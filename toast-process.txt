@@ -1,0 +1,18 @@
+Make toast for breakfast:
+
+1. Start in the kitchen.
+2. Check whether there is bread available.
+3. If there is no bread, stop the process and report that toast cannot be made.
+4. If bread is available, take two slices of bread.
+5. Put the bread slices into the toaster.
+6. Set the toaster to a medium browning level.
+7. Start the toaster.
+8. Wait until the toaster finishes.
+9. Remove the toast from the toaster carefully.
+10. Check whether the toast is burned.
+11. If the toast is burned, discard it and restart the process with new bread if more bread is available.
+12. If the toast is not burned, put the toast on a plate.
+13. Decide whether butter is desired.
+14. If butter is desired, spread butter on the toast.
+15. Serve the toast.
+16. End the process.

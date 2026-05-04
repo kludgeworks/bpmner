@@ -1,0 +1,364 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+             xmlns:omgdc="http://www.omg.org/spec/DD/20100524/DC"
+             xmlns:omgdi="http://www.omg.org/spec/DD/20100524/DI"
+             targetNamespace="http://example.com/toast"
+             exporter="BPMN Generator"
+             exporterVersion="1.0">
+
+  <process id="makeToastProcess" isExecutable="false">
+    
+    <startEvent id="startEvent" name="Start in kitchen">
+      <outgoing>flow1</outgoing>
+    </startEvent>
+    
+    <task id="checkBreadTask" name="Check whether there is bread available">
+      <incoming>flow1</incoming>
+      <outgoing>flow2</outgoing>
+    </task>
+    
+    <exclusiveGateway id="breadAvailableGateway" name="Bread available?">
+      <incoming>flow2</incoming>
+      <outgoing>flow3</outgoing>
+      <outgoing>flow4</outgoing>
+    </exclusiveGateway>
+    
+    <endEvent id="noBreadEndEvent" name="Report toast cannot be made">
+      <incoming>flow3</incoming>
+    </endEvent>
+    
+    <exclusiveGateway id="takeBreadMergeGateway">
+      <incoming>flow4</incoming>
+      <incoming>flow14</incoming>
+      <outgoing>flow5</outgoing>
+    </exclusiveGateway>
+    
+    <task id="takeBreadTask" name="Take two slices of bread">
+      <incoming>flow5</incoming>
+      <outgoing>flow6</outgoing>
+    </task>
+    
+    <task id="putBreadInToasterTask" name="Put bread slices into toaster">
+      <incoming>flow6</incoming>
+      <outgoing>flow7</outgoing>
+    </task>
+    
+    <task id="setToasterLevelTask" name="Set toaster to medium browning level">
+      <incoming>flow7</incoming>
+      <outgoing>flow8</outgoing>
+    </task>
+    
+    <task id="startToasterTask" name="Start the toaster">
+      <incoming>flow8</incoming>
+      <outgoing>flow9</outgoing>
+    </task>
+    
+    <task id="waitForToasterTask" name="Wait until toaster finishes">
+      <incoming>flow9</incoming>
+      <outgoing>flow10</outgoing>
+    </task>
+    
+    <task id="removeToastTask" name="Remove toast from toaster carefully">
+      <incoming>flow10</incoming>
+      <outgoing>flow11</outgoing>
+    </task>
+    
+    <task id="checkToastTask" name="Check whether toast is burned">
+      <incoming>flow11</incoming>
+      <outgoing>flow12</outgoing>
+    </task>
+    
+    <exclusiveGateway id="toastBurnedGateway" name="Toast burned?">
+      <incoming>flow12</incoming>
+      <outgoing>flow13</outgoing>
+      <outgoing>flow17</outgoing>
+    </exclusiveGateway>
+    
+    <task id="discardToastTask" name="Discard burned toast">
+      <incoming>flow13</incoming>
+      <outgoing>flow14a</outgoing>
+    </task>
+    
+    <exclusiveGateway id="moreBreadGateway" name="More bread available?">
+      <incoming>flow14a</incoming>
+      <outgoing>flow14</outgoing>
+      <outgoing>flow15</outgoing>
+    </exclusiveGateway>
+    
+    <endEvent id="noBreadLeftEndEvent" name="No more bread - end">
+      <incoming>flow15</incoming>
+    </endEvent>
+    
+    <task id="putToastOnPlateTask" name="Put toast on plate">
+      <incoming>flow17</incoming>
+      <outgoing>flow18</outgoing>
+    </task>
+    
+    <exclusiveGateway id="butterDesiredGateway" name="Butter desired?">
+      <incoming>flow18</incoming>
+      <outgoing>flow19</outgoing>
+      <outgoing>flow21</outgoing>
+    </exclusiveGateway>
+    
+    <task id="spreadButterTask" name="Spread butter on toast">
+      <incoming>flow19</incoming>
+      <outgoing>flow20</outgoing>
+    </task>
+    
+    <exclusiveGateway id="serveToastMergeGateway">
+      <incoming>flow20</incoming>
+      <incoming>flow21</incoming>
+      <outgoing>flow22</outgoing>
+    </exclusiveGateway>
+    
+    <task id="serveToastTask" name="Serve the toast">
+      <incoming>flow22</incoming>
+      <outgoing>flow23</outgoing>
+    </task>
+    
+    <endEvent id="endEvent" name="Process complete">
+      <incoming>flow23</incoming>
+    </endEvent>
+
+    <!-- Sequence Flows -->
+    <sequenceFlow id="flow1" sourceRef="startEvent" targetRef="checkBreadTask"/>
+    <sequenceFlow id="flow2" sourceRef="checkBreadTask" targetRef="breadAvailableGateway"/>
+    <sequenceFlow id="flow3" sourceRef="breadAvailableGateway" targetRef="noBreadEndEvent" name="No bread"/>
+    <sequenceFlow id="flow4" sourceRef="breadAvailableGateway" targetRef="takeBreadMergeGateway" name="Bread available"/>
+    <sequenceFlow id="flow5" sourceRef="takeBreadMergeGateway" targetRef="takeBreadTask"/>
+    <sequenceFlow id="flow6" sourceRef="takeBreadTask" targetRef="putBreadInToasterTask"/>
+    <sequenceFlow id="flow7" sourceRef="putBreadInToasterTask" targetRef="setToasterLevelTask"/>
+    <sequenceFlow id="flow8" sourceRef="setToasterLevelTask" targetRef="startToasterTask"/>
+    <sequenceFlow id="flow9" sourceRef="startToasterTask" targetRef="waitForToasterTask"/>
+    <sequenceFlow id="flow10" sourceRef="waitForToasterTask" targetRef="removeToastTask"/>
+    <sequenceFlow id="flow11" sourceRef="removeToastTask" targetRef="checkToastTask"/>
+    <sequenceFlow id="flow12" sourceRef="checkToastTask" targetRef="toastBurnedGateway"/>
+    <sequenceFlow id="flow13" sourceRef="toastBurnedGateway" targetRef="discardToastTask" name="Toast burned"/>
+    <sequenceFlow id="flow14a" sourceRef="discardToastTask" targetRef="moreBreadGateway"/>
+    <sequenceFlow id="flow14" sourceRef="moreBreadGateway" targetRef="takeBreadMergeGateway" name="More bread available"/>
+    <sequenceFlow id="flow15" sourceRef="moreBreadGateway" targetRef="noBreadLeftEndEvent" name="No more bread"/>
+    <sequenceFlow id="flow17" sourceRef="toastBurnedGateway" targetRef="putToastOnPlateTask" name="Toast not burned"/>
+    <sequenceFlow id="flow18" sourceRef="putToastOnPlateTask" targetRef="butterDesiredGateway"/>
+    <sequenceFlow id="flow19" sourceRef="butterDesiredGateway" targetRef="spreadButterTask" name="Butter desired"/>
+    <sequenceFlow id="flow20" sourceRef="spreadButterTask" targetRef="serveToastMergeGateway"/>
+    <sequenceFlow id="flow21" sourceRef="butterDesiredGateway" targetRef="serveToastMergeGateway" name="No butter"/>
+    <sequenceFlow id="flow22" sourceRef="serveToastMergeGateway" targetRef="serveToastTask"/>
+    <sequenceFlow id="flow23" sourceRef="serveToastTask" targetRef="endEvent"/>
+
+  </process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="makeToastProcess">
+      
+      <bpmndi:BPMNShape id="shape_startEvent" bpmnElement="startEvent">
+        <omgdc:Bounds x="50" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_checkBreadTask" bpmnElement="checkBreadTask">
+        <omgdc:Bounds x="120" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_breadAvailableGateway" bpmnElement="breadAvailableGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="260" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_noBreadEndEvent" bpmnElement="noBreadEndEvent">
+        <omgdc:Bounds x="267" y="100" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_takeBreadMergeGateway" bpmnElement="takeBreadMergeGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="320" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_takeBreadTask" bpmnElement="takeBreadTask">
+        <omgdc:Bounds x="400" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_putBreadInToasterTask" bpmnElement="putBreadInToasterTask">
+        <omgdc:Bounds x="530" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_setToasterLevelTask" bpmnElement="setToasterLevelTask">
+        <omgdc:Bounds x="660" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_startToasterTask" bpmnElement="startToasterTask">
+        <omgdc:Bounds x="790" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_waitForToasterTask" bpmnElement="waitForToasterTask">
+        <omgdc:Bounds x="920" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_removeToastTask" bpmnElement="removeToastTask">
+        <omgdc:Bounds x="1050" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_checkToastTask" bpmnElement="checkToastTask">
+        <omgdc:Bounds x="1180" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_toastBurnedGateway" bpmnElement="toastBurnedGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="1320" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_discardToastTask" bpmnElement="discardToastTask">
+        <omgdc:Bounds x="1295" y="300" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_moreBreadGateway" bpmnElement="moreBreadGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="1425" y="315" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_noBreadLeftEndEvent" bpmnElement="noBreadLeftEndEvent">
+        <omgdc:Bounds x="1432" y="420" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_putToastOnPlateTask" bpmnElement="putToastOnPlateTask">
+        <omgdc:Bounds x="1400" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_butterDesiredGateway" bpmnElement="butterDesiredGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="1530" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_spreadButterTask" bpmnElement="spreadButterTask">
+        <omgdc:Bounds x="1505" y="100" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_serveToastMergeGateway" bpmnElement="serveToastMergeGateway" isMarkerVisible="true">
+        <omgdc:Bounds x="1630" y="193" width="50" height="50"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_serveToastTask" bpmnElement="serveToastTask">
+        <omgdc:Bounds x="1710" y="178" width="100" height="80"/>
+      </bpmndi:BPMNShape>
+      
+      <bpmndi:BPMNShape id="shape_endEvent" bpmnElement="endEvent">
+        <omgdc:Bounds x="1850" y="200" width="36" height="36"/>
+      </bpmndi:BPMNShape>
+
+      <!-- Edges -->
+      <bpmndi:BPMNEdge id="edge_flow1" bpmnElement="flow1">
+        <omgdi:waypoint x="86" y="218"/>
+        <omgdi:waypoint x="120" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow2" bpmnElement="flow2">
+        <omgdi:waypoint x="220" y="218"/>
+        <omgdi:waypoint x="260" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow3" bpmnElement="flow3">
+        <omgdi:waypoint x="285" y="193"/>
+        <omgdi:waypoint x="285" y="136"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow4" bpmnElement="flow4">
+        <omgdi:waypoint x="310" y="218"/>
+        <omgdi:waypoint x="320" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow5" bpmnElement="flow5">
+        <omgdi:waypoint x="370" y="218"/>
+        <omgdi:waypoint x="400" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow6" bpmnElement="flow6">
+        <omgdi:waypoint x="500" y="218"/>
+        <omgdi:waypoint x="530" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow7" bpmnElement="flow7">
+        <omgdi:waypoint x="630" y="218"/>
+        <omgdi:waypoint x="660" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow8" bpmnElement="flow8">
+        <omgdi:waypoint x="760" y="218"/>
+        <omgdi:waypoint x="790" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow9" bpmnElement="flow9">
+        <omgdi:waypoint x="890" y="218"/>
+        <omgdi:waypoint x="920" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow10" bpmnElement="flow10">
+        <omgdi:waypoint x="1020" y="218"/>
+        <omgdi:waypoint x="1050" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow11" bpmnElement="flow11">
+        <omgdi:waypoint x="1150" y="218"/>
+        <omgdi:waypoint x="1180" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow12" bpmnElement="flow12">
+        <omgdi:waypoint x="1280" y="218"/>
+        <omgdi:waypoint x="1320" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow13" bpmnElement="flow13">
+        <omgdi:waypoint x="1345" y="243"/>
+        <omgdi:waypoint x="1345" y="300"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow14a" bpmnElement="flow14a">
+        <omgdi:waypoint x="1395" y="340"/>
+        <omgdi:waypoint x="1425" y="340"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow14" bpmnElement="flow14">
+        <omgdi:waypoint x="1450" y="315"/>
+        <omgdi:waypoint x="1450" y="280"/>
+        <omgdi:waypoint x="345" y="280"/>
+        <omgdi:waypoint x="345" y="243"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow15" bpmnElement="flow15">
+        <omgdi:waypoint x="1450" y="365"/>
+        <omgdi:waypoint x="1450" y="420"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow17" bpmnElement="flow17">
+        <omgdi:waypoint x="1370" y="218"/>
+        <omgdi:waypoint x="1400" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow18" bpmnElement="flow18">
+        <omgdi:waypoint x="1500" y="218"/>
+        <omgdi:waypoint x="1530" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow19" bpmnElement="flow19">
+        <omgdi:waypoint x="1555" y="193"/>
+        <omgdi:waypoint x="1555" y="180"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow20" bpmnElement="flow20">
+        <omgdi:waypoint x="1605" y="140"/>
+        <omgdi:waypoint x="1655" y="140"/>
+        <omgdi:waypoint x="1655" y="193"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow21" bpmnElement="flow21">
+        <omgdi:waypoint x="1580" y="218"/>
+        <omgdi:waypoint x="1630" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow22" bpmnElement="flow22">
+        <omgdi:waypoint x="1680" y="218"/>
+        <omgdi:waypoint x="1710" y="218"/>
+      </bpmndi:BPMNEdge>
+      
+      <bpmndi:BPMNEdge id="edge_flow23" bpmnElement="flow23">
+        <omgdi:waypoint x="1810" y="218"/>
+        <omgdi:waypoint x="1850" y="218"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</definitions>

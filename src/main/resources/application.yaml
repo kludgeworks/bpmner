@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: bpmner
+  main:
+    web-application-type: none
+
+embabel:
+  models:
+    default-llm: claude-sonnet-4-0
+
+bpmner:
+  max-attempts: 8
+  model: claude-sonnet-4-0
+
+logging:
+  pattern:
+    console: '%clr(%d{HH:mm:ss.SSS}){faint} %clr([%t]){magenta} %clr(%-5level) %clr(%logger{0}){cyan} %clr(-){faint} %msg%n'
+  level:
+    com.embabel.agent.core.ActionRunner: DEBUG
+    dev.groknull.bpmner: DEBUG
