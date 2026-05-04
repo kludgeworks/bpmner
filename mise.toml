@@ -1,0 +1,3 @@
+[tools]
+java = "liberica-nik-openjdk25-25.0.3+1"
+node = "latest"
