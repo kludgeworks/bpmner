@@ -16,6 +16,11 @@ test('GEN-01 flags choreography elements', async () => {
   assert.equal(hasRule(results, 'gen-01-klops-allowed-elements'), true);
 });
 
+test('GEN-02 flags duplicate diagrams', async () => {
+  const results = await lint(phase1Fixtures.gen02DuplicateDiagram);
+  assert.equal(hasRule(results, 'gen-02-no-duplicate-diagrams'), true);
+});
+
 test('ACT-12 flags loop task without Loop until annotation', async () => {
   const results = await lint(phase1Fixtures.act12LoopWithoutAnnotation);
   assert.equal(hasRule(results, 'act-12-loop-task-annotation'), true);

@@ -4,6 +4,7 @@ const plugin = {
       extends: 'bpmnlint:recommended',
       rules: {
         'gen-01-klops-allowed-elements': 'error',
+        'gen-02-no-duplicate-diagrams': 'error',
         'act-12-loop-task-annotation': 'error',
         'act-13-mi-task-annotation': 'error',
         'evt-10-start-no-incoming': 'error',
@@ -36,6 +37,7 @@ const plugin = {
   },
   rules: {
     'gen-01-klops-allowed-elements': './rules/gen-01-klops-allowed-elements',
+    'gen-02-no-duplicate-diagrams': './rules/gen-02-no-duplicate-diagrams',
     'act-12-loop-task-annotation': './rules/act-12-loop-task-annotation',
     'act-13-mi-task-annotation': './rules/act-13-mi-task-annotation',
     'evt-10-start-no-incoming': './rules/evt-10-start-no-incoming',
