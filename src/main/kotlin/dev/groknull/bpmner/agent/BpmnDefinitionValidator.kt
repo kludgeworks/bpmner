@@ -1,0 +1,67 @@
+package dev.groknull.bpmner.agent
+
+object BpmnDefinitionValidator {
+
+    fun validate(definition: BpmnDefinition): List<String> {
+        val errors = mutableListOf<String>()
+
+        if (definition.processId.isBlank()) {
+            errors.add("processId must not be blank")
+        }
+
+        if (definition.processName.isBlank()) {
+            errors.add("processName must not be blank")
+        }
+
+        if (definition.nodes.isEmpty()) {
+            errors.add("nodes must contain at least one node")
+        }
+
+        val nodeIds = definition.nodes.map { it.id.trim() }
+        val edgeIds = definition.sequences.map { it.id.trim() }
+
+        val duplicateNodeIds = nodeIds.groupBy { it }.filter { (id, all) -> id.isNotBlank() && all.size > 1 }.keys
+        duplicateNodeIds.forEach { errors.add("duplicate node id: $it") }
+
+        val duplicateEdgeIds = edgeIds.groupBy { it }.filter { (id, all) -> id.isNotBlank() && all.size > 1 }.keys
+        duplicateEdgeIds.forEach { errors.add("duplicate edge id: $it") }
+
+        val nodeIdSet = definition.nodes.map { it.id }.toSet()
+
+        definition.nodes.forEach { node ->
+            if (node.id.isBlank()) {
+                errors.add("node id must not be blank")
+            }
+            if (node.name.isBlank()) {
+                errors.add("node ${node.id.ifBlank { "<blank>" }} name must not be blank")
+            }
+        }
+
+        definition.sequences.forEach { edge ->
+            if (edge.id.isBlank()) {
+                errors.add("edge id must not be blank")
+            }
+            if (edge.sourceRef !in nodeIdSet) {
+                errors.add("edge ${edge.id.ifBlank { "<blank>" }} sourceRef '${edge.sourceRef}' does not match any node id")
+            }
+            if (edge.targetRef !in nodeIdSet) {
+                errors.add("edge ${edge.id.ifBlank { "<blank>" }} targetRef '${edge.targetRef}' does not match any node id")
+            }
+            if (edge.sourceRef == edge.targetRef) {
+                errors.add("edge ${edge.id.ifBlank { "<blank>" }} must not self-reference source and target")
+            }
+        }
+
+        val startCount = definition.nodes.count { it.type == NodeType.START_EVENT }
+        if (startCount == 0) {
+            errors.add("definition must contain at least one START_EVENT")
+        }
+
+        val endCount = definition.nodes.count { it.type == NodeType.END_EVENT }
+        if (endCount == 0) {
+            errors.add("definition must contain at least one END_EVENT")
+        }
+
+        return errors
+    }
+}
