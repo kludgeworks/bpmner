@@ -22,9 +22,14 @@ This folder documents each custom rule implemented by `bpmnlint-plugin-klm`.
 ## Phase 2 (heuristic, warn)
 - act-01-verb-object-name
 - act-02-activity-label-capitalization
+- act-03-discouraged-business-verbs
+- evt-01-event-state-name
+- evt-02-event-state-pattern
 - evt-13-intermediate-event-not-action
 - flow-02-diverging-flow-outcome-label
 - gtw-01-diverging-gateway-question
 - gtw-02-converging-gateway-unnamed
+- gtw-03-gateway-no-work-label
 - msg-02-message-flow-name-pattern
+- name-01-business-meaningful-label
 - name-02-uncommon-abbreviations

@@ -29,6 +29,14 @@ test('ACT-02 warns on non-sentence-case activity labels', async () => {
   assert.equal(hasRule(valid, 'act-02-activity-label-capitalization'), false);
 });
 
+test('ACT-03 warns on discouraged generic business verbs', async () => {
+  const invalid = await lint(phase2Fixtures.act03Invalid);
+  const valid = await lint(phase2Fixtures.act03Valid);
+
+  assert.equal(hasRule(invalid, 'act-03-discouraged-business-verbs'), true);
+  assert.equal(hasRule(valid, 'act-03-discouraged-business-verbs'), false);
+});
+
 test('GTW-01 warns when diverging gateway label is not a question', async () => {
   const invalid = await lint(phase2Fixtures.gtw01Invalid);
   const valid = await lint(phase2Fixtures.gtw01Valid);
@@ -47,6 +55,14 @@ test('GTW-02 warns when converging gateway has a label', async () => {
   assert.equal(hasRule(valid, 'gtw-02-converging-gateway-unnamed'), false);
 });
 
+test('GTW-03 warns when gateway label describes work', async () => {
+  const invalid = await lint(phase2Fixtures.gtw03Invalid);
+  const valid = await lint(phase2Fixtures.gtw03Valid);
+
+  assert.equal(hasRule(invalid, 'gtw-03-gateway-no-work-label'), true);
+  assert.equal(hasRule(valid, 'gtw-03-gateway-no-work-label'), false);
+});
+
 test('FLOW-02 warns when diverging gateway outcome flow is unnamed', async () => {
   const invalid = await lint(phase2Fixtures.flow02Invalid);
   const valid = await lint(phase2Fixtures.flow02Valid);
@@ -61,6 +77,22 @@ test('EVT-13 warns when intermediate event label is action-style', async () => {
 
   assert.equal(hasRule(invalid, 'evt-13-intermediate-event-not-action'), true);
   assert.equal(hasRule(valid, 'evt-13-intermediate-event-not-action'), false);
+});
+
+test('EVT-01 warns when event label is action-style', async () => {
+  const invalid = await lint(phase2Fixtures.evt01Invalid);
+  const valid = await lint(phase2Fixtures.evt01Valid);
+
+  assert.equal(hasRule(invalid, 'evt-01-event-state-name'), true);
+  assert.equal(hasRule(valid, 'evt-01-event-state-name'), false);
+});
+
+test('EVT-02 warns when event label does not match state/result pattern', async () => {
+  const invalid = await lint(phase2Fixtures.evt02Invalid);
+  const valid = await lint(phase2Fixtures.evt02Valid);
+
+  assert.equal(hasRule(invalid, 'evt-02-event-state-pattern'), true);
+  assert.equal(hasRule(valid, 'evt-02-event-state-pattern'), false);
 });
 
 test('MSG-02 warns on action-style message flow names', async () => {
@@ -87,4 +119,12 @@ test('NAME-02 warns on uncommon abbreviations', async () => {
 
   assert.equal(hasRule(invalid, 'name-02-uncommon-abbreviations'), true);
   assert.equal(hasRule(valid, 'name-02-uncommon-abbreviations'), false);
+});
+
+test('NAME-01 warns on technical/cryptic labels', async () => {
+  const invalid = await lint(phase2Fixtures.name01Invalid);
+  const valid = await lint(phase2Fixtures.name01Valid);
+
+  assert.equal(hasRule(invalid, 'name-01-business-meaningful-label'), true);
+  assert.equal(hasRule(valid, 'name-01-business-meaningful-label'), false);
 });
