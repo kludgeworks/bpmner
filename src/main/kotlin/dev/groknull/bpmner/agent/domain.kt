@@ -1,47 +1,111 @@
 package dev.groknull.bpmner.agent
 
+import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Positive
+import jakarta.validation.constraints.PositiveOrZero
+import jakarta.validation.constraints.Size
 
 /**
  * Input to the BPMN generation agent.
  */
 data class BpmnRequest(
-    @param:JsonPropertyDescription("Natural-language description of the business process to model")
+    @get:JsonPropertyDescription("Natural-language description of the business process to model")
     val processDescription: String,
-    @param:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
+    @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
     val outputFile: String = "output.bpmn",
 )
 
+@JsonClassDescription("Typed BPMN process definition including topology and diagram layout")
 data class BpmnDefinition(
-    @param:JsonPropertyDescription("Stable BPMN process id, e.g. Process_1")
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable BPMN process id, e.g. Process_1")
     val processId: String,
-    @param:JsonPropertyDescription("Human-readable BPMN process name")
+    @field:NotBlank
+    @get:JsonPropertyDescription("Human-readable BPMN process name")
     val processName: String,
-    @param:JsonPropertyDescription("All BPMN nodes participating in the process graph")
+    @field:NotEmpty
+    @field:Valid
+    @get:JsonPropertyDescription("All BPMN nodes participating in the process graph")
     val nodes: List<BpmnNode>,
-    @param:JsonPropertyDescription("Directed sequence-flow edges connecting node ids")
+    @field:NotEmpty
+    @field:Valid
+    @get:JsonPropertyDescription("Directed sequence-flow edges connecting node ids")
     val sequences: List<BpmnEdge>,
 )
 
-data class BpmnNode(
-    @param:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
-    val id: String,
-    @param:JsonPropertyDescription("Node label shown in BPMN")
-    val name: String,
-    @param:JsonPropertyDescription("Node type from the supported enum")
-    val type: NodeType,
+@JsonClassDescription("Rendered BPMN XML with a stable index mapping XML elements back to the typed definition")
+data class RenderedBpmn(
+    val definition: BpmnDefinition,
+    val xml: String,
+    @field:Valid
+    val elementIndex: BpmnElementIndex,
 )
 
-data class BpmnEdge(
-    @param:JsonPropertyDescription("Unique sequence-flow id, e.g. Flow_1")
+@JsonClassDescription("BPMN node with semantic type and fixed diagram bounds")
+data class BpmnNode(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
     val id: String,
-    @param:JsonPropertyDescription("Source node id")
+    @field:NotBlank
+    @get:JsonPropertyDescription("Node label shown in BPMN")
+    val name: String,
+    @get:JsonPropertyDescription("Node type from the supported enum")
+    val type: NodeType,
+    @field:Valid
+    @get:JsonPropertyDescription("Diagram bounds for this node in BPMNDI coordinates")
+    val bounds: BpmnBounds,
+)
+
+@JsonClassDescription("Directed BPMN sequence flow with optional label, condition, and diagram waypoints")
+data class BpmnEdge(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique sequence-flow id, e.g. Flow_1")
+    val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Source node id")
     val sourceRef: String,
-    @param:JsonPropertyDescription("Target node id")
+    @field:NotBlank
+    @get:JsonPropertyDescription("Target node id")
     val targetRef: String,
-    @param:JsonPropertyDescription("Optional human-readable sequence-flow label")
+    @get:JsonPropertyDescription("Optional human-readable sequence-flow label")
     val name: String? = null,
+    @get:JsonPropertyDescription("Optional sequence-flow condition expression, typically used on gateway branches")
+    val conditionExpression: String? = null,
+    @field:Size(min = 2)
+    @field:Valid
+    @get:JsonPropertyDescription("Ordered BPMNDI waypoints describing the edge path")
+    val waypoints: List<BpmnWaypoint>,
+)
+
+@JsonClassDescription("Diagram bounds for a BPMN node")
+data class BpmnBounds(
+    @field:PositiveOrZero
+    @get:JsonPropertyDescription("Left X coordinate of the node")
+    val x: Double,
+    @field:PositiveOrZero
+    @get:JsonPropertyDescription("Top Y coordinate of the node")
+    val y: Double,
+    @field:Positive
+    @get:JsonPropertyDescription("Node width")
+    val width: Double,
+    @field:Positive
+    @get:JsonPropertyDescription("Node height")
+    val height: Double,
+)
+
+@JsonClassDescription("Diagram waypoint for a BPMN edge")
+data class BpmnWaypoint(
+    @field:PositiveOrZero
+    @get:JsonPropertyDescription("Waypoint X coordinate")
+    val x: Double,
+    @field:PositiveOrZero
+    @get:JsonPropertyDescription("Waypoint Y coordinate")
+    val y: Double,
 )
 
 enum class NodeType {
@@ -52,10 +116,67 @@ enum class NodeType {
     END_EVENT,
 }
 
+@JsonClassDescription("Deterministic mapping from rendered BPMN element ids back to typed DTO objects")
+data class BpmnElementIndex(
+    val processId: String,
+    val processObjectRef: String = "process",
+    val nodeObjectRefs: Map<String, String>,
+    val edgeObjectRefs: Map<String, String>,
+    val shapeIdsByNodeId: Map<String, String>,
+    val edgeDiagramIdsByEdgeId: Map<String, String>,
+) {
+    fun objectRefForElementId(elementId: String?): String? {
+        if (elementId == null) {
+            return null
+        }
+        if (elementId == processId) {
+            return processObjectRef
+        }
+        nodeObjectRefs[elementId]?.let { return it }
+        edgeObjectRefs[elementId]?.let { return it }
+        shapeIdsByNodeId.entries.firstOrNull { (_, shapeId) -> shapeId == elementId }?.let { (nodeId, _) ->
+            return nodeObjectRefs[nodeId]
+        }
+        edgeDiagramIdsByEdgeId.entries.firstOrNull { (_, diagramId) -> diagramId == elementId }?.let { (edgeId, _) ->
+            return edgeObjectRefs[edgeId]
+        }
+        return null
+    }
+
+    fun knownElementIds(): Set<String> =
+        buildSet {
+            add(processId)
+            addAll(nodeObjectRefs.keys)
+            addAll(edgeObjectRefs.keys)
+            addAll(shapeIdsByNodeId.values)
+            addAll(edgeDiagramIdsByEdgeId.values)
+        }
+}
+
+enum class BpmnDiagnosticSource {
+    GRAPH,
+    RENDER,
+    XSD,
+    LINT,
+}
+
+@JsonClassDescription("Normalized BPMN validation or rendering diagnostic linked back to the typed definition where possible")
+data class BpmnDiagnostic(
+    val source: BpmnDiagnosticSource,
+    val message: String,
+    val rule: String? = null,
+    val category: String? = null,
+    val elementId: String? = null,
+    val objectRef: String? = null,
+)
+
 /**
  * BPMN XML that has passed both XSD and bpmn-lint validation.
  */
-data class ValidatedBpmnXml(val xml: String)
+data class ValidatedBpmnXml(
+    val xml: String,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+)
 
 /**
  * Final result written to disk.

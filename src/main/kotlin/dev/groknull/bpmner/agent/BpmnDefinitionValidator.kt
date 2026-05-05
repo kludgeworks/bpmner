@@ -5,18 +5,6 @@ object BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
-        if (definition.processId.isBlank()) {
-            errors.add("processId must not be blank")
-        }
-
-        if (definition.processName.isBlank()) {
-            errors.add("processName must not be blank")
-        }
-
-        if (definition.nodes.isEmpty()) {
-            errors.add("nodes must contain at least one node")
-        }
-
         val nodeIds = definition.nodes.map { it.id.trim() }
         val edgeIds = definition.sequences.map { it.id.trim() }
 
@@ -28,19 +16,7 @@ object BpmnDefinitionValidator {
 
         val nodeIdSet = definition.nodes.map { it.id }.toSet()
 
-        definition.nodes.forEach { node ->
-            if (node.id.isBlank()) {
-                errors.add("node id must not be blank")
-            }
-            if (node.name.isBlank()) {
-                errors.add("node ${node.id.ifBlank { "<blank>" }} name must not be blank")
-            }
-        }
-
         definition.sequences.forEach { edge ->
-            if (edge.id.isBlank()) {
-                errors.add("edge id must not be blank")
-            }
             if (edge.sourceRef !in nodeIdSet) {
                 errors.add("edge ${edge.id.ifBlank { "<blank>" }} sourceRef '${edge.sourceRef}' does not match any node id")
             }
