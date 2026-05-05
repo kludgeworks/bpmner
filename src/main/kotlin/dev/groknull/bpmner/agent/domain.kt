@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.agent
 
+import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.Valid
@@ -11,6 +12,9 @@ import jakarta.validation.constraints.Size
 
 /**
  * Input to the BPMN generation agent.
+ *
+ * Implements [PromptContributor] so the structural rules and optional style guide are
+ * injected into the system prompt automatically via [withPromptContributor].
  */
 data class BpmnRequest(
     @get:JsonPropertyDescription("Natural-language description of the business process to model")
@@ -18,7 +22,46 @@ data class BpmnRequest(
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
     val outputFile: String = "output.bpmn",
-)
+) : PromptContributor {
+    override fun contribution(): String = buildString {
+        appendLine(
+            """
+            You are a BPMN process design expert. Given a business process description, generate
+            a typed BPMN process definition object that can be converted to valid BPMN 2.0 XML.
+
+            Rules:
+            - Return a single process definition object with processId, processName, nodes, and sequences.
+            - Every node id and sequence id must be unique.
+            - Every sequence sourceRef and targetRef must reference an existing node id.
+            - Include at least one START_EVENT and one END_EVENT.
+            - Use clear, descriptive business names on nodes.
+            - Keep process topology coherent with no dangling references or self-loop sequence flows.
+            - Every node must include explicit bounds with x, y, width, and height.
+            - Every sequence must include at least two waypoints that define its diagram path.
+            - Use conditionExpression on conditional gateway branches when needed.
+            - The layout should be coherent and readable because it will be emitted directly into BPMNDI.
+
+            If you receive validation errors, fix them and return the full corrected object.
+            """.trimIndent()
+        )
+        if (styleGuide != null) {
+            appendLine()
+            appendLine("---")
+            appendLine()
+            appendLine("## Style guide")
+            appendLine()
+            appendLine(styleGuide)
+        }
+    }
+}
+
+/** User-turn prompt asking the LLM to produce an initial [BpmnDefinition]. */
+fun BpmnRequest.generationPrompt(): String = buildString {
+    appendLine("Generate a BPMN definition object for this business process.")
+    appendLine()
+    appendLine("Business process description:")
+    appendLine(processDescription)
+}
 
 @JsonClassDescription("Typed BPMN process definition including topology and diagram layout")
 data class BpmnDefinition(

@@ -1,6 +1,9 @@
 package dev.groknull.bpmner.agent
 
-object BpmnDefinitionValidator {
+import org.springframework.stereotype.Component
+
+@Component
+class BpmnDefinitionValidator {
 
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
