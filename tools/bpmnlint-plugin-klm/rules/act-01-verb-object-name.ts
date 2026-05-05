@@ -1,14 +1,24 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
+import winkNLP from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
 
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];
 
-const KNOWN_VERBS = new Set([
-  'accept', 'approve', 'assign', 'calculate', 'check', 'close', 'collect', 'confirm',
-  'create', 'dispatch', 'evaluate', 'inform', 'open', 'prepare', 'receive', 'record',
-  'register', 'reject', 'review', 'schedule', 'send', 'start', 'stop', 'submit',
-  'update', 'validate', 'verify'
-]);
+const nlp = winkNLP(model);
+const its = nlp.its;
+
+function isVerbLike(token: string): boolean {
+  const doc = nlp.readDoc(token);
+  const first = doc.tokens().itemAt(0);
+
+  if (!first) {
+    return false;
+  }
+
+  const pos = first.out(its.pos);
+  return pos === 'VERB' || pos === 'AUX';
+}
 
 export = function() {
   function check(node: ModdleElement, reporter: Reporter) {
@@ -29,14 +39,7 @@ export = function() {
       return;
     }
 
-    const first = parts[0].toLowerCase();
-
-    if (KNOWN_VERBS.has(first)) {
-      return;
-    }
-
-    if (/(ing|tion|ment|ance|ence)$/.test(first)) {
-      reporter.report(node.id, 'Activity name looks noun-based; prefer Verb + Object naming');
+    if (isVerbLike(parts[0])) {
       return;
     }
 

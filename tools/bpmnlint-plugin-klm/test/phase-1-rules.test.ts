@@ -21,9 +21,19 @@ test('ACT-12 flags loop task without Loop until annotation', async () => {
   assert.equal(hasRule(results, 'act-12-loop-task-annotation'), true);
 });
 
+test('ACT-12 accepts loop annotation with equivalent phrasing', async () => {
+  const results = await lint(phase1Fixtures.act12LoopWithEquivalentAnnotation);
+  assert.equal(hasRule(results, 'act-12-loop-task-annotation'), false);
+});
+
 test('ACT-13 flags multi-instance task without For each annotation', async () => {
   const results = await lint(phase1Fixtures.act13MiWithoutAnnotation);
   assert.equal(hasRule(results, 'act-13-mi-task-annotation'), true);
+});
+
+test('ACT-13 accepts multi-instance annotation with equivalent phrasing', async () => {
+  const results = await lint(phase1Fixtures.act13MiWithEquivalentAnnotation);
+  assert.equal(hasRule(results, 'act-13-mi-task-annotation'), false);
 });
 
 test('EVT-10 flags start event with incoming flow', async () => {

@@ -1,9 +1,22 @@
 import { is } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
+import winkNLP from 'wink-nlp';
+import model from 'wink-eng-lite-web-model';
 
-const DISCOURAGED_LEADING_VERBS = new Set([
-  'send', 'create', 'update', 'approve', 'confirm', 'notify', 'request'
-]);
+const nlp = winkNLP(model);
+const its = nlp.its;
+
+function startsWithVerbLike(name: string): boolean {
+  const doc = nlp.readDoc(name);
+  const first = doc.tokens().itemAt(0);
+
+  if (!first) {
+    return false;
+  }
+
+  const pos = first.out(its.pos);
+  return pos === 'VERB' || pos === 'AUX';
+}
 
 export = function() {
   function check(node: ModdleElement, reporter: Reporter) {
@@ -17,18 +30,8 @@ export = function() {
       return;
     }
 
-    const words = name.split(/\s+/);
-    const first = words[0].toLowerCase();
-
-    if (DISCOURAGED_LEADING_VERBS.has(first)) {
+    if (startsWithVerbLike(name)) {
       reporter.report(node.id, 'Message flow name should describe the message, not an action');
-      return;
-    }
-
-    const last = words[words.length - 1].toLowerCase();
-
-    if (words.length > 1 && /(ed)$/.test(last) && !/(ed)$/.test(first)) {
-      reporter.report(node.id, 'Prefer noun-based message naming (e.g. Confirmed order message)');
     }
   }
 

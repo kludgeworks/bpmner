@@ -54,6 +54,30 @@ export const phase1Fixtures = {
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1" />
   </bpmn:process>
 </bpmn:definitions>`,
+  act12LoopWithEquivalentAnnotation: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:task id="Task_1" name="Repeat check">
+      <bpmn:standardLoopCharacteristics />
+    </bpmn:task>
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>Repeat verification until all checks pass</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="Task_1" targetRef="TextAnnotation_1" />
+  </bpmn:process>
+</bpmn:definitions>`,
+  act13MiWithEquivalentAnnotation: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:task id="Task_1" name="Review passenger">
+      <bpmn:multiInstanceLoopCharacteristics isSequential="true" />
+    </bpmn:task>
+    <bpmn:textAnnotation id="TextAnnotation_1">
+      <bpmn:text>For every passenger in the manifest</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="Task_1" targetRef="TextAnnotation_1" />
+  </bpmn:process>
+</bpmn:definitions>`,
   evt10StartWithIncoming: `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
   <bpmn:process id="Process_1">
