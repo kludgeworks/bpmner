@@ -2,4 +2,4 @@
 
 - Severity: warn
 - Purpose: Encourage Verb + Object naming for activities.
-- Trigger: Activity name is single-word, noun-like first token, or does not start with known business verb.
+- Trigger: Activity label has fewer than two words or its first token is not POS-tagged as a verb by wink-nlp.

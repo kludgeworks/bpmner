@@ -168,6 +168,12 @@ function textFromAnnotation(annotation: ModdleElement): string {
   return annotation.text.body || '';
 }
 
+export function getAssociatedAnnotationTexts(node: ModdleElement, definitions: ModdleElement): string[] {
+  return getAssociatedTextAnnotations(node, definitions)
+    .map((annotation) => textFromAnnotation(annotation))
+    .filter((text) => Boolean(text.trim()));
+}
+
 export function hasAnnotationMatching(node: ModdleElement, definitions: ModdleElement, regex: RegExp): boolean {
   return getAssociatedTextAnnotations(node, definitions).some((annotation) => regex.test(textFromAnnotation(annotation)));
 }
