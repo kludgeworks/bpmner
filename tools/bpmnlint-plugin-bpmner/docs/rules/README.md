@@ -21,5 +21,10 @@ This folder documents each custom rule implemented by `bpmnlint-plugin-bpmner`.
 
 ## Phase 2 (heuristic, warn)
 - act-01-verb-object-name
+- act-02-activity-label-capitalization
+- evt-13-intermediate-event-not-action
+- flow-02-diverging-flow-outcome-label
 - gtw-01-diverging-gateway-question
+- gtw-02-converging-gateway-unnamed
 - msg-02-message-flow-name-pattern
+- name-02-uncommon-abbreviations
