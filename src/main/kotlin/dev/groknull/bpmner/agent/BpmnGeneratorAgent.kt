@@ -4,7 +4,13 @@ import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
+import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.api.common.asSubProcess
+import com.embabel.agent.api.common.workflow.loop.Feedback
+import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableActionContext
+import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableBuilder
+import com.embabel.agent.api.common.workflow.loop.EvaluationActionContext
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.embabel.chat.AssistantMessage
@@ -75,7 +81,7 @@ class BpmnGeneratorAgent(
     fun validateAndRefineBpmn(
         request: BpmnRequest,
         rendered: RenderedBpmn,
-        context: OperationContext,
+        context: ActionContext,
     ): ValidatedBpmnXml {
         val selectedModel = config.model.ifBlank { "<auto>" }
         logger.info(
@@ -86,92 +92,40 @@ class BpmnGeneratorAgent(
             rendered.definition.processId,
         )
 
-        val promptRunner = promptRunner(context, request)
-        var currentDefinition = rendered.definition
-        var currentRendered = rendered
-        val messages = mutableListOf<Message>(
-            UserMessage(buildGenerationPrompt(request)),
-            AssistantMessage(serializeDefinition(currentDefinition)),
-        )
-
-        for (attempt in 1..config.maxAttempts) {
-            logger.info(
-                "BPMN validation/render attempt {}/{}. messageCount={}",
-                attempt,
-                config.maxAttempts,
-                messages.size,
-            )
-
-            logger.debug("Attempt {} current BPMN definition:\n{}", attempt, serializeDefinition(currentDefinition))
-
-            val graphDiagnostics = BpmnDefinitionValidator.validate(currentDefinition).map {
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.GRAPH,
-                    message = it,
+        val refinementWorkflow = RepeatUntilAcceptableBuilder
+            .returning(BpmnRefinementAttempt::class.java)
+            .consuming(Unit::class.java)
+            .withFeedbackClass(BpmnRefinementFeedback::class.java)
+            .withMaxIterations(config.maxAttempts)
+            .repeating { attemptContext ->
+                nextRefinementAttempt(
+                    request = request,
+                    initialRendered = rendered,
+                    repairContext = context,
+                    context = attemptContext,
                 )
             }
-            val diagnostics = mutableListOf<BpmnDiagnostic>()
-            diagnostics.addAll(graphDiagnostics)
-
-            if (graphDiagnostics.isNotEmpty()) {
-                logger.warn("Attempt {}: graph validation failed with {} issue(s)", attempt, graphDiagnostics.size)
+            .withEvaluator { evaluationContext ->
+                evaluateRefinementAttempt(
+                    attempt = evaluationContext.resultToEvaluate,
+                )
             }
+            .withAcceptanceCriteria { acceptanceContext -> acceptanceContext.feedback.acceptable }
 
-            if (diagnostics.isEmpty()) {
-                currentRendered = try {
-                    if (attempt == 1) {
-                        currentRendered
-                    } else {
-                        bpmnConverter.render(currentDefinition)
-                    }
-                } catch (e: Exception) {
-                    val renderDiagnostic = BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.RENDER,
-                        message = e.message ?: e.javaClass.simpleName,
-                    )
-                    diagnostics.add(renderDiagnostic)
-                    logger.warn("Attempt {}: BPMN conversion failed: {}", attempt, e.message)
-                    renderedDiagnostics("Attempt $attempt", listOf(renderDiagnostic))
-                    requestCorrection(promptRunner, messages, buildRepairFeedback(currentDefinition, currentRendered.xml, diagnostics)).also {
-                        currentDefinition = it
-                    }
-                    continue
-                }
-
-                logger.info("Attempt {}: generated BPMN XML from typed object, length={}", attempt, currentRendered.xml.length)
-                logger.debug("Attempt {} generated XML:\n{}", attempt, currentRendered.xml)
-
-                diagnostics.addAll(normalizeXsdDiagnostics(currentRendered))
-                if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-                    logger.info("Attempt {}: XSD validation passed", attempt)
-                }
-            }
-
-            if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH || it.source == BpmnDiagnosticSource.RENDER || it.source == BpmnDiagnosticSource.XSD }) {
-                val lintIssues = bpmnLintService.lint(currentRendered.xml)
-                if (lintIssues == null) {
-                    logger.warn("Attempt {}: bpmn-lint was unavailable; continuing without lint feedback", attempt)
-                    return ValidatedBpmnXml(currentRendered.xml)
-                }
-
-                diagnostics.addAll(normalizeLintDiagnostics(lintIssues, currentRendered.elementIndex))
-            }
-
-            if (diagnostics.isEmpty()) {
-                logger.info("Attempt {}: BPMN validated successfully", attempt)
-                return ValidatedBpmnXml(currentRendered.xml)
-            }
-
-            renderedDiagnostics("Attempt $attempt", diagnostics)
-            currentDefinition = requestCorrection(
-                promptRunner,
-                messages,
-                buildRepairFeedback(currentDefinition, currentRendered.xml, diagnostics),
+        val finalAttempt: BpmnRefinementAttempt = context.asSubProcess(
+            refinementWorkflow.buildAgent(
+                name = "bpmn-refinement-workflow",
+                description = "Repair BPMN definitions until external validation succeeds",
             )
+        )
+
+        if (!finalAttempt.isSuccessful()) {
+            logger.error("validateAndRefineBpmn failed after {} attempts", config.maxAttempts)
+            error("Failed to produce valid BPMN after ${config.maxAttempts} attempts")
         }
 
-        logger.error("validateAndRefineBpmn failed after {} attempts", config.maxAttempts)
-        error("Failed to produce valid BPMN after ${config.maxAttempts} attempts")
+        logger.info("BPMN validated successfully via workflow subprocess")
+        return finalAttempt.toValidatedBpmnXml()
     }
 
     @AchievesGoal(
@@ -211,11 +165,11 @@ class BpmnGeneratorAgent(
         promptRunner: com.embabel.agent.api.common.PromptRunner,
         messages: MutableList<Message>,
         feedback: String,
-    ): BpmnDefinition {
+    ): Pair<BpmnDefinition, List<Message>> {
         messages.add(UserMessage(feedback))
         val corrected = promptRunner.createObject(messages = messages, outputClass = BpmnDefinition::class.java)
         messages.add(AssistantMessage(serializeDefinition(corrected)))
-        return corrected
+        return corrected to messages.toList()
     }
 
     private fun serializeDefinition(definition: BpmnDefinition): String =
@@ -246,6 +200,153 @@ class BpmnGeneratorAgent(
                 elementId = elementId,
                 objectRef = elementIndex.objectRefForElementId(elementId),
             )
+        }
+
+    private fun nextRefinementAttempt(
+        request: BpmnRequest,
+        initialRendered: RenderedBpmn,
+        repairContext: OperationContext,
+        context: RepeatUntilAcceptableActionContext<Unit, BpmnRefinementAttempt, BpmnRefinementFeedback>,
+    ): BpmnRefinementAttempt {
+        val previousAttempt = context.lastAttempt()?.result
+        return if (previousAttempt == null) {
+            evaluateCandidate(
+                definition = initialRendered.definition,
+                rendered = initialRendered,
+                messages = initialMessages(request, initialRendered.definition),
+            )
+        } else {
+            val feedback = context.lastAttempt()?.feedback ?: error("Expected feedback for prior refinement attempt")
+            if (previousAttempt.isSuccessful() || feedback.acceptable) {
+                logger.info("BPMN refinement subprocess already has an acceptable attempt; reusing last result")
+                return previousAttempt
+            }
+            if (context.attemptHistory.attemptCount() >= config.maxAttempts) {
+                logger.info(
+                    "BPMN refinement subprocess reached max attempts ({}); reusing last result for consolidation",
+                    config.maxAttempts,
+                )
+                return previousAttempt
+            }
+            if (feedback.repairPrompt.isBlank()) {
+                logger.warn("BPMN refinement feedback had no repair prompt; reusing last attempt")
+                return previousAttempt
+            }
+            logger.info(
+                "BPMN refinement subprocess attempt {} of {}",
+                context.attemptHistory.attemptCount() + 1,
+                config.maxAttempts,
+            )
+            val (correctedDefinition, updatedMessages) = requestCorrection(
+                promptRunner(repairContext, request),
+                previousAttempt.messages.toMutableList(),
+                feedback.repairPrompt,
+            )
+            val rendered = try {
+                bpmnConverter.render(correctedDefinition)
+            } catch (e: Exception) {
+                return evaluateCandidate(
+                    definition = correctedDefinition,
+                    rendered = null,
+                    messages = updatedMessages,
+                    renderFailureMessage = e.message ?: e.javaClass.simpleName,
+                )
+            }
+
+            evaluateCandidate(
+                definition = correctedDefinition,
+                rendered = rendered,
+                messages = updatedMessages,
+            )
+        }
+    }
+
+    private fun evaluateRefinementAttempt(attempt: BpmnRefinementAttempt): BpmnRefinementFeedback {
+        if (attempt.diagnostics.isNotEmpty()) {
+            renderedDiagnostics("Refinement workflow", attempt.diagnostics)
+        }
+
+        val acceptable = attempt.diagnostics.isEmpty()
+        return BpmnRefinementFeedback(
+            score = if (acceptable) 1.0 else 0.0,
+            acceptable = acceptable,
+            diagnostics = attempt.diagnostics,
+            repairPrompt = if (acceptable) "" else {
+                buildRepairFeedback(
+                    definition = attempt.definition,
+                    renderedXml = attempt.rendered?.xml ?: renderFailureContext(attempt),
+                    diagnostics = attempt.diagnostics,
+                )
+            },
+        )
+    }
+
+    private fun evaluateCandidate(
+        definition: BpmnDefinition,
+        rendered: RenderedBpmn?,
+        messages: List<Message>,
+        renderFailureMessage: String? = null,
+    ): BpmnRefinementAttempt {
+        logger.debug("Refinement candidate BPMN definition:\n{}", serializeDefinition(definition))
+        if (rendered != null) {
+            logger.info("Generated BPMN XML from typed object, length={}", rendered.xml.length)
+            logger.debug("Generated XML:\n{}", rendered.xml)
+        }
+
+        val diagnostics = mutableListOf<BpmnDiagnostic>()
+        diagnostics.addAll(
+            BpmnDefinitionValidator.validate(definition).map {
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.GRAPH,
+                    message = it,
+                )
+            }
+        )
+
+        if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
+            if (renderFailureMessage != null || rendered == null) {
+                diagnostics.add(
+                    BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.RENDER,
+                        message = renderFailureMessage ?: "Unknown BPMN rendering error",
+                    )
+                )
+            } else {
+                diagnostics.addAll(normalizeXsdDiagnostics(rendered))
+                if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
+                    logger.info("XSD validation passed")
+                    val lintIssues = bpmnLintService.lint(rendered.xml)
+                    if (lintIssues == null) {
+                        logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
+                    } else {
+                        diagnostics.addAll(normalizeLintDiagnostics(lintIssues, rendered.elementIndex))
+                    }
+                }
+            }
+        }
+
+        return BpmnRefinementAttempt(
+            definition = definition,
+            rendered = rendered,
+            diagnostics = diagnostics,
+            validatedXml = if (diagnostics.isEmpty()) rendered?.xml else null,
+            messages = messages,
+            renderFailureMessage = renderFailureMessage,
+        )
+    }
+
+    private fun initialMessages(
+        request: BpmnRequest,
+        definition: BpmnDefinition,
+    ): List<Message> = listOf(
+        UserMessage(buildGenerationPrompt(request)),
+        AssistantMessage(serializeDefinition(definition)),
+    )
+
+    private fun renderFailureContext(attempt: BpmnRefinementAttempt): String =
+        buildString {
+            appendLine("<render failed>")
+            attempt.renderFailureMessage?.let { appendLine(it) }
         }
 
     private fun buildRepairFeedback(
@@ -322,3 +423,26 @@ class BpmnGeneratorAgent(
         }
     }
 }
+
+private data class BpmnRefinementAttempt(
+    val definition: BpmnDefinition,
+    val rendered: RenderedBpmn?,
+    val diagnostics: List<BpmnDiagnostic>,
+    val validatedXml: String?,
+    val messages: List<Message>,
+    val renderFailureMessage: String? = null,
+) {
+    fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
+
+    fun toValidatedBpmnXml(): ValidatedBpmnXml = ValidatedBpmnXml(
+        xml = validatedXml ?: error("No validated BPMN XML available"),
+        diagnostics = diagnostics,
+    )
+}
+
+private data class BpmnRefinementFeedback(
+    override val score: Double,
+    val acceptable: Boolean,
+    val diagnostics: List<BpmnDiagnostic>,
+    val repairPrompt: String,
+) : Feedback

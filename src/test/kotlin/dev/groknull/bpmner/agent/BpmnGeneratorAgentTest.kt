@@ -1,8 +1,18 @@
 package dev.groknull.bpmner.agent
 
+import com.embabel.agent.api.common.ActionContext
+import com.embabel.agent.api.common.ContextualPromptElement
+import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.test.unit.FakeOperationContext
+import com.embabel.agent.api.tool.ToolObject
+import com.embabel.agent.core.Action
+import com.embabel.agent.core.ToolGroupRequirement
+import com.embabel.common.ai.model.LlmOptions
+import com.embabel.common.ai.prompt.PromptContributor
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BpmnGeneratorAgentTest {
@@ -16,7 +26,7 @@ class BpmnGeneratorAgentTest {
         val definition = validDefinition()
         val rendered = converter.render(definition)
 
-        val result = agent.validateAndRefineBpmn(BpmnRequest("Make toast"), rendered, FakeOperationContext())
+        val result = agent.validateAndRefineBpmn(BpmnRequest("Make toast"), rendered, FakeActionContext())
 
         assertEquals(rendered.xml, result.xml)
         assertTrue(result.diagnostics.isEmpty())
@@ -38,7 +48,7 @@ class BpmnGeneratorAgentTest {
         )
         val converter = RecordingConverter()
         val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
-        val context = FakeOperationContext()
+        val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(invalid)
         val result = agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
@@ -69,7 +79,7 @@ class BpmnGeneratorAgentTest {
         val lintService = RecordingLintService(listOf(emptyList()))
         val converter = RecordingConverter()
         val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
-        val context = FakeOperationContext()
+        val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
 
@@ -83,6 +93,32 @@ class BpmnGeneratorAgentTest {
         assertTrue(repairPrompt.contains("source=xsd"))
         assertTrue(repairPrompt.contains("elementId=Task_1"))
         assertTrue(repairPrompt.contains("objectRef=nodes[id=Task_1]"))
+    }
+
+    @Test
+    fun `workflow refinement still fails after configured max attempts`() {
+        val initial = validDefinition()
+        val corrected = validDefinition(processName = "Make toast again")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(
+            listOf(
+                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
+                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Still missing start event")),
+            )
+        )
+        val converter = RecordingConverter()
+        val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 2), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        context.expectResponse(corrected)
+        val initialRendered = converter.render(initial)
+
+        val error = assertFailsWith<IllegalStateException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+        }
+
+        assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
+        assertEquals(2, xsdValidator.xmls.size)
+        assertEquals(2, lintService.xmls.size)
     }
 
     private class RecordingLintService(
@@ -116,6 +152,39 @@ class BpmnGeneratorAgentTest {
             renderCalls += 1
             return super.render(definition)
         }
+    }
+
+    private class FakeActionContext(
+        private val delegate: FakeOperationContext = FakeOperationContext(),
+    ) : ActionContext, OperationContext by delegate {
+        override val processContext = delegate.processContext
+        override val action: Action? = null
+        override val toolGroups: Set<ToolGroupRequirement>
+            get() = delegate.toolGroups
+        override val operation = delegate.operation
+
+        val llmInvocations
+            get() = delegate.llmInvocations
+
+        fun expectResponse(response: Any) {
+            delegate.expectResponse(response)
+        }
+
+        override fun promptRunner(
+            llm: LlmOptions,
+            toolGroups: Set<ToolGroupRequirement>,
+            toolObjects: List<ToolObject>,
+            promptContributors: List<PromptContributor>,
+            contextualPromptContributors: List<ContextualPromptElement>,
+            generateExamples: Boolean,
+        ): PromptRunner = delegate.promptRunner(
+            llm = llm,
+            toolGroups = toolGroups,
+            toolObjects = toolObjects,
+            promptContributors = promptContributors,
+            contextualPromptContributors = contextualPromptContributors,
+            generateExamples = generateExamples,
+        )
     }
 
     private fun validDefinition(
