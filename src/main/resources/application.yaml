@@ -5,12 +5,17 @@ spring:
     web-application-type: none
 
 embabel:
-  models:
-    default-llm: claude-sonnet-4-0
+  agent:
+    platform:
+      models:
+        default-llm: "gpt-4o"
+        openai:
+          base-url: "https://models.github.ai/inference"
+          api-key: ${GITHUB_TOKEN}
 
 bpmner:
   max-attempts: 8
-  model: claude-sonnet-4-0
+  model: "gpt-4o"
 
 logging:
   pattern:
