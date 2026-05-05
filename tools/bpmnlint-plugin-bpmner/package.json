@@ -2,7 +2,7 @@
   "name": "bpmnlint-plugin-bpmner",
   "version": "0.1.0",
   "private": true,
-  "description": "BPMNER custom bpmnlint rules (Phase 1 deterministic set)",
+  "description": "BPMNER bpmnlint rules",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
