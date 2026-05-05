@@ -17,12 +17,28 @@ import kotlin.test.assertTrue
 
 class BpmnGeneratorAgentTest {
 
+    private fun buildAgent(
+        config: BpmnConfig,
+        lintService: BpmnLintService,
+        xsdValidator: BpmnXsdValidator,
+        converter: BpmnDefinitionToXmlConverter,
+    ): BpmnGeneratorAgent {
+        val workflow = BpmnRefinementWorkflow(
+            config = config,
+            bpmnLintService = lintService,
+            bpmnXsdValidator = xsdValidator,
+            bpmnConverter = converter,
+            bpmnDefinitionValidator = BpmnDefinitionValidator(),
+        )
+        return BpmnGeneratorAgent(config, converter, workflow)
+    }
+
     @Test
     fun `valid rendered bpmn passes straight through to validated xml`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
         val lintService = RecordingLintService(listOf(emptyList()))
         val converter = RecordingConverter()
-        val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val definition = validDefinition()
         val rendered = converter.render(definition)
 
@@ -47,7 +63,7 @@ class BpmnGeneratorAgentTest {
             )
         )
         val converter = RecordingConverter()
-        val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(invalid)
@@ -78,7 +94,7 @@ class BpmnGeneratorAgentTest {
         )
         val lintService = RecordingLintService(listOf(emptyList()))
         val converter = RecordingConverter()
-        val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
@@ -107,7 +123,7 @@ class BpmnGeneratorAgentTest {
             )
         )
         val converter = RecordingConverter()
-        val agent = BpmnGeneratorAgent(BpmnConfig(maxAttempts = 2), lintService, xsdValidator, converter)
+        val agent = buildAgent(BpmnConfig(maxAttempts = 2), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
@@ -205,23 +221,6 @@ class BpmnGeneratorAgentTest {
                 "Task_1",
                 waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
             ),
-            BpmnEdge(
-                "Flow_2",
-                "Task_1",
-                "EndEvent_1",
-                waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
-            ),
-        ),
-    )
-
-    private fun definitionWithoutStartEvent() = BpmnDefinition(
-        processId = "Process_MakeToast_Invalid",
-        processName = "Make toast",
-        nodes = listOf(
-            BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-            BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
             BpmnEdge(
                 "Flow_2",
                 "Task_1",
