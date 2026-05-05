@@ -20,7 +20,7 @@ class BpmnLintService {
 
     @PostConstruct
     fun init() {
-        logger.info("bpmn-lint configured to run via npx")
+        logger.debug("bpmn-lint configured to run via npx")
     }
 
     /**

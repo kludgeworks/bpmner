@@ -8,6 +8,8 @@ import dev.groknull.bpmner.agent.BpmnResult
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
+import org.springframework.boot.ansi.AnsiColor
+import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.stereotype.Component
 import java.io.File
 
@@ -27,7 +29,7 @@ class BpmnGeneratorRunner(
     private val logger = LoggerFactory.getLogger(BpmnGeneratorRunner::class.java)
 
     override fun run(args: ApplicationArguments) {
-        logger.info("Runner invoked with option names: {}", args.optionNames)
+        logger.debug("Runner invoked with option names: {}", args.optionNames)
 
         val description = args.getOptionValues("process")?.firstOrNull()
             ?: args.getOptionValues("process-file")?.firstOrNull()
@@ -73,6 +75,6 @@ class BpmnGeneratorRunner(
             result.outputFile,
             result.xml.length,
         )
-        println("✨ Done! BPMN written to: ${result.outputFile}")
+        println(AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}"))
     }
 }
