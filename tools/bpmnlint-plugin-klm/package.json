@@ -1,0 +1,28 @@
+{
+  "name": "bpmnlint-plugin-klm",
+  "version": "0.1.0",
+  "private": true,
+  "description": "KLM custom bpmnlint rules (Phase 1 deterministic set)",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsx --test test/**/*.test.ts",
+    "test:watch": "tsx --watch --test test/**/*.test.ts"
+  },
+  "keywords": [
+    "bpmn",
+    "bpmnlint",
+    "plugin",
+    "klm"
+  ],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "bpmn-moddle": "^9.0.4",
+    "bpmnlint": "^11.12.1",
+    "bpmnlint-utils": "^1.1.1",
+    "@types/node": "^22.15.17",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
