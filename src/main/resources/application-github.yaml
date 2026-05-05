@@ -1,0 +1,11 @@
+embabel:
+  agent:
+    platform:
+      models:
+        default-llm: "gpt-4o"
+        openai:
+          base-url: "https://models.github.ai/inference"
+          api-key: ${GITHUB_TOKEN}
+
+bpmner:
+  model: "gpt-4o"
