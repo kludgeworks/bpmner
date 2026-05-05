@@ -1,5 +1,7 @@
 package dev.groknull.bpmner.agent
 
+import com.fasterxml.jackson.annotation.JsonAnySetter
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -59,8 +61,10 @@ class BpmnLintService {
             throw RuntimeException(output.trim().ifBlank { "node exited with code $exitCode" })
         }
 
-        return objectMapper.readValue(output)
+        return parseIssues(output)
     }
+
+    internal fun parseIssues(json: String): List<LintIssue> = objectMapper.readValue(json)
 
     fun destroy() {
         // Retained for test compatibility; npx execution has no local resources to clean up.
@@ -98,9 +102,11 @@ class BpmnLintService {
             for (const [ rule, reports ] of Object.entries(result || {})) {
               for (const item of reports || []) {
                 issues.push({
+                  id: item.id || item.elementId || item.node?.id || null,
                   rule,
                   message: item.message,
-                  category: item.category || 'error'
+                  category: item.category || 'error',
+                  ...(item || {})
                 });
               }
             }
@@ -113,7 +119,22 @@ class BpmnLintService {
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class LintIssue(
+    val id: String? = null,
     val rule: String,
     val message: String,
     val category: String = "error",
-)
+) {
+    @get:JsonIgnore
+    val rawFields: MutableMap<String, Any?> = linkedMapOf()
+
+    @JsonAnySetter
+    fun captureUnknownField(name: String, value: Any?) {
+        if (name !in KNOWN_FIELDS) {
+            rawFields[name] = value
+        }
+    }
+
+    companion object {
+        private val KNOWN_FIELDS = setOf("id", "rule", "message", "category")
+    }
+}

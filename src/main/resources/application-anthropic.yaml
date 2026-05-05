@@ -1,3 +1,8 @@
+spring:
+  autoconfigure:
+    exclude:
+      - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
+
 embabel:
   models:
     default-llm: claude-sonnet-4-0
