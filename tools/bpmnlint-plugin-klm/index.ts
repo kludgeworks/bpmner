@@ -19,8 +19,14 @@ const plugin = {
         'data-01-no-type-words-in-data-name': 'error',
         'name-03-no-element-type-words': 'error',
         'act-01-verb-object-name': 'warn',
+        'act-02-activity-label-capitalization': 'warn',
         'gtw-01-diverging-gateway-question': 'warn',
+        'gtw-02-converging-gateway-unnamed': 'warn',
+        'evt-13-intermediate-event-not-action': 'warn',
+        'flow-02-diverging-flow-outcome-label': 'warn',
         'msg-02-message-flow-name-pattern': 'warn'
+        ,
+        'name-02-uncommon-abbreviations': 'warn'
       }
     }
   },
@@ -41,8 +47,13 @@ const plugin = {
     'data-01-no-type-words-in-data-name': './rules/data-01-no-type-words-in-data-name',
     'name-03-no-element-type-words': './rules/name-03-no-element-type-words',
     'act-01-verb-object-name': './rules/act-01-verb-object-name',
+    'act-02-activity-label-capitalization': './rules/act-02-activity-label-capitalization',
     'gtw-01-diverging-gateway-question': './rules/gtw-01-diverging-gateway-question',
-    'msg-02-message-flow-name-pattern': './rules/msg-02-message-flow-name-pattern'
+    'gtw-02-converging-gateway-unnamed': './rules/gtw-02-converging-gateway-unnamed',
+    'evt-13-intermediate-event-not-action': './rules/evt-13-intermediate-event-not-action',
+    'flow-02-diverging-flow-outcome-label': './rules/flow-02-diverging-flow-outcome-label',
+    'msg-02-message-flow-name-pattern': './rules/msg-02-message-flow-name-pattern',
+    'name-02-uncommon-abbreviations': './rules/name-02-uncommon-abbreviations'
   }
 };
 

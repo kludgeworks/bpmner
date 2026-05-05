@@ -21,6 +21,14 @@ test('ACT-01 accepts uppercase leading verb labels', async () => {
   assert.equal(hasRule(results, 'act-01-verb-object-name'), false);
 });
 
+test('ACT-02 warns on non-sentence-case activity labels', async () => {
+  const invalid = await lint(phase2Fixtures.act02Invalid);
+  const valid = await lint(phase2Fixtures.act02Valid);
+
+  assert.equal(hasRule(invalid, 'act-02-activity-label-capitalization'), true);
+  assert.equal(hasRule(valid, 'act-02-activity-label-capitalization'), false);
+});
+
 test('GTW-01 warns when diverging gateway label is not a question', async () => {
   const invalid = await lint(phase2Fixtures.gtw01Invalid);
   const valid = await lint(phase2Fixtures.gtw01Valid);
@@ -29,6 +37,30 @@ test('GTW-01 warns when diverging gateway label is not a question', async () => 
   assert.equal(hasRule(invalid, 'gtw-01-diverging-gateway-question'), true);
   assert.equal(hasRule(valid, 'gtw-01-diverging-gateway-question'), false);
   assert.equal(hasRule(validNoQuestionMark, 'gtw-01-diverging-gateway-question'), false);
+});
+
+test('GTW-02 warns when converging gateway has a label', async () => {
+  const invalid = await lint(phase2Fixtures.gtw02Invalid);
+  const valid = await lint(phase2Fixtures.gtw02Valid);
+
+  assert.equal(hasRule(invalid, 'gtw-02-converging-gateway-unnamed'), true);
+  assert.equal(hasRule(valid, 'gtw-02-converging-gateway-unnamed'), false);
+});
+
+test('FLOW-02 warns when diverging gateway outcome flow is unnamed', async () => {
+  const invalid = await lint(phase2Fixtures.flow02Invalid);
+  const valid = await lint(phase2Fixtures.flow02Valid);
+
+  assert.equal(hasRule(invalid, 'flow-02-diverging-flow-outcome-label'), true);
+  assert.equal(hasRule(valid, 'flow-02-diverging-flow-outcome-label'), false);
+});
+
+test('EVT-13 warns when intermediate event label is action-style', async () => {
+  const invalid = await lint(phase2Fixtures.evt13Invalid);
+  const valid = await lint(phase2Fixtures.evt13Valid);
+
+  assert.equal(hasRule(invalid, 'evt-13-intermediate-event-not-action'), true);
+  assert.equal(hasRule(valid, 'evt-13-intermediate-event-not-action'), false);
 });
 
 test('MSG-02 warns on action-style message flow names', async () => {
@@ -47,4 +79,12 @@ test('MSG-02 warns on uppercase action-style message flow names', async () => {
 test('MSG-02 accepts noun-led names with past participle terms', async () => {
   const results = await lint(phase2Fixtures.msg02PastParticipleNounValid);
   assert.equal(hasRule(results, 'msg-02-message-flow-name-pattern'), false);
+});
+
+test('NAME-02 warns on uncommon abbreviations', async () => {
+  const invalid = await lint(phase2Fixtures.name02Invalid);
+  const valid = await lint(phase2Fixtures.name02Valid);
+
+  assert.equal(hasRule(invalid, 'name-02-uncommon-abbreviations'), true);
+  assert.equal(hasRule(valid, 'name-02-uncommon-abbreviations'), false);
 });
