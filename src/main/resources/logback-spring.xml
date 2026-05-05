@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <property name="CONSOLE_PATTERN"
-              value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{0} - %msg%n"/>
+              value="%clr(%d{HH:mm:ss.SSS}){faint} [%thread] %clr(%-5level){highlight} %clr(%logger{0}){cyan} - %msg%n"/>
     <property name="FILE_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
 
@@ -21,6 +21,8 @@
             <pattern>${FILE_PATTERN}</pattern>
         </encoder>
     </appender>
+
+    <logger name="dev.groknull.bpmner" level="DEBUG" additivity="true"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

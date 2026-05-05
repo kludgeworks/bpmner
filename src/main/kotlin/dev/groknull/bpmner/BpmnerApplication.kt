@@ -2,6 +2,8 @@ package dev.groknull.bpmner
 
 import com.embabel.agent.config.annotation.EnableAgents
 import org.springframework.boot.autoconfigure.SpringBootApplication
+import org.springframework.boot.ansi.AnsiColor
+import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
 import org.springframework.boot.runApplication
 import java.io.IOException
@@ -40,7 +42,7 @@ private fun configureLogFile() {
         val logFile = logDir.resolve("bpmner-$timestamp.log")
         System.setProperty("LOG_FILE", logFile.toString())
     } catch (e: IOException) {
-        System.err.println("Unable to configure bpmner log file: ${e.message}")
+        System.err.println(AnsiOutput.toString(AnsiColor.RED, "Unable to configure bpmner log file: ${e.message}"))
     }
 }
 
