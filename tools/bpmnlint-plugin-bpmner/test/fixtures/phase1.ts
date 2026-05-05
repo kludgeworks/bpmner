@@ -205,5 +205,17 @@ export const phase1Fixtures = {
   <bpmn:process id="Process_1">
     <bpmn:task id="Task_1" name="Review event" />
   </bpmn:process>
+</bpmn:definitions>`,
+  gen02DuplicateDiagram: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" 
+  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" 
+  id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1" />
+  <bpmndi:BPMNDiagram id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" />
+  </bpmndi:BPMNDiagram>
+  <bpmndi:BPMNDiagram id="Diagram_2">
+    <bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" />
+  </bpmndi:BPMNDiagram>
 </bpmn:definitions>`
 };

@@ -137,13 +137,20 @@ class BpmnDefinitionToXmlConverter {
         definitions: Definitions,
         process: Process,
     ): BpmnPlane {
-        val diagram = modelInstance.newInstance(BpmnDiagram::class.java)
+        val existingDiagram = modelInstance.getModelElementsByType(BpmnDiagram::class.java).firstOrNull()
+
+        val diagram = existingDiagram ?: modelInstance.newInstance(BpmnDiagram::class.java).also {
+            definitions.addChildElement(it)
+        }
         diagram.id = "${process.id}_diagram"
-        val plane = modelInstance.newInstance(BpmnPlane::class.java)
+
+        val existingPlane = diagram.bpmnPlane
+        val plane = existingPlane ?: modelInstance.newInstance(BpmnPlane::class.java).also {
+            diagram.bpmnPlane = it
+        }
         plane.id = "${process.id}_plane"
         plane.bpmnElement = process
-        diagram.bpmnPlane = plane
-        definitions.addChildElement(diagram)
+
         return plane
     }
 

@@ -63,4 +63,20 @@ class BpmnDefinitionToXmlConverterTest {
         assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3"))
         assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3_di"))
     }
+
+    @Test
+    fun `generated xml contains exactly one BPMNDiagram element`() {
+        val definition = BpmnDefinition(
+            processId = "test_process",
+            processName = "Test Process",
+            nodes = listOf(
+                BpmnNode("start", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0))
+            ),
+            sequences = emptyList()
+        )
+
+        val xml = converter.toXml(definition)
+        val diagramTagCount = xml.split("<bpmndi:BPMNDiagram").size - 1
+        assertEquals(1, diagramTagCount, "XML should contain exactly one <bpmndi:BPMNDiagram> tag")
+    }
 }
