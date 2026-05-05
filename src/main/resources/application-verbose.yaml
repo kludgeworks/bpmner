@@ -1,0 +1,6 @@
+logging:
+  pattern:
+    console: '%clr(%d{HH:mm:ss.SSS}){faint} %clr([%t]){magenta} %clr(%-5level) %clr(%logger{0}){cyan} %clr(-){faint} %msg%n'
+  level:
+    com.embabel.agent.core.ActionRunner: DEBUG
+    dev.groknull.bpmner: DEBUG

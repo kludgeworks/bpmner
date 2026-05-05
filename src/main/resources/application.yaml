@@ -3,23 +3,14 @@ spring:
     name: bpmner
   main:
     web-application-type: none
-
-embabel:
-  agent:
-    platform:
-      models:
-        default-llm: "gpt-4o"
-        openai:
-          base-url: "https://models.github.ai/inference"
-          api-key: ${GITHUB_TOKEN}
+  profiles:
+    group:
+      anth:
+        - anthropic
+        - verbose
+      gh:
+        - github
+        - verbose
 
 bpmner:
-  max-attempts: 8
-  model: "gpt-4o"
-
-logging:
-  pattern:
-    console: '%clr(%d{HH:mm:ss.SSS}){faint} %clr([%t]){magenta} %clr(%-5level) %clr(%logger{0}){cyan} %clr(-){faint} %msg%n'
-  level:
-    com.embabel.agent.core.ActionRunner: DEBUG
-    dev.groknull.bpmner: DEBUG
+  max-attempts: 5
