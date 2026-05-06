@@ -61,6 +61,9 @@ Key properties in `src/main/resources/application.yaml`:
 | Property | Default | Description |
 |----------|---------|-------------|
 | `bpmner.max-attempts` | `5` | Maximum LLM correction rounds |
+| `bpmner.logging.dir` | `logs` | Directory for per-run timestamped log files |
+| `bpmner.logging.file` | (unset) | Optional explicit full log file path override |
+| `bpmner.logging.dump-artifacts` | `false` | Emit truncated outline/definition/XML artifact snapshots in debug logs |
 | `bpmner.model` | (auto) | Override the LLM model name |
 
 Profile configs live in `application-anthropic.yaml` and `application-github.yaml`.
