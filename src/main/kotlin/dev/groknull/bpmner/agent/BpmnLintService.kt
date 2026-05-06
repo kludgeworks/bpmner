@@ -9,126 +9,118 @@ import jakarta.annotation.PostConstruct
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
+import org.graalvm.polyglot.Context
+import org.graalvm.polyglot.HostAccess
+import org.graalvm.polyglot.Source
+import org.graalvm.polyglot.Value
+import org.springframework.core.io.ClassPathResource
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+import java.util.function.Consumer
+
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+
+@ConfigurationProperties("bpmner.lint")
+data class BpmnLintProperties(
+    val rules: Map<String, String> = emptyMap()
+)
+
 /**
- * Runs bpmn-lint through npx using the upstream Node.js packages directly.
+ * Runs bpmn-lint in-process using GraalJS and a bundled version of the KLM rules.
  */
 @Service
-class BpmnLintService {
+@EnableConfigurationProperties(BpmnLintProperties::class)
+class BpmnLintService(
+    private val properties: BpmnLintProperties = BpmnLintProperties()
+) {
 
     private val logger = LoggerFactory.getLogger(BpmnLintService::class.java)
     private val objectMapper = jacksonObjectMapper()
+    private var jsContext: Context? = null
+    private var linterApi: Value? = null
 
     @PostConstruct
     fun init() {
-        logger.debug("bpmn-lint configured to run via npx")
+        try {
+            logger.info("Initializing GraalJS bpmn-lint context...")
+            jsContext = Context.newBuilder("js")
+                .allowHostAccess(HostAccess.ALL)
+                .allowHostClassLookup { className ->
+                    className == "java.util.Base64" ||
+                        className == "java.lang.String" ||
+                        className == "java.nio.charset.StandardCharsets" ||
+                        className == "java.util.function.Consumer"
+                }
+                .build()
+
+            val bundleResource = ClassPathResource("js/bpmnlint-bundle.js")
+            if (!bundleResource.exists()) {
+                logger.warn("bpmnlint-bundle.js not found on classpath. Linting will be unavailable until the project is built.")
+                return
+            }
+
+            val bundleSource = Source.newBuilder("js", bundleResource.url).build()
+            jsContext?.eval(bundleSource)
+            val api = jsContext?.getBindings("js")?.getMember("BpmnLinterApi")
+            linterApi = api
+            
+            if (api != null) {
+                val defaultRules = api.getMember("getRules").execute().`as`(Map::class.java) as Map<String, String>
+                val activeRules = defaultRules + properties.rules
+                logger.info("GraalJS bpmn-lint context initialized. Active rules: {}", activeRules.keys.sorted().joinToString(", "))
+                logger.debug("Rule levels: {}", activeRules)
+            }
+        } catch (e: Exception) {
+            logger.error("Failed to initialize GraalJS bpmn-lint context", e)
+        }
     }
 
     /**
      * Validates [bpmnXml] with bpmn-lint.
-     *
-     * Returns a non-empty list of issues when the diagram has problems,
-     * an empty list when it passes, or null when bpmnlint execution is unavailable.
      */
     fun lint(bpmnXml: String): List<LintIssue>? {
-        logger.debug("Starting bpmn-lint validation via npx. xmlLength={}", bpmnXml.length)
+        val api = linterApi ?: return null
+        logger.debug("Starting in-process bpmn-lint validation. xmlLength={}", bpmnXml.length)
+        
         return try {
-            val issues = runLintWithNpx(bpmnXml)
-            logger.debug("bpmn-lint completed. issueCount={}", issues.size)
-            issues
+            val future = CompletableFuture<String>()
+            val promise = api.getMember("lintXml").execute(bpmnXml, properties.rules)
+            
+            promise.invokeMember("then", Consumer<String> { result ->
+                future.complete(result)
+            })
+            
+            val json = future.get(10, TimeUnit.SECONDS)
+            parseIssues(json)
         } catch (e: Exception) {
             logger.warn("bpmn-lint execution error: {}", e.message)
             null
         }
     }
 
-    private fun runLintWithNpx(bpmnXml: String): List<LintIssue> {
-        val process = ProcessBuilder(
-            "npx",
-            "--yes",
-            "--package=bpmnlint@$BPMNLINT_VERSION",
-            "-c",
-            "BPMNLINT_PACKAGE_JSON=\"\$(dirname \"\$(command -v bpmnlint)\")/../bpmnlint/package.json\" " +
-                "node --input-type=module --eval \"$ESCAPED_NODE_LINT_SCRIPT\""
-        )
-            .redirectErrorStream(true)
-            .start()
-
-        process.outputStream.bufferedWriter().use { it.write(bpmnXml) }
-
-        val output = process.inputStream.bufferedReader().readText()
-        val exitCode = process.waitFor()
-        if (exitCode != 0) {
-            throw RuntimeException(output.trim().ifBlank { "node exited with code $exitCode" })
-        }
-
-        return parseIssues(output)
-    }
-
     internal fun parseIssues(json: String): List<LintIssue> = objectMapper.readValue(json)
 
     fun destroy() {
-        // Retained for test compatibility; npx execution has no local resources to clean up.
+        jsContext?.close()
     }
 
     companion object {
         private const val BPMNLINT_VERSION = "11.12.1"
-
-        private val NODE_LINT_SCRIPT = """
-            import { createRequire } from 'node:module';
-            import { readFileSync } from 'node:fs';
-
-            const xml = readFileSync(0, 'utf8');
-            const require = createRequire(process.env.BPMNLINT_PACKAGE_JSON);
-
-            const bpmnlintModule = require('bpmnlint');
-            const Linter = bpmnlintModule.Linter || bpmnlintModule.default || bpmnlintModule;
-
-            const nodeResolverModule = require('bpmnlint/lib/resolver/node-resolver');
-            const NodeResolver = nodeResolverModule.default || nodeResolverModule;
-
-            const { BpmnModdle } = require('bpmn-moddle');
-
-            const moddle = new BpmnModdle();
-            const parsed = await moddle.fromXML(xml);
-
-            const linter = new Linter({
-              config: { extends: 'bpmnlint:recommended' },
-              resolver: new NodeResolver()
-            });
-
-            const result = await linter.lint(parsed.rootElement);
-            const issues = [];
-
-            for (const [ rule, reports ] of Object.entries(result || {})) {
-              for (const item of reports || []) {
-                issues.push({
-                  id: item.id || item.elementId || item.node?.id || null,
-                  rule,
-                  message: item.message,
-                  category: item.category || 'error',
-                  ...(item || {})
-                });
-              }
-            }
-
-            process.stdout.write(JSON.stringify(issues));
-        """.trimIndent()
-        private val ESCAPED_NODE_LINT_SCRIPT = NODE_LINT_SCRIPT.replace("\\", "\\\\").replace("\"", "\\\"")
     }
 }
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class LintIssue(
-    val id: String? = null,
+    val id: String?,
     val rule: String,
     val message: String,
     val category: String = "error",
+    @JsonIgnore
+    val rawFields: MutableMap<String, Any?> = mutableMapOf()
 ) {
-    @get:JsonIgnore
-    val rawFields: MutableMap<String, Any?> = linkedMapOf()
-
     @JsonAnySetter
-    fun captureUnknownField(name: String, value: Any?) {
+    fun add(name: String, value: Any?) {
         if (name !in KNOWN_FIELDS) {
             rawFields[name] = value
         }
