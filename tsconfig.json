@@ -10,6 +10,7 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": ".",
+    "baseUrl": ".",
     "types": ["node"]
   },
   "include": ["index.ts", "rules/**/*.ts", "test/**/*.ts", "types/**/*.d.ts"]

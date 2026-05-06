@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+
     <property name="CONSOLE_PATTERN"
               value="%clr(%d{HH:mm:ss.SSS}){faint} [%thread] %clr(%-5level){highlight} %clr(%logger{0}){cyan} - %msg%n"/>
     <property name="FILE_PATTERN"

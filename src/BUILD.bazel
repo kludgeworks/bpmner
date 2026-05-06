@@ -1,0 +1,71 @@
+load("@rules_java//java:defs.bzl", "java_library")
+load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_spring//springboot:springboot.bzl", "springboot")
+
+package(default_visibility = ["//visibility:public"])
+
+# Kotlin Compiler Plugins
+kt_compiler_plugin(
+    name = "allopen_base",
+    id = "org.jetbrains.kotlin.allopen",
+    deps = ["@rules_kotlin//kotlin/compiler:allopen-compiler-plugin"],
+)
+
+SPRING_OPEN_ANNOTATIONS = [
+    "org.springframework.stereotype.Component",
+    "org.springframework.transaction.annotation.Transactional",
+    "org.springframework.scheduling.annotation.Async",
+    "org.springframework.cache.annotation.Cacheable",
+    "org.springframework.boot.test.context.SpringBootTest",
+    "org.springframework.validation.annotation.Validated",
+]
+
+[kt_plugin_cfg(
+    name = "allopen_" + a.split(".")[-1].lower(),
+    options = {"annotation": [a]},
+    plugin = ":allopen_base",
+) for a in SPRING_OPEN_ANNOTATIONS]
+
+# Wrap the JS bundle in a java_library to handle resource path stripping.
+# This ensures it ends up at /js/bpmnlint-bundle.js on the classpath.
+java_library(
+    name = "linter_bundle_res",
+    resource_strip_prefix = "linter/dist",
+    resources = ["//linter:bundle"],
+)
+
+filegroup(
+    name = "bazelrun_samples",
+    srcs = [
+        "//:toast-process.txt",
+    ],
+)
+
+kt_jvm_library(
+    name = "bpmner_core",
+    srcs = glob(["main/kotlin/**/*.kt"]),
+    plugins = [":allopen_" + a.split(".")[-1].lower() for a in SPRING_OPEN_ANNOTATIONS],
+    resources = glob(["main/resources/**"]),
+    deps = [
+        ":linter_bundle_res",
+        "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
+        "@maven//:com_embabel_agent_embabel_agent_starter_openai",
+        "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
+        "@maven//:org_graalvm_polyglot_js",
+        "@maven//:org_graalvm_polyglot_polyglot",
+        "@maven//:org_jetbrains_kotlin_kotlin_reflect",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_springframework_boot_spring_boot_loader",
+        "@maven//:org_springframework_boot_spring_boot_starter",
+        "@rules_java//java/runfiles",
+    ],
+)
+
+springboot(
+    name = "bpmner_app",
+    bazelrun_data = [":bazelrun_samples"],
+    boot_app_class = "dev.groknull.bpmner.BpmnerApplicationKt",
+    boot_launcher_class = "org.springframework.boot.loader.launch.JarLauncher",
+    java_library = ":bpmner_core",
+)

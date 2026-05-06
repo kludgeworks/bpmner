@@ -16,6 +16,7 @@ import kotlin.io.path.extension
 import kotlin.io.path.fileSize
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.name
+import kotlin.streams.asSequence
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
@@ -37,7 +38,6 @@ private fun configureLogFile() {
     try {
         logDir.createDirectories()
         pruneOldLogFiles(logDir, keep = 10)
-
         val timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss-SSS"))
         val logFile = logDir.resolve("bpmner-$timestamp.log")
         System.setProperty("LOG_FILE", logFile.toString())
@@ -49,14 +49,16 @@ private fun configureLogFile() {
 private fun pruneOldLogFiles(logDir: Path, keep: Int) {
     Files.list(logDir).use { paths ->
         paths
+            .asSequence()
             .filter { path ->
                 path.isRegularFile() &&
                     path.extension == "log" &&
                     path.name.startsWith("bpmner-")
             }
-            .sorted(compareBy<Path> { it.name })
+            .sortedBy { it.name }
             .toList()
             .dropLast(keep)
             .forEach { Files.deleteIfExists(it) }
     }
 }
+

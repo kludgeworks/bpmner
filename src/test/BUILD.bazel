@@ -1,0 +1,61 @@
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_shell//shell:sh_test.bzl", "sh_test")
+
+package(default_visibility = ["//visibility:public"])
+
+sh_test(
+    name = "bpmnerAppJarStructureTest",
+    srcs = ["jar_structure_test.sh"],
+    args = ["$(location //src:bpmner_app.jar)"],
+    data = ["//src:bpmner_app.jar"],
+)
+
+sh_test(
+    name = "bpmnerAppRunfilesDataTest",
+    srcs = ["runfiles_data_test.sh"],
+    args = ["$(location //src:bpmner_app)"],
+    data = ["//src:bpmner_app"],
+)
+
+SPRING_OPEN_ANNOTATIONS = [
+    "org.springframework.stereotype.Component",
+    "org.springframework.transaction.annotation.Transactional",
+    "org.springframework.scheduling.annotation.Async",
+    "org.springframework.cache.annotation.Cacheable",
+    "org.springframework.boot.test.context.SpringBootTest",
+    "org.springframework.validation.annotation.Validated",
+]
+
+kt_jvm_library(
+    name = "bpmner_tests_lib",
+    srcs = glob(["kotlin/**/*.kt"]),
+    associates = ["//src:bpmner_core"],
+    plugins = ["//src:allopen_" + a.split(".")[-1].lower() for a in SPRING_OPEN_ANNOTATIONS],
+    resources = glob(["resources/**"]),
+    deps = [
+        "@maven//:com_embabel_agent_embabel_agent_test",
+        "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
+        "@maven//:org_graalvm_polyglot_js",
+        "@maven//:org_graalvm_polyglot_polyglot",
+        "@maven//:org_jetbrains_kotlin_kotlin_reflect",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
+        "@maven//:org_springframework_boot_spring_boot_starter_test",
+        "@rules_java//java/runfiles",
+    ],
+)
+
+TEST_FILES = glob(["kotlin/**/*Test.kt"])
+
+[java_junit5_test(
+    name = f.split("/")[-1].replace(".kt", ""),
+    tags = ["integration"] if "IntegrationTest" in f else [],
+    test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    runtime_deps = [
+        ":bpmner_tests_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+) for f in TEST_FILES]
