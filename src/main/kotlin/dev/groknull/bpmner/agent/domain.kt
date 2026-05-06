@@ -81,12 +81,95 @@ data class BpmnDefinition(
     val sequences: List<BpmnEdge>,
 )
 
+@JsonClassDescription("High-level process outline used as the first staged BPMN artifact")
+data class ProcessOutline(
+    val request: BpmnRequest,
+    @field:Valid
+    val definition: BpmnDefinition,
+    @field:Valid
+    val metrics: OutlineMetrics,
+)
+
+data class OutlineMetrics(
+    val phaseCount: Int,
+    val branchCount: Int,
+    val loopCount: Int,
+    val subprocessCount: Int,
+)
+
+data class ValidatedOutline(
+    val outline: ProcessOutline,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+) {
+    val definition: BpmnDefinition
+        get() = outline.definition
+}
+
+data class PhasePlan(
+    val phaseId: String,
+    val ownerRef: String,
+    @field:Valid
+    val definition: BpmnDefinition,
+)
+
+data class PhasePlanSet(
+    val outline: ValidatedOutline,
+    val phasePlans: List<PhasePlan>,
+)
+
+data class ValidatedPhasePlan(
+    val phaseId: String,
+    val ownerRef: String,
+    @field:Valid
+    val definition: BpmnDefinition,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+)
+
+data class ValidatedPhasePlanSet(
+    val outline: ValidatedOutline,
+    val phasePlans: List<ValidatedPhasePlan>,
+) {
+    val definition: BpmnDefinition
+        get() = phasePlans.single().definition
+}
+
+data class ComposedProcessGraph(
+    val outline: ValidatedOutline,
+    @field:Valid
+    val definition: BpmnDefinition,
+    val objectOwnersByObjectRef: Map<String, String>,
+)
+
+data class OwnedElementGraph(
+    val composedGraph: ComposedProcessGraph,
+    val elementOwnersByElementId: Map<String, String>,
+    val objectOwnersByObjectRef: Map<String, String>,
+) {
+    val definition: BpmnDefinition
+        get() = composedGraph.definition
+
+    fun ownerForElementId(elementId: String?): String? = elementOwnersByElementId[elementId]
+
+    fun ownerForObjectRef(objectRef: String?): String? = objectOwnersByObjectRef[objectRef]
+}
+
+data class LaidOutProcessGraph(
+    val ownedGraph: OwnedElementGraph,
+    @field:Valid
+    val definition: BpmnDefinition,
+) {
+    fun ownerForElementId(elementId: String?): String? = ownedGraph.ownerForElementId(elementId)
+
+    fun ownerForObjectRef(objectRef: String?): String? = ownedGraph.ownerForObjectRef(objectRef)
+}
+
 @JsonClassDescription("Rendered BPMN XML with a stable index mapping XML elements back to the typed definition")
 data class RenderedBpmn(
     val definition: BpmnDefinition,
     val xml: String,
     @field:Valid
     val elementIndex: BpmnElementIndex,
+    val sourceGraph: LaidOutProcessGraph? = null,
 )
 
 @JsonClassDescription("BPMN node with semantic type and fixed diagram bounds")
@@ -203,6 +286,14 @@ enum class BpmnDiagnosticSource {
     LINT,
 }
 
+enum class BpmnRepairScope {
+    OUTLINE,
+    PHASE,
+    COMPOSITION,
+    LAYOUT,
+    FULL_PROCESS,
+}
+
 @JsonClassDescription("Normalized BPMN validation or rendering diagnostic linked back to the typed definition where possible")
 data class BpmnDiagnostic(
     val source: BpmnDiagnosticSource,
@@ -211,7 +302,15 @@ data class BpmnDiagnostic(
     val category: String? = null,
     val elementId: String? = null,
     val objectRef: String? = null,
+    val repairScope: BpmnRepairScope? = null,
+    val ownerRef: String? = null,
 )
+
+data class GlobalDiagnostics(
+    val diagnostics: List<BpmnDiagnostic>,
+) {
+    fun countFor(source: BpmnDiagnosticSource): Int = diagnostics.count { it.source == source }
+}
 
 /**
  * BPMN XML that has passed both XSD and bpmn-lint validation.
@@ -219,6 +318,7 @@ data class BpmnDiagnostic(
 data class ValidatedBpmnXml(
     val xml: String,
     val diagnostics: List<BpmnDiagnostic> = emptyList(),
+    val repairAttempts: Int = 0,
 )
 
 /**

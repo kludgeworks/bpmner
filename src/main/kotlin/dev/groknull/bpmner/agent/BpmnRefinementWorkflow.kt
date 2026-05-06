@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import kotlin.math.min
 
 @Component
 class BpmnRefinementWorkflow(
@@ -28,17 +29,10 @@ class BpmnRefinementWorkflow(
 
     fun refine(
         request: BpmnRequest,
+        graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
         context: ActionContext,
     ): ValidatedBpmnXml {
-        logger.info(
-            "validateAndRefineBpmn started. outputFile={}, maxAttempts={}, repairer={}, processId={}",
-            request.outputFile,
-            config.maxAttempts,
-            config.repairer.persona.name,
-            rendered.definition.processId,
-        )
-
         val refinementWorkflow = RepeatUntilAcceptableBuilder
             .returning(BpmnRefinementAttempt::class.java)
             .consuming(Unit::class.java)
@@ -47,6 +41,7 @@ class BpmnRefinementWorkflow(
             .repeating { attemptContext ->
                 nextRefinementAttempt(
                     request = request,
+                    graph = graph,
                     initialRendered = rendered,
                     repairContext = context,
                     context = attemptContext,
@@ -65,11 +60,10 @@ class BpmnRefinementWorkflow(
         )
 
         if (!finalAttempt.isSuccessful()) {
-            logger.error("validateAndRefineBpmn failed after {} attempts", config.maxAttempts)
+            logger.error("BPMN validation failed after {} repair attempt(s)", config.maxAttempts)
             error("Failed to produce valid BPMN after ${config.maxAttempts} attempts")
         }
 
-        logger.info("BPMN validated successfully via workflow subprocess")
         return finalAttempt.toValidatedBpmnXml()
     }
 
@@ -79,6 +73,7 @@ class BpmnRefinementWorkflow(
 
     private fun nextRefinementAttempt(
         request: BpmnRequest,
+        graph: LaidOutProcessGraph,
         initialRendered: RenderedBpmn,
         repairContext: OperationContext,
         context: RepeatUntilAcceptableActionContext<Unit, BpmnRefinementAttempt, BpmnRefinementFeedback>,
@@ -86,58 +81,55 @@ class BpmnRefinementWorkflow(
         val previousAttempt = context.lastAttempt()?.result
         return if (previousAttempt == null) {
             evaluateCandidate(
+                graph = graph,
                 definition = initialRendered.definition,
                 rendered = initialRendered,
                 messages = initialMessages(request, initialRendered.definition),
+                repairAttempts = 0,
             )
         } else {
             val feedback = context.lastAttempt()?.feedback ?: error("Expected feedback for prior refinement attempt")
             if (previousAttempt.isSuccessful() || feedback.acceptable) {
-                logger.debug("BPMN refinement subprocess already has an acceptable attempt; reusing last result")
                 return previousAttempt
             }
             if (context.attemptHistory.attemptCount() >= config.maxAttempts) {
-                logger.debug(
-                    "BPMN refinement subprocess reached max attempts ({}); reusing last result for consolidation",
-                    config.maxAttempts,
-                )
                 return previousAttempt
             }
             if (feedback.repairPrompt.isBlank()) {
                 logger.warn("BPMN refinement feedback had no repair prompt; reusing last attempt")
                 return previousAttempt
             }
-            logger.info(
-                "BPMN refinement subprocess attempt {} of {}",
-                context.attemptHistory.attemptCount() + 1,
-                config.maxAttempts,
-            )
             val (correctedDefinition, updatedMessages) = requestCorrection(
                 promptRunner(repairContext, request),
                 previousAttempt.messages,
                 feedback.repairPrompt,
             )
+            val updatedGraph = graph.copy(definition = correctedDefinition)
             val rendered = try {
-                bpmnConverter.render(correctedDefinition)
+                bpmnConverter.render(updatedGraph)
             } catch (e: Exception) {
                 return evaluateCandidate(
+                    graph = updatedGraph,
                     definition = correctedDefinition,
                     rendered = null,
                     messages = updatedMessages,
                     renderFailureMessage = e.message ?: e.javaClass.simpleName,
+                    repairAttempts = previousAttempt.repairAttempts + 1,
                 )
             }
             evaluateCandidate(
+                graph = updatedGraph,
                 definition = correctedDefinition,
                 rendered = rendered,
                 messages = updatedMessages,
+                repairAttempts = previousAttempt.repairAttempts + 1,
             )
         }
     }
 
     private fun evaluateRefinementAttempt(attempt: BpmnRefinementAttempt): BpmnRefinementFeedback {
-        if (attempt.diagnostics.isNotEmpty()) {
-            renderedDiagnostics("Refinement workflow", attempt.diagnostics)
+        if (attempt.globalDiagnostics.diagnostics.isNotEmpty()) {
+            logDiagnosticSummary(attempt.globalDiagnostics.diagnostics)
         }
         val acceptable = attempt.diagnostics.isEmpty()
         return BpmnRefinementFeedback(
@@ -153,53 +145,76 @@ class BpmnRefinementWorkflow(
     }
 
     private fun evaluateCandidate(
+        graph: LaidOutProcessGraph,
         definition: BpmnDefinition,
         rendered: RenderedBpmn?,
         messages: List<Message>,
         renderFailureMessage: String? = null,
+        repairAttempts: Int,
     ): BpmnRefinementAttempt {
-        logger.debug("Refinement candidate BPMN definition:\n{}", serializeDefinition(definition))
-        if (rendered != null) {
-            logger.debug("Generated BPMN XML from typed object, length={}", rendered.xml.length)
-            logger.debug("Generated XML:\n{}", rendered.xml)
-        }
-
         val diagnostics = mutableListOf<BpmnDiagnostic>()
         diagnostics.addAll(
             bpmnDefinitionValidator.validate(definition).map {
-                BpmnDiagnostic(source = BpmnDiagnosticSource.GRAPH, message = it)
+                scopedDiagnostic(
+                    graph = graph,
+                    diagnostic = BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.GRAPH,
+                        message = it,
+                    )
+                )
             }
         )
 
         if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
             if (renderFailureMessage != null || rendered == null) {
-                diagnostics.add(
-                    BpmnDiagnostic(
+                diagnostics += scopedDiagnostic(
+                    graph = graph,
+                    diagnostic = BpmnDiagnostic(
                         source = BpmnDiagnosticSource.RENDER,
                         message = renderFailureMessage ?: "Unknown BPMN rendering error",
                     )
                 )
             } else {
-                diagnostics.addAll(normalizeXsdDiagnostics(rendered))
+                diagnostics.addAll(normalizeXsdDiagnostics(rendered, graph))
                 if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-                    logger.debug("XSD validation passed")
                     val lintIssues = bpmnLintService.lint(rendered.xml)
                     if (lintIssues == null) {
                         logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
                     } else {
-                        diagnostics.addAll(normalizeLintDiagnostics(lintIssues, rendered.elementIndex))
+                        diagnostics.addAll(normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
                     }
                 }
             }
         }
 
+        val globalDiagnostics = GlobalDiagnostics(diagnostics)
+        if (diagnostics.isEmpty()) {
+            logger.info(
+                "Validation summary: graph=0, xsd=0, lint=0, repairScope=none, accepted=true, repairs={}",
+                repairAttempts,
+            )
+        } else {
+            logger.info(
+                "Validation summary: graph={}, xsd={}, lint={}, repairScope={}, accepted=false, repairs={}",
+                globalDiagnostics.countFor(BpmnDiagnosticSource.GRAPH),
+                globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
+                globalDiagnostics.countFor(BpmnDiagnosticSource.LINT),
+                diagnostics.groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }.eachCount()
+                    .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
+                repairAttempts,
+            )
+        }
+        logArtifactsIfEnabled(definition, rendered)
+
         return BpmnRefinementAttempt(
             definition = definition,
             rendered = rendered,
             diagnostics = diagnostics,
+            globalDiagnostics = globalDiagnostics,
             validatedXml = if (diagnostics.isEmpty()) rendered?.xml else null,
             messages = messages,
             renderFailureMessage = renderFailureMessage,
+            repairAttempts = repairAttempts,
         )
     }
 
@@ -229,43 +244,63 @@ class BpmnRefinementWorkflow(
     // Diagnostic helpers
     // -------------------------------------------------------------------------
 
-    private fun normalizeXsdDiagnostics(rendered: RenderedBpmn): List<BpmnDiagnostic> =
+    private fun normalizeXsdDiagnostics(
+        rendered: RenderedBpmn,
+        graph: LaidOutProcessGraph,
+    ): List<BpmnDiagnostic> =
         bpmnXsdValidator.validateDetailed(rendered.xml).map { issue ->
             val elementId = issue.elementId?.takeIf { rendered.elementIndex.knownElementIds().contains(it) }
-            BpmnDiagnostic(
-                source = BpmnDiagnosticSource.XSD,
-                message = issue.message,
-                elementId = elementId,
-                objectRef = rendered.elementIndex.objectRefForElementId(elementId),
+            scopedDiagnostic(
+                graph = graph,
+                diagnostic = BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.XSD,
+                    message = issue.message,
+                    elementId = elementId,
+                    objectRef = rendered.elementIndex.objectRefForElementId(elementId),
+                )
             )
         }
 
     private fun normalizeLintDiagnostics(
         lintIssues: List<LintIssue>,
         elementIndex: BpmnElementIndex,
+        graph: LaidOutProcessGraph,
     ): List<BpmnDiagnostic> =
         lintIssues.map { issue ->
             val elementId = issue.id?.takeIf { elementIndex.knownElementIds().contains(it) }
-            BpmnDiagnostic(
-                source = BpmnDiagnosticSource.LINT,
-                message = issue.message,
-                rule = issue.rule,
-                category = issue.category,
-                elementId = elementId,
-                objectRef = elementIndex.objectRefForElementId(elementId),
+            scopedDiagnostic(
+                graph = graph,
+                diagnostic = BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.LINT,
+                    message = issue.message,
+                    rule = issue.rule,
+                    category = issue.category,
+                    elementId = elementId,
+                    objectRef = elementIndex.objectRefForElementId(elementId),
+                )
             )
         }
 
-    private fun renderedDiagnostics(prefix: String, diagnostics: List<BpmnDiagnostic>) {
+    private fun logDiagnosticSummary(diagnostics: List<BpmnDiagnostic>) {
+        logger.warn(
+            "Diagnostic summary: total={}, graph={}, xsd={}, lint={}, scopes={}",
+            diagnostics.size,
+            diagnostics.count { it.source == BpmnDiagnosticSource.GRAPH },
+            diagnostics.count { it.source == BpmnDiagnosticSource.XSD },
+            diagnostics.count { it.source == BpmnDiagnosticSource.LINT },
+            diagnostics.groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }.eachCount()
+                .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
+        )
         diagnostics.forEach { diagnostic ->
             logger.warn(
-                "{} diagnostic. source={}, rule={}, category={}, elementId={}, objectRef={}, message={}",
-                prefix,
+                "Diagnostic detail: source={}, rule={}, category={}, elementId={}, objectRef={}, repairScope={}, owner={}, message={}",
                 diagnostic.source.name.lowercase(),
                 diagnostic.rule ?: "-",
                 diagnostic.category ?: "-",
                 diagnostic.elementId ?: "-",
                 diagnostic.objectRef ?: "-",
+                diagnostic.repairScope?.name?.lowercase() ?: "-",
+                diagnostic.ownerRef ?: "-",
                 diagnostic.message,
             )
         }
@@ -287,6 +322,15 @@ class BpmnRefinementWorkflow(
         appendLine("Rendered BPMN XML:")
         appendLine(renderedXml)
         appendLine()
+        val scopes = diagnostics.mapNotNull { it.repairScope }.distinct()
+        if (scopes.isNotEmpty()) {
+            appendLine("Repair scope:")
+            scopes.forEach { scope ->
+                val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
+                appendLine("- ${scope.name.lowercase()} owners=${owners.ifEmpty { listOf("unscoped") }.joinToString(",")}")
+            }
+            appendLine()
+        }
         appendLine("Diagnostics:")
         diagnostics.forEach { diagnostic ->
             appendLine("- ${formatDiagnostic(diagnostic)}")
@@ -299,6 +343,8 @@ class BpmnRefinementWorkflow(
         diagnostic.category?.let { append(", category=$it") }
         diagnostic.elementId?.let { append(", elementId=$it") }
         diagnostic.objectRef?.let { append(", objectRef=$it") }
+        diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
+        diagnostic.ownerRef?.let { append(", owner=$it") }
         append(": ${diagnostic.message}")
     }
 
@@ -309,21 +355,96 @@ class BpmnRefinementWorkflow(
 
     private fun serializeDefinition(definition: BpmnDefinition): String =
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
+
+    private fun scopedDiagnostic(
+        graph: LaidOutProcessGraph,
+        diagnostic: BpmnDiagnostic,
+    ): BpmnDiagnostic {
+        val ownerRef = diagnostic.ownerRef
+            ?: graph.ownerForObjectRef(diagnostic.objectRef)
+            ?: graph.ownerForElementId(diagnostic.elementId)
+        val repairScope = diagnostic.repairScope ?: inferRepairScope(diagnostic, ownerRef)
+        if (diagnostic.elementId != null && ownerRef == null && diagnostic.source != BpmnDiagnosticSource.RENDER) {
+            logger.warn(
+                "Ownership mapping ambiguous. source={}, elementId={}, objectRef={}, inferredRepairScope={}",
+                diagnostic.source.name.lowercase(),
+                diagnostic.elementId,
+                diagnostic.objectRef ?: "-",
+                repairScope.name.lowercase(),
+            )
+        }
+        return diagnostic.copy(
+            repairScope = repairScope,
+            ownerRef = ownerRef,
+        )
+    }
+
+    private fun inferRepairScope(
+        diagnostic: BpmnDiagnostic,
+        ownerRef: String?,
+    ): BpmnRepairScope {
+        if (diagnostic.elementId?.endsWith("_di") == true) {
+            return BpmnRepairScope.LAYOUT
+        }
+        return when (diagnostic.source) {
+            BpmnDiagnosticSource.RENDER -> {
+                if (LAYOUT_HINTS.any { diagnostic.message.contains(it, ignoreCase = true) }) BpmnRepairScope.LAYOUT
+                else BpmnRepairScope.FULL_PROCESS
+            }
+            BpmnDiagnosticSource.GRAPH -> {
+                if (ownerRef != null || diagnostic.objectRef != null) BpmnRepairScope.PHASE
+                else BpmnRepairScope.COMPOSITION
+            }
+            BpmnDiagnosticSource.XSD,
+            BpmnDiagnosticSource.LINT,
+            -> when {
+                ownerRef != null -> BpmnRepairScope.PHASE
+                diagnostic.objectRef == "process" -> BpmnRepairScope.COMPOSITION
+                diagnostic.elementId != null -> BpmnRepairScope.COMPOSITION
+                else -> BpmnRepairScope.FULL_PROCESS
+            }
+        }
+    }
+
+    private fun logArtifactsIfEnabled(definition: BpmnDefinition, rendered: RenderedBpmn?) {
+        if (!config.logging.dumpArtifacts) {
+            return
+        }
+        logger.debug("Artifact dump [definition]: {}", serializeDefinition(definition).truncate(config.logging.artifactPreviewLength))
+        rendered?.let {
+            logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.logging.artifactPreviewLength))
+        }
+    }
+
+    private fun String.truncate(maxLength: Int): String {
+        if (length <= maxLength) {
+            return this
+        }
+        val kept = substring(0, min(length, maxLength))
+        return "$kept…<truncated>"
+    }
+
+    companion object {
+        private val LAYOUT_HINTS = listOf("waypoint", "bounds", "diagram", "layout")
+    }
 }
 
 private data class BpmnRefinementAttempt(
     val definition: BpmnDefinition,
     val rendered: RenderedBpmn?,
     val diagnostics: List<BpmnDiagnostic>,
+    val globalDiagnostics: GlobalDiagnostics,
     val validatedXml: String?,
     val messages: List<Message>,
     val renderFailureMessage: String? = null,
+    val repairAttempts: Int = 0,
 ) {
     fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
 
     fun toValidatedBpmnXml(): ValidatedBpmnXml = ValidatedBpmnXml(
         xml = validatedXml ?: error("No validated BPMN XML available"),
         diagnostics = diagnostics,
+        repairAttempts = repairAttempts,
     )
 }
 

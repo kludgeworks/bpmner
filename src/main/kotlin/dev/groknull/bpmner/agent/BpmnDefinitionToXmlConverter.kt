@@ -33,6 +33,11 @@ class BpmnDefinitionToXmlConverter {
         return render(definition).xml
     }
 
+    fun render(graph: LaidOutProcessGraph): RenderedBpmn {
+        val rendered = render(graph.definition)
+        return rendered.copy(sourceGraph = graph)
+    }
+
     fun render(definition: BpmnDefinition): RenderedBpmn {
         val modelInstance = toModelInstance(definition)
         val output = ByteArrayOutputStream()
