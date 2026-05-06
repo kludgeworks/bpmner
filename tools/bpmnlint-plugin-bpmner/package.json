@@ -7,7 +7,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "bundle": "esbuild src/linter-bundle.ts --bundle --inject:src/polyfills.ts --outfile=dist/bpmnlint-bundle.js --format=iife --target=es2022",
     "test": "tsx --test test/**/*.test.ts",
+    "test:bundle": "node test-bundle.js",
     "test:watch": "tsx --watch --test test/**/*.test.ts"
   },
   "keywords": [
@@ -18,13 +20,14 @@
   ],
   "license": "UNLICENSED",
   "devDependencies": {
+    "@types/node": "^22.15.17",
     "bpmn-moddle": "^9.0.4",
     "bpmnlint": "^11.12.1",
     "bpmnlint-utils": "^1.1.1",
-    "wink-eng-lite-web-model": "^1.8.1",
-    "wink-nlp": "^2.4.0",
-    "@types/node": "^22.15.17",
+    "esbuild": "^0.28.0",
     "tsx": "^4.19.4",
-    "typescript": "^5.8.3"
+    "typescript": "^5.8.3",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.4.0"
   }
 }
