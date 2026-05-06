@@ -10,6 +10,7 @@ data class BpmnConfig(
     val maxAttempts: Int = 5,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
+    val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
 ) {
     companion object {
         val DEFAULT_GENERATOR = Actor(
@@ -32,3 +33,8 @@ data class BpmnConfig(
         )
     }
 }
+
+data class BpmnLoggingConfig(
+    val dumpArtifacts: Boolean = false,
+    val artifactPreviewLength: Int = 8000,
+)
