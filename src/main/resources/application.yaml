@@ -14,3 +14,6 @@ spring:
 
 bpmner:
   max-attempts: 5
+  logging:
+    dir: ${BPMNER_LOG_DIR:${LOG_DIR:logs}}
+    dump-artifacts: false

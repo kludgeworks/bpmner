@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
     <include resource="org/springframework/boot/logging/logback/defaults.xml"/>
+    <springProperty scope="context" name="LOG_DIR" source="bpmner.logging.dir" defaultValue="logs"/>
+    <springProperty scope="context" name="LOG_FILE_OVERRIDE" source="bpmner.logging.file"/>
+    <timestamp key="RUN_TS" datePattern="yyyyMMdd-HHmmss-SSS" timeReference="contextBirth"/>
 
     <property name="CONSOLE_PATTERN"
               value="%clr(%d{HH:mm:ss.SSS}){faint} [%thread] %clr(%-5level){highlight} %clr(%logger{0}){cyan} - %msg%n"/>
     <property name="FILE_PATTERN"
               value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+    <property name="ACTIVE_LOG_FILE"
+              value="${LOG_FILE_OVERRIDE:-${LOG_DIR}/bpmner-${RUN_TS}.log}"/>
 
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
@@ -16,12 +21,19 @@
         </encoder>
     </appender>
 
-    <appender name="FILE" class="ch.qos.logback.core.FileAppender">
-        <file>${LOG_FILE:-logs/bpmner.log}</file>
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${ACTIVE_LOG_FILE}</file>
         <append>false</append>
         <encoder>
             <pattern>${FILE_PATTERN}</pattern>
         </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>${ACTIVE_LOG_FILE}.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>10</maxHistory>
+            <totalSizeCap>100MB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
     </appender>
 
     <logger name="dev.groknull.bpmner" level="DEBUG" additivity="true"/>
