@@ -11,7 +11,6 @@ import org.springframework.boot.ApplicationRunner
 import org.springframework.boot.ansi.AnsiColor
 import org.springframework.boot.ansi.AnsiOutput
 import org.springframework.stereotype.Component
-import java.io.File
 
 /**
  * CLI entry point. Pass the process description as a command-line argument:
@@ -27,6 +26,7 @@ class BpmnGeneratorRunner(
 ) : ApplicationRunner {
 
     private val logger = LoggerFactory.getLogger(BpmnGeneratorRunner::class.java)
+    private val inputPathResolver = InputPathResolver()
 
     override fun run(args: ApplicationArguments) {
         logger.debug("Runner invoked with option names: {}", args.optionNames)
@@ -35,7 +35,7 @@ class BpmnGeneratorRunner(
             ?: args.getOptionValues("process-file")?.firstOrNull()
                 ?.let {
                     logger.info("Loading process description from file: {}", it)
-                    File(it).readText(Charsets.UTF_8).trim()
+                    inputPathResolver.readUtf8(it).trim()
                 }
             ?: run {
                 logger.warn("No process description provided — skipping BPMN generation.")
@@ -47,7 +47,7 @@ class BpmnGeneratorRunner(
         val styleGuide = args.getOptionValues("style-guide")?.firstOrNull()
             ?.let {
                 logger.info("Loading style guide from file: {}", it)
-                File(it).readText(Charsets.UTF_8).trim()
+                inputPathResolver.readUtf8(it).trim()
             }
 
         val request = BpmnRequest(

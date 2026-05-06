@@ -1,0 +1,31 @@
+load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+
+package(default_visibility = ["//visibility:public"])
+
+# Link workspace node_modules
+npm_link_all_packages(name = "node_modules")
+
+esbuild(
+    name = "bundle",
+    srcs = ["index.ts"] + glob([
+        "src/**/*.ts",
+        "rules/**/*.ts",
+    ]),
+    config = {
+        "inject": ["linter/src/polyfills.ts"],
+    },
+    entry_point = "src/linter-bundle.ts",
+    format = "iife",
+    output = "dist/js/bpmnlint-bundle.js",
+    platform = "node",
+    target = "es2022",
+    deps = [
+        ":node_modules/@types/node",
+        ":node_modules/bpmn-moddle",
+        ":node_modules/bpmnlint",
+        ":node_modules/bpmnlint-utils",
+        ":node_modules/wink-eng-lite-web-model",
+        ":node_modules/wink-nlp",
+    ],
+)
