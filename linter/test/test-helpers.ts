@@ -1,6 +1,7 @@
 import BpmnModdle from 'bpmn-moddle';
 import { Linter } from 'bpmnlint';
-import plugin = require('../index');
+import { resolver } from '../src/static-rules';
+import { customRuleManifest, BPMNER_PLUGIN_PREFIX } from '../src/rule-manifest';
 
 type Report = {
   id?: string;
@@ -11,45 +12,22 @@ type Report = {
 type LintResults = Record<string, Report[]>;
 
 class PluginResolver {
-  resolveRule(pkg: string, ruleName: string) {
-    if (pkg !== 'bpmnlint-plugin-bpmner') {
-      throw new Error(`Unexpected package <${pkg}>`);
-    }
-
-    const rulePath = (plugin.rules as Record<string, string>)[ruleName];
-
-    if (!rulePath) {
-      throw new Error(`Unknown rule <${ruleName}>`);
-    }
-
-    return require(`../${rulePath.replace(/^\.\//, '')}`);
-  }
-
-  resolveConfig(pkg: string, configName: string) {
-    if (pkg === 'bpmnlint' && configName === 'recommended') {
-      return { rules: {} };
-    }
-
-    if (pkg !== 'bpmnlint-plugin-bpmner') {
-      throw new Error(`Unexpected package <${pkg}>`);
-    }
-
-    const config = (plugin.configs as Record<string, unknown>)[configName];
-
-    if (!config) {
-      throw new Error(`Unknown config <${configName}>`);
-    }
-
-    return config;
-  }
+  resolveRule = resolver.resolveRule;
+  resolveConfig = resolver.resolveConfig;
 }
+
+const customRuleConfig = {
+  rules: Object.fromEntries(
+    customRuleManifest.map(({ id, level }) => [`${BPMNER_PLUGIN_PREFIX}/${id}`, level])
+  ),
+};
 
 export async function lint(xml: string): Promise<LintResults> {
   const moddle = new BpmnModdle();
   const { rootElement } = await moddle.fromXML(xml);
   const linter = new Linter({
-    config: { extends: 'plugin:bpmner/recommended' },
-    resolver: new PluginResolver()
+    config: customRuleConfig,
+    resolver: new PluginResolver(),
   });
 
   return linter.lint(rootElement as never) as LintResults;

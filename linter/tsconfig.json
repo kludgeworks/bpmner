@@ -13,5 +13,11 @@
     "baseUrl": ".",
     "types": ["node"]
   },
-  "include": ["index.ts", "rules/**/*.ts", "test/**/*.ts", "types/**/*.d.ts"]
+  "include": [
+    "index.ts",
+    "src/**/*.ts",
+    "rules/**/*.ts",
+    "test/**/*.ts",
+    "types/**/*.d.ts"
+  ]
 }

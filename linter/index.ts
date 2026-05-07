@@ -1,71 +1,13 @@
+import { pluginRulePaths, recommendedPluginRules } from './src/rule-manifest';
+
 const plugin = {
   configs: {
     recommended: {
       extends: 'bpmnlint:recommended',
-      rules: {
-        'gen-01-bpmnsubset-allowed-elements': 'error',
-        'gen-02-no-duplicate-diagrams': 'error',
-        'act-12-loop-task-annotation': 'error',
-        'act-13-mi-task-annotation': 'error',
-        'evt-10-start-no-incoming': 'error',
-        'evt-11-message-start-has-message-flow': 'error',
-        'evt-14-boundary-event-constraints': 'error',
-        'evt-15-error-end-boundary-pair': 'error',
-        'evt-16-link-event-pairing': 'error',
-        'gtw-11-event-based-direct-events': 'error',
-        'gtw-12-diverging-flow-names': 'error',
-        'flow-01-sequence-flow-within-pool': 'error',
-        'msg-01-message-flow-across-pools': 'error',
-        'assoc-01-required-annotation-association': 'error',
-        'data-01-no-type-words-in-data-name': 'error',
-        'name-03-no-element-type-words': 'error',
-        'act-01-verb-object-name': 'warn',
-        'act-02-activity-label-capitalization': 'warn',
-        'act-03-discouraged-business-verbs': 'warn',
-        'evt-01-event-state-name': 'warn',
-        'evt-02-event-state-pattern': 'warn',
-        'gtw-01-diverging-gateway-question': 'warn',
-        'gtw-02-converging-gateway-unnamed': 'warn',
-        'gtw-03-gateway-no-work-label': 'warn',
-        'evt-13-intermediate-event-not-action': 'warn',
-        'flow-02-diverging-flow-outcome-label': 'warn',
-        'msg-02-message-flow-name-pattern': 'warn',
-        'name-01-business-meaningful-label': 'warn',
-        'name-02-uncommon-abbreviations': 'warn'
-      }
-    }
+      rules: recommendedPluginRules,
+    },
   },
-  rules: {
-    'gen-01-bpmnsubset-allowed-elements': './rules/gen-01-bpmnsubset-allowed-elements',
-    'gen-02-no-duplicate-diagrams': './rules/gen-02-no-duplicate-diagrams',
-    'act-12-loop-task-annotation': './rules/act-12-loop-task-annotation',
-    'act-13-mi-task-annotation': './rules/act-13-mi-task-annotation',
-    'evt-10-start-no-incoming': './rules/evt-10-start-no-incoming',
-    'evt-11-message-start-has-message-flow': './rules/evt-11-message-start-has-message-flow',
-    'evt-14-boundary-event-constraints': './rules/evt-14-boundary-event-constraints',
-    'evt-15-error-end-boundary-pair': './rules/evt-15-error-end-boundary-pair',
-    'evt-16-link-event-pairing': './rules/evt-16-link-event-pairing',
-    'gtw-11-event-based-direct-events': './rules/gtw-11-event-based-direct-events',
-    'gtw-12-diverging-flow-names': './rules/gtw-12-diverging-flow-names',
-    'flow-01-sequence-flow-within-pool': './rules/flow-01-sequence-flow-within-pool',
-    'msg-01-message-flow-across-pools': './rules/msg-01-message-flow-across-pools',
-    'assoc-01-required-annotation-association': './rules/assoc-01-required-annotation-association',
-    'data-01-no-type-words-in-data-name': './rules/data-01-no-type-words-in-data-name',
-    'name-03-no-element-type-words': './rules/name-03-no-element-type-words',
-    'act-01-verb-object-name': './rules/act-01-verb-object-name',
-    'act-02-activity-label-capitalization': './rules/act-02-activity-label-capitalization',
-    'act-03-discouraged-business-verbs': './rules/act-03-discouraged-business-verbs',
-    'evt-01-event-state-name': './rules/evt-01-event-state-name',
-    'evt-02-event-state-pattern': './rules/evt-02-event-state-pattern',
-    'gtw-01-diverging-gateway-question': './rules/gtw-01-diverging-gateway-question',
-    'gtw-02-converging-gateway-unnamed': './rules/gtw-02-converging-gateway-unnamed',
-    'gtw-03-gateway-no-work-label': './rules/gtw-03-gateway-no-work-label',
-    'evt-13-intermediate-event-not-action': './rules/evt-13-intermediate-event-not-action',
-    'flow-02-diverging-flow-outcome-label': './rules/flow-02-diverging-flow-outcome-label',
-    'msg-02-message-flow-name-pattern': './rules/msg-02-message-flow-name-pattern',
-    'name-01-business-meaningful-label': './rules/name-01-business-meaningful-label',
-    'name-02-uncommon-abbreviations': './rules/name-02-uncommon-abbreviations'
-  }
+  rules: pluginRulePaths,
 };
 
 export = plugin;
