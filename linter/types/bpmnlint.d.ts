@@ -4,3 +4,8 @@ declare module 'bpmnlint' {
     lint(rootElement: unknown): Record<string, unknown[]>;
   }
 }
+
+declare module 'bpmnlint/rules/*' {
+  const ruleFactory: unknown;
+  export default ruleFactory;
+}

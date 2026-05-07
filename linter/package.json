@@ -2,6 +2,9 @@
   "name": "@bpmner/linter",
   "version": "0.1.0",
   "private": true,
+  "scripts": {
+    "generate:static-rules": "node ./scripts/generate-static-rules.mjs"
+  },
   "dependencies": {
     "bpmn-moddle": "^9.0.4",
     "bpmnlint": "^11.12.1",
@@ -14,5 +17,10 @@
     "esbuild": "^0.28.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
   }
 }

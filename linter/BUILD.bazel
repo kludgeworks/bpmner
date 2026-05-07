@@ -1,31 +1,116 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load(":ts.bzl", "COMMON_TS_DEPS", "linter_ts_project")
 
 package(default_visibility = ["//visibility:public"])
 
-# Link workspace node_modules
+LIB_TS_SRCS = ["index.ts"] + glob([
+    "src/**/*.ts",
+    "rules/**/*.ts",
+])
+
+TEST_TS_SRCS = glob([
+    "test/**/*.ts",
+])
+
+TYPE_DECL_SRCS = glob([
+    "types/**/*.d.ts",
+])
+
+ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
+
+BPMN_FIXTURES = glob([
+    "test/fixtures/**/*.bpmn",
+])
+
+TEST_BUNDLE_SRCS = ALL_TS_SRCS + BPMN_FIXTURES
+
+# Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
+
+exports_files([
+    "pnpm-lock.yaml",
+    "tsconfig.bazel.json",
+    "tsconfig.json",
+])
+
+ts_config(
+    name = "tsconfig",
+    src = "tsconfig.json",
+)
+
+ts_config(
+    name = "tsconfig_bazel",
+    src = "tsconfig.bazel.json",
+    deps = [":tsconfig"],
+)
+
+linter_ts_project(
+    name = "ts",
+    srcs = ALL_TS_SRCS,
+    assets = BPMN_FIXTURES,
+    out_dir = "tsc",
+)
 
 esbuild(
     name = "bundle",
-    srcs = ["index.ts"] + glob([
-        "src/**/*.ts",
-        "rules/**/*.ts",
-    ]),
+    srcs = LIB_TS_SRCS,
     config = {
         "inject": ["linter/src/polyfills.ts"],
+        "sourcemap": False,
     },
     entry_point = "src/linter-bundle.ts",
     format = "iife",
     output = "dist/js/bpmnlint-bundle.js",
     platform = "node",
     target = "es2022",
-    deps = [
-        ":node_modules/@types/node",
-        ":node_modules/bpmn-moddle",
-        ":node_modules/bpmnlint",
-        ":node_modules/bpmnlint-utils",
-        ":node_modules/wink-eng-lite-web-model",
-        ":node_modules/wink-nlp",
-    ],
+    deps = COMMON_TS_DEPS,
+)
+
+esbuild(
+    name = "lint_test_bundle",
+    srcs = TEST_BUNDLE_SRCS,
+    config = {
+        "loader": {
+            ".bpmn": "text",
+        },
+        "sourcemap": False,
+    },
+    entry_point = "test/lint.test.ts",
+    format = "cjs",
+    output = "dist/test/lint.test.js",
+    platform = "node",
+    target = "es2022",
+    deps = COMMON_TS_DEPS,
+)
+
+esbuild(
+    name = "smoke_test_bundle",
+    srcs = TEST_BUNDLE_SRCS,
+    config = {
+        "loader": {
+            ".bpmn": "text",
+        },
+        "sourcemap": False,
+    },
+    entry_point = "test/smoke.test.ts",
+    format = "cjs",
+    output = "dist/test/smoke.test.js",
+    platform = "node",
+    target = "es2022",
+    deps = COMMON_TS_DEPS,
+)
+
+js_test(
+    name = "lint_test",
+    entry_point = "dist/test/lint.test.js",
+    data = [":lint_test_bundle"],
+)
+
+js_test(
+    name = "smoke_test",
+    entry_point = "dist/test/smoke.test.js",
+    data = [":smoke_test_bundle"],
 )

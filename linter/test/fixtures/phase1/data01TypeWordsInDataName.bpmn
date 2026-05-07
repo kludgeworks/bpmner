@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:dataObjectReference id="Data_1" name="Approval process" dataObjectRef="DataObject_1" />
+    <bpmn:dataObject id="DataObject_1" />
+  </bpmn:process>
+</bpmn:definitions>

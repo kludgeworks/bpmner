@@ -1,9 +1,17 @@
-// @ts-ignore
 import { Linter } from 'bpmnlint';
-// @ts-ignore
 import BpmnModdle from 'bpmn-moddle';
-// @ts-ignore
 import { config, resolver } from './static-rules';
+
+type LintReport = {
+  id?: string;
+  elementId?: string;
+  node?: { id?: string };
+  message: string;
+  category?: string;
+  [key: string]: unknown;
+};
+
+type LintResults = Record<string, LintReport[]>;
 
 /**
  * Lints a BPMN XML string and returns a JSON string of issues.
@@ -11,48 +19,50 @@ import { config, resolver } from './static-rules';
  */
 export async function lintXml(xmlString: string, ruleOverrides?: Record<string, string>): Promise<string> {
   const moddle = new BpmnModdle();
-  
+
   try {
     const { rootElement } = await moddle.fromXML(xmlString);
-    
+
     const linter = new Linter({
       config: {
         ...config,
         rules: {
-            ...config.rules,
-            ...ruleOverrides
-        }
+          ...config.rules,
+          ...ruleOverrides,
+        },
       },
-      resolver: resolver
+      resolver,
     });
-    
-    const result = await linter.lint(rootElement);
-    const issues = [];
-    
-    for (const [ rule, reports ] of Object.entries(result || {})) {
-      for (const item of (reports as any[]) || []) {
+
+    const result = (await linter.lint(rootElement)) as LintResults;
+    const issues: Record<string, unknown>[] = [];
+
+    for (const [rule, reports] of Object.entries(result || {})) {
+      for (const item of reports || []) {
         issues.push({
+          ...item,
           id: item.id || item.elementId || item.node?.id || null,
           rule,
           message: item.message,
           category: item.category || 'error',
-          ...(item || {})
         });
       }
     }
-    
+
     return JSON.stringify(issues);
-  } catch (err: any) {
-    return JSON.stringify([{
-      rule: 'parse-error',
-      message: err.message,
-      category: 'error'
-    }]);
+  } catch (err: unknown) {
+    return JSON.stringify([
+      {
+        rule: 'parse-error',
+        message: err instanceof Error ? err.message : String(err),
+        category: 'error',
+      },
+    ]);
   }
 }
 
 // Expose the API to the global scope for GraalJS/Polyglot
-(globalThis as any).BpmnLinterApi = { 
-    lintXml,
-    getRules: () => config.rules
+(globalThis as typeof globalThis & { BpmnLinterApi?: unknown }).BpmnLinterApi = {
+  lintXml,
+  getRules: () => config.rules,
 };

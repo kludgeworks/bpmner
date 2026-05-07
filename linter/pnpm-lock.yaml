@@ -7,12 +7,6 @@ settings:
 importers:
 
   .:
-    devDependencies:
-      esbuild:
-        specifier: ^0.28.0
-        version: 0.28.0
-
-  linter:
     dependencies:
       bpmn-moddle:
         specifier: ^9.0.4
