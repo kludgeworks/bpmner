@@ -1,10 +1,13 @@
-import { pluginRulePaths, recommendedPluginRules } from './src/rule-manifest';
+import { allPluginRules, pluginRulePaths, recommendedPluginRules } from './src/rule-manifest';
 
 const plugin = {
   configs: {
     recommended: {
       extends: 'bpmnlint:recommended',
       rules: recommendedPluginRules,
+    },
+    all: {
+      rules: allPluginRules,
     },
   },
   rules: pluginRulePaths,

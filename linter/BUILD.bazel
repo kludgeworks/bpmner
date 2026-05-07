@@ -44,7 +44,6 @@ LINTER_TS_DEPS = [
 ]
 
 exports_files([
-    "pnpm-lock.yaml",
     "tsconfig.bazel.json",
     "tsconfig.json",
 ])
@@ -76,9 +75,9 @@ js_binary(
         "//:node_modules/bpmnlint",
     ] + glob([
         "rules/**/*.ts",
+        "docs/rules/*.md",
     ]),
     entry_point = "scripts/generate-static-rules.mjs",
-    chdir = package_name(),
 )
 
 js_run_binary(
@@ -90,10 +89,10 @@ js_run_binary(
         "//:node_modules/bpmnlint",
     ] + glob([
         "rules/**/*.ts",
+        "docs/rules/*.md",
     ]),
     outs = [STATIC_RULES_OUTPUT],
     args = ["$(location %s)" % STATIC_RULES_OUTPUT],
-    chdir = package_name(),
     mnemonic = "GenerateStaticRules",
     progress_message = "Generating %{label}",
 )

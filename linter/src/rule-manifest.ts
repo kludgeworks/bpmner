@@ -44,6 +44,10 @@ export const recommendedPluginRules = Object.fromEntries(
   customRuleManifest.map(({ id, level }) => [id, level])
 ) as Record<string, RuleLevel>;
 
+export const allPluginRules = Object.fromEntries(
+  customRuleManifest.map(({ id }) => [id, 'error'])
+) as Record<string, RuleLevel>;
+
 export const pluginRulePaths = Object.fromEntries(
   customRuleManifest.map(({ id }) => [id, `./rules/${id}`])
 ) as Record<string, string>;

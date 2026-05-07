@@ -3,8 +3,9 @@ import assert from 'node:assert/strict';
 import { fixtures } from './fixtures';
 
 type BpmnLinterApi = {
-  lintXml(xml: string, ruleOverrides?: Record<string, string>): Promise<string>;
-  getRules(): Record<string, string>;
+  lintXml(xml: string, config?: unknown): Promise<string>;
+  getRules(config?: unknown): Record<string, string>;
+  getRuleDocs(ruleNames: string[]): Record<string, string>;
 };
 
 describe('BpmnLinterApi bundle smoke test', () => {
@@ -27,12 +28,33 @@ describe('BpmnLinterApi bundle smoke test', () => {
     assert.ok(issues.some((i) => i.rule === 'start-event-required'));
   });
 
-  it('reports bpmner/gen-02-no-duplicate-diagrams on the duplicate diagram fixture', async () => {
+  it('does not enable BPMNER rules unless explicitly configured', async () => {
     const issues: Array<{ rule: string }> = JSON.parse(await api.lintXml(fixtures.gen02DuplicateDiagram));
+    assert.ok(!issues.some((i) => i.rule === 'bpmner/gen-02-no-duplicate-diagrams'));
+  });
+
+  it('reports bpmner/gen-02-no-duplicate-diagrams when plugin recommended is enabled', async () => {
+    const issues: Array<{ rule: string }> = JSON.parse(
+      await api.lintXml(fixtures.gen02DuplicateDiagram, {
+        extends: ['bpmnlint:recommended', 'plugin:bpmner/recommended'],
+      })
+    );
     assert.ok(issues.some((i) => i.rule === 'bpmner/gen-02-no-duplicate-diagrams'));
   });
 
-  it('exposes bpmner/gen-02-no-duplicate-diagrams in getRules()', () => {
-    assert.equal(api.getRules()['bpmner/gen-02-no-duplicate-diagrams'], 'error');
+  it('resolves active rules from extends + rules config', () => {
+    const rules = api.getRules({
+      extends: ['bpmnlint:recommended', 'plugin:bpmner/recommended'],
+      rules: {
+        'bpmner/gen-02-no-duplicate-diagrams': 'warn',
+      },
+    });
+    assert.equal(rules['bpmner/gen-02-no-duplicate-diagrams'], 'warn');
+    assert.equal(rules['start-event-required'], 'error');
+  });
+
+  it('returns markdown docs for BPMNER rules', () => {
+    const docs = api.getRuleDocs(['bpmner/gen-02-no-duplicate-diagrams']);
+    assert.ok(docs['bpmner/gen-02-no-duplicate-diagrams'].includes('# gen-02-no-duplicate-diagrams'));
   });
 });
