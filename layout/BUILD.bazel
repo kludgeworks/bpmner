@@ -1,0 +1,53 @@
+load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//tools/js:ts.bzl", "bpmner_ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+LIB_TS_SRCS = glob([
+    "src/**/*.ts",
+    "types/**/*.d.ts",
+])
+
+# Link the standalone layout package's node_modules
+npm_link_all_packages(name = "node_modules")
+
+LAYOUT_TS_DEPS = [
+    "//:node_modules/@types/node",
+    "//:node_modules/yet-another-bpmn-auto-layout",
+]
+
+ts_config(
+    name = "tsconfig",
+    src = "tsconfig.json",
+)
+
+ts_config(
+    name = "tsconfig_bazel",
+    src = "tsconfig.bazel.json",
+    deps = [":tsconfig"],
+)
+
+bpmner_ts_project(
+    name = "ts",
+    srcs = LIB_TS_SRCS,
+    deps = LAYOUT_TS_DEPS,
+    out_dir = "tsc",
+    tsconfig = ":tsconfig_bazel",
+)
+
+esbuild(
+    name = "bundle",
+    srcs = LIB_TS_SRCS,
+    config = {
+        "inject": ["layout/src/polyfills.ts"],
+        "sourcemap": False,
+    },
+    entry_point = "src/layout-bundle.ts",
+    format = "iife",
+    output = "dist/js/bpmn-layout-bundle.js",
+    platform = "node",
+    target = "es2022",
+    deps = LAYOUT_TS_DEPS,
+)

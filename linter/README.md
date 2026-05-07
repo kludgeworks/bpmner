@@ -4,7 +4,7 @@ This module contains the custom `bpmnlint` rules used by `bpmner`.
 
 The primary artifact is not an npm package. It is a Bazel-built JavaScript bundle embedded into the JVM app and executed through GraalJS by [BpmnLintService](../src/main/kotlin/dev/groknull/bpmner/agent/BpmnLintService.kt).
 
-`linter/` is still a standalone Node package. It owns its own `package.json`, `pnpm-lock.yaml`, `tsconfig.json`, and `node_modules`, while Bazel consumes that package in place.
+`linter/` is still a standalone Node package. It owns its own `package.json` and `tsconfig.json`, while Bazel consumes that package in place.
 
 ## Runtime Shape
 
@@ -12,7 +12,7 @@ There are three layers:
 
 1. `rules/*.ts`
    Custom KLM rule implementations.
-2. `src/static-rules.ts`
+2. `src/generated/static-rules.ts`
    Generated static resolver catalog for GraalJS bundling.
 3. `src/linter-bundle.ts`
    GraalJS entrypoint that exposes `globalThis.BpmnLinterApi`.
@@ -53,7 +53,13 @@ The test suite covers:
 
 1. Add or update the rule implementation under `rules/`.
 2. Update `src/rule-manifest.ts` with the rule id and severity.
-3. Regenerate the GraalJS static catalog:
+3. Run a Bazel build or test.
+
+```bash
+bazel build //linter:bundle
+```
+
+Bazel generates `src/generated/static-rules.ts` automatically for both the bundle and the direct linter tests. The generator script is still available as an optional debugging tool:
 
 ```bash
 cd linter
@@ -63,7 +69,7 @@ node ./scripts/generate-static-rules.mjs
 4. Add or update fixtures under `test/fixtures/phase1/` or `test/fixtures/phase2/`.
 5. Run `bazel test //linter:all`.
 
-The manifest is the source of truth for custom rule ids and severities. `src/static-rules.ts` is generated and should not be edited manually.
+The manifest is the source of truth for custom rule ids and severities. `src/generated/static-rules.ts` is generated and should not be edited manually.
 
 ## Fixtures
 

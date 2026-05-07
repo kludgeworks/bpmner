@@ -35,6 +35,7 @@ build/
 node_modules/
 dist/
 logs/
+linter/src/generated/static-rules.ts
 
 # Bazel
 /bazel-*

@@ -22,6 +22,7 @@ class BpmnGeneratorAgentTest {
         lintService: BpmnLintService,
         xsdValidator: BpmnXsdValidator,
         converter: BpmnDefinitionToXmlConverter,
+        layoutService: BpmnLayoutService = RecordingLayoutService(),
     ): BpmnGeneratorAgent {
         val workflow = BpmnRefinementWorkflow(
             config = config,
@@ -30,15 +31,16 @@ class BpmnGeneratorAgentTest {
             bpmnConverter = converter,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
         )
-        return BpmnGeneratorAgent(config, converter, workflow)
+        return BpmnGeneratorAgent(config, converter, workflow, layoutService)
     }
 
     @Test
     fun `valid rendered bpmn passes straight through to validated xml`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
         val lintService = RecordingLintService(listOf(emptyList()))
+        val layoutService = RecordingLayoutService()
         val converter = RecordingConverter()
-        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, layoutService)
         val definition = validDefinition()
         val rendered = converter.render(definition)
 
@@ -135,6 +137,18 @@ class BpmnGeneratorAgentTest {
         assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
         assertEquals(2, xsdValidator.xmls.size)
         assertEquals(2, lintService.xmls.size)
+    }
+
+    private class RecordingLayoutService(
+        private val responses: List<String> = emptyList(),
+    ) : BpmnLayoutService() {
+        val xmls = mutableListOf<String>()
+        private var index = 0
+
+        override fun layout(xml: String): String {
+            xmls += xml
+            return if (index < responses.size) responses[index++] else xml
+        }
     }
 
     private class RecordingLintService(

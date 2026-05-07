@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import BpmnModdle from 'bpmn-moddle';
 import { Linter } from 'bpmnlint';
-import { resolver } from '../src/static-rules';
+import { resolver } from '../src/generated/static-rules';
 import { customRuleManifest, KLM_PLUGIN_PREFIX } from '../src/rule-manifest';
 import { fixtures } from './fixtures';
 
