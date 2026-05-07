@@ -1,73 +1,252 @@
-const assert = require('node:assert/strict');
-import { phase1Fixtures } from './fixtures/phase1';
-import { phase2Fixtures } from './fixtures/phase2';
-import { hasRule, lint } from './test-helpers';
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import BpmnModdle from 'bpmn-moddle';
+import { Linter } from 'bpmnlint';
+import { resolver } from '../src/static-rules';
+import { customRuleManifest, KLM_PLUGIN_PREFIX } from '../src/rule-manifest';
+import { fixtures } from './fixtures';
 
-async function expectRule(xml: string, ruleName: string, expected: boolean) {
-  const results = await lint(xml);
-  assert.equal(hasRule(results, ruleName), expected, `Expected ${ruleName} to be ${expected ? 'reported' : 'clean'}`);
+type Report = {
+  id?: string;
+  message: string;
+  category?: string;
+};
+
+type LintResults = Record<string, Report[]>;
+
+class PluginResolver {
+  resolveRule = resolver.resolveRule;
+  resolveConfig = resolver.resolveConfig;
 }
 
-async function main() {
-  const baseline = await lint(phase1Fixtures.validBaseline);
+const customRuleConfig = {
+  rules: Object.fromEntries(
+    customRuleManifest.map(({ id, level }) => [`${KLM_PLUGIN_PREFIX}/${id}`, level])
+  ),
+};
 
-  for (const reports of Object.values(baseline)) {
-    assert.equal(reports.length, 0);
-  }
-
-  await expectRule(phase1Fixtures.gen01Choreography, 'gen-01-klops-allowed-elements', true);
-  await expectRule(phase1Fixtures.gen02DuplicateDiagram, 'gen-02-no-duplicate-diagrams', true);
-  await expectRule(phase1Fixtures.act12LoopWithoutAnnotation, 'act-12-loop-task-annotation', true);
-  await expectRule(phase1Fixtures.act12LoopWithEquivalentAnnotation, 'act-12-loop-task-annotation', false);
-  await expectRule(phase1Fixtures.act13MiWithoutAnnotation, 'act-13-mi-task-annotation', true);
-  await expectRule(phase1Fixtures.act13MiWithEquivalentAnnotation, 'act-13-mi-task-annotation', false);
-  await expectRule(phase1Fixtures.evt10StartWithIncoming, 'evt-10-start-no-incoming', true);
-  await expectRule(phase1Fixtures.evt11MessageStartWithoutMessageFlow, 'evt-11-message-start-has-message-flow', true);
-  await expectRule(phase1Fixtures.evt14InvalidBoundary, 'evt-14-boundary-event-constraints', true);
-  await expectRule(phase1Fixtures.evt15UnmatchedErrorEnd, 'evt-15-error-end-boundary-pair', true);
-  await expectRule(phase1Fixtures.evt16UnpairedLink, 'evt-16-link-event-pairing', true);
-  await expectRule(phase1Fixtures.gtw11EventBasedToTask, 'gtw-11-event-based-direct-events', true);
-  await expectRule(phase1Fixtures.gtw12UnnamedDivergingFlow, 'gtw-12-diverging-flow-names', true);
-  await expectRule(phase1Fixtures.flow01CrossPoolSequence, 'flow-01-sequence-flow-within-pool', true);
-  await expectRule(phase1Fixtures.msg01SamePoolMessage, 'msg-01-message-flow-across-pools', true);
-  await expectRule(phase1Fixtures.assoc01LoopWithoutAssociation, 'assoc-01-required-annotation-association', true);
-  await expectRule(phase1Fixtures.data01TypeWordsInDataName, 'data-01-no-type-words-in-data-name', true);
-  await expectRule(phase1Fixtures.name03TypeWordsInElementName, 'name-03-no-element-type-words', true);
-
-  await expectRule(phase2Fixtures.act01Invalid, 'act-01-verb-object-name', true);
-  await expectRule(phase2Fixtures.act01Valid, 'act-01-verb-object-name', false);
-  await expectRule(phase2Fixtures.act01PhrasalVerbValid, 'act-01-verb-object-name', false);
-  await expectRule(phase2Fixtures.act01UppercaseLabelValid, 'act-01-verb-object-name', false);
-  await expectRule(phase2Fixtures.act02Invalid, 'act-02-activity-label-capitalization', true);
-  await expectRule(phase2Fixtures.act02Valid, 'act-02-activity-label-capitalization', false);
-  await expectRule(phase2Fixtures.act03Invalid, 'act-03-discouraged-business-verbs', true);
-  await expectRule(phase2Fixtures.act03Valid, 'act-03-discouraged-business-verbs', false);
-  await expectRule(phase2Fixtures.gtw01Invalid, 'gtw-01-diverging-gateway-question', true);
-  await expectRule(phase2Fixtures.gtw01Valid, 'gtw-01-diverging-gateway-question', false);
-  await expectRule(phase2Fixtures.gtw01ValidNoQuestionMark, 'gtw-01-diverging-gateway-question', false);
-  await expectRule(phase2Fixtures.gtw02Invalid, 'gtw-02-converging-gateway-unnamed', true);
-  await expectRule(phase2Fixtures.gtw02Valid, 'gtw-02-converging-gateway-unnamed', false);
-  await expectRule(phase2Fixtures.gtw03Invalid, 'gtw-03-gateway-no-work-label', true);
-  await expectRule(phase2Fixtures.gtw03Valid, 'gtw-03-gateway-no-work-label', false);
-  await expectRule(phase2Fixtures.flow02Invalid, 'flow-02-diverging-flow-outcome-label', true);
-  await expectRule(phase2Fixtures.flow02Valid, 'flow-02-diverging-flow-outcome-label', false);
-  await expectRule(phase2Fixtures.evt13Invalid, 'evt-13-intermediate-event-not-action', true);
-  await expectRule(phase2Fixtures.evt13Valid, 'evt-13-intermediate-event-not-action', false);
-  await expectRule(phase2Fixtures.evt01Invalid, 'evt-01-event-state-name', true);
-  await expectRule(phase2Fixtures.evt01Valid, 'evt-01-event-state-name', false);
-  await expectRule(phase2Fixtures.evt02Invalid, 'evt-02-event-state-pattern', true);
-  await expectRule(phase2Fixtures.evt02Valid, 'evt-02-event-state-pattern', false);
-  await expectRule(phase2Fixtures.msg02Invalid, 'msg-02-message-flow-name-pattern', true);
-  await expectRule(phase2Fixtures.msg02Valid, 'msg-02-message-flow-name-pattern', false);
-  await expectRule(phase2Fixtures.msg02UppercaseVerbInvalid, 'msg-02-message-flow-name-pattern', true);
-  await expectRule(phase2Fixtures.msg02PastParticipleNounValid, 'msg-02-message-flow-name-pattern', false);
-  await expectRule(phase2Fixtures.name02Invalid, 'name-02-uncommon-abbreviations', true);
-  await expectRule(phase2Fixtures.name02Valid, 'name-02-uncommon-abbreviations', false);
-  await expectRule(phase2Fixtures.name01Invalid, 'name-01-business-meaningful-label', true);
-  await expectRule(phase2Fixtures.name01Valid, 'name-01-business-meaningful-label', false);
+async function lint(xml: string): Promise<LintResults> {
+  const moddle = new BpmnModdle();
+  const { rootElement } = await moddle.fromXML(xml);
+  const linter = new Linter({
+    config: customRuleConfig,
+    resolver: new PluginResolver(),
+  });
+  return linter.lint(rootElement as never) as LintResults;
 }
 
-void main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+function reportsFor(results: LintResults, ruleName: string): Report[] {
+  const match = Object.entries(results).find(([key]) => {
+    return key === ruleName || key.endsWith(`/${ruleName}`);
+  });
+  return match?.[1] || [];
+}
+
+function hasRule(results: LintResults, ruleName: string): boolean {
+  return reportsFor(results, ruleName).length > 0;
+}
+
+describe('lint rules', () => {
+  it('valid baseline has no violations', async () => {
+    const baseline = await lint(fixtures.validBaseline);
+    for (const reports of Object.values(baseline)) {
+      assert.equal(reports.length, 0);
+    }
+  });
+
+  it('gen-01-klops-allowed-elements', async () => {
+    assert.ok(hasRule(await lint(fixtures.gen01Choreography), 'gen-01-klops-allowed-elements'));
+  });
+
+  it('gen-02-no-duplicate-diagrams', async () => {
+    assert.ok(hasRule(await lint(fixtures.gen02DuplicateDiagram), 'gen-02-no-duplicate-diagrams'));
+  });
+
+  it('act-12-loop-task-annotation — missing annotation', async () => {
+    assert.ok(hasRule(await lint(fixtures.act12LoopWithoutAnnotation), 'act-12-loop-task-annotation'));
+  });
+
+  it('act-12-loop-task-annotation — equivalent annotation is clean', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act12LoopWithEquivalentAnnotation), 'act-12-loop-task-annotation'));
+  });
+
+  it('act-13-mi-task-annotation — missing annotation', async () => {
+    assert.ok(hasRule(await lint(fixtures.act13MiWithoutAnnotation), 'act-13-mi-task-annotation'));
+  });
+
+  it('act-13-mi-task-annotation — equivalent annotation is clean', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act13MiWithEquivalentAnnotation), 'act-13-mi-task-annotation'));
+  });
+
+  it('evt-10-start-no-incoming', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt10StartWithIncoming), 'evt-10-start-no-incoming'));
+  });
+
+  it('evt-11-message-start-has-message-flow', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt11MessageStartWithoutMessageFlow), 'evt-11-message-start-has-message-flow'));
+  });
+
+  it('evt-14-boundary-event-constraints', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt14InvalidBoundary), 'evt-14-boundary-event-constraints'));
+  });
+
+  it('evt-15-error-end-boundary-pair', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt15UnmatchedErrorEnd), 'evt-15-error-end-boundary-pair'));
+  });
+
+  it('evt-16-link-event-pairing', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt16UnpairedLink), 'evt-16-link-event-pairing'));
+  });
+
+  it('gtw-11-event-based-direct-events', async () => {
+    assert.ok(hasRule(await lint(fixtures.gtw11EventBasedToTask), 'gtw-11-event-based-direct-events'));
+  });
+
+  it('gtw-12-diverging-flow-names', async () => {
+    assert.ok(hasRule(await lint(fixtures.gtw12UnnamedDivergingFlow), 'gtw-12-diverging-flow-names'));
+  });
+
+  it('flow-01-sequence-flow-within-pool', async () => {
+    assert.ok(hasRule(await lint(fixtures.flow01CrossPoolSequence), 'flow-01-sequence-flow-within-pool'));
+  });
+
+  it('msg-01-message-flow-across-pools', async () => {
+    assert.ok(hasRule(await lint(fixtures.msg01SamePoolMessage), 'msg-01-message-flow-across-pools'));
+  });
+
+  it('assoc-01-required-annotation-association', async () => {
+    assert.ok(hasRule(await lint(fixtures.assoc01LoopWithoutAssociation), 'assoc-01-required-annotation-association'));
+  });
+
+  it('data-01-no-type-words-in-data-name', async () => {
+    assert.ok(hasRule(await lint(fixtures.data01TypeWordsInDataName), 'data-01-no-type-words-in-data-name'));
+  });
+
+  it('name-03-no-element-type-words', async () => {
+    assert.ok(hasRule(await lint(fixtures.name03TypeWordsInElementName), 'name-03-no-element-type-words'));
+  });
+
+  it('act-01-verb-object-name — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.act01Invalid), 'act-01-verb-object-name'));
+  });
+
+  it('act-01-verb-object-name — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act01Valid), 'act-01-verb-object-name'));
+  });
+
+  it('act-01-verb-object-name — phrasal verb', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act01PhrasalVerbValid), 'act-01-verb-object-name'));
+  });
+
+  it('act-01-verb-object-name — uppercase label', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act01UppercaseLabelValid), 'act-01-verb-object-name'));
+  });
+
+  it('act-02-activity-label-capitalization — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.act02Invalid), 'act-02-activity-label-capitalization'));
+  });
+
+  it('act-02-activity-label-capitalization — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act02Valid), 'act-02-activity-label-capitalization'));
+  });
+
+  it('act-03-discouraged-business-verbs — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.act03Invalid), 'act-03-discouraged-business-verbs'));
+  });
+
+  it('act-03-discouraged-business-verbs — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.act03Valid), 'act-03-discouraged-business-verbs'));
+  });
+
+  it('gtw-01-diverging-gateway-question — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.gtw01Invalid), 'gtw-01-diverging-gateway-question'));
+  });
+
+  it('gtw-01-diverging-gateway-question — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.gtw01Valid), 'gtw-01-diverging-gateway-question'));
+  });
+
+  it('gtw-01-diverging-gateway-question — no question mark', async () => {
+    assert.ok(!hasRule(await lint(fixtures.gtw01ValidNoQuestionMark), 'gtw-01-diverging-gateway-question'));
+  });
+
+  it('gtw-02-converging-gateway-unnamed — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.gtw02Invalid), 'gtw-02-converging-gateway-unnamed'));
+  });
+
+  it('gtw-02-converging-gateway-unnamed — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.gtw02Valid), 'gtw-02-converging-gateway-unnamed'));
+  });
+
+  it('gtw-03-gateway-no-work-label — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.gtw03Invalid), 'gtw-03-gateway-no-work-label'));
+  });
+
+  it('gtw-03-gateway-no-work-label — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.gtw03Valid), 'gtw-03-gateway-no-work-label'));
+  });
+
+  it('flow-02-diverging-flow-outcome-label — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.flow02Invalid), 'flow-02-diverging-flow-outcome-label'));
+  });
+
+  it('flow-02-diverging-flow-outcome-label — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.flow02Valid), 'flow-02-diverging-flow-outcome-label'));
+  });
+
+  it('evt-13-intermediate-event-not-action — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt13Invalid), 'evt-13-intermediate-event-not-action'));
+  });
+
+  it('evt-13-intermediate-event-not-action — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.evt13Valid), 'evt-13-intermediate-event-not-action'));
+  });
+
+  it('evt-01-event-state-name — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt01Invalid), 'evt-01-event-state-name'));
+  });
+
+  it('evt-01-event-state-name — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.evt01Valid), 'evt-01-event-state-name'));
+  });
+
+  it('evt-02-event-state-pattern — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.evt02Invalid), 'evt-02-event-state-pattern'));
+  });
+
+  it('evt-02-event-state-pattern — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.evt02Valid), 'evt-02-event-state-pattern'));
+  });
+
+  it('msg-02-message-flow-name-pattern — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.msg02Invalid), 'msg-02-message-flow-name-pattern'));
+  });
+
+  it('msg-02-message-flow-name-pattern — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.msg02Valid), 'msg-02-message-flow-name-pattern'));
+  });
+
+  it('msg-02-message-flow-name-pattern — uppercase verb invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.msg02UppercaseVerbInvalid), 'msg-02-message-flow-name-pattern'));
+  });
+
+  it('msg-02-message-flow-name-pattern — past participle noun valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.msg02PastParticipleNounValid), 'msg-02-message-flow-name-pattern'));
+  });
+
+  it('name-02-uncommon-abbreviations — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.name02Invalid), 'name-02-uncommon-abbreviations'));
+  });
+
+  it('name-02-uncommon-abbreviations — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.name02Valid), 'name-02-uncommon-abbreviations'));
+  });
+
+  it('name-01-business-meaningful-label — invalid', async () => {
+    assert.ok(hasRule(await lint(fixtures.name01Invalid), 'name-01-business-meaningful-label'));
+  });
+
+  it('name-01-business-meaningful-label — valid', async () => {
+    assert.ok(!hasRule(await lint(fixtures.name01Valid), 'name-01-business-meaningful-label'));
+  });
 });
