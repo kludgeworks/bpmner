@@ -1,0 +1,24 @@
+{
+  "name": "bpmner-root",
+  "private": true,
+  "dependencies": {
+    "bpmn-moddle": "^9.0.4",
+    "bpmnlint": "^11.12.1",
+    "bpmnlint-utils": "^1.1.1",
+    "wink-eng-lite-web-model": "^1.8.1",
+    "wink-nlp": "^2.4.0",
+    "yet-another-bpmn-auto-layout": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.17",
+    "esbuild": "^0.28.0",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  },
+  "packageManager": "pnpm@9.1.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

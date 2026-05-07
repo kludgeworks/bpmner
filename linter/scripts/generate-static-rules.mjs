@@ -1,15 +1,18 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 
 const require = createRequire(import.meta.url);
 
-const repoRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const rulesDir = path.join(repoRoot, 'rules');
 const manifestPath = path.join(repoRoot, 'src', 'rule-manifest.ts');
-const outputPath = path.join(repoRoot, 'src', 'static-rules.ts');
+const defaultOutputPath = path.join(repoRoot, 'src', 'generated', 'static-rules.ts');
+const cliOutputPath = process.argv[2];
+const outputPath = cliOutputPath ? path.resolve(process.cwd(), cliOutputPath) : defaultOutputPath;
 
-const recommendedConfig = require(path.join(repoRoot, 'node_modules', 'bpmnlint', 'config', 'recommended.js'));
+const recommendedConfig = require('bpmnlint/config/recommended');
 
 const manifestSource = fs.readFileSync(manifestPath, 'utf8');
 
@@ -109,4 +112,5 @@ export const resolver = {
 };
 `;
 
+fs.mkdirSync(path.dirname(outputPath), { recursive: true });
 fs.writeFileSync(outputPath, source);

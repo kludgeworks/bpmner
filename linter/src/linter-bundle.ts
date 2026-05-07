@@ -1,6 +1,6 @@
 import { Linter } from 'bpmnlint';
 import BpmnModdle from 'bpmn-moddle';
-import { config, resolver } from './static-rules';
+import { config, resolver } from './generated/static-rules';
 
 type LintReport = {
   id?: string;

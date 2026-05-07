@@ -14,6 +14,7 @@ class BpmnGeneratorAgent(
     private val config: BpmnConfig,
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
     private val refinementWorkflow: BpmnRefinementWorkflow,
+    private val layoutService: BpmnLayoutService,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
 
@@ -158,6 +159,12 @@ class BpmnGeneratorAgent(
         context: ActionContext,
     ): ValidatedBpmnXml = refinementWorkflow.refine(request, graph, rendered, context)
 
+    @Action(description = "Apply auto-layout to the validated BPMN XML")
+    fun layoutBpmnXml(bpmn: ValidatedBpmnXml): LayoutedBpmnXml {
+        val layoutedXml = layoutService.layout(bpmn.xml)
+        return LayoutedBpmnXml(xml = layoutedXml)
+    }
+
     fun validateAndRefineBpmn(
         request: BpmnRequest,
         rendered: RenderedBpmn,
@@ -187,12 +194,11 @@ class BpmnGeneratorAgent(
         description = "Write validated BPMN 2.0 XML to the requested output file",
         export = Export(name = "generateBpmn", remote = true, startingInputTypes = [BpmnRequest::class]),
     )
-    @Action(description = "Write the validated BPMN XML to disk")
-    fun writeBpmn(request: BpmnRequest, bpmn: ValidatedBpmnXml): BpmnResult {
+    @Action(description = "Write the layouted BPMN XML to disk")
+    fun writeBpmn(request: BpmnRequest, bpmn: LayoutedBpmnXml): BpmnResult {
         File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
         logger.info(
-            "Final BPMN summary: accepted after {} scoped repair attempt(s), finalXmlLength={}, outputFile={}",
-            bpmn.repairAttempts,
+            "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
             bpmn.xml.length,
             request.outputFile,
         )

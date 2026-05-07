@@ -322,6 +322,13 @@ data class ValidatedBpmnXml(
 )
 
 /**
+ * BPMN XML that has been processed by the auto-layout service.
+ */
+data class LayoutedBpmnXml(
+    val xml: String,
+)
+
+/**
  * Final result written to disk.
  */
 data class BpmnResult(

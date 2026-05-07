@@ -4,3 +4,4 @@ node_modules
 .git
 .idea
 linter/node_modules
+layout/node_modules

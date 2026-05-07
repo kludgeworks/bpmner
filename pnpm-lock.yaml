@@ -23,6 +23,9 @@ importers:
       wink-nlp:
         specifier: ^2.4.0
         version: 2.4.0
+      yet-another-bpmn-auto-layout:
+        specifier: ^2.0.0
+        version: 2.0.0
     devDependencies:
       '@types/node':
         specifier: ^22.15.17
@@ -36,6 +39,30 @@ importers:
       typescript:
         specifier: ^5.8.3
         version: 5.9.3
+
+  layout:
+    dependencies:
+      yet-another-bpmn-auto-layout:
+        specifier: ^2.0.0
+        version: 2.0.0
+
+  linter:
+    dependencies:
+      bpmn-moddle:
+        specifier: ^9.0.4
+        version: 9.0.4
+      bpmnlint:
+        specifier: ^11.12.1
+        version: 11.12.1
+      bpmnlint-utils:
+        specifier: ^1.1.1
+        version: 1.1.1
+      wink-eng-lite-web-model:
+        specifier: ^1.8.1
+        version: 1.8.1
+      wink-nlp:
+        specifier: ^2.4.0
+        version: 2.4.0
 
 packages:
 
@@ -413,6 +440,9 @@ packages:
   globrex@0.1.2:
     resolution: {integrity: sha512-uHJgbwAMwNFf5mLst7IWLNg14x1CkeqglJb/K3doi4dw6q2IvAAmM/Y81kevy83wP+Sst+nutFTYOGg3d1lsxg==}
 
+  graph-by-ivan-tulaev@1.0.0-alpha.16:
+    resolution: {integrity: sha512-2+HnMrAHMYRWPWy/0lwO5C85FCu0yCbG10Zuf4fZ6lG1rewOvSeFPJatrIxL6kNGYorI4rQW7Nelkf/wFcDw7g==}
+
   min-dash@4.2.3:
     resolution: {integrity: sha512-VLMYQI5+FcD9Ad24VcB08uA83B07OhueAlZ88jBK6PyupTvEJwllTMUqMy0wPGYs7pZUEtEEMWdHB63m3LtEcg==}
 
@@ -478,6 +508,10 @@ packages:
 
   wink-nlp@2.4.0:
     resolution: {integrity: sha512-d02inlNJL0LLNTLoYfkxZYGrqnYDSZV4HI4WpeuyIEfpu7UcUqUW1ZYWr+JTFm4ZR6dQdzOW/FtHEQRO+o/zzA==}
+
+  yet-another-bpmn-auto-layout@2.0.0:
+    resolution: {integrity: sha512-XxTvqNh93XPoVYH2tEZfW8imbSujI5U452+QyQxkO2y5BtZdGWgwTu+0peZjalcK1TDE+Tzm5f88cb5HqC1ALw==}
+    engines: {node: '>= 18'}
 
 snapshots:
 
@@ -751,6 +785,8 @@ snapshots:
 
   globrex@0.1.2: {}
 
+  graph-by-ivan-tulaev@1.0.0-alpha.16: {}
+
   min-dash@4.2.3: {}
 
   min-dash@5.0.0: {}
@@ -804,3 +840,9 @@ snapshots:
   wink-eng-lite-web-model@1.8.1: {}
 
   wink-nlp@2.4.0: {}
+
+  yet-another-bpmn-auto-layout@2.0.0:
+    dependencies:
+      bpmn-moddle: 10.0.0
+      graph-by-ivan-tulaev: 1.0.0-alpha.16
+      min-dash: 4.2.3
