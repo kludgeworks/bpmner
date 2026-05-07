@@ -10,6 +10,7 @@ import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableBuilder
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
+import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
@@ -99,8 +100,12 @@ class BpmnRefinementWorkflow(
                 logger.warn("BPMN refinement feedback had no repair prompt; reusing last attempt")
                 return previousAttempt
             }
+            val repairPromptRunner = promptRunner(repairContext, request).let { runner ->
+                val docsPrompt = lintRuleDocsPrompt(feedback.diagnostics)
+                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
+            }
             val (correctedDefinition, updatedMessages) = requestCorrection(
-                promptRunner(repairContext, request),
+                repairPromptRunner,
                 previousAttempt.messages,
                 feedback.repairPrompt,
             )
@@ -346,6 +351,36 @@ class BpmnRefinementWorkflow(
         diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
         diagnostic.ownerRef?.let { append(", owner=$it") }
         append(": ${diagnostic.message}")
+    }
+
+    private fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
+        val lintRules = diagnostics
+            .asSequence()
+            .filter { it.source == BpmnDiagnosticSource.LINT }
+            .mapNotNull { it.rule }
+            .distinct()
+            .toList()
+        if (lintRules.isEmpty()) {
+            return null
+        }
+
+        val docs = bpmnLintService.ruleDocs(lintRules)
+        if (docs.isEmpty()) {
+            return null
+        }
+
+        val content = buildString {
+            appendLine("KLM lint rule documentation for current violations:")
+            appendLine()
+            docs.toSortedMap().forEach { (rule, markdown) ->
+                appendLine("## $rule")
+                appendLine()
+                appendLine(markdown.trim())
+                appendLine()
+            }
+        }.trim()
+
+        return if (content.isBlank()) null else PromptContributor.fixed(content)
     }
 
     private fun renderFailureContext(attempt: BpmnRefinementAttempt): String = buildString {

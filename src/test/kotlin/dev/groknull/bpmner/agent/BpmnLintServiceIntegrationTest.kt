@@ -28,7 +28,11 @@ class BpmnLintServiceIntegrationTest {
     
     @Test
     fun `lint detects duplicate diagram elements using KLM rule`() {
-        val service = BpmnLintService()
+        val service = BpmnLintService(
+            BpmnLintProperties(
+                extends = listOf("bpmnlint:recommended", "plugin:klm/recommended"),
+            )
+        )
         service.init()
 
         val duplicateDiagramXml = """

@@ -23,7 +23,18 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 
 @ConfigurationProperties("bpmner.lint")
 data class BpmnLintProperties(
+    val extends: List<String> = listOf("bpmnlint:recommended"),
     val rules: Map<String, String> = emptyMap()
+) {
+    fun toLintConfig(): RuntimeLintConfig = RuntimeLintConfig(
+        extends = extends,
+        rules = rules,
+    )
+}
+
+data class RuntimeLintConfig(
+    val extends: List<String> = emptyList(),
+    val rules: Map<String, String> = emptyMap(),
 )
 
 /**
@@ -66,8 +77,7 @@ class BpmnLintService(
             linterApi = api
             
             if (api != null) {
-                val defaultRules = api.getMember("getRules").execute().`as`(Map::class.java) as Map<String, String>
-                val activeRules = defaultRules + properties.rules
+                val activeRules = resolvedRules()
                 logger.info("GraalJS bpmn-lint context initialized. Active rules: {}", activeRules.keys.sorted().joinToString(", "))
                 logger.debug("Rule levels: {}", activeRules)
             }
@@ -85,7 +95,7 @@ class BpmnLintService(
         
         return try {
             val future = CompletableFuture<String>()
-            val promise = api.getMember("lintXml").execute(bpmnXml, properties.rules)
+            val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson())
             
             promise.invokeMember("then", Consumer<String> { result ->
                 future.complete(result)
@@ -101,9 +111,40 @@ class BpmnLintService(
 
     internal fun parseIssues(json: String): List<LintIssue> = objectMapper.readValue(json)
 
+    open fun ruleDocs(ruleNames: Collection<String>): Map<String, String> {
+        val api = linterApi ?: return emptyMap()
+        if (ruleNames.isEmpty()) {
+            return emptyMap()
+        }
+
+        return try {
+            @Suppress("UNCHECKED_CAST")
+            api.getMember("getRuleDocs")
+                .execute(objectMapper.writeValueAsString(ruleNames.distinct().sorted()))
+                .`as`(Map::class.java) as Map<String, String>
+        } catch (e: Exception) {
+            logger.warn("Failed to resolve lint rule docs: {}", e.message)
+            emptyMap()
+        }
+    }
+
+    open fun resolvedRules(): Map<String, String> {
+        val api = linterApi ?: return emptyMap()
+
+        return try {
+            @Suppress("UNCHECKED_CAST")
+            api.getMember("getRules").execute(lintConfigJson()).`as`(Map::class.java) as Map<String, String>
+        } catch (e: Exception) {
+            logger.warn("Failed to resolve active lint rules: {}", e.message)
+            emptyMap()
+        }
+    }
+
     fun destroy() {
         jsContext?.close()
     }
+
+    private fun lintConfigJson(): String = objectMapper.writeValueAsString(properties.toLintConfig())
 
     companion object {
         private const val BPMNLINT_VERSION = "11.12.1"

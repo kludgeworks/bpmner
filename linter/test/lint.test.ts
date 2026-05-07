@@ -2,7 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import BpmnModdle from 'bpmn-moddle';
 import { Linter } from 'bpmnlint';
-import { resolver } from '../src/generated/static-rules';
+import { configs, customRuleDocs, resolver } from '../src/generated/static-rules';
 import { customRuleManifest, KLM_PLUGIN_PREFIX } from '../src/rule-manifest';
 import { fixtures } from './fixtures';
 
@@ -20,16 +20,22 @@ class PluginResolver {
 }
 
 const customRuleConfig = {
-  rules: Object.fromEntries(
-    customRuleManifest.map(({ id, level }) => [`${KLM_PLUGIN_PREFIX}/${id}`, level])
-  ),
+  extends: ['plugin:klm/recommended'],
+};
+
+const customRuleConfigAll = {
+  extends: ['plugin:klm/all'],
 };
 
 async function lint(xml: string): Promise<LintResults> {
+  return lintWithConfig(xml, customRuleConfig);
+}
+
+async function lintWithConfig(xml: string, config: unknown): Promise<LintResults> {
   const moddle = new BpmnModdle();
   const { rootElement } = await moddle.fromXML(xml);
   const linter = new Linter({
-    config: customRuleConfig,
+    config,
     resolver: new PluginResolver(),
   });
   return linter.lint(rootElement as never) as LintResults;
@@ -47,9 +53,36 @@ function hasRule(results: LintResults, ruleName: string): boolean {
 }
 
 describe('lint rules', () => {
+  it('plugin recommended config resolves every manifest rule', () => {
+    const config = configs['plugin:klm/recommended'];
+    assert.equal(Object.keys(config.rules).length, customRuleManifest.length);
+  });
+
+  it('plugin all config upgrades every manifest rule to error', () => {
+    const config = configs['plugin:klm/all'];
+    assert.deepEqual(
+      Object.values(config.rules),
+      customRuleManifest.map(() => 'error')
+    );
+  });
+
+  it('every manifest rule has generated markdown docs', () => {
+    for (const { id } of customRuleManifest) {
+      assert.equal(typeof customRuleDocs[`${KLM_PLUGIN_PREFIX}/${id}`], 'string');
+      assert.ok(customRuleDocs[`${KLM_PLUGIN_PREFIX}/${id}`].length > 0);
+    }
+  });
+
   it('valid baseline has no violations', async () => {
     const baseline = await lint(fixtures.validBaseline);
     for (const reports of Object.values(baseline)) {
+      assert.equal(reports.length, 0);
+    }
+  });
+
+  it('plugin all exposes rules as errors through resolved config', async () => {
+    const results = await lintWithConfig(fixtures.validBaseline, customRuleConfigAll);
+    for (const reports of Object.values(results)) {
       assert.equal(reports.length, 0);
     }
   });

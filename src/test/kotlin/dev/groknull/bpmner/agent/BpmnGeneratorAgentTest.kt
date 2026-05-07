@@ -82,6 +82,35 @@ class BpmnGeneratorAgentTest {
     }
 
     @Test
+    fun `klm lint issue includes matching rule docs in repair prompt contributor`() {
+        val invalid = validDefinition()
+        val corrected = validDefinition()
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(
+            responses = listOf(
+                listOf(LintIssue(id = "Task_1", rule = "klm/gen-02-no-duplicate-diagrams", message = "Duplicate BPMNDiagram")),
+                emptyList(),
+            ),
+            docs = mapOf(
+                "klm/gen-02-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs"
+            ),
+        )
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        context.expectResponse(corrected)
+        val initialRendered = converter.render(invalid)
+
+        agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+
+        val promptContributions = context.llmInvocations.single().interaction.promptContributors.joinToString("\n") {
+            it.contribution()
+        }
+        assertTrue(promptContributions.contains("KLM lint rule documentation for current violations"))
+        assertTrue(promptContributions.contains("# gen-02-no-duplicate-diagrams"))
+    }
+
+    @Test
     fun `xsd issue is preserved as diagnostic and causes rerender before succeeding`() {
         val initial = validDefinition()
         val corrected = validDefinition(
@@ -153,6 +182,7 @@ class BpmnGeneratorAgentTest {
 
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
+        private val docs: Map<String, String> = emptyMap(),
     ) : BpmnLintService() {
         val xmls = mutableListOf<String>()
         private var index = 0
@@ -161,6 +191,13 @@ class BpmnGeneratorAgentTest {
             xmls += bpmnXml
             return responses[index++]
         }
+
+        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> =
+            buildMap {
+                ruleNames.distinct().forEach { ruleName ->
+                    docs[ruleName]?.let { put(ruleName, it) }
+                }
+            }
     }
 
     private class RecordingXsdValidator(
