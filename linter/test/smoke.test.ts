@@ -1,36 +1,38 @@
-const assert = require('node:assert/strict');
-import { phase1Fixtures } from './fixtures/phase1';
+import { describe, it, before } from 'node:test';
+import assert from 'node:assert/strict';
+import { fixtures } from './fixtures';
 
-async function main() {
-  require('../src/linter-bundle');
+type BpmnLinterApi = {
+  lintXml(xml: string, ruleOverrides?: Record<string, string>): Promise<string>;
+  getRules(): Record<string, string>;
+};
 
-  const api = (globalThis as typeof globalThis & {
-    BpmnLinterApi?: {
-      lintXml(xml: string, ruleOverrides?: Record<string, string>): Promise<string>;
-      getRules(): Record<string, string>;
-    };
-  }).BpmnLinterApi;
+describe('BpmnLinterApi bundle smoke test', () => {
+  let api: BpmnLinterApi;
 
-  assert.ok(api, 'BpmnLinterApi should be defined on globalThis');
+  before(() => {
+    require('../src/linter-bundle');
+    const globalApi = (globalThis as typeof globalThis & { BpmnLinterApi?: BpmnLinterApi }).BpmnLinterApi;
+    assert.ok(globalApi, 'BpmnLinterApi should be defined on globalThis');
+    api = globalApi!;
+  });
 
-  if (!api) {
-    throw new Error('BpmnLinterApi is unavailable');
-  }
-
-  const builtInIssues = JSON.parse(await api.lintXml(`<?xml version="1.0" encoding="UTF-8"?>
+  it('reports start-event-required on a minimal process', async () => {
+    const issues: Array<{ rule: string }> = JSON.parse(
+      await api.lintXml(`<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1">
   <bpmn:process id="Process_1" />
-</bpmn:definitions>`));
+</bpmn:definitions>`)
+    );
+    assert.ok(issues.some((i) => i.rule === 'start-event-required'));
+  });
 
-  assert.equal(builtInIssues.some((issue: { rule: string }) => issue.rule === 'start-event-required'), true);
+  it('reports bpmner/gen-02-no-duplicate-diagrams on the duplicate diagram fixture', async () => {
+    const issues: Array<{ rule: string }> = JSON.parse(await api.lintXml(fixtures.gen02DuplicateDiagram));
+    assert.ok(issues.some((i) => i.rule === 'bpmner/gen-02-no-duplicate-diagrams'));
+  });
 
-  const customIssues = JSON.parse(await api.lintXml(phase1Fixtures.gen02DuplicateDiagram));
-
-  assert.equal(customIssues.some((issue: { rule: string }) => issue.rule === 'bpmner/gen-02-no-duplicate-diagrams'), true);
-  assert.equal(api.getRules()['bpmner/gen-02-no-duplicate-diagrams'], 'error');
-}
-
-void main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+  it('exposes bpmner/gen-02-no-duplicate-diagrams in getRules()', () => {
+    assert.equal(api.getRules()['bpmner/gen-02-no-duplicate-diagrams'], 'error');
+  });
 });
