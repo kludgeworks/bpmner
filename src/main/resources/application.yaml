@@ -25,3 +25,12 @@ bpmner:
   logging:
     dir: ${BPMNER_LOG_DIR:${LOG_DIR:logs}}
     dump-artifacts: false
+  lint:
+    extends:
+      - plugin:bpmner/recommended-error
+    rules:
+      bpmner/act-01-verb-object-name: error
+      bpmner/act-02-activity-label-capitalization: error
+      bpmner/act-03-discouraged-business-verbs: error
+      bpmner/act-12-loop-task-annotation: error
+      bpmner/act-13-mi-task-annotation: error
