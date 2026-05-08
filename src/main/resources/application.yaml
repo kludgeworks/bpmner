@@ -12,6 +12,14 @@ spring:
         - github
         - verbose
 
+embabel:
+  agent:
+    shell:
+      web-application-type: none
+      interactive:
+        enabled: true
+        history-enabled: true
+
 bpmner:
   max-attempts: 5
   logging:

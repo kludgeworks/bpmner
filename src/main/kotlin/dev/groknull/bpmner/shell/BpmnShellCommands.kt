@@ -1,0 +1,50 @@
+package dev.groknull.bpmner.shell
+
+import dev.groknull.bpmner.BpmnGenerationInput
+import dev.groknull.bpmner.BpmnGenerationUseCase
+import org.springframework.shell.standard.ShellComponent
+import org.springframework.shell.standard.ShellMethod
+import org.springframework.shell.standard.ShellOption
+
+@ShellComponent
+class BpmnShellCommands(
+    private val generationUseCase: BpmnGenerationUseCase,
+) {
+
+    @ShellMethod(
+        value = "Generate a BPMN 2.0 diagram from a process description",
+        key = ["generate", "gen"],
+    )
+    fun generate(
+        @ShellOption(
+            value = ["--process"],
+            help = "Natural-language process description",
+            defaultValue = ShellOption.NULL,
+        ) processDescription: String?,
+        @ShellOption(
+            value = ["--process-file"],
+            help = "Path to a file containing the process description",
+            defaultValue = ShellOption.NULL,
+        ) processFile: String?,
+        @ShellOption(
+            value = ["--output"],
+            help = "BPMN output path",
+            defaultValue = "output.bpmn",
+        ) output: String,
+        @ShellOption(
+            value = ["--style-guide"],
+            help = "Optional Markdown style guide path",
+            defaultValue = ShellOption.NULL,
+        ) styleGuide: String?,
+    ): String {
+        val result = generationUseCase.generate(
+            BpmnGenerationInput(
+                processDescription = processDescription,
+                processFile = processFile,
+                outputFile = output,
+                styleGuide = styleGuide,
+            )
+        )
+        return "BPMN written to: ${result.outputFile}"
+    }
+}

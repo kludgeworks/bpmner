@@ -29,6 +29,7 @@ maven.install(
         "org.springframework.boot:spring-boot-starter-test:3.5.9",
         "com.embabel.agent:embabel-agent-starter-openai:0.3.5",
         "com.embabel.agent:embabel-agent-starter-anthropic:0.3.5",
+        "com.embabel.agent:embabel-agent-starter-shell:0.3.5",
         "com.embabel.agent:embabel-agent-test:0.3.5",
         "org.jetbrains.kotlin:kotlin-reflect:2.1.10",
         "org.jetbrains.kotlin:kotlin-test-junit5:2.1.10",

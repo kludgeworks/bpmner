@@ -19,6 +19,26 @@ bazel build //src:bpmner_app
 
 Pick a provider profile and export the matching key.
 
+### Interactive Shell
+
+Run without `--process` or `--process-file` to start the Embabel Spring Shell:
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+bazel run //src:bpmner_app -- --spring.profiles.active=anth
+```
+
+From the shell, use the BPMN-specific `generate` command:
+
+```text
+generate --process "Order goes from customer to warehouse to shipping" --output order.bpmn
+gen --process-file toast-process.txt --output toast.bpmn --style-guide style.md
+```
+
+The shell also includes Embabel's generic agent commands, such as `execute`, `chat`, `agents`, `goals`, and `runs`.
+
+### One-Shot Generation
+
 **Anthropic:**
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
@@ -34,6 +54,7 @@ bazel run //src:bpmner_app -- --spring.profiles.active=gh \
 ```
 
 Pass `--process "your description here"` instead of `--process-file` to supply the description inline.
+One-shot mode still writes the BPMN file and exits after generation.
 
 For arbitrary local files, prefer an absolute filesystem path:
 
@@ -65,6 +86,9 @@ Key properties in `src/main/resources/application.yaml`:
 | `bpmner.logging.file` | (unset) | Optional explicit full log file path override |
 | `bpmner.logging.dump-artifacts` | `false` | Emit truncated outline/definition/XML artifact snapshots in debug logs |
 | `bpmner.model` | (auto) | Override the LLM model name |
+| `embabel.agent.shell.web-application-type` | `none` | Keep shell mode as a non-web Spring Boot application |
+| `embabel.agent.shell.interactive.enabled` | `true` | Enable the interactive shell when no one-shot process input is supplied |
+| `embabel.agent.shell.interactive.history-enabled` | `true` | Enable command history in the interactive shell |
 
 Profile configs live in `application-anthropic.yaml` and `application-github.yaml`.
 
