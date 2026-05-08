@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "generate:static-rules": "node ./scripts/generate-static-rules.mjs"
+    "generate:static-rules": "node ./scripts/generate-static-rules.mjs",
+    "test:build": "cd .. && bazel build //linter:lint_test_bundle //linter:smoke_test_bundle",
+    "test": "node --test --test-reporter=tap ../bazel-bin/linter/dist/test/lint.test.js ../bazel-bin/linter/dist/test/smoke.test.js"
   },
   "dependencies": {
     "bpmn-moddle": "^9.0.4",

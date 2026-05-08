@@ -1,4 +1,5 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_project")
@@ -8,6 +9,10 @@ package(default_visibility = ["//visibility:public"])
 LIB_TS_SRCS = glob([
     "src/**/*.ts",
     "types/**/*.d.ts",
+])
+
+TEST_TS_SRCS = glob([
+    "test/**/*.ts",
 ])
 
 # Link the standalone layout package's node_modules
@@ -31,7 +36,7 @@ ts_config(
 
 bpmner_ts_project(
     name = "ts",
-    srcs = LIB_TS_SRCS,
+    srcs = LIB_TS_SRCS + TEST_TS_SRCS,
     deps = LAYOUT_TS_DEPS,
     out_dir = "tsc",
     tsconfig = ":tsconfig_bazel",
@@ -50,4 +55,26 @@ esbuild(
     platform = "node",
     target = "es2022",
     deps = LAYOUT_TS_DEPS,
+)
+
+esbuild(
+    name = "smoke_test_bundle",
+    srcs = LIB_TS_SRCS + TEST_TS_SRCS,
+    entry_point = "test/smoke.test.ts",
+    external = [
+        "node:test",
+        "node:assert",
+    ],
+    format = "cjs",
+    output = "dist/test/smoke.test.js",
+    platform = "node",
+    target = "es2022",
+    deps = LAYOUT_TS_DEPS,
+)
+
+js_test(
+    name = "smoke_test",
+    entry_point = "dist/test/smoke.test.js",
+    data = [":smoke_test_bundle"],
+    node_options = ["--test-reporter=spec"],
 )
