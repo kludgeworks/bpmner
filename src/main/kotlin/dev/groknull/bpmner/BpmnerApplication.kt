@@ -10,4 +10,9 @@ import org.springframework.boot.runApplication
 @EnableAgents
 class BpmnerApplication
 
-fun main(args: Array<String>) = runApplication<BpmnerApplication>(*args)
+fun main(args: Array<String>) {
+    System.getenv("BUILD_WORKING_DIRECTORY")?.let {
+        System.setProperty("user.dir", it)
+    }
+    runApplication<BpmnerApplication>(*args)
+}
