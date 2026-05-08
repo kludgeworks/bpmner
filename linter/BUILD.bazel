@@ -158,10 +158,12 @@ js_test(
     name = "lint_test",
     entry_point = "dist/test/lint.test.js",
     data = [":lint_test_bundle"],
+    node_options = ["--test-reporter=spec"],
 )
 
 js_test(
     name = "smoke_test",
     entry_point = "dist/test/smoke.test.js",
     data = [":smoke_test_bundle"],
+    node_options = ["--test-reporter=spec"],
 )
