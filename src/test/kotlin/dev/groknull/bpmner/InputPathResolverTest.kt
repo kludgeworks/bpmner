@@ -38,6 +38,44 @@ class InputPathResolverTest {
     }
 
     @Test
+    fun `relative output path resolves from cwd`(@TempDir tempDir: Path) {
+        val resolver = InputPathResolver(cwd = tempDir)
+
+        assertEquals(tempDir.resolve("output.bpmn"), resolver.resolveOutputPath("output.bpmn"))
+    }
+
+    @Test
+    fun `build working directory takes precedence over user dir`(@TempDir tempDir: Path) {
+        val bazelWorkingDirectory = tempDir.resolve("workspace").also { it.createDirectories() }
+        val userDir = tempDir.resolve("runfiles").also { it.createDirectories() }
+        val input = bazelWorkingDirectory.resolve("process.txt").apply { writeText("Workspace input") }
+        userDir.resolve("process.txt").apply { writeText("Runfiles input") }
+        val environment = mutableMapOf<String, String>()
+
+        val resolver = InputPathResolver(
+            environment = environment,
+            userDir = userDir.pathString,
+        )
+        environment["BUILD_WORKING_DIRECTORY"] = bazelWorkingDirectory.pathString
+
+        assertEquals(input, resolver.resolve("process.txt"))
+        assertEquals(bazelWorkingDirectory.resolve("output.bpmn"), resolver.resolveOutputPath("output.bpmn"))
+    }
+
+    @Test
+    fun `user dir is fallback when build working directory is absent`(@TempDir tempDir: Path) {
+        val input = tempDir.resolve("process.txt").apply { writeText("User dir input") }
+
+        val resolver = InputPathResolver(
+            environment = emptyMap(),
+            userDir = tempDir.pathString,
+        )
+
+        assertEquals(input, resolver.resolve("process.txt"))
+        assertEquals(tempDir.resolve("output.bpmn"), resolver.resolveOutputPath("output.bpmn"))
+    }
+
+    @Test
     fun `missing filesystem path falls back to raw runfiles key`(@TempDir tempDir: Path) {
         val runfiles = createRunfiles(tempDir) {
             resolve("sample/process.txt").apply {

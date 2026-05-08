@@ -35,7 +35,7 @@ internal class AgentPlatformBpmnAgentInvoker(
 @Component
 internal class BpmnGenerationService(
     private val agentInvoker: BpmnAgentInvoker,
-    private val inputPathResolver: InputPathResolver = InputPathResolver(),
+    private val inputPathResolver: InputPathResolver,
 ) : BpmnGenerationUseCase {
 
     private val logger = LoggerFactory.getLogger(BpmnGenerationService::class.java)

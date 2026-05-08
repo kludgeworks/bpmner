@@ -6,11 +6,38 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.readText
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 
-internal class InputPathResolver(
-    private val cwd: Path = Path.of("").toAbsolutePath(),
+@Component
+internal class InputPathResolver private constructor(
+    private val cwdProvider: () -> Path,
     private val runfilesLoader: () -> Runfiles? = defaultRunfilesLoader(),
 ) {
+
+    @Autowired
+    constructor() : this(
+        cwdProvider = { currentWorkingDirectory(System.getenv(), System.getProperty("user.dir")) },
+    )
+
+    internal constructor(
+        cwd: Path,
+        runfilesLoader: () -> Runfiles? = defaultRunfilesLoader(),
+    ) : this(
+        cwdProvider = { cwd },
+        runfilesLoader = runfilesLoader,
+    )
+
+    internal constructor(
+        environment: Map<String, String>,
+        userDir: String,
+        runfilesLoader: () -> Runfiles? = defaultRunfilesLoader(),
+    ) : this(
+        cwdProvider = { currentWorkingDirectory(environment, userDir) },
+        runfilesLoader = runfilesLoader,
+    )
+
+    private val cwd: Path by lazy(cwdProvider)
 
     fun readUtf8(rawInput: String): String = resolve(rawInput).readText(StandardCharsets.UTF_8)
 
@@ -78,6 +105,14 @@ internal class InputPathResolver(
     }
 
     companion object {
+        private const val BUILD_WORKING_DIRECTORY = "BUILD_WORKING_DIRECTORY"
+
+        private fun currentWorkingDirectory(environment: Map<String, String>, userDir: String): Path =
+            environment[BUILD_WORKING_DIRECTORY]
+                ?.takeIf { it.isNotBlank() }
+                ?.let { Path.of(it).toAbsolutePath().normalize() }
+                ?: Path.of(userDir).toAbsolutePath().normalize()
+
         private fun defaultRunfilesLoader(): () -> Runfiles? = {
             try {
                 Runfiles.preload().withSourceRepository("")
