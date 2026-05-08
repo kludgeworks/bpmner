@@ -81,13 +81,17 @@ class BpmnRefinementWorkflow(
     ): BpmnRefinementAttempt {
         val previousAttempt = context.lastAttempt()?.result
         return if (previousAttempt == null) {
-            evaluateCandidate(
+            val result = evaluateCandidate(
                 graph = graph,
                 definition = initialRendered.definition,
                 rendered = initialRendered,
                 messages = initialMessages(request, initialRendered.definition),
                 repairAttempts = 0,
             )
+            if (result.isSuccessful()) {
+                context.updateProgress("Validation passed after ${result.repairAttempts} repair attempt(s)")
+            }
+            result
         } else {
             val feedback = context.lastAttempt()?.feedback ?: error("Expected feedback for prior refinement attempt")
             if (previousAttempt.isSuccessful() || feedback.acceptable) {
@@ -100,6 +104,13 @@ class BpmnRefinementWorkflow(
                 logger.warn("BPMN refinement feedback had no repair prompt; reusing last attempt")
                 return previousAttempt
             }
+            val globalFeedbackDiagnostics = GlobalDiagnostics(feedback.diagnostics)
+            context.updateProgress(
+                "Repair attempt ${previousAttempt.repairAttempts + 1}/${config.maxAttempts}: " +
+                "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
+                "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
+                "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}"
+            )
             val repairPromptRunner = promptRunner(repairContext, request).let { runner ->
                 val docsPrompt = lintRuleDocsPrompt(feedback.diagnostics)
                 if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
@@ -113,7 +124,7 @@ class BpmnRefinementWorkflow(
             val rendered = try {
                 bpmnConverter.render(updatedGraph)
             } catch (e: Exception) {
-                return evaluateCandidate(
+                val renderFailResult = evaluateCandidate(
                     graph = updatedGraph,
                     definition = correctedDefinition,
                     rendered = null,
@@ -121,14 +132,22 @@ class BpmnRefinementWorkflow(
                     renderFailureMessage = e.message ?: e.javaClass.simpleName,
                     repairAttempts = previousAttempt.repairAttempts + 1,
                 )
+                if (renderFailResult.isSuccessful()) {
+                    context.updateProgress("Validation passed after ${renderFailResult.repairAttempts} repair attempt(s)")
+                }
+                return renderFailResult
             }
-            evaluateCandidate(
+            val result = evaluateCandidate(
                 graph = updatedGraph,
                 definition = correctedDefinition,
                 rendered = rendered,
                 messages = updatedMessages,
                 repairAttempts = previousAttempt.repairAttempts + 1,
             )
+            if (result.isSuccessful()) {
+                context.updateProgress("Validation passed after ${result.repairAttempts} repair attempt(s)")
+            }
+            result
         }
     }
 
@@ -481,6 +500,10 @@ private data class BpmnRefinementAttempt(
         diagnostics = diagnostics,
         repairAttempts = repairAttempts,
     )
+
+    override fun toString(): String =
+        "BpmnRefinementAttempt(successful=${isSuccessful()}, diagnostics=${diagnostics.size}, " +
+        "repairAttempts=$repairAttempts, messages=${messages.size})"
 }
 
 private data class BpmnRefinementFeedback(
@@ -488,4 +511,8 @@ private data class BpmnRefinementFeedback(
     val acceptable: Boolean,
     val diagnostics: List<BpmnDiagnostic>,
     val repairPrompt: String,
-) : Feedback
+) : Feedback {
+    override fun toString(): String =
+        "BpmnRefinementFeedback(score=$score, acceptable=$acceptable, " +
+        "diagnostics=${diagnostics.size}, repairPromptLength=${repairPrompt.length})"
+}
