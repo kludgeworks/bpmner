@@ -43,7 +43,8 @@ class BpmnGeneratorRunner(
                 return
             }
 
-        val outputFile = args.getOptionValues("output")?.firstOrNull() ?: "output.bpmn"
+        val outputFileRaw = args.getOptionValues("output")?.firstOrNull() ?: "output.bpmn"
+        val outputFile = inputPathResolver.resolveOutputPath(outputFileRaw).toString()
         val styleGuide = args.getOptionValues("style-guide")?.firstOrNull()
             ?.let {
                 logger.info("Loading style guide from file: {}", it)

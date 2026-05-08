@@ -23,14 +23,14 @@ Pick a provider profile and export the matching key.
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 bazel run //src:bpmner_app -- --spring.profiles.active=anth \
-  --process-file=bpmner/toast-process.txt --output=toast.bpmn
+  --process-file=toast-process.txt --output=toast.bpmn
 ```
 
 **GitHub Models (OpenAI-compatible):**
 ```bash
 export GITHUB_TOKEN="ghp_..."
 bazel run //src:bpmner_app -- --spring.profiles.active=gh \
-  --process-file=bpmner/toast-process.txt --output=toast.bpmn
+  --process-file=toast-process.txt --output=toast.bpmn
 ```
 
 Pass `--process "your description here"` instead of `--process-file` to supply the description inline.
