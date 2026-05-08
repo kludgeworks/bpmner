@@ -6,6 +6,10 @@ const plugin = {
       extends: 'bpmnlint:recommended',
       rules: recommendedPluginRules,
     },
+    'recommended-error': {
+      extends: 'bpmnlint:recommended-error',
+      rules: recommendedPluginRules,
+    },
     all: {
       rules: allPluginRules,
     },

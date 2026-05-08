@@ -89,6 +89,7 @@ const customRuleEntries = manifestEntries
   .join('\n');
 
 const coreRecommendedConfigEntries = builtinRules.map(({ id, level }) => `    '${id}': '${level}',`).join('\n');
+const coreRecommendedErrorConfigEntries = builtinRules.map(({ id }) => `    '${id}': 'error',`).join('\n');
 const customRecommendedConfigEntries = manifestEntries
   .map(({ id, level }) => `    '${id}': '${level}',`)
   .join('\n');
@@ -140,6 +141,23 @@ ${customRecommendedConfigEntries}
   'plugin:bpmnlint-plugin-klm/all': {
     rules: {
 ${customAllConfigEntries}
+    },
+  },
+  'bpmnlint:recommended-error': {
+    rules: {
+${coreRecommendedErrorConfigEntries}
+    },
+  },
+  'plugin:klm/recommended-error': {
+    rules: {
+${coreRecommendedErrorConfigEntries}
+${customRecommendedConfigEntries}
+    },
+  },
+  'plugin:bpmnlint-plugin-klm/recommended-error': {
+    rules: {
+${coreRecommendedErrorConfigEntries}
+${customRecommendedConfigEntries}
     },
   },
 };
