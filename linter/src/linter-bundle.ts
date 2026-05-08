@@ -80,14 +80,14 @@ function expandPluginRuleNames(pkg: string, rules: Record<string, RuleLevel>): R
 
 function resolveConfigReference(configRef: string): LintConfig {
   const key = configRefKey(configRef);
-  const config = configs[key as keyof typeof configs];
+  const config = configs[key as keyof typeof configs] as LintConfig | undefined;
 
   if (config) {
     if (key.startsWith('plugin:')) {
       const pluginName = key.slice('plugin:'.length).split('/')[0];
       return {
         extends: config.extends,
-        rules: expandPluginRuleNames(pluginName, config.rules),
+        rules: expandPluginRuleNames(pluginName, config.rules ?? {}),
       };
     }
 
