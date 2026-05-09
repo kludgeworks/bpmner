@@ -14,7 +14,7 @@ import java.io.File
 class BpmnGeneratorAgent(
     private val config: BpmnConfig,
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
-    private val refinementWorkflow: BpmnRefinementWorkflow,
+    private val refinementEngine: BpmnRefinementEngine,
     private val layoutService: BpmnLayoutService,
     private val bpmnLintService: BpmnLintService,
     private val bpmnXsdValidator: BpmnXsdValidator,
@@ -164,7 +164,7 @@ class BpmnGeneratorAgent(
         rendered: RenderedBpmn,
         context: ActionContext,
     ): ValidatedBpmnXml = try {
-        refinementWorkflow.refine(request, graph, rendered, context)
+        refinementEngine.refine(request, graph, rendered, context)
     } catch (e: BpmnRefinementFailureException) {
         logger.warn(e.summary)
         throw e
@@ -238,7 +238,7 @@ class BpmnGeneratorAgent(
             )
         )
         return try {
-            refinementWorkflow.refine(request, graph, rendered.copy(sourceGraph = graph), context)
+            refinementEngine.refine(request, graph, rendered.copy(sourceGraph = graph), context)
         } catch (e: BpmnRefinementFailureException) {
             logger.warn(e.summary)
             throw e

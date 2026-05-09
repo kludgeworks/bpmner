@@ -26,16 +26,32 @@ class BpmnGeneratorAgentTest {
         layoutService: BpmnLayoutService = RecordingLayoutService(),
         patchApplier: BpmnPatchApplier = BpmnPatchApplier(),
     ): BpmnGeneratorAgent {
-        val workflow = BpmnRefinementWorkflow(
+        val fingerprints = BpmnFingerprintService()
+        val normalizer = BpmnDiagnosticNormalizer()
+        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, normalizer)
+        val evaluationPipeline = BpmnEvaluationPipeline(
             config = config,
             bpmnLintService = lintService,
             bpmnXsdValidator = xsdValidator,
-            bpmnConverter = converter,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
-            bpmnPatchApplier = patchApplier,
-            topologyRepair = BpmnTopologyRepair(),
+            normalizer = normalizer,
+            fingerprints = fingerprints,
         )
-        return BpmnGeneratorAgent(config, converter, workflow, layoutService, lintService, xsdValidator)
+        val strategies = listOf(
+            DeterministicTopologyRepairStrategy(BpmnTopologyRepair(), patchApplier),
+            TargetedLabelRepairStrategy(patchApplier, promptFactory),
+            LlmPatchRepairStrategy(patchApplier, promptFactory),
+            FullLlmRewriteRepairStrategy(promptFactory, fingerprints),
+        )
+        val refinementEngine = BpmnRefinementEngine(
+            config = config,
+            bpmnConverter = converter,
+            evaluationPipeline = evaluationPipeline,
+            promptFactory = promptFactory,
+            fingerprints = fingerprints,
+            strategies = strategies,
+        )
+        return BpmnGeneratorAgent(config, converter, refinementEngine, layoutService, lintService, xsdValidator)
     }
 
     @Test
