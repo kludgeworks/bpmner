@@ -29,8 +29,8 @@ bpmner:
     extends:
       - plugin:klm/recommended-error
     rules:
-      klm/act-01-verb-object-name: error
-      klm/act-02-activity-label-capitalization: error
-      klm/act-03-discouraged-business-verbs: error
-      klm/act-12-loop-task-annotation: error
-      klm/act-13-mi-task-annotation: error
+      "[klm/act-01-verb-object-name]": error
+      "[klm/act-02-activity-label-capitalization]": error
+      "[klm/act-03-discouraged-business-verbs]": error
+      "[klm/act-12-loop-task-annotation]": error
+      "[klm/act-13-mi-task-annotation]": error
