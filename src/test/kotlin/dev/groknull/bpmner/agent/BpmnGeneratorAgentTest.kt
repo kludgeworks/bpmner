@@ -82,6 +82,37 @@ class BpmnGeneratorAgentTest {
     }
 
     @Test
+    fun `lint parse error for unknown rule aborts without repair`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(
+            listOf(
+                listOf(
+                    LintIssue(
+                        id = null,
+                        rule = "parse-error",
+                        message = "unknown rule <klmact-01-verb-object-name>",
+                    )
+                )
+            )
+        )
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        val initialRendered = converter.render(validDefinition())
+
+        val error = assertFailsWith<BpmnValidatorInfrastructureException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+        }
+
+        assertTrue(error.message!!.contains("BPMN validator infrastructure failure"))
+        assertTrue(error.message!!.contains("klmact-01-verb-object-name"))
+        assertTrue(context.llmInvocations.isEmpty())
+        assertEquals(1, xsdValidator.xmls.size)
+        assertEquals(1, lintService.xmls.size)
+        assertEquals(1, converter.renderCalls)
+    }
+
+    @Test
     fun `klm lint issue includes matching rule docs in repair prompt contributor`() {
         val invalid = validDefinition()
         val corrected = validDefinition()
