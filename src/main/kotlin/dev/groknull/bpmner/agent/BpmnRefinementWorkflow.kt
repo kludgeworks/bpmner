@@ -314,7 +314,15 @@ class BpmnRefinementWorkflow(
             diagnosticFingerprint = diagnosticFingerprint(diagnostics),
             definitionFingerprint = definitionFingerprint(definition),
             repairPromptFingerprint = repairPromptFingerprint,
+            topDiagnostics = diagnostics.take(TOP_DIAGNOSTICS_LIMIT).map { formatTopDiagnostic(it) },
         )
+
+    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String = buildString {
+        append(diagnostic.source.name.lowercase())
+        diagnostic.rule?.let { append(" [$it]") }
+        diagnostic.elementId?.let { append(" @${it}") }
+        append(": ${diagnostic.message.take(120)}")
+    }
 
     private fun failRefinement(
         maxEvaluations: Int,
@@ -322,13 +330,43 @@ class BpmnRefinementWorkflow(
         reason: String,
     ): Nothing {
         val compactHistory = history.joinToString(" | ") { it.compact() }
-        logger.error(
-            "BPMN validation failed after {} candidate evaluation(s): {}; history={}",
-            history.size,
-            reason,
-            compactHistory,
+
+        val fingerprintRuns = mutableMapOf<String, MutableList<Int>>()
+        for (record in history) {
+            fingerprintRuns.getOrPut(record.diagnosticFingerprint) { mutableListOf() } += record.attemptNumber
+        }
+        val stuckFingerprints = fingerprintRuns.filterValues { it.size > 1 }
+        val lastStuckRecord = history.lastOrNull { stuckFingerprints.containsKey(it.diagnosticFingerprint) }
+        val lastRecord = history.lastOrNull()
+
+        val summary = buildString {
+            appendLine("BPMN generation failed after ${history.size} attempt(s): $reason")
+            appendLine("  Cause: $reason")
+            appendLine("  Attempts: ${history.size} / $maxEvaluations")
+            for ((fp, attempts) in stuckFingerprints) {
+                appendLine("  Recurring (stuck) fingerprint: $fp — seen in attempt(s): ${attempts.joinToString(", ")}")
+            }
+            val displayRecord = lastStuckRecord ?: lastRecord
+            if (displayRecord != null && displayRecord.topDiagnostics.isNotEmpty()) {
+                val label = if (lastStuckRecord != null) "Top stuck diagnostics" else "Last attempt diagnostics"
+                appendLine("  $label:")
+                displayRecord.topDiagnostics.forEach { appendLine("    - $it") }
+            }
+            if (lastRecord != null) {
+                appendLine(
+                    "  Last attempt: graph=${lastRecord.graphDiagnostics}, render=${lastRecord.renderDiagnostics}, " +
+                    "xsd=${lastRecord.xsdDiagnostics}, lint=${lastRecord.lintDiagnostics}, " +
+                    "def=${lastRecord.definitionFingerprint}",
+                )
+            }
+            append("  Full history: $compactHistory")
+        }.trim()
+
+        logger.error(summary)
+        throw BpmnRefinementFailureException(
+            message = "Failed to produce valid BPMN after $maxEvaluations attempts: $reason; history=$compactHistory",
+            summary = summary,
         )
-        error("Failed to produce valid BPMN after $maxEvaluations attempts: $reason; history=$compactHistory")
     }
 
     private fun definitionFingerprint(definition: BpmnDefinition): String =
@@ -703,6 +741,13 @@ class BpmnRefinementWorkflow(
 
 class BpmnValidatorInfrastructureException(message: String) : IllegalStateException(message)
 
+class BpmnRefinementFailureException(
+    message: String,
+    val summary: String,
+) : IllegalStateException(message)
+
+private const val TOP_DIAGNOSTICS_LIMIT = 5
+
 private data class BpmnRefinementAttempt(
     val definition: BpmnDefinition,
     val rendered: RenderedBpmn?,
@@ -736,6 +781,7 @@ private data class BpmnRefinementAttemptRecord(
     val diagnosticFingerprint: String,
     val definitionFingerprint: String,
     val repairPromptFingerprint: String?,
+    val topDiagnostics: List<String> = emptyList(),
 ) {
     fun compact(): String =
         "#$attemptNumber(repairs=$repairAttempts,graph=$graphDiagnostics,render=$renderDiagnostics," +

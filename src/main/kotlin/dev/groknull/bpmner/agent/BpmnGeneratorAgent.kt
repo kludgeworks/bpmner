@@ -163,7 +163,12 @@ class BpmnGeneratorAgent(
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
         context: ActionContext,
-    ): ValidatedBpmnXml = refinementWorkflow.refine(request, graph, rendered, context)
+    ): ValidatedBpmnXml = try {
+        refinementWorkflow.refine(request, graph, rendered, context)
+    } catch (e: BpmnRefinementFailureException) {
+        logger.warn(e.summary)
+        throw e
+    }
 
     @Action(description = "Apply auto-layout to the validated BPMN XML")
     fun layoutBpmnXml(bpmn: ValidatedBpmnXml): LayoutedBpmnXml {
@@ -232,7 +237,12 @@ class BpmnGeneratorAgent(
                 )
             )
         )
-        return refinementWorkflow.refine(request, graph, rendered.copy(sourceGraph = graph), context)
+        return try {
+            refinementWorkflow.refine(request, graph, rendered.copy(sourceGraph = graph), context)
+        } catch (e: BpmnRefinementFailureException) {
+            logger.warn(e.summary)
+            throw e
+        }
     }
 
     @AchievesGoal(
