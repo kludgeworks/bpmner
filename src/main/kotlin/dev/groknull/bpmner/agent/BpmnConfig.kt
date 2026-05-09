@@ -20,7 +20,7 @@ data class BpmnConfig(
                 objective = "Create a valid, well-structured BPMN process definition from a business description",
                 voice = "precise and thorough",
             ),
-            llm = LlmOptions(),
+            llm = LlmOptions.withLlmForRole("generator"),
         )
         val DEFAULT_REPAIRER = Actor(
             persona = Persona(
@@ -29,7 +29,7 @@ data class BpmnConfig(
                 objective = "Fix every validation error in the BPMN definition and return the complete corrected object",
                 voice = "concise and exact",
             ),
-            llm = LlmOptions(),
+            llm = LlmOptions.withLlmForRole("repairer"),
         )
     }
 }
