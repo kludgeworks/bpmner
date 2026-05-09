@@ -127,7 +127,7 @@ class BpmnDefinitionToXmlConverter {
         }
 
         flowNode.id = node.id
-        flowNode.name = node.name
+        BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }
         return flowNode
     }
 

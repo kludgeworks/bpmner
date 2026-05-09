@@ -18,6 +18,20 @@ class BpmnDefinitionValidator {
         duplicateEdgeIds.forEach { errors.add("duplicate edge id: $it") }
 
         val nodeIdSet = definition.nodes.map { it.id }.toSet()
+        val incomingCounts = definition.sequences.groupingBy { it.targetRef }.eachCount()
+        val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
+
+        definition.nodes.forEach { node ->
+            if (
+                BpmnNodeNamingPolicy.requiresName(
+                    node = node,
+                    incomingCount = incomingCounts[node.id] ?: 0,
+                    outgoingCount = outgoingCounts[node.id] ?: 0,
+                ) && node.name.isNullOrBlank()
+            ) {
+                errors.add(BpmnNodeNamingPolicy.missingNameMessage(node))
+            }
+        }
 
         definition.sequences.forEach { edge ->
             if (edge.sourceRef !in nodeIdSet) {
