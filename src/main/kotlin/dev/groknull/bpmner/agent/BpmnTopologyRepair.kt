@@ -17,6 +17,7 @@ class BpmnTopologyRepair {
             rule.contains("no-gateway-join-fork") -> buildJoinForkRepair(nodeId, definition)
             rule.contains("fake-join") -> buildFakeJoinRepair(nodeId, definition)
             rule.contains("superfluous-gateway") -> buildSuperfluousGatewayRepair(nodeId, definition)
+            rule.contains("gtw-02") -> buildConvergingGatewayClearName(nodeId, definition)
             else -> null
         }
         if (ops.isNullOrEmpty()) return null
@@ -122,6 +123,15 @@ class BpmnTopologyRepair {
         )
     }
 
+    private fun buildConvergingGatewayClearName(nodeId: String, definition: BpmnDefinition): List<BpmnPatchOperation>? {
+        val node = definition.nodes.firstOrNull { it.id == nodeId } ?: return null
+        if (node.name.isNullOrBlank()) return null
+        val incoming = definition.sequences.count { it.targetRef == nodeId }
+        val outgoing = definition.sequences.count { it.sourceRef == nodeId }
+        if (incoming <= 1 || outgoing > 1) return null
+        return listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = null))
+    }
+
     private fun freshId(prefix: String, definition: BpmnDefinition): String {
         val taken = (definition.nodes.map { it.id } + definition.sequences.map { it.id }).toSet()
         var n = 1
@@ -134,6 +144,9 @@ class BpmnTopologyRepair {
         TOPOLOGY_LINT_RULES.any { rule.contains(it) }
 
     companion object {
-        private val TOPOLOGY_LINT_RULES = listOf("no-gateway-join-fork", "fake-join", "superfluous-gateway")
+        private val TOPOLOGY_LINT_RULES = listOf(
+            "no-gateway-join-fork", "fake-join", "superfluous-gateway",
+            "gtw-02",
+        )
     }
 }
