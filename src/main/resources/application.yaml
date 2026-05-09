@@ -13,6 +13,10 @@ spring:
         - verbose
 
 embabel:
+  models:
+    llms:
+      generator: gpt-4.1
+      repairer: gpt-4.1-mini
   agent:
     shell:
       web-application-type: none

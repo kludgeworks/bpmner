@@ -2,15 +2,16 @@ spring:
   autoconfigure:
     exclude:
       - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
 
 embabel:
+  models:
+    default-llm: openai/gpt-4o
+    llms:
+      generator: openai/gpt-4o
+      repairer: openai/gpt-4o
   agent:
     platform:
       models:
-        default-llm: "gpt-4o"
-        openai:
-          base-url: "https://models.github.ai/inference"
+        github:
           api-key: ${GITHUB_TOKEN}
-
-bpmner:
-  model: "gpt-4o"

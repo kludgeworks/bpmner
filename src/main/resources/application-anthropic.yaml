@@ -6,7 +6,9 @@ spring:
 embabel:
   models:
     default-llm: claude-sonnet-4-0
+    llms:
+      generator: claude-sonnet-4-0
+      repairer: claude-sonnet-4-0
 
 bpmner:
   max-attempts: 8
-  model: claude-sonnet-4-0
