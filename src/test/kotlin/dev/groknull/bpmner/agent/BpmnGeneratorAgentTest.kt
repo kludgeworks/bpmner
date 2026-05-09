@@ -7,6 +7,7 @@ import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.agent.api.tool.ToolObject
 import com.embabel.agent.core.Action
+import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
@@ -48,6 +49,7 @@ class BpmnGeneratorAgentTest {
 
         assertEquals(rendered.xml, result.xml)
         assertTrue(result.diagnostics.isEmpty())
+        assertEquals(0, result.repairAttempts)
         assertEquals(1, xsdValidator.xmls.size)
         assertEquals(1, lintService.xmls.size)
         assertEquals(1, converter.renderCalls)
@@ -56,7 +58,7 @@ class BpmnGeneratorAgentTest {
     @Test
     fun `lint issue with linked id triggers definition repair and full rerender revalidation`() {
         val invalid = validDefinition()
-        val corrected = validDefinition()
+        val corrected = validDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
         val lintService = RecordingLintService(
             listOf(
@@ -76,6 +78,7 @@ class BpmnGeneratorAgentTest {
         assertEquals(2, xsdValidator.xmls.size)
         assertEquals(2, lintService.xmls.size)
         assertEquals(2, converter.renderCalls)
+        assertEquals(1, result.repairAttempts)
         val repairPrompt = context.llmInvocations.single().messages.joinToString("\n") { it.content }
         assertTrue(repairPrompt.contains("elementId=Task_1"))
         assertTrue(repairPrompt.contains("objectRef=nodes[id=Task_1]"))
@@ -115,7 +118,7 @@ class BpmnGeneratorAgentTest {
     @Test
     fun `klm lint issue includes matching rule docs in repair prompt contributor`() {
         val invalid = validDefinition()
-        val corrected = validDefinition()
+        val corrected = validDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
         val lintService = RecordingLintService(
             responses = listOf(
@@ -197,6 +200,92 @@ class BpmnGeneratorAgentTest {
         assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
         assertEquals(2, xsdValidator.xmls.size)
         assertEquals(2, lintService.xmls.size)
+    }
+
+    @Test
+    fun `unchanged diagnostics fail fast after one repair cycle`() {
+        val initial = validDefinition()
+        val corrected = validDefinition(processName = "Make toast again")
+        val repeatedIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(listOf(listOf(repeatedIssue), listOf(repeatedIssue)))
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        context.expectResponse(corrected)
+        val initialRendered = converter.render(initial)
+
+        val error = assertFailsWith<IllegalStateException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+        }
+
+        assertTrue(error.message!!.contains("unchanged diagnostics"))
+        assertTrue(error.message!!.contains("history=#1"))
+        assertEquals(1, context.llmInvocations.size)
+        assertEquals(2, xsdValidator.xmls.size)
+        assertEquals(2, lintService.xmls.size)
+    }
+
+    @Test
+    fun `unchanged repaired definition fails before rerender`() {
+        val initial = validDefinition()
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(
+            listOf(listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")))
+        )
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        context.expectResponse(initial)
+        val initialRendered = converter.render(initial)
+
+        val error = assertFailsWith<IllegalStateException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+        }
+
+        assertTrue(error.message!!.contains("unchanged patch"))
+        assertEquals(1, context.llmInvocations.size)
+        assertEquals(1, xsdValidator.xmls.size)
+        assertEquals(1, lintService.xmls.size)
+        assertEquals(1, converter.renderCalls)
+    }
+
+    @Test
+    fun `previous invalid definition output fails before another validation pass`() {
+        val initial = validDefinition()
+        val firstRepair = validDefinition(processName = "Make toast again")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(
+            listOf(
+                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
+                listOf(LintIssue(id = "Task_1", rule = "end-event-required", message = "Missing end event")),
+            )
+        )
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val context = FakeActionContext()
+        context.expectResponse(firstRepair)
+        context.expectResponse(initial)
+        val initialRendered = converter.render(initial)
+
+        val error = assertFailsWith<IllegalStateException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), initialRendered, context)
+        }
+
+        assertTrue(error.message!!.contains("repeated invalid output"))
+        assertEquals(2, context.llmInvocations.size)
+        assertEquals(2, xsdValidator.xmls.size)
+        assertEquals(2, lintService.xmls.size)
+        assertEquals(2, converter.renderCalls)
+    }
+
+    @Test
+    fun `validate and refine action fires only once`() {
+        val action = BpmnGeneratorAgent::class.java.methods.single {
+            it.name == "validateAndRefineBpmn" && it.parameterCount == 4
+        }.getAnnotation(com.embabel.agent.api.annotation.Action::class.java)
+
+        assertEquals(ActionRetryPolicy.FIRE_ONCE, action.actionRetryPolicy)
     }
 
     private class RecordingLayoutService(
