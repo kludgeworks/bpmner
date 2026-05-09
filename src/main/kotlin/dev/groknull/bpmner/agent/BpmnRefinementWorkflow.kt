@@ -22,6 +22,7 @@ class BpmnRefinementWorkflow(
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
     private val bpmnDefinitionValidator: BpmnDefinitionValidator,
     private val bpmnPatchApplier: BpmnPatchApplier,
+    private val topologyRepair: BpmnTopologyRepair,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementWorkflow::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules()
@@ -66,7 +67,38 @@ class BpmnRefinementWorkflow(
             }
 
             var repairPromptText: String
-            val (correctedDefinition, updatedMessages) = if (isPatchable(currentAttempt.diagnostics)) {
+            val deterministicPatch = topologyRepair.buildTopologyPatch(currentAttempt.definition, currentAttempt.diagnostics)
+            val (correctedDefinition, updatedMessages) = if (deterministicPatch != null) {
+                repairPromptText = "deterministic-topology-repair:${deterministicPatch.reason}"
+                when (val patchResult = bpmnPatchApplier.apply(currentAttempt.definition, deterministicPatch)) {
+                    is PatchApplicationResult.Success -> {
+                        logger.info(
+                            "Topology repair applied deterministically: ops={}, reason={}",
+                            deterministicPatch.operations.size,
+                            deterministicPatch.reason ?: "-",
+                        )
+                        patchResult.definition to currentAttempt.messages
+                    }
+                    is PatchApplicationResult.NoOp -> failRefinement(
+                        maxEvaluations = maxEvaluations,
+                        history = history,
+                        reason = "deterministic topology patch was a no-op on attempt ${currentAttempt.repairAttempts + 1}",
+                    )
+                    is PatchApplicationResult.Failure -> {
+                        logger.warn(
+                            "Deterministic topology repair failed ({}), falling back to full correction",
+                            patchResult.reason,
+                        )
+                        val repairPrompt = buildRepairFeedback(
+                            definition = currentAttempt.definition,
+                            renderedXml = currentAttempt.rendered?.xml ?: renderFailureContext(currentAttempt),
+                            diagnostics = currentAttempt.diagnostics,
+                        )
+                        repairPromptText = repairPrompt
+                        requestCorrection(repairPromptRunner, currentAttempt.messages, repairPrompt)
+                    }
+                }
+            } else if (isPatchable(currentAttempt.diagnostics)) {
                 val patchFeedback = buildPatchFeedback(currentAttempt.definition, currentAttempt.diagnostics)
                 repairPromptText = patchFeedback
                 val patch = requestPatchCorrection(repairPromptRunner, currentAttempt.messages, patchFeedback)
