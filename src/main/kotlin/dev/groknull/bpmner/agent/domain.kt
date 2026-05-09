@@ -373,6 +373,14 @@ data class LayoutedBpmnXml(
 )
 
 /**
+ * Final BPMN XML that has passed validation after auto-layout.
+ */
+data class FinalValidatedBpmnXml(
+    val xml: String,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+)
+
+/**
  * Final result written to disk.
  */
 data class BpmnResult(

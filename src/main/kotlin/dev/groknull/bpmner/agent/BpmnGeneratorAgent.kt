@@ -16,6 +16,8 @@ class BpmnGeneratorAgent(
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
     private val refinementWorkflow: BpmnRefinementWorkflow,
     private val layoutService: BpmnLayoutService,
+    private val bpmnLintService: BpmnLintService,
+    private val bpmnXsdValidator: BpmnXsdValidator,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
 
@@ -169,6 +171,45 @@ class BpmnGeneratorAgent(
         return LayoutedBpmnXml(xml = layoutedXml)
     }
 
+    @Action(description = "Validate the final auto-layouted BPMN XML without semantic repair")
+    fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
+        val diagnostics = mutableListOf<BpmnDiagnostic>()
+        diagnostics += bpmnXsdValidator.validateDetailed(bpmn.xml).map { issue ->
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.XSD,
+                message = issue.message,
+                elementId = issue.elementId,
+                repairScope = BpmnRepairScope.FULL_PROCESS,
+            )
+        }
+
+        if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
+            val lintIssues = bpmnLintService.lint(bpmn.xml, BpmnLintPhase.FINAL_POST_LAYOUT)
+            if (lintIssues == null) {
+                logger.warn("Final bpmn-lint validation was unavailable; continuing without lint feedback")
+            } else {
+                diagnostics += lintIssues.map { issue ->
+                    val isLayoutDiagnostic = issue.rule.isLayoutSensitiveLintRule()
+                    BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.LINT,
+                        message = issue.message,
+                        rule = issue.rule,
+                        category = issue.category,
+                        elementId = issue.id,
+                        repairScope = if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
+                    )
+                }
+            }
+        }
+
+        if (diagnostics.isNotEmpty()) {
+            throw BpmnFinalValidationException(finalValidationMessage(diagnostics))
+        }
+
+        logger.info("Final BPMN validation passed after auto-layout")
+        return FinalValidatedBpmnXml(xml = bpmn.xml)
+    }
+
     fun validateAndRefineBpmn(
         request: BpmnRequest,
         rendered: RenderedBpmn,
@@ -199,7 +240,7 @@ class BpmnGeneratorAgent(
         export = Export(name = "generateBpmn", remote = true, startingInputTypes = [BpmnRequest::class]),
     )
     @Action(description = "Write the layouted BPMN XML to disk")
-    fun writeBpmn(request: BpmnRequest, bpmn: LayoutedBpmnXml): BpmnResult {
+    fun writeBpmn(request: BpmnRequest, bpmn: FinalValidatedBpmnXml): BpmnResult {
         File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
         logger.info(
             "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
@@ -226,4 +267,30 @@ class BpmnGeneratorAgent(
         val payload = artifact.toString().take(config.logging.artifactPreviewLength)
         logger.debug("Artifact dump [{}]: {}", label, payload)
     }
+
+    private fun finalValidationMessage(diagnostics: List<BpmnDiagnostic>): String = buildString {
+        append("Final BPMN validation failed after auto-layout")
+        val layoutDiagnostics = diagnostics.filter { it.repairScope == BpmnRepairScope.LAYOUT }
+        if (layoutDiagnostics.isNotEmpty()) {
+            append("; layout diagnostics remain after auto-layout")
+        }
+        append(": ")
+        append(
+            diagnostics.groupingBy { it.source }.eachCount()
+                .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" }
+        )
+        appendLine()
+        diagnostics.forEach { diagnostic ->
+            append("- source=${diagnostic.source.name.lowercase()}")
+            diagnostic.rule?.let { append(", rule=$it") }
+            diagnostic.elementId?.let { append(", elementId=$it") }
+            diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
+            appendLine(": ${diagnostic.message}")
+        }
+    }.trim()
+
+    private fun String.isLayoutSensitiveLintRule(): Boolean =
+        this == "no-overlapping-elements" || this == "bpmnlint/no-overlapping-elements"
 }
+
+class BpmnFinalValidationException(message: String) : IllegalStateException(message)

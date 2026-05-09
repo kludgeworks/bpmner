@@ -35,7 +35,7 @@ class BpmnGeneratorAgentTest {
             bpmnPatchApplier = patchApplier,
             topologyRepair = BpmnTopologyRepair(),
         )
-        return BpmnGeneratorAgent(config, converter, workflow, layoutService)
+        return BpmnGeneratorAgent(config, converter, workflow, layoutService, lintService, xsdValidator)
     }
 
     @Test
@@ -55,7 +55,20 @@ class BpmnGeneratorAgentTest {
         assertEquals(0, result.repairAttempts)
         assertEquals(1, xsdValidator.xmls.size)
         assertEquals(1, lintService.xmls.size)
+        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.phases)
         assertEquals(1, converter.renderCalls)
+    }
+
+    @Test
+    fun `semantic repair uses pre-layout lint phase`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(listOf(emptyList()))
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+
+        agent.validateAndRefineBpmn(BpmnRequest("Make toast"), converter.render(validDefinition()), FakeActionContext())
+
+        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.phases)
     }
 
     @Test
@@ -363,6 +376,48 @@ class BpmnGeneratorAgentTest {
         assertEquals(ActionRetryPolicy.FIRE_ONCE, action.actionRetryPolicy)
     }
 
+    @Test
+    fun `final validation runs full post-layout lint and succeeds`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(listOf(emptyList()))
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+
+        val result = agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
+
+        assertEquals("<definitions />", result.xml)
+        assertTrue(result.diagnostics.isEmpty())
+        assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
+        assertEquals(1, xsdValidator.xmls.size)
+    }
+
+    @Test
+    fun `final validation fails clearly when layout diagnostics remain`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(
+            listOf(
+                listOf(
+                    LintIssue(
+                        id = "Task_1",
+                        rule = "no-overlapping-elements",
+                        message = "Element overlaps with Task_2",
+                    )
+                )
+            )
+        )
+        val converter = RecordingConverter()
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+
+        val error = assertFailsWith<BpmnFinalValidationException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
+        }
+
+        assertTrue(error.message!!.contains("Final BPMN validation failed after auto-layout"))
+        assertTrue(error.message!!.contains("layout diagnostics remain after auto-layout"))
+        assertTrue(error.message!!.contains("no-overlapping-elements"))
+        assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
+    }
+
     private class RecordingLayoutService(
         private val responses: List<String> = emptyList(),
     ) : BpmnLayoutService() {
@@ -380,10 +435,12 @@ class BpmnGeneratorAgentTest {
         private val docs: Map<String, String> = emptyMap(),
     ) : BpmnLintService() {
         val xmls = mutableListOf<String>()
+        val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0
 
-        override fun lint(bpmnXml: String): List<LintIssue>? {
+        override fun lint(bpmnXml: String, phase: BpmnLintPhase?): List<LintIssue>? {
             xmls += bpmnXml
+            phases += phase ?: BpmnLintPhase.FINAL_POST_LAYOUT
             return responses[index++]
         }
 
