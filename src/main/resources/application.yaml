@@ -29,8 +29,8 @@ bpmner:
     extends:
       - plugin:bpmner/recommended-error
     rules:
-      bpmner/act-01-verb-object-name: error
-      bpmner/act-02-activity-label-capitalization: error
-      bpmner/act-03-discouraged-business-verbs: error
-      bpmner/act-12-loop-task-annotation: error
-      bpmner/act-13-mi-task-annotation: error
+      "[bpmner/act-01-verb-object-name]": error
+      "[bpmner/act-02-activity-label-capitalization]": error
+      "[bpmner/act-03-discouraged-business-verbs]": error
+      "[bpmner/act-12-loop-task-annotation]": error
+      "[bpmner/act-13-mi-task-annotation]": error
