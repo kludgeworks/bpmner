@@ -137,6 +137,30 @@ function getRuleDocs(ruleNames: string[]): Record<string, string> {
   return docs;
 }
 
+function splitRuleReference(ruleName: string): { pkg: string; name: string } {
+  const slashIndex = ruleName.indexOf('/');
+
+  if (slashIndex === -1) {
+    return { pkg: 'bpmnlint', name: ruleName };
+  }
+
+  return {
+    pkg: ruleName.slice(0, slashIndex),
+    name: ruleName.slice(slashIndex + 1),
+  };
+}
+
+function getInvalidRules(configInput?: unknown): string[] {
+  const rules = resolveLintConfig(configInput).rules ?? {};
+
+  return Object.keys(rules)
+    .filter((ruleName) => {
+      const { pkg, name } = splitRuleReference(ruleName);
+      return !resolver.resolveRule(pkg, name);
+    })
+    .sort();
+}
+
 /**
  * Lints a BPMN XML string and returns a JSON string of issues.
  * This is designed to be called from GraalJS.
@@ -185,6 +209,7 @@ export async function lintXml(xmlString: string, configInput?: unknown): Promise
   lintXml,
   getDefaultConfig: () => DEFAULT_LINT_CONFIG,
   getRules: (configInput?: unknown) => resolveLintConfig(configInput).rules ?? {},
+  getInvalidRules,
   getRuleDocs: (ruleNamesInput?: unknown) => {
     if (typeof ruleNamesInput === 'string') {
       return getRuleDocs(JSON.parse(ruleNamesInput) as string[]);

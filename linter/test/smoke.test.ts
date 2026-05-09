@@ -5,6 +5,7 @@ import { fixtures } from './fixtures';
 type BpmnLinterApi = {
   lintXml(xml: string, config?: unknown): Promise<string>;
   getRules(config?: unknown): Record<string, string>;
+  getInvalidRules(config?: unknown): string[];
   getRuleDocs(ruleNames: string[]): Record<string, string>;
 };
 
@@ -51,6 +52,28 @@ describe('BpmnLinterApi bundle smoke test', () => {
     });
     assert.equal(rules['bpmner/gen-02-no-duplicate-diagrams'], 'warn');
     assert.equal(rules['start-event-required'], 'error');
+  });
+
+  it('returns no invalid rules for valid config', () => {
+    const invalidRules = api.getInvalidRules({
+      extends: ['bpmnlint:recommended', 'plugin:bpmner/recommended'],
+      rules: {
+        'bpmner/gen-02-no-duplicate-diagrams': 'warn',
+      },
+    });
+
+    assert.deepEqual(invalidRules, []);
+  });
+
+  it('returns invalid rule ids from resolved config', () => {
+    const invalidRules = api.getInvalidRules({
+      extends: ['bpmnlint:recommended'],
+      rules: {
+        'bpmneract-01-verb-object-name': 'error',
+      },
+    });
+
+    assert.deepEqual(invalidRules, ['bpmneract-01-verb-object-name']);
   });
 
   it('returns markdown docs for BPMNER rules', () => {
