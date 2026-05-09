@@ -211,6 +211,14 @@ class BpmnRefinementWorkflow(
             }
         }
 
+        val infrastructureDiagnostics = diagnostics.filter { it.isValidatorInfrastructureFailure() }
+        if (infrastructureDiagnostics.isNotEmpty()) {
+            logDiagnosticSummary(infrastructureDiagnostics)
+            throw BpmnValidatorInfrastructureException(
+                buildValidatorInfrastructureMessage(infrastructureDiagnostics)
+            )
+        }
+
         val globalDiagnostics = GlobalDiagnostics(diagnostics)
         if (diagnostics.isEmpty()) {
             logger.info(
@@ -372,6 +380,24 @@ class BpmnRefinementWorkflow(
         append(": ${diagnostic.message}")
     }
 
+    private fun BpmnDiagnostic.isValidatorInfrastructureFailure(): Boolean {
+        if (source != BpmnDiagnosticSource.LINT || rule != "parse-error") {
+            return false
+        }
+        return VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS.any { message.contains(it, ignoreCase = true) }
+    }
+
+    private fun buildValidatorInfrastructureMessage(diagnostics: List<BpmnDiagnostic>): String =
+        buildString {
+            append("BPMN validator infrastructure failure")
+            diagnostics.firstOrNull()?.message?.takeIf { it.isNotBlank() }?.let { append(": $it") }
+            appendLine()
+            appendLine("Non-repairable bpmn-lint diagnostic(s):")
+            diagnostics.forEach { diagnostic ->
+                appendLine("- ${formatDiagnostic(diagnostic)}")
+            }
+        }.trim()
+
     private fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules = diagnostics
             .asSequence()
@@ -480,8 +506,18 @@ class BpmnRefinementWorkflow(
 
     companion object {
         private val LAYOUT_HINTS = listOf("waypoint", "bounds", "diagram", "layout")
+        private val VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS = listOf(
+            "unknown rule",
+            "Config resolution not supported",
+            "resolveRule",
+            "resolver",
+            "bpmnlint-bundle",
+            "bpmn-lint execution error",
+        )
     }
 }
+
+class BpmnValidatorInfrastructureException(message: String) : IllegalStateException(message)
 
 private data class BpmnRefinementAttempt(
     val definition: BpmnDefinition,
