@@ -1,10 +1,19 @@
 package dev.groknull.bpmner.agent
 
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 class BpmnLintServiceIntegrationTest {
+
+    @Test
+    fun `default lint configuration initializes successfully`() {
+        val service = BpmnLintService()
+        service.init()
+
+        assertTrue(service.resolvedRules().isNotEmpty(), "Default lint configuration should resolve active rules")
+    }
 
     @Test
     fun `lint returns issues for invalid bpmn xml using GraalJS`() {
@@ -50,5 +59,27 @@ class BpmnLintServiceIntegrationTest {
         
         assertNotNull(issues)
         assertTrue(issues.any { it.rule == "klm/gen-02-no-duplicate-diagrams" }, "Should find KLM duplicate diagram issue")
+    }
+
+    @Test
+    fun `init fails fast for unknown lint rule id`() {
+        val service = BpmnLintService(
+            BpmnLintProperties(
+                rules = mapOf("klmact-01-verb-object-name" to "error"),
+            )
+        )
+
+        val exception = assertFailsWith<BpmnLintConfigurationException> {
+            service.init()
+        }
+
+        assertTrue(
+            exception.message!!.contains("Invalid BPMN lint configuration"),
+            "Error should identify lint configuration as the problem: ${exception.message}",
+        )
+        assertTrue(
+            exception.message!!.contains("klmact-01-verb-object-name"),
+            "Error should list the invalid rule id: ${exception.message}",
+        )
     }
 }

@@ -37,6 +37,11 @@ data class RuntimeLintConfig(
     val rules: Map<String, String> = emptyMap(),
 )
 
+class BpmnLintConfigurationException(
+    message: String,
+    cause: Throwable? = null,
+) : IllegalStateException(message, cause)
+
 /**
  * Runs bpmn-lint in-process using GraalJS and a bundled version of the KLM rules.
  */
@@ -77,10 +82,14 @@ class BpmnLintService(
             linterApi = api
             
             if (api != null) {
+                validateLintConfiguration(api)
                 val activeRules = resolvedRules()
                 logger.info("GraalJS bpmn-lint context initialized. Active rules: {}", activeRules.keys.sorted().joinToString(", "))
                 logger.debug("Rule levels: {}", activeRules)
             }
+        } catch (e: BpmnLintConfigurationException) {
+            logger.error("Invalid BPMN lint configuration", e)
+            throw e
         } catch (e: Exception) {
             logger.error("Failed to initialize GraalJS bpmn-lint context", e)
         }
@@ -142,6 +151,26 @@ class BpmnLintService(
 
     fun destroy() {
         jsContext?.close()
+    }
+
+    private fun validateLintConfiguration(api: Value) {
+        val invalidRules = try {
+            @Suppress("UNCHECKED_CAST")
+            api.getMember("getInvalidRules")
+                .execute(lintConfigJson())
+                .`as`(List::class.java) as List<String>
+        } catch (e: Exception) {
+            throw BpmnLintConfigurationException(
+                "Invalid BPMN lint configuration: ${e.message}",
+                e,
+            )
+        }
+
+        if (invalidRules.isNotEmpty()) {
+            throw BpmnLintConfigurationException(
+                "Invalid BPMN lint configuration: unknown rule id(s): ${invalidRules.sorted().joinToString(", ")}"
+            )
+        }
     }
 
     private fun lintConfigJson(): String = objectMapper.writeValueAsString(properties.toLintConfig())
