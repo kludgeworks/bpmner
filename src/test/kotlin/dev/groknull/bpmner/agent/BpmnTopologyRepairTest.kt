@@ -293,4 +293,62 @@ class BpmnTopologyRepairTest {
             BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = stdWaypoints),
         ),
     )
+
+    private fun convergingNamedGatewayDefinition(gatewayName: String? = "Join") = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Converging Named Gateway Process",
+        nodes = listOf(
+            BpmnNode("Start_1", "Path A", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
+            BpmnNode("Start_2", "Path B", NodeType.START_EVENT, BpmnBounds(80.0, 200.0, 36.0, 36.0)),
+            BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 135.0, 50.0, 50.0)),
+            BpmnNode("Task_1", "Continue", NodeType.USER_TASK, BpmnBounds(360.0, 118.0, 100.0, 80.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 140.0, 36.0, 36.0)),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
+        ),
+    )
+
+    // -------------------------------------------------------------------------
+    // gtw-02: clear converging gateway name
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `gtw-02 clears name from named converging gateway`() {
+        val definition = convergingNamedGatewayDefinition("Join")
+        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Gateway_1", "klm/gtw-02-converging-gateway-unnamed")))
+
+        assertNotNull(patch)
+        val op = patch.operations.single()
+        assertEquals(BpmnPatchOperationType.SET_NODE_NAME, op.type)
+        assertEquals("Gateway_1", op.nodeId)
+        assertNull(op.name, "Converging gateway name must be cleared to null")
+    }
+
+    @Test
+    fun `gtw-02 repair produces valid definition`() {
+        val definition = convergingNamedGatewayDefinition("Join")
+        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Gateway_1", "klm/gtw-02-converging-gateway-unnamed")))!!
+        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val errors = validator.validate(result.definition)
+        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
+        assertNull(result.definition.nodes.single { it.id == "Gateway_1" }.name)
+    }
+
+    @Test
+    fun `gtw-02 returns null for already unnamed converging gateway`() {
+        val definition = convergingNamedGatewayDefinition(gatewayName = null)
+        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Gateway_1", "klm/gtw-02-converging-gateway-unnamed")))
+        assertNull(patch)
+    }
+
+    @Test
+    fun `gtw-02 returns null for diverging gateway`() {
+        val definition = divergingGatewayDefinition()
+        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Gateway_1", "klm/gtw-02-converging-gateway-unnamed")))
+        assertNull(patch)
+    }
 }

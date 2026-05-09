@@ -11,6 +11,7 @@ data class BpmnConfig(
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
+    val repair: BpmnRepairConfig = BpmnRepairConfig(),
 ) {
     companion object {
         val DEFAULT_GENERATOR = Actor(
@@ -37,4 +38,8 @@ data class BpmnConfig(
 data class BpmnLoggingConfig(
     val dumpArtifacts: Boolean = false,
     val artifactPreviewLength: Int = 8000,
+)
+
+data class BpmnRepairConfig(
+    val abbreviations: Map<String, String> = emptyMap(),
 )

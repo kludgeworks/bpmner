@@ -29,6 +29,11 @@ bpmner:
   logging:
     dir: ${BPMNER_LOG_DIR:${LOG_DIR:${BUILD_WORKING_DIRECTORY:${user.dir}}/logs}}
     dump-artifacts: false
+  repair:
+    abbreviations:
+      ITBL: ineligible-to-board list
+      PNR: booking reference
+      FFP: frequent flyer programme
   lint:
     extends:
       - plugin:klm/recommended-error

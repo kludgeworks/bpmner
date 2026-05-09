@@ -99,7 +99,10 @@ class BpmnRefinementWorkflow(
                     }
                 }
             } else if (isPatchable(currentAttempt.diagnostics)) {
-                val patchFeedback = buildPatchFeedback(currentAttempt.definition, currentAttempt.diagnostics)
+                val patchFeedback = if (isLabelStyleOnly(currentAttempt.diagnostics))
+                    buildTargetedLabelPatchFeedback(currentAttempt.definition, currentAttempt.diagnostics)
+                else
+                    buildPatchFeedback(currentAttempt.definition, currentAttempt.diagnostics)
                 repairPromptText = patchFeedback
                 val patch = requestPatchCorrection(repairPromptRunner, currentAttempt.messages, patchFeedback)
                 when (val patchResult = bpmnPatchApplier.apply(currentAttempt.definition, patch)) {
@@ -475,6 +478,40 @@ class BpmnRefinementWorkflow(
         }
     }
 
+    private fun isLabelStyleOnly(diagnostics: List<BpmnDiagnostic>): Boolean =
+        diagnostics.isNotEmpty() && diagnostics.all { it.isLabelStyleRule() }
+
+    private fun BpmnDiagnostic.isLabelStyleRule(): Boolean =
+        source == BpmnDiagnosticSource.LINT && rule != null &&
+        LABEL_STYLE_RULES.any { rule.contains(it) }
+
+    private fun buildTargetedLabelPatchFeedback(
+        definition: BpmnDefinition,
+        diagnostics: List<BpmnDiagnostic>,
+    ): String {
+        val affectedIds = diagnostics.mapNotNull { it.elementId }.distinct()
+        val affectedNodes = definition.nodes.filter { it.id in affectedIds }
+        val ruleDocs = bpmnLintService.ruleDocs(diagnostics.mapNotNull { it.rule }.distinct().toSet())
+        return buildString {
+            appendLine("Fix the following BPMN element label violations.")
+            appendLine("Return only a BpmnRepairPatch with SET_NODE_NAME operations for the listed elements — do not modify any other nodes.")
+            appendLine()
+            appendLine("Affected elements:")
+            for (node in affectedNodes) {
+                val diag = diagnostics.first { it.elementId == node.id }
+                appendLine("  - id=${node.id}, current name=\"${node.name}\", rule=${diag.rule}")
+                appendLine("    violation: ${diag.message}")
+                ruleDocs[diag.rule]?.let { appendLine("    rule guidance: $it") }
+                if (diag.rule?.contains("name-02") == true && node.name != null) {
+                    val relevant = config.repair.abbreviations.entries.filter { node.name.contains(it.key) }
+                    if (relevant.isNotEmpty()) {
+                        appendLine("    domain glossary: ${relevant.joinToString { "${it.key}=${it.value}" }}")
+                    }
+                }
+            }
+        }
+    }
+
     private fun buildRepairFeedback(
         definition: BpmnDefinition,
         renderedXml: String,
@@ -643,7 +680,8 @@ class BpmnRefinementWorkflow(
 
     companion object {
         private const val PATCH_DIAGNOSTIC_LIMIT = 5
-        private val PATCHABLE_LINT_RULES = listOf("label", "name", "naming")
+        private val PATCHABLE_LINT_RULES = listOf("label", "name", "naming", "act-02", "gtw-01", "gtw-03", "name-02")
+        private val LABEL_STYLE_RULES = listOf("act-02", "gtw-01", "gtw-03", "name-02")
         private val LAYOUT_HINTS = listOf("waypoint", "bounds", "diagram", "layout")
         private val VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS = listOf(
             "unknown rule",
