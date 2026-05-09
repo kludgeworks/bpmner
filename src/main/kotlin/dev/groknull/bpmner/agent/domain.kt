@@ -162,6 +162,59 @@ data class LaidOutProcessGraph(
     fun ownerForElementId(elementId: String?): String? = ownedGraph.ownerForElementId(elementId)
 
     fun ownerForObjectRef(objectRef: String?): String? = ownedGraph.ownerForObjectRef(objectRef)
+
+    fun validateOwnership(): List<String> = buildList {
+        definition.nodes.forEach { node ->
+            if (ownerForElementId(node.id) == null) add("Node '${node.id}' has no owner assignment")
+        }
+        definition.sequences.forEach { edge ->
+            if (ownerForElementId(edge.id) == null) add("Edge '${edge.id}' has no owner assignment")
+        }
+    }
+}
+
+/**
+ * Rebuild ownership maps for [newDefinition] and return a fully consistent [LaidOutProcessGraph].
+ *
+ * Existing node/edge owners are preserved. Elements added since the last reindex inherit the
+ * process-level default owner. Removed elements are implicitly dropped because the element
+ * owner map is rebuilt from scratch against [newDefinition].
+ *
+ * Also keeps [LaidOutProcessGraph.ownedGraph.composedGraph.definition] in sync so that the
+ * two copies of the definition inside the graph never diverge.
+ */
+fun LaidOutProcessGraph.withUpdatedDefinition(newDefinition: BpmnDefinition): LaidOutProcessGraph {
+    val defaultOwner = ownedGraph.objectOwnersByObjectRef["process"] ?: "phase:main"
+    val baseObjectOwners = ownedGraph.objectOwnersByObjectRef
+    val updatedObjectOwners: Map<String, String> = baseObjectOwners +
+        newDefinition.nodes
+            .filter { "nodes[id=${it.id}]" !in baseObjectOwners }
+            .associate { "nodes[id=${it.id}]" to defaultOwner } +
+        newDefinition.sequences
+            .filter { "sequences[id=${it.id}]" !in baseObjectOwners }
+            .associate { "sequences[id=${it.id}]" to defaultOwner }
+    val newElementOwners: Map<String, String> = buildMap {
+        put(newDefinition.processId, updatedObjectOwners["process"] ?: defaultOwner)
+        newDefinition.nodes.forEach { node ->
+            val owner = updatedObjectOwners["nodes[id=${node.id}]"] ?: defaultOwner
+            put(node.id, owner)
+            put("${node.id}_di", owner)
+        }
+        newDefinition.sequences.forEach { edge ->
+            val owner = updatedObjectOwners["sequences[id=${edge.id}]"] ?: defaultOwner
+            put(edge.id, owner)
+            put("${edge.id}_di", owner)
+        }
+    }
+    val updatedOwnedGraph = OwnedElementGraph(
+        composedGraph = ownedGraph.composedGraph.copy(
+            definition = newDefinition,
+            objectOwnersByObjectRef = updatedObjectOwners,
+        ),
+        elementOwnersByElementId = newElementOwners,
+        objectOwnersByObjectRef = updatedObjectOwners,
+    )
+    return LaidOutProcessGraph(ownedGraph = updatedOwnedGraph, definition = newDefinition)
 }
 
 @JsonClassDescription("Rendered BPMN XML with a stable index mapping XML elements back to the typed definition")

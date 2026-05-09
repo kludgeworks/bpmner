@@ -162,7 +162,7 @@ class BpmnRefinementWorkflow(
                 )
             }
 
-            currentGraph = currentGraph.copy(definition = correctedDefinition)
+            currentGraph = currentGraph.withUpdatedDefinition(correctedDefinition)
             var renderFailureMessage: String? = null
             val correctedRendered = try {
                 bpmnConverter.render(currentGraph)
@@ -231,6 +231,13 @@ class BpmnRefinementWorkflow(
                 )
             }
         )
+        graph.validateOwnership().forEach { msg ->
+            diagnostics += BpmnDiagnostic(
+                source = BpmnDiagnosticSource.GRAPH,
+                message = msg,
+                repairScope = BpmnRepairScope.COMPOSITION,
+            )
+        }
 
         if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
             if (renderFailureMessage != null || rendered == null) {
@@ -619,11 +626,11 @@ class BpmnRefinementWorkflow(
             ?: graph.ownerForElementId(diagnostic.elementId)
         val repairScope = diagnostic.repairScope ?: inferRepairScope(diagnostic, ownerRef)
         if (diagnostic.elementId != null && ownerRef == null && diagnostic.source != BpmnDiagnosticSource.RENDER) {
-            logger.warn(
-                "Ownership mapping ambiguous. source={}, elementId={}, objectRef={}, inferredRepairScope={}",
-                diagnostic.source.name.lowercase(),
+            logger.debug(
+                "Ownership unresolved for elementId={}, objectRef={}, source={}, inferredRepairScope={}",
                 diagnostic.elementId,
                 diagnostic.objectRef ?: "-",
+                diagnostic.source.name.lowercase(),
                 repairScope.name.lowercase(),
             )
         }
