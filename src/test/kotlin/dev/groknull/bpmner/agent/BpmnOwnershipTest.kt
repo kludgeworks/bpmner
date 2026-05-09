@@ -1,0 +1,299 @@
+package dev.groknull.bpmner.agent
+
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+
+class BpmnOwnershipTest {
+
+    private val repair = BpmnTopologyRepair()
+    private val applier = BpmnPatchApplier()
+    private val stdWaypoints = listOf(BpmnWaypoint(100.0, 100.0), BpmnWaypoint(200.0, 100.0))
+
+    // -------------------------------------------------------------------------
+    // Fixtures
+    // -------------------------------------------------------------------------
+
+    private fun baseGraph(): LaidOutProcessGraph {
+        val definition = BpmnDefinition(
+            processId = "Process_1",
+            processName = "Test",
+            nodes = listOf(
+                BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
+                BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
+                BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(340.0, 120.0, 36.0, 36.0)),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
+                BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
+            ),
+        )
+        val objectOwners = buildMap {
+            put("process", "phase:main")
+            definition.nodes.forEach { put("nodes[id=${it.id}]", "phase:main") }
+            definition.sequences.forEach { put("sequences[id=${it.id}]", "phase:main") }
+        }
+        val elementOwners = buildMap {
+            put(definition.processId, "phase:main")
+            definition.nodes.forEach { node ->
+                put(node.id, "phase:main"); put("${node.id}_di", "phase:main")
+            }
+            definition.sequences.forEach { edge ->
+                put(edge.id, "phase:main"); put("${edge.id}_di", "phase:main")
+            }
+        }
+        val composedGraph = ComposedProcessGraph(
+            outline = ValidatedOutline(
+                outline = ProcessOutline(
+                    request = BpmnRequest("test"),
+                    definition = definition,
+                    metrics = OutlineMetrics(1, 0, 0, 0),
+                )
+            ),
+            definition = definition,
+            objectOwnersByObjectRef = objectOwners,
+        )
+        val ownedGraph = OwnedElementGraph(
+            composedGraph = composedGraph,
+            elementOwnersByElementId = elementOwners,
+            objectOwnersByObjectRef = objectOwners,
+        )
+        return LaidOutProcessGraph(ownedGraph = ownedGraph, definition = definition)
+    }
+
+    // -------------------------------------------------------------------------
+    // validateOwnership
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `validateOwnership clean graph returns empty`() {
+        assertTrue(baseGraph().validateOwnership().isEmpty())
+    }
+
+    @Test
+    fun `validateOwnership detects node missing from element owners`() {
+        val graph = baseGraph()
+        val extraNode = BpmnNode("Orphan_1", "Orphan", NodeType.SERVICE_TASK, BpmnBounds(0.0, 0.0, 100.0, 80.0))
+        val newDef = graph.definition.copy(nodes = graph.definition.nodes + extraNode)
+        // Manually corrupt: update definition but do NOT reindex ownership
+        val corruptGraph = LaidOutProcessGraph(ownedGraph = graph.ownedGraph, definition = newDef)
+        val errors = corruptGraph.validateOwnership()
+        assertTrue(errors.any { it.contains("Orphan_1") }, "Expected error for Orphan_1, got: $errors")
+    }
+
+    @Test
+    fun `validateOwnership detects edge missing from element owners`() {
+        val graph = baseGraph()
+        val extraEdge = BpmnEdge("Flow_99", "Start_1", "End_1", waypoints = stdWaypoints)
+        val newDef = graph.definition.copy(sequences = graph.definition.sequences + extraEdge)
+        val corruptGraph = LaidOutProcessGraph(ownedGraph = graph.ownedGraph, definition = newDef)
+        val errors = corruptGraph.validateOwnership()
+        assertTrue(errors.any { it.contains("Flow_99") }, "Expected error for Flow_99, got: $errors")
+    }
+
+    // -------------------------------------------------------------------------
+    // withUpdatedDefinition — basic behaviour
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `withUpdatedDefinition assigns owner to new node`() {
+        val graph = baseGraph()
+        val newNode = BpmnNode("Task_2", "Extra task", NodeType.SERVICE_TASK, BpmnBounds(180.0, 240.0, 100.0, 80.0))
+        val newDef = graph.definition.copy(nodes = graph.definition.nodes + newNode)
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertNotNull(updated.ownerForElementId("Task_2"), "Task_2 must have an owner after reindex")
+        assertNotNull(updated.ownerForElementId("Task_2_di"), "Task_2_di must have an owner after reindex")
+    }
+
+    @Test
+    fun `withUpdatedDefinition assigns owner to new edge`() {
+        val graph = baseGraph()
+        val newEdge = BpmnEdge("Flow_3", "Start_1", "End_1", waypoints = stdWaypoints)
+        val newDef = graph.definition.copy(sequences = graph.definition.sequences + newEdge)
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertNotNull(updated.ownerForElementId("Flow_3"), "Flow_3 must have an owner after reindex")
+        assertNotNull(updated.ownerForElementId("Flow_3_di"), "Flow_3_di must have an owner after reindex")
+    }
+
+    @Test
+    fun `withUpdatedDefinition preserves existing owners`() {
+        val graph = baseGraph()
+        val newDef = graph.definition.copy(processName = "Renamed")
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertEquals("phase:main", updated.ownerForElementId("Start_1"))
+        assertEquals("phase:main", updated.ownerForElementId("Task_1"))
+        assertEquals("phase:main", updated.ownerForElementId("Flow_1"))
+    }
+
+    @Test
+    fun `withUpdatedDefinition purges removed elements from owner map`() {
+        val graph = baseGraph()
+        val newDef = graph.definition.copy(
+            nodes = graph.definition.nodes.filter { it.id != "Task_1" },
+            sequences = graph.definition.sequences.filter { it.sourceRef != "Task_1" && it.targetRef != "Task_1" },
+        )
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertNull(updated.ownerForElementId("Task_1"), "Task_1 must be absent after removal")
+        assertNull(updated.ownerForElementId("Task_1_di"), "Task_1_di must be absent after removal")
+    }
+
+    @Test
+    fun `withUpdatedDefinition syncs composedGraph definition`() {
+        val graph = baseGraph()
+        val newDef = graph.definition.copy(processName = "Synced")
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertEquals("Synced", updated.ownedGraph.composedGraph.definition.processName)
+    }
+
+    @Test
+    fun `withUpdatedDefinition result passes validateOwnership`() {
+        val graph = baseGraph()
+        val newNode = BpmnNode("Task_2", "Extra", NodeType.USER_TASK, BpmnBounds(180.0, 240.0, 100.0, 80.0))
+        val newEdge = BpmnEdge("Flow_3", "Task_1", "Task_2", waypoints = stdWaypoints)
+        val newDef = graph.definition.copy(
+            nodes = graph.definition.nodes + newNode,
+            sequences = graph.definition.sequences + newEdge,
+        )
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertTrue(updated.validateOwnership().isEmpty(), "Expected clean ownership after reindex")
+    }
+
+    // -------------------------------------------------------------------------
+    // Topology repair integration — ownership after gateway split/insert/remove
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `withUpdatedDefinition after join-fork gateway split assigns owner to new gateway and edge`() {
+        val definition = joinForkDefinition()
+        val graph = graphFor(definition)
+        val patch = repair.buildTopologyPatch(
+            definition,
+            listOf(BpmnDiagnostic(BpmnDiagnosticSource.LINT, "topology violation", rule = "klm/gtw-20-no-gateway-join-fork", elementId = "Gateway_1")),
+        )!!
+        val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
+        val updated = graph.withUpdatedDefinition(newDef)
+        val newNodeId = newDef.nodes.first { it.id !in definition.nodes.map { n -> n.id } }.id
+        assertNotNull(updated.ownerForElementId(newNodeId), "Inserted join gateway must have an owner")
+        assertTrue(updated.validateOwnership().isEmpty(), "Ownership must be complete after join-fork repair")
+    }
+
+    @Test
+    fun `withUpdatedDefinition after fake-join repair assigns owner to inserted gateway`() {
+        val definition = fakeJoinDefinition()
+        val graph = graphFor(definition)
+        val patch = repair.buildTopologyPatch(
+            definition,
+            listOf(BpmnDiagnostic(BpmnDiagnosticSource.LINT, "topology violation", rule = "klm/gtw-12-fake-join", elementId = "Task_1")),
+        )!!
+        val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertTrue(updated.validateOwnership().isEmpty(), "Ownership must be complete after fake-join repair")
+    }
+
+    @Test
+    fun `withUpdatedDefinition after superfluous gateway removal purges gateway from owners`() {
+        val definition = superfluousGatewayDefinition()
+        val graph = graphFor(definition)
+        val patch = repair.buildTopologyPatch(
+            definition,
+            listOf(BpmnDiagnostic(BpmnDiagnosticSource.LINT, "topology violation", rule = "klm/gtw-15-superfluous-gateway", elementId = "Gateway_1")),
+        )!!
+        val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
+        val updated = graph.withUpdatedDefinition(newDef)
+        assertNull(updated.ownerForElementId("Gateway_1"), "Removed gateway must no longer have an owner")
+        assertTrue(updated.validateOwnership().isEmpty(), "Ownership must be clean after superfluous gateway removal")
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private fun graphFor(definition: BpmnDefinition): LaidOutProcessGraph {
+        val objectOwners = buildMap {
+            put("process", "phase:main")
+            definition.nodes.forEach { put("nodes[id=${it.id}]", "phase:main") }
+            definition.sequences.forEach { put("sequences[id=${it.id}]", "phase:main") }
+        }
+        val elementOwners = buildMap {
+            put(definition.processId, "phase:main")
+            definition.nodes.forEach { node ->
+                put(node.id, "phase:main"); put("${node.id}_di", "phase:main")
+            }
+            definition.sequences.forEach { edge ->
+                put(edge.id, "phase:main"); put("${edge.id}_di", "phase:main")
+            }
+        }
+        val composedGraph = ComposedProcessGraph(
+            outline = ValidatedOutline(
+                outline = ProcessOutline(
+                    request = BpmnRequest("test"),
+                    definition = definition,
+                    metrics = OutlineMetrics(1, 0, 0, 0),
+                )
+            ),
+            definition = definition,
+            objectOwnersByObjectRef = objectOwners,
+        )
+        val ownedGraph = OwnedElementGraph(
+            composedGraph = composedGraph,
+            elementOwnersByElementId = elementOwners,
+            objectOwnersByObjectRef = objectOwners,
+        )
+        return LaidOutProcessGraph(ownedGraph = ownedGraph, definition = definition)
+    }
+
+    private fun joinForkDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Join Fork",
+        nodes = listOf(
+            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 160.0, 36.0, 36.0)),
+            BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 260.0, 36.0, 36.0)),
+            BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 155.0, 50.0, 50.0)),
+            BpmnNode("Task_1", "Handle A", NodeType.USER_TASK, BpmnBounds(360.0, 140.0, 100.0, 80.0)),
+            BpmnNode("Task_2", "Handle B", NodeType.USER_TASK, BpmnBounds(360.0, 250.0, 100.0, 80.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 160.0, 36.0, 36.0)),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A", waypoints = stdWaypoints),
+            BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B", waypoints = stdWaypoints),
+            BpmnEdge("Flow_5", "Task_1", "End_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_6", "Task_2", "End_1", waypoints = stdWaypoints),
+        ),
+    )
+
+    private fun fakeJoinDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Fake Join",
+        nodes = listOf(
+            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+            BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
+            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(240.0, 138.0, 100.0, 80.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 160.0, 36.0, 36.0)),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_2", "Start_2", "Task_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+        ),
+    )
+
+    private fun superfluousGatewayDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Superfluous Gateway",
+        nodes = listOf(
+            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+            BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
+            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(300.0, 118.0, 100.0, 80.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_2", "Gateway_1", "Task_1", waypoints = stdWaypoints),
+            BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+        ),
+    )
+}
