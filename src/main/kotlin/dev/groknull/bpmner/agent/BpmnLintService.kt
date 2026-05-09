@@ -37,6 +37,11 @@ data class RuntimeLintConfig(
     val rules: Map<String, String> = emptyMap(),
 )
 
+enum class BpmnLintPhase {
+    SEMANTIC_PRE_LAYOUT,
+    FINAL_POST_LAYOUT,
+}
+
 class BpmnLintConfigurationException(
     message: String,
     cause: Throwable? = null,
@@ -98,13 +103,16 @@ class BpmnLintService(
     /**
      * Validates [bpmnXml] with bpmn-lint.
      */
-    fun lint(bpmnXml: String): List<LintIssue>? {
+    fun lint(bpmnXml: String): List<LintIssue>? = lint(bpmnXml, BpmnLintPhase.FINAL_POST_LAYOUT)
+
+    open fun lint(bpmnXml: String, phase: BpmnLintPhase?): List<LintIssue>? {
+        val resolvedPhase = phase ?: BpmnLintPhase.FINAL_POST_LAYOUT
         val api = linterApi ?: return null
-        logger.debug("Starting in-process bpmn-lint validation. xmlLength={}", bpmnXml.length)
+        logger.debug("Starting in-process bpmn-lint validation. phase={}, xmlLength={}", resolvedPhase, bpmnXml.length)
         
         return try {
             val future = CompletableFuture<String>()
-            val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson())
+            val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson(resolvedPhase))
             
             promise.invokeMember("then", Consumer<String> { result ->
                 future.complete(result)
@@ -173,10 +181,26 @@ class BpmnLintService(
         }
     }
 
-    private fun lintConfigJson(): String = objectMapper.writeValueAsString(properties.toLintConfig())
+    internal fun lintConfig(phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT): RuntimeLintConfig {
+        val base = properties.toLintConfig()
+        if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) {
+            return base
+        }
+
+        return base.copy(
+            rules = base.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" },
+        )
+    }
+
+    private fun lintConfigJson(phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT): String =
+        objectMapper.writeValueAsString(lintConfig(phase))
 
     companion object {
         private const val BPMNLINT_VERSION = "11.12.1"
+        private val LAYOUT_SENSITIVE_RULES = setOf(
+            "no-overlapping-elements",
+            "bpmnlint/no-overlapping-elements",
+        )
     }
 }
 

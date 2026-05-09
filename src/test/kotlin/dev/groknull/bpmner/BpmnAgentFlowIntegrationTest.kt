@@ -6,18 +6,22 @@ import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.agent.BpmnBounds
 import dev.groknull.bpmner.agent.BpmnDefinition
 import dev.groknull.bpmner.agent.BpmnEdge
+import dev.groknull.bpmner.agent.BpmnLintPhase
 import dev.groknull.bpmner.agent.BpmnLintService
 import dev.groknull.bpmner.agent.BpmnNode
 import dev.groknull.bpmner.agent.BpmnRequest
 import dev.groknull.bpmner.agent.BpmnResult
 import dev.groknull.bpmner.agent.BpmnWaypoint
 import dev.groknull.bpmner.agent.BpmnXsdValidator
+import dev.groknull.bpmner.agent.LintIssue
 import dev.groknull.bpmner.agent.NodeType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.verify
+import org.mockito.Mockito.times
 import org.mockito.Mockito.`when`
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -43,7 +47,10 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
         val definition = validDefinition()
         val outputFile = tempDir.resolve("process.bpmn")
         `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString())).thenReturn(emptyList())
-        `when`(bpmnLintService.lint(org.mockito.ArgumentMatchers.anyString())).thenReturn(emptyList())
+        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService)
+            .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
+        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService)
+            .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT))
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
 
@@ -57,8 +64,15 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
         assertEquals(outputFile.toString(), result.outputFile)
         assertTrue(result.xml.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
-        verify(bpmnXsdValidator).validateDetailed(org.mockito.ArgumentMatchers.anyString())
-        verify(bpmnLintService).lint(org.mockito.ArgumentMatchers.anyString())
+        verify(bpmnXsdValidator, times(2)).validateDetailed(org.mockito.ArgumentMatchers.anyString())
+        verify(bpmnLintService).lint(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
+        )
+        verify(bpmnLintService).lint(
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT),
+        )
     }
 
     private fun validDefinition() = BpmnDefinition(

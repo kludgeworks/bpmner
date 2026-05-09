@@ -31,4 +31,25 @@ class BpmnLintServiceTest {
         assertEquals("kept", issues.single().rawFields["custom"])
         assertTrue("column" in issues.single().rawFields)
     }
+
+    @Test
+    fun `semantic pre-layout lint disables layout-sensitive rules`() {
+        val config = service.lintConfig(BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+
+        assertEquals("off", config.rules["no-overlapping-elements"])
+        assertEquals("off", config.rules["bpmnlint/no-overlapping-elements"])
+    }
+
+    @Test
+    fun `final post-layout lint preserves configured rules`() {
+        val configured = BpmnLintService(
+            BpmnLintProperties(
+                rules = mapOf("no-overlapping-elements" to "error"),
+            )
+        )
+
+        val config = configured.lintConfig(BpmnLintPhase.FINAL_POST_LAYOUT)
+
+        assertEquals("error", config.rules["no-overlapping-elements"])
+    }
 }

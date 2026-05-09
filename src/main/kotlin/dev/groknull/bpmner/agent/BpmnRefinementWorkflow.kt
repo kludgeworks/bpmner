@@ -241,7 +241,7 @@ class BpmnRefinementWorkflow(
             } else {
                 diagnostics.addAll(normalizeXsdDiagnostics(rendered, graph))
                 if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-                    val lintIssues = bpmnLintService.lint(rendered.xml)
+                    val lintIssues = bpmnLintService.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
                     if (lintIssues == null) {
                         logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
                     } else {
