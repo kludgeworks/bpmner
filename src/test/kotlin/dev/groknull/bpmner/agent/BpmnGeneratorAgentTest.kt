@@ -24,6 +24,7 @@ class BpmnGeneratorAgentTest {
         xsdValidator: BpmnXsdValidator,
         converter: BpmnDefinitionToXmlConverter,
         layoutService: BpmnLayoutService = RecordingLayoutService(),
+        patchApplier: BpmnPatchApplier = BpmnPatchApplier(),
     ): BpmnGeneratorAgent {
         val workflow = BpmnRefinementWorkflow(
             config = config,
@@ -31,6 +32,7 @@ class BpmnGeneratorAgentTest {
             bpmnXsdValidator = xsdValidator,
             bpmnConverter = converter,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
+            bpmnPatchApplier = patchApplier,
         )
         return BpmnGeneratorAgent(config, converter, workflow, layoutService)
     }
@@ -277,6 +279,78 @@ class BpmnGeneratorAgentTest {
         assertEquals(2, xsdValidator.xmls.size)
         assertEquals(2, lintService.xmls.size)
         assertEquals(2, converter.renderCalls)
+    }
+
+    @Test
+    fun `patchable lint diagnostic results in patch repair prompt and patch application`() {
+        val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
+        val converter = RecordingConverter()
+        val patchedDefinition = validDefinition(processName = "Make toast — patched")
+        val patchApplier = object : BpmnPatchApplier() {
+            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
+                PatchApplicationResult.Success(patchedDefinition)
+        }
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
+        val context = FakeActionContext()
+        context.expectResponse(
+            BpmnRepairPatch(
+                operations = listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Toast bread fixed")),
+                reason = "fix missing label",
+            )
+        )
+        val result = agent.validateAndRefineBpmn(BpmnRequest("Make toast"), converter.render(validDefinition()), context)
+
+        assertEquals(1, context.llmInvocations.size)
+        assertEquals(1, result.repairAttempts)
+        val patchPrompt = context.llmInvocations.single().messages.joinToString("\n") { it.content }
+        assertTrue(patchPrompt.contains("targeted name or label patches"), "Expected patch prompt but got: $patchPrompt")
+    }
+
+    @Test
+    fun `no-op patch fails refinement fast`() {
+        val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue)))
+        val converter = RecordingConverter()
+        val patchApplier = object : BpmnPatchApplier() {
+            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
+                PatchApplicationResult.NoOp
+        }
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
+        val context = FakeActionContext()
+        context.expectResponse(
+            BpmnRepairPatch(operations = listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Toast bread")))
+        )
+
+        val error = assertFailsWith<IllegalStateException> {
+            agent.validateAndRefineBpmn(BpmnRequest("Make toast"), converter.render(validDefinition()), context)
+        }
+        assertTrue(error.message!!.contains("no-op"))
+    }
+
+    @Test
+    fun `invalid patch falls back to full definition correction`() {
+        val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
+        val corrected = validDefinition(processName = "Make toast correctly")
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
+        val converter = RecordingConverter()
+        val patchApplier = object : BpmnPatchApplier() {
+            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
+                PatchApplicationResult.Failure("unknown nodeId 'Task_X'")
+        }
+        val agent = buildAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
+        val context = FakeActionContext()
+        context.expectResponse(
+            BpmnRepairPatch(operations = listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_X", name = "fix")))
+        )
+        context.expectResponse(corrected)
+
+        val result = agent.validateAndRefineBpmn(BpmnRequest("Make toast"), converter.render(validDefinition()), context)
+        assertTrue(result.xml.contains("Make toast correctly"))
+        assertEquals(2, context.llmInvocations.size)
     }
 
     @Test

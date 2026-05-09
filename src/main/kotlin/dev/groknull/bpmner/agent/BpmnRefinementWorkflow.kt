@@ -21,6 +21,7 @@ class BpmnRefinementWorkflow(
     private val bpmnXsdValidator: BpmnXsdValidator,
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
     private val bpmnDefinitionValidator: BpmnDefinitionValidator,
+    private val bpmnPatchApplier: BpmnPatchApplier,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementWorkflow::class.java)
     private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules()
@@ -52,18 +53,6 @@ class BpmnRefinementWorkflow(
         val invalidDefinitionFingerprints = mutableSetOf(currentRecord.definitionFingerprint)
         while (history.size < maxEvaluations) {
             logDiagnosticSummary(currentAttempt.globalDiagnostics.diagnostics)
-            val repairPrompt = buildRepairFeedback(
-                definition = currentAttempt.definition,
-                renderedXml = currentAttempt.rendered?.xml ?: renderFailureContext(currentAttempt),
-                diagnostics = currentAttempt.diagnostics,
-            )
-            if (repairPrompt.isBlank()) {
-                failRefinement(
-                    maxEvaluations = maxEvaluations,
-                    history = history,
-                    reason = "empty repair prompt",
-                )
-            }
             val globalFeedbackDiagnostics = currentAttempt.globalDiagnostics
             context.updateProgress(
                 "Repair attempt ${currentAttempt.repairAttempts + 1}/${maxEvaluations - 1}: " +
@@ -75,11 +64,53 @@ class BpmnRefinementWorkflow(
                 val docsPrompt = lintRuleDocsPrompt(currentAttempt.diagnostics)
                 if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
             }
-            val (correctedDefinition, updatedMessages) = requestCorrection(
-                repairPromptRunner,
-                currentAttempt.messages,
-                repairPrompt,
-            )
+
+            var repairPromptText: String
+            val (correctedDefinition, updatedMessages) = if (isPatchable(currentAttempt.diagnostics)) {
+                val patchFeedback = buildPatchFeedback(currentAttempt.definition, currentAttempt.diagnostics)
+                repairPromptText = patchFeedback
+                val patch = requestPatchCorrection(repairPromptRunner, currentAttempt.messages, patchFeedback)
+                when (val patchResult = bpmnPatchApplier.apply(currentAttempt.definition, patch)) {
+                    is PatchApplicationResult.Success -> {
+                        logger.info(
+                            "Patch repair applied: ops={}, reason={}",
+                            patch.operations.size,
+                            patch.reason ?: "-",
+                        )
+                        patchResult.definition to (currentAttempt.messages + UserMessage(patchFeedback))
+                    }
+                    is PatchApplicationResult.NoOp -> failRefinement(
+                        maxEvaluations = maxEvaluations,
+                        history = history,
+                        reason = "patch was a no-op on attempt ${currentAttempt.repairAttempts + 1}",
+                    )
+                    is PatchApplicationResult.Failure -> {
+                        logger.warn(
+                            "Patch application failed ({}), falling back to full correction",
+                            patchResult.reason,
+                        )
+                        val repairPrompt = buildRepairFeedback(
+                            definition = currentAttempt.definition,
+                            renderedXml = currentAttempt.rendered?.xml ?: renderFailureContext(currentAttempt),
+                            diagnostics = currentAttempt.diagnostics,
+                        )
+                        repairPromptText = repairPrompt
+                        requestCorrection(repairPromptRunner, currentAttempt.messages, repairPrompt)
+                    }
+                }
+            } else {
+                val repairPrompt = buildRepairFeedback(
+                    definition = currentAttempt.definition,
+                    renderedXml = currentAttempt.rendered?.xml ?: renderFailureContext(currentAttempt),
+                    diagnostics = currentAttempt.diagnostics,
+                )
+                repairPromptText = repairPrompt
+                if (repairPrompt.isBlank()) {
+                    failRefinement(maxEvaluations = maxEvaluations, history = history, reason = "empty repair prompt")
+                }
+                requestCorrection(repairPromptRunner, currentAttempt.messages, repairPrompt)
+            }
+
             val correctedDefinitionFingerprint = definitionFingerprint(correctedDefinition)
             if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
                 failRefinement(
@@ -114,7 +145,7 @@ class BpmnRefinementWorkflow(
             )
             val nextRecord = nextAttempt.toRecord(
                 attemptNumber = history.size + 1,
-                repairPromptFingerprint = textFingerprint(repairPrompt),
+                repairPromptFingerprint = textFingerprint(repairPromptText),
             )
             history += nextRecord
             if (nextAttempt.isSuccessful()) {
@@ -289,8 +320,30 @@ class BpmnRefinementWorkflow(
     // LLM interaction
     // -------------------------------------------------------------------------
 
+    private fun isPatchable(diagnostics: List<BpmnDiagnostic>): Boolean {
+        if (diagnostics.isEmpty() || diagnostics.size > PATCH_DIAGNOSTIC_LIMIT) return false
+        return diagnostics.all { it.isPatchableByLabelFix() }
+    }
+
+    private fun BpmnDiagnostic.isPatchableByLabelFix(): Boolean =
+        when (source) {
+            BpmnDiagnosticSource.GRAPH -> message.contains("blank", ignoreCase = true)
+                                       || message.contains("name", ignoreCase = true)
+            BpmnDiagnosticSource.LINT  -> rule != null && PATCHABLE_LINT_RULES.any { rule.contains(it) }
+            else -> false
+        }
+
     private fun promptRunner(context: OperationContext, request: BpmnRequest): PromptRunner =
         config.repairer.promptRunner(context).withPromptContributor(request)
+
+    private fun requestPatchCorrection(
+        promptRunner: PromptRunner,
+        messages: List<Message>,
+        feedback: String,
+    ): BpmnRepairPatch {
+        val withFeedback = messages + UserMessage(feedback)
+        return promptRunner.createObject(messages = withFeedback, outputClass = BpmnRepairPatch::class.java)
+    }
 
     private fun requestCorrection(
         promptRunner: PromptRunner,
@@ -370,6 +423,23 @@ class BpmnRefinementWorkflow(
                 diagnostic.ownerRef ?: "-",
                 diagnostic.message,
             )
+        }
+    }
+
+    private fun buildPatchFeedback(
+        definition: BpmnDefinition,
+        diagnostics: List<BpmnDiagnostic>,
+    ): String = buildString {
+        appendLine("The following diagnostics can be fixed with targeted name or label patches.")
+        appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
+        appendLine("Do not rewrite the whole graph — only include operations that directly address the listed diagnostics.")
+        appendLine()
+        appendLine("Current canonical BpmnDefinition JSON:")
+        appendLine(serializeDefinition(definition))
+        appendLine()
+        appendLine("Diagnostics to fix:")
+        diagnostics.forEach { diagnostic ->
+            appendLine("- ${formatDiagnostic(diagnostic)}")
         }
     }
 
@@ -540,6 +610,8 @@ class BpmnRefinementWorkflow(
     }
 
     companion object {
+        private const val PATCH_DIAGNOSTIC_LIMIT = 5
+        private val PATCHABLE_LINT_RULES = listOf("label", "name", "naming")
         private val LAYOUT_HINTS = listOf("waypoint", "bounds", "diagram", "layout")
         private val VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS = listOf(
             "unknown rule",
