@@ -33,6 +33,7 @@ class BpmnGeneratorAgentTest {
             bpmnConverter = converter,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
             bpmnPatchApplier = patchApplier,
+            topologyRepair = BpmnTopologyRepair(),
         )
         return BpmnGeneratorAgent(config, converter, workflow, layoutService)
     }
