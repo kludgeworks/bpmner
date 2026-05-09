@@ -6,6 +6,7 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.core.ActionRetryPolicy
 import org.slf4j.LoggerFactory
 import java.io.File
 
@@ -151,7 +152,10 @@ class BpmnGeneratorAgent(
         return rendered
     }
 
-    @Action(description = "Validate rendered BPMN, repair the typed definition if needed, and return validated BPMN XML")
+    @Action(
+        description = "Validate rendered BPMN, repair the typed definition if needed, and return validated BPMN XML",
+        actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
+    )
     fun validateAndRefineBpmn(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,

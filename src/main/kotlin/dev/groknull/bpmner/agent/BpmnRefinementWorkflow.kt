@@ -3,10 +3,6 @@ package dev.groknull.bpmner.agent
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
-import com.embabel.agent.api.common.asSubProcess
-import com.embabel.agent.api.common.workflow.loop.Feedback
-import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableActionContext
-import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableBuilder
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
@@ -15,6 +11,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import java.security.MessageDigest
 import kotlin.math.min
 
 @Component
@@ -34,139 +31,119 @@ class BpmnRefinementWorkflow(
         rendered: RenderedBpmn,
         context: ActionContext,
     ): ValidatedBpmnXml {
-        val refinementWorkflow = RepeatUntilAcceptableBuilder
-            .returning(BpmnRefinementAttempt::class.java)
-            .consuming(Unit::class.java)
-            .withFeedbackClass(BpmnRefinementFeedback::class.java)
-            .withMaxIterations(config.maxAttempts)
-            .repeating { attemptContext ->
-                nextRefinementAttempt(
-                    request = request,
-                    graph = graph,
-                    initialRendered = rendered,
-                    repairContext = context,
-                    context = attemptContext,
-                )
-            }
-            .withEvaluator { evaluationContext ->
-                evaluateRefinementAttempt(attempt = evaluationContext.resultToEvaluate)
-            }
-            .withAcceptanceCriteria { acceptanceContext -> acceptanceContext.feedback.acceptable }
-
-        val finalAttempt: BpmnRefinementAttempt = context.asSubProcess(
-            refinementWorkflow.buildAgent(
-                name = "bpmn-refinement-workflow",
-                description = "Repair BPMN definitions until external validation succeeds",
-            )
+        val maxEvaluations = config.maxAttempts.coerceAtLeast(1)
+        val history = mutableListOf<BpmnRefinementAttemptRecord>()
+        val initialMessages = initialMessages(request, rendered.definition)
+        var currentGraph = graph
+        var currentAttempt = evaluateCandidate(
+            graph = currentGraph,
+            definition = rendered.definition,
+            rendered = rendered,
+            messages = initialMessages,
+            repairAttempts = 0,
         )
-
-        if (!finalAttempt.isSuccessful()) {
-            logger.error("BPMN validation failed after {} repair attempt(s)", config.maxAttempts)
-            error("Failed to produce valid BPMN after ${config.maxAttempts} attempts")
+        var currentRecord = currentAttempt.toRecord(attemptNumber = history.size + 1)
+        history += currentRecord
+        if (currentAttempt.isSuccessful()) {
+            context.updateProgress("Validation passed after ${currentAttempt.repairAttempts} repair attempt(s)")
+            return currentAttempt.toValidatedBpmnXml()
         }
 
-        return finalAttempt.toValidatedBpmnXml()
+        val invalidDefinitionFingerprints = mutableSetOf(currentRecord.definitionFingerprint)
+        while (history.size < maxEvaluations) {
+            logDiagnosticSummary(currentAttempt.globalDiagnostics.diagnostics)
+            val repairPrompt = buildRepairFeedback(
+                definition = currentAttempt.definition,
+                renderedXml = currentAttempt.rendered?.xml ?: renderFailureContext(currentAttempt),
+                diagnostics = currentAttempt.diagnostics,
+            )
+            if (repairPrompt.isBlank()) {
+                failRefinement(
+                    maxEvaluations = maxEvaluations,
+                    history = history,
+                    reason = "empty repair prompt",
+                )
+            }
+            val globalFeedbackDiagnostics = currentAttempt.globalDiagnostics
+            context.updateProgress(
+                "Repair attempt ${currentAttempt.repairAttempts + 1}/${maxEvaluations - 1}: " +
+                "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
+                "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
+                "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}"
+            )
+            val repairPromptRunner = promptRunner(context, request).let { runner ->
+                val docsPrompt = lintRuleDocsPrompt(currentAttempt.diagnostics)
+                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
+            }
+            val (correctedDefinition, updatedMessages) = requestCorrection(
+                repairPromptRunner,
+                currentAttempt.messages,
+                repairPrompt,
+            )
+            val correctedDefinitionFingerprint = definitionFingerprint(correctedDefinition)
+            if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
+                failRefinement(
+                    maxEvaluations = maxEvaluations,
+                    history = history,
+                    reason = "unchanged patch on repair attempt ${currentAttempt.repairAttempts + 1}",
+                )
+            }
+            if (correctedDefinitionFingerprint in invalidDefinitionFingerprints) {
+                failRefinement(
+                    maxEvaluations = maxEvaluations,
+                    history = history,
+                    reason = "repeated invalid output on repair attempt ${currentAttempt.repairAttempts + 1}",
+                )
+            }
+
+            currentGraph = currentGraph.copy(definition = correctedDefinition)
+            var renderFailureMessage: String? = null
+            val correctedRendered = try {
+                bpmnConverter.render(currentGraph)
+            } catch (e: Exception) {
+                renderFailureMessage = e.message ?: e.javaClass.simpleName
+                null
+            }
+            val nextAttempt = evaluateCandidate(
+                graph = currentGraph,
+                definition = correctedDefinition,
+                rendered = correctedRendered,
+                messages = updatedMessages,
+                renderFailureMessage = renderFailureMessage,
+                repairAttempts = currentAttempt.repairAttempts + 1,
+            )
+            val nextRecord = nextAttempt.toRecord(
+                attemptNumber = history.size + 1,
+                repairPromptFingerprint = textFingerprint(repairPrompt),
+            )
+            history += nextRecord
+            if (nextAttempt.isSuccessful()) {
+                context.updateProgress("Validation passed after ${nextAttempt.repairAttempts} repair attempt(s)")
+                return nextAttempt.toValidatedBpmnXml()
+            }
+            if (nextRecord.diagnosticFingerprint == currentRecord.diagnosticFingerprint) {
+                failRefinement(
+                    maxEvaluations = maxEvaluations,
+                    history = history,
+                    reason = "unchanged diagnostics after repair attempt ${nextAttempt.repairAttempts}",
+                )
+            }
+
+            invalidDefinitionFingerprints += nextRecord.definitionFingerprint
+            currentAttempt = nextAttempt
+            currentRecord = nextRecord
+        }
+
+        failRefinement(
+            maxEvaluations = maxEvaluations,
+            history = history,
+            reason = "exhausted BPMN repair attempts",
+        )
     }
 
     // -------------------------------------------------------------------------
     // Refinement loop internals
     // -------------------------------------------------------------------------
-
-    private fun nextRefinementAttempt(
-        request: BpmnRequest,
-        graph: LaidOutProcessGraph,
-        initialRendered: RenderedBpmn,
-        repairContext: OperationContext,
-        context: RepeatUntilAcceptableActionContext<Unit, BpmnRefinementAttempt, BpmnRefinementFeedback>,
-    ): BpmnRefinementAttempt {
-        val previousAttempt = context.lastAttempt()?.result
-        return if (previousAttempt == null) {
-            val result = evaluateCandidate(
-                graph = graph,
-                definition = initialRendered.definition,
-                rendered = initialRendered,
-                messages = initialMessages(request, initialRendered.definition),
-                repairAttempts = 0,
-            )
-            if (result.isSuccessful()) {
-                context.updateProgress("Validation passed after ${result.repairAttempts} repair attempt(s)")
-            }
-            result
-        } else {
-            val feedback = context.lastAttempt()?.feedback ?: error("Expected feedback for prior refinement attempt")
-            if (previousAttempt.isSuccessful() || feedback.acceptable) {
-                return previousAttempt
-            }
-            if (context.attemptHistory.attemptCount() >= config.maxAttempts) {
-                return previousAttempt
-            }
-            if (feedback.repairPrompt.isBlank()) {
-                logger.warn("BPMN refinement feedback had no repair prompt; reusing last attempt")
-                return previousAttempt
-            }
-            val globalFeedbackDiagnostics = GlobalDiagnostics(feedback.diagnostics)
-            context.updateProgress(
-                "Repair attempt ${previousAttempt.repairAttempts + 1}/${config.maxAttempts}: " +
-                "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
-                "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
-                "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}"
-            )
-            val repairPromptRunner = promptRunner(repairContext, request).let { runner ->
-                val docsPrompt = lintRuleDocsPrompt(feedback.diagnostics)
-                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
-            }
-            val (correctedDefinition, updatedMessages) = requestCorrection(
-                repairPromptRunner,
-                previousAttempt.messages,
-                feedback.repairPrompt,
-            )
-            val updatedGraph = graph.copy(definition = correctedDefinition)
-            val rendered = try {
-                bpmnConverter.render(updatedGraph)
-            } catch (e: Exception) {
-                val renderFailResult = evaluateCandidate(
-                    graph = updatedGraph,
-                    definition = correctedDefinition,
-                    rendered = null,
-                    messages = updatedMessages,
-                    renderFailureMessage = e.message ?: e.javaClass.simpleName,
-                    repairAttempts = previousAttempt.repairAttempts + 1,
-                )
-                if (renderFailResult.isSuccessful()) {
-                    context.updateProgress("Validation passed after ${renderFailResult.repairAttempts} repair attempt(s)")
-                }
-                return renderFailResult
-            }
-            val result = evaluateCandidate(
-                graph = updatedGraph,
-                definition = correctedDefinition,
-                rendered = rendered,
-                messages = updatedMessages,
-                repairAttempts = previousAttempt.repairAttempts + 1,
-            )
-            if (result.isSuccessful()) {
-                context.updateProgress("Validation passed after ${result.repairAttempts} repair attempt(s)")
-            }
-            result
-        }
-    }
-
-    private fun evaluateRefinementAttempt(attempt: BpmnRefinementAttempt): BpmnRefinementFeedback {
-        if (attempt.globalDiagnostics.diagnostics.isNotEmpty()) {
-            logDiagnosticSummary(attempt.globalDiagnostics.diagnostics)
-        }
-        val acceptable = attempt.diagnostics.isEmpty()
-        return BpmnRefinementFeedback(
-            score = if (acceptable) 1.0 else 0.0,
-            acceptable = acceptable,
-            diagnostics = attempt.diagnostics,
-            repairPrompt = if (acceptable) "" else buildRepairFeedback(
-                definition = attempt.definition,
-                renderedXml = attempt.rendered?.xml ?: renderFailureContext(attempt),
-                diagnostics = attempt.diagnostics,
-            ),
-        )
-    }
 
     private fun evaluateCandidate(
         graph: LaidOutProcessGraph,
@@ -248,6 +225,64 @@ class BpmnRefinementWorkflow(
             renderFailureMessage = renderFailureMessage,
             repairAttempts = repairAttempts,
         )
+    }
+
+    private fun BpmnRefinementAttempt.toRecord(
+        attemptNumber: Int,
+        repairPromptFingerprint: String? = null,
+    ): BpmnRefinementAttemptRecord =
+        BpmnRefinementAttemptRecord(
+            attemptNumber = attemptNumber,
+            repairAttempts = repairAttempts,
+            graphDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.GRAPH),
+            renderDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.RENDER),
+            xsdDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
+            lintDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.LINT),
+            diagnosticFingerprint = diagnosticFingerprint(diagnostics),
+            definitionFingerprint = definitionFingerprint(definition),
+            repairPromptFingerprint = repairPromptFingerprint,
+        )
+
+    private fun failRefinement(
+        maxEvaluations: Int,
+        history: List<BpmnRefinementAttemptRecord>,
+        reason: String,
+    ): Nothing {
+        val compactHistory = history.joinToString(" | ") { it.compact() }
+        logger.error(
+            "BPMN validation failed after {} candidate evaluation(s): {}; history={}",
+            history.size,
+            reason,
+            compactHistory,
+        )
+        error("Failed to produce valid BPMN after $maxEvaluations attempts: $reason; history=$compactHistory")
+    }
+
+    private fun definitionFingerprint(definition: BpmnDefinition): String =
+        textFingerprint(serializeDefinition(definition))
+
+    private fun diagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String =
+        textFingerprint(
+            diagnostics
+                .map { diagnostic ->
+                    listOf(
+                        diagnostic.source.name,
+                        diagnostic.rule.orEmpty(),
+                        diagnostic.category.orEmpty(),
+                        diagnostic.elementId.orEmpty(),
+                        diagnostic.objectRef.orEmpty(),
+                        diagnostic.repairScope?.name.orEmpty(),
+                        diagnostic.ownerRef.orEmpty(),
+                        diagnostic.message,
+                    ).joinToString("\u001f")
+                }
+                .sorted()
+                .joinToString("\u001e")
+        )
+
+    private fun textFingerprint(value: String): String {
+        val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
+        return digest.joinToString("") { "%02x".format(it) }.take(12)
     }
 
     // -------------------------------------------------------------------------
@@ -542,13 +577,19 @@ private data class BpmnRefinementAttempt(
         "repairAttempts=$repairAttempts, messages=${messages.size})"
 }
 
-private data class BpmnRefinementFeedback(
-    override val score: Double,
-    val acceptable: Boolean,
-    val diagnostics: List<BpmnDiagnostic>,
-    val repairPrompt: String,
-) : Feedback {
-    override fun toString(): String =
-        "BpmnRefinementFeedback(score=$score, acceptable=$acceptable, " +
-        "diagnostics=${diagnostics.size}, repairPromptLength=${repairPrompt.length})"
+private data class BpmnRefinementAttemptRecord(
+    val attemptNumber: Int,
+    val repairAttempts: Int,
+    val graphDiagnostics: Int,
+    val renderDiagnostics: Int,
+    val xsdDiagnostics: Int,
+    val lintDiagnostics: Int,
+    val diagnosticFingerprint: String,
+    val definitionFingerprint: String,
+    val repairPromptFingerprint: String?,
+) {
+    fun compact(): String =
+        "#$attemptNumber(repairs=$repairAttempts,graph=$graphDiagnostics,render=$renderDiagnostics," +
+        "xsd=$xsdDiagnostics,lint=$lintDiagnostics,diag=$diagnosticFingerprint," +
+        "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
 }
