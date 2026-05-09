@@ -34,7 +34,8 @@ data class BpmnRequest(
             - Every node id and sequence id must be unique.
             - Every sequence sourceRef and targetRef must reference an existing node id.
             - Include at least one START_EVENT and one END_EVENT.
-            - Use clear, descriptive business names on nodes.
+            - Use clear, descriptive business names on tasks and events.
+            - Name diverging gateways as decision questions; leave converging gateways unnamed.
             - Keep process topology coherent with no dangling references or self-loop sequence flows.
             - Every node must include explicit bounds with x, y, width, and height.
             - Every sequence must include at least two waypoints that define its diagram path.
@@ -177,9 +178,8 @@ data class BpmnNode(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
     val id: String,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Node label shown in BPMN")
-    val name: String,
+    @get:JsonPropertyDescription("Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways.")
+    val name: String? = null,
     @get:JsonPropertyDescription("Node type from the supported enum")
     val type: NodeType,
     @field:Valid

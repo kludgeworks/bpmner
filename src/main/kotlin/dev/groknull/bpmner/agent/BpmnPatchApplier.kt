@@ -37,14 +37,23 @@ class BpmnPatchApplier {
 
     private fun applySetNodeName(definition: BpmnDefinition, op: BpmnPatchOperation): OperationResult {
         val nodeId = op.nodeId ?: return OperationResult.Invalid("SET_NODE_NAME requires nodeId")
-        val name = op.name ?: return OperationResult.Invalid("SET_NODE_NAME requires name")
-        if (name.isBlank()) return OperationResult.Invalid("SET_NODE_NAME name must not be blank")
         val node = definition.nodes.firstOrNull { it.id == nodeId }
             ?: return OperationResult.Invalid("SET_NODE_NAME: unknown nodeId '$nodeId'")
-        if (node.name == name) return OperationResult.Unchanged
+        val name = BpmnNodeNamingPolicy.normalize(op.name)
+        if (name == null && node.requiresName(definition)) {
+            return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.type}")
+        }
+        if (BpmnNodeNamingPolicy.normalize(node.name) == name) return OperationResult.Unchanged
         val updated = definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.copy(name = name) else it })
         return OperationResult.Changed(updated)
     }
+
+    private fun BpmnNode.requiresName(definition: BpmnDefinition): Boolean =
+        BpmnNodeNamingPolicy.requiresName(
+            node = this,
+            incomingCount = definition.sequences.count { it.targetRef == id },
+            outgoingCount = definition.sequences.count { it.sourceRef == id },
+        )
 
     private fun applySetEdgeLabel(definition: BpmnDefinition, op: BpmnPatchOperation): OperationResult {
         val edgeId = op.edgeId ?: return OperationResult.Invalid("SET_EDGE_LABEL requires edgeId")

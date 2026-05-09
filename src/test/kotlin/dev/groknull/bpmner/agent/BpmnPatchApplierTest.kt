@@ -3,6 +3,7 @@ package dev.groknull.bpmner.agent
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BpmnPatchApplierTest {
@@ -49,6 +50,36 @@ class BpmnPatchApplierTest {
     fun `SET_NODE_NAME with blank name is invalid`() {
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = ""))
         val result = assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
+        assertTrue(result.reason.contains("blank"))
+    }
+
+    @Test
+    fun `SET_NODE_NAME clears converging gateway name`() {
+        val definition = convergingGatewayDefinition(gatewayName = "Decision merged")
+        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Gateway_1", name = ""))
+
+        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+
+        assertNull(result.definition.nodes.first { it.id == "Gateway_1" }.name)
+    }
+
+    @Test
+    fun `SET_NODE_NAME with null name clears converging gateway name`() {
+        val definition = convergingGatewayDefinition(gatewayName = "Decision merged")
+        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Gateway_1", name = null))
+
+        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+
+        assertNull(result.definition.nodes.first { it.id == "Gateway_1" }.name)
+    }
+
+    @Test
+    fun `SET_NODE_NAME does not clear diverging gateway name`() {
+        val definition = divergingGatewayDefinition()
+        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Gateway_1", name = ""))
+
+        val result = assertIs<PatchApplicationResult.Failure>(applier.apply(definition, patch))
+
         assertTrue(result.reason.contains("blank"))
     }
 
@@ -293,4 +324,42 @@ class BpmnPatchApplierTest {
     // -------------------------------------------------------------------------
 
     private fun patch(vararg ops: BpmnPatchOperation) = BpmnRepairPatch(operations = ops.toList())
+
+    private fun convergingGatewayDefinition(gatewayName: String?) = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Merge decisions",
+        nodes = listOf(
+            BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
+            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
+            BpmnNode("Task_2", "Do other work", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
+            BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(320.0, 140.0, 50.0, 50.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = standardWaypoints),
+            BpmnEdge("Flow_2", "Start_1", "Task_2", waypoints = standardWaypoints),
+            BpmnEdge("Flow_3", "Task_1", "Gateway_1", waypoints = standardWaypoints),
+            BpmnEdge("Flow_4", "Task_2", "Gateway_1", waypoints = standardWaypoints),
+            BpmnEdge("Flow_5", "Gateway_1", "End_1", waypoints = standardWaypoints),
+        ),
+    )
+
+    private fun divergingGatewayDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Route decision",
+        nodes = listOf(
+            BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
+            BpmnNode("Gateway_1", "Is request valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(160.0, 120.0, 50.0, 50.0)),
+            BpmnNode("Task_1", "Approve request", NodeType.USER_TASK, taskBounds),
+            BpmnNode("Task_2", "Reject request", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
+            BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = standardWaypoints),
+            BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Valid", waypoints = standardWaypoints),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Invalid", waypoints = standardWaypoints),
+            BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = standardWaypoints),
+            BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = standardWaypoints),
+        ),
+    )
 }
