@@ -1,0 +1,43 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "No Element Type Words"
+category = RuleCategory.Name
+sequence = 3
+
+intent = "Avoid redundant BPMN element type words in labels."
+forModellers =
+  "Do not include words such as activity, process, or event in element names because the BPMN shape already indicates the type."
+forAI =
+  "Detect named BPMN elements whose labels include redundant element type words."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:SubProcess",
+    "bpmn:CallActivity",
+    "bpmn:StartEvent",
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:EndEvent",
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ParallelGateway",
+    "bpmn:ComplexGateway",
+    "bpmn:DataObjectReference",
+    "bpmn:DataStoreReference",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Element name must not include its BPMN element type"
+}
+
+staticConfig = new {
+  discouragedWords = List("activity", "process", "event")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

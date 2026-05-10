@@ -7,8 +7,37 @@ facts {
     Catalog.rules.map((rule) -> rule.id)
       == List(
         "act-01-verb-object-name",
+        "act-02-activity-label-capitalization",
         "act-03-discouraged-business-verbs",
+        "act-12-loop-task-annotation",
+        "act-13-mi-task-annotation",
+        "assoc-01-required-annotation-association",
+        "data-01-no-type-words-in-data-name",
+        "evt-01-event-state-name",
+        "evt-02-event-state-pattern",
+        "evt-10-start-no-incoming",
+        "evt-11-message-start-has-message-flow",
+        "evt-13-intermediate-event-not-action",
+        "evt-14-boundary-event-constraints",
+        "evt-15-error-end-boundary-pair",
+        "evt-16-link-event-pairing",
+        "flow-01-sequence-flow-within-pool",
+        "flow-02-diverging-flow-outcome-label",
+        "gen-01-klops-allowed-elements",
+        "gen-02-no-duplicate-diagrams",
+        "gtw-01-diverging-gateway-question",
+        "gtw-02-converging-gateway-unnamed",
+        "gtw-03-gateway-no-work-label",
+        "gtw-11-event-based-direct-events",
+        "gtw-12-diverging-flow-names",
+        "gtw-20-no-gateway-join-fork",
+        "gtw-21-fake-join",
+        "gtw-22-superfluous-gateway",
+        "msg-01-message-flow-across-pools",
+        "msg-02-message-flow-name-pattern",
+        "name-01-business-meaningful-label",
         "name-02-uncommon-abbreviations",
+        "name-03-no-element-type-words",
       )
   }
 
@@ -24,6 +53,10 @@ facts {
       .errorMessages.containsKey("tooShort")
     Catalog.rules.find((rule) -> rule.id == "act-03-discouraged-business-verbs")
       .staticConfig.discouragedLeadingVerbs.contains("manage")
+    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed")
+      .autoFixable
+    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed")
+      .fixStrategy == "attribute-mutation"
     Catalog.rules.find((rule) -> rule.id == "name-02-uncommon-abbreviations")
       .staticConfig.commonAcronyms.contains("BPMN")
   }
@@ -31,8 +64,8 @@ facts {
   ["migrated rules have valid severity and auto-fix metadata"] {
     Catalog.rules.every((rule) ->
       List("error", "warning", "info", "off").contains(rule.severity)
-        && (!rule.autoFixable)
-        && rule.fixStrategy == "none"
+        && ((rule.id == "gtw-02-converging-gateway-unnamed")
+          || ((!rule.autoFixable) && rule.fixStrategy == "none"))
     )
   }
 }

@@ -8,7 +8,7 @@ export type RuleConfig = {
   id: string;
   severity: PklSeverity;
   targetElements?: string[];
-  errorMessages: Record<string, string>;
+  errorMessages: Record<string, string | undefined>;
   staticConfig?: unknown;
   autoFixable: boolean;
   fixStrategy: string;

@@ -1,0 +1,29 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Message Flow Across Pools"
+category = RuleCategory.Message
+sequence = 1
+
+intent = "Ensure message flow models inter-participant communication."
+forModellers =
+  "Use message flows only between different pools or participants, not within a single pool."
+forAI =
+  "Detect message flows whose source and target resolve to the same pool or cannot be mapped to valid pools."
+
+targetElements =
+  List(
+    "bpmn:MessageFlow",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Message flow must connect elements in different pools"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

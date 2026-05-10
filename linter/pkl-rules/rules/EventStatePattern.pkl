@@ -1,0 +1,34 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Event State Pattern"
+category = RuleCategory.Event
+sequence = 2
+
+intent = "Encourage event labels to follow noun plus state or result wording."
+forModellers =
+  "Name events with a noun and a clear resulting state, such as Request approved or Order received."
+forAI =
+  "Detect event labels that lack both a noun or proper noun and a state-like token such as an adjective, past participle, or configured state word."
+
+targetElements =
+  List(
+    "bpmn:StartEvent",
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:EndEvent",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Event name should follow a noun + state/result pattern (e.g. Request approved)"
+}
+
+staticConfig = new {
+  stateWords = List("received", "approved", "rejected", "completed", "confirmed", "sent", "fulfilled", "failed", "cancelled", "resolved", "closed")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

@@ -1,0 +1,31 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Converging Gateway Unnamed"
+category = RuleCategory.Gateway
+sequence = 2
+
+intent = "Keep converging gateway labels empty so decision wording stays on the diverging side."
+forModellers =
+  "Do not name converging exclusive, inclusive, or parallel gateways; use a text annotation if convergence needs explanation."
+forAI =
+  "Detect converging exclusive, inclusive, or parallel gateways with labels and remove the label when auto-fixing."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ParallelGateway",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Converging gateway should remain unnamed"
+}
+
+staticConfig = new {}
+
+autoFixable = true
+fixStrategy = "attribute-mutation"
+

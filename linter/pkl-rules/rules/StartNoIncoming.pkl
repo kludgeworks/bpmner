@@ -1,0 +1,29 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Start No Incoming"
+category = RuleCategory.Event
+sequence = 10
+
+intent = "Enforce BPMN start-event structure."
+forModellers =
+  "Start events initiate the process and must not have incoming sequence flows."
+forAI =
+  "Validate that every start event has zero incoming sequence flows."
+
+targetElements =
+  List(
+    "bpmn:StartEvent",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Start event must not have incoming sequence flow"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

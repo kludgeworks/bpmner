@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Diverging Gateway Question"
+category = RuleCategory.Gateway
+sequence = 1
+
+intent = "Encourage question-style naming on diverging exclusive and inclusive gateways."
+forModellers =
+  "Name diverging exclusive and inclusive gateways with a question that expresses the decision."
+forAI =
+  "Detect diverging exclusive and inclusive gateways with missing names or names that are not interrogative."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Diverging exclusive/inclusive gateway should be named as a question"
+}
+
+staticConfig = new {
+  interrogativeStarters = List("is", "are", "am", "was", "were", "do", "does", "did", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "have", "has", "had", "who", "what", "when", "where", "why", "how", "which", "whose", "whom")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

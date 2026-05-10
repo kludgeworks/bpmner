@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Link Event Pairing"
+category = RuleCategory.Event
+sequence = 16
+
+intent = "Ensure link intermediate events are named and paired correctly."
+forModellers =
+  "Use throwing and catching link intermediate events in matched pairs with the same reference name in the same scope."
+forAI =
+  "Detect link events without names or without a named throw/catch counterpart in the same scope."
+
+targetElements =
+  List(
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:IntermediateCatchEvent",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["missingName"] = "Link event must have a name and a matching pair in the same scope"
+  ["missingCounterpart"] = "Link event must have a named throw/catch counterpart in the same scope"
+  ["default"] = "Link event must have a named throw/catch counterpart in the same scope"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+
