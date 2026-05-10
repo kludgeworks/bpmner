@@ -1,0 +1,27 @@
+load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_library", "pkl_test")
+
+package(default_visibility = ["//visibility:public"])
+
+PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
+
+pkl_library(
+    name = "schema",
+    srcs = PKL_SCHEMA_SRCS,
+)
+
+pkl_eval(
+    name = "uncommon_abbreviations_json",
+    srcs = PKL_SCHEMA_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
+    outs = ["uncommon_abbreviations.json"],
+    entrypoints = ["test-fixtures/UncommonAbbreviations.pkl"],
+    format = "json",
+)
+
+pkl_test(
+    name = "schema_test",
+    srcs = PKL_SCHEMA_SRCS + [
+        "test-fixtures/SchemaTest.pkl",
+        "test-fixtures/UncommonAbbreviations.pkl",
+    ],
+    entrypoints = ["test-fixtures/SchemaTest.pkl"],
+)
