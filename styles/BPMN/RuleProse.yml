@@ -1,0 +1,12 @@
+extends: substitution
+message: "Use '%s' instead of '%s' for BPMN rule prose."
+level: warning
+ignorecase: false
+swap:
+  For modelers: For modellers
+  For modeller: For modellers
+  For Modelers: For modellers
+  For Modellers: For modellers
+  for modelers: for modellers
+  XML fixer: XML auto-fixer
+  XML autofixer: XML auto-fixer

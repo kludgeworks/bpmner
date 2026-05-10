@@ -1,0 +1,10 @@
+BPMN2
+BPMN-DI
+BPMN DI
+bpmnlint
+autofix
+auto fix
+pkl
+Typescript
+Javascript
+Graal JS
