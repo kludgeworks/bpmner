@@ -1,0 +1,13 @@
+extends: existence
+message: "Avoid '%s'. Use precise, inclusive language."
+level: warning
+ignorecase: true
+tokens:
+  - blacklist
+  - whitelist
+  - master/slave
+  - sanity check
+  - dummy
+  - crazy
+  - lame
+  - guys

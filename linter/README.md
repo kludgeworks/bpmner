@@ -44,6 +44,12 @@ Run the linter-specific tests with Bazel:
 bazel test //linter:all
 ```
 
+Run Vale locally when changing rule prose:
+
+```bash
+mise exec -- vale README.md HELP.md linter/**/*.md
+```
+
 The test suite covers:
 
 - direct rule tests across deterministic and heuristic rule coverage

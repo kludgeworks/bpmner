@@ -1,0 +1,22 @@
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: warning
+ignorecase: false
+swap:
+  BPMN2: BPMN 2.0
+  BPMN 2: BPMN 2.0
+  BPMN DI: BPMNDI
+  BPMN-DI: BPMNDI
+  bpmn lint: bpmn-lint
+  BPMN lint: bpmn-lint
+  bpmnlint: bpmn-lint
+  pkl: Pkl
+  Typescript: TypeScript
+  Javascript: JavaScript
+  Graal JS: GraalJS
+  Graal.js: GraalJS
+  auto fix: auto-fix
+  autofix: auto-fix
+  auto fixer: auto-fixer
+  blacklist: denylist
+  whitelist: allowlist

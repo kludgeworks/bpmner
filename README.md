@@ -75,6 +75,14 @@ bazel test //src/test/...
 bazel test --test_tag_filters=integration //src/test/...
 ```
 
+## Prose Linting
+
+Vale checks Markdown and text documentation for BPMN terminology and inclusive language.
+
+```bash
+mise exec -- vale README.md HELP.md linter/**/*.md
+```
+
 ## Configuration
 
 Key properties in `src/main/resources/application.yaml`:
