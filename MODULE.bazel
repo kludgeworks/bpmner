@@ -21,29 +21,45 @@ bazel_dep(name = "rules_pkl", version = "0.15.0")
 # --- Kotlin Toolchain ---
 register_toolchains("//tools/kotlin:kotlin_toolchain")
 
+# --- Maven Dependency Versions ---
+SPRING_BOOT_VERSION     = "3.5.9"
+EMBABEL_VERSION         = "0.3.5"
+KOTLIN_VERSION          = "2.1.10"
+JUNIT_PLATFORM_VERSION  = "1.12.2"
+JUNIT_JUPITER_VERSION   = "5.12.2"
+GRAALVM_VERSION         = "25.0.2"
+SPRING_MODULITH_VERSION = "1.4.1"
+JMOLECULES_VERSION      = "1.6.0"
+
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     artifacts = [
-        "org.springframework.boot:spring-boot-loader:3.5.9",
-        "org.springframework.boot:spring-boot-starter:3.5.9",
-        "org.springframework.boot:spring-boot-starter-test:3.5.9",
-        "com.embabel.agent:embabel-agent-starter-openai:0.3.5",
-        "com.embabel.agent:embabel-agent-starter-anthropic:0.3.5",
-        "com.embabel.agent:embabel-agent-starter-shell:0.3.5",
-        "com.embabel.agent:embabel-agent-test:0.3.5",
-        "org.jetbrains.kotlin:kotlin-reflect:2.1.10",
-        "org.jetbrains.kotlin:kotlin-test-junit5:2.1.10",
-        "org.junit.platform:junit-platform-launcher:1.12.2",
-        "org.junit.platform:junit-platform-console-standalone:1.12.2",
-        "org.junit.platform:junit-platform-reporting:1.12.2",
-        "org.junit.platform:junit-platform-engine:1.12.2",
-        "org.junit.platform:junit-platform-commons:1.12.2",
-        "org.junit.jupiter:junit-jupiter-api:5.12.2",
-        "org.junit.jupiter:junit-jupiter-engine:5.12.2",
+        "org.springframework.boot:spring-boot-loader:" + SPRING_BOOT_VERSION,
+        "org.springframework.boot:spring-boot-starter:" + SPRING_BOOT_VERSION,
+        "org.springframework.boot:spring-boot-starter-test:" + SPRING_BOOT_VERSION,
+        "com.embabel.agent:embabel-agent-starter-openai:" + EMBABEL_VERSION,
+        "com.embabel.agent:embabel-agent-starter-anthropic:" + EMBABEL_VERSION,
+        "com.embabel.agent:embabel-agent-starter-shell:" + EMBABEL_VERSION,
+        "com.embabel.agent:embabel-agent-test:" + EMBABEL_VERSION,
+        "org.jetbrains.kotlin:kotlin-reflect:" + KOTLIN_VERSION,
+        "org.jetbrains.kotlin:kotlin-test-junit5:" + KOTLIN_VERSION,
+        "org.junit.platform:junit-platform-launcher:" + JUNIT_PLATFORM_VERSION,
+        "org.junit.platform:junit-platform-console-standalone:" + JUNIT_PLATFORM_VERSION,
+        "org.junit.platform:junit-platform-reporting:" + JUNIT_PLATFORM_VERSION,
+        "org.junit.platform:junit-platform-engine:" + JUNIT_PLATFORM_VERSION,
+        "org.junit.platform:junit-platform-commons:" + JUNIT_PLATFORM_VERSION,
+        "org.junit.jupiter:junit-jupiter-api:" + JUNIT_JUPITER_VERSION,
+        "org.junit.jupiter:junit-jupiter-engine:" + JUNIT_JUPITER_VERSION,
         "org.camunda.bpm.model:camunda-bpmn-model:7.24.0",
-        "org.graalvm.polyglot:polyglot:25.0.2",
-        "org.graalvm.polyglot:js:25.0.2",
+        "org.graalvm.polyglot:polyglot:" + GRAALVM_VERSION,
+        "org.graalvm.polyglot:js:" + GRAALVM_VERSION,
+        "org.springframework.modulith:spring-modulith-starter-core:" + SPRING_MODULITH_VERSION,
+        "org.springframework.modulith:spring-modulith-starter-test:" + SPRING_MODULITH_VERSION,
+        "org.jmolecules.integrations:jmolecules-starter-ddd:0.28.0",
+        "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_VERSION,
+        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_VERSION,
+        "com.tngtech.archunit:archunit:1.4.1",
     ],
     repositories = [
         "https://repo.maven.apache.org/maven2",
