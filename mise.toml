@@ -3,10 +3,28 @@ bazelisk = "latest"
 java = "liberica-nik-openjdk25-25.0.3+1"
 node = "24"
 "npm:pnpm" = "11.0.8"
+hk = "latest"
+pkl = "latest"
+biome = "latest"
+ktlint = "latest"
+buildifier = "latest"
+taplo = "latest"
+shfmt = "latest"
+shellcheck = "latest"
+vale = "latest"
+
+[env]
+HK_MISE = 1
+
+[settings]
+experimental = true
+
+[hooks]
+postinstall = "hk install --mise"
 
 [tasks.gh-models]
 description = "List the GitHub Models catalog (table / CSV / JSON) [nushell]"
-tools = {"github:nushell/nushell" = "latest" }
+tools = { "github:nushell/nushell" = "latest" }
 usage = '''
 flag "-f --format <format>" help="Output format" default="table" {
   choices "table" "csv" "json"

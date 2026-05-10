@@ -1,5 +1,6 @@
 load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
+load("@buildifier_prebuilt//:rules.bzl", "buildifier_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 
 package(default_visibility = ["//visibility:public"])
@@ -43,14 +44,30 @@ build_test(
     targets = ["//linter:bundle"],
 )
 
+buildifier_test(
+    name = "buildifier_check",
+    srcs = glob(
+        [
+            "**/*.bzl",
+            "**/*.bazel",
+            "**/WORKSPACE",
+            "**/MODULE.bazel",
+        ],
+        allow_empty = True,
+        exclude = ["node_modules/**"],
+    ),
+)
+
 test_suite(
     name = "ci",
     tests = [
+        ":buildifier_check",
         ":linter_bundle_build_test",
         ":vale_docs_test",
         ":vale_fixtures_test",
         "//linter:lint_test",
         "//linter:smoke_test",
         "//linter/pkl-rules:schema_test",
+        "//src:ktlint_check",
     ],
 )

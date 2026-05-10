@@ -1,6 +1,7 @@
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
 
 package(default_visibility = ["//visibility:public"])
@@ -54,8 +55,8 @@ kt_jvm_library(
     plugins = [":allopen_" + a.split(".")[-1].lower() for a in SPRING_OPEN_ANNOTATIONS],
     resources = glob(["main/resources/**"]),
     deps = [
-        ":linter_bundle_res",
         ":layout_bundle_res",
+        ":linter_bundle_res",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
         "@maven//:com_embabel_agent_embabel_agent_starter_shell",
@@ -64,11 +65,11 @@ kt_jvm_library(
         "@maven//:org_graalvm_polyglot_polyglot",
         "@maven//:org_jetbrains_kotlin_kotlin_reflect",
         "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_jmolecules_integrations_jmolecules_spring",
+        "@maven//:org_jmolecules_integrations_jmolecules_starter_ddd",
         "@maven//:org_springframework_boot_spring_boot_loader",
         "@maven//:org_springframework_boot_spring_boot_starter",
         "@maven//:org_springframework_modulith_spring_modulith_starter_core",
-        "@maven//:org_jmolecules_integrations_jmolecules_starter_ddd",
-        "@maven//:org_jmolecules_integrations_jmolecules_spring",
         "@rules_java//java/runfiles",
     ],
 )
@@ -79,4 +80,9 @@ springboot(
     boot_app_class = "dev.groknull.bpmner.BpmnerApplicationKt",
     boot_launcher_class = "org.springframework.boot.loader.launch.JarLauncher",
     java_library = ":bpmner_core",
+)
+
+ktlint_test(
+    name = "ktlint_check",
+    srcs = glob(["main/kotlin/**/*.kt"]),
 )
