@@ -16,6 +16,7 @@ bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
+bazel_dep(name = "rules_pkl", version = "0.15.0")
 
 # --- Kotlin Toolchain ---
 register_toolchains("//tools/kotlin:kotlin_toolchain")

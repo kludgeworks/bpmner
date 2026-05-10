@@ -1,0 +1,26 @@
+import "RuleCategory.pkl"
+
+typealias NonEmptyString = String(!isEmpty)
+typealias RuleSequence = UInt(this > 0)
+typealias Severity = "error" | "warning" | "info" | "off"
+typealias FixStrategy =
+  "string-manipulation" | "attribute-mutation" | "node-deletion" | "ast-rewiring" | "none"
+
+name: NonEmptyString
+category: RuleCategory.RuleCategory
+sequence: RuleSequence
+slug: NonEmptyString = name.toLowerCase().replaceAll(" ", "-")
+id: NonEmptyString = "\(category.shortCode)-\(sequence.toString().padStart(2, "0"))-\(slug)"
+
+intent: NonEmptyString
+forModellers: NonEmptyString
+forAI: NonEmptyString
+
+targetElements: List<NonEmptyString>(!isEmpty)
+severity: Severity
+errorMessages: Mapping<NonEmptyString, NonEmptyString>(!isEmpty)
+staticConfig: Dynamic? = null
+
+autoFixable: Boolean = false
+fixStrategy: FixStrategy((!autoFixable) || this != "none") = "none"
+replacementMap: Mapping<String, String>? = null

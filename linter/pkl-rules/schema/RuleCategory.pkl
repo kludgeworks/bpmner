@@ -1,0 +1,69 @@
+class RuleCategory {
+  name: "Activity"
+    | "Association"
+    | "Artifact"
+    | "Data"
+    | "Event"
+    | "Flow"
+    | "Gateway"
+    | "General"
+    | "Lane"
+    | "Message"
+    | "Name"
+    | "Pool"
+  shortCode: String(!isEmpty) = name.toLowerCase()
+}
+
+Activity: RuleCategory = new {
+  name = "Activity"
+}
+
+Association: RuleCategory = new {
+  name = "Association"
+  shortCode = "assoc"
+}
+
+Artifact: RuleCategory = new {
+  name = "Artifact"
+  shortCode = "art"
+}
+
+Data: RuleCategory = new {
+  name = "Data"
+}
+
+Event: RuleCategory = new {
+  name = "Event"
+  shortCode = "evt"
+}
+
+Flow: RuleCategory = new {
+  name = "Flow"
+}
+
+Gateway: RuleCategory = new {
+  name = "Gateway"
+  shortCode = "gtw"
+}
+
+General: RuleCategory = new {
+  name = "General"
+  shortCode = "gen"
+}
+
+Lane: RuleCategory = new {
+  name = "Lane"
+}
+
+Message: RuleCategory = new {
+  name = "Message"
+  shortCode = "msg"
+}
+
+Name: RuleCategory = new {
+  name = "Name"
+}
+
+Pool: RuleCategory = new {
+  name = "Pool"
+}
