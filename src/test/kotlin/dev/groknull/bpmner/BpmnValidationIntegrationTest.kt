@@ -1,7 +1,8 @@
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.agent.BpmnLintService
-import dev.groknull.bpmner.agent.BpmnXsdValidator
+import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.validation.internal.BpmnLintService
+import dev.groknull.bpmner.validation.internal.BpmnXsdValidator
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -34,10 +35,10 @@ class BpmnValidationIntegrationTest {
     fun `valid process passes both XSD and bpmn-lint`() {
         val xml = loadBpmn("valid-process.bpmn")
 
-        val xsdError = xsdValidator.validate(xml)
-        assertNull(xsdError, "XSD validation should pass: $xsdError")
+        val xsdIssues = xsdValidator.validateDetailed(xml)
+        assertTrue(xsdIssues.isEmpty(), "XSD validation should pass: $xsdIssues")
 
-        val lintIssues = lintService.lint(xml)
+        val lintIssues = lintService.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
         assertNotNull(lintIssues, "bpmn-lint should be available")
         assertTrue(lintIssues!!.isEmpty(), "bpmn-lint should report no issues: $lintIssues")
     }
@@ -46,18 +47,18 @@ class BpmnValidationIntegrationTest {
     fun `invalid XSD fails XSD validation`() {
         val xml = loadBpmn("invalid-xsd.bpmn")
 
-        val xsdError = xsdValidator.validate(xml)
-        assertNotNull(xsdError, "XSD validation should fail for invalid BPMN")
+        val xsdIssues = xsdValidator.validateDetailed(xml)
+        assertTrue(xsdIssues.isNotEmpty(), "XSD validation should fail for invalid BPMN")
     }
 
     @Test
     fun `process without start event passes XSD but fails bpmn-lint`() {
         val xml = loadBpmn("no-start-event.bpmn")
 
-        val xsdError = xsdValidator.validate(xml)
-        assertNull(xsdError, "XSD validation should pass: $xsdError")
+        val xsdIssues = xsdValidator.validateDetailed(xml)
+        assertTrue(xsdIssues.isEmpty(), "XSD validation should pass: $xsdIssues")
 
-        val lintIssues = lintService.lint(xml)
+        val lintIssues = lintService.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
         assertNotNull(lintIssues, "bpmn-lint should be available")
         assertTrue(lintIssues!!.isNotEmpty(), "bpmn-lint should report issues for a process without a start event")
         assertTrue(

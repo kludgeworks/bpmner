@@ -1,5 +1,18 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnDiagnostic
+import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.repair.internal.BpmnPatchApplier
+import dev.groknull.bpmner.repair.internal.BpmnPatchOperationType
+import dev.groknull.bpmner.repair.internal.BpmnTopologyRepair
+import dev.groknull.bpmner.repair.internal.PatchApplicationResult
+import dev.groknull.bpmner.validation.internal.BpmnDefinitionValidator
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

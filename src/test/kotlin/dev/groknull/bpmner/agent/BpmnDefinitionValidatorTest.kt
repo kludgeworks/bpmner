@@ -1,5 +1,12 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.validation.internal.BpmnDefinitionValidator
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue

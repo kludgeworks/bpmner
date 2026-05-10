@@ -1,5 +1,9 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.validation.internal.BpmnLintConfigurationException
+import dev.groknull.bpmner.validation.internal.BpmnLintProperties
+import dev.groknull.bpmner.validation.internal.BpmnLintService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -28,8 +32,8 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        val issues = service.lint(invalidXml)
-        
+        val issues = service.lint(invalidXml, BpmnLintPhase.FINAL_POST_LAYOUT)
+
         assertNotNull(issues, "Issues should not be null when linting is functional")
         // We expect at least start-event-required or end-event-required
         assertTrue(issues.isNotEmpty(), "Should find issues in minimal process")
@@ -56,8 +60,8 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        val issues = service.lint(duplicateDiagramXml)
-        
+        val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT)
+
         assertNotNull(issues)
         assertTrue(issues.any { it.rule == "bpmner/gen-02-no-duplicate-diagrams" }, "Should find BPMNER duplicate diagram issue")
     }

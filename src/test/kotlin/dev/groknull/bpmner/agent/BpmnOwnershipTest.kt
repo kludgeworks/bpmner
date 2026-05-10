@@ -1,5 +1,24 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnDiagnostic
+import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.ComposedProcessGraph
+import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.OutlineMetrics
+import dev.groknull.bpmner.core.OwnedElementGraph
+import dev.groknull.bpmner.core.ProcessOutline
+import dev.groknull.bpmner.core.ValidatedOutline
+import dev.groknull.bpmner.core.withUpdatedDefinition
+import dev.groknull.bpmner.repair.internal.BpmnPatchApplier
+import dev.groknull.bpmner.repair.internal.BpmnTopologyRepair
+import dev.groknull.bpmner.repair.internal.PatchApplicationResult
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
