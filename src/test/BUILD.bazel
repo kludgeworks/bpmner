@@ -42,6 +42,9 @@ kt_jvm_library(
         "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
         "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
         "@maven//:org_springframework_boot_spring_boot_starter_test",
+        "@maven//:org_springframework_modulith_spring_modulith_starter_test",
+        "@maven//:org_jmolecules_integrations_jmolecules_archunit",
+        "@maven//:com_tngtech_archunit_archunit",
         "@rules_java//java/runfiles",
     ],
 )
