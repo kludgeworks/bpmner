@@ -1,0 +1,43 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Business Meaningful Label"
+category = RuleCategory.Name
+sequence = 1
+
+intent = "Encourage business-readable labels over technical identifiers."
+forModellers =
+  "Choose names that are meaningful to business stakeholders and avoid technical shorthand, code names, and implementation identifiers."
+forAI =
+  "Detect labels containing technical patterns such as underscores, slash paths, alphanumeric codes, or configured technical tokens."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:SubProcess",
+    "bpmn:CallActivity",
+    "bpmn:StartEvent",
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:EndEvent",
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ParallelGateway",
+    "bpmn:ComplexGateway",
+    "bpmn:DataObjectReference",
+    "bpmn:DataStoreReference",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Label appears technical/cryptic; prefer business-meaningful wording"
+}
+
+staticConfig = new {
+  technicalTokens = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

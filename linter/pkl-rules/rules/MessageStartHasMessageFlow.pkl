@@ -1,0 +1,29 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Message Start Has Message Flow"
+category = RuleCategory.Event
+sequence = 11
+
+intent = "Ensure message-start semantics are modeled as inter-pool communication."
+forModellers =
+  "When a process starts through a message start event, model the incoming message flow from the external participant."
+forAI =
+  "Detect message start events that do not have an incoming message flow from another pool."
+
+targetElements =
+  List(
+    "bpmn:StartEvent",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Message start event must have an incoming message flow from another pool"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

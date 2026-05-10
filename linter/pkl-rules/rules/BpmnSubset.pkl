@@ -1,0 +1,51 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "BpmnSubset Allowed Elements"
+category = RuleCategory.General
+sequence = 1
+
+intent = "Keep models within the BpmnSubset BPMN subset."
+forModellers =
+  "Use only the BPMN elements described in the BpmnSubset BPMN toolbox and avoid unsupported exotic BPMN constructs."
+forAI =
+  "Detect discouraged BPMN types that are outside the BpmnSubset subset and propose supported replacements."
+
+targetElements =
+  List(
+    "bpmn:Choreography",
+    "bpmn:ChoreographyTask",
+    "bpmn:SubChoreography",
+    "bpmn:CallChoreography",
+    "bpmn:Conversation",
+    "bpmn:ConversationLink",
+    "bpmn:ConversationAssociation",
+    "bpmn:Transaction",
+    "bpmn:CompensateEventDefinition",
+    "bpmn:EscalationEventDefinition",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Element type is outside the BpmnSubset BPMN subset"
+}
+
+staticConfig = new {
+  discouragedTypes = List(
+    "bpmn:Choreography",
+    "bpmn:ChoreographyTask",
+    "bpmn:SubChoreography",
+    "bpmn:CallChoreography",
+    "bpmn:Conversation",
+    "bpmn:ConversationLink",
+    "bpmn:ConversationAssociation",
+    "bpmn:Transaction",
+    "bpmn:CompensateEventDefinition",
+    "bpmn:EscalationEventDefinition",
+  )
+}
+
+autoFixable = false
+fixStrategy = "none"
+

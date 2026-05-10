@@ -1,0 +1,31 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Event Based Direct Events"
+category = RuleCategory.Gateway
+sequence = 11
+
+intent = "Enforce event-based gateway semantics."
+forModellers =
+  "Use event-based gateways only when the process waits for events, and connect outgoing flows directly to intermediate catch events or receive tasks."
+forAI =
+  "Detect event-based gateway outgoing flows that target anything other than an intermediate catch event or receive task."
+
+targetElements =
+  List(
+    "bpmn:EventBasedGateway",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Event-based gateway must connect directly to intermediate catch events or receive tasks"
+}
+
+staticConfig = new {
+  allowedTargets = List("bpmn:IntermediateCatchEvent", "bpmn:ReceiveTask")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

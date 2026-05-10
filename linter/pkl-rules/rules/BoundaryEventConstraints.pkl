@@ -1,0 +1,33 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Boundary Event Constraints"
+category = RuleCategory.Event
+sequence = 14
+
+intent = "Enforce valid boundary event attachment and flow cardinality."
+forModellers =
+  "Attach boundary events to tasks or subprocesses, do not give them incoming sequence flow, and use exactly one outgoing sequence flow."
+forAI =
+  "Detect detached boundary events, boundary events with incoming flow or wrong outgoing count, and non-interrupting error boundary events."
+
+targetElements =
+  List(
+    "bpmn:BoundaryEvent",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["detached"] = "Boundary event must be attached to a task or subprocess"
+  ["incoming"] = "Boundary event must not have incoming sequence flow"
+  ["outgoing"] = "Boundary event must have exactly one outgoing sequence flow"
+  ["errorInterrupting"] = "Error boundary event must be interrupting"
+  ["default"] = "Boundary event violates attachment or flow constraints"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

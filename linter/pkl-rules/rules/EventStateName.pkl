@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Event State Name"
+category = RuleCategory.Event
+sequence = 1
+
+intent = "Encourage event labels to describe states or happenings rather than process actions."
+forModellers =
+  "Name events as things that happen or states that are reached, not as actions performed by the process."
+forAI =
+  "Detect event labels whose first token is POS-tagged as a verb and suggest state-style wording."
+
+targetElements =
+  List(
+    "bpmn:StartEvent",
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:IntermediateThrowEvent",
+    "bpmn:EndEvent",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Event name should describe a state/happening, not an action"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

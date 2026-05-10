@@ -1,0 +1,30 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Intermediate Event Not Action"
+category = RuleCategory.Event
+sequence = 13
+
+intent = "Ensure intermediate events describe states or happenings rather than work."
+forModellers =
+  "Use intermediate events for things that happen while activities perform the work."
+forAI =
+  "Detect intermediate catch or throw event labels that start with a verb or auxiliary and suggest state-style wording or a task."
+
+targetElements =
+  List(
+    "bpmn:IntermediateCatchEvent",
+    "bpmn:IntermediateThrowEvent",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Intermediate event name should describe a state, not an action"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

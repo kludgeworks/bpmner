@@ -1,0 +1,33 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Gateway No Work Label"
+category = RuleCategory.Gateway
+sequence = 3
+
+intent = "Keep gateway labels focused on decision conditions rather than work execution."
+forModellers =
+  "Model work as an activity before the gateway; use the gateway only to evaluate the resulting condition."
+forAI =
+  "Detect diverging gateway labels that start with action verbs or configured work verbs."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ComplexGateway",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Gateway label should describe a decision condition, not perform work"
+}
+
+staticConfig = new {
+  workVerbStarters = List("check", "validate", "verify", "approve", "reject", "review", "assess", "confirm")
+}
+
+autoFixable = false
+fixStrategy = "none"
+

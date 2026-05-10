@@ -1,0 +1,29 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "No Duplicate Diagrams"
+category = RuleCategory.General
+sequence = 2
+
+intent = "Ensure BPMN documents contain a single diagram for downstream viewer compatibility."
+forModellers =
+  "Keep each BPMN document to one BPMN diagram entry so tools such as bpmn-js can load it reliably."
+forAI =
+  "Detect bpmn:Definitions roots containing more than one bpmndi:BPMNDiagram."
+
+targetElements =
+  List(
+    "bpmn:Definitions",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Multiple bpmndi:BPMNDiagram elements found. Only one diagram is allowed for compatibility with viewers like bpmn-js."
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

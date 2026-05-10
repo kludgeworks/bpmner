@@ -1,0 +1,36 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Fake Join"
+category = RuleCategory.Gateway
+sequence = 21
+
+intent = "Ensure converging flows pass through an explicit gateway rather than directly into a task."
+forModellers =
+  "When two or more flows merge before work continues, model the merge with a converging gateway before the task."
+forAI =
+  "Detect task elements with two or more incoming sequence flows and no explicit converging gateway."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:UserTask",
+    "bpmn:ServiceTask",
+    "bpmn:SendTask",
+    "bpmn:ReceiveTask",
+    "bpmn:ManualTask",
+    "bpmn:BusinessRuleTask",
+    "bpmn:ScriptTask",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Task has multiple incoming flows without an explicit converging gateway"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

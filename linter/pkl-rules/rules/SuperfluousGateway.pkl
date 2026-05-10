@@ -1,0 +1,31 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Superfluous Gateway"
+category = RuleCategory.Gateway
+sequence = 22
+
+intent = "Remove passthrough gateways that carry no routing decision."
+forModellers =
+  "Avoid gateways with exactly one incoming and one outgoing flow because they do not split or merge control flow."
+forAI =
+  "Detect exclusive, inclusive, or parallel gateways with a single incoming and single outgoing flow."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ParallelGateway",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Gateway has a single incoming and single outgoing flow and can be removed"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

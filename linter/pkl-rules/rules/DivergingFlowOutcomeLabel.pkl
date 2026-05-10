@@ -1,0 +1,31 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Diverging Flow Outcome Label"
+category = RuleCategory.Flow
+sequence = 2
+
+intent = "Encourage explicit outcome labels on flows from diverging decision gateways."
+forModellers =
+  "Name flows leaving diverging exclusive, inclusive, or complex gateways with outcome conditions such as Valid or Not eligible."
+forAI =
+  "Detect outgoing sequence flows from diverging exclusive, inclusive, or complex gateways that have empty or missing labels."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ComplexGateway",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Sequence flow from diverging gateway should use an outcome condition label"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"
+

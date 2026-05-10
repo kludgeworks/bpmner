@@ -5,6 +5,7 @@ import { Linter } from 'bpmnlint';
 import { configs, customRuleDocs, resolver } from '../src/generated/static-rules';
 import { getBpmnlintLevel, getRuleConfig, getRuleMessage, getStaticConfig } from '../src/rule-config';
 import { customRuleManifest, BPMNER_PLUGIN_PREFIX } from '../src/rule-manifest';
+import catalog from '../src/generated/linter-rules.json';
 import { fixtures } from './fixtures';
 
 type Report = {
@@ -14,6 +15,10 @@ type Report = {
 };
 
 type LintResults = Record<string, Report[]>;
+
+type RuleCatalog = {
+  rules: Array<{ id: string }>;
+};
 
 class PluginResolver {
   resolveRule = resolver.resolveRule;
@@ -74,16 +79,31 @@ describe('lint rules', () => {
     }
   });
 
+  it('generated Pkl catalog matches manifest order and count', () => {
+    assert.deepEqual(
+      (catalog as RuleCatalog).rules.map((rule) => rule.id),
+      customRuleManifest.map((rule) => rule.id)
+    );
+  });
+
+  it('getRuleConfig resolves every manifest rule from generated metadata', () => {
+    for (const { id, level } of customRuleManifest) {
+      const config = getRuleConfig(id);
+      assert.equal(config.id, id);
+      assert.equal(config.severity, level === 'error' ? 'error' : 'warning');
+      assert.ok(config.errorMessages.default);
+    }
+  });
+
   it('migrated rule metadata maps Pkl severity to bpmnlint levels', () => {
     assert.equal(getBpmnlintLevel('bpmner/name-02-uncommon-abbreviations'), 'warn');
     assert.equal(getBpmnlintLevel('bpmnlint-plugin-bpmner/act-03-discouraged-business-verbs'), 'warn');
   });
 
-  it('unmigrated rules use manifest compatibility metadata', () => {
-    const config = getRuleConfig('name-01-business-meaningful-label');
-    assert.equal(config.severity, 'warning');
-    assert.equal(config.autoFixable, false);
-    assert.deepEqual(config.staticConfig, {});
+  it('gtw-02 records current auto-fix capability in generated metadata', () => {
+    const config = getRuleConfig('gtw-02-converging-gateway-unnamed');
+    assert.equal(config.autoFixable, true);
+    assert.equal(config.fixStrategy, 'attribute-mutation');
   });
 
   it('valid baseline has no violations', async () => {

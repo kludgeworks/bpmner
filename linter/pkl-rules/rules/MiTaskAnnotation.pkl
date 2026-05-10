@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "MI Task Annotation"
+category = RuleCategory.Activity
+sequence = 13
+
+intent = "Ensure multi-instance activities document the set of items being iterated."
+forModellers =
+  "Attach a text annotation to each multi-instance task or subprocess that explains the item set, for example For each passenger."
+forAI =
+  "Detect multi-instance activities without an associated annotation containing iteration-set wording such as each, every, or per."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:SubProcess",
+  )
+
+severity = "error"
+errorMessages = new {
+  ["default"] = "Multi-instance activity is missing a linked text annotation expressing iteration-set intent"
+}
+
+staticConfig = new {
+  iterationQuantifiers = List("each", "every", "per")
+}
+
+autoFixable = false
+fixStrategy = "none"
+
