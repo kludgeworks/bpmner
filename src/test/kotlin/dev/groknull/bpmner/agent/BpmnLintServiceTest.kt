@@ -1,5 +1,9 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.LintIssue
+import dev.groknull.bpmner.validation.internal.BpmnLintProperties
+import dev.groknull.bpmner.validation.internal.BpmnLintService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.agent
 
+import dev.groknull.bpmner.validation.internal.BpmnLintProperties
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

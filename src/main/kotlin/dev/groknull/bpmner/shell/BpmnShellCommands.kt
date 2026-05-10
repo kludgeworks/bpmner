@@ -1,7 +1,7 @@
 package dev.groknull.bpmner.shell
 
-import dev.groknull.bpmner.BpmnGenerationInput
-import dev.groknull.bpmner.BpmnGenerationUseCase
+import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
 import org.springframework.shell.standard.ShellOption

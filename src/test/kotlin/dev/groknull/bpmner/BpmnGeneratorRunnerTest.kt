@@ -1,6 +1,9 @@
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.agent.BpmnResult
+import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.generation.BpmnGeneratorRunner
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.boot.DefaultApplicationArguments

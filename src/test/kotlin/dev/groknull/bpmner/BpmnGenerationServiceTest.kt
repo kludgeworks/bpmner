@@ -1,7 +1,11 @@
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.agent.BpmnRequest
-import dev.groknull.bpmner.agent.BpmnResult
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.generation.BpmnAgentInvoker
+import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationService
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

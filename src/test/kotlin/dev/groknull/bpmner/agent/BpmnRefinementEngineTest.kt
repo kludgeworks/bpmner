@@ -10,6 +10,40 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnFingerprintService
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.ComposedProcessGraph
+import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.LintIssue
+import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.OutlineMetrics
+import dev.groknull.bpmner.core.OwnedElementGraph
+import dev.groknull.bpmner.core.ProcessOutline
+import dev.groknull.bpmner.core.ValidatedOutline
+import dev.groknull.bpmner.core.XsdValidationIssue
+import dev.groknull.bpmner.generation.internal.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.repair.internal.BpmnPatchApplier
+import dev.groknull.bpmner.repair.internal.BpmnRepairPromptFactory
+import dev.groknull.bpmner.repair.internal.BpmnRepairStrategy
+import dev.groknull.bpmner.repair.internal.BpmnRefinementEngine
+import dev.groknull.bpmner.repair.internal.DeterministicTopologyRepairStrategy
+import dev.groknull.bpmner.repair.internal.FullLlmRewriteRepairStrategy
+import dev.groknull.bpmner.repair.internal.LlmPatchRepairStrategy
+import dev.groknull.bpmner.repair.internal.BpmnTopologyRepair
+import dev.groknull.bpmner.repair.internal.TargetedLabelRepairStrategy
+import dev.groknull.bpmner.validation.internal.BpmnDefinitionValidator
+import dev.groknull.bpmner.validation.internal.BpmnDiagnosticNormalizer
+import dev.groknull.bpmner.validation.internal.BpmnEvaluationPipeline
+import dev.groknull.bpmner.validation.internal.BpmnLintService
+import dev.groknull.bpmner.validation.internal.BpmnXsdValidator
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.annotation.AnnotationAwareOrderComparator
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,9 +55,8 @@ class BpmnRefinementEngineTest {
     fun `strategy annotations order deterministic repairs before LLM repairs`() {
         val config = BpmnConfig()
         val lint = RecordingLintService(listOf(emptyList()))
-        val normalizer = BpmnDiagnosticNormalizer()
         val fingerprints = BpmnFingerprintService()
-        val prompts = BpmnRepairPromptFactory(config, lint, fingerprints, normalizer)
+        val prompts = BpmnRepairPromptFactory(config, lint, fingerprints)
         val patchApplier = BpmnPatchApplier()
         val strategies = mutableListOf<BpmnRepairStrategy>(
             FullLlmRewriteRepairStrategy(prompts, fingerprints),
@@ -112,12 +145,12 @@ class BpmnRefinementEngineTest {
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer()
-        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, normalizer)
+        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints)
         val patchApplier = BpmnPatchApplier()
         return BpmnRefinementEngine(
             config = config,
-            bpmnConverter = converter,
-            evaluationPipeline = BpmnEvaluationPipeline(
+            bpmnRenderer = converter,
+            validator = BpmnEvaluationPipeline(
                 config = config,
                 bpmnLintService = lintService,
                 bpmnXsdValidator = xsdValidator,
@@ -133,7 +166,12 @@ class BpmnRefinementEngineTest {
                 LlmPatchRepairStrategy(patchApplier, promptFactory),
                 FullLlmRewriteRepairStrategy(promptFactory, fingerprints),
             ),
+            eventPublisher = NoOpEventPublisher,
         )
+    }
+
+    private object NoOpEventPublisher : ApplicationEventPublisher {
+        override fun publishEvent(event: Any) = Unit
     }
 
     private class RecordingLintService(
@@ -142,7 +180,7 @@ class BpmnRefinementEngineTest {
         val xmls = mutableListOf<String>()
         private var index = 0
 
-        override fun lint(bpmnXml: String, phase: BpmnLintPhase?): List<LintIssue>? {
+        override fun lint(bpmnXml: String, phase: dev.groknull.bpmner.core.BpmnLintPhase): List<LintIssue>? {
             xmls += bpmnXml
             return responses[index++]
         }
