@@ -22,7 +22,8 @@ TYPE_DECL_SRCS = glob([
 ])
 
 ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
-GENERATED_JSON_SRCS = ["src/generated/linter-rules.json"]
+# This import path is generated from the Pkl catalog by Bazel.
+GENERATED_JSON_SRCS = [":linter_rules_json_for_ts"]
 ALL_TSC_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
 
 BPMN_FIXTURES = glob([
@@ -34,6 +35,13 @@ TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_
 
 # Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
+
+genrule(
+    name = "linter_rules_json_for_ts",
+    srcs = ["//linter/pkl-rules:linter-rules.json"],
+    outs = ["src/generated/linter-rules.json"],
+    cmd = "cp $(location //linter/pkl-rules:linter-rules.json) $@",
+)
 
 LINTER_TS_DEPS = [
     "//:node_modules/@types/node",
