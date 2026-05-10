@@ -16,6 +16,7 @@ facts {
   }
 
   ["category short codes default to lowercase names unless overridden"] {
+    RuleCategory.Activity.shortCode == "act"
     RuleCategory.Flow.shortCode == "flow"
     RuleCategory.Pool.shortCode == "pool"
     RuleCategory.Event.shortCode == "evt"

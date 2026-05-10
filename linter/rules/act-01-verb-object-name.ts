@@ -1,9 +1,13 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
+import { getRuleMessage } from '../src/rule-config';
 import winkNLP from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
 
+const RULE_ID = 'act-01-verb-object-name';
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];
+const TOO_SHORT_MESSAGE = getRuleMessage(RULE_ID, 'tooShort');
+const MISSING_VERB_MESSAGE = getRuleMessage(RULE_ID, 'missingVerb');
 
 const nlp = winkNLP(model);
 const its = nlp.its;
@@ -35,7 +39,7 @@ export = function() {
     const parts = rawName.split(/\s+/);
 
     if (parts.length < 2) {
-      reporter.report(node.id, 'Activity name should follow Verb + Object (at least two words)');
+      reporter.report(node.id, TOO_SHORT_MESSAGE);
       return;
     }
 
@@ -43,7 +47,7 @@ export = function() {
       return;
     }
 
-    reporter.report(node.id, 'Activity name should start with a business verb');
+    reporter.report(node.id, MISSING_VERB_MESSAGE);
   }
 
   return { check };

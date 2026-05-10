@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import BpmnModdle from 'bpmn-moddle';
 import { Linter } from 'bpmnlint';
 import { configs, customRuleDocs, resolver } from '../src/generated/static-rules';
+import { getBpmnlintLevel, getRuleConfig, getRuleMessage, getStaticConfig } from '../src/rule-config';
 import { customRuleManifest, BPMNER_PLUGIN_PREFIX } from '../src/rule-manifest';
 import { fixtures } from './fixtures';
 
@@ -71,6 +72,18 @@ describe('lint rules', () => {
       assert.equal(typeof customRuleDocs[`${BPMNER_PLUGIN_PREFIX}/${id}`], 'string');
       assert.ok(customRuleDocs[`${BPMNER_PLUGIN_PREFIX}/${id}`].length > 0);
     }
+  });
+
+  it('migrated rule metadata maps Pkl severity to bpmnlint levels', () => {
+    assert.equal(getBpmnlintLevel('bpmner/name-02-uncommon-abbreviations'), 'warn');
+    assert.equal(getBpmnlintLevel('bpmnlint-plugin-bpmner/act-03-discouraged-business-verbs'), 'warn');
+  });
+
+  it('unmigrated rules use manifest compatibility metadata', () => {
+    const config = getRuleConfig('name-01-business-meaningful-label');
+    assert.equal(config.severity, 'warning');
+    assert.equal(config.autoFixable, false);
+    assert.deepEqual(config.staticConfig, {});
   });
 
   it('valid baseline has no violations', async () => {
@@ -160,7 +173,8 @@ describe('lint rules', () => {
   });
 
   it('act-01-verb-object-name — invalid', async () => {
-    assert.ok(hasRule(await lint(fixtures.act01Invalid), 'act-01-verb-object-name'));
+    const reports = reportsFor(await lint(fixtures.act01Invalid), 'act-01-verb-object-name');
+    assert.equal(reports[0]?.message, getRuleMessage('act-01-verb-object-name', 'missingVerb'));
   });
 
   it('act-01-verb-object-name — valid', async () => {
@@ -175,6 +189,12 @@ describe('lint rules', () => {
     assert.ok(!hasRule(await lint(fixtures.act01UppercaseLabelValid), 'act-01-verb-object-name'));
   });
 
+  it('act-01-verb-object-name — too short message comes from metadata', async () => {
+    const xml = fixtures.act01Invalid.replace('Order creation', 'Approve');
+    const reports = reportsFor(await lint(xml), 'act-01-verb-object-name');
+    assert.equal(reports[0]?.message, getRuleMessage('act-01-verb-object-name', 'tooShort'));
+  });
+
   it('act-02-activity-label-capitalization — invalid', async () => {
     assert.ok(hasRule(await lint(fixtures.act02Invalid), 'act-02-activity-label-capitalization'));
   });
@@ -184,7 +204,10 @@ describe('lint rules', () => {
   });
 
   it('act-03-discouraged-business-verbs — invalid', async () => {
-    assert.ok(hasRule(await lint(fixtures.act03Invalid), 'act-03-discouraged-business-verbs'));
+    const config = getStaticConfig<{ discouragedLeadingVerbs: string[] }>('act-03-discouraged-business-verbs');
+    assert.ok(config.discouragedLeadingVerbs.includes('handle'));
+    const reports = reportsFor(await lint(fixtures.act03Invalid), 'act-03-discouraged-business-verbs');
+    assert.equal(reports[0]?.message, getRuleMessage('act-03-discouraged-business-verbs'));
   });
 
   it('act-03-discouraged-business-verbs — valid', async () => {
@@ -268,10 +291,13 @@ describe('lint rules', () => {
   });
 
   it('name-02-uncommon-abbreviations — invalid', async () => {
-    assert.ok(hasRule(await lint(fixtures.name02Invalid), 'name-02-uncommon-abbreviations'));
+    const reports = reportsFor(await lint(fixtures.name02Invalid), 'name-02-uncommon-abbreviations');
+    assert.equal(reports[0]?.message, getRuleMessage('name-02-uncommon-abbreviations'));
   });
 
   it('name-02-uncommon-abbreviations — valid', async () => {
+    const config = getStaticConfig<{ commonAcronyms: string[] }>('name-02-uncommon-abbreviations');
+    assert.ok(config.commonAcronyms.includes('BPMNER'));
     assert.ok(!hasRule(await lint(fixtures.name02Valid), 'name-02-uncommon-abbreviations'));
   });
 

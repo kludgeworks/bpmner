@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Verb Object Name"
+category = RuleCategory.Activity
+sequence = 1
+
+intent = "Make activity labels action-oriented and specific."
+forModellers =
+  "Name activities with a business verb followed by the object being acted on."
+forAI =
+  "Detect activity labels that do not start with a verb or that contain fewer than two words."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:SubProcess",
+    "bpmn:CallActivity",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["tooShort"] = "Activity name should follow Verb + Object (at least two words)"
+  ["missingVerb"] = "Activity name should start with a business verb"
+  ["default"] = "Activity name should follow Verb + Object"
+}
+
+staticConfig = new {}
+
+autoFixable = false
+fixStrategy = "none"

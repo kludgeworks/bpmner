@@ -1,0 +1,9 @@
+import "rules/VerbObjectName.pkl" as VerbObjectName
+import "rules/DiscouragedBusinessVerbs.pkl" as DiscouragedBusinessVerbs
+import "rules/UncommonAbbreviations.pkl" as UncommonAbbreviations
+
+rules = List(
+  VerbObjectName,
+  DiscouragedBusinessVerbs,
+  UncommonAbbreviations,
+)

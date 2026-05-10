@@ -16,6 +16,7 @@ class RuleCategory {
 
 Activity: RuleCategory = new {
   name = "Activity"
+  shortCode = "act"
 }
 
 Association: RuleCategory = new {
