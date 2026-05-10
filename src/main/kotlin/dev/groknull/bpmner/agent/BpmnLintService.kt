@@ -128,6 +128,41 @@ class BpmnLintService(
 
     internal fun parseIssues(json: String): List<LintIssue> = objectMapper.readValue(json)
 
+    open fun autoFix(
+        bpmnXml: String,
+        issues: List<LintIssue>,
+        phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT,
+    ): BpmnAutoFixResult? {
+        val api = linterApi ?: return null
+        val fixXml = api.getMember("fixXml") ?: return null
+        logger.debug(
+            "Starting in-process BPMN XML auto-fix. phase={}, xmlLength={}, issueCount={}",
+            phase,
+            bpmnXml.length,
+            issues.size,
+        )
+
+        return try {
+            val future = CompletableFuture<String>()
+            val promise = fixXml.execute(
+                bpmnXml,
+                objectMapper.writeValueAsString(issues),
+                lintConfigJson(phase),
+            )
+
+            promise.invokeMember("then", Consumer<String> { result ->
+                future.complete(result)
+            })
+
+            parseAutoFixResult(future.get(10, TimeUnit.SECONDS))
+        } catch (e: Exception) {
+            logger.warn("BPMN XML auto-fix execution error: {}", e.message)
+            null
+        }
+    }
+
+    internal fun parseAutoFixResult(json: String): BpmnAutoFixResult = objectMapper.readValue(json)
+
     open fun ruleDocs(ruleNames: Collection<String>): Map<String, String> {
         val api = linterApi ?: return emptyMap()
         if (ruleNames.isEmpty()) {
@@ -224,3 +259,33 @@ data class LintIssue(
         private val KNOWN_FIELDS = setOf("id", "rule", "message", "category")
     }
 }
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BpmnAutoFixResult(
+    val changed: Boolean = false,
+    val xml: String = "",
+    val applied: List<BpmnAutoFixChange> = emptyList(),
+    val skipped: List<BpmnAutoFixSkip> = emptyList(),
+    val errors: List<BpmnAutoFixError> = emptyList(),
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BpmnAutoFixChange(
+    val rule: String,
+    val elementId: String? = null,
+    val message: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BpmnAutoFixSkip(
+    val rule: String,
+    val elementId: String? = null,
+    val message: String,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
+data class BpmnAutoFixError(
+    val rule: String,
+    val elementId: String? = null,
+    val message: String,
+)

@@ -170,13 +170,60 @@ class BpmnGeneratorAgent(
         throw e
     }
 
-    @Action(description = "Apply auto-layout to the validated BPMN XML")
-    fun layoutBpmnXml(bpmn: ValidatedBpmnXml): LayoutedBpmnXml {
+    @Action(description = "Apply auto-layout to the auto-fixed BPMN XML")
+    fun layoutBpmnXml(bpmn: AutoFixedBpmnXml): LayoutedBpmnXml {
         val layoutedXml = layoutService.layout(bpmn.xml)
         return LayoutedBpmnXml(xml = layoutedXml)
     }
 
-    @Action(description = "Validate the final auto-layouted BPMN XML without semantic repair")
+    @Action(description = "Apply bounded deterministic XML auto-fixes before layout")
+    fun autoFixBpmnXml(bpmn: ValidatedBpmnXml): AutoFixedBpmnXml {
+        val lintIssues = bpmnLintService.lint(bpmn.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        if (lintIssues == null) {
+            logger.warn("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
+            return AutoFixedBpmnXml(xml = bpmn.xml)
+        }
+
+        val autoFixResult = bpmnLintService.autoFix(bpmn.xml, lintIssues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        if (autoFixResult == null) {
+            logger.warn("BPMN XML auto-fix was unavailable; keeping validated XML")
+            return AutoFixedBpmnXml(xml = bpmn.xml)
+        }
+
+        if (autoFixResult.applied.isNotEmpty() || autoFixResult.skipped.isNotEmpty() || autoFixResult.errors.isNotEmpty()) {
+            logger.info(
+                "BPMN XML auto-fix result: changed={}, applied={}, skipped={}, errors={}",
+                autoFixResult.changed,
+                autoFixResult.applied.joinToString("; ") { it.summary() },
+                autoFixResult.skipped.joinToString("; ") { it.summary() },
+                autoFixResult.errors.joinToString("; ") { it.summary() },
+            )
+        }
+
+        if (autoFixResult.changed) {
+            val xsdIssues = bpmnXsdValidator.validateDetailed(autoFixResult.xml)
+            if (xsdIssues.isNotEmpty()) {
+                logger.warn(
+                    "BPMN XML auto-fix produced XSD-invalid XML; keeping validated XML. applied={}, skipped={}, errors={}, xsdErrors={}",
+                    autoFixResult.applied.joinToString("; ") { it.summary() },
+                    autoFixResult.skipped.joinToString("; ") { it.summary() },
+                    autoFixResult.errors.joinToString("; ") { it.summary() },
+                    xsdIssues.joinToString("; ") { it.summary() },
+                )
+                return AutoFixedBpmnXml(
+                    xml = bpmn.xml,
+                    autoFixResult = autoFixResult,
+                )
+            }
+        }
+
+        return AutoFixedBpmnXml(
+            xml = if (autoFixResult.changed) autoFixResult.xml else bpmn.xml,
+            autoFixResult = autoFixResult,
+        )
+    }
+
+    @Action(description = "Validate the final layouted BPMN XML without semantic repair")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
         val diagnostics = mutableListOf<BpmnDiagnostic>()
         diagnostics += bpmnXsdValidator.validateDetailed(bpmn.xml).map { issue ->
@@ -215,28 +262,27 @@ class BpmnGeneratorAgent(
         return FinalValidatedBpmnXml(xml = bpmn.xml)
     }
 
+    fun validateFinalLayoutedBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml =
+        validateFinalBpmnXml(bpmn)
+
     fun validateAndRefineBpmn(
         request: BpmnRequest,
         rendered: RenderedBpmn,
         context: ActionContext,
     ): ValidatedBpmnXml {
-        val graph = rendered.sourceGraph ?: assignLayout(
-            assignOwnership(
-                composeProcessGraph(
-                    validatePhasePlans(
-                        generatePhasePlans(
-                            validateOutline(
-                                ProcessOutline(
-                                    request = request,
-                                    definition = rendered.definition,
-                                    metrics = outlineMetrics(rendered.definition),
-                                )
-                            )
-                        )
-                    )
-                )
+        val graph = rendered.sourceGraph ?: run {
+            val outline = ProcessOutline(
+                request = request,
+                definition = rendered.definition,
+                metrics = outlineMetrics(rendered.definition),
             )
-        )
+            val validatedOutline = validateOutline(outline)
+            val phasePlans = generatePhasePlans(validatedOutline)
+            val validatedPhasePlans = validatePhasePlans(phasePlans)
+            val composedGraph = composeProcessGraph(validatedPhasePlans)
+            val ownedGraph = assignOwnership(composedGraph)
+            assignLayout(ownedGraph)
+        }
         return try {
             refinementEngine.refine(request, graph, rendered.copy(sourceGraph = graph), context)
         } catch (e: BpmnRefinementFailureException) {
@@ -301,6 +347,18 @@ class BpmnGeneratorAgent(
 
     private fun String.isLayoutSensitiveLintRule(): Boolean =
         this == "no-overlapping-elements" || this == "bpmnlint/no-overlapping-elements"
+
+    private fun BpmnAutoFixChange.summary(): String =
+        listOfNotNull(rule, elementId, message).joinToString("|")
+
+    private fun BpmnAutoFixSkip.summary(): String =
+        listOfNotNull(rule, elementId, message).joinToString("|")
+
+    private fun BpmnAutoFixError.summary(): String =
+        listOfNotNull(rule, elementId, message).joinToString("|")
+
+    private fun XsdValidationIssue.summary(): String =
+        listOfNotNull(elementId, message).joinToString("|")
 }
 
 class BpmnFinalValidationException(message: String) : IllegalStateException(message)

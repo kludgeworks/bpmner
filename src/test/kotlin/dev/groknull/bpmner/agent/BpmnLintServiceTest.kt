@@ -41,6 +41,33 @@ class BpmnLintServiceTest {
     }
 
     @Test
+    fun `parseAutoFixResult parses bundle auto-fix contract`() {
+        val result = service.parseAutoFixResult(
+            """
+            {
+              "changed": true,
+              "xml": "<definitions />",
+              "applied": [
+                {
+                  "rule": "bpmner/gtw-02-converging-gateway-unnamed",
+                  "elementId": "Gateway_1",
+                  "message": "Cleared gateway name"
+                }
+              ],
+              "skipped": [],
+              "errors": []
+            }
+            """.trimIndent()
+        )
+
+        assertEquals(true, result.changed)
+        assertEquals("<definitions />", result.xml)
+        assertEquals("Gateway_1", result.applied.single().elementId)
+        assertEquals("Cleared gateway name", result.applied.single().message)
+        assertTrue(result.errors.isEmpty())
+    }
+
+    @Test
     fun `final post-layout lint preserves configured rules`() {
         val configured = BpmnLintService(
             BpmnLintProperties(

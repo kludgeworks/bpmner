@@ -426,6 +426,14 @@ data class LayoutedBpmnXml(
 )
 
 /**
+ * BPMN XML after the bounded pre-layout AST auto-fix pass.
+ */
+data class AutoFixedBpmnXml(
+    val xml: String,
+    val autoFixResult: BpmnAutoFixResult? = null,
+)
+
+/**
  * Final BPMN XML that has passed validation after auto-layout.
  */
 data class FinalValidatedBpmnXml(
