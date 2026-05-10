@@ -18,18 +18,27 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
 bazel_dep(name = "rules_pkl", version = "0.15.0")
 
+bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2", dev_dependency = True)
+
 # --- Kotlin Toolchain ---
 register_toolchains("//tools/kotlin:kotlin_toolchain")
 
 # --- Maven Dependency Versions ---
-SPRING_BOOT_VERSION     = "3.5.9"
-EMBABEL_VERSION         = "0.3.5"
-KOTLIN_VERSION          = "2.1.10"
-JUNIT_PLATFORM_VERSION  = "1.12.2"
-JUNIT_JUPITER_VERSION   = "5.12.2"
-GRAALVM_VERSION         = "25.0.2"
+SPRING_BOOT_VERSION = "3.5.9"
+
+EMBABEL_VERSION = "0.3.5"
+
+KOTLIN_VERSION = "2.1.10"
+
+JUNIT_PLATFORM_VERSION = "1.12.2"
+
+JUNIT_JUPITER_VERSION = "5.12.2"
+
+GRAALVM_VERSION = "25.0.2"
+
 SPRING_MODULITH_VERSION = "1.4.1"
-JMOLECULES_VERSION      = "1.6.0"
+
+JMOLECULES_VERSION = "1.6.0"
 
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")

@@ -1,0 +1,40 @@
+amends "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Builtins.pkl"
+
+local linters = new Mapping<String, Step> {
+  ["biome"] = Builtins.biome
+  ["ktlint"] = Builtins.ktlint
+  ["pkl_format"] = Builtins.pkl_format
+  ["buildifier_format"] = Builtins.buildifier_format
+  ["buildifier_lint"] = Builtins.buildifier_lint
+  ["shellcheck"] = Builtins.shellcheck
+  ["shfmt"] = Builtins.shfmt
+  ["vale"] = Builtins.vale
+  ["taplo_format"] = Builtins.taplo_format
+  ["check_merge_conflict"] = Builtins.check_merge_conflict
+  ["trailing_whitespace"] = Builtins.trailing_whitespace
+  ["mixed_line_ending"] = Builtins.mixed_line_ending
+}
+
+hooks {
+  ["pre-commit"] {
+    steps {
+      ...linters
+    }
+  }
+  ["commit-msg"] {
+    steps {
+      ["check_conventional_commit"] = Builtins.check_conventional_commit
+    }
+  }
+  ["fix"] {
+    steps {
+      ...linters
+    }
+  }
+  ["check"] {
+    steps {
+      ...linters
+    }
+  }
+}
