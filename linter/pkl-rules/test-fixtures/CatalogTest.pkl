@@ -1,0 +1,38 @@
+amends "pkl:test"
+
+import "../Catalog.pkl" as Catalog
+
+facts {
+  ["catalog exposes deterministic migrated IDs"] {
+    Catalog.rules.map((rule) -> rule.id)
+      == List(
+        "act-01-verb-object-name",
+        "act-03-discouraged-business-verbs",
+        "name-02-uncommon-abbreviations",
+      )
+  }
+
+  ["catalog IDs are unique"] {
+    Catalog.rules.map((rule) -> rule.id).toSet().length == Catalog.rules.length
+  }
+
+  ["migrated rules include required messages and static config"] {
+    Catalog.rules.every((rule) -> rule.errorMessages.containsKey("default"))
+    Catalog.rules.find((rule) -> rule.id == "act-01-verb-object-name")
+      .errorMessages.containsKey("missingVerb")
+    Catalog.rules.find((rule) -> rule.id == "act-01-verb-object-name")
+      .errorMessages.containsKey("tooShort")
+    Catalog.rules.find((rule) -> rule.id == "act-03-discouraged-business-verbs")
+      .staticConfig.discouragedLeadingVerbs.contains("manage")
+    Catalog.rules.find((rule) -> rule.id == "name-02-uncommon-abbreviations")
+      .staticConfig.commonAcronyms.contains("BPMN")
+  }
+
+  ["migrated rules have valid severity and auto-fix metadata"] {
+    Catalog.rules.every((rule) ->
+      List("error", "warning", "info", "off").contains(rule.severity)
+        && (!rule.autoFixable)
+        && rule.fixStrategy == "none"
+    )
+  }
+}

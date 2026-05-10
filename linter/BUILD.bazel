@@ -22,14 +22,15 @@ TYPE_DECL_SRCS = glob([
 ])
 
 ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
-ALL_TSC_SRCS = ALL_TS_SRCS + [":static_rules"]
+GENERATED_JSON_SRCS = ["src/generated/linter-rules.json"]
+ALL_TSC_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
 
 BPMN_FIXTURES = glob([
     "test/fixtures/**/*.bpmn",
 ])
 
-BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"]
-TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + BPMN_FIXTURES
+BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
+TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES
 
 # Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
@@ -65,6 +66,7 @@ bpmner_ts_project(
     assets = BPMN_FIXTURES,
     deps = LINTER_TS_DEPS,
     out_dir = "tsc",
+    resolve_json_module = True,
 )
 
 js_binary(

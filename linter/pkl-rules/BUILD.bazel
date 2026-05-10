@@ -3,6 +3,7 @@ load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_library", "pkl_test")
 package(default_visibility = ["//visibility:public"])
 
 PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
+PKL_RULE_SRCS = glob(["rules/*.pkl"])
 
 pkl_library(
     name = "schema",
@@ -10,8 +11,16 @@ pkl_library(
 )
 
 pkl_eval(
+    name = "linter_rules_json",
+    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["Catalog.pkl"],
+    outs = ["linter-rules.json"],
+    entrypoints = ["Catalog.pkl"],
+    format = "json",
+)
+
+pkl_eval(
     name = "uncommon_abbreviations_json",
-    srcs = PKL_SCHEMA_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
+    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
     outs = ["uncommon_abbreviations.json"],
     entrypoints = ["test-fixtures/UncommonAbbreviations.pkl"],
     format = "json",
@@ -20,8 +29,14 @@ pkl_eval(
 pkl_test(
     name = "schema_test",
     srcs = PKL_SCHEMA_SRCS + [
+        "Catalog.pkl",
+    ] + PKL_RULE_SRCS + [
+        "test-fixtures/CatalogTest.pkl",
         "test-fixtures/SchemaTest.pkl",
         "test-fixtures/UncommonAbbreviations.pkl",
     ],
-    entrypoints = ["test-fixtures/SchemaTest.pkl"],
+    entrypoints = [
+        "test-fixtures/SchemaTest.pkl",
+        "test-fixtures/CatalogTest.pkl",
+    ],
 )

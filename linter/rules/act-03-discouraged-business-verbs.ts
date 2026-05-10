@@ -1,8 +1,12 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
+import { getRuleMessage, getStaticConfig } from '../src/rule-config';
 
+const RULE_ID = 'act-03-discouraged-business-verbs';
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];
-const DISCOURAGED_LEADING_VERBS = new Set([ 'handle', 'manage', 'process', 'perform', 'do' ]);
+const { discouragedLeadingVerbs } = getStaticConfig<{ discouragedLeadingVerbs: string[] }>(RULE_ID);
+const DISCOURAGED_LEADING_VERBS = new Set(discouragedLeadingVerbs);
+const MESSAGE = getRuleMessage(RULE_ID);
 
 function firstWord(name: string): string {
   const word = name.split(/\s+/)[0] || '';
@@ -22,7 +26,7 @@ export = function() {
     }
 
     if (DISCOURAGED_LEADING_VERBS.has(firstWord(name))) {
-      reporter.report(node.id, 'Activity label starts with a discouraged generic verb; prefer a more specific business verb');
+      reporter.report(node.id, MESSAGE);
     }
   }
 

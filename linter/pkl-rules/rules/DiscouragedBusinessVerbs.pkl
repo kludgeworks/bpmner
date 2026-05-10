@@ -1,0 +1,32 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Discouraged Business Verbs"
+category = RuleCategory.Activity
+sequence = 3
+
+intent = "Avoid generic activity verbs that hide the real business action."
+forModellers =
+  "Replace vague leading verbs with a more specific business verb."
+forAI =
+  "Detect activity labels whose first word is on the discouraged generic verb list."
+
+targetElements =
+  List(
+    "bpmn:Task",
+    "bpmn:SubProcess",
+    "bpmn:CallActivity",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Activity label starts with a discouraged generic verb; prefer a more specific business verb"
+}
+
+staticConfig = new {
+  discouragedLeadingVerbs = List("handle", "manage", "process", "perform", "do")
+}
+
+autoFixable = false
+fixStrategy = "none"

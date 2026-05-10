@@ -1,7 +1,9 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
+import { getRuleConfig, getRuleMessage, getStaticConfig } from '../src/rule-config';
 
-const TYPES_WITH_NAMES = [
+const RULE_ID = 'name-02-uncommon-abbreviations';
+const TYPES_WITH_NAMES = getRuleConfig(RULE_ID).targetElements || [
   'bpmn:Task',
   'bpmn:SubProcess',
   'bpmn:CallActivity',
@@ -17,7 +19,9 @@ const TYPES_WITH_NAMES = [
   'bpmn:DataStoreReference'
 ];
 
-const COMMON_ACRONYMS = new Set([ 'BPMN', 'KLM', 'SLA', 'API', 'IT' ]);
+const { commonAcronyms } = getStaticConfig<{ commonAcronyms: string[] }>(RULE_ID);
+const COMMON_ACRONYMS = new Set(commonAcronyms);
+const MESSAGE = getRuleMessage(RULE_ID);
 
 function hasUncommonAbbreviation(name: string): boolean {
   const matches = name.match(/\b[A-Z]{2,}\b/g) || [];
@@ -38,7 +42,7 @@ export = function() {
     }
 
     if (hasUncommonAbbreviation(name)) {
-      reporter.report(node.id, 'Avoid uncommon abbreviations in labels or explain them via annotation/glossary');
+      reporter.report(node.id, MESSAGE);
     }
   }
 
