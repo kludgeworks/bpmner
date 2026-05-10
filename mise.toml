@@ -3,7 +3,6 @@ bazelisk = "latest"
 java = "liberica-nik-openjdk25-25.0.3+1"
 node = "24"
 "npm:pnpm" = "11.0.8"
-vale = "latest"
 
 [tasks.gh-models]
 description = "List the GitHub Models catalog (table / CSV / JSON) [nushell]"

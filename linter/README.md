@@ -47,7 +47,8 @@ bazel test //linter:all
 Run Vale locally when changing rule prose:
 
 ```bash
-mise exec -- vale README.md HELP.md linter/**/*.md
+pnpm vale:docs
+bazel test //:vale_docs_test //:vale_fixtures_test
 ```
 
 The test suite covers:
