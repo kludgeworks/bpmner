@@ -1,6 +1,7 @@
 package dev.groknull.bpmner.agent
 
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -59,6 +60,48 @@ class BpmnLintServiceIntegrationTest {
         
         assertNotNull(issues)
         assertTrue(issues.any { it.rule == "klm/gen-02-no-duplicate-diagrams" }, "Should find KLM duplicate diagram issue")
+    }
+
+    @Test
+    fun `autoFix clears named converging gateway using GraalJS bundle`() {
+        val service = BpmnLintService(
+            BpmnLintProperties(
+                extends = listOf("plugin:klm/recommended"),
+            )
+        )
+        service.init()
+
+        val xml = """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+              <bpmn:process id="Process_1">
+                <bpmn:task id="Task_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:task>
+                <bpmn:task id="Task_2"><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:task>
+                <bpmn:exclusiveGateway id="Gateway_1" name="Decision merged">
+                  <bpmn:incoming>Flow_1</bpmn:incoming>
+                  <bpmn:incoming>Flow_2</bpmn:incoming>
+                  <bpmn:outgoing>Flow_3</bpmn:outgoing>
+                </bpmn:exclusiveGateway>
+                <bpmn:endEvent id="EndEvent_1"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+                <bpmn:sequenceFlow id="Flow_1" sourceRef="Task_1" targetRef="Gateway_1" />
+                <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_2" targetRef="Gateway_1" />
+                <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_1" targetRef="EndEvent_1" />
+              </bpmn:process>
+            </bpmn:definitions>
+        """.trimIndent()
+
+        val issues = service.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
+        assertNotNull(issues)
+
+        val result = service.autoFix(xml, issues, BpmnLintPhase.FINAL_POST_LAYOUT)
+
+        assertNotNull(result)
+        assertEquals(true, result.changed)
+        assertEquals("Gateway_1", result.applied.single().elementId)
+        assertTrue(!result.xml.contains("name=\"Decision merged\""))
+        assertTrue(service.lint(result.xml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty().none {
+            it.rule == "klm/gtw-02-converging-gateway-unnamed"
+        })
     }
 
     @Test

@@ -1,5 +1,7 @@
 import { Linter } from 'bpmnlint';
 import BpmnModdle from 'bpmn-moddle';
+import { fixBpmnXml } from './auto-fix/engine';
+import type { AutoFixResult } from './auto-fix/types';
 import { configs, customRuleDocs, resolver } from './generated/static-rules';
 
 type RuleLevel = 'off' | 'warn' | 'error';
@@ -204,9 +206,42 @@ export async function lintXml(xmlString: string, configInput?: unknown): Promise
   }
 }
 
+/**
+ * Applies one bounded BPMN XML auto-fix pass and returns a JSON string result.
+ * This is designed to be called from GraalJS.
+ */
+export async function fixXml(
+  xmlString: string,
+  issuesInput?: unknown,
+  configInput?: unknown,
+  _optionsInput?: unknown
+): Promise<string> {
+  try {
+    const result = await fixBpmnXml(xmlString, issuesInput, configInput, {
+      lintXml,
+    });
+    return JSON.stringify(result);
+  } catch (err: unknown) {
+    const result: AutoFixResult = {
+      changed: false,
+      xml: xmlString,
+      applied: [],
+      skipped: [],
+      errors: [
+        {
+          rule: 'auto-fix-error',
+          message: err instanceof Error ? err.message : String(err),
+        },
+      ],
+    };
+    return JSON.stringify(result);
+  }
+}
+
 // Expose the API to the global scope for GraalJS/Polyglot
 (globalThis as typeof globalThis & { BpmnLinterApi?: unknown }).BpmnLinterApi = {
   lintXml,
+  fixXml,
   getDefaultConfig: () => DEFAULT_LINT_CONFIG,
   getRules: (configInput?: unknown) => resolveLintConfig(configInput).rules ?? {},
   getInvalidRules,

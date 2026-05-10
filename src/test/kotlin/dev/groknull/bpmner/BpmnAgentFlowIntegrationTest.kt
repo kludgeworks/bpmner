@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.times
@@ -51,6 +52,12 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
             .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
         doReturn(emptyList<LintIssue>()).`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT))
+        doReturn(null).`when`(bpmnLintService)
+            .autoFix(
+                org.mockito.ArgumentMatchers.anyString(),
+                anyList(),
+                eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
+            )
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
 
@@ -65,7 +72,7 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
         assertTrue(result.xml.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(org.mockito.ArgumentMatchers.anyString())
-        verify(bpmnLintService).lint(
+        verify(bpmnLintService, times(2)).lint(
             org.mockito.ArgumentMatchers.anyString(),
             org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
         )
@@ -73,7 +80,15 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
             org.mockito.ArgumentMatchers.anyString(),
             org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT),
         )
+        verify(bpmnLintService).autoFix(
+            org.mockito.ArgumentMatchers.anyString(),
+            anyList(),
+            eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
+        )
     }
+
+    private fun eqPhase(phase: BpmnLintPhase): BpmnLintPhase =
+        org.mockito.ArgumentMatchers.eq(phase) ?: phase
 
     private fun validDefinition() = BpmnDefinition(
         processId = "Process_MakeToast",

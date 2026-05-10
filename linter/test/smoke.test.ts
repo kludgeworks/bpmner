@@ -1,12 +1,22 @@
 import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
+import BpmnModdle from 'bpmn-moddle';
 import { fixtures } from './fixtures';
 
 type BpmnLinterApi = {
   lintXml(xml: string, config?: unknown): Promise<string>;
+  fixXml(xml: string, issues?: unknown, config?: unknown, options?: unknown): Promise<string>;
   getRules(config?: unknown): Record<string, string>;
   getInvalidRules(config?: unknown): string[];
   getRuleDocs(ruleNames: string[]): Record<string, string>;
+};
+
+type AutoFixResult = {
+  changed: boolean;
+  xml: string;
+  applied: Array<{ rule: string; elementId?: string; message: string }>;
+  skipped: Array<{ rule: string; elementId?: string; message: string }>;
+  errors: Array<{ rule: string; elementId?: string; message: string }>;
 };
 
 describe('BpmnLinterApi bundle smoke test', () => {
@@ -79,5 +89,67 @@ describe('BpmnLinterApi bundle smoke test', () => {
   it('returns markdown docs for KLM rules', () => {
     const docs = api.getRuleDocs(['klm/gen-02-no-duplicate-diagrams']);
     assert.ok(docs['klm/gen-02-no-duplicate-diagrams'].includes('# gen-02-no-duplicate-diagrams'));
+  });
+
+  it('fixXml clears a named converging gateway', async () => {
+    const issues = JSON.parse(
+      await api.lintXml(fixtures.gtw02Invalid, {
+        extends: ['plugin:klm/recommended'],
+      })
+    );
+
+    const result: AutoFixResult = JSON.parse(await api.fixXml(fixtures.gtw02Invalid, issues));
+
+    assert.equal(result.changed, true);
+    assert.equal(result.applied.length, 1);
+    assert.equal(result.applied[0].rule, 'klm/gtw-02-converging-gateway-unnamed');
+    assert.equal(result.applied[0].elementId, 'Gateway_1');
+    assert.ok(!result.xml.includes('name="Decision merged"'));
+
+    const postFixIssues: Array<{ rule: string }> = JSON.parse(
+      await api.lintXml(result.xml, {
+        extends: ['plugin:klm/recommended'],
+      })
+    );
+    assert.ok(!postFixIssues.some((i) => i.rule === 'klm/gtw-02-converging-gateway-unnamed'));
+
+    const moddle = new BpmnModdle();
+    await moddle.fromXML(result.xml);
+  });
+
+  it('fixXml returns a skip entry for non-fixable rules', async () => {
+    const result: AutoFixResult = JSON.parse(
+      await api.fixXml(fixtures.validBaseline, [
+        {
+          id: 'Task_1',
+          rule: 'start-event-required',
+          message: 'Not fixable here',
+        },
+      ])
+    );
+
+    assert.equal(result.changed, false);
+    assert.equal(result.xml, fixtures.validBaseline);
+    assert.deepEqual(result.applied, []);
+    assert.equal(result.skipped.length, 1);
+    assert.equal(result.skipped[0].rule, 'start-event-required');
+    assert.deepEqual(result.errors, []);
+  });
+
+  it('fixXml returns a structured parse error for invalid XML', async () => {
+    const result: AutoFixResult = JSON.parse(
+      await api.fixXml('<bpmn:definitions>', [
+        {
+          id: 'Gateway_1',
+          rule: 'klm/gtw-02-converging-gateway-unnamed',
+          message: 'Converging gateway should remain unnamed',
+        },
+      ])
+    );
+
+    assert.equal(result.changed, false);
+    assert.equal(result.xml, '<bpmn:definitions>');
+    assert.equal(result.applied.length, 0);
+    assert.ok(result.errors.some((error) => error.rule === 'parse-error'));
   });
 });
