@@ -1,3 +1,5 @@
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 
 package(default_visibility = ["//visibility:public"])
@@ -5,4 +7,50 @@ package(default_visibility = ["//visibility:public"])
 # Link all packages from the root lockfile
 npm_link_all_packages(name = "node_modules")
 
+VALE_SRCS = [
+    ".vale.ini",
+    "README.md",
+] + glob([
+    "styles/**/*.txt",
+    "styles/**/*.yml",
+    "test/prose/*.md",
+])
+
 exports_files(["toast-process.txt"])
+
+js_test(
+    name = "vale_docs_test",
+    args = ["docs"],
+    data = VALE_SRCS + [
+        "//:node_modules/@vvago/vale",
+        "//linter:vale_docs",
+    ],
+    entry_point = "tools/vale/vale-test.mjs",
+)
+
+js_test(
+    name = "vale_fixtures_test",
+    args = ["fixtures"],
+    data = VALE_SRCS + [
+        "//:node_modules/@vvago/vale",
+        "//linter:vale_docs",
+    ],
+    entry_point = "tools/vale/vale-test.mjs",
+)
+
+build_test(
+    name = "linter_bundle_build_test",
+    targets = ["//linter:bundle"],
+)
+
+test_suite(
+    name = "ci",
+    tests = [
+        ":linter_bundle_build_test",
+        ":vale_docs_test",
+        ":vale_fixtures_test",
+        "//linter:lint_test",
+        "//linter:smoke_test",
+        "//linter/pkl-rules:schema_test",
+    ],
+)

@@ -80,7 +80,8 @@ bazel test --test_tag_filters=integration //src/test/...
 Vale checks Markdown and text documentation for BPMN terminology and inclusive language.
 
 ```bash
-mise exec -- vale README.md HELP.md linter/**/*.md
+pnpm vale:docs
+bazel test //:vale_docs_test //:vale_fixtures_test
 ```
 
 ## Configuration

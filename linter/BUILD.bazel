@@ -1,5 +1,5 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_run_binary", "js_test")
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_project")
@@ -22,15 +22,28 @@ TYPE_DECL_SRCS = glob([
 ])
 
 ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
+
 # This import path is generated from the Pkl catalog by Bazel.
 GENERATED_JSON_SRCS = [":linter_rules_json_for_ts"]
+
 ALL_TSC_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
 
 BPMN_FIXTURES = glob([
     "test/fixtures/**/*.bpmn",
 ])
 
+js_library(
+    name = "vale_docs",
+    srcs = [
+        "README.md",
+        "bpmn_toolbox_expanded.md",
+    ] + glob([
+        "docs/rules/*.md",
+    ]),
+)
+
 BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
+
 TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES
 
 # Link the standalone linter package's node_modules
@@ -72,9 +85,9 @@ bpmner_ts_project(
     name = "ts",
     srcs = ALL_TSC_SRCS,
     assets = BPMN_FIXTURES,
-    deps = LINTER_TS_DEPS,
     out_dir = "tsc",
     resolve_json_module = True,
+    deps = LINTER_TS_DEPS,
 )
 
 js_binary(
@@ -92,7 +105,6 @@ js_binary(
 
 js_run_binary(
     name = "static_rules",
-    tool = ":generate_static_rules_bin",
     srcs = [
         "scripts/generate-static-rules.mjs",
         "src/rule-manifest.ts",
@@ -105,6 +117,7 @@ js_run_binary(
     args = ["$(location %s)" % STATIC_RULES_OUTPUT],
     mnemonic = "GenerateStaticRules",
     progress_message = "Generating %{label}",
+    tool = ":generate_static_rules_bin",
 )
 
 esbuild(
@@ -166,14 +179,14 @@ esbuild(
 
 js_test(
     name = "lint_test",
-    entry_point = "dist/test/lint.test.js",
     data = [":lint_test_bundle"],
+    entry_point = "dist/test/lint.test.js",
     node_options = ["--test-reporter=spec"],
 )
 
 js_test(
     name = "smoke_test",
-    entry_point = "dist/test/smoke.test.js",
     data = [":smoke_test_bundle"],
+    entry_point = "dist/test/smoke.test.js",
     node_options = ["--test-reporter=spec"],
 )
