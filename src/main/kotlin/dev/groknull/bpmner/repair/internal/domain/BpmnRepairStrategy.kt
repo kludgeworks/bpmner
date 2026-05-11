@@ -1,0 +1,32 @@
+package dev.groknull.bpmner.repair.internal.domain
+
+import com.embabel.agent.api.common.PromptRunner
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnRepairAttempt
+import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.ValidatedBpmnXml
+import com.embabel.chat.Message
+import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.springframework.core.Ordered
+
+internal interface BpmnRepairStrategy : Ordered {
+    fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult
+}
+
+internal data class BpmnRepairStrategyContext(
+    val attempt: BpmnRepairAttempt,
+    val promptRunner: PromptRunner,
+)
+
+internal sealed class BpmnRepairResult {
+    data class Repaired(
+        val definition: BpmnDefinition,
+        val promptText: String,
+        val messages: List<Message>,
+    ) : BpmnRepairResult()
+
+    data object NotApplicable : BpmnRepairResult()
+
+    data class TerminalFailure(val reason: String) : BpmnRepairResult()
+}

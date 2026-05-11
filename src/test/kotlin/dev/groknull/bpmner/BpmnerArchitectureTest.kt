@@ -7,12 +7,11 @@ import org.jmolecules.archunit.JMoleculesDddRules
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
-@Disabled("Enable after Phase 3 jMolecules stereotypes are applied to production classes")
 class BpmnerArchitectureTest {
-
-    private val classes = ClassFileImporter()
-        .withImportOption(ImportOption.DoNotIncludeTests())
-        .importPackages("dev.groknull.bpmner")
+    private val classes =
+        ClassFileImporter()
+            .withImportOption(ImportOption.DoNotIncludeTests())
+            .importPackages("dev.groknull.bpmner")
 
     @Test
     fun `verifies onion architecture`() {
