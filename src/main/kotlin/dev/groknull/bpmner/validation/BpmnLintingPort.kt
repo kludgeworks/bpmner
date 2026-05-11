@@ -3,9 +3,9 @@ package dev.groknull.bpmner.validation
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.LintIssue
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.hexagonal.SecondaryPort
 
-@PrimaryPort
+@SecondaryPort
 interface BpmnLintingPort {
     fun lint(
         bpmnXml: String,
