@@ -50,6 +50,8 @@ import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
+import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
+import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
@@ -68,7 +70,9 @@ class BpmnRepairAgentTest {
     ): BpmnRepairAgent {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer()
-        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints)
+        val catalogService = RuleCatalogService()
+        val llmValidator = LlmValidator(catalogService)
+        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
         val evaluationPipeline = BpmnEvaluationPipeline(
             config = config,
             bpmnLintingPort = lintService,
@@ -170,7 +174,7 @@ class BpmnRepairAgentTest {
                     LintIssue(
                         id = null,
                         rule = "parse-error",
-                        message = "unknown rule <bpmneract-01-verb-object-name>",
+                        message = "unknown rule <bpmneract-verb-object-name>",
                     )
                 )
             )
@@ -186,7 +190,7 @@ class BpmnRepairAgentTest {
         }
 
         assertTrue(error.message!!.contains("BPMN validator infrastructure failure"))
-        assertTrue(error.message!!.contains("bpmneract-01-verb-object-name"))
+        assertTrue(error.message!!.contains("bpmneract-verb-object-name"))
         assertTrue(context.llmInvocations.isEmpty())
         assertEquals(1, xsdValidator.xmls.size)
         assertEquals(1, lintService.xmls.size)
@@ -200,11 +204,11 @@ class BpmnRepairAgentTest {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
         val lintService = RecordingLintService(
             responses = listOf(
-                listOf(LintIssue(id = "Task_1", rule = "bpmner/gen-02-no-duplicate-diagrams", message = "Duplicate BPMNDiagram")),
+                listOf(LintIssue(id = "Task_1", rule = "bpmner/gen-no-duplicate-diagrams", message = "Duplicate BPMNDiagram")),
                 emptyList(),
             ),
             docs = mapOf(
-                "bpmner/gen-02-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs"
+                "bpmner/gen-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs"
             ),
         )
         val converter = RecordingConverter()
@@ -219,7 +223,7 @@ class BpmnRepairAgentTest {
             it.contribution()
         }
         assertTrue(promptContributions.contains("BPMNER lint rule documentation for current violations"))
-        assertTrue(promptContributions.contains("# gen-02-no-duplicate-diagrams"))
+        assertTrue(promptContributions.contains("# gen-no-duplicate-diagrams"))
     }
 
     @Test
@@ -450,7 +454,7 @@ class BpmnRepairAgentTest {
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
         private val autoFixResponses: List<BpmnAutoFixResult?> = emptyList(),
-    ) : BpmnLintService() {
+    ) : BpmnLintService(catalogService = RuleCatalogService()) {
         val xmls = mutableListOf<String>()
         val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0

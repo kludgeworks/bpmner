@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Business Meaningful Label"
 category = RuleCategory.Name
-sequence = 1
 
 intent = "Encourage business-readable labels over technical identifiers."
 forModellers =
@@ -39,5 +38,4 @@ staticConfig = new {
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

@@ -4,18 +4,13 @@ import "../schema/RuleCategory.pkl"
 
 name = "Sequence Flow Within Pool"
 category = RuleCategory.Flow
-sequence = 1
 
 intent = "Keep sequence flows within a single pool."
 forModellers =
   "Use sequence flow only within the same pool; use message flow for communication between pools."
-forAI =
-  "Detect sequence flows whose source and target resolve to different pools."
+forAI = "Detect sequence flows whose source and target resolve to different pools."
 
-targetElements =
-  List(
-    "bpmn:SequenceFlow",
-  )
+targetElements = List("bpmn:SequenceFlow")
 
 severity = "error"
 errorMessages = new {
@@ -25,5 +20,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

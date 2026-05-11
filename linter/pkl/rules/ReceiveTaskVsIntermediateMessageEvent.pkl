@@ -1,0 +1,23 @@
+amends "../schema/BpmnRule.pkl"
+import "../schema/RuleCategory.pkl"
+
+name = "Receive Task Vs Intermediate Message Event"
+category = RuleCategory.Activity
+
+intent = "Choose correctly between Receive Task and catching Intermediate Message Event."
+forModellers =
+  "Use Receive Task for explicit waits from external participants; use Intermediate Message Event for passive external business events."
+forAI =
+  "Detect message-driven waits where the description implies an explicit participant interaction versus a passive event."
+
+targetElements = List("bpmn:ReceiveTask", "bpmn:IntermediateCatchEvent")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] =
+    "Use Receive Task for explicit participant interaction; use Intermediate Message Event for passive events."
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

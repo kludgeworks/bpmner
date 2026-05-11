@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Event Based Direct Events"
 category = RuleCategory.Gateway
-sequence = 11
 
 intent = "Enforce event-based gateway semantics."
 forModellers =
@@ -12,14 +11,12 @@ forModellers =
 forAI =
   "Detect event-based gateway outgoing flows that target anything other than an intermediate catch event or receive task."
 
-targetElements =
-  List(
-    "bpmn:EventBasedGateway",
-  )
+targetElements = List("bpmn:EventBasedGateway")
 
 severity = "error"
 errorMessages = new {
-  ["default"] = "Event-based gateway must connect directly to intermediate catch events or receive tasks"
+  ["default"] =
+    "Event-based gateway must connect directly to intermediate catch events or receive tasks"
 }
 
 staticConfig = new {
@@ -27,5 +24,4 @@ staticConfig = new {
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

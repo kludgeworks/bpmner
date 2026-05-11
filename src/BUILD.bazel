@@ -49,6 +49,12 @@ filegroup(
     ],
 )
 
+java_library(
+    name = "linter_rules_json_res",
+    resource_strip_prefix = "linter/pkl",
+    resources = ["//linter/pkl:linter_rules_json"],
+)
+
 kt_jvm_library(
     name = "bpmner_core",
     srcs = glob(["main/kotlin/**/*.kt"]),
@@ -57,6 +63,7 @@ kt_jvm_library(
     deps = [
         ":layout_bundle_res",
         ":linter_bundle_res",
+        ":linter_rules_json_res",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
         "@maven//:com_embabel_agent_embabel_agent_starter_shell",

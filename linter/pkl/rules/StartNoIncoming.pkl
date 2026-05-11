@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Start No Incoming"
 category = RuleCategory.Event
-sequence = 10
 
 intent = "Enforce BPMN start-event structure."
 forModellers = "Start events initiate the process and must not have incoming sequence flows."
@@ -21,3 +20,4 @@ staticConfig = new {}
 
 autoFixable = true
 fixStrategy = "node-deletion"
+fixMethod = "deleteIncomingFlows"

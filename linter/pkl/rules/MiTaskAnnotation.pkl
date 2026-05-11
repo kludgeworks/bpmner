@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "MI Task Annotation"
 category = RuleCategory.Activity
-sequence = 13
 
 intent = "Ensure multi-instance activities document the set of items being iterated."
 forModellers =
@@ -20,7 +19,8 @@ targetElements =
 
 severity = "error"
 errorMessages = new {
-  ["default"] = "Multi-instance activity is missing a linked text annotation expressing iteration-set intent"
+  ["default"] =
+    "Multi-instance activity is missing a linked text annotation expressing iteration-set intent"
 }
 
 staticConfig = new {
@@ -28,5 +28,4 @@ staticConfig = new {
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

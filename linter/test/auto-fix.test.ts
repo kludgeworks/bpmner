@@ -16,7 +16,7 @@ describe("auto-fix engine", () => {
 	// ─── attribute-mutation ─────────────────────────────────────────────────────
 
 	it("gtw-02 metadata is registered as attribute-mutation", () => {
-		const m = autoFixMetadata("bpmner/gtw-02-converging-gateway-unnamed");
+		const m = autoFixMetadata("bpmner/gtw-converging-gateway-unnamed");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "attribute-mutation");
 	});
@@ -25,21 +25,21 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Gateway_1",
-				rule: "bpmnlint-plugin-bpmner/gtw-02-converging-gateway-unnamed",
+				rule: "bpmnlint-plugin-bpmner/gtw-converging-gateway-unnamed",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.gtw02Invalid, issues);
 		assert.equal(result.changed, true);
 		assert.equal(
 			result.applied[0].rule,
-			"bpmner/gtw-02-converging-gateway-unnamed",
+			"bpmner/gtw-converging-gateway-unnamed",
 		);
 		assert.ok(!result.xml.includes('name="Decision merged"'));
 		await roundTrip(result.xml);
 	});
 
 	it("gtw-03 metadata is registered as attribute-mutation", () => {
-		const m = autoFixMetadata("bpmner/gtw-03-gateway-no-work-label");
+		const m = autoFixMetadata("bpmner/gtw-gateway-no-work-label");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "attribute-mutation");
 	});
@@ -48,7 +48,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Gateway_1",
-				rule: "bpmnlint-plugin-bpmner/gtw-03-gateway-no-work-label",
+				rule: "bpmnlint-plugin-bpmner/gtw-gateway-no-work-label",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.gtw03Invalid, issues);
@@ -71,7 +71,7 @@ describe("auto-fix engine", () => {
 	// ─── string-manipulation ────────────────────────────────────────────────────
 
 	it("act-02 metadata is registered as string-manipulation", () => {
-		const m = autoFixMetadata("bpmner/act-02-activity-label-capitalization");
+		const m = autoFixMetadata("bpmner/act-activity-label-capitalization");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "string-manipulation");
 	});
@@ -80,7 +80,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Task_1",
-				rule: "bpmnlint-plugin-bpmner/act-02-activity-label-capitalization",
+				rule: "bpmnlint-plugin-bpmner/act-activity-label-capitalization",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.act02Invalid, issues);
@@ -97,7 +97,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Task_1",
-				rule: "bpmnlint-plugin-bpmner/act-02-activity-label-capitalization",
+				rule: "bpmnlint-plugin-bpmner/act-activity-label-capitalization",
 			},
 		];
 		const result = await fixBpmnXml(xml, issues);
@@ -105,7 +105,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("name-02 metadata is registered as string-manipulation", () => {
-		const m = autoFixMetadata("bpmner/name-02-uncommon-abbreviations");
+		const m = autoFixMetadata("bpmner/name-uncommon-abbreviations");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "string-manipulation");
 	});
@@ -114,7 +114,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Task_1",
-				rule: "bpmnlint-plugin-bpmner/name-02-uncommon-abbreviations",
+				rule: "bpmnlint-plugin-bpmner/name-uncommon-abbreviations",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.name02FixableAbbrev, issues);
@@ -124,7 +124,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("name-03 metadata is registered as string-manipulation", () => {
-		const m = autoFixMetadata("bpmner/name-03-no-element-type-words");
+		const m = autoFixMetadata("bpmner/name-no-element-type-words");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "string-manipulation");
 	});
@@ -133,7 +133,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Task_1",
-				rule: "bpmnlint-plugin-bpmner/name-03-no-element-type-words",
+				rule: "bpmnlint-plugin-bpmner/name-no-element-type-words",
 			},
 		];
 		const result = await fixBpmnXml(
@@ -147,7 +147,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("data-01 metadata is registered as string-manipulation", () => {
-		const m = autoFixMetadata("bpmner/data-01-no-type-words-in-data-name");
+		const m = autoFixMetadata("bpmner/data-no-type-words-in-data-name");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "string-manipulation");
 	});
@@ -156,7 +156,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Data_1",
-				rule: "bpmnlint-plugin-bpmner/data-01-no-type-words-in-data-name",
+				rule: "bpmnlint-plugin-bpmner/data-no-type-words-in-data-name",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.data01TypeWordsInDataName, issues);
@@ -234,7 +234,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("evt-10 metadata is registered as node-deletion", () => {
-		const m = autoFixMetadata("bpmner/evt-10-start-no-incoming");
+		const m = autoFixMetadata("bpmner/evt-start-no-incoming");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "node-deletion");
 	});
@@ -243,7 +243,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "StartEvent_1",
-				rule: "bpmnlint-plugin-bpmner/evt-10-start-no-incoming",
+				rule: "bpmnlint-plugin-bpmner/evt-start-no-incoming",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.evt10StartWithIncoming, issues);
@@ -261,7 +261,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("gtw-22 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("bpmner/gtw-22-superfluous-gateway");
+		const m = autoFixMetadata("bpmner/gtw-superfluous-gateway");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "ast-rewiring");
 	});
@@ -270,7 +270,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Gateway_1",
-				rule: "bpmnlint-plugin-bpmner/gtw-22-superfluous-gateway",
+				rule: "bpmnlint-plugin-bpmner/gtw-superfluous-gateway",
 			},
 		];
 		const result = await fixBpmnXml(
@@ -306,14 +306,14 @@ describe("auto-fix engine", () => {
 	});
 
 	it("gtw-21 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("bpmner/gtw-21-fake-join");
+		const m = autoFixMetadata("bpmner/gtw-fake-join");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "ast-rewiring");
 	});
 
 	it("gtw-21: inserts converging gateway before task with multiple incoming flows", async () => {
 		const issues: Issue[] = [
-			{ id: "Task_1", rule: "bpmnlint-plugin-bpmner/gtw-21-fake-join" },
+			{ id: "Task_1", rule: "bpmnlint-plugin-bpmner/gtw-fake-join" },
 		];
 		const result = await fixBpmnXml(fixtures.gtw21FakeJoinFixable, issues);
 		assert.equal(result.changed, true);
@@ -338,7 +338,7 @@ describe("auto-fix engine", () => {
 	});
 
 	it("gtw-20 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("bpmner/gtw-20-no-gateway-join-fork");
+		const m = autoFixMetadata("bpmner/gtw-no-gateway-join-fork");
 		assert.ok(m?.autoFixable);
 		assert.equal(m?.fixStrategy, "ast-rewiring");
 	});
@@ -347,7 +347,7 @@ describe("auto-fix engine", () => {
 		const issues: Issue[] = [
 			{
 				id: "Gateway_1",
-				rule: "bpmnlint-plugin-bpmner/gtw-20-no-gateway-join-fork",
+				rule: "bpmnlint-plugin-bpmner/gtw-no-gateway-join-fork",
 			},
 		];
 		const result = await fixBpmnXml(fixtures.gtw20JoinForkFixable, issues);
@@ -370,7 +370,7 @@ describe("auto-fix engine", () => {
 
 	it("skips non-fixable rules with a skip entry", async () => {
 		const result = await fixBpmnXml(fixtures.validBaseline, [
-			{ id: "Task_1", rule: "act-01-verb-object-name" },
+			{ id: "Task_1", rule: "act-verb-object-name" },
 		]);
 		assert.equal(result.changed, false);
 		assert.equal(result.skipped.length, 1);
@@ -381,7 +381,7 @@ describe("auto-fix engine", () => {
 		const result = await fixBpmnXml("<bpmn:definitions>", [
 			{
 				id: "Task_1",
-				rule: "bpmnlint-plugin-bpmner/act-02-activity-label-capitalization",
+				rule: "bpmnlint-plugin-bpmner/act-activity-label-capitalization",
 			},
 		]);
 		assert.equal(result.changed, false);

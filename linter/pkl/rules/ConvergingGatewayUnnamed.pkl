@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Converging Gateway Unnamed"
 category = RuleCategory.Gateway
-sequence = 2
 
 intent = "Keep converging gateway labels empty so decision wording stays on the diverging side."
 forModellers =
@@ -28,4 +27,4 @@ staticConfig = new {}
 
 autoFixable = true
 fixStrategy = "attribute-mutation"
-
+fixMethod = "clearName"

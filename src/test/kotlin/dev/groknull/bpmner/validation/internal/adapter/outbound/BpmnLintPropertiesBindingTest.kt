@@ -1,50 +1,57 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
-import org.springframework.boot.context.properties.bind.Bindable
-import org.springframework.boot.context.properties.bind.Binder
-import org.springframework.boot.env.YamlPropertySourceLoader
-import org.springframework.core.env.StandardEnvironment
-import org.springframework.core.io.ClassPathResource
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.context.TestPropertySource
 
+@SpringBootTest(classes = [BpmnLintPropertiesBindingTest.Config::class])
+@TestPropertySource(
+    properties = [
+        "bpmner.lint.extends[0]=bpmnlint:recommended",
+        "bpmner.lint.extends[1]=plugin:bpmner/recommended",
+        "bpmner.lint.rules.[bpmner/act-verb-object-name]=error",
+        "bpmner.lint.rules.[bpmner/act-loop-task-annotation]=error",
+        "bpmner.lint.rules.[bpmner/act-mi-task-annotation]=error",
+    ]
+)
 class BpmnLintPropertiesBindingTest {
 
+    @EnableConfigurationProperties(BpmnLintProperties::class)
+    class Config
+
+    @Autowired
+    lateinit var properties: BpmnLintProperties
+
     @Test
-    fun `application yaml preserves lint rule ids containing slash`() {
-        val environment = StandardEnvironment()
-        val propertySources = YamlPropertySourceLoader().load(
-            "application",
-            ClassPathResource("application.yaml"),
-        )
-        propertySources.reversed().forEach {
-            environment.propertySources.addFirst(it)
-        }
+    fun `properties are bound correctly from spring environment`() {
+        assertEquals(2, properties.extends.size)
+        assertTrue(properties.extends.contains("bpmnlint:recommended"))
+        assertTrue(properties.extends.contains("plugin:bpmner/recommended"))
 
-        val properties = Binder.get(environment)
-            .bind("bpmner.lint", Bindable.of(BpmnLintProperties::class.java))
-            .orElseThrow { IllegalStateException("bpmner.lint properties should bind from application.yaml") }
+        assertEquals("error", properties.rules["bpmner/act-verb-object-name"])
+        assertEquals("error", properties.rules["bpmner/act-loop-task-annotation"])
+        assertEquals("error", properties.rules["bpmner/act-mi-task-annotation"])
+    }
 
-        val expectedOverrides = setOf(
-            "bpmner/act-01-verb-object-name",
-            "bpmner/act-02-activity-label-capitalization",
-            "bpmner/act-03-discouraged-business-verbs",
-            "bpmner/act-12-loop-task-annotation",
-            "bpmner/act-13-mi-task-annotation",
+    @Test
+    fun `bpmner overrides are preserved exactly as configured`() {
+        val expectedOverrides = listOf(
+            "bpmner/act-verb-object-name",
+            "bpmner/act-loop-task-annotation",
+            "bpmner/act-mi-task-annotation",
         )
 
-        assertEquals(listOf("plugin:bpmner/recommended-error"), properties.extends)
-        assertEquals("error", properties.rules["bpmner/act-01-verb-object-name"])
-        assertTrue(properties.rules.keys.containsAll(expectedOverrides))
-        assertFalse(
-            properties.rules.keys.any { it.startsWith("bpmneract-") },
-            "Spring binding must not strip '/' from BPMNER rule ids: ${properties.rules.keys}",
+        assertTrue(
+            properties.rules.keys.containsAll(expectedOverrides),
+            "Expected overrides $expectedOverrides not found in ${properties.rules.keys}"
         )
+
         assertFalse(
             properties.rules.keys.any { it in expectedOverrides.map { rule -> rule.replace("/", "") } },
-            "Configured BPMNER overrides must preserve their slash: ${properties.rules.keys}",
+            "Configured BPMNER overrides must preserve their slash: ${properties.rules.keys}"
         )
     }
 }

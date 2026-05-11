@@ -4,13 +4,10 @@ import "../schema/RuleCategory.pkl"
 
 name = "Verb Object Name"
 category = RuleCategory.Activity
-sequence = 1
 
 intent = "Make activity labels action-oriented and specific."
-forModellers =
-  "Name activities with a business verb followed by the object being acted on."
-forAI =
-  "Detect activity labels that do not start with a verb or that contain fewer than two words."
+forModellers = "Name activities with a business verb followed by the object being acted on."
+forAI = "Detect activity labels that do not start with a verb or that contain fewer than two words."
 
 targetElements =
   List(
@@ -29,4 +26,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
+fixStrategy = "LLM"

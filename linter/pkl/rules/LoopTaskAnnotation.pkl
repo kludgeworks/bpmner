@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Loop Task Annotation"
 category = RuleCategory.Activity
-sequence = 12
 
 intent = "Ensure loop activities document the condition that stops repetition."
 forModellers =
@@ -24,10 +23,23 @@ errorMessages = new {
 }
 
 staticConfig = new {
-  loopWords = List("loop", "loops", "looping", "repeat", "repeats", "repeating", "retry", "retries", "retrying", "rework", "reworks", "reworking")
+  loopWords =
+    List(
+      "loop",
+      "loops",
+      "looping",
+      "repeat",
+      "repeats",
+      "repeating",
+      "retry",
+      "retries",
+      "retrying",
+      "rework",
+      "reworks",
+      "reworking",
+    )
   conditionWords = List("until", "while", "unless", "till")
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

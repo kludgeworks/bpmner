@@ -4,13 +4,10 @@ import "../schema/RuleCategory.pkl"
 
 name = "Discouraged Business Verbs"
 category = RuleCategory.Activity
-sequence = 3
 
 intent = "Avoid generic activity verbs that hide the real business action."
-forModellers =
-  "Replace vague leading verbs with a more specific business verb."
-forAI =
-  "Detect activity labels whose first word is on the discouraged generic verb list."
+forModellers = "Replace vague leading verbs with a more specific business verb."
+forAI = "Detect activity labels whose first word is on the discouraged generic verb list."
 
 targetElements =
   List(
@@ -21,7 +18,8 @@ targetElements =
 
 severity = "warning"
 errorMessages = new {
-  ["default"] = "Activity label starts with a discouraged generic verb; prefer a more specific business verb"
+  ["default"] =
+    "Activity label starts with a discouraged generic verb; prefer a more specific business verb"
 }
 
 staticConfig = new {
@@ -29,4 +27,4 @@ staticConfig = new {
 }
 
 autoFixable = false
-fixStrategy = "none"
+fixStrategy = "LLM"

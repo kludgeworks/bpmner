@@ -6,38 +6,42 @@ facts {
   ["catalog exposes deterministic migrated IDs"] {
     Catalog.rules.map((rule) -> rule.id)
       == List(
-        "act-01-verb-object-name",
-        "act-02-activity-label-capitalization",
-        "act-03-discouraged-business-verbs",
-        "act-12-loop-task-annotation",
-        "act-13-mi-task-annotation",
-        "assoc-01-required-annotation-association",
-        "data-01-no-type-words-in-data-name",
-        "evt-01-event-state-name",
-        "evt-02-event-state-pattern",
-        "evt-10-start-no-incoming",
-        "evt-11-message-start-has-message-flow",
-        "evt-13-intermediate-event-not-action",
-        "evt-14-boundary-event-constraints",
-        "evt-15-error-end-boundary-pair",
-        "evt-16-link-event-pairing",
-        "flow-01-sequence-flow-within-pool",
-        "flow-02-diverging-flow-outcome-label",
-        "gen-01-bpmnsubset-allowed-elements",
-        "gen-02-no-duplicate-diagrams",
-        "gtw-01-diverging-gateway-question",
-        "gtw-02-converging-gateway-unnamed",
-        "gtw-03-gateway-no-work-label",
-        "gtw-11-event-based-direct-events",
-        "gtw-12-diverging-flow-names",
-        "gtw-20-no-gateway-join-fork",
-        "gtw-21-fake-join",
-        "gtw-22-superfluous-gateway",
-        "msg-01-message-flow-across-pools",
-        "msg-02-message-flow-name-pattern",
-        "name-01-business-meaningful-label",
-        "name-02-uncommon-abbreviations",
-        "name-03-no-element-type-words",
+        "act-activity-label-capitalization",
+        "act-business-process-element-usage",
+        "act-discouraged-business-verbs",
+        "act-loop-task-annotation",
+        "act-mi-task-annotation",
+        "act-receive-task-vs-intermediate-message-event",
+        "act-send-task-vs-throwing-message-event",
+        "act-task-vs-subprocess-vs-call-activity",
+        "act-verb-object-name",
+        "assoc-required-annotation-association",
+        "data-no-type-words-in-data-name",
+        "evt-boundary-event-constraints",
+        "evt-error-end-boundary-pair",
+        "evt-event-state-name",
+        "evt-event-state-pattern",
+        "evt-intermediate-event-not-action",
+        "evt-link-event-pairing",
+        "evt-message-start-has-message-flow",
+        "evt-start-no-incoming",
+        "flow-diverging-flow-outcome-label",
+        "flow-sequence-flow-within-pool",
+        "gen-bpmnsubset-allowed-elements",
+        "gen-no-duplicate-diagrams",
+        "gtw-converging-gateway-unnamed",
+        "gtw-diverging-flow-names",
+        "gtw-diverging-gateway-question",
+        "gtw-event-based-direct-events",
+        "gtw-fake-join",
+        "gtw-gateway-no-work-label",
+        "gtw-no-gateway-join-fork",
+        "gtw-superfluous-gateway",
+        "msg-message-flow-across-pools",
+        "msg-message-flow-name-pattern",
+        "name-business-meaningful-label",
+        "name-no-element-type-words",
+        "name-uncommon-abbreviations",
       )
   }
 
@@ -48,23 +52,23 @@ facts {
   ["migrated rules include required messages and static config"] {
     Catalog.rules.every((rule) -> rule.errorMessages.containsKey("default"))
     Catalog.rules
-      .find((rule) -> rule.id == "act-01-verb-object-name")
+      .find((rule) -> rule.id == "act-verb-object-name")
       .errorMessages
       .containsKey("missingVerb")
     Catalog.rules
-      .find((rule) -> rule.id == "act-01-verb-object-name")
+      .find((rule) -> rule.id == "act-verb-object-name")
       .errorMessages
       .containsKey("tooShort")
     Catalog.rules
-      .find((rule) -> rule.id == "act-03-discouraged-business-verbs")
+      .find((rule) -> rule.id == "act-discouraged-business-verbs")
       .staticConfig
       .discouragedLeadingVerbs
       .contains("manage")
-    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed").autoFixable
-    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed").fixStrategy
+    Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").autoFixable
+    Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").fixStrategy
       == "attribute-mutation"
     Catalog.rules
-      .find((rule) -> rule.id == "name-02-uncommon-abbreviations")
+      .find((rule) -> rule.id == "name-uncommon-abbreviations")
       .staticConfig
       .commonAcronyms
       .contains("BPMN")
@@ -72,35 +76,35 @@ facts {
 
   local fixableRuleIds =
     Set(
-      "act-02-activity-label-capitalization",
-      "data-01-no-type-words-in-data-name",
-      "evt-10-start-no-incoming",
-      "gtw-02-converging-gateway-unnamed",
-      "gtw-03-gateway-no-work-label",
-      "gtw-20-no-gateway-join-fork",
-      "gtw-21-fake-join",
-      "gtw-22-superfluous-gateway",
-      "name-02-uncommon-abbreviations",
-      "name-03-no-element-type-words",
+      "act-activity-label-capitalization",
+      "data-no-type-words-in-data-name",
+      "evt-start-no-incoming",
+      "gtw-converging-gateway-unnamed",
+      "gtw-gateway-no-work-label",
+      "gtw-no-gateway-join-fork",
+      "gtw-fake-join",
+      "gtw-superfluous-gateway",
+      "name-uncommon-abbreviations",
+      "name-no-element-type-words",
     )
 
   ["migrated rules have valid severity and auto-fix metadata"] {
     Catalog.rules.every((rule) ->
       List("error", "warning", "info", "off").contains(rule.severity)
-        && (fixableRuleIds.contains(rule.id) || ((!rule.autoFixable) && rule.fixStrategy == "none"))
+        && (fixableRuleIds.contains(rule.id) || ((!rule.autoFixable) && rule.fixStrategy == "LLM"))
     )
   }
 
-  ["fixable rules carry non-none fix strategies"] {
+  ["fixable rules carry non-LLM fix strategies"] {
     Catalog.rules
       .filter((rule) -> fixableRuleIds.contains(rule.id))
-      .every((rule) -> rule.autoFixable && rule.fixStrategy != "none")
+      .every((rule) -> rule.autoFixable && rule.fixStrategy != "LLM")
   }
 
   ["name-02 replacement map is present and non-empty"] {
-    Catalog.rules.find((rule) -> rule.id == "name-02-uncommon-abbreviations").replacementMap != null
+    Catalog.rules.find((rule) -> rule.id == "name-uncommon-abbreviations").replacementMap != null
     Catalog.rules
-      .find((rule) -> rule.id == "name-02-uncommon-abbreviations")
+      .find((rule) -> rule.id == "name-uncommon-abbreviations")
       .replacementMap
       .containsKey("REQ")
   }

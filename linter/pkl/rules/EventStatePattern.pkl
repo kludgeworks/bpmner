@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Event State Pattern"
 category = RuleCategory.Event
-sequence = 2
 
 intent = "Encourage event labels to follow noun plus state or result wording."
 forModellers =
@@ -26,9 +25,21 @@ errorMessages = new {
 }
 
 staticConfig = new {
-  stateWords = List("received", "approved", "rejected", "completed", "confirmed", "sent", "fulfilled", "failed", "cancelled", "resolved", "closed")
+  stateWords =
+    List(
+      "received",
+      "approved",
+      "rejected",
+      "completed",
+      "confirmed",
+      "sent",
+      "fulfilled",
+      "failed",
+      "cancelled",
+      "resolved",
+      "closed",
+    )
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

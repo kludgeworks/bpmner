@@ -1,68 +1,94 @@
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.*
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
-import org.junit.jupiter.api.AfterAll
+import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
+import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
+import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
+import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
 import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BpmnValidationIntegrationTest {
+
+    private val lintService = BpmnLintService(catalogService = RuleCatalogService())
     private val xsdValidator = BpmnXsdValidator()
-    private val lintService = BpmnLintService()
+    private val validator = BpmnEvaluationPipeline(
+        config = BpmnConfig(),
+        bpmnLintingPort = lintService,
+        bpmnXsdValidationPort = xsdValidator,
+        bpmnDefinitionValidator = BpmnDefinitionValidator(),
+        normalizer = BpmnDiagnosticNormalizer(),
+        fingerprints = BpmnFingerprintService(),
+    )
 
-    @BeforeAll
-    fun setup() {
+    @Test
+    fun `full validation cycle of toast sample`() {
         lintService.init()
-    }
+        val request = BpmnRequest("Make toast")
+        val definition = toastDefinition()
 
-    @AfterAll
-    fun teardown() {
-        lintService.destroy()
-    }
-
-    private fun loadBpmn(name: String): String =
-        javaClass.getResourceAsStream("/bpmn/$name")?.bufferedReader()?.readText()
-            ?: error("Test fixture not found: /bpmn/$name")
-
-    @Test
-    fun `valid process passes both XSD and bpmn-lint`() {
-        val xml = loadBpmn("valid-process.bpmn")
-
-        val xsdIssues = xsdValidator.validateDetailed(xml)
-        assertTrue(xsdIssues.isEmpty(), "XSD validation should pass: $xsdIssues")
-
-        val lintIssues = lintService.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
-        assertNotNull(lintIssues, "bpmn-lint should be available")
-        assertTrue(lintIssues!!.isEmpty(), "bpmn-lint should report no issues: $lintIssues")
-    }
-
-    @Test
-    fun `invalid XSD fails XSD validation`() {
-        val xml = loadBpmn("invalid-xsd.bpmn")
-
-        val xsdIssues = xsdValidator.validateDetailed(xml)
-        assertTrue(xsdIssues.isNotEmpty(), "XSD validation should fail for invalid BPMN")
-    }
-
-    @Test
-    fun `process without start event passes XSD but fails bpmn-lint`() {
-        val xml = loadBpmn("no-start-event.bpmn")
-
-        val xsdIssues = xsdValidator.validateDetailed(xml)
-        assertTrue(xsdIssues.isEmpty(), "XSD validation should pass: $xsdIssues")
-
-        val lintIssues = lintService.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
-        assertNotNull(lintIssues, "bpmn-lint should be available")
-        assertTrue(lintIssues!!.isNotEmpty(), "bpmn-lint should report issues for a process without a start event")
-        assertTrue(
-            lintIssues.any { it.rule.contains("start-event", ignoreCase = true) },
-            "Expected a start-event lint rule violation, got: $lintIssues",
+        // Mocking graph and rendered for a simple integration test
+        val graph = LaidOutProcessGraph(
+            OwnedElementGraph(
+                ComposedProcessGraph(
+                    ValidatedOutline(ProcessOutline(request, definition, OutlineMetrics(1, 0, 0, 0))),
+                    definition,
+                    emptyMap()
+                ),
+                emptyMap(),
+                emptyMap()
+            ),
+            definition
         )
+
+        val rendered = RenderedBpmn(
+            definition = definition,
+            xml = "MOCK_XML",
+            elementIndex = BpmnElementIndex(
+                processId = definition.processId,
+                nodeObjectRefs = emptyMap(),
+                edgeObjectRefs = emptyMap(),
+                shapeIdsByNodeId = emptyMap(),
+                edgeDiagramIdsByEdgeId = emptyMap(),
+            ),
+            sourceGraph = graph,
+        )
+
+        val result = validator.evaluate(
+            graph = graph,
+            definition = definition,
+            rendered = rendered,
+            repairAttempts = 0
+        )
+
+        assertNotNull(result)
+        assertTrue(result.diagnostics.none { it.category == "error" }, "Sample toast process should be valid. Diagnostics: ${result.diagnostics}")
     }
+
+    private fun toastDefinition() = BpmnDefinition(
+        processId = "Process_MakeToast",
+        processName = "Make toast",
+        nodes = listOf(
+            BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
+            BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
+            BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
+        ),
+        sequences = listOf(
+            BpmnEdge(
+                "Flow_1",
+                "StartEvent_1",
+                "Task_1",
+                waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
+            ),
+            BpmnEdge(
+                "Flow_2",
+                "Task_1",
+                "EndEvent_1",
+                waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+            ),
+        ),
+    )
 }

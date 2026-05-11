@@ -2,7 +2,7 @@ import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
 import { getRuleConfig, getRuleMessage, getStaticConfig } from '../rule-config';
 
-const RULE_ID = 'name-02-uncommon-abbreviations';
+const RULE_ID = 'name-uncommon-abbreviations';
 const TYPES_WITH_NAMES = getRuleConfig(RULE_ID).targetElements || [
   'bpmn:Task',
   'bpmn:SubProcess',

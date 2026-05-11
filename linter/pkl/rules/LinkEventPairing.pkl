@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Link Event Pairing"
 category = RuleCategory.Event
-sequence = 16
 
 intent = "Ensure link intermediate events are named and paired correctly."
 forModellers =
@@ -28,5 +27,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

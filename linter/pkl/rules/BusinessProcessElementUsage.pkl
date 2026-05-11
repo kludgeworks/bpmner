@@ -1,0 +1,23 @@
+amends "../schema/BpmnRule.pkl"
+import "../schema/RuleCategory.pkl"
+
+name = "Business Process Element Usage"
+category = RuleCategory.Activity
+
+intent = "Ensure Business Process elements are only used for high-level overviews."
+forModellers =
+  "Use Business Process elements only for top-level view of multiple processes; do not model detailed flows within them."
+forAI =
+  "Flag Business Process elements that contain detailed flow and suggest converting to a standard BPMN Process (Pool)."
+
+targetElements = List("bpmn:Process")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] =
+    "Business Process elements should only be used for high-level overviews, not detailed flows."
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

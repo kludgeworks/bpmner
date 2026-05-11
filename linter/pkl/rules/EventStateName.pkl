@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Event State Name"
 category = RuleCategory.Event
-sequence = 1
 
 intent = "Encourage event labels to describe states or happenings rather than process actions."
 forModellers =
@@ -28,5 +27,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"
