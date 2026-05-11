@@ -9,8 +9,7 @@ sequence = 3
 intent = "Avoid redundant BPMN element type words in labels."
 forModellers =
   "Do not include words such as activity, process, or event in element names because the BPMN shape already indicates the type."
-forAI =
-  "Detect named BPMN elements whose labels include redundant element type words."
+forAI = "Detect named BPMN elements whose labels include redundant element type words."
 
 targetElements =
   List(
@@ -38,6 +37,5 @@ staticConfig = new {
   discouragedWords = List("activity", "process", "event")
 }
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "string-manipulation"

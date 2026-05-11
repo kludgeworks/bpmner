@@ -7,15 +7,10 @@ category = RuleCategory.Event
 sequence = 10
 
 intent = "Enforce BPMN start-event structure."
-forModellers =
-  "Start events initiate the process and must not have incoming sequence flows."
-forAI =
-  "Validate that every start event has zero incoming sequence flows."
+forModellers = "Start events initiate the process and must not have incoming sequence flows."
+forAI = "Validate that every start event has zero incoming sequence flows."
 
-targetElements =
-  List(
-    "bpmn:StartEvent",
-  )
+targetElements = List("bpmn:StartEvent")
 
 severity = "error"
 errorMessages = new {
@@ -24,6 +19,5 @@ errorMessages = new {
 
 staticConfig = new {}
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "node-deletion"

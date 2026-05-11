@@ -22,12 +22,12 @@ targetElements =
 severity = "warning"
 errorMessages = new {
   ["firstWord"] = "Activity label should start with a capitalized first word"
-  ["sentenceCase"] = "Activity label should use sentence case after the first word (except acronyms/proper nouns)"
+  ["sentenceCase"] =
+    "Activity label should use sentence case after the first word (except acronyms/proper nouns)"
   ["default"] = "Activity label should use sentence case"
 }
 
 staticConfig = new {}
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "string-manipulation"

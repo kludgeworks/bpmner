@@ -47,25 +47,61 @@ facts {
 
   ["migrated rules include required messages and static config"] {
     Catalog.rules.every((rule) -> rule.errorMessages.containsKey("default"))
-    Catalog.rules.find((rule) -> rule.id == "act-01-verb-object-name")
-      .errorMessages.containsKey("missingVerb")
-    Catalog.rules.find((rule) -> rule.id == "act-01-verb-object-name")
-      .errorMessages.containsKey("tooShort")
-    Catalog.rules.find((rule) -> rule.id == "act-03-discouraged-business-verbs")
-      .staticConfig.discouragedLeadingVerbs.contains("manage")
-    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed")
-      .autoFixable
-    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed")
-      .fixStrategy == "attribute-mutation"
-    Catalog.rules.find((rule) -> rule.id == "name-02-uncommon-abbreviations")
-      .staticConfig.commonAcronyms.contains("BPMN")
+    Catalog.rules
+      .find((rule) -> rule.id == "act-01-verb-object-name")
+      .errorMessages
+      .containsKey("missingVerb")
+    Catalog.rules
+      .find((rule) -> rule.id == "act-01-verb-object-name")
+      .errorMessages
+      .containsKey("tooShort")
+    Catalog.rules
+      .find((rule) -> rule.id == "act-03-discouraged-business-verbs")
+      .staticConfig
+      .discouragedLeadingVerbs
+      .contains("manage")
+    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed").autoFixable
+    Catalog.rules.find((rule) -> rule.id == "gtw-02-converging-gateway-unnamed").fixStrategy
+      == "attribute-mutation"
+    Catalog.rules
+      .find((rule) -> rule.id == "name-02-uncommon-abbreviations")
+      .staticConfig
+      .commonAcronyms
+      .contains("BPMN")
   }
+
+  local fixableRuleIds =
+    Set(
+      "act-02-activity-label-capitalization",
+      "data-01-no-type-words-in-data-name",
+      "evt-10-start-no-incoming",
+      "gtw-02-converging-gateway-unnamed",
+      "gtw-03-gateway-no-work-label",
+      "gtw-20-no-gateway-join-fork",
+      "gtw-21-fake-join",
+      "gtw-22-superfluous-gateway",
+      "name-02-uncommon-abbreviations",
+      "name-03-no-element-type-words",
+    )
 
   ["migrated rules have valid severity and auto-fix metadata"] {
     Catalog.rules.every((rule) ->
       List("error", "warning", "info", "off").contains(rule.severity)
-        && ((rule.id == "gtw-02-converging-gateway-unnamed")
-          || ((!rule.autoFixable) && rule.fixStrategy == "none"))
+        && (fixableRuleIds.contains(rule.id) || ((!rule.autoFixable) && rule.fixStrategy == "none"))
     )
+  }
+
+  ["fixable rules carry non-none fix strategies"] {
+    Catalog.rules
+      .filter((rule) -> fixableRuleIds.contains(rule.id))
+      .every((rule) -> rule.autoFixable && rule.fixStrategy != "none")
+  }
+
+  ["name-02 replacement map is present and non-empty"] {
+    Catalog.rules.find((rule) -> rule.id == "name-02-uncommon-abbreviations").replacementMap != null
+    Catalog.rules
+      .find((rule) -> rule.id == "name-02-uncommon-abbreviations")
+      .replacementMap
+      .containsKey("REQ")
   }
 }
