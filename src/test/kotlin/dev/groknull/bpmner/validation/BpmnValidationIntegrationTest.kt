@@ -1,4 +1,4 @@
-package dev.groknull.bpmner
+package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
