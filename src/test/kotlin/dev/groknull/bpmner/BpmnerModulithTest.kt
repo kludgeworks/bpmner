@@ -1,12 +1,10 @@
 package dev.groknull.bpmner
 
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules
 
 class BpmnerModulithTest {
-
     private val modules = ApplicationModules.of(BpmnerApplication::class.java)
 
     @Test
@@ -20,8 +18,6 @@ class BpmnerModulithTest {
         assertTrue(moduleNames.contains("observability"), "Expected 'observability' module, found: $moduleNames")
     }
 
-    @Disabled("detectViolations() triggers a jMolecules binary incompatibility (AbstractMethodError). " +
-        "Re-enable when jmolecules-archunit version is aligned with archunit in the Bazel WORKSPACE.")
     @Test
     fun `verifies no illegal cross-module dependencies`() {
         val violations = modules.detectViolations()

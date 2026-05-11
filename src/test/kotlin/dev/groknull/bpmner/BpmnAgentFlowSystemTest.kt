@@ -35,7 +35,12 @@ import kotlin.io.path.readText
         "embabel.agent.platform.models.openai.api-key=test-key",
     ],
 )
-class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
+/**
+ * Full end-to-end system test: validates the complete Embabel agent pipeline from BpmnRequest
+ * through generation, repair, and layout to a written BPMN file. Per-module behavior is covered
+ * by RepairModuleTest, GenerationModuleTest, and ValidationModuleTest.
+ */
+class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
 

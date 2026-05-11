@@ -42,6 +42,11 @@ JMOLECULES_VERSION = "2.0.1"
 
 JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
 
+# jmolecules-archunit must match the version bundled by spring-modulith-core (1.4.1 bundles 0.26.0).
+# Using 0.33.0 causes AbstractMethodError because the jMolecules ArchUnit API changed between
+# these versions, and Spring Modulith calls into it at compile-time-expected signatures.
+JMOLECULES_ARCHUNIT_VERSION = "0.26.0"
+
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
@@ -73,7 +78,7 @@ maven.install(
         "org.jmolecules:jmolecules-cqrs-architecture:" + JMOLECULES_VERSION,
         "org.jmolecules.integrations:jmolecules-starter-ddd:" + JMOLECULES_INTEGRATIONS_VERSION,
         "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_INTEGRATIONS_VERSION,
-        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_INTEGRATIONS_VERSION,
+        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_ARCHUNIT_VERSION,
         "com.tngtech.archunit:archunit:1.4.1",
     ],
     repositories = [
