@@ -3,6 +3,7 @@ load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_library", "pkl_test")
 package(default_visibility = ["//visibility:public"])
 
 PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
+
 PKL_RULE_SRCS = glob(["rules/*.pkl"])
 
 pkl_library(
@@ -24,6 +25,16 @@ pkl_eval(
     outs = ["uncommon_abbreviations.json"],
     entrypoints = ["test-fixtures/UncommonAbbreviations.pkl"],
     format = "json",
+)
+
+pkl_eval(
+    name = "docs",
+    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + [
+        "Catalog.pkl",
+        "MarkdownGenerator.pkl",
+    ],
+    entrypoints = ["MarkdownGenerator.pkl"],
+    multiple_outputs = True,
 )
 
 pkl_test(

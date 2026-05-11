@@ -1,6 +1,6 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
-import { getRuleMessage, getStaticConfig } from '../src/rule-config';
+import { getRuleMessage, getStaticConfig } from '../rule-config';
 
 const RULE_ID = 'act-03-discouraged-business-verbs';
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];

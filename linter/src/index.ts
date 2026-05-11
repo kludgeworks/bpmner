@@ -1,4 +1,4 @@
-import { allPluginRules, pluginRulePaths, recommendedPluginRules } from './src/rule-manifest';
+import { allPluginRules, pluginRulePaths, recommendedPluginRules } from './rule-manifest';
 
 const plugin = {
   configs: {

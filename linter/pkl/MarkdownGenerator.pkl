@@ -1,0 +1,56 @@
+import "Catalog.pkl"
+
+/// Generator for BPMN Cookbook Rule Documentation in Markdown format.
+output {
+  files {
+    for (rule in Catalog.rules) {
+      ["\(rule.id).md"] {
+        text =
+          """
+          # \(rule.id)
+
+          - **Name**: \(rule.name)
+          - **Category**: \(rule.category.name)
+          - **Severity**: \(rule.severity)
+          - **Target Elements**: `\(rule.targetElements.join("`, `"))`
+
+          ## Intent
+          \(rule.intent)
+
+          ## Modeller Guidance
+          \(rule.forModellers)
+
+          ## AI Guidance
+          \(rule.forAI)
+
+          ## Diagnostic Messages
+          \(rule.errorMessages.toMap().entries.map((e) -> "- `\(e.first)`: \(e.second)").join("\n"))
+
+          ## Auto-Fix
+          - **Auto-Fixable**: \(if (rule.autoFixable) "Yes" else "No")
+          - **Strategy**: `\(rule.fixStrategy)`
+          \(if (rule.replacementMap != null)
+            """
+
+            ### Replacements
+            \(rule.replacementMap.toMap().entries.map((e) -> "- `\(e.first)` → `\(e.second)`").join("\n"))
+            """
+          else
+            "")
+          """.trim() + "\n"
+      }
+    }
+
+    ["README.md"] {
+      text =
+        """
+        # BPMNER Rule Documentation
+
+        This folder documents each custom rule implemented by `bpmnlint-plugin-bpmner`.
+
+        ## Rules
+        \(Catalog.rules.sortBy((r) -> r.id).map((r) -> "- [\(r.id)](\(r.id).md): \(r.name)").join("\n"))
+        """.trim() + "\n"
+    }
+  }
+}

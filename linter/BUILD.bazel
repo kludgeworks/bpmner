@@ -8,9 +8,8 @@ package(default_visibility = ["//visibility:public"])
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
 
-LIB_TS_SRCS = ["index.ts"] + glob([
+LIB_TS_SRCS = glob([
     "src/**/*.ts",
-    "rules/**/*.ts",
 ])
 
 TEST_TS_SRCS = glob([
@@ -36,10 +35,10 @@ js_library(
     name = "vale_docs",
     srcs = [
         "README.md",
-        "bpmn_toolbox_expanded.md",
-    ] + glob([
-        "docs/rules/*.md",
-    ]),
+        "docs/template.md",
+        "docs/toolbox.md",
+        "//linter/pkl:docs",
+    ],
 )
 
 BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
@@ -51,9 +50,9 @@ npm_link_all_packages(name = "node_modules")
 
 genrule(
     name = "linter_rules_json_for_ts",
-    srcs = ["//linter/pkl-rules:linter-rules.json"],
+    srcs = ["//linter/pkl:linter-rules.json"],
     outs = ["src/generated/linter-rules.json"],
-    cmd = "cp $(location //linter/pkl-rules:linter-rules.json) $@",
+    cmd = "cp $(location //linter/pkl:linter-rules.json) $@",
 )
 
 LINTER_TS_DEPS = [
@@ -96,9 +95,9 @@ js_binary(
         "scripts/generate-static-rules.mjs",
         "src/rule-manifest.ts",
         "//:node_modules/bpmnlint",
+        "//linter/pkl:docs",
     ] + glob([
-        "rules/**/*.ts",
-        "docs/rules/*.md",
+        "src/rules/**/*.ts",
     ]),
     entry_point = "scripts/generate-static-rules.mjs",
 )
@@ -109,12 +108,15 @@ js_run_binary(
         "scripts/generate-static-rules.mjs",
         "src/rule-manifest.ts",
         "//:node_modules/bpmnlint",
+        "//linter/pkl:docs",
     ] + glob([
-        "rules/**/*.ts",
-        "docs/rules/*.md",
+        "src/rules/**/*.ts",
     ]),
     outs = [STATIC_RULES_OUTPUT],
-    args = ["$(location %s)" % STATIC_RULES_OUTPUT],
+    args = [
+        "$(location %s)" % STATIC_RULES_OUTPUT,
+        "$(location //linter/pkl:docs)",
+    ],
     mnemonic = "GenerateStaticRules",
     progress_message = "Generating %{label}",
     tool = ":generate_static_rules_bin",
