@@ -6,7 +6,8 @@ name = "Fake Join"
 category = RuleCategory.Gateway
 sequence = 21
 
-intent = "Ensure converging flows pass through an explicit gateway rather than directly into a task."
+intent =
+  "Ensure converging flows pass through an explicit gateway rather than directly into a task."
 forModellers =
   "When two or more flows merge before work continues, model the merge with a converging gateway before the task."
 forAI =
@@ -31,6 +32,5 @@ errorMessages = new {
 
 staticConfig = new {}
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "ast-rewiring"

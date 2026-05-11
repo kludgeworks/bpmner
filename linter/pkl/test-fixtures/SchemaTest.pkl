@@ -29,7 +29,9 @@ facts {
     Rule.errorMessages["default"]
       == "Avoid uncommon abbreviations in labels or explain them via annotation/glossary"
     Rule.staticConfig.commonAcronyms.contains("BPMN")
-    !Rule.autoFixable
-    Rule.fixStrategy == "none"
+    Rule.autoFixable
+    Rule.fixStrategy == "string-manipulation"
+    Rule.replacementMap != null
+    Rule.replacementMap.containsKey("REQ")
   }
 }

@@ -21,11 +21,11 @@ targetElements =
 
 severity = "error"
 errorMessages = new {
-  ["default"] = "Gateway acts as both join and fork; split into separate converging and diverging gateways"
+  ["default"] =
+    "Gateway acts as both join and fork; split into separate converging and diverging gateways"
 }
 
 staticConfig = new {}
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "ast-rewiring"

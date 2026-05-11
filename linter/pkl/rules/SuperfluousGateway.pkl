@@ -26,6 +26,5 @@ errorMessages = new {
 
 staticConfig = new {}
 
-autoFixable = false
-fixStrategy = "none"
-
+autoFixable = true
+fixStrategy = "ast-rewiring"

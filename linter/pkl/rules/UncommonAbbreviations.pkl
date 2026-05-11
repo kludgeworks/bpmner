@@ -38,5 +38,15 @@ staticConfig = new {
   commonAcronyms = List("BPMN", "KLM", "SLA", "API", "IT")
 }
 
-autoFixable = false
-fixStrategy = "none"
+autoFixable = true
+fixStrategy = "string-manipulation"
+
+replacementMap = new Mapping<String, String> {
+  ["REQ"] = "request"
+  ["RESP"] = "response"
+  ["AUTH"] = "authentication"
+  ["CFG"] = "configuration"
+  ["MSG"] = "message"
+  ["DOC"] = "document"
+  ["ITBL"] = "itinerary block"
+}

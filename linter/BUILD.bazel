@@ -192,3 +192,31 @@ js_test(
     entry_point = "dist/test/smoke.test.js",
     node_options = ["--test-reporter=spec"],
 )
+
+esbuild(
+    name = "auto_fix_test_bundle",
+    srcs = TEST_BUNDLE_SRCS,
+    config = {
+        "loader": {
+            ".bpmn": "text",
+        },
+        "sourcemap": False,
+    },
+    entry_point = "test/auto-fix.test.ts",
+    external = [
+        "node:test",
+        "node:assert",
+    ],
+    format = "cjs",
+    output = "dist/test/auto-fix.test.js",
+    platform = "node",
+    target = "es2022",
+    deps = LINTER_TS_DEPS,
+)
+
+js_test(
+    name = "auto_fix_test",
+    data = [":auto_fix_test_bundle"],
+    entry_point = "dist/test/auto-fix.test.js",
+    node_options = ["--test-reporter=spec"],
+)
