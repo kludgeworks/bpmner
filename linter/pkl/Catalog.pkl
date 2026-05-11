@@ -1,0 +1,3 @@
+local ruleModules = import*("rules/*.pkl")
+
+rules = ruleModules.toMap().values.toList().sortBy((r) -> r.id)

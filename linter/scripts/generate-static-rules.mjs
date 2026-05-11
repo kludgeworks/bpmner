@@ -6,11 +6,14 @@ import { fileURLToPath } from 'node:url';
 const require = createRequire(import.meta.url);
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const rulesDir = path.join(repoRoot, 'rules');
+const rulesDir = path.join(repoRoot, 'src', 'rules');
 const manifestPath = path.join(repoRoot, 'src', 'rule-manifest.ts');
-const docsDir = path.join(repoRoot, 'docs', 'rules');
+const defaultDocsDir = path.join(repoRoot, 'docs', 'rules');
 const defaultOutputPath = path.join(repoRoot, 'src', 'generated', 'static-rules.ts');
+
 const cliOutputPath = process.argv[2];
+const cliDocsDir = process.argv[3];
+
 const bazelPackageOutputRoot =
   process.env.BAZEL_BINDIR && process.env.BAZEL_PACKAGE
     ? path.join(process.env.BAZEL_BINDIR, process.env.BAZEL_PACKAGE)
@@ -20,6 +23,7 @@ const execRoot =
     ? repoRoot.slice(0, -bazelPackageOutputRoot.length - 1)
     : path.dirname(repoRoot);
 const isBazelOutputPath = (value) => value.startsWith('bazel-out/') || value.startsWith('bazel-out\\');
+
 const outputPath = !cliOutputPath
   ? defaultOutputPath
   : path.isAbsolute(cliOutputPath)
@@ -27,6 +31,14 @@ const outputPath = !cliOutputPath
     : isBazelOutputPath(cliOutputPath)
       ? path.resolve(execRoot, cliOutputPath)
       : path.resolve(process.cwd(), cliOutputPath);
+
+const docsDir = !cliDocsDir
+  ? defaultDocsDir
+  : path.isAbsolute(cliDocsDir)
+    ? cliDocsDir
+    : isBazelOutputPath(cliDocsDir)
+      ? path.resolve(execRoot, cliDocsDir)
+      : path.resolve(process.cwd(), cliDocsDir);
 
 const recommendedConfig = require('bpmnlint/config/recommended');
 
@@ -77,7 +89,7 @@ const builtinImports = builtinRules
   .join('\n');
 
 const customImports = manifestEntries
-  .map(({ id }) => `import ${toIdentifier(id)} from '../../rules/${id}';`)
+  .map(({ id }) => `import ${toIdentifier(id)} from '../rules/${id}';`)
   .join('\n');
 
 const builtinRuleEntries = builtinRules

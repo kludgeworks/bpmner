@@ -1,6 +1,6 @@
 import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
-import { getRuleMessage } from '../src/rule-config';
+import { getRuleMessage } from '../rule-config';
 import winkNLP from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
 

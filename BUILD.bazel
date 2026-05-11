@@ -21,10 +21,14 @@ exports_files(["toast-process.txt"])
 
 js_test(
     name = "vale_docs_test",
-    args = ["docs"],
+    args = [
+        "docs",
+        "$(location //linter/pkl:docs)",
+    ],
     data = VALE_SRCS + [
         "//:node_modules/@vvago/vale",
         "//linter:vale_docs",
+        "//linter/pkl:docs",
     ],
     entry_point = "tools/vale/vale-test.mjs",
 )
@@ -67,7 +71,7 @@ test_suite(
         ":vale_fixtures_test",
         "//linter:lint_test",
         "//linter:smoke_test",
-        "//linter/pkl-rules:schema_test",
+        "//linter/pkl:schema_test",
         "//src:ktlint_check",
     ],
 )
