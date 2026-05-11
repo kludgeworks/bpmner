@@ -84,46 +84,61 @@ data class LaidOutProcessGraph(
 
     fun ownerForObjectRef(objectRef: String?): String? = ownedGraph.ownerForObjectRef(objectRef)
 
-    fun validateOwnership(): List<String> = buildList {
-        definition.nodes.forEach { node ->
-            if (ownerForElementId(node.id) == null) add("Node '${node.id}' has no owner assignment")
+    fun validateOwnership(): List<String> =
+        buildList {
+            if (ownedGraph.objectOwnersByObjectRef.isEmpty()) return@buildList
+            definition.nodes.forEach { node ->
+                if (ownerForElementId(node.id) == null) add("Node '${node.id}' has no owner assignment")
+            }
+            definition.sequences.forEach { edge ->
+                if (ownerForElementId(edge.id) == null) add("Edge '${edge.id}' has no owner assignment")
+            }
         }
-        definition.sequences.forEach { edge ->
-            if (ownerForElementId(edge.id) == null) add("Edge '${edge.id}' has no owner assignment")
-        }
-    }
 }
 
 fun LaidOutProcessGraph.withUpdatedDefinition(newDefinition: BpmnDefinition): LaidOutProcessGraph {
+    if (ownedGraph.objectOwnersByObjectRef.isEmpty()) {
+        val emptyOwnedGraph =
+            OwnedElementGraph(
+                composedGraph = ownedGraph.composedGraph.copy(definition = newDefinition),
+                elementOwnersByElementId = emptyMap(),
+                objectOwnersByObjectRef = emptyMap(),
+            )
+        return LaidOutProcessGraph(ownedGraph = emptyOwnedGraph, definition = newDefinition)
+    }
     val defaultOwner = ownedGraph.objectOwnersByObjectRef["process"] ?: "phase:main"
     val baseObjectOwners = ownedGraph.objectOwnersByObjectRef
-    val updatedObjectOwners: Map<String, String> = baseObjectOwners +
-        newDefinition.nodes
-            .filter { "nodes[id=${it.id}]" !in baseObjectOwners }
-            .associate { "nodes[id=${it.id}]" to defaultOwner } +
-        newDefinition.sequences
-            .filter { "sequences[id=${it.id}]" !in baseObjectOwners }
-            .associate { "sequences[id=${it.id}]" to defaultOwner }
-    val newElementOwners: Map<String, String> = buildMap {
-        put(newDefinition.processId, updatedObjectOwners["process"] ?: defaultOwner)
-        newDefinition.nodes.forEach { node ->
-            val owner = updatedObjectOwners["nodes[id=${node.id}]"] ?: defaultOwner
-            put(node.id, owner)
-            put("${node.id}_di", owner)
+    val updatedObjectOwners: Map<String, String> =
+        baseObjectOwners +
+            newDefinition.nodes
+                .filter { "nodes[id=${it.id}]" !in baseObjectOwners }
+                .associate { "nodes[id=${it.id}]" to defaultOwner } +
+            newDefinition.sequences
+                .filter { "sequences[id=${it.id}]" !in baseObjectOwners }
+                .associate { "sequences[id=${it.id}]" to defaultOwner }
+    val newElementOwners: Map<String, String> =
+        buildMap {
+            put(newDefinition.processId, updatedObjectOwners["process"] ?: defaultOwner)
+            newDefinition.nodes.forEach { node ->
+                val owner = updatedObjectOwners["nodes[id=${node.id}]"] ?: defaultOwner
+                put(node.id, owner)
+                put("${node.id}_di", owner)
+            }
+            newDefinition.sequences.forEach { edge ->
+                val owner = updatedObjectOwners["sequences[id=${edge.id}]"] ?: defaultOwner
+                put(edge.id, owner)
+                put("${edge.id}_di", owner)
+            }
         }
-        newDefinition.sequences.forEach { edge ->
-            val owner = updatedObjectOwners["sequences[id=${edge.id}]"] ?: defaultOwner
-            put(edge.id, owner)
-            put("${edge.id}_di", owner)
-        }
-    }
-    val updatedOwnedGraph = OwnedElementGraph(
-        composedGraph = ownedGraph.composedGraph.copy(
-            definition = newDefinition,
+    val updatedOwnedGraph =
+        OwnedElementGraph(
+            composedGraph =
+                ownedGraph.composedGraph.copy(
+                    definition = newDefinition,
+                    objectOwnersByObjectRef = updatedObjectOwners,
+                ),
+            elementOwnersByElementId = newElementOwners,
             objectOwnersByObjectRef = updatedObjectOwners,
-        ),
-        elementOwnersByElementId = newElementOwners,
-        objectOwnersByObjectRef = updatedObjectOwners,
-    )
+        )
     return LaidOutProcessGraph(ownedGraph = updatedOwnedGraph, definition = newDefinition)
 }

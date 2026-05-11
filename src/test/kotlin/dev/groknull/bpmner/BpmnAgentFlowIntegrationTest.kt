@@ -13,16 +13,16 @@ import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.validation.internal.BpmnLintService
-import dev.groknull.bpmner.validation.internal.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito.doReturn
-import org.mockito.Mockito.verify
 import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -33,10 +33,9 @@ import kotlin.io.path.readText
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
         "embabel.agent.platform.models.openai.api-key=test-key",
-    ]
+    ],
 )
 class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
-
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
 
@@ -44,15 +43,20 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnLintService: BpmnLintService
 
     @Test
-    fun `planner resolves request through definition render validation and write`(@TempDir tempDir: Path) {
+    fun `planner resolves request through definition render validation and write`(
+        @TempDir tempDir: Path,
+    ) {
         val definition = validDefinition()
         val outputFile = tempDir.resolve("process.bpmn")
         `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString())).thenReturn(emptyList())
-        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService)
+        doReturn(emptyList<LintIssue>())
+            .`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
-        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService)
+        doReturn(emptyList<LintIssue>())
+            .`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT))
-        doReturn(null).`when`(bpmnLintService)
+        doReturn(null)
+            .`when`(bpmnLintService)
             .autoFix(
                 org.mockito.ArgumentMatchers.anyString(),
                 anyList(),
@@ -61,12 +65,13 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
 
-        val result = AgentPlatformTypedOps(agentPlatform)
-            .transform(
-                BpmnRequest(processDescription = "Make toast", outputFile = outputFile.toString()),
-                BpmnResult::class.java,
-                ProcessOptions(),
-            )
+        val result =
+            AgentPlatformTypedOps(agentPlatform)
+                .transform(
+                    BpmnRequest(processDescription = "Make toast", outputFile = outputFile.toString()),
+                    BpmnResult::class.java,
+                    ProcessOptions(),
+                )
 
         assertEquals(outputFile.toString(), result.outputFile)
         assertTrue(result.xml.contains("<process"))
@@ -87,30 +92,32 @@ class BpmnAgentFlowIntegrationTest : EmbabelMockitoIntegrationTest() {
         )
     }
 
-    private fun eqPhase(phase: BpmnLintPhase): BpmnLintPhase =
-        org.mockito.ArgumentMatchers.eq(phase) ?: phase
+    private fun eqPhase(phase: BpmnLintPhase): BpmnLintPhase = org.mockito.ArgumentMatchers.eq(phase) ?: phase
 
-    private fun validDefinition() = BpmnDefinition(
-        processId = "Process_MakeToast",
-        processName = "Make toast",
-        nodes = listOf(
-            BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-            BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-            BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge(
-                "Flow_1",
-                "StartEvent_1",
-                "Task_1",
-                waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
-            ),
-            BpmnEdge(
-                "Flow_2",
-                "Task_1",
-                "EndEvent_1",
-                waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
-            ),
-        ),
-    )
+    private fun validDefinition() =
+        BpmnDefinition(
+            processId = "Process_MakeToast",
+            processName = "Make toast",
+            nodes =
+                listOf(
+                    BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
+                    BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge(
+                        "Flow_1",
+                        "StartEvent_1",
+                        "Task_1",
+                        waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
+                    ),
+                    BpmnEdge(
+                        "Flow_2",
+                        "Task_1",
+                        "EndEvent_1",
+                        waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+                    ),
+                ),
+        )
 }

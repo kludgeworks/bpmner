@@ -1,8 +1,8 @@
 package dev.groknull.bpmner
 
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.validation.internal.BpmnLintService
-import dev.groknull.bpmner.validation.internal.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -13,7 +13,6 @@ import org.junit.jupiter.api.TestInstance
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BpmnValidationIntegrationTest {
-
     private val xsdValidator = BpmnXsdValidator()
     private val lintService = BpmnLintService()
 
@@ -63,7 +62,7 @@ class BpmnValidationIntegrationTest {
         assertTrue(lintIssues!!.isNotEmpty(), "bpmn-lint should report issues for a process without a start event")
         assertTrue(
             lintIssues.any { it.rule.contains("start-event", ignoreCase = true) },
-            "Expected a start-event lint rule violation, got: $lintIssues"
+            "Expected a start-event lint rule violation, got: $lintIssues",
         )
     }
 }

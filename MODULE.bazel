@@ -38,7 +38,9 @@ GRAALVM_VERSION = "25.0.2"
 
 SPRING_MODULITH_VERSION = "1.4.1"
 
-JMOLECULES_VERSION = "1.6.0"
+JMOLECULES_VERSION = "2.0.1"
+
+JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
 
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
@@ -65,9 +67,13 @@ maven.install(
         "org.graalvm.polyglot:js:" + GRAALVM_VERSION,
         "org.springframework.modulith:spring-modulith-starter-core:" + SPRING_MODULITH_VERSION,
         "org.springframework.modulith:spring-modulith-starter-test:" + SPRING_MODULITH_VERSION,
-        "org.jmolecules.integrations:jmolecules-starter-ddd:0.28.0",
-        "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_VERSION,
-        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_VERSION,
+        "org.jmolecules:jmolecules-hexagonal-architecture:" + JMOLECULES_VERSION,
+        "org.jmolecules:jmolecules-onion-architecture:" + JMOLECULES_VERSION,
+        "org.jmolecules:jmolecules-events:" + JMOLECULES_VERSION,
+        "org.jmolecules:jmolecules-cqrs-architecture:" + JMOLECULES_VERSION,
+        "org.jmolecules.integrations:jmolecules-starter-ddd:" + JMOLECULES_INTEGRATIONS_VERSION,
+        "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_INTEGRATIONS_VERSION,
+        "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_INTEGRATIONS_VERSION,
         "com.tngtech.archunit:archunit:1.4.1",
     ],
     repositories = [
