@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Fake Join"
 category = RuleCategory.Gateway
-sequence = 21
 
 intent =
   "Ensure converging flows pass through an explicit gateway rather than directly into a task."
@@ -34,3 +33,4 @@ staticConfig = new {}
 
 autoFixable = true
 fixStrategy = "ast-rewiring"
+fixMethod = "insertConvergingGateway"

@@ -35,6 +35,8 @@ import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
+import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
+import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.annotation.AnnotationAwareOrderComparator
@@ -49,7 +51,9 @@ class BpmnRefinementEngineTest {
         val config = BpmnConfig()
         val lint = RecordingLintService(listOf(emptyList()))
         val fingerprints = BpmnFingerprintService()
-        val prompts = BpmnRepairPromptFactory(config, lint, fingerprints)
+        val catalogService = RuleCatalogService()
+        val llmValidator = LlmValidator(catalogService)
+        val prompts = BpmnRepairPromptFactory(config, lint, fingerprints, llmValidator)
         val patchApplier = BpmnPatchApplier()
         val strategies = mutableListOf<BpmnRepairStrategy>(
             FullLlmRewriteRepairStrategy(prompts),
@@ -138,7 +142,9 @@ class BpmnRefinementEngineTest {
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer()
-        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints)
+        val catalogService = RuleCatalogService()
+        val llmValidator = LlmValidator(catalogService)
+        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
         val patchApplier = BpmnPatchApplier()
         return BpmnRefinementEngine(
             config = config,
@@ -169,7 +175,7 @@ class BpmnRefinementEngineTest {
 
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
-    ) : BpmnLintService() {
+    ) : BpmnLintService(catalogService = RuleCatalogService()) {
         val xmls = mutableListOf<String>()
         private var index = 0
 

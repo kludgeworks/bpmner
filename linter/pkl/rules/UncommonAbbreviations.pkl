@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Uncommon Abbreviations"
 category = RuleCategory.Name
-sequence = 2
 
 intent = "Reduce ambiguity from obscure abbreviations in BPMN labels."
 forModellers =
@@ -40,6 +39,7 @@ staticConfig = new {
 
 autoFixable = true
 fixStrategy = "string-manipulation"
+fixMethod = "expandAbbreviations"
 
 replacementMap = new Mapping<String, String> {
   ["REQ"] = "request"

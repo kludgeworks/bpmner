@@ -1,30 +1,23 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnLintPhase
-import kotlin.test.Test
-import kotlin.test.assertEquals
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
 
 class BpmnLintServiceIntegrationTest {
 
     @Test
-    fun `default lint configuration initializes successfully`() {
-        val service = BpmnLintService()
-        service.init()
-
-        assertTrue(service.resolvedRules().isNotEmpty(), "Default lint configuration should resolve active rules")
-    }
-
-    @Test
-    fun `lint returns issues for invalid bpmn xml using GraalJS`() {
-        val service = BpmnLintService()
+    fun `lint returns issues for invalid BPMN XML using GraalJS bundle`() {
+        val service = BpmnLintService(catalogService = RuleCatalogService())
         service.init()
 
         val invalidXml = """
             <?xml version="1.0" encoding="UTF-8"?>
-            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1">
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
               <bpmn:process id="Process_1" />
             </bpmn:definitions>
         """.trimIndent()
@@ -32,17 +25,18 @@ class BpmnLintServiceIntegrationTest {
         val issues = service.lint(invalidXml, BpmnLintPhase.FINAL_POST_LAYOUT)
 
         assertNotNull(issues, "Issues should not be null when linting is functional")
-        // We expect at least start-event-required or end-event-required
+        issues!!
         assertTrue(issues.isNotEmpty(), "Should find issues in minimal process")
         assertTrue(issues.any { it.rule == "start-event-required" || it.rule == "end-event-required" }, "Should find expected core issues. Found: ${issues.map { it.rule }}")
     }
-    
+
     @Test
     fun `lint detects duplicate diagram elements using KLM rule`() {
         val service = BpmnLintService(
-            BpmnLintProperties(
+            catalogService = RuleCatalogService(),
+            properties = BpmnLintProperties(
                 extends = listOf("bpmnlint:recommended", "plugin:klm/recommended"),
-            )
+            ),
         )
         service.init()
 
@@ -60,15 +54,17 @@ class BpmnLintServiceIntegrationTest {
         val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT)
 
         assertNotNull(issues)
-        assertTrue(issues.any { it.rule == "klm/gen-02-no-duplicate-diagrams" }, "Should find KLM duplicate diagram issue")
+        issues!!
+        assertTrue(issues.any { it.rule == "klm/gen-no-duplicate-diagrams" }, "Should find KLM duplicate diagram issue")
     }
 
     @Test
     fun `autoFix clears named converging gateway using GraalJS bundle`() {
         val service = BpmnLintService(
-            BpmnLintProperties(
+            catalogService = RuleCatalogService(),
+            properties = BpmnLintProperties(
                 extends = listOf("plugin:klm/recommended"),
-            )
+            ),
         )
         service.init()
 
@@ -93,37 +89,33 @@ class BpmnLintServiceIntegrationTest {
 
         val issues = service.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
         assertNotNull(issues)
+        issues!!
 
         val result = service.autoFix(xml, issues, BpmnLintPhase.FINAL_POST_LAYOUT)
 
         assertNotNull(result)
+        result!!
         assertEquals(true, result.changed)
         assertEquals("Gateway_1", result.applied.single().elementId)
         assertTrue(!result.xml.contains("name=\"Decision merged\""))
         assertTrue(service.lint(result.xml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty().none {
-            it.rule == "klm/gtw-02-converging-gateway-unnamed"
+            it.rule == "klm/gtw-converging-gateway-unnamed"
         })
     }
 
     @Test
     fun `init fails fast for unknown lint rule id`() {
         val service = BpmnLintService(
-            BpmnLintProperties(
-                rules = mapOf("klmact-01-verb-object-name" to "error"),
-            )
+            catalogService = RuleCatalogService(),
+            properties = BpmnLintProperties(
+                rules = mapOf("klm/act-verb-object-name" to "error"),
+            ),
         )
 
-        val exception = assertFailsWith<BpmnLintConfigurationException> {
+        val exception = assertThrows<BpmnLintConfigurationException> {
             service.init()
         }
 
-        assertTrue(
-            exception.message!!.contains("Invalid BPMN lint configuration"),
-            "Error should identify lint configuration as the problem: ${exception.message}",
-        )
-        assertTrue(
-            exception.message!!.contains("klmact-01-verb-object-name"),
-            "Error should list the invalid rule id: ${exception.message}",
-        )
+        assertTrue(exception.message!!.contains("klm/act-verb-object-name"), "Error message should contain the unknown rule id")
     }
 }

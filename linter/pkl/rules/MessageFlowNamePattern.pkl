@@ -4,18 +4,13 @@ import "../schema/RuleCategory.pkl"
 
 name = "Message Flow Name Pattern"
 category = RuleCategory.Message
-sequence = 2
 
 intent = "Encourage noun-based message naming over action phrasing."
 forModellers =
   "Label message flows with the message name, such as Approval confirmation, rather than an action such as Send approval."
-forAI =
-  "Detect message flow labels that start with a verb or auxiliary token."
+forAI = "Detect message flow labels that start with a verb or auxiliary token."
 
-targetElements =
-  List(
-    "bpmn:MessageFlow",
-  )
+targetElements = List("bpmn:MessageFlow")
 
 severity = "warning"
 errorMessages = new {
@@ -25,5 +20,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

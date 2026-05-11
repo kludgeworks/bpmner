@@ -116,4 +116,4 @@ export const fixtures = {
 	gtw22SuperfluousGatewayFixable,
 	gtw21FakeJoinFixable,
 	gtw20JoinForkFixable,
-};
+} as Record<string, string>;

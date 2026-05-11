@@ -2,7 +2,7 @@ import { isAny } from 'bpmnlint-utils';
 import type { ModdleElement, Reporter } from './_helpers';
 import { getRuleMessage, getStaticConfig } from '../rule-config';
 
-const RULE_ID = 'act-03-discouraged-business-verbs';
+const RULE_ID = 'act-discouraged-business-verbs';
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];
 const { discouragedLeadingVerbs } = getStaticConfig<{ discouragedLeadingVerbs: string[] }>(RULE_ID);
 const DISCOURAGED_LEADING_VERBS = new Set(discouragedLeadingVerbs);

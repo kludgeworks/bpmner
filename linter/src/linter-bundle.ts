@@ -239,7 +239,7 @@ export async function fixXml(
 }
 
 // Expose the API to the global scope for GraalJS/Polyglot
-(globalThis as typeof globalThis & { BpmnLinterApi?: unknown }).BpmnLinterApi = {
+export const BpmnLinterApi = {
   lintXml,
   fixXml,
   getDefaultConfig: () => DEFAULT_LINT_CONFIG,
@@ -257,3 +257,5 @@ export async function fixXml(
     return {};
   },
 };
+
+(globalThis as typeof globalThis & { BpmnLinterApi?: unknown }).BpmnLinterApi = BpmnLinterApi;

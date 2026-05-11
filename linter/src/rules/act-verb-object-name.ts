@@ -4,7 +4,7 @@ import { getRuleMessage } from '../rule-config';
 import winkNLP from 'wink-nlp';
 import model from 'wink-eng-lite-web-model';
 
-const RULE_ID = 'act-01-verb-object-name';
+const RULE_ID = 'act-verb-object-name';
 const TARGET_TYPES = [ 'bpmn:Task', 'bpmn:SubProcess', 'bpmn:CallActivity' ];
 const TOO_SHORT_MESSAGE = getRuleMessage(RULE_ID, 'tooShort');
 const MISSING_VERB_MESSAGE = getRuleMessage(RULE_ID, 'missingVerb');

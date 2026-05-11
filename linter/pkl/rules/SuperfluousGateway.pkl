@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Superfluous Gateway"
 category = RuleCategory.Gateway
-sequence = 22
 
 intent = "Remove passthrough gateways that carry no routing decision."
 forModellers =
@@ -28,3 +27,4 @@ staticConfig = new {}
 
 autoFixable = true
 fixStrategy = "ast-rewiring"
+fixMethod = "bypassGateway"

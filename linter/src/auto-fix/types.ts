@@ -32,7 +32,8 @@ export type AutoFixRuleMetadata = {
 		| "attribute-mutation"
 		| "node-deletion"
 		| "ast-rewiring"
-		| "none";
+		| "LLM";
+	fixMethod?: string | null;
 	replacementMap?: Record<string, string>;
 };
 

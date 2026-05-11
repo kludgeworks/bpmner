@@ -14,8 +14,8 @@ import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.format
 import dev.groknull.bpmner.core.generationPrompt
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.validation.BpmnLintingPort
+import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 
@@ -25,6 +25,7 @@ internal class BpmnRepairPromptFactory(
     private val config: BpmnConfig,
     private val bpmnLintingPort: BpmnLintingPort,
     private val fingerprints: BpmnFingerprintService,
+    private val llmValidator: LlmValidator,
 ) {
     fun initialMessages(request: BpmnRequest, definition: BpmnDefinition): List<Message> = listOf(
         UserMessage(request.generationPrompt()),
@@ -36,6 +37,11 @@ internal class BpmnRepairPromptFactory(
         appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
         appendLine("Do not rewrite the whole graph — only include operations that directly address the listed diagnostics.")
         appendLine()
+        val guidance = llmValidator.getLlmRuleGuidance()
+        if (guidance.isNotEmpty()) {
+            appendLine(guidance)
+            appendLine()
+        }
         appendLine("Current canonical BpmnDefinition JSON:")
         appendLine(fingerprints.serializeDefinition(definition))
         appendLine()
@@ -107,6 +113,11 @@ internal class BpmnRepairPromptFactory(
     ): String = buildString {
         appendLine("The BPMN definition needs repair. Return the full corrected BpmnDefinition object.")
         appendLine()
+        val guidance = llmValidator.getLlmRuleGuidance()
+        if (guidance.isNotEmpty()) {
+            appendLine(guidance)
+            appendLine()
+        }
         appendLine("Use the typed BPMN definition as the canonical edit surface.")
         appendLine("Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.")
         appendLine()

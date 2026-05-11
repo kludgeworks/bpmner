@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Activity Label Capitalization"
 category = RuleCategory.Activity
-sequence = 2
 
 intent = "Keep activity labels in readable sentence case."
 forModellers =
@@ -31,3 +30,4 @@ staticConfig = new {}
 
 autoFixable = true
 fixStrategy = "string-manipulation"
+fixMethod = "fixSentenceCase"

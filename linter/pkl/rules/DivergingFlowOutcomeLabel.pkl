@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Diverging Flow Outcome Label"
 category = RuleCategory.Flow
-sequence = 2
 
 intent = "Encourage explicit outcome labels on flows from diverging decision gateways."
 forModellers =
@@ -27,5 +26,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

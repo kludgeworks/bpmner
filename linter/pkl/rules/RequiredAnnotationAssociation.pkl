@@ -4,13 +4,12 @@ import "../schema/RuleCategory.pkl"
 
 name = "Required Annotation Association"
 category = RuleCategory.Association
-sequence = 1
 
-intent = "Require explicit association links from loop and multi-instance activities to their explanatory annotations."
+intent =
+  "Require explicit association links from loop and multi-instance activities to their explanatory annotations."
 forModellers =
   "Use an association to link required text annotations to loop or multi-instance tasks and subprocesses."
-forAI =
-  "Detect loop or multi-instance activities that do not have any associated text annotation."
+forAI = "Detect loop or multi-instance activities that do not have any associated text annotation."
 
 targetElements =
   List(
@@ -20,13 +19,14 @@ targetElements =
 
 severity = "error"
 errorMessages = new {
-  ["default"] = "Loop or multi-instance activity must be linked to a text annotation via association"
+  ["default"] =
+    "Loop or multi-instance activity must be linked to a text annotation via association"
 }
 
 staticConfig = new {
-  loopCharacteristics = List("bpmn:StandardLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
+  loopCharacteristics =
+    List("bpmn:StandardLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

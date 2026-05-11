@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "No Type Words In Data Name"
 category = RuleCategory.Data
-sequence = 1
 
 intent = "Keep data element names business-oriented and noun-based."
 forModellers =
@@ -28,3 +27,4 @@ staticConfig = new {
 
 autoFixable = true
 fixStrategy = "string-manipulation"
+fixMethod = "stripTypeWords"

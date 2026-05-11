@@ -1,0 +1,15 @@
+amends "pkl:Project"
+
+evaluatorSettings {
+  moduleOutput {
+    path = "java"
+    isRelative = true
+  }
+}
+
+generatorSettings {
+  java {
+    basePackage = "dev.groknull.bpmner.linter.pkl"
+    generateGetters = true
+  }
+}

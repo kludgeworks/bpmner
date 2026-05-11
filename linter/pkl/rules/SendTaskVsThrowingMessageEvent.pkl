@@ -1,0 +1,23 @@
+amends "../schema/BpmnRule.pkl"
+import "../schema/RuleCategory.pkl"
+
+name = "Send Task Vs Throwing Message Event"
+category = RuleCategory.Activity
+
+intent = "Choose correctly between Send Task and throwing Intermediate Message Event."
+forModellers =
+  "Use Send Task for user-driven sending with a clear performer; use throwing Intermediate Message Event for event-driven sending."
+forAI =
+  "Suggest Send Task when message sending is tied to a user action; suggest throwing message event for automated or event-driven sending."
+
+targetElements = List("bpmn:SendTask", "bpmn:IntermediateThrowEvent")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] =
+    "Use Send Task for user-driven sends; use throwing Intermediate Message Event for event-driven sends."
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

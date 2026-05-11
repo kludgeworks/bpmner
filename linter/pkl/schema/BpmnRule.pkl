@@ -1,16 +1,14 @@
 import "RuleCategory.pkl"
 
 typealias NonEmptyString = String(!isEmpty)
-typealias RuleSequence = UInt(this > 0)
 typealias Severity = "error" | "warning" | "info" | "off"
 typealias FixStrategy =
-  "string-manipulation" | "attribute-mutation" | "node-deletion" | "ast-rewiring" | "none"
+  "string-manipulation" | "attribute-mutation" | "node-deletion" | "ast-rewiring" | "LLM"
 
 name: NonEmptyString
 category: RuleCategory.RuleCategory
-sequence: RuleSequence
 slug: NonEmptyString = name.toLowerCase().replaceAll(" ", "-")
-id: NonEmptyString = "\(category.shortCode)-\(sequence.toString().padStart(2, "0"))-\(slug)"
+id: NonEmptyString = "\(category.shortCode)-\(slug)"
 
 intent: NonEmptyString
 forModellers: NonEmptyString
@@ -22,5 +20,12 @@ errorMessages: Mapping<NonEmptyString, NonEmptyString>(!isEmpty)
 staticConfig: Dynamic? = null
 
 autoFixable: Boolean = false
-fixStrategy: FixStrategy((!autoFixable) || this != "none") = "none"
+fixStrategy: FixStrategy = "LLM"
+fixMethod: String?(if (autoFixable && fixStrategy != "LLM") this != null else true) = null
 replacementMap: Mapping<String, String>? = null
+
+hasTsImplementation: Boolean = true
+
+deprecated: Boolean = false
+replacedBy: List<String> = List()
+deprecationReason: String?(if (deprecated) this != null else true) = null

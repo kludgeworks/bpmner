@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "KLOps Allowed Elements"
 category = RuleCategory.General
-sequence = 1
 
 intent = "Keep models within the KLOps BPMN subset."
 forModellers =
@@ -32,20 +31,20 @@ errorMessages = new {
 }
 
 staticConfig = new {
-  discouragedTypes = List(
-    "bpmn:Choreography",
-    "bpmn:ChoreographyTask",
-    "bpmn:SubChoreography",
-    "bpmn:CallChoreography",
-    "bpmn:Conversation",
-    "bpmn:ConversationLink",
-    "bpmn:ConversationAssociation",
-    "bpmn:Transaction",
-    "bpmn:CompensateEventDefinition",
-    "bpmn:EscalationEventDefinition",
-  )
+  discouragedTypes =
+    List(
+      "bpmn:Choreography",
+      "bpmn:ChoreographyTask",
+      "bpmn:SubChoreography",
+      "bpmn:CallChoreography",
+      "bpmn:Conversation",
+      "bpmn:ConversationLink",
+      "bpmn:ConversationAssociation",
+      "bpmn:Transaction",
+      "bpmn:CompensateEventDefinition",
+      "bpmn:EscalationEventDefinition",
+    )
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

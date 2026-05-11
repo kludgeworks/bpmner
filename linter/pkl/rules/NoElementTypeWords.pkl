@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "No Element Type Words"
 category = RuleCategory.Name
-sequence = 3
 
 intent = "Avoid redundant BPMN element type words in labels."
 forModellers =
@@ -39,3 +38,4 @@ staticConfig = new {
 
 autoFixable = true
 fixStrategy = "string-manipulation"
+fixMethod = "stripTypeWords"

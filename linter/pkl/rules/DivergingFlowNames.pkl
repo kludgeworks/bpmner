@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Diverging Flow Names"
 category = RuleCategory.Gateway
-sequence = 12
 
 intent = "Require outcome labels on diverging gateway branches."
 forModellers =
@@ -27,5 +26,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

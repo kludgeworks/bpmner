@@ -42,6 +42,7 @@ class BpmnLintConfigurationException(message: String, cause: Throwable? = null) 
 @EnableConfigurationProperties(BpmnLintProperties::class)
 internal open class BpmnLintService(
     private val properties: BpmnLintProperties = BpmnLintProperties(),
+    private val catalogService: RuleCatalogService,
 ) : BpmnLintingPort {
 
     private val logger = LoggerFactory.getLogger(BpmnLintService::class.java)
@@ -147,12 +148,25 @@ internal open class BpmnLintService(
     internal fun parseAutoFixResult(json: String): BpmnAutoFixResult = objectMapper.readValue(json)
 
     internal fun lintConfig(phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT): RuntimeLintConfig {
-        val base = properties.toLintConfig()
-        if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) return base
-        return base.copy(rules = base.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" })
+        val baseConfig = properties.toLintConfig()
+
+        // Merge Pkl catalog defaults for rules that have TS implementation
+        val pklRules = catalogService.catalog.rules
+            .filter { it.hasTsImplementation }
+            .associate { "klm/${it.id}" to if (it.severity == "error") "error" else "warn" }
+
+        // Application.yaml (baseConfig.rules) overrides Pkl defaults
+        val mergedRules = pklRules + baseConfig.rules
+
+        val finalConfig = baseConfig.copy(rules = mergedRules)
+
+        if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) return finalConfig
+        return finalConfig.copy(rules = finalConfig.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" })
     }
 
-    fun destroy() { jsContext?.close() }
+    fun destroy() {
+        jsContext?.close()
+    }
 
     private fun validateLintConfiguration(api: Value) {
         val invalidRules = try {
@@ -163,7 +177,7 @@ internal open class BpmnLintService(
         }
         if (invalidRules.isNotEmpty()) {
             throw BpmnLintConfigurationException(
-                "Invalid BPMN lint configuration: unknown rule id(s): ${invalidRules.sorted().joinToString(", ")}"
+                "Invalid BPMN lint configuration: unknown rule id(s): ${invalidRules.sorted().joinToString(", ")}",
             )
         }
     }

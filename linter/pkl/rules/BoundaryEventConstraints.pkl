@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Boundary Event Constraints"
 category = RuleCategory.Event
-sequence = 14
 
 intent = "Enforce valid boundary event attachment and flow cardinality."
 forModellers =
@@ -12,10 +11,7 @@ forModellers =
 forAI =
   "Detect detached boundary events, boundary events with incoming flow or wrong outgoing count, and non-interrupting error boundary events."
 
-targetElements =
-  List(
-    "bpmn:BoundaryEvent",
-  )
+targetElements = List("bpmn:BoundaryEvent")
 
 severity = "error"
 errorMessages = new {
@@ -29,5 +25,4 @@ errorMessages = new {
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

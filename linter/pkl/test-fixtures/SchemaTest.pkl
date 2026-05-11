@@ -4,15 +4,14 @@ import "../schema/RuleCategory.pkl"
 import "UncommonAbbreviations.pkl" as Rule
 
 facts {
-  ["NAME-02 ID is generated from category, sequence, and name"] {
-    Rule.id == "name-02-uncommon-abbreviations"
+  ["NAME-02 ID is generated from category and name"] {
+    Rule.id == "name-uncommon-abbreviations"
     Rule.slug == "uncommon-abbreviations"
   }
 
   ["NAME-02 preserves cookbook category metadata"] {
     Rule.category.name == "Name"
     Rule.category.shortCode == "name"
-    Rule.sequence == 2
   }
 
   ["category short codes default to lowercase names unless overridden"] {

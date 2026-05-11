@@ -54,8 +54,11 @@ function setProp(element: ModdleElement, key: string, value: unknown): void {
 	}
 }
 
-// ─── attribute-mutation ──────────────────────────────────────────────────────
+// ─── handlers ───────────────────────────────────────────────────────────────
 
+/**
+ * attribute-mutation: Clear the element name.
+ */
 function clearName(element: ModdleElement): AutoFixHandlerResult {
 	const current = getName(element);
 	if (!current.trim()) {
@@ -66,29 +69,28 @@ function clearName(element: ModdleElement): AutoFixHandlerResult {
 	return { changed: true, message: "Cleared element name" };
 }
 
-function removeTerminateDefinition(
-	element: ModdleElement,
-): AutoFixHandlerResult {
+/**
+ * attribute-mutation: Remove TerminateEventDefinition from an end event.
+ */
+function removeTerminateDefinition(element: ModdleElement): AutoFixHandlerResult {
 	const defs = element.eventDefinitions as ModdleElement[] | undefined;
 	if (!defs) {
 		return { changed: false, message: "End event has no event definitions" };
 	}
-	const filtered = defs.filter(
-		(d) => d.$type !== "bpmn:TerminateEventDefinition",
-	);
+	const filtered = defs.filter((d) => d.$type !== "bpmn:TerminateEventDefinition");
 	if (filtered.length === defs.length) {
 		return { changed: false, message: "No TerminateEventDefinition found" };
 	}
 	element.eventDefinitions = filtered;
 	return {
 		changed: true,
-		message:
-			"Removed TerminateEventDefinition; end event is now a standard none end event",
+		message: "Removed TerminateEventDefinition; end event is now a standard none end event",
 	};
 }
 
-// ─── string-manipulation ────────────────────────────────────────────────────
-
+/**
+ * string-manipulation: Fix label to sentence case.
+ */
 function fixSentenceCase(element: ModdleElement): AutoFixHandlerResult {
 	const raw = getName(element).trim();
 	if (!raw) {
@@ -116,65 +118,80 @@ function fixSentenceCase(element: ModdleElement): AutoFixHandlerResult {
 	};
 }
 
-function makeAbbreviationFixer(map: Record<string, string>): AutoFixHandler {
-	return (element) => {
-		const raw = getName(element).trim();
-		if (!raw) return { changed: false, message: "Element has no name" };
-		if (!Object.keys(map).length)
-			return { changed: false, message: "No replacement map configured" };
+/**
+ * string-manipulation: Expand abbreviations based on replacementMap.
+ */
+function expandAbbreviations(
+	element: ModdleElement,
+	issue: AutoFixLintIssue,
+): AutoFixHandlerResult {
+	const ruleId = issue.rule.replace(/^klm\//, "");
+	const map = getRuleConfig(ruleId).replacementMap || {};
+	const raw = getName(element).trim();
+	if (!raw) return { changed: false, message: "Element has no name" };
+	if (!Object.keys(map).length)
+		return { changed: false, message: "No replacement map configured" };
 
-		let fixed = raw;
-		for (const [abbr, expansion] of Object.entries(map)) {
-			fixed = fixed.replace(new RegExp(`\\b${abbr}\\b`, "g"), expansion);
-		}
-		if (fixed === raw)
-			return {
-				changed: false,
-				message: "No known abbreviations found in name",
-			};
-		setName(element, fixed);
+	let fixed = raw;
+	for (const [abbr, expansion] of Object.entries(map)) {
+		fixed = fixed.replace(new RegExp(`\\b${abbr}\\b`, "g"), expansion);
+	}
+	if (fixed === raw)
 		return {
-			changed: true,
-			message: `Expanded abbreviations: "${raw}" → "${fixed}"`,
+			changed: false,
+			message: "No known abbreviations found in name",
 		};
+	setName(element, fixed);
+	return {
+		changed: true,
+		message: `Expanded abbreviations: "${raw}" → "${fixed}"`,
 	};
 }
 
-function makeTypeWordStripper(words: string[]): AutoFixHandler {
+/**
+ * string-manipulation: Strip discouraged type words.
+ */
+function stripTypeWords(
+	element: ModdleElement,
+	issue: AutoFixLintIssue,
+): AutoFixHandlerResult {
+	const ruleId = issue.rule.replace(/^klm\//, "");
+	const config = getStaticConfig<{ discouragedWords: string[] }>(ruleId) || {
+		discouragedWords: ["activity", "process", "event"],
+	};
+	const words = config.discouragedWords;
 	const pattern = new RegExp(
 		`\\b(${words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})\\b`,
 		"gi",
 	);
-	return (element) => {
-		const raw = getName(element).trim();
-		if (!raw) return { changed: false, message: "Element has no name" };
-		const fixed = raw
-			.replace(pattern, "")
-			.replace(/\s{2,}/g, " ")
-			.trim();
-		if (fixed === raw)
-			return { changed: false, message: "No type words found in name" };
-		if (!fixed)
-			return {
-				changed: false,
-				message: "Stripping type words would leave an empty name; skipping",
-			};
-		setName(element, fixed);
+
+	const raw = getName(element).trim();
+	if (!raw) return { changed: false, message: "Element has no name" };
+	const fixed = raw
+		.replace(pattern, "")
+		.replace(/\s{2,}/g, " ")
+		.trim();
+	if (fixed === raw) return { changed: false, message: "No type words found in name" };
+	if (!fixed)
 		return {
-			changed: true,
-			message: `Stripped type words: "${raw}" → "${fixed}"`,
+			changed: false,
+			message: "Stripping type words would leave an empty name; skipping",
 		};
+	setName(element, fixed);
+	return {
+		changed: true,
+		message: `Stripped type words: "${raw}" → "${fixed}"`,
 	};
 }
 
-// ─── node-deletion ───────────────────────────────────────────────────────────
-
+/**
+ * node-deletion: Delete duplicate sequence flow.
+ */
 function deleteSequenceFlow(element: ModdleElement): AutoFixHandlerResult {
 	if (element.$type !== "bpmn:SequenceFlow") {
 		return {
 			changed: false,
-			message:
-				"Not a sequence flow; source/target secondary reports are skipped",
+			message: "Not a sequence flow; source/target secondary reports are skipped",
 		};
 	}
 	const source = element.sourceRef as ModdleElement | undefined;
@@ -183,24 +200,24 @@ function deleteSequenceFlow(element: ModdleElement): AutoFixHandlerResult {
 
 	if (source?.outgoing) removeFromArray(source.outgoing as unknown[], element);
 	if (target?.incoming) removeFromArray(target.incoming as unknown[], element);
-	if (parent?.flowElements)
-		removeFromArray(parent.flowElements as unknown[], element);
+	if (parent?.flowElements) removeFromArray(parent.flowElements as unknown[], element);
 
 	return { changed: true, message: "Deleted duplicate sequence flow" };
 }
 
+/**
+ * node-deletion: Delete redundant blank start events.
+ */
 function deleteBlankStartEvents(element: ModdleElement): AutoFixHandlerResult {
 	const flowElements = element.flowElements as ModdleElement[] | undefined;
-	if (!flowElements)
-		return { changed: false, message: "Container has no flow elements" };
+	if (!flowElements) return { changed: false, message: "Container has no flow elements" };
 
 	const blanks = flowElements.filter(
 		(el) =>
 			el.$type === "bpmn:StartEvent" &&
 			(!el.eventDefinitions || (el.eventDefinitions as unknown[]).length === 0),
 	);
-	if (blanks.length <= 1)
-		return { changed: false, message: "At most one blank start event present" };
+	if (blanks.length <= 1) return { changed: false, message: "At most one blank start event present" };
 
 	const toDelete = blanks.slice(1);
 	for (const se of toDelete) {
@@ -218,15 +235,13 @@ function deleteBlankStartEvents(element: ModdleElement): AutoFixHandlerResult {
 	};
 }
 
-function keepFirstEventDefinition(
-	element: ModdleElement,
-): AutoFixHandlerResult {
+/**
+ * node-deletion: Keep only the first event definition.
+ */
+function keepFirstEventDefinition(element: ModdleElement): AutoFixHandlerResult {
 	const defs = element.eventDefinitions as ModdleElement[] | undefined;
 	if (!defs || defs.length <= 1)
-		return {
-			changed: false,
-			message: "Event has at most one event definition",
-		};
+		return { changed: false, message: "Event has at most one event definition" };
 	const removed = defs.length - 1;
 	element.eventDefinitions = [defs[0]];
 	return {
@@ -235,17 +250,18 @@ function keepFirstEventDefinition(
 	};
 }
 
+/**
+ * node-deletion: Delete incoming sequence flows from a start event.
+ */
 function deleteIncomingFlows(element: ModdleElement): AutoFixHandlerResult {
 	const inFlows = [...((element.incoming as ModdleElement[]) || [])];
-	if (!inFlows.length)
-		return { changed: false, message: "Start event has no incoming flows" };
+	if (!inFlows.length) return { changed: false, message: "Start event has no incoming flows" };
 
 	const parent = element.$parent as ModdleElement | undefined;
 	for (const flow of inFlows) {
 		const source = flow.sourceRef as ModdleElement | undefined;
 		if (source?.outgoing) removeFromArray(source.outgoing as unknown[], flow);
-		if (parent?.flowElements)
-			removeFromArray(parent.flowElements as unknown[], flow);
+		if (parent?.flowElements) removeFromArray(parent.flowElements as unknown[], flow);
 	}
 	element.incoming = [];
 	return {
@@ -254,8 +270,9 @@ function deleteIncomingFlows(element: ModdleElement): AutoFixHandlerResult {
 	};
 }
 
-// ─── ast-rewiring ────────────────────────────────────────────────────────────
-
+/**
+ * ast-rewiring: Bypass a gateway with 1-in 1-out.
+ */
 function bypassGateway(element: ModdleElement): AutoFixHandlerResult {
 	const incoming = element.incoming as ModdleElement[] | undefined;
 	const outgoing = element.outgoing as ModdleElement[] | undefined;
@@ -266,8 +283,7 @@ function bypassGateway(element: ModdleElement): AutoFixHandlerResult {
 	const inFlow = incoming[0];
 	const outFlow = outgoing[0];
 	const downstream = outFlow.targetRef as ModdleElement | undefined;
-	if (!downstream)
-		return { changed: false, message: "Could not resolve downstream element" };
+	if (!downstream) return { changed: false, message: "Could not resolve downstream element" };
 
 	setProp(inFlow, "targetRef", downstream);
 
@@ -293,27 +309,24 @@ function bypassGateway(element: ModdleElement): AutoFixHandlerResult {
 	};
 }
 
+/**
+ * ast-rewiring: Insert a converging gateway before an element with multiple incoming flows.
+ */
 function insertConvergingGateway(
 	element: ModdleElement,
-	_issue: unknown,
+	_issue: AutoFixLintIssue,
 	ctx: AutoFixContext,
 ): AutoFixHandlerResult {
 	const inFlows = [...((element.incoming as ModdleElement[]) || [])];
 	if (inFlows.length < 2)
-		return {
-			changed: false,
-			message: "Task does not have multiple incoming flows",
-		};
+		return { changed: false, message: "Task does not have multiple incoming flows" };
 
 	const parent = element.$parent as ModdleElement | undefined;
-	if (!parent?.flowElements)
-		return { changed: false, message: "Could not find parent container" };
+	if (!parent?.flowElements) return { changed: false, message: "Could not find parent container" };
 
 	const flowElements = parent.flowElements as ModdleElement[];
 
-	const newGateway = ctx.createElement("bpmn:ExclusiveGateway", {
-		id: ctx.generateId(),
-	});
+	const newGateway = ctx.createElement("bpmn:ExclusiveGateway", { id: ctx.generateId() });
 	newGateway.$parent = parent;
 
 	const newFlow = ctx.createElement("bpmn:SequenceFlow", {
@@ -336,28 +349,26 @@ function insertConvergingGateway(
 
 	return {
 		changed: true,
-		message:
-			"Inserted converging gateway before task with multiple incoming flows",
+		message: "Inserted converging gateway before task with multiple incoming flows",
 	};
 }
 
+/**
+ * ast-rewiring: Split a join-fork gateway into two.
+ */
 function splitJoinForkGateway(
 	element: ModdleElement,
-	_issue: unknown,
+	_issue: AutoFixLintIssue,
 	ctx: AutoFixContext,
 ): AutoFixHandlerResult {
 	const inFlows = [...((element.incoming as ModdleElement[]) || [])];
 	const outFlows = [...((element.outgoing as ModdleElement[]) || [])];
 	if (inFlows.length < 2 || outFlows.length < 2) {
-		return {
-			changed: false,
-			message: "Gateway is not simultaneously a join and a fork",
-		};
+		return { changed: false, message: "Gateway is not simultaneously a join and a fork" };
 	}
 
 	const parent = element.$parent as ModdleElement | undefined;
-	if (!parent?.flowElements)
-		return { changed: false, message: "Could not find parent container" };
+	if (!parent?.flowElements) return { changed: false, message: "Could not find parent container" };
 
 	const flowElements = parent.flowElements as ModdleElement[];
 	const gatewayType = element.$type as string;
@@ -385,196 +396,101 @@ function splitJoinForkGateway(
 
 	return {
 		changed: true,
-		message:
-			"Split join-fork gateway into separate converging and diverging gateways",
+		message: "Split join-fork gateway into separate converging and diverging gateways",
 	};
 }
 
-// ─── config-driven handler initialization ────────────────────────────────────
+// ─── registration ───────────────────────────────────────────────────────────
 
-const DEFAULT_TYPE_WORDS = ["activity", "process", "event"];
-
-function safeStaticConfig<T>(id: string, fallback: T): T {
-	try {
-		return getStaticConfig<T>(id) || fallback;
-	} catch {
-		return fallback;
-	}
-}
-
-function safeReplacementMap(id: string): Record<string, string> {
-	try {
-		return getRuleConfig(id).replacementMap || {};
-	} catch {
-		return {};
-	}
-}
-
-const name02Map = safeReplacementMap("name-02-uncommon-abbreviations");
-const name03Words = safeStaticConfig<{ discouragedWords: string[] }>(
-	"name-03-no-element-type-words",
-	{ discouragedWords: DEFAULT_TYPE_WORDS },
-).discouragedWords;
-const data01Words = safeStaticConfig<{ discouragedWords: string[] }>(
-	"data-01-no-type-words-in-data-name",
-	{ discouragedWords: DEFAULT_TYPE_WORDS },
-).discouragedWords;
-
-// ─── registration table ──────────────────────────────────────────────────────
-
-const registrations: Record<string, AutoFixRegistration> = {
-	// attribute-mutation
-	"klm/gtw-02-converging-gateway-unnamed": {
-		metadata: {
-			rule: "klm/gtw-02-converging-gateway-unnamed",
-			autoFixable: true,
-			fixStrategy: "attribute-mutation",
-		},
-		handler: clearName,
-	},
-	"klm/gtw-03-gateway-no-work-label": {
-		metadata: {
-			rule: "klm/gtw-03-gateway-no-work-label",
-			autoFixable: true,
-			fixStrategy: "attribute-mutation",
-		},
-		handler: clearName,
-	},
-	"superfluous-termination": {
-		metadata: {
-			rule: "superfluous-termination",
-			autoFixable: true,
-			fixStrategy: "attribute-mutation",
-		},
-		handler: removeTerminateDefinition,
-	},
-
-	// string-manipulation
-	"klm/act-02-activity-label-capitalization": {
-		metadata: {
-			rule: "klm/act-02-activity-label-capitalization",
-			autoFixable: true,
-			fixStrategy: "string-manipulation",
-		},
-		handler: fixSentenceCase,
-	},
-	"klm/name-02-uncommon-abbreviations": {
-		metadata: {
-			rule: "klm/name-02-uncommon-abbreviations",
-			autoFixable: true,
-			fixStrategy: "string-manipulation",
-			replacementMap: name02Map,
-		},
-		handler: makeAbbreviationFixer(name02Map),
-	},
-	"klm/name-03-no-element-type-words": {
-		metadata: {
-			rule: "klm/name-03-no-element-type-words",
-			autoFixable: true,
-			fixStrategy: "string-manipulation",
-		},
-		handler: makeTypeWordStripper(name03Words),
-	},
-	"klm/data-01-no-type-words-in-data-name": {
-		metadata: {
-			rule: "klm/data-01-no-type-words-in-data-name",
-			autoFixable: true,
-			fixStrategy: "string-manipulation",
-		},
-		handler: makeTypeWordStripper(data01Words),
-	},
-
-	// node-deletion
-	"no-duplicate-sequence-flows": {
-		metadata: {
-			rule: "no-duplicate-sequence-flows",
-			autoFixable: true,
-			fixStrategy: "node-deletion",
-		},
-		handler: deleteSequenceFlow,
-	},
-	"single-blank-start-event": {
-		metadata: {
-			rule: "single-blank-start-event",
-			autoFixable: true,
-			fixStrategy: "node-deletion",
-		},
-		handler: deleteBlankStartEvents,
-	},
-	"single-event-definition": {
-		metadata: {
-			rule: "single-event-definition",
-			autoFixable: true,
-			fixStrategy: "node-deletion",
-		},
-		handler: keepFirstEventDefinition,
-	},
-	"klm/evt-10-start-no-incoming": {
-		metadata: {
-			rule: "klm/evt-10-start-no-incoming",
-			autoFixable: true,
-			fixStrategy: "node-deletion",
-		},
-		handler: deleteIncomingFlows,
-	},
-
-	// ast-rewiring
-	"superfluous-gateway": {
-		metadata: {
-			rule: "superfluous-gateway",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: bypassGateway,
-	},
-	"klm/gtw-22-superfluous-gateway": {
-		metadata: {
-			rule: "klm/gtw-22-superfluous-gateway",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: bypassGateway,
-	},
-	"fake-join": {
-		metadata: {
-			rule: "fake-join",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: insertConvergingGateway,
-	},
-	"klm/gtw-21-fake-join": {
-		metadata: {
-			rule: "klm/gtw-21-fake-join",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: insertConvergingGateway,
-	},
-	"no-gateway-join-fork": {
-		metadata: {
-			rule: "no-gateway-join-fork",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: splitJoinForkGateway,
-	},
-	"klm/gtw-20-no-gateway-join-fork": {
-		metadata: {
-			rule: "klm/gtw-20-no-gateway-join-fork",
-			autoFixable: true,
-			fixStrategy: "ast-rewiring",
-		},
-		handler: splitJoinForkGateway,
-	},
+const HANDLERS: Record<string, AutoFixHandler> = {
+	clearName,
+	removeTerminateDefinition,
+	fixSentenceCase,
+	expandAbbreviations,
+	stripTypeWords,
+	deleteSequenceFlow,
+	deleteBlankStartEvents,
+	keepFirstEventDefinition,
+	deleteIncomingFlows,
+	bypassGateway,
+	insertConvergingGateway,
+	splitJoinForkGateway,
 };
 
-export function autoFixRegistration(
-	rule: string,
-): AutoFixRegistration | undefined {
-	return registrations[rule];
+export function autoFixRegistration(ruleId: string): AutoFixRegistration | undefined {
+	const normalizedId = ruleId.replace(/^klm\//, "");
+	let config;
+	try {
+		config = getRuleConfig(normalizedId);
+	} catch {
+		// Fallback for non-KLM rules or manual registrations
+		if (ruleId === "superfluous-termination") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "attribute-mutation" },
+				handler: removeTerminateDefinition,
+			};
+		}
+		if (ruleId === "no-duplicate-sequence-flows") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "node-deletion" },
+				handler: deleteSequenceFlow,
+			};
+		}
+		if (ruleId === "single-blank-start-event") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "node-deletion" },
+				handler: deleteBlankStartEvents,
+			};
+		}
+		if (ruleId === "single-event-definition") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "node-deletion" },
+				handler: keepFirstEventDefinition,
+			};
+		}
+		if (ruleId === "superfluous-gateway") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "ast-rewiring" },
+				handler: bypassGateway,
+			};
+		}
+		if (ruleId === "fake-join") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "ast-rewiring" },
+				handler: insertConvergingGateway,
+			};
+		}
+		if (ruleId === "no-gateway-join-fork") {
+			return {
+				metadata: { rule: ruleId, autoFixable: true, fixStrategy: "ast-rewiring" },
+				handler: splitJoinForkGateway,
+			};
+		}
+		return undefined;
+	}
+
+	if (!config.autoFixable || !config.fixMethod) {
+		return undefined;
+	}
+
+	const handler = HANDLERS[config.fixMethod];
+	if (!handler) {
+		console.error(`No JS handler found for fixMethod: ${config.fixMethod} (rule: ${ruleId})`);
+		return undefined;
+	}
+
+	return {
+		metadata: {
+			rule: ruleId,
+			autoFixable: config.autoFixable,
+			fixStrategy: config.fixStrategy,
+			fixMethod: config.fixMethod,
+			replacementMap: config.replacementMap,
+		},
+		handler,
+	};
 }
 
-export function autoFixMetadata(rule: string): AutoFixRuleMetadata | undefined {
-	return registrations[rule]?.metadata;
+export function autoFixMetadata(ruleId: string): AutoFixRuleMetadata | undefined {
+	return autoFixRegistration(ruleId)?.metadata;
 }

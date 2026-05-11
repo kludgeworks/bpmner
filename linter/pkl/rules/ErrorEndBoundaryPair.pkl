@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Error End Boundary Pair"
 category = RuleCategory.Event
-sequence = 15
 
 intent = "Ensure error end events propagate to matching parent boundary error handlers."
 forModellers =
@@ -12,20 +11,17 @@ forModellers =
 forAI =
   "Detect error end events outside subprocesses or without a matching parent boundary error event using the same error name or code."
 
-targetElements =
-  List(
-    "bpmn:EndEvent",
-  )
+targetElements = List("bpmn:EndEvent")
 
 severity = "error"
 errorMessages = new {
   ["outsideSubprocess"] = "Error end event must be placed inside a subprocess"
-  ["missingBoundary"] = "Error end event must match an error boundary event on its parent subprocess"
+  ["missingBoundary"] =
+    "Error end event must match an error boundary event on its parent subprocess"
   ["default"] = "Error end event must match an error boundary event on its parent subprocess"
 }
 
 staticConfig = new {}
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"

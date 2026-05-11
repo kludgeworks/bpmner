@@ -1,0 +1,19 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Invalid Autofix"
+category = RuleCategory.Activity
+
+intent = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
+forModellers = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
+forAI = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
+
+targetElements = List("bpmn:Task")
+severity = "warning"
+errorMessages = new {
+  ["default"] = "This fixture should fail"
+}
+
+autoFixable = true
+fixStrategy = "LLM"

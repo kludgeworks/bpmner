@@ -4,7 +4,6 @@ import "../schema/RuleCategory.pkl"
 
 name = "Diverging Gateway Question"
 category = RuleCategory.Gateway
-sequence = 1
 
 intent = "Encourage question-style naming on diverging exclusive and inclusive gateways."
 forModellers =
@@ -24,9 +23,39 @@ errorMessages = new {
 }
 
 staticConfig = new {
-  interrogativeStarters = List("is", "are", "am", "was", "were", "do", "does", "did", "can", "could", "will", "would", "shall", "should", "may", "might", "must", "have", "has", "had", "who", "what", "when", "where", "why", "how", "which", "whose", "whom")
+  interrogativeStarters =
+    List(
+      "is",
+      "are",
+      "am",
+      "was",
+      "were",
+      "do",
+      "does",
+      "did",
+      "can",
+      "could",
+      "will",
+      "would",
+      "shall",
+      "should",
+      "may",
+      "might",
+      "must",
+      "have",
+      "has",
+      "had",
+      "who",
+      "what",
+      "when",
+      "where",
+      "why",
+      "how",
+      "which",
+      "whose",
+      "whom",
+    )
 }
 
 autoFixable = false
-fixStrategy = "none"
-
+fixStrategy = "LLM"
