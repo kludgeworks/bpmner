@@ -108,3 +108,15 @@ src/          Kotlin/JVM application (Spring Boot + Embabel)
 linter/       TypeScript bpmn-lint plugin (27 custom rules, bundled at build time)
 tools/kotlin/ Bazel Kotlin toolchain config
 ```
+
+## Commit Message Conventions
+
+We use a simplified version of [Conventional Commits](https://www.conventionalcommits.org/). Every commit message must take the form:
+`<type>(<optional scope>): <subject>`
+
+### Accepted Types
+* **`feat`**: A new feature.
+* **`fix`**: A bug fix.
+* **`docs`**: Documentation only changes.
+* **`refactor`**: Code changes that neither fix a bug nor add a feature (includes performance and formatting improvements).
+* **`chore`**: Changes that don't modify `src` or `test` files (includes CI, build system, tooling, and adding missing tests).

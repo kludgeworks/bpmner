@@ -24,7 +24,10 @@ hooks {
   }
   ["commit-msg"] {
     steps {
-      ["check_conventional_commit"] = Builtins.check_conventional_commit
+      ["check_conventional_commit"] = (Builtins.check_conventional_commit) {
+        check =
+          "hk util check-conventional-commit --allowed-types feat,fix,docs,refactor,chore {{commit_msg_file}}"
+      }
     }
   }
   ["fix"] {
