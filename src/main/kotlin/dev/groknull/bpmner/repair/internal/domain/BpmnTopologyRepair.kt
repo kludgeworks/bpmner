@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
@@ -28,7 +30,6 @@ internal class BpmnTopologyRepair(
         return patchApplier.apply(definition, patch)
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern for missing rule/element info
     fun buildTopologyPatch(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
@@ -51,7 +52,6 @@ internal class BpmnTopologyRepair(
         return BpmnRepairPatch(operations = ops, reason = "Deterministic topology repair: $rule on $nodeId")
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildJoinForkRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -96,7 +96,6 @@ internal class BpmnTopologyRepair(
         return ops
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildFakeJoinRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -140,7 +139,6 @@ internal class BpmnTopologyRepair(
         return ops
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildSuperfluousGatewayRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -163,7 +161,6 @@ internal class BpmnTopologyRepair(
         )
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildConvergingGatewayClearName(
         nodeId: String,
         definition: BpmnDefinition,
