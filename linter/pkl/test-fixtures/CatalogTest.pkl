@@ -15,7 +15,10 @@ facts {
         "act-send-task-vs-throwing-message-event",
         "act-task-vs-subprocess-vs-call-activity",
         "act-verb-object-name",
+        "art-group-usage",
+        "art-text-annotation-usage",
         "assoc-required-annotation-association",
+        "data-information-item-vs-application-component",
         "data-no-type-words-in-data-name",
         "evt-boundary-event-constraints",
         "evt-error-end-boundary-pair",
@@ -40,11 +43,17 @@ facts {
         "gtw-gateway-no-work-label",
         "gtw-no-gateway-join-fork",
         "gtw-superfluous-gateway",
+        "lane-actor-artifact-usage",
+        "lane-lane-labels-business-roles-performers",
+        "msg-envelope-icon-usage",
         "msg-message-flow-across-pools",
         "msg-message-flow-name-pattern",
         "name-business-meaningful-label",
         "name-no-element-type-words",
         "name-uncommon-abbreviations",
+        "pool-black-box-pool-named-by-external-entity-or-process",
+        "pool-child-diagrams-keep-pool-process-name",
+        "pool-white-box-pool-named-by-process",
       )
   }
 
@@ -88,6 +97,43 @@ facts {
       .find((rule) -> rule.id == "gtw-exclusive-inclusive-parallel-semantics")
       .errorMessages
       .containsKey("parallelCondition")
+    Catalog.rules
+      .find((rule) -> rule.id == "pool-white-box-pool-named-by-process")
+      .targetElements
+      .contains("bpmn:Participant")
+    Catalog.rules.find((rule) -> rule.id == "pool-white-box-pool-named-by-process").errorMessages["default"]
+      == "White-box pool name should match the referenced process name"
+    Catalog.rules.find((rule) -> rule.id == "pool-white-box-pool-named-by-process").fixStrategy
+      == "LLM"
+    Catalog.rules
+      .find((rule) -> rule.id == "pool-black-box-pool-named-by-external-entity-or-process")
+      .targetElements
+      .contains("bpmn:Participant")
+    Catalog.rules
+      .find((rule) -> rule.id == "lane-lane-labels-business-roles-performers")
+      .targetElements
+      .contains("bpmn:Lane")
+    Catalog.rules
+      .find((rule) -> rule.id == "art-text-annotation-usage")
+      .targetElements
+      .contains("bpmn:TextAnnotation")
+    Catalog.rules.find((rule) -> rule.id == "msg-envelope-icon-usage").staticConfig.diField
+      == "bpmndi:BPMNEdge.messageVisibleKind"
+  }
+
+  local metadataOnlyRuleIds =
+    Set(
+      "pool-child-diagrams-keep-pool-process-name",
+      "lane-actor-artifact-usage",
+      "art-group-usage",
+      "data-information-item-vs-application-component",
+      "msg-envelope-icon-usage",
+    )
+
+  ["context-dependent cookbook rules are metadata-only"] {
+    Catalog.rules
+      .filter((rule) -> metadataOnlyRuleIds.contains(rule.id))
+      .every((rule) -> rule.hasTsImplementation == false)
   }
 
   local fixableRuleIds =

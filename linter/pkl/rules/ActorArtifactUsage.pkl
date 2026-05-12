@@ -1,0 +1,27 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Actor Artifact Usage"
+category = RuleCategory.Lane
+
+intent = "Treat Actor custom artifacts as lane clarification only."
+forModellers =
+  "Use an Actor custom artifact inside a lane only to clarify who performs the lane activities; it does not replace the lane."
+forAI =
+  "Do not infer additional participants, lanes, control flow, or responsibility semantics from Actor artifacts."
+
+targetElements = List("bpmn:Artifact")
+
+severity = "info"
+errorMessages = new {
+  ["default"] = "Actor artifacts are documentation only and require modelling context"
+}
+
+staticConfig = new {
+  cookbookCode = "LANE-02"
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

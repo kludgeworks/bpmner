@@ -8,6 +8,7 @@ import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
 @SecondaryPort
 internal interface BpmnAgentInvoker {
@@ -15,6 +16,7 @@ internal interface BpmnAgentInvoker {
 }
 
 @Service
+@Component
 internal class BpmnGenerationService(
     private val agentInvoker: BpmnAgentInvoker,
     private val inputPathResolver: InputPathResolver,

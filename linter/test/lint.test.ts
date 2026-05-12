@@ -336,6 +336,86 @@ describe("lint rules", () => {
 		)
 	})
 
+	it("pool-white-box-pool-named-by-process — mismatch", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.pool01WhiteBoxMismatchingProcessName),
+			"pool-white-box-pool-named-by-process",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage("pool-white-box-pool-named-by-process"),
+		)
+	})
+
+	it("pool-white-box-pool-named-by-process — matching", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.pool01WhiteBoxMatchingProcessName),
+				"pool-white-box-pool-named-by-process",
+			),
+		)
+	})
+
+	it("pool-black-box-pool-named-by-external-entity-or-process — unnamed", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.pool02BlackBoxUnnamed),
+			"pool-black-box-pool-named-by-external-entity-or-process",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage("pool-black-box-pool-named-by-external-entity-or-process"),
+		)
+	})
+
+	it("pool-black-box-pool-named-by-external-entity-or-process — named", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.pool02BlackBoxNamed),
+				"pool-black-box-pool-named-by-external-entity-or-process",
+			),
+		)
+	})
+
+	it("lane-lane-labels-business-roles-performers — unnamed", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.lane01Unnamed),
+			"lane-lane-labels-business-roles-performers",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage("lane-lane-labels-business-roles-performers"),
+		)
+	})
+
+	it("lane-lane-labels-business-roles-performers — named", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.lane01Named),
+				"lane-lane-labels-business-roles-performers",
+			),
+		)
+	})
+
+	it("art-text-annotation-usage — unassociated", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.art02TextAnnotationUnassociated),
+			"art-text-annotation-usage",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage("art-text-annotation-usage"),
+		)
+	})
+
+	it("art-text-annotation-usage — associated", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.art02TextAnnotationAssociated),
+				"art-text-annotation-usage",
+			),
+		)
+	})
+
 	it("assoc-required-annotation-association", async () => {
 		assert.ok(
 			hasRule(

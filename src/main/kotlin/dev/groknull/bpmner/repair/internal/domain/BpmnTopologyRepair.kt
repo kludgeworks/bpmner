@@ -26,8 +26,10 @@ import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
 @Service
+@Component
 internal class BpmnTopologyRepair(
     private val patchApplier: BpmnPatchApplier,
 ) {

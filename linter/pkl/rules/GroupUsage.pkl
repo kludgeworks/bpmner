@@ -1,0 +1,26 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Group Usage"
+category = RuleCategory.Artifact
+
+intent = "Keep BPMN groups as visual, non-semantic containers."
+forModellers = "Use Group to visually group related elements; it does not affect process logic."
+forAI =
+  "Treat groups as non-semantic containers and do not infer control flow or data flow from group membership."
+
+targetElements = List("bpmn:Group")
+
+severity = "info"
+errorMessages = new {
+  ["default"] = "Groups are visual containers and require modelling context"
+}
+
+staticConfig = new {
+  cookbookCode = "ART-01"
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

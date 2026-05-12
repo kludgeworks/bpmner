@@ -51,6 +51,7 @@ import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
@@ -238,7 +239,7 @@ class BpmnRepairAgentTest {
                 it.contribution()
             }
         assertTrue(promptContributions.contains("KLM lint rule documentation for current violations"))
-        assertTrue(promptContributions.contains("# gen-no-duplicate-diagrams"))
+        assertTrue(promptContributions.contains("# gen-02-no-duplicate-diagrams"))
     }
 
     @Test

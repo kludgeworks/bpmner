@@ -61,10 +61,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString())).thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
+            .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT))
+            .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
         doReturn(null)
             .`when`(bpmnLintService)
             .autoFix(
@@ -89,11 +89,11 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         verify(bpmnXsdValidator, times(2)).validateDetailed(org.mockito.ArgumentMatchers.anyString())
         verify(bpmnLintService, times(2)).lint(
             org.mockito.ArgumentMatchers.anyString(),
-            org.mockito.ArgumentMatchers.eq(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
+            eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
         )
         verify(bpmnLintService).lint(
             org.mockito.ArgumentMatchers.anyString(),
-            org.mockito.ArgumentMatchers.eq(BpmnLintPhase.FINAL_POST_LAYOUT),
+            eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT),
         )
         verify(bpmnLintService).autoFix(
             org.mockito.ArgumentMatchers.anyString(),

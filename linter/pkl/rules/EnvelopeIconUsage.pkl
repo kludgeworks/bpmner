@@ -1,0 +1,29 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Envelope Icon Usage"
+category = RuleCategory.Message
+
+intent = "Use envelope message-flow notation only when the communication is electronic."
+forModellers =
+  "Use the envelope icon on message flows for electronic messages, paper-based flows, web services, and IT interfaces; omit it for direct human communication."
+forAI =
+  "BPMN DI exposes envelope representation as bpmndi:BPMNEdge.messageVisibleKind, but BPMN XML does not provide reliable business intent for electronic versus direct-human communication, so deterministic linting stays off."
+
+targetElements = List("bpmn:MessageFlow", "bpmndi:BPMNEdge")
+
+severity = "info"
+errorMessages = new {
+  ["default"] = "Envelope icon usage requires communication intent context"
+}
+
+staticConfig = new {
+  cookbookCode = "MSG-03"
+  diField = "bpmndi:BPMNEdge.messageVisibleKind"
+  deterministicLinting = false
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

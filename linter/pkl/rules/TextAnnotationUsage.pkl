@@ -1,0 +1,26 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Text Annotation Usage"
+category = RuleCategory.Artifact
+
+intent = "Ensure text annotations are explicitly connected to the element they clarify."
+forModellers =
+  "Use Text Annotation to document clarifications or extra details, and attach it to its target with an association."
+forAI =
+  "Require text annotations to have at least one association; loop and multi-instance specificity remains covered by activity and association rules."
+
+targetElements = List("bpmn:TextAnnotation")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Text annotation must be linked to a BPMN element with an association"
+}
+
+staticConfig = new {
+  cookbookCode = "ART-02"
+}
+
+autoFixable = false
+fixStrategy = "LLM"

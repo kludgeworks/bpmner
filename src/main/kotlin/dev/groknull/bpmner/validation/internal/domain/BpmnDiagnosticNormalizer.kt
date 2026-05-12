@@ -10,8 +10,10 @@ import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.core.format
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
 @Service
+@Component
 internal class BpmnDiagnosticNormalizer {
     private val logger = LoggerFactory.getLogger(BpmnDiagnosticNormalizer::class.java)
 
