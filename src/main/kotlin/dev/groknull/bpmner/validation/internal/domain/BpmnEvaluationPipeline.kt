@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnAttemptRecord
@@ -5,6 +21,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEvaluation
+import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRepairScope
@@ -12,7 +29,6 @@ import dev.groknull.bpmner.core.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.core.GlobalDiagnostics
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnValidator
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
@@ -42,32 +58,35 @@ internal class BpmnEvaluationPipeline(
         diagnostics.addAll(
             bpmnDefinitionValidator.validate(definition).map {
                 normalizer.graphDiagnostic(graph, it)
-            }
+            },
         )
         graph.validateOwnership().forEach { msg ->
-            diagnostics += BpmnDiagnostic(
-                source = BpmnDiagnosticSource.GRAPH,
-                message = msg,
-                repairScope = BpmnRepairScope.COMPOSITION,
-            )
+            diagnostics +=
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.GRAPH,
+                    message = msg,
+                    repairScope = BpmnRepairScope.COMPOSITION,
+                )
         }
 
         if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
             if (renderFailureMessage != null || rendered == null) {
-                diagnostics += normalizer.scopedDiagnostic(
-                    graph = graph,
-                    diagnostic = BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.RENDER,
-                        message = renderFailureMessage ?: "Unknown BPMN rendering error",
+                diagnostics +=
+                    normalizer.scopedDiagnostic(
+                        graph = graph,
+                        diagnostic =
+                            BpmnDiagnostic(
+                                source = BpmnDiagnosticSource.RENDER,
+                                message = renderFailureMessage ?: "Unknown BPMN rendering error",
+                            ),
                     )
-                )
             } else {
                 diagnostics.addAll(
                     normalizer.normalizeXsdDiagnostics(
                         issues = bpmnXsdValidationPort.validateDetailed(rendered.xml),
                         rendered = rendered,
                         graph = graph,
-                    )
+                    ),
                 )
                 if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
                     val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
@@ -84,7 +103,7 @@ internal class BpmnEvaluationPipeline(
         if (infrastructureDiagnostics.isNotEmpty()) {
             logDiagnosticSummary(infrastructureDiagnostics)
             throw BpmnValidatorInfrastructureException(
-                normalizer.validatorInfrastructureMessage(infrastructureDiagnostics)
+                normalizer.validatorInfrastructureMessage(infrastructureDiagnostics),
             )
         }
 
@@ -100,8 +119,11 @@ internal class BpmnEvaluationPipeline(
                 globalDiagnostics.countFor(BpmnDiagnosticSource.GRAPH),
                 globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
                 globalDiagnostics.countFor(BpmnDiagnosticSource.LINT),
-                diagnostics.groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }.eachCount()
-                    .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
+                diagnostics
+                    .groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }
+                    .eachCount()
+                    .entries
+                    .joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
                 repairAttempts,
             )
         }
@@ -117,7 +139,10 @@ internal class BpmnEvaluationPipeline(
         )
     }
 
-    override fun toRecord(attempt: BpmnRepairAttempt, repairPromptFingerprint: String?): BpmnAttemptRecord {
+    override fun toRecord(
+        attempt: BpmnRepairAttempt,
+        repairPromptFingerprint: String?,
+    ): BpmnAttemptRecord {
         val globalDiagnostics = attempt.evaluation.globalDiagnostics
         return BpmnAttemptRecord(
             attemptNumber = attempt.attemptNumber,
@@ -140,8 +165,11 @@ internal class BpmnEvaluationPipeline(
             diagnostics.count { it.source == BpmnDiagnosticSource.GRAPH },
             diagnostics.count { it.source == BpmnDiagnosticSource.XSD },
             diagnostics.count { it.source == BpmnDiagnosticSource.LINT },
-            diagnostics.groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }.eachCount()
-                .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
+            diagnostics
+                .groupingBy { it.repairScope ?: BpmnRepairScope.FULL_PROCESS }
+                .eachCount()
+                .entries
+                .joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
         )
         diagnostics.forEach { diagnostic ->
             logger.warn(
@@ -158,16 +186,23 @@ internal class BpmnEvaluationPipeline(
         }
     }
 
-    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String = buildString {
-        append(diagnostic.source.name.lowercase())
-        diagnostic.rule?.let { append(" [$it]") }
-        diagnostic.elementId?.let { append(" @${it}") }
-        append(": ${diagnostic.message.take(120)}")
-    }
+    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String =
+        buildString {
+            append(diagnostic.source.name.lowercase())
+            diagnostic.rule?.let { append(" [$it]") }
+            diagnostic.elementId?.let { append(" @$it") }
+            append(": ${diagnostic.message.take(120)}")
+        }
 
-    private fun logArtifactsIfEnabled(definition: BpmnDefinition, rendered: RenderedBpmn?) {
+    private fun logArtifactsIfEnabled(
+        definition: BpmnDefinition,
+        rendered: RenderedBpmn?,
+    ) {
         if (!config.logging.dumpArtifacts) return
-        logger.debug("Artifact dump [definition]: {}", fingerprints.serializeDefinition(definition).truncate(config.logging.artifactPreviewLength))
+        logger.debug(
+            "Artifact dump [definition]: {}",
+            fingerprints.serializeDefinition(definition).truncate(config.logging.artifactPreviewLength),
+        )
         rendered?.let { logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.logging.artifactPreviewLength)) }
     }
 

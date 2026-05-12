@@ -1,5 +1,6 @@
 load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -35,18 +36,28 @@ kt_jvm_library(
     resources = glob(["resources/**"]),
     deps = [
         "@maven//:com_embabel_agent_embabel_agent_test",
+        "@maven//:com_tngtech_archunit_archunit",
         "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
         "@maven//:org_graalvm_polyglot_js",
         "@maven//:org_graalvm_polyglot_polyglot",
         "@maven//:org_jetbrains_kotlin_kotlin_reflect",
         "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
         "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
+        "@maven//:org_jmolecules_integrations_jmolecules_archunit",
         "@maven//:org_springframework_boot_spring_boot_starter_test",
         "@maven//:org_springframework_modulith_spring_modulith_starter_test",
-        "@maven//:org_jmolecules_integrations_jmolecules_archunit",
-        "@maven//:com_tngtech_archunit_archunit",
         "@rules_java//java/runfiles",
     ],
+)
+
+filegroup(
+    name = "detekt_srcs",
+    srcs = glob(["kotlin/**/*.kt"]),
+)
+
+ktlint_test(
+    name = "ktlint_check",
+    srcs = glob(["kotlin/**/*.kt"]),
 )
 
 TEST_FILES = glob(["kotlin/**/*Test.kt"])

@@ -17,8 +17,8 @@ import org.springframework.stereotype.Component
 class BpmnGeneratorRunner(
     private val generationUseCase: BpmnGenerationUseCase,
     private val applicationShutdown: BpmnerApplicationShutdown,
-) : ApplicationRunner, Ordered {
-
+) : ApplicationRunner,
+    Ordered {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorRunner::class.java)
 
     override fun getOrder(): Int = Ordered.HIGHEST_PRECEDENCE
@@ -31,14 +31,15 @@ class BpmnGeneratorRunner(
             return
         }
 
-        val result = generationUseCase.generate(
-            BpmnGenerationInput(
-                processDescription = args.getOptionValues("process")?.firstOrNull(),
-                processFile = args.getOptionValues("process-file")?.firstOrNull(),
-                outputFile = args.getOptionValues("output")?.firstOrNull() ?: "output.bpmn",
-                styleGuide = args.getOptionValues("style-guide")?.firstOrNull(),
+        val result =
+            generationUseCase.generate(
+                BpmnGenerationInput(
+                    processDescription = args.getOptionValues("process")?.firstOrNull(),
+                    processFile = args.getOptionValues("process-file")?.firstOrNull(),
+                    outputFile = args.getOptionValues("output")?.firstOrNull() ?: "output.bpmn",
+                    styleGuide = args.getOptionValues("style-guide")?.firstOrNull(),
+                ),
             )
-        )
         println(AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}"))
         applicationShutdown.exit()
     }

@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnBounds
@@ -33,7 +49,6 @@ import java.io.ByteArrayOutputStream
 @SecondaryAdapter
 @Component
 internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
-
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
         private const val EXPORTER = "bpmner"
@@ -59,17 +74,21 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     }
 
     private fun toModelInstance(definition: BpmnDefinition): BpmnModelInstance {
-        val modelInstance = Bpmn.createExecutableProcess(definition.processId)
-            .name(definition.processName)
-            .done()
+        val modelInstance =
+            Bpmn
+                .createExecutableProcess(definition.processId)
+                .name(definition.processName)
+                .done()
 
-        val process = modelInstance
-            .getModelElementsByType(Process::class.java)
-            .firstOrNull()
-            ?: error("Unable to locate process in Camunda model instance")
+        val process =
+            modelInstance
+                .getModelElementsByType(Process::class.java)
+                .firstOrNull()
+                ?: error("Unable to locate process in Camunda model instance")
 
-        val definitions = modelInstance.definitions
-            ?: error("Unable to locate definitions in Camunda model instance")
+        val definitions =
+            modelInstance.definitions
+                ?: error("Unable to locate definitions in Camunda model instance")
         configureDefinitions(definitions)
 
         val nodeMap = mutableMapOf<String, FlowNode>()
@@ -90,10 +109,12 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         }
 
         for (edge in definition.sequences) {
-            val source = nodeMap[edge.sourceRef]
-                ?: throw IllegalArgumentException("Unknown sourceRef '${edge.sourceRef}' on edge '${edge.id}'")
-            val target = nodeMap[edge.targetRef]
-                ?: throw IllegalArgumentException("Unknown targetRef '${edge.targetRef}' on edge '${edge.id}'")
+            val source =
+                nodeMap[edge.sourceRef]
+                    ?: throw IllegalArgumentException("Unknown sourceRef '${edge.sourceRef}' on edge '${edge.id}'")
+            val target =
+                nodeMap[edge.targetRef]
+                    ?: throw IllegalArgumentException("Unknown targetRef '${edge.targetRef}' on edge '${edge.id}'")
 
             val sequenceFlow = modelInstance.newInstance(SequenceFlow::class.java)
             sequenceFlow.id = edge.id
@@ -124,14 +145,18 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         return modelInstance
     }
 
-    private fun newFlowNode(modelInstance: BpmnModelInstance, node: dev.groknull.bpmner.core.BpmnNode): FlowNode {
-        val flowNode = when (node.type) {
-            NodeType.START_EVENT -> modelInstance.newInstance(StartEvent::class.java)
-            NodeType.USER_TASK -> modelInstance.newInstance(UserTask::class.java)
-            NodeType.SERVICE_TASK -> modelInstance.newInstance(ServiceTask::class.java)
-            NodeType.EXCLUSIVE_GATEWAY -> modelInstance.newInstance(ExclusiveGateway::class.java)
-            NodeType.END_EVENT -> modelInstance.newInstance(EndEvent::class.java)
-        }
+    private fun newFlowNode(
+        modelInstance: BpmnModelInstance,
+        node: dev.groknull.bpmner.core.BpmnNode,
+    ): FlowNode {
+        val flowNode =
+            when (node.type) {
+                NodeType.START_EVENT -> modelInstance.newInstance(StartEvent::class.java)
+                NodeType.USER_TASK -> modelInstance.newInstance(UserTask::class.java)
+                NodeType.SERVICE_TASK -> modelInstance.newInstance(ServiceTask::class.java)
+                NodeType.EXCLUSIVE_GATEWAY -> modelInstance.newInstance(ExclusiveGateway::class.java)
+                NodeType.END_EVENT -> modelInstance.newInstance(EndEvent::class.java)
+            }
         flowNode.id = node.id
         BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }
         return flowNode
@@ -149,21 +174,26 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         process: Process,
     ): BpmnPlane {
         val existingDiagram = modelInstance.getModelElementsByType(BpmnDiagram::class.java).firstOrNull()
-        val diagram = existingDiagram ?: modelInstance.newInstance(BpmnDiagram::class.java).also {
-            definitions.addChildElement(it)
-        }
+        val diagram =
+            existingDiagram ?: modelInstance.newInstance(BpmnDiagram::class.java).also {
+                definitions.addChildElement(it)
+            }
         diagram.id = "${process.id}_diagram"
 
         val existingPlane = diagram.bpmnPlane
-        val plane = existingPlane ?: modelInstance.newInstance(BpmnPlane::class.java).also {
-            diagram.bpmnPlane = it
-        }
+        val plane =
+            existingPlane ?: modelInstance.newInstance(BpmnPlane::class.java).also {
+                diagram.bpmnPlane = it
+            }
         plane.id = "${process.id}_plane"
         plane.bpmnElement = process
         return plane
     }
 
-    private fun newBounds(modelInstance: BpmnModelInstance, bounds: BpmnBounds): Bounds {
+    private fun newBounds(
+        modelInstance: BpmnModelInstance,
+        bounds: BpmnBounds,
+    ): Bounds {
         val diBounds = modelInstance.newInstance(Bounds::class.java)
         diBounds.x = bounds.x
         diBounds.y = bounds.y
@@ -172,7 +202,10 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         return diBounds
     }
 
-    private fun newWaypoint(modelInstance: BpmnModelInstance, waypoint: BpmnWaypoint): Waypoint {
+    private fun newWaypoint(
+        modelInstance: BpmnModelInstance,
+        waypoint: BpmnWaypoint,
+    ): Waypoint {
         val diWaypoint = modelInstance.newInstance(Waypoint::class.java)
         diWaypoint.x = waypoint.x
         diWaypoint.y = waypoint.y

@@ -1,3 +1,8 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnBounds
@@ -17,7 +22,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BpmnPatchApplierTest {
-
     private val applier = BpmnPatchApplier()
 
     private val startBounds = BpmnBounds(80.0, 120.0, 36.0, 36.0)
@@ -25,19 +29,22 @@ class BpmnPatchApplierTest {
     private val endBounds = BpmnBounds(320.0, 120.0, 36.0, 36.0)
     private val standardWaypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0))
 
-    private val baseDefinition = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Test Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
-            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = standardWaypoints),
-        ),
-    )
+    private val baseDefinition =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Test Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = standardWaypoints),
+                ),
+        )
 
     // -------------------------------------------------------------------------
     // SET_NODE_NAME
@@ -47,7 +54,12 @@ class BpmnPatchApplierTest {
     fun `SET_NODE_NAME updates node name`() {
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "New name"))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals("New name", result.definition.nodes.first { it.id == "Task_1" }.name)
+        assertEquals(
+            "New name",
+            result.definition.nodes
+                .first { it.id == "Task_1" }
+                .name,
+        )
     }
 
     @Test
@@ -70,7 +82,11 @@ class BpmnPatchApplierTest {
 
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
 
-        assertNull(result.definition.nodes.first { it.id == "Gateway_1" }.name)
+        assertNull(
+            result.definition.nodes
+                .first { it.id == "Gateway_1" }
+                .name,
+        )
     }
 
     @Test
@@ -80,7 +96,11 @@ class BpmnPatchApplierTest {
 
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
 
-        assertNull(result.definition.nodes.first { it.id == "Gateway_1" }.name)
+        assertNull(
+            result.definition.nodes
+                .first { it.id == "Gateway_1" }
+                .name,
+        )
     }
 
     @Test
@@ -114,17 +134,31 @@ class BpmnPatchApplierTest {
     fun `SET_EDGE_LABEL updates edge label`() {
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = "Yes"))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals("Yes", result.definition.sequences.first { it.id == "Flow_1" }.name)
+        assertEquals(
+            "Yes",
+            result.definition.sequences
+                .first { it.id == "Flow_1" }
+                .name,
+        )
     }
 
     @Test
     fun `SET_EDGE_LABEL clears label when null`() {
-        val withLabel = baseDefinition.copy(sequences = baseDefinition.sequences.map {
-            if (it.id == "Flow_1") it.copy(name = "Old label") else it
-        })
+        val withLabel =
+            baseDefinition.copy(
+                sequences =
+                    baseDefinition.sequences.map {
+                        if (it.id == "Flow_1") it.copy(name = "Old label") else it
+                    },
+            )
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = null))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(withLabel, patch))
-        assertEquals(null, result.definition.sequences.first { it.id == "Flow_1" }.name)
+        assertEquals(
+            null,
+            result.definition.sequences
+                .first { it.id == "Flow_1" }
+                .name,
+        )
     }
 
     @Test
@@ -167,9 +201,10 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `REMOVE_NODE removes a node with no edges`() {
-        val isolated = baseDefinition.copy(
-            nodes = baseDefinition.nodes + BpmnNode("Isolated_1", "Isolated", NodeType.SERVICE_TASK, taskBounds)
-        )
+        val isolated =
+            baseDefinition.copy(
+                nodes = baseDefinition.nodes + BpmnNode("Isolated_1", "Isolated", NodeType.SERVICE_TASK, taskBounds),
+            )
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REMOVE_NODE, nodeId = "Isolated_1"))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(isolated, patch))
         assertTrue(result.definition.nodes.none { it.id == "Isolated_1" })
@@ -197,7 +232,12 @@ class BpmnPatchApplierTest {
         val replacement = BpmnNode("Task_1", "Replaced task", NodeType.SERVICE_TASK, taskBounds.copy(x = 200.0))
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals("Replaced task", result.definition.nodes.first { it.id == "Task_1" }.name)
+        assertEquals(
+            "Replaced task",
+            result.definition.nodes
+                .first { it.id == "Task_1" }
+                .name,
+        )
     }
 
     @Test
@@ -276,7 +316,12 @@ class BpmnPatchApplierTest {
         val replacement = BpmnEdge("Flow_1", "Start_1", "Task_1", name = "start flow", waypoints = standardWaypoints)
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_EDGE, edgeId = "Flow_1", edge = replacement))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals("start flow", result.definition.sequences.first { it.id == "Flow_1" }.name)
+        assertEquals(
+            "start flow",
+            result.definition.sequences
+                .first { it.id == "Flow_1" }
+                .name,
+        )
     }
 
     @Test
@@ -299,25 +344,39 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `multiple operations applied in order`() {
-        val patch = BpmnRepairPatch(
-            operations = listOf(
-                BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "First fix"),
-                BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = "start"),
+        val patch =
+            BpmnRepairPatch(
+                operations =
+                    listOf(
+                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "First fix"),
+                        BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = "start"),
+                    ),
             )
-        )
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals("First fix", result.definition.nodes.first { it.id == "Task_1" }.name)
-        assertEquals("start", result.definition.sequences.first { it.id == "Flow_1" }.name)
+        assertEquals(
+            "First fix",
+            result.definition.nodes
+                .first { it.id == "Task_1" }
+                .name,
+        )
+        assertEquals(
+            "start",
+            result.definition.sequences
+                .first { it.id == "Flow_1" }
+                .name,
+        )
     }
 
     @Test
     fun `first invalid operation stops processing and returns failure`() {
-        val patch = BpmnRepairPatch(
-            operations = listOf(
-                BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Bad_Id", name = "fix"),
-                BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Good fix"),
+        val patch =
+            BpmnRepairPatch(
+                operations =
+                    listOf(
+                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Bad_Id", name = "fix"),
+                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Good fix"),
+                    ),
             )
-        )
         assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
     }
 
@@ -325,8 +384,18 @@ class BpmnPatchApplierTest {
     fun `patch preserves stable ids on all other nodes`() {
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Updated"))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
-        assertEquals(setOf("Start_1", "Task_1", "End_1"), result.definition.nodes.map { it.id }.toSet())
-        assertEquals(setOf("Flow_1", "Flow_2"), result.definition.sequences.map { it.id }.toSet())
+        assertEquals(
+            setOf("Start_1", "Task_1", "End_1"),
+            result.definition.nodes
+                .map { it.id }
+                .toSet(),
+        )
+        assertEquals(
+            setOf("Flow_1", "Flow_2"),
+            result.definition.sequences
+                .map { it.id }
+                .toSet(),
+        )
     }
 
     // -------------------------------------------------------------------------
@@ -335,41 +404,47 @@ class BpmnPatchApplierTest {
 
     private fun patch(vararg ops: BpmnPatchOperation) = BpmnRepairPatch(operations = ops.toList())
 
-    private fun convergingGatewayDefinition(gatewayName: String?) = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Merge decisions",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
-            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
-            BpmnNode("Task_2", "Do other work", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
-            BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(320.0, 140.0, 50.0, 50.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_2", "Start_1", "Task_2", waypoints = standardWaypoints),
-            BpmnEdge("Flow_3", "Task_1", "Gateway_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_4", "Task_2", "Gateway_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_5", "Gateway_1", "End_1", waypoints = standardWaypoints),
-        ),
-    )
+    private fun convergingGatewayDefinition(gatewayName: String?) =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Merge decisions",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
+                    BpmnNode("Task_2", "Do other work", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
+                    BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(320.0, 140.0, 50.0, 50.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_2", "Start_1", "Task_2", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_3", "Task_1", "Gateway_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_4", "Task_2", "Gateway_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_5", "Gateway_1", "End_1", waypoints = standardWaypoints),
+                ),
+        )
 
-    private fun divergingGatewayDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Route decision",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
-            BpmnNode("Gateway_1", "Is request valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(160.0, 120.0, 50.0, 50.0)),
-            BpmnNode("Task_1", "Approve request", NodeType.USER_TASK, taskBounds),
-            BpmnNode("Task_2", "Reject request", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Valid", waypoints = standardWaypoints),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Invalid", waypoints = standardWaypoints),
-            BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = standardWaypoints),
-            BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = standardWaypoints),
-        ),
-    )
+    private fun divergingGatewayDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Route decision",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
+                    BpmnNode("Gateway_1", "Is request valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(160.0, 120.0, 50.0, 50.0)),
+                    BpmnNode("Task_1", "Approve request", NodeType.USER_TASK, taskBounds),
+                    BpmnNode("Task_2", "Reject request", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Valid", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Invalid", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = standardWaypoints),
+                    BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = standardWaypoints),
+                ),
+        )
 }

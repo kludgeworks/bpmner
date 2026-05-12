@@ -1,50 +1,52 @@
-import { isAny } from 'bpmnlint-utils';
-import type { ModdleElement, Reporter } from './_helpers';
-import { getRuleConfig, getRuleMessage, getStaticConfig } from '../rule-config';
+import { isAny } from "bpmnlint-utils"
+import { getRuleConfig, getRuleMessage, getStaticConfig } from "../rule-config"
+import type { ModdleElement, Reporter } from "./_helpers"
 
-const RULE_ID = 'name-uncommon-abbreviations';
+const RULE_ID = "name-uncommon-abbreviations"
 const TYPES_WITH_NAMES = getRuleConfig(RULE_ID).targetElements || [
-  'bpmn:Task',
-  'bpmn:SubProcess',
-  'bpmn:CallActivity',
-  'bpmn:StartEvent',
-  'bpmn:IntermediateCatchEvent',
-  'bpmn:IntermediateThrowEvent',
-  'bpmn:EndEvent',
-  'bpmn:ExclusiveGateway',
-  'bpmn:InclusiveGateway',
-  'bpmn:ParallelGateway',
-  'bpmn:ComplexGateway',
-  'bpmn:DataObjectReference',
-  'bpmn:DataStoreReference'
-];
+	"bpmn:Task",
+	"bpmn:SubProcess",
+	"bpmn:CallActivity",
+	"bpmn:StartEvent",
+	"bpmn:IntermediateCatchEvent",
+	"bpmn:IntermediateThrowEvent",
+	"bpmn:EndEvent",
+	"bpmn:ExclusiveGateway",
+	"bpmn:InclusiveGateway",
+	"bpmn:ParallelGateway",
+	"bpmn:ComplexGateway",
+	"bpmn:DataObjectReference",
+	"bpmn:DataStoreReference",
+]
 
-const { commonAcronyms } = getStaticConfig<{ commonAcronyms: string[] }>(RULE_ID);
-const COMMON_ACRONYMS = new Set(commonAcronyms);
-const MESSAGE = getRuleMessage(RULE_ID);
+const { commonAcronyms } = getStaticConfig<{ commonAcronyms: string[] }>(
+	RULE_ID,
+)
+const COMMON_ACRONYMS = new Set(commonAcronyms)
+const MESSAGE = getRuleMessage(RULE_ID)
 
 function hasUncommonAbbreviation(name: string): boolean {
-  const matches = name.match(/\b[A-Z]{2,}\b/g) || [];
+	const matches = name.match(/\b[A-Z]{2,}\b/g) || []
 
-  return matches.some((token) => !COMMON_ACRONYMS.has(token));
+	return matches.some((token) => !COMMON_ACRONYMS.has(token))
 }
 
-export = function() {
-  function check(node: ModdleElement, reporter: Reporter) {
-    if (!isAny(node, TYPES_WITH_NAMES)) {
-      return;
-    }
+export = () => {
+	function check(node: ModdleElement, reporter: Reporter) {
+		if (!isAny(node, TYPES_WITH_NAMES)) {
+			return
+		}
 
-    const name = node.name?.trim() || '';
+		const name = node.name?.trim() || ""
 
-    if (!name) {
-      return;
-    }
+		if (!name) {
+			return
+		}
 
-    if (hasUncommonAbbreviation(name)) {
-      reporter.report(node.id, MESSAGE);
-    }
-  }
+		if (hasUncommonAbbreviation(name)) {
+			reporter.report(node.id, MESSAGE)
+		}
+	}
 
-  return { check };
-};
+	return { check }
+}

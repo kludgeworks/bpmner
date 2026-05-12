@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import org.w3c.dom.ls.LSInput
@@ -6,41 +22,92 @@ import java.io.InputStream
 import java.io.Reader
 
 class ClasspathResourceResolver : LSResourceResolver {
-
     override fun resolveResource(
         type: String?,
         namespaceURI: String?,
         publicId: String?,
         systemId: String?,
         baseURI: String?,
-    ): LSInput? {
-        val resourceName = systemId?.substringAfterLast('/')?.takeIf { it.isNotBlank() }
-            ?: return null
-        val stream = javaClass.getResourceAsStream("/xsd/$resourceName") ?: return null
-        return ClasspathLSInput(publicId, systemId, stream)
+    ): LSInput? =
+        systemId
+            ?.substringAfterLast('/')
+            ?.takeIf { it.isNotBlank() }
+            ?.let { resourceName ->
+                javaClass
+                    .getResourceAsStream("/xsd/$resourceName")
+                    ?.let { stream ->
+                        ClasspathLSInput(publicId, systemId, stream)
+                    }
+            }
+}
+
+private abstract class MutableLSInput : LSInput {
+    private var publicIdValue: String? = null
+    private var systemIdValue: String? = null
+    private var baseUriValue: String? = null
+    private var byteStreamValue: InputStream? = null
+    private var characterStreamValue: Reader? = null
+    private var stringDataValue: String? = null
+    private var certifiedTextValue: Boolean = false
+    private var encodingValue: String? = null
+
+    override fun getPublicId() = publicIdValue
+
+    override fun getSystemId() = systemIdValue
+
+    override fun getBaseURI() = baseUriValue
+
+    override fun getByteStream() = byteStreamValue
+
+    override fun getCharacterStream() = characterStreamValue
+
+    override fun getStringData() = stringDataValue
+
+    override fun getCertifiedText() = certifiedTextValue
+
+    override fun getEncoding() = encodingValue
+
+    override fun setPublicId(publicId: String?) {
+        publicIdValue = publicId
+    }
+
+    override fun setSystemId(systemId: String?) {
+        systemIdValue = systemId
+    }
+
+    override fun setBaseURI(baseURI: String?) {
+        baseUriValue = baseURI
+    }
+
+    override fun setByteStream(byteStream: InputStream?) {
+        byteStreamValue = byteStream
+    }
+
+    override fun setCharacterStream(characterStream: Reader?) {
+        characterStreamValue = characterStream
+    }
+
+    override fun setStringData(stringData: String?) {
+        stringDataValue = stringData
+    }
+
+    override fun setCertifiedText(certifiedText: Boolean) {
+        certifiedTextValue = certifiedText
+    }
+
+    override fun setEncoding(encoding: String?) {
+        encodingValue = encoding
     }
 }
 
 private class ClasspathLSInput(
-    private val publicId: String?,
-    private val systemId: String?,
-    private val stream: InputStream,
-) : LSInput {
-    override fun getPublicId() = publicId
-    override fun getSystemId() = systemId
-    override fun getBaseURI() = null
-    override fun getByteStream() = stream
-    override fun getCharacterStream(): Reader? = null
-    override fun getStringData(): String? = null
-    override fun getCertifiedText() = false
-    override fun getEncoding() = null
-
-    override fun setPublicId(publicId: String?) {}
-    override fun setSystemId(systemId: String?) {}
-    override fun setBaseURI(baseURI: String?) {}
-    override fun setByteStream(byteStream: InputStream?) {}
-    override fun setCharacterStream(characterStream: Reader?) {}
-    override fun setStringData(stringData: String?) {}
-    override fun setCertifiedText(certifiedText: Boolean) {}
-    override fun setEncoding(encoding: String?) {}
+    publicId: String?,
+    systemId: String?,
+    stream: InputStream,
+) : MutableLSInput() {
+    init {
+        setPublicId(publicId)
+        setSystemId(systemId)
+        setByteStream(stream)
+    }
 }

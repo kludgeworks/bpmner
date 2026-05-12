@@ -31,7 +31,13 @@ internal enum class BpmnPatchOperationType {
 }
 
 internal sealed class PatchApplicationResult {
-    data class Success(val definition: BpmnDefinition) : PatchApplicationResult()
+    data class Success(
+        val definition: BpmnDefinition,
+    ) : PatchApplicationResult()
+
     data object NoOp : PatchApplicationResult()
-    data class Failure(val reason: String) : PatchApplicationResult()
+
+    data class Failure(
+        val reason: String,
+    ) : PatchApplicationResult()
 }

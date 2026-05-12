@@ -4,7 +4,6 @@ import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import org.jmolecules.archunit.JMoleculesArchitectureRules
 import org.jmolecules.archunit.JMoleculesDddRules
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 
 class BpmnerArchitectureTest {

@@ -1,3 +1,8 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.core.BpmnBounds

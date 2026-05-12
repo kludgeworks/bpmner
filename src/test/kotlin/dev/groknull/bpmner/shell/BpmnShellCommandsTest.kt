@@ -7,18 +7,18 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
 class BpmnShellCommandsTest {
-
     @Test
     fun `generate forwards inline process description`() {
         val generationUseCase = CapturingGenerationUseCase()
         val commands = BpmnShellCommands(generationUseCase)
 
-        val response = commands.generate(
-            processDescription = "Ship order",
-            processFile = null,
-            output = "ship.bpmn",
-            styleGuide = "style.md",
-        )
+        val response =
+            commands.generate(
+                processDescription = "Ship order",
+                processFile = null,
+                output = "ship.bpmn",
+                styleGuide = "style.md",
+            )
 
         assertEquals(
             BpmnGenerationInput(

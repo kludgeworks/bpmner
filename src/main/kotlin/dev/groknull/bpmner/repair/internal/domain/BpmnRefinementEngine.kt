@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.ActionContext
@@ -5,15 +21,14 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnAttemptHistory
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRefinementFailureException
+import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.core.ValidatedBpmnXml
+import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
@@ -21,7 +36,6 @@ import dev.groknull.bpmner.validation.BpmnValidator
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
-import kotlin.math.min
 
 @Service
 internal class BpmnRefinementEngine(
@@ -44,18 +58,20 @@ internal class BpmnRefinementEngine(
         val maxEvaluations = config.maxAttempts.coerceAtLeast(1)
         val initialMessages = promptFactory.initialMessages(request, rendered.definition)
         var currentGraph = graph
-        var currentAttempt = BpmnRepairAttempt(
-            attemptNumber = 1,
-            repairAttempts = 0,
-            graph = currentGraph,
-            evaluation = validator.evaluate(
-                graph = currentGraph,
-                definition = rendered.definition,
-                rendered = rendered,
+        var currentAttempt =
+            BpmnRepairAttempt(
+                attemptNumber = 1,
                 repairAttempts = 0,
-            ),
-            messages = initialMessages,
-        )
+                graph = currentGraph,
+                evaluation =
+                    validator.evaluate(
+                        graph = currentGraph,
+                        definition = rendered.definition,
+                        rendered = rendered,
+                        repairAttempts = 0,
+                    ),
+                messages = initialMessages,
+            )
         var currentRecord = validator.toRecord(currentAttempt)
         var history = BpmnAttemptHistory().append(currentRecord)
         if (currentAttempt.evaluation.isSuccessful()) {
@@ -72,7 +88,7 @@ internal class BpmnRefinementEngine(
                 "Repair attempt ${currentAttempt.repairAttempts + 1}/${maxEvaluations - 1}: " +
                     "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
                     "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
-                    "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}"
+                    "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}",
             )
 
             eventPublisher.publishEvent(
@@ -81,24 +97,34 @@ internal class BpmnRefinementEngine(
                     diagnostics = currentAttempt.diagnostics,
                     attemptNumber = currentAttempt.attemptNumber,
                     repairAttempts = currentAttempt.repairAttempts,
-                )
+                ),
             )
 
-            val repairPromptRunner = promptRunner(context, request).let { runner ->
-                val docsPrompt = promptFactory.lintRuleDocsPrompt(currentAttempt.diagnostics)
-                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
-            }
+            val repairPromptRunner =
+                promptRunner(context, request).let { runner ->
+                    val docsPrompt = promptFactory.lintRuleDocsPrompt(currentAttempt.diagnostics)
+                    if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
+                }
             val repair = repairWithStrategies(currentAttempt, repairPromptRunner)
-            val repaired = when (repair) {
-                is BpmnRepairResult.Repaired -> repair
-                is BpmnRepairResult.TerminalFailure -> failRefinement(maxEvaluations, history, repair.reason, request)
-                BpmnRepairResult.NotApplicable -> failRefinement(
-                    maxEvaluations = maxEvaluations,
-                    history = history,
-                    reason = "no repair strategy produced a candidate",
-                    request = request,
-                )
-            }
+            val repaired =
+                when (repair) {
+                    is BpmnRepairResult.Repaired -> {
+                        repair
+                    }
+
+                    is BpmnRepairResult.TerminalFailure -> {
+                        failRefinement(maxEvaluations, history, repair.reason, request)
+                    }
+
+                    BpmnRepairResult.NotApplicable -> {
+                        failRefinement(
+                            maxEvaluations = maxEvaluations,
+                            history = history,
+                            reason = "no repair strategy produced a candidate",
+                            request = request,
+                        )
+                    }
+                }
 
             val correctedDefinitionFingerprint = fingerprints.definitionFingerprint(repaired.definition)
             if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
@@ -120,30 +146,34 @@ internal class BpmnRefinementEngine(
 
             currentGraph = currentGraph.withUpdatedDefinition(repaired.definition)
             var renderFailureMessage: String? = null
-            val correctedRendered = try {
-                bpmnRenderer.render(currentGraph)
-            } catch (e: Exception) {
-                renderFailureMessage = e.message ?: e.javaClass.simpleName
-                null
-            }
-            val nextEvaluation = validator.evaluate(
-                graph = currentGraph,
-                definition = repaired.definition,
-                rendered = correctedRendered,
-                renderFailureMessage = renderFailureMessage,
-                repairAttempts = currentAttempt.repairAttempts + 1,
-            )
-            val nextAttempt = BpmnRepairAttempt(
-                attemptNumber = history.size + 1,
-                repairAttempts = currentAttempt.repairAttempts + 1,
-                graph = currentGraph,
-                evaluation = nextEvaluation,
-                messages = repaired.messages,
-            )
-            val nextRecord = validator.toRecord(
-                attempt = nextAttempt,
-                repairPromptFingerprint = fingerprints.promptFingerprint(repaired.promptText),
-            )
+            val correctedRendered =
+                try {
+                    bpmnRenderer.render(currentGraph)
+                } catch (e: Exception) {
+                    renderFailureMessage = e.message ?: e.javaClass.simpleName
+                    null
+                }
+            val nextEvaluation =
+                validator.evaluate(
+                    graph = currentGraph,
+                    definition = repaired.definition,
+                    rendered = correctedRendered,
+                    renderFailureMessage = renderFailureMessage,
+                    repairAttempts = currentAttempt.repairAttempts + 1,
+                )
+            val nextAttempt =
+                BpmnRepairAttempt(
+                    attemptNumber = history.size + 1,
+                    repairAttempts = currentAttempt.repairAttempts + 1,
+                    graph = currentGraph,
+                    evaluation = nextEvaluation,
+                    messages = repaired.messages,
+                )
+            val nextRecord =
+                validator.toRecord(
+                    attempt = nextAttempt,
+                    repairPromptFingerprint = fingerprints.promptFingerprint(repaired.promptText),
+                )
             history = history.append(nextRecord)
             if (nextAttempt.evaluation.isSuccessful()) {
                 context.updateProgress("Validation passed after ${nextAttempt.repairAttempts} repair attempt(s)")
@@ -176,10 +206,11 @@ internal class BpmnRefinementEngine(
         attempt: BpmnRepairAttempt,
         promptRunner: PromptRunner,
     ): BpmnRepairResult {
-        val strategyContext = BpmnRepairStrategyContext(
-            attempt = attempt,
-            promptRunner = promptRunner,
-        )
+        val strategyContext =
+            BpmnRepairStrategyContext(
+                attempt = attempt,
+                promptRunner = promptRunner,
+            )
         for (strategy in strategies) {
             when (val result = strategy.repair(strategyContext)) {
                 BpmnRepairResult.NotApplicable -> Unit
@@ -189,8 +220,10 @@ internal class BpmnRefinementEngine(
         return BpmnRepairResult.NotApplicable
     }
 
-    private fun promptRunner(context: OperationContext, request: BpmnRequest): PromptRunner =
-        config.repairer.promptRunner(context).withPromptContributor(request)
+    private fun promptRunner(
+        context: OperationContext,
+        request: BpmnRequest,
+    ): PromptRunner = config.repairer.promptRunner(context).withPromptContributor(request)
 
     private fun failRefinement(
         maxEvaluations: Int,
@@ -208,28 +241,29 @@ internal class BpmnRefinementEngine(
         val lastStuckRecord = history.records.lastOrNull { stuckFingerprints.containsKey(it.diagnosticFingerprint) }
         val lastRecord = history.last
 
-        val summary = buildString {
-            appendLine("BPMN generation failed after ${history.size} attempt(s): $reason")
-            appendLine("  Cause: $reason")
-            appendLine("  Attempts: ${history.size} / $maxEvaluations")
-            for ((fp, attempts) in stuckFingerprints) {
-                appendLine("  Recurring (stuck) fingerprint: $fp — seen in attempt(s): ${attempts.joinToString(", ")}")
-            }
-            val displayRecord = lastStuckRecord ?: lastRecord
-            if (displayRecord != null && displayRecord.topDiagnostics.isNotEmpty()) {
-                val label = if (lastStuckRecord != null) "Top stuck diagnostics" else "Last attempt diagnostics"
-                appendLine("  $label:")
-                displayRecord.topDiagnostics.forEach { appendLine("    - $it") }
-            }
-            if (lastRecord != null) {
-                appendLine(
-                    "  Last attempt: graph=${lastRecord.graphDiagnostics}, render=${lastRecord.renderDiagnostics}, " +
-                        "xsd=${lastRecord.xsdDiagnostics}, lint=${lastRecord.lintDiagnostics}, " +
-                        "def=${lastRecord.definitionFingerprint}",
-                )
-            }
-            append("  Full history: $compactHistory")
-        }.trim()
+        val summary =
+            buildString {
+                appendLine("BPMN generation failed after ${history.size} attempt(s): $reason")
+                appendLine("  Cause: $reason")
+                appendLine("  Attempts: ${history.size} / $maxEvaluations")
+                for ((fp, attempts) in stuckFingerprints) {
+                    appendLine("  Recurring (stuck) fingerprint: $fp — seen in attempt(s): ${attempts.joinToString(", ")}")
+                }
+                val displayRecord = lastStuckRecord ?: lastRecord
+                if (displayRecord != null && displayRecord.topDiagnostics.isNotEmpty()) {
+                    val label = if (lastStuckRecord != null) "Top stuck diagnostics" else "Last attempt diagnostics"
+                    appendLine("  $label:")
+                    displayRecord.topDiagnostics.forEach { appendLine("    - $it") }
+                }
+                if (lastRecord != null) {
+                    appendLine(
+                        "  Last attempt: graph=${lastRecord.graphDiagnostics}, render=${lastRecord.renderDiagnostics}, " +
+                            "xsd=${lastRecord.xsdDiagnostics}, lint=${lastRecord.lintDiagnostics}, " +
+                            "def=${lastRecord.definitionFingerprint}",
+                    )
+                }
+                append("  Full history: $compactHistory")
+            }.trim()
 
         logger.error(summary)
         throw BpmnRefinementFailureException(

@@ -1,3 +1,5 @@
+"""Shared TypeScript project macro for BPMNer packages."""
+
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 
 def bpmner_ts_project(name, srcs, deps, assets = [], out_dir = "tsc", tsconfig = "//linter:tsconfig_bazel", **kwargs):

@@ -37,9 +37,9 @@ ts_config(
 bpmner_ts_project(
     name = "ts",
     srcs = LIB_TS_SRCS + TEST_TS_SRCS,
-    deps = LAYOUT_TS_DEPS,
     out_dir = "tsc",
     tsconfig = ":tsconfig_bazel",
+    deps = LAYOUT_TS_DEPS,
 )
 
 esbuild(
@@ -74,7 +74,7 @@ esbuild(
 
 js_test(
     name = "smoke_test",
-    entry_point = "dist/test/smoke.test.js",
     data = [":smoke_test_bundle"],
+    entry_point = "dist/test/smoke.test.js",
     node_options = ["--test-reporter=spec"],
 )

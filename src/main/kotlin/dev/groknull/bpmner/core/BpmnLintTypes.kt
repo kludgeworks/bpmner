@@ -19,7 +19,10 @@ data class LintIssue(
     val rawFields: MutableMap<String, Any?> = mutableMapOf(),
 ) {
     @JsonAnySetter
-    fun add(name: String, value: Any?) {
+    fun add(
+        name: String,
+        value: Any?,
+    ) {
         if (name !in KNOWN_FIELDS) rawFields[name] = value
     }
 

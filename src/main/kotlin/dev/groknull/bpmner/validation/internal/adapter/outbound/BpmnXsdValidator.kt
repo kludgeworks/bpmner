@@ -1,7 +1,23 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.core.ClasspathResourceResolver
+import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
@@ -16,7 +32,6 @@ import javax.xml.validation.SchemaFactory
 @SecondaryAdapter
 @Component
 internal open class BpmnXsdValidator : BpmnXsdValidationPort {
-
     private val logger = LoggerFactory.getLogger(BpmnXsdValidator::class.java)
 
     override fun validateDetailed(bpmnXml: String): List<XsdValidationIssue> {
@@ -24,8 +39,9 @@ internal open class BpmnXsdValidator : BpmnXsdValidationPort {
         return try {
             val schemaFactory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI)
             schemaFactory.resourceResolver = ClasspathResourceResolver()
-            val schemaUrl = javaClass.getResource("/xsd/BPMN20.xsd")
-                ?: return listOf(XsdValidationIssue("BPMN20.xsd not found on classpath"))
+            val schemaUrl =
+                javaClass.getResource("/xsd/BPMN20.xsd")
+                    ?: return listOf(XsdValidationIssue("BPMN20.xsd not found on classpath"))
             val schema = schemaFactory.newSchema(schemaUrl)
             schema.newValidator().validate(StreamSource(StringReader(bpmnXml)))
             logger.debug("XSD validation passed")

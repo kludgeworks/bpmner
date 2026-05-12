@@ -3,6 +3,8 @@
 set -euo pipefail
 
 app_path="${1:?expected springboot launcher path}"
+: "${TEST_SRCDIR:?TEST_SRCDIR must be set by Bazel}"
+: "${TEST_WORKSPACE:?TEST_WORKSPACE must be set by Bazel}"
 workspace_root="${TEST_SRCDIR}/${TEST_WORKSPACE}"
 env_script="${workspace_root}/src/bpmner_app_bazelrun_env.sh"
 sample_path="${workspace_root}/toast-process.txt"

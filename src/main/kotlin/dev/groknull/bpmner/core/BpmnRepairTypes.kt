@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import com.embabel.chat.Message
@@ -12,11 +28,12 @@ data class BpmnEvaluation(
 ) {
     fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
 
-    fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml = ValidatedBpmnXml(
-        xml = validatedXml ?: error("No validated BPMN XML available"),
-        diagnostics = diagnostics,
-        repairAttempts = repairAttempts,
-    )
+    fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml =
+        ValidatedBpmnXml(
+            xml = validatedXml ?: error("No validated BPMN XML available"),
+            diagnostics = diagnostics,
+            repairAttempts = repairAttempts,
+        )
 }
 
 data class BpmnRepairAttempt(
@@ -41,8 +58,7 @@ data class BpmnAttemptHistory(
 
     fun append(record: BpmnAttemptRecord): BpmnAttemptHistory = copy(records = records + record)
 
-    fun containsDefinitionFingerprint(fingerprint: String): Boolean =
-        records.any { it.definitionFingerprint == fingerprint }
+    fun containsDefinitionFingerprint(fingerprint: String): Boolean = records.any { it.definitionFingerprint == fingerprint }
 
     fun compact(): String = records.joinToString(" | ") { it.compact() }
 }
@@ -65,7 +81,9 @@ data class BpmnAttemptRecord(
             "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
 }
 
-class BpmnValidatorInfrastructureException(message: String) : IllegalStateException(message)
+class BpmnValidatorInfrastructureException(
+    message: String,
+) : IllegalStateException(message)
 
 class BpmnRefinementFailureException(
     message: String,

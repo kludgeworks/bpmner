@@ -1,3 +1,8 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
@@ -18,7 +23,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BpmnTopologyRepairTest {
-
     private val applier = BpmnPatchApplier()
     private val repair = BpmnTopologyRepair(applier)
     private val validator = BpmnDefinitionValidator()
@@ -179,12 +183,17 @@ class BpmnTopologyRepairTest {
     @Test
     fun `returns null when no topology diagnostics present`() {
         val definition = superfluousGatewayDefinition()
-        val patch = repair.buildTopologyPatch(
-            definition,
-            listOf(
-                BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, message = "label issue", rule = "bpmner/gtw-01-diverging-gateway-question"),
-            ),
-        )
+        val patch =
+            repair.buildTopologyPatch(
+                definition,
+                listOf(
+                    BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.LINT,
+                        message = "label issue",
+                        rule = "bpmner/gtw-01-diverging-gateway-question",
+                    ),
+                ),
+            )
         assertNull(patch)
     }
 
@@ -196,13 +205,14 @@ class BpmnTopologyRepairTest {
     @Test
     fun `picks first topology diagnostic when multiple present`() {
         val definition = joinForkDefinition()
-        val patch = repair.buildTopologyPatch(
-            definition,
-            listOf(
-                topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork"),
-                topologyDiag("Task_1", "bpmner/gtw-21-fake-join"),
-            ),
-        )
+        val patch =
+            repair.buildTopologyPatch(
+                definition,
+                listOf(
+                    topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork"),
+                    topologyDiag("Task_1", "bpmner/gtw-21-fake-join"),
+                ),
+            )
         assertNotNull(patch)
         assertTrue(patch.reason?.contains("no-gateway-join-fork") == true)
     }
@@ -211,116 +221,137 @@ class BpmnTopologyRepairTest {
     // Helpers
     // -------------------------------------------------------------------------
 
-    private fun topologyDiag(elementId: String, rule: String) = BpmnDiagnostic(
+    private fun topologyDiag(
+        elementId: String,
+        rule: String,
+    ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = "topology violation",
         rule = rule,
         elementId = elementId,
     )
 
-    private fun joinForkDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Join Fork Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 160.0, 36.0, 36.0)),
-            BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 260.0, 36.0, 36.0)),
-            BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 155.0, 50.0, 50.0)),
-            BpmnNode("Task_1", "Handle A", NodeType.USER_TASK, BpmnBounds(360.0, 140.0, 100.0, 80.0)),
-            BpmnNode("Task_2", "Handle B", NodeType.USER_TASK, BpmnBounds(360.0, 250.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 160.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A", waypoints = stdWaypoints),
-            BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B", waypoints = stdWaypoints),
-            BpmnEdge("Flow_5", "Task_1", "End_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_6", "Task_2", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun joinForkDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Join Fork Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 260.0, 36.0, 36.0)),
+                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 155.0, 50.0, 50.0)),
+                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK, BpmnBounds(360.0, 140.0, 100.0, 80.0)),
+                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK, BpmnBounds(360.0, 250.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 160.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_5", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_6", "Task_2", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
-    private fun fakeJoinDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Fake Join Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-            BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
-            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(240.0, 138.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 160.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Start_2", "Task_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun fakeJoinDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Fake Join Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(240.0, 138.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 160.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Start_2", "Task_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
-    private fun singleIncomingTaskDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Single Incoming",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 120.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 140.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun singleIncomingTaskDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Single Incoming",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 120.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 140.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
-    private fun superfluousGatewayDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Superfluous Gateway Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-            BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
-            BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(300.0, 118.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Gateway_1", "Task_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun superfluousGatewayDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Superfluous Gateway Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(300.0, 118.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
-    private fun divergingGatewayDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Diverging Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-            BpmnNode("Gateway_1", "Is valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
-            BpmnNode("Task_1", "Approve", NodeType.USER_TASK, BpmnBounds(300.0, 100.0, 100.0, 80.0)),
-            BpmnNode("Task_2", "Reject", NodeType.USER_TASK, BpmnBounds(300.0, 200.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes", waypoints = stdWaypoints),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No", waypoints = stdWaypoints),
-            BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun divergingGatewayDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Diverging Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Gateway_1", "Is valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
+                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK, BpmnBounds(300.0, 100.0, 100.0, 80.0)),
+                    BpmnNode("Task_2", "Reject", NodeType.USER_TASK, BpmnBounds(300.0, 200.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
-    private fun convergingNamedGatewayDefinition(gatewayName: String? = "Join") = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Converging Named Gateway Process",
-        nodes = listOf(
-            BpmnNode("Start_1", "Path A", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
-            BpmnNode("Start_2", "Path B", NodeType.START_EVENT, BpmnBounds(80.0, 200.0, 36.0, 36.0)),
-            BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 135.0, 50.0, 50.0)),
-            BpmnNode("Task_1", "Continue", NodeType.USER_TASK, BpmnBounds(360.0, 118.0, 100.0, 80.0)),
-            BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 140.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_1", waypoints = stdWaypoints),
-            BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
-        ),
-    )
+    private fun convergingNamedGatewayDefinition(gatewayName: String? = "Join") =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Converging Named Gateway Process",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Path A", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
+                    BpmnNode("Start_2", "Path B", NodeType.START_EVENT, BpmnBounds(80.0, 200.0, 36.0, 36.0)),
+                    BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 135.0, 50.0, 50.0)),
+                    BpmnNode("Task_1", "Continue", NodeType.USER_TASK, BpmnBounds(360.0, 118.0, 100.0, 80.0)),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 140.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
+                ),
+        )
 
     // -------------------------------------------------------------------------
     // gtw-02: clear converging gateway name
@@ -345,7 +376,11 @@ class BpmnTopologyRepairTest {
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
         val errors = validator.validate(result.definition)
         assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
-        assertNull(result.definition.nodes.single { it.id == "Gateway_1" }.name)
+        assertNull(
+            result.definition.nodes
+                .single { it.id == "Gateway_1" }
+                .name,
+        )
     }
 
     @Test

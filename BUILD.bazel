@@ -2,6 +2,7 @@ load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("@rules_detekt//detekt:defs.bzl", "detekt_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -48,6 +49,14 @@ build_test(
     targets = ["//linter:bundle"],
 )
 
+build_test(
+    name = "typescript_build_test",
+    targets = [
+        "//layout:ts",
+        "//linter:ts",
+    ],
+)
+
 buildifier_test(
     name = "buildifier_check",
     srcs = glob(
@@ -62,16 +71,30 @@ buildifier_test(
     ),
 )
 
+detekt_test(
+    name = "detekt_check",
+    srcs = [
+        "//src:detekt_srcs",
+        "//src/test:detekt_srcs",
+    ],
+    build_upon_default_config = True,
+    cfgs = ["config/detekt/detekt.yml"],
+)
+
 test_suite(
     name = "ci",
     tests = [
         ":buildifier_check",
+        ":detekt_check",
         ":linter_bundle_build_test",
+        ":typescript_build_test",
         ":vale_docs_test",
         ":vale_fixtures_test",
+        "//linter:auto_fix_test",
         "//linter:lint_test",
         "//linter:smoke_test",
         "//linter/pkl:schema_test",
         "//src:ktlint_check",
+        "//src/test:ktlint_check",
     ],
 )

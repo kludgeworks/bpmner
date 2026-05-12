@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -7,7 +23,6 @@ import org.jmolecules.ddd.annotation.Service
 
 @Service
 internal class BpmnDefinitionValidator {
-
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
@@ -25,13 +40,13 @@ internal class BpmnDefinitionValidator {
         val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
 
         definition.nodes.forEach { node ->
-            if (
+            val requiresName =
                 BpmnNodeNamingPolicy.requiresName(
                     node = node,
                     incomingCount = incomingCounts[node.id] ?: 0,
                     outgoingCount = outgoingCounts[node.id] ?: 0,
-                ) && node.name.isNullOrBlank()
-            ) {
+                )
+            if (requiresName && node.name.isNullOrBlank()) {
                 errors.add(BpmnNodeNamingPolicy.missingNameMessage(node))
             }
         }

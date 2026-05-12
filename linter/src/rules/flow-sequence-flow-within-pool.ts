@@ -1,25 +1,36 @@
-import { is } from 'bpmnlint-utils';
-import { getDefinitions, getPoolIdForNode, type ModdleElement, type Reporter } from './_helpers';
+import { is } from "bpmnlint-utils"
+import {
+	getDefinitions,
+	getPoolIdForNode,
+	type ModdleElement,
+	type Reporter,
+} from "./_helpers"
 
-export = function() {
-  function check(node: ModdleElement, reporter: Reporter) {
-    if (!is(node, 'bpmn:SequenceFlow')) {
-      return;
-    }
+export = () => {
+	function check(node: ModdleElement, reporter: Reporter) {
+		if (!is(node, "bpmn:SequenceFlow")) {
+			return
+		}
 
-    const definitions = getDefinitions(node);
+		const definitions = getDefinitions(node)
 
-    if (!definitions) {
-      return;
-    }
+		if (!definitions) {
+			return
+		}
 
-    const sourcePool = getPoolIdForNode(node.sourceRef as ModdleElement | undefined, definitions);
-    const targetPool = getPoolIdForNode(node.targetRef as ModdleElement | undefined, definitions);
+		const sourcePool = getPoolIdForNode(
+			node.sourceRef as ModdleElement | undefined,
+			definitions,
+		)
+		const targetPool = getPoolIdForNode(
+			node.targetRef as ModdleElement | undefined,
+			definitions,
+		)
 
-    if (sourcePool && targetPool && sourcePool !== targetPool) {
-      reporter.report(node.id, 'Sequence flow must not cross pool boundaries');
-    }
-  }
+		if (sourcePool && targetPool && sourcePool !== targetPool) {
+			reporter.report(node.id, "Sequence flow must not cross pool boundaries")
+		}
+	}
 
-  return { check };
-};
+	return { check }
+}

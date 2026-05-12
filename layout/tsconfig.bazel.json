@@ -1,6 +1,6 @@
 {
-  "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "outDir": "tsc"
-  }
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"outDir": "tsc"
+	}
 }

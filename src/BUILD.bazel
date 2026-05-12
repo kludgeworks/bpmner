@@ -49,6 +49,11 @@ filegroup(
     ],
 )
 
+filegroup(
+    name = "detekt_srcs",
+    srcs = glob(["main/kotlin/**/*.kt"]),
+)
+
 java_library(
     name = "linter_rules_json_res",
     resource_strip_prefix = "linter/pkl",

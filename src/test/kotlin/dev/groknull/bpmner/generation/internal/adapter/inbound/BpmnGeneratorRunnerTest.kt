@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test
 import org.springframework.boot.DefaultApplicationArguments
 
 class BpmnGeneratorRunnerTest {
-
     @Test
     fun `no arguments do not trigger one shot generation`() {
         val generationUseCase = CapturingGenerationUseCase()
@@ -33,7 +32,7 @@ class BpmnGeneratorRunnerTest {
                 "--process=Ship order",
                 "--output=ship.bpmn",
                 "--style-guide=style.md",
-            )
+            ),
         )
 
         assertEquals(

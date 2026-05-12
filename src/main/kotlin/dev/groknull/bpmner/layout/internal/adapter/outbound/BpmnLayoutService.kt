@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import jakarta.annotation.PostConstruct
@@ -16,7 +32,6 @@ import java.util.function.Consumer
 @SecondaryAdapter
 @Service
 internal open class BpmnLayoutService {
-
     private val logger = LoggerFactory.getLogger(BpmnLayoutService::class.java)
     private var jsContext: Context? = null
     private var layoutApi: Value? = null
@@ -25,15 +40,16 @@ internal open class BpmnLayoutService {
     fun init() {
         try {
             logger.info("Initializing GraalJS layout context...")
-            jsContext = Context.newBuilder("js")
-                .allowHostAccess(HostAccess.ALL)
-                .allowHostClassLookup { className ->
-                    className == "java.util.Base64" ||
-                        className == "java.lang.String" ||
-                        className == "java.nio.charset.StandardCharsets" ||
-                        className == "java.util.function.Consumer"
-                }
-                .build()
+            jsContext =
+                Context
+                    .newBuilder("js")
+                    .allowHostAccess(HostAccess.ALL)
+                    .allowHostClassLookup { className ->
+                        className == "java.util.Base64" ||
+                            className == "java.lang.String" ||
+                            className == "java.nio.charset.StandardCharsets" ||
+                            className == "java.util.function.Consumer"
+                    }.build()
 
             val bundleResource = ClassPathResource("js/bpmn-layout-bundle.js")
             if (!bundleResource.exists()) {
@@ -63,9 +79,12 @@ internal open class BpmnLayoutService {
             val future = CompletableFuture<String>()
             val promise = api.invokeMember("layoutXml", xml)
 
-            promise.invokeMember("then", Consumer<String> { result ->
-                future.complete(result)
-            })
+            promise.invokeMember(
+                "then",
+                Consumer<String> { result ->
+                    future.complete(result)
+                },
+            )
 
             future.get(30, TimeUnit.SECONDS)
         } catch (e: Exception) {
