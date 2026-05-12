@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:startEvent id="StartEvent_1" name="Time reached">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1"><bpmn:incoming>Flow_1</bpmn:incoming></bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1" />
+  </bpmn:process>
+</bpmn:definitions>

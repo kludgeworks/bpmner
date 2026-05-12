@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:parallelGateway id="Gateway_1" gatewayDirection="Diverging">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_1"><bpmn:incoming>Flow_1</bpmn:incoming></bpmn:task>
+    <bpmn:task id="Task_2"><bpmn:incoming>Flow_2</bpmn:incoming></bpmn:task>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Gateway_1" targetRef="Task_1">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">${approved}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Gateway_1" targetRef="Task_2" />
+  </bpmn:process>
+</bpmn:definitions>

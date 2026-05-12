@@ -1,0 +1,39 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Exclusive Inclusive Parallel Semantics"
+category = RuleCategory.Gateway
+
+intent = "Keep gateway type choices aligned with BPMN token semantics."
+forModellers =
+  "Use exclusive gateways for exactly one path, inclusive gateways for one or more paths, and parallel gateways when all paths proceed together."
+forAI =
+  "Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid."
+
+targetElements =
+  List(
+    "bpmn:ExclusiveGateway",
+    "bpmn:InclusiveGateway",
+    "bpmn:ParallelGateway",
+  )
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Gateway semantics should match exclusive, inclusive, or parallel behavior"
+  ["parallelCondition"] =
+    "Parallel gateway outgoing sequence flow must not be conditional or default-only"
+  ["parallelSplitCardinality"] =
+    "Parallel diverging gateway should have at least two outgoing sequence flows"
+  ["parallelJoinCardinality"] =
+    "Parallel converging gateway should have at least two incoming sequence flows"
+}
+
+staticConfig = new {
+  deterministicChecks =
+    List("parallelCondition", "parallelSplitCardinality", "parallelJoinCardinality")
+  heuristicChecks = List("xor-vs-or-business-intent", "matching-split-join-context")
+}
+
+autoFixable = false
+fixStrategy = "LLM"
