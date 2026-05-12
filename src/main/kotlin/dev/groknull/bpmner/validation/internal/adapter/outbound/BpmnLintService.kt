@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -58,6 +42,7 @@ class BpmnLintConfigurationException(
 @SecondaryAdapter
 @Service
 @EnableConfigurationProperties(BpmnLintProperties::class)
+@Suppress("TooManyFunctions") // one method per linting operation plus initialization and internal helpers
 internal open class BpmnLintService(
     private val properties: BpmnLintProperties = BpmnLintProperties(),
     private val catalogService: RuleCatalogService,
@@ -84,7 +69,10 @@ internal open class BpmnLintService(
 
             val bundleResource = ClassPathResource("js/bpmnlint-bundle.js")
             if (!bundleResource.exists()) {
-                logger.warn("bpmnlint-bundle.js not found on classpath. Linting will be unavailable until the project is built.")
+                logger.warn(
+                    "bpmnlint-bundle.js not found on classpath. " +
+                        "Linting will be unavailable until the project is built.",
+                )
                 return
             }
 
@@ -96,17 +84,21 @@ internal open class BpmnLintService(
             if (api != null) {
                 validateLintConfiguration(api)
                 val activeRules = resolvedRules()
-                logger.info("GraalJS bpmn-lint context initialized. Active rules: {}", activeRules.keys.sorted().joinToString(", "))
+                logger.info(
+                    "GraalJS bpmn-lint context initialized. Active rules: {}",
+                    activeRules.keys.sorted().joinToString(", "),
+                )
                 logger.debug("Rule levels: {}", activeRules)
             }
         } catch (e: BpmnLintConfigurationException) {
             logger.error("Invalid BPMN lint configuration", e)
             throw e
-        } catch (e: Exception) {
+        } catch (e: org.graalvm.polyglot.PolyglotException) {
             logger.error("Failed to initialize GraalJS bpmn-lint context", e)
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // mixed: PolyglotException and Future checked exceptions
     override fun lint(
         bpmnXml: String,
         phase: BpmnLintPhase,
@@ -117,13 +109,14 @@ internal open class BpmnLintService(
             val future = CompletableFuture<String>()
             val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
-            parseIssues(future.get(10, TimeUnit.SECONDS))
+            parseIssues(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
         } catch (e: Exception) {
             logger.warn("bpmn-lint execution error: {}", e.message)
             null
         }
     }
 
+    @Suppress("TooGenericExceptionCaught", "ReturnCount") // mixed exceptions; guard-clause pattern
     override fun autoFix(
         bpmnXml: String,
         issues: List<LintIssue>,
@@ -131,18 +124,24 @@ internal open class BpmnLintService(
     ): BpmnAutoFixResult? {
         val api = linterApi ?: return null
         val fixXml = api.getMember("fixXml") ?: return null
-        logger.debug("Starting in-process BPMN XML auto-fix. phase={}, xmlLength={}, issueCount={}", phase, bpmnXml.length, issues.size)
+        logger.debug(
+            "Starting in-process BPMN XML auto-fix. phase={}, xmlLength={}, issueCount={}",
+            phase,
+            bpmnXml.length,
+            issues.size,
+        )
         return try {
             val future = CompletableFuture<String>()
             val promise = fixXml.execute(bpmnXml, objectMapper.writeValueAsString(issues), lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
-            parseAutoFixResult(future.get(10, TimeUnit.SECONDS))
+            parseAutoFixResult(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
         } catch (e: Exception) {
             logger.warn("BPMN XML auto-fix execution error: {}", e.message)
             null
         }
     }
 
+    @Suppress("TooGenericExceptionCaught", "ReturnCount") // mixed exceptions; guard-clause pattern
     override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> {
         val api = linterApi ?: return emptyMap()
         if (ruleNames.isEmpty()) return emptyMap()
@@ -158,6 +157,7 @@ internal open class BpmnLintService(
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // catches both PolyglotException and Future execution errors
     fun resolvedRules(): Map<String, String> {
         val api = linterApi ?: return emptyMap()
         return try {
@@ -200,7 +200,7 @@ internal open class BpmnLintService(
             try {
                 @Suppress("UNCHECKED_CAST")
                 api.getMember("getInvalidRules").execute(lintConfigJson()).`as`(List::class.java) as List<String>
-            } catch (e: Exception) {
+            } catch (e: org.graalvm.polyglot.PolyglotException) {
                 throw BpmnLintConfigurationException("Invalid BPMN lint configuration: ${e.message}", e)
             }
         if (invalidRules.isNotEmpty()) {
@@ -214,6 +214,8 @@ internal open class BpmnLintService(
         objectMapper.writeValueAsString(lintConfig(phase))
 
     companion object {
+        private const val LINT_TIMEOUT_SECONDS = 10L
+
         private val LAYOUT_SENSITIVE_RULES =
             setOf(
                 "no-overlapping-elements",

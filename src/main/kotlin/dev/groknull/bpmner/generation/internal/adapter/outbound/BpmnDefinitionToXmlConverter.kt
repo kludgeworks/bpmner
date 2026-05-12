@@ -1,24 +1,9 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnElementIndex
+import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -48,6 +33,7 @@ import java.io.ByteArrayOutputStream
 
 @SecondaryAdapter
 @Component
+@Suppress("TooManyFunctions") // one helper per BPMN element type plus infrastructure methods
 internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
@@ -91,15 +77,24 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 ?: error("Unable to locate definitions in Camunda model instance")
         configureDefinitions(definitions)
 
+        val plane = createDiagramPlane(modelInstance, definitions, process)
+        val (nodeMap, shapeMap) = buildNodeMaps(modelInstance, definition, process, plane)
+        buildSequenceFlows(modelInstance, definition, process, plane, nodeMap, shapeMap)
+        return modelInstance
+    }
+
+    private fun buildNodeMaps(
+        modelInstance: BpmnModelInstance,
+        definition: BpmnDefinition,
+        process: Process,
+        plane: BpmnPlane,
+    ): Pair<Map<String, FlowNode>, Map<String, BpmnShape>> {
         val nodeMap = mutableMapOf<String, FlowNode>()
         val shapeMap = mutableMapOf<String, BpmnShape>()
-        val plane = createDiagramPlane(modelInstance, definitions, process)
-
         for (node in definition.nodes) {
             val flowNode = newFlowNode(modelInstance, node)
             process.addChildElement(flowNode)
             nodeMap[node.id] = flowNode
-
             val shape = modelInstance.newInstance(BpmnShape::class.java)
             shape.id = "${node.id}_di"
             shape.bpmnElement = flowNode
@@ -107,7 +102,18 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             plane.addChildElement(shape)
             shapeMap[node.id] = shape
         }
+        return nodeMap to shapeMap
+    }
 
+    @Suppress("LongParameterList") // all params structurally required; no meaningful grouping
+    private fun buildSequenceFlows(
+        modelInstance: BpmnModelInstance,
+        definition: BpmnDefinition,
+        process: Process,
+        plane: BpmnPlane,
+        nodeMap: Map<String, FlowNode>,
+        shapeMap: Map<String, BpmnShape>,
+    ) {
         for (edge in definition.sequences) {
             val source =
                 nodeMap[edge.sourceRef]
@@ -115,7 +121,6 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             val target =
                 nodeMap[edge.targetRef]
                     ?: throw IllegalArgumentException("Unknown targetRef '${edge.targetRef}' on edge '${edge.id}'")
-
             val sequenceFlow = modelInstance.newInstance(SequenceFlow::class.java)
             sequenceFlow.id = edge.id
             if (!edge.name.isNullOrBlank()) sequenceFlow.name = edge.name
@@ -127,11 +132,10 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             sequenceFlow.source = source
             sequenceFlow.target = target
             process.addChildElement(sequenceFlow)
-
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
-
-            val diEdge = modelInstance.newInstance(org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge::class.java)
+            val diEdge =
+                modelInstance.newInstance(org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge::class.java)
             diEdge.id = "${edge.id}_di"
             diEdge.bpmnElement = sequenceFlow
             diEdge.sourceElement = shapeMap[edge.sourceRef]
@@ -141,13 +145,11 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
             plane.addChildElement(diEdge)
         }
-
-        return modelInstance
     }
 
     private fun newFlowNode(
         modelInstance: BpmnModelInstance,
-        node: dev.groknull.bpmner.core.BpmnNode,
+        node: BpmnNode,
     ): FlowNode {
         val flowNode =
             when (node.type) {

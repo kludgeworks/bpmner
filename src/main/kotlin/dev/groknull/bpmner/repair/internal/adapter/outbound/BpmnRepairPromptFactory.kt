@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import com.embabel.chat.AssistantMessage
@@ -59,7 +43,10 @@ internal class BpmnRepairPromptFactory(
         buildString {
             appendLine("The following diagnostics can be fixed with targeted name or label patches.")
             appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
-            appendLine("Do not rewrite the whole graph — only include operations that directly address the listed diagnostics.")
+            appendLine(
+                "Do not rewrite the whole graph — only include operations that " +
+                    "directly address the listed diagnostics.",
+            )
             appendLine()
             val guidance = llmValidator.getLlmRuleGuidance()
             if (guidance.isNotEmpty()) {
@@ -83,7 +70,8 @@ internal class BpmnRepairPromptFactory(
         return buildString {
             appendLine("Fix the following BPMN element label violations.")
             appendLine(
-                "Return only a BpmnRepairPatch with SET_NODE_NAME operations for the listed elements — do not modify any other nodes.",
+                "Return only a BpmnRepairPatch with SET_NODE_NAME operations for the listed elements" +
+                    " — do not modify any other nodes.",
             )
             appendLine()
             appendLine("Affected elements:")
@@ -111,6 +99,7 @@ internal class BpmnRepairPromptFactory(
             diagnostics = attempt.diagnostics,
         )
 
+    @Suppress("ReturnCount") // guard-clause pattern for empty inputs
     fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules =
             diagnostics
@@ -153,7 +142,9 @@ internal class BpmnRepairPromptFactory(
                 appendLine()
             }
             appendLine("Use the typed BPMN definition as the canonical edit surface.")
-            appendLine("Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.")
+            appendLine(
+                "Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.",
+            )
             appendLine()
             appendLine("Current canonical BpmnDefinition JSON:")
             appendLine(fingerprints.serializeDefinition(definition))
@@ -166,7 +157,10 @@ internal class BpmnRepairPromptFactory(
                 appendLine("Repair scope:")
                 scopes.forEach { scope ->
                     val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
-                    appendLine("- ${scope.name.lowercase()} owners=${owners.ifEmpty { listOf("unscoped") }.joinToString(",")}")
+                    appendLine(
+                        "- ${scope.name.lowercase()} owners=" +
+                            owners.ifEmpty { listOf("unscoped") }.joinToString(","),
+                    )
                 }
                 appendLine()
             }

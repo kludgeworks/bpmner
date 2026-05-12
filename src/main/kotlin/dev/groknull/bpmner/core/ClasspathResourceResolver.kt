@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.core
 
 import org.w3c.dom.ls.LSInput
@@ -41,6 +25,7 @@ class ClasspathResourceResolver : LSResourceResolver {
             }
 }
 
+@Suppress("TooManyFunctions") // LSInput interface mandates 16 getters/setters
 private abstract class MutableLSInput : LSInput {
     private var publicIdValue: String? = null
     private var systemIdValue: String? = null

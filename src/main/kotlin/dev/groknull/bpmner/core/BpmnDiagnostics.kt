@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
@@ -33,7 +17,9 @@ enum class BpmnRepairScope {
     FULL_PROCESS,
 }
 
-@JsonClassDescription("Normalized BPMN validation or rendering diagnostic linked back to the typed definition where possible")
+@JsonClassDescription(
+    "Normalized BPMN validation or rendering diagnostic linked back to the typed definition where possible",
+)
 data class BpmnDiagnostic(
     val source: BpmnDiagnosticSource,
     val message: String,

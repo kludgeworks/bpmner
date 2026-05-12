@@ -1,7 +1,4 @@
-@file:Suppress(
-    "MaxLineLength",
-    "UnusedPrivateProperty",
-)
+@file:Suppress("MaxLineLength")
 
 package dev.groknull.bpmner.repair
 
@@ -66,6 +63,7 @@ class RepairModuleTest {
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
 
     @MockitoBean
+    @Suppress("UnusedPrivateProperty") // Spring replaces the bean; not referenced in test code
     private lateinit var agentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Autowired

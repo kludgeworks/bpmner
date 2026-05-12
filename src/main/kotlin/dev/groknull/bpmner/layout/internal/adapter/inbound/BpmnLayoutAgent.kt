@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.Action
@@ -46,6 +30,7 @@ internal class BpmnLayoutAgent(
     private val logger = LoggerFactory.getLogger(BpmnLayoutAgent::class.java)
 
     @Action(description = "Apply bounded deterministic XML auto-fixes before layout")
+    @Suppress("ReturnCount") // guard-clause early returns on unavailable lint/autoFix services
     fun autoFixBpmnXml(bpmn: ValidatedBpmnXml): AutoFixedBpmnXml {
         val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
         if (lintIssues == null) {
@@ -59,7 +44,10 @@ internal class BpmnLayoutAgent(
             return AutoFixedBpmnXml(xml = bpmn.xml)
         }
 
-        if (autoFixResult.applied.isNotEmpty() || autoFixResult.skipped.isNotEmpty() || autoFixResult.errors.isNotEmpty()) {
+        if (autoFixResult.applied.isNotEmpty() ||
+            autoFixResult.skipped.isNotEmpty() ||
+            autoFixResult.errors.isNotEmpty()
+        ) {
             logger.info(
                 "BPMN XML auto-fix result: changed={}, applied={}, skipped={}, errors={}",
                 autoFixResult.changed,
@@ -73,7 +61,8 @@ internal class BpmnLayoutAgent(
             val xsdIssues = bpmnXsdValidationPort.validateDetailed(autoFixResult.xml)
             if (xsdIssues.isNotEmpty()) {
                 logger.warn(
-                    "BPMN XML auto-fix produced XSD-invalid XML; keeping validated XML. applied={}, skipped={}, errors={}, xsdErrors={}",
+                    "BPMN XML auto-fix produced XSD-invalid XML; keeping validated XML. " +
+                        "applied={}, skipped={}, errors={}, xsdErrors={}",
                     autoFixResult.applied.joinToString("; ") { it.summary() },
                     autoFixResult.skipped.joinToString("; ") { it.summary() },
                     autoFixResult.errors.joinToString("; ") { it.summary() },
@@ -122,7 +111,8 @@ internal class BpmnLayoutAgent(
                             rule = issue.rule,
                             category = issue.category,
                             elementId = issue.id,
-                            repairScope = if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
+                            repairScope =
+                                if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
                         )
                     }
             }

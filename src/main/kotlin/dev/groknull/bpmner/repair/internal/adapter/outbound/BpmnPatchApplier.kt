@@ -1,22 +1,7 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
@@ -27,6 +12,7 @@ import org.springframework.stereotype.Component
 
 @SecondaryAdapter
 @Component
+@Suppress("TooManyFunctions") // one method per patch operation type is the natural decomposition
 internal open class BpmnPatchApplier {
     fun apply(
         definition: BpmnDefinition,
@@ -70,6 +56,7 @@ internal open class BpmnPatchApplier {
             BpmnPatchOperationType.REPLACE_EDGE -> applyReplaceEdge(definition, op)
         }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applySetNodeName(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -83,17 +70,19 @@ internal open class BpmnPatchApplier {
             return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.type}")
         }
         if (BpmnNodeNamingPolicy.normalize(node.name) == name) return OperationResult.Unchanged
-        val updated = definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.copy(name = name) else it })
+        val updated =
+            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.copy(name = name) else it })
         return OperationResult.Changed(updated)
     }
 
-    private fun dev.groknull.bpmner.core.BpmnNode.requiresName(definition: BpmnDefinition): Boolean =
+    private fun BpmnNode.requiresName(definition: BpmnDefinition): Boolean =
         BpmnNodeNamingPolicy.requiresName(
             node = this,
             incomingCount = definition.sequences.count { it.targetRef == id },
             outgoingCount = definition.sequences.count { it.sourceRef == id },
         )
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applySetEdgeLabel(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -103,10 +92,14 @@ internal open class BpmnPatchApplier {
             definition.sequences.firstOrNull { it.id == edgeId }
                 ?: return OperationResult.Invalid("SET_EDGE_LABEL: unknown edgeId '$edgeId'")
         if (edge.name == op.label) return OperationResult.Unchanged
-        val updated = definition.copy(sequences = definition.sequences.map { if (it.id == edgeId) it.copy(name = op.label) else it })
+        val updated =
+            definition.copy(
+                sequences = definition.sequences.map { if (it.id == edgeId) it.copy(name = op.label) else it },
+            )
         return OperationResult.Changed(updated)
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyAddNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -118,6 +111,7 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(nodes = definition.nodes + node))
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyRemoveNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -129,12 +123,14 @@ internal open class BpmnPatchApplier {
         val referencingEdges = definition.sequences.filter { it.sourceRef == nodeId || it.targetRef == nodeId }
         if (referencingEdges.isNotEmpty()) {
             return OperationResult.Invalid(
-                "REMOVE_NODE: nodeId '$nodeId' still referenced by edges: ${referencingEdges.map { it.id }}",
+                "REMOVE_NODE: nodeId '$nodeId' still referenced by edges: " +
+                    "${referencingEdges.map { it.id }}",
             )
         }
         return OperationResult.Changed(definition.copy(nodes = definition.nodes.filter { it.id != nodeId }))
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyReplaceNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -142,15 +138,20 @@ internal open class BpmnPatchApplier {
         val nodeId = op.nodeId ?: return OperationResult.Invalid("REPLACE_NODE requires nodeId")
         val replacement = op.node ?: return OperationResult.Invalid("REPLACE_NODE requires node")
         if (replacement.id != nodeId) {
-            return OperationResult.Invalid("REPLACE_NODE: replacement node id '${replacement.id}' must match nodeId '$nodeId'")
+            return OperationResult.Invalid(
+                "REPLACE_NODE: replacement node id '${replacement.id}' must match nodeId '$nodeId'",
+            )
         }
         val existing =
             definition.nodes.firstOrNull { it.id == nodeId }
                 ?: return OperationResult.Invalid("REPLACE_NODE: unknown nodeId '$nodeId'")
         if (existing == replacement) return OperationResult.Unchanged
-        return OperationResult.Changed(definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) replacement else it }))
+        return OperationResult.Changed(
+            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) replacement else it }),
+        )
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyAddEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -169,6 +170,7 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(sequences = definition.sequences + edge))
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyRemoveEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -180,6 +182,7 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(sequences = definition.sequences.filter { it.id != edgeId }))
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyReplaceEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -187,13 +190,17 @@ internal open class BpmnPatchApplier {
         val edgeId = op.edgeId ?: return OperationResult.Invalid("REPLACE_EDGE requires edgeId")
         val replacement = op.edge ?: return OperationResult.Invalid("REPLACE_EDGE requires edge")
         if (replacement.id != edgeId) {
-            return OperationResult.Invalid("REPLACE_EDGE: replacement edge id '${replacement.id}' must match edgeId '$edgeId'")
+            return OperationResult.Invalid(
+                "REPLACE_EDGE: replacement edge id '${replacement.id}' must match edgeId '$edgeId'",
+            )
         }
         val existing =
             definition.sequences.firstOrNull { it.id == edgeId }
                 ?: return OperationResult.Invalid("REPLACE_EDGE: unknown edgeId '$edgeId'")
         if (existing == replacement) return OperationResult.Unchanged
-        return OperationResult.Changed(definition.copy(sequences = definition.sequences.map { if (it.id == edgeId) replacement else it }))
+        return OperationResult.Changed(
+            definition.copy(sequences = definition.sequences.map { if (it.id == edgeId) replacement else it }),
+        )
     }
 
     private sealed class OperationResult {

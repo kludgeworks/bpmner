@@ -1,24 +1,10 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.config
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.slf4j.LoggerFactory
+import java.io.IOException
 import java.net.URI
 
 data class GitHubCatalogEntry(
@@ -32,8 +18,8 @@ object GitHubCatalogClient {
 
     fun fetchTextModels(catalogUrl: String = "https://models.github.ai/catalog/models"): List<GitHubCatalogEntry> =
         try {
-            parseTextModels(URI(catalogUrl).toURL().readText(Charsets.UTF_8))
-        } catch (e: Exception) {
+            parseTextModels(URI.create(catalogUrl).toURL().readText(Charsets.UTF_8))
+        } catch (e: IOException) {
             logger.warn("Could not fetch GitHub Models catalog from {}: {}", catalogUrl, e.message)
             emptyList()
         }
@@ -49,7 +35,7 @@ object GitHubCatalogClient {
                         publisher = node.path("publisher").asText(),
                     )
                 }
-        } catch (e: Exception) {
+        } catch (e: JsonProcessingException) {
             logger.warn("Could not parse GitHub Models catalog response: {}", e.message)
             emptyList()
         }

@@ -1,22 +1,8 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.core.BpmnConfig
+import com.embabel.chat.AssistantMessage
+import com.embabel.chat.UserMessage
+import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
@@ -28,7 +14,6 @@ import org.springframework.stereotype.Component
 @Service
 @Component
 internal class TargetedLabelRepairStrategy(
-    private val config: BpmnConfig,
     private val promptFactory: BpmnRepairPromptFactory,
     private val patchApplier: BpmnPatchApplier,
 ) : BpmnRepairStrategy {
@@ -50,8 +35,8 @@ internal class TargetedLabelRepairStrategy(
                     definition = application.definition,
                     promptText = feedback,
                     messages =
-                        context.attempt.messages + com.embabel.chat.UserMessage(feedback) +
-                            com.embabel.chat.AssistantMessage(patch.toString()),
+                        context.attempt.messages + UserMessage(feedback) +
+                            AssistantMessage(patch.toString()),
                 )
             }
 
@@ -93,8 +78,8 @@ internal class LlmPatchRepairStrategy(
                     definition = application.definition,
                     promptText = feedback,
                     messages =
-                        context.attempt.messages + com.embabel.chat.UserMessage(feedback) +
-                            com.embabel.chat.AssistantMessage(patch.toString()),
+                        context.attempt.messages + UserMessage(feedback) +
+                            AssistantMessage(patch.toString()),
                 )
             }
 
@@ -121,13 +106,13 @@ internal class FullLlmRewriteRepairStrategy(
 
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val feedback = promptFactory.fullRepairFeedback(context.attempt)
-        val repaired = context.promptRunner.createObject(feedback, dev.groknull.bpmner.core.BpmnDefinition::class.java)
+        val repaired = context.promptRunner.createObject(feedback, BpmnDefinition::class.java)
 
         return BpmnRepairResult.Repaired(
             definition = repaired,
             promptText = feedback,
             messages =
-                context.attempt.messages + com.embabel.chat.UserMessage(feedback) + com.embabel.chat.AssistantMessage(repaired.toString()),
+                context.attempt.messages + UserMessage(feedback) + AssistantMessage(repaired.toString()),
         )
     }
 }

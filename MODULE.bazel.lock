@@ -997,6 +997,35 @@
         "recordedRepoMappingEntries": []
       }
     },
+    "@@rules_pmd+//pmd:extensions.bzl%pmd": {
+      "general": {
+        "bzlTransitiveDigest": "UU1v0CSeh22O4JdYP5u9M6gyD6coR7gAQVjx6+ah86M=",
+        "usagesDigest": "D/ifXkc9TXqizjh+7qDgY1iuQU0EBFbbpTY6LO6S5Tk=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "net_sourceforge_pmd": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "urls": [
+                "https://github.com/pmd/pmd/releases/download/pmd_releases/6.55.0/pmd-bin-6.55.0.zip"
+              ],
+              "strip_prefix": "pmd-bin-6.55.0/lib",
+              "sha256": "21acf96d43cb40d591cacccc1c20a66fc796eaddf69ea61812594447bac7a11d",
+              "build_file": "@@rules_pmd+//pmd:BUILD.pmd.bazel"
+            }
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "rules_pmd+",
+            "bazel_tools",
+            "bazel_tools"
+          ]
+        ]
+      }
+    },
     "@@rules_python+//python/uv:uv.bzl%uv": {
       "general": {
         "bzlTransitiveDigest": "xfNZ/WmfkC9N/pNH0cmucTOrqBa966d9iMmmX54m1UM=",

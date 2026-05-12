@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.core
 
 import com.google.devtools.build.runfiles.Runfiles
@@ -73,33 +57,8 @@ internal class InputPathResolver private constructor(
             )
 
         if (!Path.of(rawInput).isAbsolute()) {
-            val runfiles = runfilesLoader()
-            if (runfiles != null) {
-                val runfilesKeys =
-                    listOf(
-                        rawInput,
-                        "_main/$rawInput",
-                        "bpmner/$rawInput",
-                    )
-
-                for (key in runfilesKeys) {
-                    val resolved =
-                        try {
-                            runfiles.rlocation(key)
-                        } catch (_: IllegalArgumentException) {
-                            attemptedLocations += "Bazel runfile $key (invalid runfiles key)"
-                            null
-                        }
-                    if (resolved != null) {
-                        attemptedLocations += "Bazel runfile $key -> $resolved"
-                    }
-                    if (resolved != null) {
-                        val candidate = Path.of(resolved)
-                        if (Files.exists(candidate)) {
-                            return candidate
-                        }
-                    }
-                }
+            runfilesLoader()?.let { runfiles ->
+                findInRunfiles(rawInput, runfiles, attemptedLocations)?.let { return it }
             }
         }
 
@@ -111,6 +70,28 @@ internal class InputPathResolver private constructor(
                 append(attemptedLocations.joinToString(", "))
             },
         )
+    }
+
+    private fun findInRunfiles(
+        rawInput: String,
+        runfiles: Runfiles,
+        attemptedLocations: MutableList<String>,
+    ): Path? {
+        for (key in listOf(rawInput, "_main/$rawInput", "bpmner/$rawInput")) {
+            val resolved =
+                try {
+                    runfiles.rlocation(key)
+                } catch (_: IllegalArgumentException) {
+                    attemptedLocations += "Bazel runfile $key (invalid runfiles key)"
+                    null
+                }
+            if (resolved != null) {
+                attemptedLocations += "Bazel runfile $key -> $resolved"
+                val candidate = Path.of(resolved)
+                if (Files.exists(candidate)) return candidate
+            }
+        }
+        return null
     }
 
     private fun filesystemCandidate(rawInput: String): Path {

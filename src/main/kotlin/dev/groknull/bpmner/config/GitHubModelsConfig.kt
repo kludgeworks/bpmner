@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.config
 
 import com.embabel.agent.openai.OpenAiCompatibleModelFactory
@@ -33,6 +17,10 @@ import org.springframework.context.annotation.Profile
 import org.springframework.http.client.ClientHttpRequestFactory
 
 private const val PROVIDER = "GitHub"
+private const val DEFAULT_MAX_ATTEMPTS = 10
+private const val DEFAULT_BACKOFF_MILLIS = 5000L
+private const val DEFAULT_BACKOFF_MULTIPLIER = 5.0
+private const val DEFAULT_BACKOFF_MAX_INTERVAL = 180000L
 private const val BASE_URL = "https://models.github.ai/inference"
 private const val COMPLETIONS_PATH = "/chat/completions"
 private const val CATALOG_URL = "https://models.github.ai/catalog/models"
@@ -42,10 +30,10 @@ class GitHubProperties : RetryProperties {
     var apiKey: String? = null
     var models: List<String> = listOf("openai/gpt-4o")
     var catalogUrl: String = CATALOG_URL
-    override var maxAttempts: Int = 10
-    override var backoffMillis: Long = 5000L
-    override var backoffMultiplier: Double = 5.0
-    override var backoffMaxInterval: Long = 180000L
+    override var maxAttempts: Int = DEFAULT_MAX_ATTEMPTS
+    override var backoffMillis: Long = DEFAULT_BACKOFF_MILLIS
+    override var backoffMultiplier: Double = DEFAULT_BACKOFF_MULTIPLIER
+    override var backoffMaxInterval: Long = DEFAULT_BACKOFF_MAX_INTERVAL
 }
 
 @Profile("github")
@@ -60,7 +48,10 @@ class GitHubModelsConfig(
         baseUrl = BASE_URL,
         apiKey =
             properties.apiKey
-                ?: error("GitHub token required: set GITHUB_TOKEN env var or embabel.agent.platform.models.github.api-key"),
+                ?: error(
+                    "GitHub token required: set GITHUB_TOKEN env var or" +
+                        " embabel.agent.platform.models.github.api-key",
+                ),
         completionsPath = COMPLETIONS_PATH,
         embeddingsPath = null,
         observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
@@ -73,7 +64,8 @@ class GitHubModelsConfig(
         if (modelList.isEmpty()) {
             logger.warn(
                 "No GitHub Models configured. " +
-                    "Set embabel.agent.platform.models.github.models (e.g. --embabel.agent.platform.models.github.models=openai/gpt-4o)",
+                    "Set embabel.agent.platform.models.github.models" +
+                    " (e.g. --embabel.agent.platform.models.github.models=openai/gpt-4o)",
             )
             printCatalog()
             return ProviderInitialization(provider = PROVIDER, registeredLlms = emptyList())
