@@ -38,7 +38,7 @@ internal class BpmnRefinementEngine(
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementEngine::class.java)
 
-    @Suppress("LongMethod", "TooGenericExceptionCaught") // repair loop; render() may throw any RuntimeException
+    @Suppress("LongMethod", "CyclomaticComplexMethod") // repair loop; render() may throw any RuntimeException
     fun refine(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
@@ -139,7 +139,10 @@ internal class BpmnRefinementEngine(
             val correctedRendered =
                 try {
                     bpmnRenderer.render(currentGraph)
-                } catch (e: Exception) {
+                } catch (e: IllegalStateException) {
+                    renderFailureMessage = e.message ?: e.javaClass.simpleName
+                    null
+                } catch (e: IllegalArgumentException) {
                     renderFailureMessage = e.message ?: e.javaClass.simpleName
                     null
                 }

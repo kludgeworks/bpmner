@@ -55,7 +55,6 @@ internal open class BpmnLayoutService {
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // mixed: PolyglotException and Future checked exceptions
     fun layout(xml: String): String {
         val api = layoutApi ?: return xml
         logger.debug("Starting in-process BPMN auto-layout. xmlLength={}", xml.length)
@@ -72,7 +71,19 @@ internal open class BpmnLayoutService {
             )
 
             future.get(LAYOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        } catch (e: Exception) {
+        } catch (e: org.graalvm.polyglot.PolyglotException) {
+            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            xml
+        } catch (e: java.util.concurrent.ExecutionException) {
+            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            xml
+        } catch (e: java.util.concurrent.TimeoutException) {
+            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            xml
+        } catch (e: InterruptedException) {
+            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            xml
+        } catch (e: java.util.concurrent.CancellationException) {
             logger.warn("BPMN auto-layout execution error: {}", e.message)
             xml
         }
