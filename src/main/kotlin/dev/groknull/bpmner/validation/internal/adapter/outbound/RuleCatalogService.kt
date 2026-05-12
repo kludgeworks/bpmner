@@ -44,6 +44,7 @@ data class BpmnRuleMetadata(
     val fixMethod: String?,
     val replacementMap: Map<String, String>?,
     val hasTsImplementation: Boolean,
+    val aliases: List<String>,
     val deprecated: Boolean,
     val replacedBy: List<String>,
     val deprecationReason: String?,
@@ -75,6 +76,6 @@ class RuleCatalogService {
 
     fun getRule(id: String): BpmnRuleMetadata? {
         val bareId = id.replace("^(bpmner|bpmnlint-plugin-bpmner)/".toRegex(), "")
-        return catalog.rules.find { it.id == bareId }
+        return catalog.rules.find { it.id == bareId || it.aliases.contains(bareId) }
     }
 }

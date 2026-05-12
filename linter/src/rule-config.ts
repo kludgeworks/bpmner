@@ -5,6 +5,7 @@ export type BpmnlintRuleLevel = "error" | "warn" | "off"
 
 export type RuleConfig = {
 	id: string
+	aliases?: string[]
 	severity: PklSeverity
 	targetElements?: string[]
 	errorMessages: Record<string, string | undefined>
@@ -34,6 +35,12 @@ const severityToBpmnlintLevel: Record<PklSeverity, BpmnlintRuleLevel> = {
 const migratedRuleConfigs = new Map<string, RuleConfig>(
 	(catalog as RuleCatalog).rules.map((rule) => [rule.id, rule]),
 )
+
+for (const rule of (catalog as RuleCatalog).rules) {
+	for (const alias of rule.aliases ?? []) {
+		migratedRuleConfigs.set(alias, rule)
+	}
+}
 
 export function getRuleConfig(id: string): RuleConfig {
 	const bareId = id.replace(/^(bpmner|bpmnlint-plugin-bpmner)\//, "")

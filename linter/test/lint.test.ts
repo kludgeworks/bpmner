@@ -27,7 +27,12 @@ type Report = {
 type LintResults = Record<string, Report[]>
 
 type RuleCatalog = {
-	rules: Array<{ id: string; hasTsImplementation: boolean }>
+	rules: Array<{
+		id: string
+		aliases?: string[]
+		hasTsImplementation: boolean
+		staticConfig?: { cookbookCode?: string }
+	}>
 }
 
 class PluginResolver {
@@ -107,6 +112,37 @@ describe("lint rules", () => {
 		}
 	})
 
+	it("GEN-02 cookbook metadata is separated from duplicate diagram runtime id", () => {
+		const rules = (catalog as unknown as RuleCatalog).rules
+		const duplicateDiagram = rules.find(
+			(rule) => rule.id === "gen-no-duplicate-diagrams",
+		)
+		const businessClarity = rules.find(
+			(rule) => rule.id === "gen-business-clarity-over-technical-detail",
+		)
+
+		assert.equal(duplicateDiagram?.hasTsImplementation, true)
+		assert.ok(
+			duplicateDiagram?.aliases?.includes("gen-02-no-duplicate-diagrams"),
+		)
+		assert.equal(businessClarity?.hasTsImplementation, false)
+		assert.equal(businessClarity?.staticConfig?.cookbookCode, "GEN-02")
+	})
+
+	it("legacy duplicate diagram metadata resolves to the canonical rule", () => {
+		const config = getRuleConfig("bpmner/gen-02-no-duplicate-diagrams")
+
+		assert.equal(config.id, "gen-no-duplicate-diagrams")
+		assert.ok(resolver.resolveRule("", "gen-02-no-duplicate-diagrams"))
+		assert.ok(resolver.resolveRule("bpmner", "gen-02-no-duplicate-diagrams"))
+		assert.ok(
+			resolver.resolveRule(
+				"bpmnlint-plugin-bpmner",
+				"gen-02-no-duplicate-diagrams",
+			),
+		)
+	})
+
 	it("migrated rule metadata maps Pkl severity to bpmnlint levels", () => {
 		assert.equal(getBpmnlintLevel("bpmner/name-uncommon-abbreviations"), "warn")
 		assert.equal(
@@ -154,6 +190,16 @@ describe("lint rules", () => {
 				"gen-no-duplicate-diagrams",
 			),
 		)
+	})
+
+	it("legacy gen-02-no-duplicate-diagrams config still activates duplicate diagram rule", async () => {
+		const results = await lintWithConfig(fixtures.gen02DuplicateDiagram, {
+			rules: {
+				"bpmner/gen-02-no-duplicate-diagrams": "error",
+			},
+		})
+
+		assert.ok(hasRule(results, "gen-02-no-duplicate-diagrams"))
 	})
 
 	it("act-loop-task-annotation — missing annotation", async () => {

@@ -22,3 +22,4 @@ staticConfig = new {}
 
 autoFixable = false
 fixStrategy = "LLM"
+aliases = List("gen-02-no-duplicate-diagrams")

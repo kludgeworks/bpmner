@@ -2,7 +2,12 @@ import BpmnModdle from "bpmn-moddle"
 import { Linter } from "bpmnlint"
 import { fixBpmnXml } from "./auto-fix/engine"
 import type { AutoFixResult } from "./auto-fix/types"
-import { configs, customRuleDocs, resolver } from "./generated/static-rules"
+import {
+	configs,
+	customRuleAliases,
+	customRuleDocs,
+	resolver,
+} from "./generated/static-rules"
 
 type RuleLevel = "off" | "warn" | "error"
 
@@ -63,6 +68,11 @@ function normalizeRuleName(ruleName: string): string {
 		return `bpmner/${ruleName.slice("bpmnlint-plugin-bpmner/".length)}`
 	}
 	return ruleName
+}
+
+function canonicalRuleName(ruleName: string): string {
+	const normalized = normalizeRuleName(ruleName)
+	return customRuleAliases[normalized] ?? normalized
 }
 
 function configRefKey(configRef: string): string {
@@ -201,7 +211,7 @@ export async function lintXml(
 				issues.push({
 					...item,
 					id: item.id || item.elementId || item.node?.id || null,
-					rule,
+					rule: canonicalRuleName(rule),
 					message: item.message,
 					category: item.category || "error",
 				})
