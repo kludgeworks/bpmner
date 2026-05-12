@@ -1,0 +1,27 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Business Clarity Over Technical Detail"
+category = RuleCategory.General
+
+intent = "Keep BPMN diagrams focused on business behavior rather than implementation mechanics."
+forModellers =
+  "Prefer clear business outcomes, responsibilities, and decisions over technical implementation details that obscure the process."
+forAI =
+  "Review labels and structure for business readability. Flag technical detail only when it dominates or obscures business intent."
+
+targetElements = List("bpmn:Definitions", "bpmn:Process", "bpmn:FlowElement")
+
+severity = "info"
+errorMessages = new {
+  ["default"] = "Business clarity over technical detail requires contextual review"
+}
+
+staticConfig = new {
+  cookbookCode = "GEN-02"
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

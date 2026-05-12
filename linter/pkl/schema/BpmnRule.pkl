@@ -26,6 +26,7 @@ replacementMap: Mapping<String, String>? = null
 
 hasTsImplementation: Boolean = true
 
+aliases: List<NonEmptyString> = List()
 deprecated: Boolean = false
 replacedBy: List<String> = List()
 deprecationReason: String?(if (deprecated) this != null else true) = null

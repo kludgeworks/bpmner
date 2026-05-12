@@ -2,6 +2,7 @@ import catalog from "./generated/linter-rules.json"
 
 type RuleConfig = {
 	id: string
+	aliases?: string[]
 	severity: string
 	hasTsImplementation: boolean
 }
@@ -23,7 +24,10 @@ const allPluginRules = Object.fromEntries(
 ) as Record<string, string>
 
 const pluginRulePaths = Object.fromEntries(
-	tsRules.map((r) => [r.id, `./rules/${r.id}`]),
+	tsRules.flatMap((r) => [
+		[r.id, `./rules/${r.id}`],
+		...(r.aliases ?? []).map((alias) => [alias, `./rules/${r.id}`]),
+	]),
 ) as Record<string, string>
 
 const plugin = {

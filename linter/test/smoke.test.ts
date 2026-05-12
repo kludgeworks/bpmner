@@ -36,6 +36,21 @@ describe("BpmnLinterApi bundle smoke test", () => {
 		assert.ok(issues.some((i) => i.rule === "klm/gen-no-duplicate-diagrams"))
 	})
 
+	it("normalizes legacy duplicate diagram config diagnostics to the canonical rule", async () => {
+		const issues: Array<{ rule: string }> = JSON.parse(
+			await api.lintXml(fixtures.gen02DuplicateDiagram, {
+				rules: {
+					"klm/gen-02-no-duplicate-diagrams": "error",
+				},
+			}),
+		)
+
+		assert.ok(issues.some((i) => i.rule === "klm/gen-no-duplicate-diagrams"))
+		assert.ok(
+			!issues.some((i) => i.rule === "klm/gen-02-no-duplicate-diagrams"),
+		)
+	})
+
 	it("resolves active rules from extends + rules config", () => {
 		const rules = api.getRules({
 			extends: ["plugin:klm/recommended"],
@@ -72,6 +87,13 @@ describe("BpmnLinterApi bundle smoke test", () => {
 		const docs = api.getRuleDocs(["klm/gen-no-duplicate-diagrams"])
 		const doc = docs["klm/gen-no-duplicate-diagrams"]
 		assert.ok(doc?.includes("# gen-no-duplicate-diagrams"))
+	})
+
+	it("returns compatibility docs for legacy duplicate diagram references", () => {
+		const docs = api.getRuleDocs(["klm/gen-02-no-duplicate-diagrams"])
+		const doc = docs["klm/gen-02-no-duplicate-diagrams"]
+		assert.ok(doc?.includes("# gen-no-duplicate-diagrams"))
+		assert.ok(doc?.includes("## Compatibility"))
 	})
 
 	it("fixXml clears a named converging gateway", async () => {

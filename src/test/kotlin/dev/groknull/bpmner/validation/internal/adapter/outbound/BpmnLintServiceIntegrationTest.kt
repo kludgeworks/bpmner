@@ -71,6 +71,42 @@ class BpmnLintServiceIntegrationTest {
     }
 
     @Test
+    fun `legacy duplicate diagram config and docs resolve through canonical rule`() {
+        val service =
+            BpmnLintService(
+                catalogService = RuleCatalogService(),
+                properties =
+                    BpmnLintProperties(
+                        rules =
+                            mapOf(
+                                "klm/gen-no-duplicate-diagrams" to "off",
+                                "klm/gen-02-no-duplicate-diagrams" to "error",
+                            ),
+                    ),
+            )
+        service.init()
+
+        val duplicateDiagramXml =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+              xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+              id="Definitions_1" targetNamespace="http://example.com/bpmn">
+              <bpmn:process id="Process_1" />
+              <bpmndi:BPMNDiagram id="Diagram_1"><bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="Diagram_2"><bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
+            </bpmn:definitions>
+            """.trimIndent()
+
+        val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty()
+        val docs = service.ruleDocs(listOf("klm/gen-02-no-duplicate-diagrams"))
+
+        assertTrue(issues.any { it.rule == "klm/gen-no-duplicate-diagrams" }, "Legacy config should report canonical rule")
+        assertTrue(issues.none { it.rule == "klm/gen-02-no-duplicate-diagrams" }, "Legacy rule id should not leak into diagnostics")
+        assertTrue(docs["klm/gen-02-no-duplicate-diagrams"]?.contains("## Compatibility") == true)
+    }
+
+    @Test
     fun `autoFix clears named converging gateway using GraalJS bundle`() {
         val service =
             BpmnLintService(

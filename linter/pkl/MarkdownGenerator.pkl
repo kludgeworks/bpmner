@@ -1,6 +1,25 @@
 import "Catalog.pkl"
 
 /// Generator for BPMN Cookbook Rule Documentation in Markdown format.
+local function staticConfigMap(rule) =
+  if (rule.staticConfig == null) Map() else rule.staticConfig.toMap()
+
+local function cookbookCodeLine(rule) =
+  let (config = staticConfigMap(rule))
+    if (config.containsKey("cookbookCode"))
+      "- **Cookbook Code**: `\(config["cookbookCode"])`\n"
+    else
+      ""
+
+local function aliasesLine(rule) =
+  if (!rule.aliases.isEmpty) "- **Legacy Aliases**: `\(rule.aliases.join("`, `"))`\n" else ""
+
+local function deprecationLines(rule) =
+  if (rule.deprecated)
+    "- **Deprecated**: Yes\n- **Replaced By**: `\(rule.replacedBy.join("`, `"))`\n- **Deprecation Reason**: \(rule.deprecationReason)\n"
+  else
+    ""
+
 output {
   files {
     for (rule in Catalog.rules) {
@@ -13,6 +32,7 @@ output {
           - **Category**: \(rule.category.name)
           - **Severity**: \(rule.severity)
           - **Target Elements**: `\(rule.targetElements.join("`, `"))`
+          \(cookbookCodeLine(rule))\(aliasesLine(rule))\(deprecationLines(rule))
 
           ## Intent
           \(rule.intent)

@@ -32,6 +32,7 @@ facts {
         "evt-timer-start-events-block-until-time",
         "flow-diverging-flow-outcome-label",
         "flow-sequence-flow-within-pool",
+        "gen-business-clarity-over-technical-detail",
         "gen-klops-allowed-elements",
         "gen-no-duplicate-diagrams",
         "gtw-converging-gateway-unnamed",
@@ -119,10 +120,22 @@ facts {
       .contains("bpmn:TextAnnotation")
     Catalog.rules.find((rule) -> rule.id == "msg-envelope-icon-usage").staticConfig.diField
       == "bpmndi:BPMNEdge.messageVisibleKind"
+    Catalog.rules
+      .find((rule) -> rule.id == "gen-business-clarity-over-technical-detail")
+      .staticConfig
+      .cookbookCode
+      == "GEN-02"
+    Catalog.rules.find((rule) -> rule.id == "gen-business-clarity-over-technical-detail").severity
+      == "info"
+    Catalog.rules
+      .find((rule) -> rule.id == "gen-no-duplicate-diagrams")
+      .aliases
+      .contains("gen-02-no-duplicate-diagrams")
   }
 
   local metadataOnlyRuleIds =
     Set(
+      "gen-business-clarity-over-technical-detail",
       "pool-child-diagrams-keep-pool-process-name",
       "lane-actor-artifact-usage",
       "art-group-usage",
