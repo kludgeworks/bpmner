@@ -1,0 +1,27 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Child Diagrams Keep Pool Process Name"
+category = RuleCategory.Pool
+
+intent = "Keep child-level pool labels aligned with the upper-level process name."
+forModellers =
+  "When a child diagram elaborates a subprocess, keep the pool label as the upper-level process name rather than renaming it to the subprocess."
+forAI =
+  "Compare parent and child diagram context when available; a single BPMN XML document does not reliably prove cross-level naming intent."
+
+targetElements = List("bpmn:Participant")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Child diagram pool should keep the parent process name"
+}
+
+staticConfig = new {
+  cookbookCode = "POOL-03"
+}
+
+autoFixable = false
+fixStrategy = "LLM"
+hasTsImplementation = false

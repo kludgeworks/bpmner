@@ -21,6 +21,7 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnAttemptHistory
 import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRepairAttempt
@@ -36,8 +37,10 @@ import dev.groknull.bpmner.validation.BpmnValidator
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.stereotype.Component
 
 @Service
+@Component
 internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,

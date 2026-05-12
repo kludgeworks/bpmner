@@ -1,12 +1,23 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.config.annotation.EnableAgents
+import com.embabel.agent.core.deployment.AgentScanningProperties
+import com.embabel.agent.spi.config.spring.ContextRepositoryProperties
+import com.embabel.agent.spi.support.RankingProperties
+import dev.groknull.bpmner.core.BpmnConfig
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.context.properties.ConfigurationPropertiesScan
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
 @ConfigurationPropertiesScan
+@EnableConfigurationProperties(
+    AgentScanningProperties::class,
+    BpmnConfig::class,
+    ContextRepositoryProperties::class,
+    RankingProperties::class,
+)
 @EnableAgents
 class BpmnerApplication
 

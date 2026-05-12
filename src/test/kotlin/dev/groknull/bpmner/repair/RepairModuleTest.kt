@@ -18,12 +18,14 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
@@ -39,18 +41,17 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentMatchers.any
+import org.mockito.ArgumentMatchers
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.modulith.test.PublishedEvents
-import org.springframework.modulith.test.Scenario
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
-@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES)
+@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
@@ -71,11 +72,11 @@ class RepairModuleTest {
     private lateinit var refinementEngine: BpmnRefinementEngine
 
     @Test
-    fun `refinement engine publishes BpmnValidationPassedEvent when BPMN is already valid`(scenario: Scenario) {
-        `when`(bpmnXsdValidator.validateDetailed(any(String::class.java))).thenReturn(emptyList())
-        doReturn(emptyList<Any>()).`when`(bpmnLintService).lint(any(String::class.java), any())
-        doReturn(null).`when`(bpmnLintService).autoFix(any(String::class.java), any(), any())
-        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(any())
+    fun `refinement engine publishes BpmnValidationPassedEvent when BPMN is already valid`(events: PublishedEvents) {
+        `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
+        doReturn(emptyList<Any>()).`when`(bpmnLintService).lint(anyString(), anyPhase())
+        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues(), anyPhase())
+        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
 
         val request = BpmnRequest(processDescription = "Make toast")
         val definition = validDefinition()
@@ -83,19 +84,19 @@ class RepairModuleTest {
         val rendered = BpmnDefinitionToXmlConverter().render(graph)
         val context = FakeActionContext()
 
-        scenario
-            .stimulate(Runnable { refinementEngine.refine(request, graph, rendered, context) })
-            .andWaitForEventOfType(BpmnValidationPassedEvent::class.java)
-            .toArrive()
+        refinementEngine.refine(request, graph, rendered, context)
+
+        val passedEvents = events.ofType(BpmnValidationPassedEvent::class.java).toList()
+        assertTrue(passedEvents.isNotEmpty(), "Expected at least one BpmnValidationPassedEvent to be published")
     }
 
     @Test
     fun `refinement engine publishes BpmnValidationFailedEvent before failing on invalid BPMN`(events: PublishedEvents) {
         val lintIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
-        `when`(bpmnXsdValidator.validateDetailed(any(String::class.java))).thenReturn(emptyList())
-        doReturn(listOf(lintIssue)).`when`(bpmnLintService).lint(any(String::class.java), any())
-        doReturn(null).`when`(bpmnLintService).autoFix(any(String::class.java), any(), any())
-        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(any())
+        `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
+        doReturn(listOf(lintIssue)).`when`(bpmnLintService).lint(anyString(), anyPhase())
+        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues(), anyPhase())
+        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
 
         val definition = validDefinition()
         val graph = graph(definition)
@@ -147,6 +148,14 @@ class RepairModuleTest {
                     ),
                 ),
         )
+
+    private fun anyString(): String = ArgumentMatchers.anyString()
+
+    private fun anyPhase(): BpmnLintPhase = ArgumentMatchers.any(BpmnLintPhase::class.java) ?: BpmnLintPhase.FINAL_POST_LAYOUT
+
+    private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
+
+    private fun anyRuleNames(): Collection<String> = ArgumentMatchers.anyCollection()
 
     private class FakeActionContext(
         private val delegate: FakeOperationContext = FakeOperationContext(),

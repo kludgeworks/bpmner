@@ -7,6 +7,14 @@ export type ModdleElement = {
 	rootElements?: ModdleElement[]
 	participants?: ModdleElement[]
 	processRef?: ModdleElement
+	laneSets?: ModdleElement[]
+	lanes?: ModdleElement[]
+	diagrams?: ModdleElement[]
+	plane?: ModdleElement
+	planeElement?: ModdleElement[]
+	bpmnElement?: ModdleElement
+	categoryValueRef?: ModdleElement
+	categoryValue?: ModdleElement[]
 	messageFlows?: ModdleElement[]
 	flowElements?: ModdleElement[]
 	artifacts?: ModdleElement[]
@@ -43,6 +51,20 @@ function getCollaborations(definitions: ModdleElement): ModdleElement[] {
 	)
 }
 
+export function getParticipants(definitions: ModdleElement): ModdleElement[] {
+	return getCollaborations(definitions).flatMap(
+		(collaboration) => (collaboration.participants as ModdleElement[]) || [],
+	)
+}
+
+export function isWhiteBoxParticipant(participant: ModdleElement): boolean {
+	return Boolean(participant.processRef)
+}
+
+export function isBlackBoxParticipant(participant: ModdleElement): boolean {
+	return !isWhiteBoxParticipant(participant)
+}
+
 export function getMessageFlows(definitions: ModdleElement): ModdleElement[] {
 	const flows: ModdleElement[] = []
 
@@ -58,12 +80,9 @@ function getProcessToParticipantMap(
 ): Map<string, string> {
 	const map = new Map<string, string>()
 
-	for (const collaboration of getCollaborations(definitions)) {
-		for (const participant of (collaboration.participants as ModdleElement[]) ||
-			[]) {
-			if (participant.processRef?.id && participant.id) {
-				map.set(participant.processRef.id, participant.id)
-			}
+	for (const participant of getParticipants(definitions)) {
+		if (participant.processRef?.id && participant.id) {
+			map.set(participant.processRef.id, participant.id)
 		}
 	}
 
@@ -143,6 +162,16 @@ function collectAssociations(definitions: ModdleElement): ModdleElement[] {
 	}
 
 	return associations
+}
+
+export function hasAnyAssociation(
+	node: ModdleElement,
+	definitions: ModdleElement,
+): boolean {
+	return collectAssociations(definitions).some(
+		(association) =>
+			association.sourceRef === node || association.targetRef === node,
+	)
 }
 
 function getAssociatedTextAnnotations(

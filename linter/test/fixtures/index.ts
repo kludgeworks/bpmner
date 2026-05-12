@@ -10,6 +10,8 @@ import act12LoopWithEquivalentAnnotation from "./act12LoopWithEquivalentAnnotati
 import act12LoopWithoutAnnotation from "./act12LoopWithoutAnnotation.bpmn"
 import act13MiWithEquivalentAnnotation from "./act13MiWithEquivalentAnnotation.bpmn"
 import act13MiWithoutAnnotation from "./act13MiWithoutAnnotation.bpmn"
+import art02TextAnnotationAssociated from "./art02TextAnnotationAssociated.bpmn"
+import art02TextAnnotationUnassociated from "./art02TextAnnotationUnassociated.bpmn"
 import assoc01LoopWithoutAssociation from "./assoc01LoopWithoutAssociation.bpmn"
 import data01TypeWordsInDataName from "./data01TypeWordsInDataName.bpmn"
 import evt01Invalid from "./evt01Invalid.bpmn"
@@ -47,6 +49,8 @@ import gtw12UnnamedDivergingFlow from "./gtw12UnnamedDivergingFlow.bpmn"
 import gtw20JoinForkFixable from "./gtw20JoinForkFixable.bpmn"
 import gtw21FakeJoinFixable from "./gtw21FakeJoinFixable.bpmn"
 import gtw22SuperfluousGatewayFixable from "./gtw22SuperfluousGatewayFixable.bpmn"
+import lane01Named from "./lane01Named.bpmn"
+import lane01Unnamed from "./lane01Unnamed.bpmn"
 import msg01SamePoolMessage from "./msg01SamePoolMessage.bpmn"
 import msg02Invalid from "./msg02Invalid.bpmn"
 import msg02PastParticipleNounValid from "./msg02PastParticipleNounValid.bpmn"
@@ -59,6 +63,10 @@ import name02Invalid from "./name02Invalid.bpmn"
 import name02Valid from "./name02Valid.bpmn"
 import name03TypeWordsInElementName from "./name03TypeWordsInElementName.bpmn"
 import noDuplicateFlowFixable from "./noDuplicateFlowFixable.bpmn"
+import pool01WhiteBoxMatchingProcessName from "./pool01WhiteBoxMatchingProcessName.bpmn"
+import pool01WhiteBoxMismatchingProcessName from "./pool01WhiteBoxMismatchingProcessName.bpmn"
+import pool02BlackBoxNamed from "./pool02BlackBoxNamed.bpmn"
+import pool02BlackBoxUnnamed from "./pool02BlackBoxUnnamed.bpmn"
 import singleBlankStartEventFixable from "./singleBlankStartEventFixable.bpmn"
 import singleEventDefinitionFixable from "./singleEventDefinitionFixable.bpmn"
 import superfluousTerminationFixable from "./superfluousTerminationFixable.bpmn"
@@ -72,6 +80,8 @@ export const fixtures = {
 	act12LoopWithEquivalentAnnotation,
 	act13MiWithoutAnnotation,
 	act13MiWithEquivalentAnnotation,
+	art02TextAnnotationAssociated,
+	art02TextAnnotationUnassociated,
 	act01Invalid,
 	act01Valid,
 	act01PhrasalVerbValid,
@@ -130,4 +140,10 @@ export const fixtures = {
 	gtw22SuperfluousGatewayFixable,
 	gtw21FakeJoinFixable,
 	gtw20JoinForkFixable,
+	lane01Named,
+	lane01Unnamed,
+	pool01WhiteBoxMatchingProcessName,
+	pool01WhiteBoxMismatchingProcessName,
+	pool02BlackBoxNamed,
+	pool02BlackBoxUnnamed,
 } as Record<string, string>

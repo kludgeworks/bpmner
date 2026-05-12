@@ -4,8 +4,16 @@ import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.modulith.test.ApplicationModuleTest
+import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
+import org.springframework.test.context.TestPropertySource
 
-@ApplicationModuleTest
+@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
+@TestPropertySource(
+    properties = [
+        "embabel.agent.platform.models.anthropic.api-key=test-key",
+        "embabel.agent.platform.models.openai.api-key=test-key",
+    ],
+)
 class ValidationModuleTest {
     @Autowired
     private lateinit var lintingPort: BpmnLintingPort

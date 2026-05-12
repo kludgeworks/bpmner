@@ -1,0 +1,26 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Lane Labels Business Roles Performers"
+category = RuleCategory.Lane
+
+intent = "Require lane labels that identify the responsible business role or performer."
+forModellers =
+  "Name each lane by the business role or performer responsible for the activities in that lane."
+forAI =
+  "Deterministically require lane labels to be present; judging whether the label is the correct role requires business context."
+
+targetElements = List("bpmn:Lane")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Lane must have a business role or performer name"
+}
+
+staticConfig = new {
+  cookbookCode = "LANE-01"
+}
+
+autoFixable = false
+fixStrategy = "LLM"

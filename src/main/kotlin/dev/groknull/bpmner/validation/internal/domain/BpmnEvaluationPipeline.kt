@@ -34,9 +34,11 @@ import dev.groknull.bpmner.validation.BpmnValidator
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 import kotlin.math.min
 
 @Service
+@Component
 internal class BpmnEvaluationPipeline(
     private val config: dev.groknull.bpmner.core.BpmnConfig,
     private val bpmnLintingPort: BpmnLintingPort,

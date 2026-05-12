@@ -1,0 +1,26 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "Black Box Pool Named By External Entity Or Process"
+category = RuleCategory.Pool
+
+intent = "Ensure black-box pools are identifiable external participants."
+forModellers =
+  "Name black-box pools using the external entity, organization, department, system, or external process they represent."
+forAI =
+  "For pools without a process reference, deterministically require a non-empty label; semantic entity checks require modelling context."
+
+targetElements = List("bpmn:Participant")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Black-box pool must have a name"
+}
+
+staticConfig = new {
+  cookbookCode = "POOL-02"
+}
+
+autoFixable = false
+fixStrategy = "LLM"
