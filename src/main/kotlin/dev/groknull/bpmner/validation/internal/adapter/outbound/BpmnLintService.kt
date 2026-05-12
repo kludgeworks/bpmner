@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
@@ -98,25 +100,20 @@ internal open class BpmnLintService(
         }
     }
 
-    @Suppress("TooGenericExceptionCaught") // mixed: PolyglotException and Future checked exceptions
     override fun lint(
         bpmnXml: String,
         phase: BpmnLintPhase,
     ): List<LintIssue>? {
         val api = linterApi ?: return null
         logger.debug("Starting in-process bpmn-lint validation. phase={}, xmlLength={}", phase, bpmnXml.length)
-        return try {
+        return safePolyglotCall("bpmn-lint execution error: {}") {
             val future = CompletableFuture<String>()
             val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
             parseIssues(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
-        } catch (e: Exception) {
-            logger.warn("bpmn-lint execution error: {}", e.message)
-            null
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "ReturnCount") // mixed exceptions; guard-clause pattern
     override fun autoFix(
         bpmnXml: String,
         issues: List<LintIssue>,
@@ -130,43 +127,32 @@ internal open class BpmnLintService(
             bpmnXml.length,
             issues.size,
         )
-        return try {
+        return safePolyglotCall("BPMN XML auto-fix execution error: {}") {
             val future = CompletableFuture<String>()
             val promise = fixXml.execute(bpmnXml, objectMapper.writeValueAsString(issues), lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
             parseAutoFixResult(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
-        } catch (e: Exception) {
-            logger.warn("BPMN XML auto-fix execution error: {}", e.message)
-            null
         }
     }
 
-    @Suppress("TooGenericExceptionCaught", "ReturnCount") // mixed exceptions; guard-clause pattern
     override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> {
         val api = linterApi ?: return emptyMap()
         if (ruleNames.isEmpty()) return emptyMap()
-        return try {
+        return safePolyglotCall("Failed to resolve lint rule docs: {}") {
             @Suppress("UNCHECKED_CAST")
             api
                 .getMember("getRuleDocs")
                 .execute(objectMapper.writeValueAsString(ruleNames.distinct().sorted()))
                 .`as`(Map::class.java) as Map<String, String>
-        } catch (e: Exception) {
-            logger.warn("Failed to resolve lint rule docs: {}", e.message)
-            emptyMap()
-        }
+        } ?: emptyMap()
     }
 
-    @Suppress("TooGenericExceptionCaught") // catches both PolyglotException and Future execution errors
     fun resolvedRules(): Map<String, String> {
         val api = linterApi ?: return emptyMap()
-        return try {
+        return safePolyglotCall("Failed to resolve active lint rules: {}") {
             @Suppress("UNCHECKED_CAST")
             api.getMember("getRules").execute(lintConfigJson()).`as`(Map::class.java) as Map<String, String>
-        } catch (e: Exception) {
-            logger.warn("Failed to resolve active lint rules: {}", e.message)
-            emptyMap()
-        }
+        } ?: emptyMap()
     }
 
     internal fun parseIssues(json: String): List<LintIssue> = objectMapper.readValue(json)
@@ -190,6 +176,15 @@ internal open class BpmnLintService(
         if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) return finalConfig
         return finalConfig.copy(rules = finalConfig.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" })
     }
+
+    @Suppress("TooGenericExceptionCaught") // GraalVM polyglot + CompletableFuture exception boundary
+    private fun <T> safePolyglotCall(warningMessage: String, block: () -> T?): T? =
+        try {
+            block()
+        } catch (e: Exception) {
+            logger.warn(warningMessage, e.message)
+            null
+        }
 
     fun destroy() {
         jsContext?.close()

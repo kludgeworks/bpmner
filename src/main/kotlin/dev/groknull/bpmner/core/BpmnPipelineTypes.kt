@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
@@ -21,7 +23,6 @@ data class BpmnElementIndex(
     val shapeIdsByNodeId: Map<String, String>,
     val edgeDiagramIdsByEdgeId: Map<String, String>,
 ) {
-    @Suppress("ReturnCount") // guard-clause lookup pattern
     fun objectRefForElementId(elementId: String?): String? {
         if (elementId == null) return null
         if (elementId == processId) return processObjectRef

@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -56,7 +58,6 @@ internal open class BpmnPatchApplier {
             BpmnPatchOperationType.REPLACE_EDGE -> applyReplaceEdge(definition, op)
         }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applySetNodeName(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -82,7 +83,6 @@ internal open class BpmnPatchApplier {
             outgoingCount = definition.sequences.count { it.sourceRef == id },
         )
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applySetEdgeLabel(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -99,7 +99,6 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(updated)
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyAddNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -111,7 +110,6 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(nodes = definition.nodes + node))
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyRemoveNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -130,7 +128,6 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(nodes = definition.nodes.filter { it.id != nodeId }))
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyReplaceNode(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -151,7 +148,6 @@ internal open class BpmnPatchApplier {
         )
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyAddEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -170,7 +166,6 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(sequences = definition.sequences + edge))
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyRemoveEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
@@ -182,7 +177,6 @@ internal open class BpmnPatchApplier {
         return OperationResult.Changed(definition.copy(sequences = definition.sequences.filter { it.id != edgeId }))
     }
 
-    @Suppress("ReturnCount") // guard-clause pattern
     private fun applyReplaceEdge(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,

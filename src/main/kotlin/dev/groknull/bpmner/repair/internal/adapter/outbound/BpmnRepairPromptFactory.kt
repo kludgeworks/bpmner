@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import com.embabel.chat.AssistantMessage
@@ -99,7 +101,6 @@ internal class BpmnRepairPromptFactory(
             diagnostics = attempt.diagnostics,
         )
 
-    @Suppress("ReturnCount") // guard-clause pattern for empty inputs
     fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules =
             diagnostics

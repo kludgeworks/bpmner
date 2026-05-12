@@ -1,3 +1,5 @@
+@file:Suppress("ReturnCount")
+
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.Action
@@ -30,7 +32,6 @@ internal class BpmnLayoutAgent(
     private val logger = LoggerFactory.getLogger(BpmnLayoutAgent::class.java)
 
     @Action(description = "Apply bounded deterministic XML auto-fixes before layout")
-    @Suppress("ReturnCount") // guard-clause early returns on unavailable lint/autoFix services
     fun autoFixBpmnXml(bpmn: ValidatedBpmnXml): AutoFixedBpmnXml {
         val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
         if (lintIssues == null) {
