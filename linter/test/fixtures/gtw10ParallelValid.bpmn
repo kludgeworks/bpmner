@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1">
+    <bpmn:parallelGateway id="Fork_1" gatewayDirection="Diverging">
+      <bpmn:incoming>Flow_0</bpmn:incoming>
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_0"><bpmn:outgoing>Flow_0</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_1"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_2"><bpmn:incoming>Flow_2</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:task>
+    <bpmn:parallelGateway id="Join_1" gatewayDirection="Converging">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:task id="Task_3"><bpmn:incoming>Flow_5</bpmn:incoming></bpmn:task>
+    <bpmn:sequenceFlow id="Flow_0" sourceRef="Task_0" targetRef="Fork_1" />
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Fork_1" targetRef="Task_1" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Fork_1" targetRef="Task_2" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_1" targetRef="Join_1" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_2" targetRef="Join_1" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Join_1" targetRef="Task_3" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -24,7 +24,9 @@ facts {
         "evt-intermediate-event-not-action",
         "evt-link-event-pairing",
         "evt-message-start-has-message-flow",
+        "evt-signal-events-broadcast-only-when-needed",
         "evt-start-no-incoming",
+        "evt-timer-start-events-block-until-time",
         "flow-diverging-flow-outcome-label",
         "flow-sequence-flow-within-pool",
         "gen-bpmnsubset-allowed-elements",
@@ -33,6 +35,7 @@ facts {
         "gtw-diverging-flow-names",
         "gtw-diverging-gateway-question",
         "gtw-event-based-direct-events",
+        "gtw-exclusive-inclusive-parallel-semantics",
         "gtw-fake-join",
         "gtw-gateway-no-work-label",
         "gtw-no-gateway-join-fork",
@@ -72,6 +75,19 @@ facts {
       .staticConfig
       .commonAcronyms
       .contains("BPMN")
+    Catalog.rules
+      .find((rule) -> rule.id == "evt-signal-events-broadcast-only-when-needed")
+      .hasTsImplementation
+      == false
+    Catalog.rules
+      .find((rule) -> rule.id == "evt-timer-start-events-block-until-time")
+      .staticConfig
+      .timerExpressionFields
+      .contains("timeCycle")
+    Catalog.rules
+      .find((rule) -> rule.id == "gtw-exclusive-inclusive-parallel-semantics")
+      .errorMessages
+      .containsKey("parallelCondition")
   }
 
   local fixableRuleIds =

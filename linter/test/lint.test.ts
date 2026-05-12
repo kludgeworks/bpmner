@@ -210,6 +210,43 @@ describe("lint rules", () => {
 		)
 	})
 
+	it("evt-timer-start-events-block-until-time — missing expression", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.evt12TimerStartMissingExpression),
+			"evt-timer-start-events-block-until-time",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage(
+				"evt-timer-start-events-block-until-time",
+				"missingTimerExpression",
+			),
+		)
+	})
+
+	it("evt-timer-start-events-block-until-time — multiple expressions", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.evt12TimerStartMultipleExpressions),
+			"evt-timer-start-events-block-until-time",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage(
+				"evt-timer-start-events-block-until-time",
+				"multipleTimerExpressions",
+			),
+		)
+	})
+
+	it("evt-timer-start-events-block-until-time — valid", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.evt12TimerStartValid),
+				"evt-timer-start-events-block-until-time",
+			),
+		)
+	})
+
 	it("evt-boundary-event-constraints", async () => {
 		assert.ok(
 			hasRule(
@@ -231,6 +268,35 @@ describe("lint rules", () => {
 	it("evt-link-event-pairing", async () => {
 		assert.ok(
 			hasRule(await lint(fixtures.evt16UnpairedLink), "evt-link-event-pairing"),
+		)
+	})
+
+	it("gtw-exclusive-inclusive-parallel-semantics — valid XOR/OR/AND", async () => {
+		for (const fixture of [
+			fixtures.gtw10ExclusiveValid,
+			fixtures.gtw10InclusiveValid,
+			fixtures.gtw10ParallelValid,
+		]) {
+			assert.ok(
+				!hasRule(
+					await lint(fixture),
+					"gtw-exclusive-inclusive-parallel-semantics",
+				),
+			)
+		}
+	})
+
+	it("gtw-exclusive-inclusive-parallel-semantics — parallel condition", async () => {
+		const reports = reportsFor(
+			await lint(fixtures.gtw10ParallelConditionalInvalid),
+			"gtw-exclusive-inclusive-parallel-semantics",
+		)
+		assert.equal(
+			reports[0]?.message,
+			getRuleMessage(
+				"gtw-exclusive-inclusive-parallel-semantics",
+				"parallelCondition",
+			),
 		)
 	})
 

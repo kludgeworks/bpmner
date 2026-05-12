@@ -18,6 +18,9 @@ import evt02Invalid from "./evt02Invalid.bpmn"
 import evt02Valid from "./evt02Valid.bpmn"
 import evt10StartWithIncoming from "./evt10StartWithIncoming.bpmn"
 import evt11MessageStartWithoutMessageFlow from "./evt11MessageStartWithoutMessageFlow.bpmn"
+import evt12TimerStartMissingExpression from "./evt12TimerStartMissingExpression.bpmn"
+import evt12TimerStartMultipleExpressions from "./evt12TimerStartMultipleExpressions.bpmn"
+import evt12TimerStartValid from "./evt12TimerStartValid.bpmn"
 import evt13Invalid from "./evt13Invalid.bpmn"
 import evt13Valid from "./evt13Valid.bpmn"
 import evt14InvalidBoundary from "./evt14InvalidBoundary.bpmn"
@@ -35,6 +38,10 @@ import gtw02Invalid from "./gtw02Invalid.bpmn"
 import gtw02Valid from "./gtw02Valid.bpmn"
 import gtw03Invalid from "./gtw03Invalid.bpmn"
 import gtw03Valid from "./gtw03Valid.bpmn"
+import gtw10ExclusiveValid from "./gtw10ExclusiveValid.bpmn"
+import gtw10InclusiveValid from "./gtw10InclusiveValid.bpmn"
+import gtw10ParallelConditionalInvalid from "./gtw10ParallelConditionalInvalid.bpmn"
+import gtw10ParallelValid from "./gtw10ParallelValid.bpmn"
 import gtw11EventBasedToTask from "./gtw11EventBasedToTask.bpmn"
 import gtw12UnnamedDivergingFlow from "./gtw12UnnamedDivergingFlow.bpmn"
 import gtw20JoinForkFixable from "./gtw20JoinForkFixable.bpmn"
@@ -75,6 +82,9 @@ export const fixtures = {
 	act03Valid,
 	evt10StartWithIncoming,
 	evt11MessageStartWithoutMessageFlow,
+	evt12TimerStartMissingExpression,
+	evt12TimerStartMultipleExpressions,
+	evt12TimerStartValid,
 	evt13Invalid,
 	evt13Valid,
 	evt14InvalidBoundary,
@@ -93,6 +103,10 @@ export const fixtures = {
 	gtw02Valid,
 	gtw03Invalid,
 	gtw03Valid,
+	gtw10ExclusiveValid,
+	gtw10InclusiveValid,
+	gtw10ParallelConditionalInvalid,
+	gtw10ParallelValid,
 	flow01CrossPoolSequence,
 	flow02Invalid,
 	flow02Valid,
