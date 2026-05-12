@@ -1,7 +1,4 @@
-@file:Suppress(
-    "MaxLineLength",
-    "UnusedPrivateProperty",
-)
+@file:Suppress("MaxLineLength")
 
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
@@ -16,7 +13,6 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -523,7 +519,6 @@ class BpmnRepairAgentTest {
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
-        private val autoFixResponses: List<BpmnAutoFixResult?> = emptyList(),
     ) : BpmnLintService(catalogService = RuleCatalogService()) {
         val xmls = mutableListOf<String>()
         val phases = mutableListOf<BpmnLintPhase>()

@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -25,6 +9,7 @@ import org.springframework.stereotype.Component
 @Service
 @Component
 internal class BpmnDefinitionValidator {
+    @Suppress("CyclomaticComplexMethod") // six independent structural checks; splitting adds no clarity
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
@@ -55,10 +40,14 @@ internal class BpmnDefinitionValidator {
 
         definition.sequences.forEach { edge ->
             if (edge.sourceRef !in nodeIdSet) {
-                errors.add("edge ${edge.id.ifBlank { "<blank>" }} sourceRef '${edge.sourceRef}' does not match any node id")
+                errors.add(
+                    "edge ${edge.id.ifBlank { "<blank>" }} sourceRef '${edge.sourceRef}' does not match any node id",
+                )
             }
             if (edge.targetRef !in nodeIdSet) {
-                errors.add("edge ${edge.id.ifBlank { "<blank>" }} targetRef '${edge.targetRef}' does not match any node id")
+                errors.add(
+                    "edge ${edge.id.ifBlank { "<blank>" }} targetRef '${edge.targetRef}' does not match any node id",
+                )
             }
             if (edge.sourceRef == edge.targetRef) {
                 errors.add("edge ${edge.id.ifBlank { "<blank>" }} must not self-reference source and target")

@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.domain
 
 import com.embabel.agent.api.common.PromptRunner
@@ -21,15 +5,13 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
-import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 internal class LlmValidator(
     private val catalogService: RuleCatalogService,
 ) {
-    private val logger = LoggerFactory.getLogger(LlmValidator::class.java)
-
+    @Suppress("UnusedParameter") // reserved for future LLM-based validation integration
     fun validate(
         definition: BpmnDefinition,
         graph: LaidOutProcessGraph,
@@ -38,10 +20,9 @@ internal class LlmValidator(
         val llmRules = catalogService.catalog.rules.filter { !it.hasTsImplementation }
         if (llmRules.isEmpty()) return emptyList()
 
-        // TODO: In a real production system, we would call an LLM agent here to perform heuristic validation.
-        // For this task, we've enabled the Pkl-driven architecture.
-        // We will pass these rule definitions to the repair prompt factory instead,
-        // so the repair agent performs "just-in-time" validation and repair.
+        // In production this would invoke an LLM agent for heuristic validation.
+        // Currently, rule guidance is passed to the repair prompt factory instead
+        // so the repair agent performs just-in-time validation and repair.
 
         return emptyList()
     }

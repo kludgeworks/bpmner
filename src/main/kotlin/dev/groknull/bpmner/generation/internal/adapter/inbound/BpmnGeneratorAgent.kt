@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.AchievesGoal
@@ -21,6 +5,7 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
@@ -50,14 +35,18 @@ import java.io.File
 
 @PrimaryAdapter
 @Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language business process description")
+@Suppress("TooManyFunctions") // one action method per generation pipeline stage
 internal class BpmnGeneratorAgent(
-    private val config: dev.groknull.bpmner.core.BpmnConfig,
+    private val config: BpmnConfig,
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
 
-    @Action(description = "Create a high-level process outline and initial typed BPMN artifact from a business-process description")
+    @Action(
+        description =
+            "Create a high-level process outline and initial typed BPMN artifact from a business-process description",
+    )
     fun createProcessOutline(
         request: BpmnRequest,
         context: OperationContext,

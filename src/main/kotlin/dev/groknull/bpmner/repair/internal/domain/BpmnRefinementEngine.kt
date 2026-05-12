@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.ActionContext
@@ -31,6 +15,7 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
+import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnValidator
@@ -41,17 +26,19 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
+@Suppress("LongParameterList") // Spring constructor injection — no cleaner grouping possible
 internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,
     private val validator: BpmnValidator,
-    private val promptFactory: dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory,
+    private val promptFactory: BpmnRepairPromptFactory,
     private val fingerprints: BpmnFingerprintService,
     private val strategies: List<BpmnRepairStrategy>,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementEngine::class.java)
 
+    @Suppress("LongMethod", "TooGenericExceptionCaught") // repair loop; render() may throw any RuntimeException
     fun refine(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
@@ -228,6 +215,7 @@ internal class BpmnRefinementEngine(
         request: BpmnRequest,
     ): PromptRunner = config.repairer.promptRunner(context).withPromptContributor(request)
 
+    @Suppress("UnusedParameter") // request reserved for future error-context enrichment
     private fun failRefinement(
         maxEvaluations: Int,
         history: BpmnAttemptHistory,
@@ -250,7 +238,10 @@ internal class BpmnRefinementEngine(
                 appendLine("  Cause: $reason")
                 appendLine("  Attempts: ${history.size} / $maxEvaluations")
                 for ((fp, attempts) in stuckFingerprints) {
-                    appendLine("  Recurring (stuck) fingerprint: $fp — seen in attempt(s): ${attempts.joinToString(", ")}")
+                    appendLine(
+                        "  Recurring (stuck) fingerprint: $fp" +
+                            " — seen in attempt(s): ${attempts.joinToString(", ")}",
+                    )
                 }
                 val displayRecord = lastStuckRecord ?: lastRecord
                 if (displayRecord != null && displayRecord.topDiagnostics.isNotEmpty()) {
@@ -260,9 +251,11 @@ internal class BpmnRefinementEngine(
                 }
                 if (lastRecord != null) {
                     appendLine(
-                        "  Last attempt: graph=${lastRecord.graphDiagnostics}, render=${lastRecord.renderDiagnostics}, " +
-                            "xsd=${lastRecord.xsdDiagnostics}, lint=${lastRecord.lintDiagnostics}, " +
-                            "def=${lastRecord.definitionFingerprint}",
+                        "  Last attempt: graph=${lastRecord.graphDiagnostics}," +
+                            " render=${lastRecord.renderDiagnostics}," +
+                            " xsd=${lastRecord.xsdDiagnostics}," +
+                            " lint=${lastRecord.lintDiagnostics}," +
+                            " def=${lastRecord.definitionFingerprint}",
                     )
                 }
                 append("  Full history: $compactHistory")

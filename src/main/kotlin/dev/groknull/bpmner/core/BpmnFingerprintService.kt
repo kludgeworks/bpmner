@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -50,8 +34,12 @@ class BpmnFingerprintService {
 
     fun promptFingerprint(prompt: String): String = textFingerprint(prompt)
 
+    companion object {
+        private const val FINGERPRINT_LENGTH = 12
+    }
+
     private fun textFingerprint(value: String): String {
         val digest = MessageDigest.getInstance("SHA-256").digest(value.toByteArray(Charsets.UTF_8))
-        return digest.joinToString("") { "%02x".format(it) }.take(12)
+        return digest.joinToString("") { "%02x".format(it) }.take(FINGERPRINT_LENGTH)
     }
 }

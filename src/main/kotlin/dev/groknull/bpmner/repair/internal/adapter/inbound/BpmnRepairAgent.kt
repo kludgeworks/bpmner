@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.Action
@@ -33,7 +17,9 @@ internal class BpmnRepairAgent(
     private val refinementEngine: BpmnRefinementEngine,
 ) {
     @Action(
-        description = "Iteratively validate and repair a generated BPMN process graph until it passes all XSD and lint rules",
+        description =
+            "Iteratively validate and repair a generated BPMN process graph" +
+                " until it passes all XSD and lint rules",
         actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
     )
     fun repair(

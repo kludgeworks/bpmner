@@ -1,22 +1,7 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnAttemptRecord
+import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
@@ -40,7 +25,7 @@ import kotlin.math.min
 @Service
 @Component
 internal class BpmnEvaluationPipeline(
-    private val config: dev.groknull.bpmner.core.BpmnConfig,
+    private val config: BpmnConfig,
     private val bpmnLintingPort: BpmnLintingPort,
     private val bpmnXsdValidationPort: BpmnXsdValidationPort,
     private val bpmnDefinitionValidator: BpmnDefinitionValidator,
@@ -72,33 +57,7 @@ internal class BpmnEvaluationPipeline(
         }
 
         if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
-            if (renderFailureMessage != null || rendered == null) {
-                diagnostics +=
-                    normalizer.scopedDiagnostic(
-                        graph = graph,
-                        diagnostic =
-                            BpmnDiagnostic(
-                                source = BpmnDiagnosticSource.RENDER,
-                                message = renderFailureMessage ?: "Unknown BPMN rendering error",
-                            ),
-                    )
-            } else {
-                diagnostics.addAll(
-                    normalizer.normalizeXsdDiagnostics(
-                        issues = bpmnXsdValidationPort.validateDetailed(rendered.xml),
-                        rendered = rendered,
-                        graph = graph,
-                    ),
-                )
-                if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-                    val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
-                    if (lintIssues == null) {
-                        logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
-                    } else {
-                        diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
-                    }
-                }
-            }
+            collectRenderedDiagnostics(rendered, renderFailureMessage, graph, diagnostics)
         }
 
         val infrastructureDiagnostics = normalizer.infrastructureDiagnostics(diagnostics)
@@ -141,6 +100,41 @@ internal class BpmnEvaluationPipeline(
         )
     }
 
+    private fun collectRenderedDiagnostics(
+        rendered: RenderedBpmn?,
+        renderFailureMessage: String?,
+        graph: LaidOutProcessGraph,
+        diagnostics: MutableList<BpmnDiagnostic>,
+    ) {
+        if (renderFailureMessage != null || rendered == null) {
+            diagnostics +=
+                normalizer.scopedDiagnostic(
+                    graph = graph,
+                    diagnostic =
+                        BpmnDiagnostic(
+                            source = BpmnDiagnosticSource.RENDER,
+                            message = renderFailureMessage ?: "Unknown BPMN rendering error",
+                        ),
+                )
+            return
+        }
+        diagnostics.addAll(
+            normalizer.normalizeXsdDiagnostics(
+                issues = bpmnXsdValidationPort.validateDetailed(rendered.xml),
+                rendered = rendered,
+                graph = graph,
+            ),
+        )
+        if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
+            val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+            if (lintIssues == null) {
+                logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
+            } else {
+                diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
+            }
+        }
+    }
+
     override fun toRecord(
         attempt: BpmnRepairAttempt,
         repairPromptFingerprint: String?,
@@ -175,7 +169,8 @@ internal class BpmnEvaluationPipeline(
         )
         diagnostics.forEach { diagnostic ->
             logger.warn(
-                "Diagnostic detail: source={}, rule={}, category={}, elementId={}, objectRef={}, repairScope={}, owner={}, message={}",
+                "Diagnostic detail: source={}, rule={}, category={}, elementId={}, " +
+                    "objectRef={}, repairScope={}, owner={}, message={}",
                 diagnostic.source.name.lowercase(),
                 diagnostic.rule ?: "-",
                 diagnostic.category ?: "-",
@@ -193,7 +188,7 @@ internal class BpmnEvaluationPipeline(
             append(diagnostic.source.name.lowercase())
             diagnostic.rule?.let { append(" [$it]") }
             diagnostic.elementId?.let { append(" @$it") }
-            append(": ${diagnostic.message.take(120)}")
+            append(": ${diagnostic.message.take(DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH)}")
         }
 
     private fun logArtifactsIfEnabled(
@@ -205,7 +200,9 @@ internal class BpmnEvaluationPipeline(
             "Artifact dump [definition]: {}",
             fingerprints.serializeDefinition(definition).truncate(config.logging.artifactPreviewLength),
         )
-        rendered?.let { logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.logging.artifactPreviewLength)) }
+        rendered?.let {
+            logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.logging.artifactPreviewLength))
+        }
     }
 
     private fun String.truncate(maxLength: Int): String {
@@ -215,5 +212,6 @@ internal class BpmnEvaluationPipeline(
 
     companion object {
         private const val TOP_DIAGNOSTICS_LIMIT = 5
+        private const val DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH = 120
     }
 }

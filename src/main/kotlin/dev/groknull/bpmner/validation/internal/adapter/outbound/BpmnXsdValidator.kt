@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.ClasspathResourceResolver
@@ -23,6 +7,7 @@ import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.xml.sax.SAXException
+import java.io.IOException
 import java.io.StringReader
 import java.util.regex.Pattern
 import javax.xml.XMLConstants
@@ -49,7 +34,7 @@ internal open class BpmnXsdValidator : BpmnXsdValidationPort {
         } catch (e: SAXException) {
             logger.debug("XSD validation failed: {}", e.message)
             listOf(XsdValidationIssue(e.message ?: "Unknown XSD validation error", extractElementId(e.message)))
-        } catch (e: Exception) {
+        } catch (e: IOException) {
             logger.warn("Unexpected XSD validation error: {}", e.message)
             listOf(XsdValidationIssue("XSD validation error: ${e.message}", extractElementId(e.message)))
         }

@@ -1,7 +1,4 @@
-@file:Suppress(
-    "MaxLineLength",
-    "UnusedPrivateProperty",
-)
+@file:Suppress("MaxLineLength")
 
 package dev.groknull.bpmner.validation
 

@@ -1,7 +1,4 @@
-@file:Suppress(
-    "MaxLineLength",
-    "UnusedPrivateProperty",
-)
+@file:Suppress("MaxLineLength")
 
 package dev.groknull.bpmner.generation
 
@@ -39,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 )
 class GenerationModuleTest {
     @MockitoBean
+    @Suppress("UnusedPrivateProperty") // Spring replaces the bean; not referenced in test code
     private lateinit var agentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Autowired

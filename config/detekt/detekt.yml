@@ -5,3 +5,7 @@ config:
 
 build:
   maxIssues: 0
+
+style:
+  MaxLineLength:
+    maxLineLength: 130

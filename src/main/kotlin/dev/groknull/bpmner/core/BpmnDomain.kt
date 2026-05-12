@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.core
 
 import com.embabel.common.ai.prompt.PromptContributor
@@ -98,7 +82,9 @@ data class BpmnNode(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
     val id: String,
-    @get:JsonPropertyDescription("Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways.")
+    @get:JsonPropertyDescription(
+        "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways.",
+    )
     val name: String? = null,
     @get:JsonPropertyDescription("Node type from the supported enum")
     val type: NodeType,

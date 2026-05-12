@@ -1,21 +1,6 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
+import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import org.slf4j.LoggerFactory
@@ -67,7 +52,7 @@ class RuleCatalogService {
         } else {
             try {
                 objectMapper.readValue<RuleCatalog>(resource.inputStream)
-            } catch (e: Exception) {
+            } catch (e: JsonProcessingException) {
                 logger.error("Failed to load linter-rules.json", e)
                 RuleCatalog(emptyList())
             }

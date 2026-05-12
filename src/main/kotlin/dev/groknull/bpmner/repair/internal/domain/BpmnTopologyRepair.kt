@@ -1,25 +1,10 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
@@ -43,6 +28,7 @@ internal class BpmnTopologyRepair(
         return patchApplier.apply(definition, patch)
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern for missing rule/element info
     fun buildTopologyPatch(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
@@ -65,6 +51,7 @@ internal class BpmnTopologyRepair(
         return BpmnRepairPatch(operations = ops, reason = "Deterministic topology repair: $rule on $nodeId")
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildJoinForkRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -81,12 +68,18 @@ internal class BpmnTopologyRepair(
                 id = joinId,
                 name = null,
                 type = NodeType.EXCLUSIVE_GATEWAY,
-                bounds = BpmnBounds(x = gateway.bounds.x - 80.0, y = gateway.bounds.y, width = 50.0, height = 50.0),
+                bounds =
+                    BpmnBounds(
+                        x = gateway.bounds.x - JOIN_GATEWAY_X_OFFSET,
+                        y = gateway.bounds.y,
+                        width = GATEWAY_SIZE,
+                        height = GATEWAY_SIZE,
+                    ),
             )
-        val joinCenter = BpmnWaypoint(joinGw.bounds.x + 25.0, joinGw.bounds.y + 25.0)
-        val forkEntry = BpmnWaypoint(gateway.bounds.x, gateway.bounds.y + 25.0)
+        val joinCenter = BpmnWaypoint(joinGw.bounds.x + GATEWAY_HALF_SIZE, joinGw.bounds.y + GATEWAY_HALF_SIZE)
+        val forkEntry = BpmnWaypoint(gateway.bounds.x, gateway.bounds.y + GATEWAY_HALF_SIZE)
         val joinToFork =
-            dev.groknull.bpmner.core.BpmnEdge(
+            BpmnEdge(
                 id = joinEdgeId,
                 sourceRef = joinId,
                 targetRef = nodeId,
@@ -103,6 +96,7 @@ internal class BpmnTopologyRepair(
         return ops
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildFakeJoinRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -120,16 +114,16 @@ internal class BpmnTopologyRepair(
                 type = NodeType.EXCLUSIVE_GATEWAY,
                 bounds =
                     BpmnBounds(
-                        x = task.bounds.x - 80.0,
-                        y = task.bounds.y + (task.bounds.height / 2.0) - 25.0,
-                        width = 50.0,
-                        height = 50.0,
+                        x = task.bounds.x - JOIN_GATEWAY_X_OFFSET,
+                        y = task.bounds.y + (task.bounds.height / 2.0) - GATEWAY_HALF_SIZE,
+                        width = GATEWAY_SIZE,
+                        height = GATEWAY_SIZE,
                     ),
             )
-        val joinCenter = BpmnWaypoint(joinGw.bounds.x + 25.0, joinGw.bounds.y + 25.0)
+        val joinCenter = BpmnWaypoint(joinGw.bounds.x + GATEWAY_HALF_SIZE, joinGw.bounds.y + GATEWAY_HALF_SIZE)
         val taskEntry = BpmnWaypoint(task.bounds.x, task.bounds.y + task.bounds.height / 2.0)
         val joinToTask =
-            dev.groknull.bpmner.core.BpmnEdge(
+            BpmnEdge(
                 id = joinEdgeId,
                 sourceRef = joinId,
                 targetRef = nodeId,
@@ -146,6 +140,7 @@ internal class BpmnTopologyRepair(
         return ops
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildSuperfluousGatewayRepair(
         nodeId: String,
         definition: BpmnDefinition,
@@ -158,12 +153,17 @@ internal class BpmnTopologyRepair(
                 waypoints = listOf(incomingEdge.waypoints.first(), outgoingEdge.waypoints.last()),
             )
         return listOf(
-            BpmnPatchOperation(type = BpmnPatchOperationType.REPLACE_EDGE, edgeId = incomingEdge.id, edge = updatedIncoming),
+            BpmnPatchOperation(
+                type = BpmnPatchOperationType.REPLACE_EDGE,
+                edgeId = incomingEdge.id,
+                edge = updatedIncoming,
+            ),
             BpmnPatchOperation(type = BpmnPatchOperationType.REMOVE_EDGE, edgeId = outgoingEdge.id),
             BpmnPatchOperation(type = BpmnPatchOperationType.REMOVE_NODE, nodeId = nodeId),
         )
     }
 
+    @Suppress("ReturnCount") // guard-clause pattern
     private fun buildConvergingGatewayClearName(
         nodeId: String,
         definition: BpmnDefinition,
@@ -193,5 +193,8 @@ internal class BpmnTopologyRepair(
 
     companion object {
         private val TOPOLOGY_LINT_RULES = listOf("no-gateway-join-fork", "fake-join", "superfluous-gateway", "gtw-02")
+        private const val JOIN_GATEWAY_X_OFFSET = 80.0
+        private const val GATEWAY_SIZE = 50.0
+        private const val GATEWAY_HALF_SIZE = 25.0
     }
 }

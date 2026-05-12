@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
@@ -25,9 +9,11 @@ import org.springframework.stereotype.Component
 @PrimaryAdapter
 @Component
 internal class BpmnRepairEventListener(
+    @Suppress("UnusedPrivateProperty") // placeholder for future background-refinement integration
     private val refinementEngine: BpmnRefinementEngine,
 ) {
     @EventListener
+    @Suppress("UnusedParameter") // Spring dispatches by parameter type
     fun onBpmnGenerated(event: BpmnGeneratedEvent) {
         // This listener could trigger background refinement if needed,
         // but currently the orchestration is handled by Embabel agent chaining.

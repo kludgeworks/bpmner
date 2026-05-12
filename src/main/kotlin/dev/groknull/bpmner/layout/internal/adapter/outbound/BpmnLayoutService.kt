@@ -1,19 +1,3 @@
-@file:Suppress(
-    "CyclomaticComplexMethod",
-    "ForbiddenComment",
-    "LongMethod",
-    "LongParameterList",
-    "MagicNumber",
-    "MaxLineLength",
-    "NestedBlockDepth",
-    "ReturnCount",
-    "SpreadOperator",
-    "TooGenericExceptionCaught",
-    "TooManyFunctions",
-    "UnusedParameter",
-    "UnusedPrivateProperty",
-)
-
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import jakarta.annotation.PostConstruct
@@ -66,11 +50,12 @@ internal open class BpmnLayoutService {
             } else {
                 logger.warn("BpmnLayoutApi not found in the JS bundle.")
             }
-        } catch (e: Exception) {
+        } catch (e: org.graalvm.polyglot.PolyglotException) {
             logger.error("Failed to initialize GraalJS layout context", e)
         }
     }
 
+    @Suppress("TooGenericExceptionCaught") // mixed: PolyglotException and Future checked exceptions
     fun layout(xml: String): String {
         val api = layoutApi ?: return xml
         logger.debug("Starting in-process BPMN auto-layout. xmlLength={}", xml.length)
@@ -86,7 +71,7 @@ internal open class BpmnLayoutService {
                 },
             )
 
-            future.get(30, TimeUnit.SECONDS)
+            future.get(LAYOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (e: Exception) {
             logger.warn("BPMN auto-layout execution error: {}", e.message)
             xml
@@ -95,5 +80,9 @@ internal open class BpmnLayoutService {
 
     fun destroy() {
         jsContext?.close()
+    }
+
+    companion object {
+        private const val LAYOUT_TIMEOUT_SECONDS = 30L
     }
 }
