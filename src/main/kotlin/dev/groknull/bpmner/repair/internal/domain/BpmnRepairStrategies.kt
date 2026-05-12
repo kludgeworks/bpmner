@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnConfig
@@ -7,7 +23,6 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
-import org.springframework.core.Ordered
 import org.springframework.stereotype.Component
 
 @Service

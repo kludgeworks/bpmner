@@ -6,7 +6,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BpmnLintServiceTest {
-
     private val service = BpmnLintService(catalogService = RuleCatalogService())
 
     @Test
@@ -26,12 +25,13 @@ class BpmnLintServiceTest {
 
     @Test
     fun `parseIssues correctly parses GraalJS JSON output`() {
-        val json = """
+        val json =
+            """
             [
               {"id": "Task_1", "rule": "rule-1", "message": "error 1", "category": "error"},
               {"id": "Flow_1", "rule": "rule-2", "message": "error 2", "category": "warn"}
             ]
-        """.trimIndent()
+            """.trimIndent()
 
         val issues = service.parseIssues(json)
 
@@ -42,7 +42,8 @@ class BpmnLintServiceTest {
 
     @Test
     fun `parseAutoFixResult correctly parses GraalJS JSON output`() {
-        val json = """
+        val json =
+            """
             {
               "changed": true,
               "xml": "FIXED_XML",
@@ -52,7 +53,7 @@ class BpmnLintServiceTest {
               "skips": [],
               "errors": []
             }
-        """.trimIndent()
+            """.trimIndent()
 
         val result = service.parseAutoFixResult(json)
 
@@ -64,12 +65,14 @@ class BpmnLintServiceTest {
 
     @Test
     fun `lintConfig merges Pkl defaults with overrides`() {
-        val service = BpmnLintService(
-            catalogService = RuleCatalogService(),
-            properties = BpmnLintProperties(
-                rules = mapOf("klm/act-verb-object-name" to "error"),
-            ),
-        )
+        val service =
+            BpmnLintService(
+                catalogService = RuleCatalogService(),
+                properties =
+                    BpmnLintProperties(
+                        rules = mapOf("klm/act-verb-object-name" to "error"),
+                    ),
+            )
 
         val config = service.lintConfig()
 

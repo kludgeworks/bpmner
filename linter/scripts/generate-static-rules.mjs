@@ -1,116 +1,136 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import fs from "node:fs"
+import { createRequire } from "node:module"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
-const require = createRequire(import.meta.url);
+const require = createRequire(import.meta.url)
 
-const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const rulesDir = path.join(repoRoot, 'src', 'rules');
-const defaultDocsDir = path.join(repoRoot, 'docs', 'rules');
-const defaultOutputPath = path.join(repoRoot, 'src', 'generated', 'static-rules.ts');
+const repoRoot = path.resolve(
+	path.dirname(fileURLToPath(import.meta.url)),
+	"..",
+)
+const defaultDocsDir = path.join(repoRoot, "docs", "rules")
+const defaultOutputPath = path.join(
+	repoRoot,
+	"src",
+	"generated",
+	"static-rules.ts",
+)
 
-const cliOutputPath = process.argv[2];
-const cliDocsDir = process.argv[3];
-const cliRulesJsonPath = process.argv[4];
+const cliOutputPath = process.argv[2]
+const cliDocsDir = process.argv[3]
+const cliRulesJsonPath = process.argv[4]
 
 const bazelPackageOutputRoot =
-  process.env.BAZEL_BINDIR && process.env.BAZEL_PACKAGE
-    ? path.join(process.env.BAZEL_BINDIR, process.env.BAZEL_PACKAGE)
-    : null;
+	process.env.BAZEL_BINDIR && process.env.BAZEL_PACKAGE
+		? path.join(process.env.BAZEL_BINDIR, process.env.BAZEL_PACKAGE)
+		: null
 const execRoot =
-  bazelPackageOutputRoot && repoRoot.endsWith(bazelPackageOutputRoot)
-    ? repoRoot.slice(0, -bazelPackageOutputRoot.length - 1)
-    : path.dirname(repoRoot);
-const isBazelOutputPath = (value) => value.startsWith('bazel-out/') || value.startsWith('bazel-out\\');
+	bazelPackageOutputRoot && repoRoot.endsWith(bazelPackageOutputRoot)
+		? repoRoot.slice(0, -bazelPackageOutputRoot.length - 1)
+		: path.dirname(repoRoot)
+const isBazelOutputPath = (value) =>
+	value.startsWith("bazel-out/") || value.startsWith("bazel-out\\")
 
 const outputPath = !cliOutputPath
-  ? defaultOutputPath
-  : path.isAbsolute(cliOutputPath)
-    ? cliOutputPath
-    : isBazelOutputPath(cliOutputPath)
-      ? path.resolve(execRoot, cliOutputPath)
-      : path.resolve(process.cwd(), cliOutputPath);
+	? defaultOutputPath
+	: path.isAbsolute(cliOutputPath)
+		? cliOutputPath
+		: isBazelOutputPath(cliOutputPath)
+			? path.resolve(execRoot, cliOutputPath)
+			: path.resolve(process.cwd(), cliOutputPath)
 
 const docsDir = !cliDocsDir
-  ? defaultDocsDir
-  : path.isAbsolute(cliDocsDir)
-    ? cliDocsDir
-    : isBazelOutputPath(cliDocsDir)
-      ? path.resolve(execRoot, cliDocsDir)
-      : path.resolve(process.cwd(), cliDocsDir);
+	? defaultDocsDir
+	: path.isAbsolute(cliDocsDir)
+		? cliDocsDir
+		: isBazelOutputPath(cliDocsDir)
+			? path.resolve(execRoot, cliDocsDir)
+			: path.resolve(process.cwd(), cliDocsDir)
 
 const rulesJsonPath = !cliRulesJsonPath
-  ? path.join(repoRoot, 'src', 'generated', 'linter-rules.json')
-  : path.isAbsolute(cliRulesJsonPath)
-    ? cliRulesJsonPath
-    : isBazelOutputPath(cliRulesJsonPath)
-      ? path.resolve(execRoot, cliRulesJsonPath)
-      : path.resolve(process.cwd(), cliRulesJsonPath);
+	? path.join(repoRoot, "src", "generated", "linter-rules.json")
+	: path.isAbsolute(cliRulesJsonPath)
+		? cliRulesJsonPath
+		: isBazelOutputPath(cliRulesJsonPath)
+			? path.resolve(execRoot, cliRulesJsonPath)
+			: path.resolve(process.cwd(), cliRulesJsonPath)
 
-const recommendedConfig = require('bpmnlint/config/recommended');
+const recommendedConfig = require("bpmnlint/config/recommended")
 
-const rulesData = JSON.parse(fs.readFileSync(rulesJsonPath, 'utf8'));
-const allRules = rulesData.rules;
+const rulesData = JSON.parse(fs.readFileSync(rulesJsonPath, "utf8"))
+const allRules = rulesData.rules
 
 // Filter rules that have a TS implementation
-const tsRules = allRules.filter(r => r.hasTsImplementation);
+const tsRules = allRules.filter((r) => r.hasTsImplementation)
 
 const builtinRules = Object.entries(recommendedConfig.rules)
-  .map(([id, level]) => ({ id, level }))
-  .sort((a, b) => a.id.localeCompare(b.id));
+	.map(([id, level]) => ({ id, level }))
+	.sort((a, b) => a.id.localeCompare(b.id))
 
 const toIdentifier = (value) =>
-  value
-    .replace(/(^|[-_/])([a-z])/g, (_, __, ch) => ch.toUpperCase())
-    .replace(/[^A-Za-z0-9]/g, '')
-    .replace(/^[0-9]/, '_$&')
-    .replace(/^([A-Z])/, (match) => match.toLowerCase());
+	value
+		.replace(/(^|[-_/])([a-z])/g, (_, __, ch) => ch.toUpperCase())
+		.replace(/[^A-Za-z0-9]/g, "")
+		.replace(/^[0-9]/, "_$&")
+		.replace(/^([A-Z])/, (match) => match.toLowerCase())
 
 const builtinImports = builtinRules
-  .map(({ id }) => `import ${toIdentifier(id)} from 'bpmnlint/rules/${id}';`)
-  .join('\n');
+	.map(({ id }) => `import ${toIdentifier(id)} from 'bpmnlint/rules/${id}';`)
+	.join("\n")
 
 const customImports = tsRules
-  .map(({ id }) => `import ${toIdentifier(id)} from '../rules/${id}';`)
-  .join('\n');
+	.map(({ id }) => `import ${toIdentifier(id)} from '../rules/${id}';`)
+	.join("\n")
 
 const builtinRuleEntries = builtinRules
-  .map(({ id }) => `  '${id}': ${toIdentifier(id)},\n  'bpmnlint/${id}': ${toIdentifier(id)},`)
-  .join('\n');
+	.map(
+		({ id }) =>
+			`  '${id}': ${toIdentifier(id)},\n  'bpmnlint/${id}': ${toIdentifier(id)},`,
+	)
+	.join("\n")
 
 const customRuleEntries = tsRules
-  .map(({ id }) => `  'klm/${id}': ${toIdentifier(id)},\n  'bpmnlint-plugin-klm/${id}': ${toIdentifier(id)},`)
-  .join('\n');
+	.map(
+		({ id }) =>
+			`  'klm/${id}': ${toIdentifier(id)},\n  'bpmnlint-plugin-klm/${id}': ${toIdentifier(id)},`,
+	)
+	.join("\n")
 
-const coreRecommendedConfigEntries = builtinRules.map(({ id, level }) => `    '${id}': '${level}',`).join('\n');
-const coreRecommendedErrorConfigEntries = builtinRules.map(({ id }) => `    '${id}': 'error',`).join('\n');
+const coreRecommendedConfigEntries = builtinRules
+	.map(({ id, level }) => `    '${id}': '${level}',`)
+	.join("\n")
+const coreRecommendedErrorConfigEntries = builtinRules
+	.map(({ id }) => `    '${id}': 'error',`)
+	.join("\n")
 
 // For custom rules, use the severity from Pkl as the recommended level
 const customRecommendedConfigEntries = tsRules
-  .map((r) => `    '${r.id}': '${r.severity === 'error' ? 'error' : 'warn'}',`)
-  .join('\n');
+	.map((r) => `    '${r.id}': '${r.severity === "error" ? "error" : "warn"}',`)
+	.join("\n")
 
 const customAllConfigEntries = tsRules
-  .map((r) => `    '${r.id}': 'error',`)
-  .join('\n');
+	.map((r) => `    '${r.id}': 'error',`)
+	.join("\n")
 
 const customRuleDocsEntries = tsRules
-  .map((r) => {
-    const docPath = path.join(docsDir, `${r.id}.md`);
-    if (!fs.existsSync(docPath)) {
-      console.warn(`Warning: Documentation not found for rule ${r.id} at ${docPath}`);
-      return '';
-    }
-    const content = fs.readFileSync(docPath, 'utf8');
-    return [
-      `  '${r.id}': ${JSON.stringify(content)},`,
-      `  'klm/${r.id}': ${JSON.stringify(content)},`,
-      `  'bpmnlint-plugin-klm/${r.id}': ${JSON.stringify(content)},`,
-    ].join('\n');
-  })
-  .filter(Boolean)
-  .join('\n');
+	.map((r) => {
+		const docPath = path.join(docsDir, `${r.id}.md`)
+		if (!fs.existsSync(docPath)) {
+			console.warn(
+				`Warning: Documentation not found for rule ${r.id} at ${docPath}`,
+			)
+			return ""
+		}
+		const content = fs.readFileSync(docPath, "utf8")
+		return [
+			`  '${r.id}': ${JSON.stringify(content)},`,
+			`  'klm/${r.id}': ${JSON.stringify(content)},`,
+			`  'bpmnlint-plugin-klm/${r.id}': ${JSON.stringify(content)},`,
+		].join("\n")
+	})
+	.filter(Boolean)
+	.join("\n")
 
 const source = `// Generated by linter/scripts/generate-static-rules.mjs. Do not edit by hand.
 ${builtinImports}
@@ -208,7 +228,7 @@ export const resolver = {
     return customRuleDocs[name as keyof typeof customRuleDocs] || null;
   },
 };
-`;
+`
 
-fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-fs.writeFileSync(outputPath, source);
+fs.mkdirSync(path.dirname(outputPath), { recursive: true })
+fs.writeFileSync(outputPath, source)

@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.databind.ObjectMapper
@@ -12,8 +28,7 @@ class BpmnFingerprintService {
     fun serializeDefinition(definition: BpmnDefinition): String =
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
 
-    fun definitionFingerprint(definition: BpmnDefinition): String =
-        textFingerprint(serializeDefinition(definition))
+    fun definitionFingerprint(definition: BpmnDefinition): String = textFingerprint(serializeDefinition(definition))
 
     fun diagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String =
         textFingerprint(
@@ -29,9 +44,8 @@ class BpmnFingerprintService {
                         diagnostic.ownerRef.orEmpty(),
                         diagnostic.message,
                     ).joinToString("")
-                }
-                .sorted()
-                .joinToString("")
+                }.sorted()
+                .joinToString(""),
         )
 
     fun promptFingerprint(prompt: String): String = textFingerprint(prompt)

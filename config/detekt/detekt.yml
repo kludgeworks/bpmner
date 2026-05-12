@@ -1,0 +1,7 @@
+config:
+  validation: true
+  warningsAsErrors: true
+  checkExhaustiveness: false
+
+build:
+  maxIssues: 0

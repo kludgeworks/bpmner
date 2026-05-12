@@ -19,22 +19,23 @@ internal class BpmnGenerationService(
     private val agentInvoker: BpmnAgentInvoker,
     private val inputPathResolver: InputPathResolver,
 ) : BpmnGenerationUseCase {
-
     private val logger = LoggerFactory.getLogger(BpmnGenerationService::class.java)
 
     override fun generate(input: BpmnGenerationInput): BpmnResult {
         val description = resolveProcessDescription(input)
         val outputFile = inputPathResolver.resolveOutputPath(input.outputFile).toString()
-        val styleGuide = input.styleGuide?.let {
-            logger.info("Loading style guide from file: {}", it)
-            inputPathResolver.readUtf8(it).trim()
-        }
+        val styleGuide =
+            input.styleGuide?.let {
+                logger.info("Loading style guide from file: {}", it)
+                inputPathResolver.readUtf8(it).trim()
+            }
 
-        val request = BpmnRequest(
-            processDescription = description,
-            outputFile = outputFile,
-            styleGuide = styleGuide,
-        )
+        val request =
+            BpmnRequest(
+                processDescription = description,
+                outputFile = outputFile,
+                styleGuide = styleGuide,
+            )
 
         logger.info(
             "Starting BPMN generation. outputFile={}, descriptionLength={}, styleGuidePresent={}",

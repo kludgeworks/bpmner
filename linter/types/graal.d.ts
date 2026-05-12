@@ -1,3 +1,3 @@
 declare const Java: {
-  type(name: string): any;
-};
+	type(name: string): unknown
+}

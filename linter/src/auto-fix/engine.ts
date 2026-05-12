@@ -1,5 +1,5 @@
-import BpmnModdle from "bpmn-moddle";
-import { autoFixRegistration } from "./registry";
+import BpmnModdle from "bpmn-moddle"
+import { autoFixRegistration } from "./registry"
 import {
 	type AutoFixContext,
 	type AutoFixLintIssue,
@@ -7,11 +7,11 @@ import {
 	issueElementId,
 	type ModdleElement,
 	normalizeRuleId,
-} from "./types";
+} from "./types"
 
 type AutoFixEngineOptions = {
-	lintXml?: (xml: string, configInput?: unknown) => Promise<string>;
-};
+	lintXml?: (xml: string, configInput?: unknown) => Promise<string>
+}
 
 export async function fixBpmnXml(
 	xml: string,
@@ -25,24 +25,24 @@ export async function fixBpmnXml(
 		applied: [],
 		skipped: [],
 		errors: [],
-	};
+	}
 
-	const issues = await resolveIssues(xml, issuesInput, configInput, options);
-	const moddle = new BpmnModdle();
-	let rootElement: ModdleElement;
+	const issues = await resolveIssues(xml, issuesInput, configInput, options)
+	const moddle = new BpmnModdle()
+	let rootElement: ModdleElement
 
 	try {
-		rootElement = (await moddle.fromXML(xml)).rootElement as ModdleElement;
+		rootElement = (await moddle.fromXML(xml)).rootElement as ModdleElement
 	} catch (err: unknown) {
 		result.errors.push({
 			rule: "parse-error",
 			message: err instanceof Error ? err.message : String(err),
-		});
-		return result;
+		})
+		return result
 	}
 
-	const elementsById = indexElementsById(rootElement);
-	let idCounter = 0;
+	const elementsById = indexElementsById(rootElement)
+	let idCounter = 0
 
 	const context: AutoFixContext = {
 		rootElement,
@@ -50,81 +50,81 @@ export async function fixBpmnXml(
 		createElement: (type, attrs) => moddle.create(type, attrs) as ModdleElement,
 		generateId: () =>
 			`Fix_${(++idCounter).toString().padStart(4, "0")}_${Math.random().toString(36).slice(2, 6)}`,
-	};
+	}
 
 	for (const issue of issues) {
-		const rule = normalizeRuleId(issue.rule);
-		const registration = autoFixRegistration(rule);
-		const elementId = issueElementId(issue);
+		const rule = normalizeRuleId(issue.rule)
+		const registration = autoFixRegistration(rule)
+		const elementId = issueElementId(issue)
 
 		if (!registration?.metadata.autoFixable || !registration.handler) {
 			result.skipped.push({
 				rule,
 				elementId,
 				message: "Rule is not auto-fixable",
-			});
-			continue;
+			})
+			continue
 		}
 
 		if (!elementId) {
 			result.skipped.push({
 				rule,
 				message: "Diagnostic does not identify an element",
-			});
-			continue;
+			})
+			continue
 		}
 
-		const element = elementsById.get(elementId);
+		const element = elementsById.get(elementId)
 		if (!element) {
 			result.errors.push({
 				rule,
 				elementId,
 				message: "Element not found in BPMN XML",
-			});
-			continue;
+			})
+			continue
 		}
 
 		try {
-			const fixResult = registration.handler(element, issue, context);
+			const fixResult = registration.handler(element, issue, context)
 			if (fixResult.changed) {
 				result.applied.push({
 					rule,
 					elementId,
 					message: fixResult.message,
-				});
-				result.changed = true;
+				})
+				result.changed = true
 			} else {
 				result.skipped.push({
 					rule,
 					elementId,
 					message: fixResult.message,
-				});
+				})
 			}
 		} catch (err: unknown) {
 			result.errors.push({
 				rule,
 				elementId,
 				message: err instanceof Error ? err.message : String(err),
-			});
+			})
 		}
 	}
 
 	if (!result.changed) {
-		return result;
+		return result
 	}
 
 	try {
-		result.xml = (await moddle.toXML(rootElement)).xml;
+		result.xml = (await moddle.toXML(rootElement)).xml
 	} catch (err: unknown) {
 		result.errors.push({
 			rule: "serialize-error",
 			message: err instanceof Error ? err.message : String(err),
-		});
-		result.changed = false;
-		result.xml = xml;
+		})
+		result.changed = false
+		result.xml = xml
 	}
 
-	return result;
+	return result
 }
 
 async function resolveIssues(
@@ -135,43 +135,43 @@ async function resolveIssues(
 ): Promise<AutoFixLintIssue[]> {
 	if (issuesInput == null) {
 		if (!options.lintXml) {
-			return [];
+			return []
 		}
-		return parseIssues(await options.lintXml(xml, configInput));
+		return parseIssues(await options.lintXml(xml, configInput))
 	}
 
-	return parseIssues(issuesInput);
+	return parseIssues(issuesInput)
 }
 
 function parseIssues(input: unknown): AutoFixLintIssue[] {
-	const parsed = typeof input === "string" ? JSON.parse(input) : input;
-	return Array.isArray(parsed) ? (parsed as AutoFixLintIssue[]) : [];
+	const parsed = typeof input === "string" ? JSON.parse(input) : input
+	return Array.isArray(parsed) ? (parsed as AutoFixLintIssue[]) : []
 }
 
 function indexElementsById(
 	rootElement: ModdleElement,
 ): Map<string, ModdleElement> {
-	const elements = new Map<string, ModdleElement>();
-	const seen = new WeakSet<object>();
+	const elements = new Map<string, ModdleElement>()
+	const seen = new WeakSet<object>()
 
 	function visit(value: unknown) {
 		if (!value || typeof value !== "object") {
-			return;
+			return
 		}
 
 		if (seen.has(value)) {
-			return;
+			return
 		}
-		seen.add(value);
+		seen.add(value)
 
 		if (Array.isArray(value)) {
-			value.forEach(visit);
-			return;
+			value.forEach(visit)
+			return
 		}
 
-		const element = value as ModdleElement;
+		const element = value as ModdleElement
 		if (typeof element.id === "string") {
-			elements.set(element.id, element);
+			elements.set(element.id, element)
 		}
 
 		for (const [key, child] of Object.entries(element)) {
@@ -180,12 +180,12 @@ function indexElementsById(
 				key === "$attrs" ||
 				typeof child === "function"
 			) {
-				continue;
+				continue
 			}
-			visit(child);
+			visit(child)
 		}
 	}
 
-	visit(rootElement);
-	return elements;
+	visit(rootElement)
+	return elements
 }

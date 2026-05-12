@@ -12,24 +12,25 @@ import java.nio.file.Path
 import kotlin.io.path.writeText
 
 class BpmnGenerationServiceTest {
-
     @TempDir
     lateinit var tempDir: Path
 
     @Test
     fun `generates from inline process description and resolves output path`() {
         val invoker = CapturingBpmnAgentInvoker()
-        val service = BpmnGenerationService(
-            agentInvoker = invoker,
-            inputPathResolver = InputPathResolver(cwd = tempDir),
-        )
-
-        val result = service.generate(
-            BpmnGenerationInput(
-                processDescription = "  Order is packed and shipped  ",
-                outputFile = "order.bpmn",
+        val service =
+            BpmnGenerationService(
+                agentInvoker = invoker,
+                inputPathResolver = InputPathResolver(cwd = tempDir),
             )
-        )
+
+        val result =
+            service.generate(
+                BpmnGenerationInput(
+                    processDescription = "  Order is packed and shipped  ",
+                    outputFile = "order.bpmn",
+                ),
+            )
 
         assertEquals(tempDir.resolve("order.bpmn").toString(), invoker.lastRequest.outputFile)
         assertEquals("Order is packed and shipped", invoker.lastRequest.processDescription)
@@ -43,17 +44,18 @@ class BpmnGenerationServiceTest {
         processFile.writeText("  Approve invoice and pay supplier  ")
         styleGuideFile.writeText("  Use verb object task names  ")
         val invoker = CapturingBpmnAgentInvoker()
-        val service = BpmnGenerationService(
-            agentInvoker = invoker,
-            inputPathResolver = InputPathResolver(cwd = tempDir),
-        )
+        val service =
+            BpmnGenerationService(
+                agentInvoker = invoker,
+                inputPathResolver = InputPathResolver(cwd = tempDir),
+            )
 
         service.generate(
             BpmnGenerationInput(
                 processFile = "process.txt",
                 outputFile = "invoice.bpmn",
                 styleGuide = "style.md",
-            )
+            ),
         )
 
         assertEquals("Approve invoice and pay supplier", invoker.lastRequest.processDescription)
@@ -63,10 +65,11 @@ class BpmnGenerationServiceTest {
 
     @Test
     fun `requires exactly one process source`() {
-        val service = BpmnGenerationService(
-            agentInvoker = CapturingBpmnAgentInvoker(),
-            inputPathResolver = InputPathResolver(cwd = tempDir),
-        )
+        val service =
+            BpmnGenerationService(
+                agentInvoker = CapturingBpmnAgentInvoker(),
+                inputPathResolver = InputPathResolver(cwd = tempDir),
+            )
 
         assertThrows(IllegalArgumentException::class.java) {
             service.generate(BpmnGenerationInput())
@@ -76,7 +79,7 @@ class BpmnGenerationServiceTest {
                 BpmnGenerationInput(
                     processDescription = "Order is shipped",
                     processFile = "process.txt",
-                )
+                ),
             )
         }
     }

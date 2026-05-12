@@ -5,16 +5,16 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class GitHubCatalogClientTest {
-
     @Test
     fun `parses text-output models from catalog JSON`() {
-        val json = """
+        val json =
+            """
             [
               {"id": "openai/gpt-4o", "publisher": "OpenAI", "supported_output_modalities": ["text"]},
               {"id": "meta/llama-3.3-70b-instruct", "publisher": "Meta", "supported_output_modalities": ["text"]},
               {"id": "openai/text-embedding-3-small", "publisher": "OpenAI", "supported_output_modalities": ["embeddings"]}
             ]
-        """.trimIndent()
+            """.trimIndent()
 
         val result = GitHubCatalogClient.parseTextModels(json)
 
@@ -25,11 +25,12 @@ class GitHubCatalogClientTest {
 
     @Test
     fun `excludes models with no text output modality`() {
-        val json = """
+        val json =
+            """
             [
               {"id": "openai/text-embedding-3-large", "publisher": "OpenAI", "supported_output_modalities": ["embeddings"]}
             ]
-        """.trimIndent()
+            """.trimIndent()
 
         val result = GitHubCatalogClient.parseTextModels(json)
 
@@ -52,11 +53,12 @@ class GitHubCatalogClientTest {
 
     @Test
     fun `handles model with multiple output modalities`() {
-        val json = """
+        val json =
+            """
             [
               {"id": "some/multimodal", "publisher": "Acme", "supported_output_modalities": ["text", "embeddings"]}
             ]
-        """.trimIndent()
+            """.trimIndent()
 
         val result = GitHubCatalogClient.parseTextModels(json)
 

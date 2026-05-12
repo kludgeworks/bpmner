@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent

@@ -1,11 +1,16 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import dev.groknull.bpmner.core.BpmnAutoFixChange
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnAutoFixSkip
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.LayoutedBpmnXml
+import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
@@ -17,7 +22,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BpmnLayoutAgentTest {
-
     private fun buildLayoutAgent(
         lintService: BpmnLintingPort,
         xsdValidator: BpmnXsdValidationPort,
@@ -41,27 +45,31 @@ class BpmnLayoutAgentTest {
     @Test
     fun `auto-fix runs before layout and final validation`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintIssue = LintIssue(
-            id = "Gateway_1",
-            rule = "klm/gtw-02-converging-gateway-unnamed",
-            message = "Converging gateway should remain unnamed",
-        )
-        val lintService = RecordingLintService(
-            responses = listOf(listOf(lintIssue), emptyList()),
-            autoFixResponses = listOf(
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = "<definitions fixed=\"true\" />",
-                    applied = listOf(
-                        BpmnAutoFixChange(
-                            rule = "klm/gtw-02-converging-gateway-unnamed",
-                            elementId = "Gateway_1",
-                            message = "Cleared gateway name",
-                        )
+        val lintIssue =
+            LintIssue(
+                id = "Gateway_1",
+                rule = "klm/gtw-02-converging-gateway-unnamed",
+                message = "Converging gateway should remain unnamed",
+            )
+        val lintService =
+            RecordingLintService(
+                responses = listOf(listOf(lintIssue), emptyList()),
+                autoFixResponses =
+                    listOf(
+                        BpmnAutoFixResult(
+                            changed = true,
+                            xml = "<definitions fixed=\"true\" />",
+                            applied =
+                                listOf(
+                                    BpmnAutoFixChange(
+                                        rule = "klm/gtw-02-converging-gateway-unnamed",
+                                        elementId = "Gateway_1",
+                                        message = "Cleared gateway name",
+                                    ),
+                                ),
+                        ),
                     ),
-                )
-            ),
-        )
+            )
         val layoutService = RecordingLayoutService(listOf("<definitions fixed=\"true\" layouted=\"true\" />"))
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
 
@@ -82,16 +90,25 @@ class BpmnLayoutAgentTest {
     @Test
     fun `auto-fix no-op keeps original validated xml`() {
         val lintIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
-        val lintService = RecordingLintService(
-            responses = listOf(listOf(lintIssue)),
-            autoFixResponses = listOf(
-                BpmnAutoFixResult(
-                    changed = false,
-                    xml = "<definitions changed=\"ignored\" />",
-                    skipped = listOf(BpmnAutoFixSkip(rule = "start-event-required", elementId = "Task_1", message = "Rule is not auto-fixable")),
-                )
-            ),
-        )
+        val lintService =
+            RecordingLintService(
+                responses = listOf(listOf(lintIssue)),
+                autoFixResponses =
+                    listOf(
+                        BpmnAutoFixResult(
+                            changed = false,
+                            xml = "<definitions changed=\"ignored\" />",
+                            skipped =
+                                listOf(
+                                    BpmnAutoFixSkip(
+                                        rule = "start-event-required",
+                                        elementId = "Task_1",
+                                        message = "Rule is not auto-fixable",
+                                    ),
+                                ),
+                        ),
+                    ),
+            )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
         val result = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
@@ -105,10 +122,11 @@ class BpmnLayoutAgentTest {
     @Test
     fun `auto-fix unavailable keeps original validated xml for layout`() {
         val lintIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
-        val lintService = RecordingLintService(
-            responses = listOf(listOf(lintIssue)),
-            autoFixResponses = listOf(null),
-        )
+        val lintService =
+            RecordingLintService(
+                responses = listOf(listOf(lintIssue)),
+                autoFixResponses = listOf(null),
+            )
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())), layoutService)
 
@@ -121,30 +139,35 @@ class BpmnLayoutAgentTest {
 
     @Test
     fun `auto-fix that invalidates XSD keeps original validated xml for layout`() {
-        val lintIssue = LintIssue(
-            id = "Gateway_1",
-            rule = "klm/gtw-02-converging-gateway-unnamed",
-            message = "Converging gateway should remain unnamed",
-        )
-        val lintService = RecordingLintService(
-            responses = listOf(listOf(lintIssue)),
-            autoFixResponses = listOf(
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = "<definitions><broken /></definitions>",
-                    applied = listOf(
-                        BpmnAutoFixChange(
-                            rule = "klm/gtw-02-converging-gateway-unnamed",
-                            elementId = "Gateway_1",
-                            message = "Cleared gateway name",
-                        )
+        val lintIssue =
+            LintIssue(
+                id = "Gateway_1",
+                rule = "klm/gtw-02-converging-gateway-unnamed",
+                message = "Converging gateway should remain unnamed",
+            )
+        val lintService =
+            RecordingLintService(
+                responses = listOf(listOf(lintIssue)),
+                autoFixResponses =
+                    listOf(
+                        BpmnAutoFixResult(
+                            changed = true,
+                            xml = "<definitions><broken /></definitions>",
+                            applied =
+                                listOf(
+                                    BpmnAutoFixChange(
+                                        rule = "klm/gtw-02-converging-gateway-unnamed",
+                                        elementId = "Gateway_1",
+                                        message = "Cleared gateway name",
+                                    ),
+                                ),
+                        ),
                     ),
-                )
-            ),
-        )
-        val xsdValidator = RecordingXsdValidator(
-            listOf(listOf(XsdValidationIssue("cvc-complex-type failure near Gateway_1", "Gateway_1")))
-        )
+            )
+        val xsdValidator =
+            RecordingXsdValidator(
+                listOf(listOf(XsdValidationIssue("cvc-complex-type failure near Gateway_1", "Gateway_1"))),
+            )
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
 
@@ -160,22 +183,24 @@ class BpmnLayoutAgentTest {
     @Test
     fun `final validation fails clearly when layout diagnostics remain`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(
-            listOf(
+        val lintService =
+            RecordingLintService(
                 listOf(
-                    LintIssue(
-                        id = "Task_1",
-                        rule = "no-overlapping-elements",
-                        message = "Element overlaps with Task_2",
-                    )
-                )
+                    listOf(
+                        LintIssue(
+                            id = "Task_1",
+                            rule = "no-overlapping-elements",
+                            message = "Element overlaps with Task_2",
+                        ),
+                    ),
+                ),
             )
-        )
         val agent = buildLayoutAgent(lintService, xsdValidator)
 
-        val error = assertFailsWith<BpmnFinalValidationException> {
-            agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
-        }
+        val error =
+            assertFailsWith<BpmnFinalValidationException> {
+                agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
+            }
 
         assertTrue(error.message!!.contains("Final BPMN validation failed after auto-layout"))
         assertTrue(error.message!!.contains("layout diagnostics remain after auto-layout"))
@@ -208,7 +233,10 @@ class BpmnLayoutAgentTest {
         private var index = 0
         private var autoFixIndex = 0
 
-        override fun lint(bpmnXml: String, phase: BpmnLintPhase): List<LintIssue>? {
+        override fun lint(
+            bpmnXml: String,
+            phase: BpmnLintPhase,
+        ): List<LintIssue>? {
             xmls += bpmnXml
             phases += phase
             return responses[index++]

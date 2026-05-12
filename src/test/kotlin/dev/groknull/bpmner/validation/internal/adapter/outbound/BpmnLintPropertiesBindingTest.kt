@@ -1,6 +1,8 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -15,10 +17,9 @@ import org.springframework.test.context.TestPropertySource
         "bpmner.lint.rules.[klm/act-verb-object-name]=error",
         "bpmner.lint.rules.[klm/act-loop-task-annotation]=error",
         "bpmner.lint.rules.[klm/act-mi-task-annotation]=error",
-    ]
+    ],
 )
 class BpmnLintPropertiesBindingTest {
-
     @EnableConfigurationProperties(BpmnLintProperties::class)
     class Config
 
@@ -38,20 +39,21 @@ class BpmnLintPropertiesBindingTest {
 
     @Test
     fun `klm overrides are preserved exactly as configured`() {
-        val expectedOverrides = listOf(
-            "klm/act-verb-object-name",
-            "klm/act-loop-task-annotation",
-            "klm/act-mi-task-annotation",
-        )
+        val expectedOverrides =
+            listOf(
+                "klm/act-verb-object-name",
+                "klm/act-loop-task-annotation",
+                "klm/act-mi-task-annotation",
+            )
 
         assertTrue(
             properties.rules.keys.containsAll(expectedOverrides),
-            "Expected overrides $expectedOverrides not found in ${properties.rules.keys}"
+            "Expected overrides $expectedOverrides not found in ${properties.rules.keys}",
         )
 
         assertFalse(
             properties.rules.keys.any { it in expectedOverrides.map { rule -> rule.replace("/", "") } },
-            "Configured KLM overrides must preserve their slash: ${properties.rules.keys}"
+            "Configured KLM overrides must preserve their slash: ${properties.rules.keys}",
         )
     }
 }

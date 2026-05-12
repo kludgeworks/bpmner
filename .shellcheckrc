@@ -1,0 +1,4 @@
+enable=all
+severity=style
+shell=bash
+source-path=SCRIPTDIR

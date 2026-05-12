@@ -12,6 +12,7 @@ taplo = "latest"
 shfmt = "latest"
 shellcheck = "latest"
 vale = "latest"
+detekt = "1.23.8"
 
 [env]
 HK_MISE = 1

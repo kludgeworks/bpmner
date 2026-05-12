@@ -17,6 +17,7 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
 bazel_dep(name = "rules_pkl", version = "0.15.0")
+bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2", dev_dependency = True)
 

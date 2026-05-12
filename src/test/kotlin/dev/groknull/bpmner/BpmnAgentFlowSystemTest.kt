@@ -1,9 +1,23 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.core.*
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.LintIssue
+import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -11,23 +25,26 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.anyList
-import org.mockito.Mockito.*
+import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
+import org.mockito.Mockito.`when`
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.nio.file.Path
 import kotlin.io.path.readText
 
+/**
+ * Full end-to-end system test: validates the complete Embabel agent pipeline from BpmnRequest
+ * through generation, repair, and layout to a written BPMN file. Per-module behavior is covered
+ * by RepairModuleTest, GenerationModuleTest, and ValidationModuleTest.
+ */
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
         "embabel.agent.platform.models.openai.api-key=test-key",
     ],
 )
-/**
- * Full end-to-end system test: validates the complete Embabel agent pipeline from BpmnRequest
- * through generation, repair, and layout to a written BPMN file. Per-module behavior is covered
- * by RepairModuleTest, GenerationModuleTest, and ValidationModuleTest.
- */
 class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator

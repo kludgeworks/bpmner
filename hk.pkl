@@ -8,12 +8,30 @@ local linters = new Mapping<String, Step> {
   ["buildifier_format"] = Builtins.buildifier_format
   ["buildifier_lint"] = Builtins.buildifier_lint
   ["shellcheck"] = Builtins.shellcheck
-  ["shfmt"] = Builtins.shfmt
-  ["vale"] = Builtins.vale
+  ["shfmt"] = new Step {
+    types = List("shell")
+    check = "shfmt -i 2 -d --apply-ignore {{files}}"
+    fix = "shfmt -i 2 -w --apply-ignore {{files}}"
+  }
+  ["vale"] = new Step {
+    glob = List("README.md", "linter/**/*.md")
+    check = "vale sync && vale README.md linter/README.md linter/docs"
+  }
   ["taplo_format"] = Builtins.taplo_format
   ["check_merge_conflict"] = Builtins.check_merge_conflict
+  ["newlines"] = Builtins.newlines
   ["trailing_whitespace"] = Builtins.trailing_whitespace
   ["mixed_line_ending"] = Builtins.mixed_line_ending
+  ["check_case_conflict"] = Builtins.check_case_conflict
+  ["check_symlinks"] = Builtins.check_symlinks
+  ["check_executables_have_shebangs"] = Builtins.check_executables_have_shebangs
+  ["check_byte_order_marker"] = Builtins.check_byte_order_marker
+  ["detect_private_key"] = Builtins.detect_private_key
+  ["detekt"] = new Step {
+    glob = List("src/**/*.kt")
+    check =
+      "detekt --build-upon-default-config --config config/detekt/detekt.yml --input src/main/kotlin,src/test/kotlin --language-version 2.1 --jvm-target 21 --base-path ."
+  }
 }
 
 hooks {

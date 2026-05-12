@@ -1,3 +1,8 @@
+@file:Suppress(
+    "MaxLineLength",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import com.embabel.agent.api.common.ActionContext
@@ -19,8 +24,8 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnRefinementFailureException
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -38,21 +43,18 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairResult
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.BpmnTopologyRepair
 import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import dev.groknull.bpmner.validation.internal.domain.LlmValidator
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -60,7 +62,6 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
 
 class BpmnRepairAgentTest {
-
     private fun buildRepairAgent(
         config: BpmnConfig,
         lintService: BpmnLintService,
@@ -73,29 +74,32 @@ class BpmnRepairAgentTest {
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
         val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
-        val evaluationPipeline = BpmnEvaluationPipeline(
-            config = config,
-            bpmnLintingPort = lintService,
-            bpmnXsdValidationPort = xsdValidator,
-            bpmnDefinitionValidator = BpmnDefinitionValidator(),
-            normalizer = normalizer,
-            fingerprints = fingerprints,
-        )
-        val strategies = listOf(
-            DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-            TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
-            LlmPatchRepairStrategy(promptFactory, patchApplier),
-            FullLlmRewriteRepairStrategy(promptFactory),
-        )
-        val refinementEngine = BpmnRefinementEngine(
-            config = config,
-            bpmnRenderer = converter,
-            validator = evaluationPipeline,
-            promptFactory = promptFactory,
-            fingerprints = fingerprints,
-            strategies = strategies,
-            eventPublisher = NoOpEventPublisher,
-        )
+        val evaluationPipeline =
+            BpmnEvaluationPipeline(
+                config = config,
+                bpmnLintingPort = lintService,
+                bpmnXsdValidationPort = xsdValidator,
+                bpmnDefinitionValidator = BpmnDefinitionValidator(),
+                normalizer = normalizer,
+                fingerprints = fingerprints,
+            )
+        val strategies =
+            listOf(
+                DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
+                TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                LlmPatchRepairStrategy(promptFactory, patchApplier),
+                FullLlmRewriteRepairStrategy(promptFactory),
+            )
+        val refinementEngine =
+            BpmnRefinementEngine(
+                config = config,
+                bpmnRenderer = converter,
+                validator = evaluationPipeline,
+                promptFactory = promptFactory,
+                fingerprints = fingerprints,
+                strategies = strategies,
+                eventPublisher = NoOpEventPublisher,
+            )
         return BpmnRepairAgent(refinementEngine)
     }
 
@@ -138,12 +142,13 @@ class BpmnRepairAgentTest {
         val invalid = validDefinition()
         val corrected = validDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(
-            listOf(
-                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
-                emptyList(),
+        val lintService =
+            RecordingLintService(
+                listOf(
+                    listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
+                    emptyList(),
+                ),
             )
-        )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val context = FakeActionContext()
@@ -159,7 +164,11 @@ class BpmnRepairAgentTest {
         assertEquals(2, lintService.xmls.size)
         assertEquals(2, converter.renderCalls)
         assertEquals(1, result.repairAttempts)
-        val repairPrompt = context.llmInvocations.single().messages.joinToString("\n") { it.content }
+        val repairPrompt =
+            context.llmInvocations
+                .single()
+                .messages
+                .joinToString("\n") { it.content }
         assertTrue(repairPrompt.contains("elementId=Task_1"))
         // objectRef might not be present if ownership is not resolved but elementIndex is used
         assertTrue(repairPrompt.contains("objectRef=nodes[id=Task_1]"))
@@ -168,26 +177,28 @@ class BpmnRepairAgentTest {
     @Test
     fun `lint parse error for unknown rule aborts without repair`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(
-            listOf(
+        val lintService =
+            RecordingLintService(
                 listOf(
-                    LintIssue(
-                        id = null,
-                        rule = "parse-error",
-                        message = "unknown rule <klmact-verb-object-name>",
-                    )
-                )
+                    listOf(
+                        LintIssue(
+                            id = null,
+                            rule = "parse-error",
+                            message = "unknown rule <klmact-verb-object-name>",
+                        ),
+                    ),
+                ),
             )
-        )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         val definition = validDefinition()
         val initialRendered = converter.render(definition)
 
-        val error = assertFailsWith<BpmnValidatorInfrastructureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(definition), initialRendered, context)
-        }
+        val error =
+            assertFailsWith<BpmnValidatorInfrastructureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(definition), initialRendered, context)
+            }
 
         assertTrue(error.message!!.contains("BPMN validator infrastructure failure"))
         assertTrue(error.message!!.contains("klmact-verb-object-name"))
@@ -202,15 +213,18 @@ class BpmnRepairAgentTest {
         val invalid = validDefinition()
         val corrected = validDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(
-            responses = listOf(
-                listOf(LintIssue(id = "Task_1", rule = "klm/gen-no-duplicate-diagrams", message = "Duplicate BPMNDiagram")),
-                emptyList(),
-            ),
-            docs = mapOf(
-                "klm/gen-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs"
-            ),
-        )
+        val lintService =
+            RecordingLintService(
+                responses =
+                    listOf(
+                        listOf(LintIssue(id = "Task_1", rule = "klm/gen-no-duplicate-diagrams", message = "Duplicate BPMNDiagram")),
+                        emptyList(),
+                    ),
+                docs =
+                    mapOf(
+                        "klm/gen-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs",
+                    ),
+            )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
         val context = FakeActionContext()
@@ -219,9 +233,10 @@ class BpmnRepairAgentTest {
 
         agent.repair(BpmnRequest("Make toast"), graph(invalid, withOwnership = false), initialRendered, context)
 
-        val promptContributions = context.llmInvocations.single().interaction.promptContributors.joinToString("\n") {
-            it.contribution()
-        }
+        val promptContributions =
+            context.llmInvocations.single().interaction.promptContributors.joinToString("\n") {
+                it.contribution()
+            }
         assertTrue(promptContributions.contains("KLM lint rule documentation for current violations"))
         assertTrue(promptContributions.contains("# gen-no-duplicate-diagrams"))
     }
@@ -229,16 +244,18 @@ class BpmnRepairAgentTest {
     @Test
     fun `xsd issue is preserved as diagnostic and causes rerender before succeeding`() {
         val initial = validDefinition()
-        val corrected = validDefinition(
-            processId = "Process_Fixed",
-            processName = "Prepare toast safely",
-        )
-        val xsdValidator = RecordingXsdValidator(
-            listOf(
-                listOf(XsdValidationIssue("cvc-complex-type failure near Task_1", "Task_1")),
-                emptyList(),
+        val corrected =
+            validDefinition(
+                processId = "Process_Fixed",
+                processName = "Prepare toast safely",
             )
-        )
+        val xsdValidator =
+            RecordingXsdValidator(
+                listOf(
+                    listOf(XsdValidationIssue("cvc-complex-type failure near Task_1", "Task_1")),
+                    emptyList(),
+                ),
+            )
         val lintService = RecordingLintService(listOf(emptyList()))
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
@@ -252,7 +269,11 @@ class BpmnRepairAgentTest {
         assertTrue(result.xml.contains("name=\"Prepare toast safely\""))
         assertEquals(2, xsdValidator.xmls.size)
         assertEquals(1, lintService.xmls.size)
-        val repairPrompt = context.llmInvocations.single().messages.joinToString("\n") { it.content }
+        val repairPrompt =
+            context.llmInvocations
+                .single()
+                .messages
+                .joinToString("\n") { it.content }
         assertTrue(repairPrompt.contains("source=xsd"))
         assertTrue(repairPrompt.contains("elementId=Task_1"))
         assertTrue(repairPrompt.contains("objectRef=nodes[id=Task_1]"))
@@ -263,21 +284,23 @@ class BpmnRepairAgentTest {
         val initial = validDefinition()
         val corrected = validDefinition(processName = "Make toast again")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(
-            listOf(
-                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
-                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Still missing start event")),
+        val lintService =
+            RecordingLintService(
+                listOf(
+                    listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
+                    listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Still missing start event")),
+                ),
             )
-        )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 2), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
 
-        val error = assertFailsWith<BpmnRefinementFailureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
-        }
+        val error =
+            assertFailsWith<BpmnRefinementFailureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
+            }
 
         assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
         assertEquals(2, xsdValidator.xmls.size)
@@ -297,9 +320,10 @@ class BpmnRepairAgentTest {
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
 
-        val error = assertFailsWith<BpmnRefinementFailureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
-        }
+        val error =
+            assertFailsWith<BpmnRefinementFailureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
+            }
 
         assertTrue(error.message!!.contains("unchanged diagnostics"))
         assertTrue(error.message!!.contains("history=#1"))
@@ -312,18 +336,20 @@ class BpmnRepairAgentTest {
     fun `unchanged repaired definition fails before rerender`() {
         val initial = validDefinition()
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(
-            listOf(listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")))
-        )
+        val lintService =
+            RecordingLintService(
+                listOf(listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event"))),
+            )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(initial)
         val initialRendered = converter.render(initial)
 
-        val error = assertFailsWith<BpmnRefinementFailureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
-        }
+        val error =
+            assertFailsWith<BpmnRefinementFailureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
+            }
 
         assertTrue(error.message!!.contains("unchanged patch"))
         assertEquals(1, context.llmInvocations.size)
@@ -337,12 +363,13 @@ class BpmnRepairAgentTest {
         val initial = validDefinition()
         val firstRepair = validDefinition(processName = "Make toast again")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(
-            listOf(
-                listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
-                listOf(LintIssue(id = "Task_1", rule = "end-event-required", message = "Missing end event")),
+        val lintService =
+            RecordingLintService(
+                listOf(
+                    listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
+                    listOf(LintIssue(id = "Task_1", rule = "end-event-required", message = "Missing end event")),
+                ),
             )
-        )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
         val context = FakeActionContext()
@@ -350,9 +377,10 @@ class BpmnRepairAgentTest {
         context.expectResponse(initial)
         val initialRendered = converter.render(initial)
 
-        val error = assertFailsWith<BpmnRefinementFailureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
-        }
+        val error =
+            assertFailsWith<BpmnRefinementFailureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(initial, withOwnership = false), initialRendered, context)
+            }
 
         assertTrue(error.message!!.contains("repeated invalid output"))
         assertEquals(2, context.llmInvocations.size)
@@ -368,16 +396,26 @@ class BpmnRepairAgentTest {
         val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
         val converter = RecordingConverter()
         val patchedDefinition = validDefinition(processName = "Make toast — patched")
-        val patchApplier = object : BpmnPatchApplier() {
-            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
-                PatchApplicationResult.Success(patchedDefinition)
-        }
+        val patchApplier =
+            object : BpmnPatchApplier() {
+                override fun apply(
+                    definition: BpmnDefinition,
+                    patch: BpmnRepairPatch,
+                ): PatchApplicationResult = PatchApplicationResult.Success(patchedDefinition)
+            }
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
         val context = FakeActionContext()
         context.expectResponse(
             BpmnRepairPatch(
-                operations = listOf(dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Toast bread fixed")),
-            )
+                operations =
+                    listOf(
+                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                            nodeId = "Task_1",
+                            name = "Toast bread fixed",
+                        ),
+                    ),
+            ),
         )
         val definition = validDefinition()
 
@@ -385,7 +423,11 @@ class BpmnRepairAgentTest {
 
         assertEquals(1, context.llmInvocations.size)
         assertEquals(1, result.repairAttempts)
-        val patchPrompt = context.llmInvocations.single().messages.joinToString("\n") { it.content }
+        val patchPrompt =
+            context.llmInvocations
+                .single()
+                .messages
+                .joinToString("\n") { it.content }
         assertTrue(patchPrompt.contains("targeted name or label patches"), "Expected patch prompt but got: $patchPrompt")
     }
 
@@ -395,21 +437,34 @@ class BpmnRepairAgentTest {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
         val lintService = RecordingLintService(listOf(listOf(patchableLintIssue)))
         val converter = RecordingConverter()
-        val patchApplier = object : BpmnPatchApplier() {
-            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
-                PatchApplicationResult.NoOp
-        }
+        val patchApplier =
+            object : BpmnPatchApplier() {
+                override fun apply(
+                    definition: BpmnDefinition,
+                    patch: BpmnRepairPatch,
+                ): PatchApplicationResult = PatchApplicationResult.NoOp
+            }
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
         val context = FakeActionContext()
         context.expectResponse(
-            BpmnRepairPatch(operations = listOf(dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Toast bread")))
+            BpmnRepairPatch(
+                operations =
+                    listOf(
+                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                            nodeId = "Task_1",
+                            name = "Toast bread",
+                        ),
+                    ),
+            ),
         )
         val definition = validDefinition()
         context.expectResponse(definition) // Fallback response: unchanged definition
 
-        val error = assertFailsWith<BpmnRefinementFailureException> {
-            agent.repair(BpmnRequest("Make toast"), graph(definition, withOwnership = true), converter.render(definition), context)
-        }
+        val error =
+            assertFailsWith<BpmnRefinementFailureException> {
+                agent.repair(BpmnRequest("Make toast"), graph(definition, withOwnership = true), converter.render(definition), context)
+            }
         assertTrue(error.message!!.contains("unchanged patch"))
     }
 
@@ -420,14 +475,26 @@ class BpmnRepairAgentTest {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
         val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
         val converter = RecordingConverter()
-        val patchApplier = object : BpmnPatchApplier() {
-            override fun apply(definition: BpmnDefinition, patch: BpmnRepairPatch): PatchApplicationResult =
-                PatchApplicationResult.Failure("unknown nodeId 'Task_X'")
-        }
+        val patchApplier =
+            object : BpmnPatchApplier() {
+                override fun apply(
+                    definition: BpmnDefinition,
+                    patch: BpmnRepairPatch,
+                ): PatchApplicationResult = PatchApplicationResult.Failure("unknown nodeId 'Task_X'")
+            }
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter, patchApplier = patchApplier)
         val context = FakeActionContext()
         context.expectResponse(
-            BpmnRepairPatch(operations = listOf(dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_X", name = "fix")))
+            BpmnRepairPatch(
+                operations =
+                    listOf(
+                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                            nodeId = "Task_X",
+                            name = "fix",
+                        ),
+                    ),
+            ),
         )
         context.expectResponse(corrected)
         val definition = validDefinition()
@@ -439,9 +506,11 @@ class BpmnRepairAgentTest {
 
     @Test
     fun `validate and refine action fires only once`() {
-        val action = BpmnRepairAgent::class.java.methods.single {
-            it.name == "repair"
-        }.getAnnotation(com.embabel.agent.api.annotation.Action::class.java)
+        val action =
+            BpmnRepairAgent::class.java.methods
+                .single {
+                    it.name == "repair"
+                }.getAnnotation(com.embabel.agent.api.annotation.Action::class.java)
 
         assertEquals(ActionRetryPolicy.FIRE_ONCE, action.actionRetryPolicy)
     }
@@ -459,7 +528,10 @@ class BpmnRepairAgentTest {
         val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0
 
-        override fun lint(bpmnXml: String, phase: BpmnLintPhase): List<LintIssue>? {
+        override fun lint(
+            bpmnXml: String,
+            phase: BpmnLintPhase,
+        ): List<LintIssue>? {
             xmls += bpmnXml
             phases += phase
             return responses[index++]
@@ -496,7 +568,8 @@ class BpmnRepairAgentTest {
 
     private class FakeActionContext(
         private val delegate: FakeOperationContext = FakeOperationContext(),
-    ) : ActionContext, OperationContext by delegate {
+    ) : ActionContext,
+        OperationContext by delegate {
         override val processContext = delegate.processContext
         override val action: Action? = null
         override val toolGroups: Set<ToolGroupRequirement>
@@ -517,43 +590,50 @@ class BpmnRepairAgentTest {
             promptContributors: List<PromptContributor>,
             contextualPromptContributors: List<ContextualPromptElement>,
             generateExamples: Boolean,
-        ): PromptRunner = delegate.promptRunner(
-            llm = llm,
-            toolGroups = toolGroups,
-            toolObjects = toolObjects,
-            promptContributors = promptContributors,
-            contextualPromptContributors = contextualPromptContributors,
-            generateExamples = generateExamples,
-        )
+        ): PromptRunner =
+            delegate.promptRunner(
+                llm = llm,
+                toolGroups = toolGroups,
+                toolObjects = toolObjects,
+                promptContributors = promptContributors,
+                contextualPromptContributors = contextualPromptContributors,
+                generateExamples = generateExamples,
+            )
     }
 
-    private fun graph(definition: BpmnDefinition, withOwnership: Boolean = false): LaidOutProcessGraph {
+    private fun graph(
+        definition: BpmnDefinition,
+        withOwnership: Boolean = false,
+    ): LaidOutProcessGraph {
         val owner = if (withOwnership) "phase:main" else null
-        val objectOwners = buildMap {
-            if (owner != null) {
-                put("process", owner)
-                definition.nodes.forEach { put("nodes[id=${it.id}]", owner) }
-                definition.sequences.forEach { put("sequences[id=${it.id}]", owner) }
-            }
-        }
-        val composed = ComposedProcessGraph(
-            outline = ValidatedOutline(ProcessOutline(BpmnRequest("test"), definition, OutlineMetrics(1, 0, 0, 0))),
-            definition = definition,
-            objectOwnersByObjectRef = objectOwners,
-        )
-        val elementOwners = buildMap {
-            if (owner != null) {
-                put(definition.processId, owner)
-                definition.nodes.forEach {
-                    put(it.id, owner)
-                    put("${it.id}_di", owner)
-                }
-                definition.sequences.forEach {
-                    put(it.id, owner)
-                    put("${it.id}_di", owner)
+        val objectOwners =
+            buildMap {
+                if (owner != null) {
+                    put("process", owner)
+                    definition.nodes.forEach { put("nodes[id=${it.id}]", owner) }
+                    definition.sequences.forEach { put("sequences[id=${it.id}]", owner) }
                 }
             }
-        }
+        val composed =
+            ComposedProcessGraph(
+                outline = ValidatedOutline(ProcessOutline(BpmnRequest("test"), definition, OutlineMetrics(1, 0, 0, 0))),
+                definition = definition,
+                objectOwnersByObjectRef = objectOwners,
+            )
+        val elementOwners =
+            buildMap {
+                if (owner != null) {
+                    put(definition.processId, owner)
+                    definition.nodes.forEach {
+                        put(it.id, owner)
+                        put("${it.id}_di", owner)
+                    }
+                    definition.sequences.forEach {
+                        put(it.id, owner)
+                        put("${it.id}_di", owner)
+                    }
+                }
+            }
         return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)
     }
 
@@ -563,24 +643,26 @@ class BpmnRepairAgentTest {
     ) = BpmnDefinition(
         processId = processId,
         processName = processName,
-        nodes = listOf(
-            BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-            BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-            BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
-        ),
-        sequences = listOf(
-            BpmnEdge(
-                "Flow_1",
-                "StartEvent_1",
-                "Task_1",
-                waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
+        nodes =
+            listOf(
+                BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
+                BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
+                BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
             ),
-            BpmnEdge(
-                "Flow_2",
-                "Task_1",
-                "EndEvent_1",
-                waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+        sequences =
+            listOf(
+                BpmnEdge(
+                    "Flow_1",
+                    "StartEvent_1",
+                    "Task_1",
+                    waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
+                ),
+                BpmnEdge(
+                    "Flow_2",
+                    "Task_1",
+                    "EndEvent_1",
+                    waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+                ),
             ),
-        ),
     )
 }

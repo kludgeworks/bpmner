@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.config
 
 import com.embabel.agent.openai.OpenAiCompatibleModelFactory
@@ -41,14 +57,15 @@ class GitHubModelsConfig(
     private val properties: GitHubProperties,
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
-    baseUrl = BASE_URL,
-    apiKey = properties.apiKey
-        ?: error("GitHub token required: set GITHUB_TOKEN env var or embabel.agent.platform.models.github.api-key"),
-    completionsPath = COMPLETIONS_PATH,
-    embeddingsPath = null,
-    observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
-    requestFactory = requestFactory,
-) {
+        baseUrl = BASE_URL,
+        apiKey =
+            properties.apiKey
+                ?: error("GitHub token required: set GITHUB_TOKEN env var or embabel.agent.platform.models.github.api-key"),
+        completionsPath = COMPLETIONS_PATH,
+        embeddingsPath = null,
+        observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
+        requestFactory = requestFactory,
+    ) {
     private val modelList = properties.models
 
     @Bean
@@ -56,23 +73,25 @@ class GitHubModelsConfig(
         if (modelList.isEmpty()) {
             logger.warn(
                 "No GitHub Models configured. " +
-                "Set embabel.agent.platform.models.github.models (e.g. --embabel.agent.platform.models.github.models=openai/gpt-4o)"
+                    "Set embabel.agent.platform.models.github.models (e.g. --embabel.agent.platform.models.github.models=openai/gpt-4o)",
             )
             printCatalog()
             return ProviderInitialization(provider = PROVIDER, registeredLlms = emptyList())
         }
 
-        val registeredLlms = modelList.map { modelId ->
-            val llm = SpringAiLlmService(
-                name = modelId,
-                provider = PROVIDER,
-                chatModel = chatModelOf(modelId, properties.retryTemplate(modelId)),
-                optionsConverter = StandardOpenAiOptionsConverter,
-            )
-            configurableBeanFactory.registerSingleton(modelId, llm)
-            logger.info("Registered GitHub model: {}", modelId)
-            RegisteredModel(beanName = modelId, modelId = modelId)
-        }
+        val registeredLlms =
+            modelList.map { modelId ->
+                val llm =
+                    SpringAiLlmService(
+                        name = modelId,
+                        provider = PROVIDER,
+                        chatModel = chatModelOf(modelId, properties.retryTemplate(modelId)),
+                        optionsConverter = StandardOpenAiOptionsConverter,
+                    )
+                configurableBeanFactory.registerSingleton(modelId, llm)
+                logger.info("Registered GitHub model: {}", modelId)
+                RegisteredModel(beanName = modelId, modelId = modelId)
+            }
 
         return ProviderInitialization(provider = PROVIDER, registeredLlms = registeredLlms)
             .also { logger.info(it.summary()) }
@@ -88,4 +107,3 @@ class GitHubModelsConfig(
         }
     }
 }
-

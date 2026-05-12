@@ -1,28 +1,30 @@
-import catalog from "./generated/linter-rules.json";
+import catalog from "./generated/linter-rules.json"
 
 type RuleConfig = {
-	id: string;
-	severity: string;
-	hasTsImplementation: boolean;
-};
+	id: string
+	severity: string
+	hasTsImplementation: boolean
+}
 
 type RuleCatalog = {
-	rules: RuleConfig[];
-};
+	rules: RuleConfig[]
+}
 
-const tsRules = (catalog as RuleCatalog).rules.filter(r => r.hasTsImplementation);
+const tsRules = (catalog as RuleCatalog).rules.filter(
+	(r) => r.hasTsImplementation,
+)
 
 const recommendedPluginRules = Object.fromEntries(
 	tsRules.map((r) => [r.id, r.severity === "error" ? "error" : "warn"]),
-) as Record<string, string>;
+) as Record<string, string>
 
 const allPluginRules = Object.fromEntries(
 	tsRules.map((r) => [r.id, "error"]),
-) as Record<string, string>;
+) as Record<string, string>
 
 const pluginRulePaths = Object.fromEntries(
 	tsRules.map((r) => [r.id, `./rules/${r.id}`]),
-) as Record<string, string>;
+) as Record<string, string>
 
 const plugin = {
 	configs: {
@@ -39,6 +41,6 @@ const plugin = {
 		},
 	},
 	rules: pluginRulePaths,
-};
+}
 
-export = plugin;
+export = plugin

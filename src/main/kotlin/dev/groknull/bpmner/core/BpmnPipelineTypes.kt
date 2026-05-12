@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.annotation.JsonClassDescription

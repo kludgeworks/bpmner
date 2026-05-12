@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
@@ -35,13 +51,14 @@ data class GlobalDiagnostics(
     fun countFor(source: BpmnDiagnosticSource): Int = diagnostics.count { it.source == source }
 }
 
-fun BpmnDiagnostic.format(): String = buildString {
-    append("source=${source.name.lowercase()}")
-    rule?.let { append(", rule=$it") }
-    category?.let { append(", category=$it") }
-    elementId?.let { append(", elementId=$it") }
-    objectRef?.let { append(", objectRef=$it") }
-    repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
-    ownerRef?.let { append(", owner=$it") }
-    append(": $message")
-}
+fun BpmnDiagnostic.format(): String =
+    buildString {
+        append("source=${source.name.lowercase()}")
+        rule?.let { append(", rule=$it") }
+        category?.let { append(", category=$it") }
+        elementId?.let { append(", elementId=$it") }
+        objectRef?.let { append(", objectRef=$it") }
+        repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
+        ownerRef?.let { append(", owner=$it") }
+        append(": $message")
+    }

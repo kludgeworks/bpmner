@@ -1,21 +1,17 @@
 {
-  "compilerOptions": {
-    "target": "ES2022",
-    "module": "Node16",
-    "moduleResolution": "node16",
-    "strict": true,
-    "esModuleInterop": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "outDir": "dist",
-    "rootDir": ".",
-    "baseUrl": ".",
-    "types": ["node"]
-  },
-  "include": [
-    "src/**/*.ts",
-    "test/**/*.ts",
-    "types/**/*.d.ts"
-  ]
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "Node16",
+		"moduleResolution": "node16",
+		"strict": true,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"skipLibCheck": true,
+		"declaration": true,
+		"outDir": "dist",
+		"rootDir": ".",
+		"baseUrl": ".",
+		"types": ["node"]
+	},
+	"include": ["src/**/*.ts", "test/**/*.ts", "types/**/*.d.ts"]
 }

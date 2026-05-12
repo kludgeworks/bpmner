@@ -1,3 +1,19 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.Action
@@ -82,31 +98,33 @@ internal class BpmnLayoutAgent(
     @Action(description = "Validate the final layouted BPMN XML without semantic repair")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
         val diagnostics = mutableListOf<BpmnDiagnostic>()
-        diagnostics += bpmnXsdValidationPort.validateDetailed(bpmn.xml).map { issue ->
-            BpmnDiagnostic(
-                source = BpmnDiagnosticSource.XSD,
-                message = issue.message,
-                elementId = issue.elementId,
-                repairScope = BpmnRepairScope.FULL_PROCESS,
-            )
-        }
+        diagnostics +=
+            bpmnXsdValidationPort.validateDetailed(bpmn.xml).map { issue ->
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.XSD,
+                    message = issue.message,
+                    elementId = issue.elementId,
+                    repairScope = BpmnRepairScope.FULL_PROCESS,
+                )
+            }
 
         if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
             val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.FINAL_POST_LAYOUT)
             if (lintIssues == null) {
                 logger.warn("Final bpmn-lint validation was unavailable; continuing without lint feedback")
             } else {
-                diagnostics += lintIssues.map { issue ->
-                    val isLayoutDiagnostic = issue.rule.isLayoutSensitiveLintRule()
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.LINT,
-                        message = issue.message,
-                        rule = issue.rule,
-                        category = issue.category,
-                        elementId = issue.id,
-                        repairScope = if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
-                    )
-                }
+                diagnostics +=
+                    lintIssues.map { issue ->
+                        val isLayoutDiagnostic = issue.rule.isLayoutSensitiveLintRule()
+                        BpmnDiagnostic(
+                            source = BpmnDiagnosticSource.LINT,
+                            message = issue.message,
+                            rule = issue.rule,
+                            category = issue.category,
+                            elementId = issue.id,
+                            repairScope = if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
+                        )
+                    }
             }
         }
 
@@ -118,41 +136,43 @@ internal class BpmnLayoutAgent(
         return FinalValidatedBpmnXml(xml = bpmn.xml)
     }
 
-    private fun finalValidationMessage(diagnostics: List<BpmnDiagnostic>): String = buildString {
-        append("Final BPMN validation failed after auto-layout")
-        val layoutDiagnostics = diagnostics.filter { it.repairScope == BpmnRepairScope.LAYOUT }
-        if (layoutDiagnostics.isNotEmpty()) {
-            append("; layout diagnostics remain after auto-layout")
-        }
-        append(": ")
-        append(
-            diagnostics.groupingBy { it.source }.eachCount()
-                .entries.joinToString(",") { "${it.key.name.lowercase()}=${it.value}" }
-        )
-        appendLine()
-        diagnostics.forEach { diagnostic ->
-            append("- source=${diagnostic.source.name.lowercase()}")
-            diagnostic.rule?.let { append(", rule=$it") }
-            diagnostic.elementId?.let { append(", elementId=$it") }
-            diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
-            appendLine(": ${diagnostic.message}")
-        }
-    }.trim()
+    private fun finalValidationMessage(diagnostics: List<BpmnDiagnostic>): String =
+        buildString {
+            append("Final BPMN validation failed after auto-layout")
+            val layoutDiagnostics = diagnostics.filter { it.repairScope == BpmnRepairScope.LAYOUT }
+            if (layoutDiagnostics.isNotEmpty()) {
+                append("; layout diagnostics remain after auto-layout")
+            }
+            append(": ")
+            append(
+                diagnostics
+                    .groupingBy { it.source }
+                    .eachCount()
+                    .entries
+                    .joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
+            )
+            appendLine()
+            diagnostics.forEach { diagnostic ->
+                append("- source=${diagnostic.source.name.lowercase()}")
+                diagnostic.rule?.let { append(", rule=$it") }
+                diagnostic.elementId?.let { append(", elementId=$it") }
+                diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
+                appendLine(": ${diagnostic.message}")
+            }
+        }.trim()
 
     private fun String.isLayoutSensitiveLintRule(): Boolean =
         this == "no-overlapping-elements" || this == "bpmnlint/no-overlapping-elements"
 
-    private fun BpmnAutoFixChange.summary(): String =
-        listOfNotNull(rule, elementId, message).joinToString("|")
+    private fun BpmnAutoFixChange.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")
 
-    private fun BpmnAutoFixSkip.summary(): String =
-        listOfNotNull(rule, elementId, message).joinToString("|")
+    private fun BpmnAutoFixSkip.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")
 
-    private fun BpmnAutoFixError.summary(): String =
-        listOfNotNull(rule, elementId, message).joinToString("|")
+    private fun BpmnAutoFixError.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")
 
-    private fun XsdValidationIssue.summary(): String =
-        listOfNotNull(elementId, message).joinToString("|")
+    private fun XsdValidationIssue.summary(): String = listOfNotNull(elementId, message).joinToString("|")
 }
 
-class BpmnFinalValidationException(message: String) : IllegalStateException(message)
+class BpmnFinalValidationException(
+    message: String,
+) : IllegalStateException(message)

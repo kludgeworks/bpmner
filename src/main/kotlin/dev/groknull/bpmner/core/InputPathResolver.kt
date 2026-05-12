@@ -1,20 +1,35 @@
+@file:Suppress(
+    "CyclomaticComplexMethod",
+    "ForbiddenComment",
+    "LongMethod",
+    "LongParameterList",
+    "MagicNumber",
+    "MaxLineLength",
+    "NestedBlockDepth",
+    "ReturnCount",
+    "SpreadOperator",
+    "TooGenericExceptionCaught",
+    "TooManyFunctions",
+    "UnusedParameter",
+    "UnusedPrivateProperty",
+)
+
 package dev.groknull.bpmner.core
 
 import com.google.devtools.build.runfiles.Runfiles
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.stereotype.Component
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.readText
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.stereotype.Component
 
 @Component
 internal class InputPathResolver private constructor(
     private val cwdProvider: () -> Path,
     private val runfilesLoader: () -> Runfiles? = defaultRunfilesLoader(),
 ) {
-
     @Autowired
     constructor() : this(
         cwdProvider = { currentWorkingDirectory(System.getenv(), System.getProperty("user.dir")) },
@@ -52,26 +67,29 @@ internal class InputPathResolver private constructor(
             return filesystemPath
         }
 
-        val attemptedLocations = mutableListOf(
-            "filesystem path ${filesystemPath.toAbsolutePath().normalize()}",
-        )
+        val attemptedLocations =
+            mutableListOf(
+                "filesystem path ${filesystemPath.toAbsolutePath().normalize()}",
+            )
 
         if (!Path.of(rawInput).isAbsolute()) {
             val runfiles = runfilesLoader()
             if (runfiles != null) {
-                val runfilesKeys = listOf(
-                    rawInput,
-                    "_main/$rawInput",
-                    "bpmner/$rawInput",
-                )
+                val runfilesKeys =
+                    listOf(
+                        rawInput,
+                        "_main/$rawInput",
+                        "bpmner/$rawInput",
+                    )
 
                 for (key in runfilesKeys) {
-                    val resolved = try {
-                        runfiles.rlocation(key)
-                    } catch (_: IllegalArgumentException) {
-                        attemptedLocations += "Bazel runfile $key (invalid runfiles key)"
-                        null
-                    }
+                    val resolved =
+                        try {
+                            runfiles.rlocation(key)
+                        } catch (_: IllegalArgumentException) {
+                            attemptedLocations += "Bazel runfile $key (invalid runfiles key)"
+                            null
+                        }
                     if (resolved != null) {
                         attemptedLocations += "Bazel runfile $key -> $resolved"
                     }
@@ -91,7 +109,7 @@ internal class InputPathResolver private constructor(
                 append(rawInput)
                 append("' was not found. Tried: ")
                 append(attemptedLocations.joinToString(", "))
-            }
+            },
         )
     }
 
@@ -103,18 +121,22 @@ internal class InputPathResolver private constructor(
     companion object {
         private const val BUILD_WORKING_DIRECTORY = "BUILD_WORKING_DIRECTORY"
 
-        private fun currentWorkingDirectory(environment: Map<String, String>, userDir: String): Path =
+        private fun currentWorkingDirectory(
+            environment: Map<String, String>,
+            userDir: String,
+        ): Path =
             environment[BUILD_WORKING_DIRECTORY]
                 ?.takeIf { it.isNotBlank() }
                 ?.let { Path.of(it).toAbsolutePath().normalize() }
                 ?: Path.of(userDir).toAbsolutePath().normalize()
 
-        private fun defaultRunfilesLoader(): () -> Runfiles? = {
-            try {
-                Runfiles.preload().withSourceRepository("")
-            } catch (_: IOException) {
-                null
+        private fun defaultRunfilesLoader(): () -> Runfiles? =
+            {
+                try {
+                    Runfiles.preload().withSourceRepository("")
+                } catch (_: IOException) {
+                    null
+                }
             }
-        }
     }
 }

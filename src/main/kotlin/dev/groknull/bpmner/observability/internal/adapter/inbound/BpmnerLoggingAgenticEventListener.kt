@@ -12,11 +12,17 @@ import org.springframework.stereotype.Component
 class BpmnerLoggingAgenticEventListener : LoggingAgenticEventListener() {
     override fun onProcessEvent(event: AgentProcessEvent) {
         when (event) {
-            is AgentProcessReadyToPlanEvent ->
+            is AgentProcessReadyToPlanEvent -> {
                 logger.debug(getAgentProcessReadyToPlanEventMessage(event))
-            is AgentProcessPlanFormulatedEvent ->
+            }
+
+            is AgentProcessPlanFormulatedEvent -> {
                 logger.debug(getAgentProcessPlanFormulatedEventMessage(event))
-            else -> super.onProcessEvent(event)
+            }
+
+            else -> {
+                super.onProcessEvent(event)
+            }
         }
     }
 }
