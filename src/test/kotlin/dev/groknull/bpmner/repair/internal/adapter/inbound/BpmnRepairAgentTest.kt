@@ -45,6 +45,7 @@ import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
@@ -519,7 +520,7 @@ class BpmnRepairAgentTest {
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
-    ) : BpmnLintService(catalogService = RuleCatalogService()) {
+    ) : BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine()) {
         val xmls = mutableListOf<String>()
         val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0

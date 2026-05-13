@@ -44,45 +44,18 @@ class BpmnLintConfigurationException(
 @SecondaryAdapter
 @Service
 @EnableConfigurationProperties(BpmnLintProperties::class)
-@Suppress("TooManyFunctions") // one method per linting operation plus initialization and internal helpers
 internal open class BpmnLintService(
     private val properties: BpmnLintProperties = BpmnLintProperties(),
     private val catalogService: RuleCatalogService,
+    private val engine: BpmnLintJsEngine,
 ) : BpmnLintingPort {
     private val logger = LoggerFactory.getLogger(BpmnLintService::class.java)
     private val objectMapper = jacksonObjectMapper()
-    private var jsContext: Context? = null
-    private var linterApi: Value? = null
 
     @PostConstruct
     fun init() {
         try {
-            logger.info("Initializing GraalJS bpmn-lint context...")
-            jsContext =
-                Context
-                    .newBuilder("js")
-                    .allowHostAccess(HostAccess.ALL)
-                    .allowHostClassLookup { className ->
-                        className == "java.util.Base64" ||
-                            className == "java.lang.String" ||
-                            className == "java.nio.charset.StandardCharsets" ||
-                            className == "java.util.function.Consumer"
-                    }.build()
-
-            val bundleResource = ClassPathResource("js/bpmnlint-bundle.js")
-            if (!bundleResource.exists()) {
-                logger.warn(
-                    "bpmnlint-bundle.js not found on classpath. " +
-                        "Linting will be unavailable until the project is built.",
-                )
-                return
-            }
-
-            val bundleSource = Source.newBuilder("js", bundleResource.url).build()
-            jsContext?.eval(bundleSource)
-            val api = jsContext?.getBindings("js")?.getMember("BpmnLinterApi")
-            linterApi = api
-
+            val api = engine.linterApi
             if (api != null) {
                 validateLintConfiguration(api)
                 val activeRules = resolvedRules()
@@ -95,8 +68,6 @@ internal open class BpmnLintService(
         } catch (e: BpmnLintConfigurationException) {
             logger.error("Invalid BPMN lint configuration", e)
             throw e
-        } catch (e: org.graalvm.polyglot.PolyglotException) {
-            logger.error("Failed to initialize GraalJS bpmn-lint context", e)
         }
     }
 
@@ -104,9 +75,9 @@ internal open class BpmnLintService(
         bpmnXml: String,
         phase: BpmnLintPhase,
     ): List<LintIssue>? {
-        val api = linterApi ?: return null
+        val api = engine.linterApi ?: return null
         logger.debug("Starting in-process bpmn-lint validation. phase={}, xmlLength={}", phase, bpmnXml.length)
-        return safePolyglotCall("bpmn-lint execution error: {}") {
+        return engine.safePolyglotCall("bpmn-lint execution error: {}") {
             val future = CompletableFuture<String>()
             val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
@@ -119,7 +90,7 @@ internal open class BpmnLintService(
         issues: List<LintIssue>,
         phase: BpmnLintPhase,
     ): BpmnAutoFixResult? {
-        val api = linterApi ?: return null
+        val api = engine.linterApi ?: return null
         val fixXml = api.getMember("fixXml") ?: return null
         logger.debug(
             "Starting in-process BPMN XML auto-fix. phase={}, xmlLength={}, issueCount={}",
@@ -127,7 +98,7 @@ internal open class BpmnLintService(
             bpmnXml.length,
             issues.size,
         )
-        return safePolyglotCall("BPMN XML auto-fix execution error: {}") {
+        return engine.safePolyglotCall("BPMN XML auto-fix execution error: {}") {
             val future = CompletableFuture<String>()
             val promise = fixXml.execute(bpmnXml, objectMapper.writeValueAsString(issues), lintConfigJson(phase))
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
@@ -136,9 +107,9 @@ internal open class BpmnLintService(
     }
 
     override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> {
-        val api = linterApi ?: return emptyMap()
+        val api = engine.linterApi ?: return emptyMap()
         if (ruleNames.isEmpty()) return emptyMap()
-        return safePolyglotCall("Failed to resolve lint rule docs: {}") {
+        return engine.safePolyglotCall("Failed to resolve lint rule docs: {}") {
             @Suppress("UNCHECKED_CAST")
             api
                 .getMember("getRuleDocs")
@@ -148,8 +119,8 @@ internal open class BpmnLintService(
     }
 
     fun resolvedRules(): Map<String, String> {
-        val api = linterApi ?: return emptyMap()
-        return safePolyglotCall("Failed to resolve active lint rules: {}") {
+        val api = engine.linterApi ?: return emptyMap()
+        return engine.safePolyglotCall("Failed to resolve active lint rules: {}") {
             @Suppress("UNCHECKED_CAST")
             api.getMember("getRules").execute(lintConfigJson()).`as`(Map::class.java) as Map<String, String>
         } ?: emptyMap()
@@ -177,37 +148,8 @@ internal open class BpmnLintService(
         return finalConfig.copy(rules = finalConfig.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" })
     }
 
-    private fun <T> safePolyglotCall(
-        warningMessage: String,
-        block: () -> T?,
-    ): T? =
-        try {
-            block()
-        } catch (e: org.graalvm.polyglot.PolyglotException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.ExecutionException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.TimeoutException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: InterruptedException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.CancellationException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: IllegalStateException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: IllegalArgumentException) {
-            logger.warn(warningMessage, e.message)
-            null
-        }
-
     fun destroy() {
-        jsContext?.close()
+        engine.destroy()
     }
 
     private fun validateLintConfiguration(api: Value) {

@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BpmnLintServiceTest {
-    private val service = BpmnLintService(catalogService = RuleCatalogService())
+    private val service = BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine())
 
     @Test
     fun `lintConfig returns base properties for final phase`() {
@@ -68,6 +68,7 @@ class BpmnLintServiceTest {
         val service =
             BpmnLintService(
                 catalogService = RuleCatalogService(),
+                engine = BpmnLintJsEngine(),
                 properties =
                     BpmnLintProperties(
                         rules = mapOf("klm/act-verb-object-name" to "error"),

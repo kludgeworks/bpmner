@@ -9,3 +9,8 @@ build:
 style:
   MaxLineLength:
     maxLineLength: 130
+
+complexity:
+  TooManyFunctions:
+    active: true
+    ignoreOverridden: true

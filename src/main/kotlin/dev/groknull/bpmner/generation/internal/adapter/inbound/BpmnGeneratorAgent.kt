@@ -35,10 +35,10 @@ import java.io.File
 
 @PrimaryAdapter
 @Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language business process description")
-@Suppress("TooManyFunctions") // one action method per generation pipeline stage
 internal class BpmnGeneratorAgent(
     private val config: BpmnConfig,
     private val bpmnConverter: BpmnDefinitionToXmlConverter,
+    private val metricsCalculator: BpmnGeneratorMetrics,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
@@ -57,7 +57,7 @@ internal class BpmnGeneratorAgent(
             ProcessOutline(
                 request = request,
                 definition = definition,
-                metrics = outlineMetrics(definition),
+                metrics = metricsCalculator.calculate(definition),
             )
         logger.info(
             "Outline summary: phases={}, branches={}, loops={}, subprocesses={}",
@@ -210,14 +210,6 @@ internal class BpmnGeneratorAgent(
         )
         return BpmnResult(outputFile = request.outputFile, xml = bpmn.xml)
     }
-
-    private fun outlineMetrics(definition: BpmnDefinition): OutlineMetrics =
-        OutlineMetrics(
-            phaseCount = 1,
-            branchCount = definition.nodes.count { it.type == NodeType.EXCLUSIVE_GATEWAY },
-            loopCount = definition.sequences.count { it.sourceRef == it.targetRef },
-            subprocessCount = 0,
-        )
 
     private fun logArtifactDump(
         label: String,

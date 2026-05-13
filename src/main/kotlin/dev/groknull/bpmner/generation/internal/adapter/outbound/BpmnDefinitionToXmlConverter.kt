@@ -33,7 +33,6 @@ import java.io.ByteArrayOutputStream
 
 @SecondaryAdapter
 @Component
-@Suppress("TooManyFunctions") // one helper per BPMN element type plus infrastructure methods
 internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
@@ -77,7 +76,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 ?: error("Unable to locate definitions in Camunda model instance")
         configureDefinitions(definitions)
 
-        val plane = createDiagramPlane(modelInstance, definitions, process)
+        val plane = BpmnModelFactory.createDiagramPlane(modelInstance, definitions, process)
         val (nodeMap, shapeMap) = buildNodeMaps(modelInstance, definition, process, plane)
         buildSequenceFlows(modelInstance, definition, process, plane, nodeMap, shapeMap)
         return modelInstance
@@ -92,13 +91,13 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         val nodeMap = mutableMapOf<String, FlowNode>()
         val shapeMap = mutableMapOf<String, BpmnShape>()
         for (node in definition.nodes) {
-            val flowNode = newFlowNode(modelInstance, node)
+            val flowNode = BpmnModelFactory.newFlowNode(modelInstance, node)
             process.addChildElement(flowNode)
             nodeMap[node.id] = flowNode
             val shape = modelInstance.newInstance(BpmnShape::class.java)
             shape.id = "${node.id}_di"
             shape.bpmnElement = flowNode
-            shape.bounds = newBounds(modelInstance, node.bounds)
+            shape.bounds = BpmnModelFactory.newBounds(modelInstance, node.bounds)
             plane.addChildElement(shape)
             shapeMap[node.id] = shape
         }
@@ -141,77 +140,16 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             diEdge.sourceElement = shapeMap[edge.sourceRef]
             diEdge.targetElement = shapeMap[edge.targetRef]
             edge.waypoints.forEach { waypoint ->
-                diEdge.addChildElement(newWaypoint(modelInstance, waypoint))
+                diEdge.addChildElement(BpmnModelFactory.newWaypoint(modelInstance, waypoint))
             }
             plane.addChildElement(diEdge)
         }
-    }
-
-    private fun newFlowNode(
-        modelInstance: BpmnModelInstance,
-        node: BpmnNode,
-    ): FlowNode {
-        val flowNode =
-            when (node.type) {
-                NodeType.START_EVENT -> modelInstance.newInstance(StartEvent::class.java)
-                NodeType.USER_TASK -> modelInstance.newInstance(UserTask::class.java)
-                NodeType.SERVICE_TASK -> modelInstance.newInstance(ServiceTask::class.java)
-                NodeType.EXCLUSIVE_GATEWAY -> modelInstance.newInstance(ExclusiveGateway::class.java)
-                NodeType.END_EVENT -> modelInstance.newInstance(EndEvent::class.java)
-            }
-        flowNode.id = node.id
-        BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }
-        return flowNode
     }
 
     private fun configureDefinitions(definitions: Definitions) {
         definitions.targetNamespace = TARGET_NAMESPACE
         definitions.exporter = EXPORTER
         definitions.exporterVersion = EXPORTER_VERSION
-    }
-
-    private fun createDiagramPlane(
-        modelInstance: BpmnModelInstance,
-        definitions: Definitions,
-        process: Process,
-    ): BpmnPlane {
-        val existingDiagram = modelInstance.getModelElementsByType(BpmnDiagram::class.java).firstOrNull()
-        val diagram =
-            existingDiagram ?: modelInstance.newInstance(BpmnDiagram::class.java).also {
-                definitions.addChildElement(it)
-            }
-        diagram.id = "${process.id}_diagram"
-
-        val existingPlane = diagram.bpmnPlane
-        val plane =
-            existingPlane ?: modelInstance.newInstance(BpmnPlane::class.java).also {
-                diagram.bpmnPlane = it
-            }
-        plane.id = "${process.id}_plane"
-        plane.bpmnElement = process
-        return plane
-    }
-
-    private fun newBounds(
-        modelInstance: BpmnModelInstance,
-        bounds: BpmnBounds,
-    ): Bounds {
-        val diBounds = modelInstance.newInstance(Bounds::class.java)
-        diBounds.x = bounds.x
-        diBounds.y = bounds.y
-        diBounds.width = bounds.width
-        diBounds.height = bounds.height
-        return diBounds
-    }
-
-    private fun newWaypoint(
-        modelInstance: BpmnModelInstance,
-        waypoint: BpmnWaypoint,
-    ): Waypoint {
-        val diWaypoint = modelInstance.newInstance(Waypoint::class.java)
-        diWaypoint.x = waypoint.x
-        diWaypoint.y = waypoint.y
-        return diWaypoint
     }
 
     private fun buildElementIndex(definition: BpmnDefinition): BpmnElementIndex =
