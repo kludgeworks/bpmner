@@ -4,6 +4,7 @@ import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnAttemptHistory
+import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnFingerprintService
@@ -38,7 +39,7 @@ internal class BpmnRefinementEngine(
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementEngine::class.java)
 
-    @Suppress("LongMethod", "CyclomaticComplexMethod") // repair loop; render() may throw any RuntimeException
+    @Suppress("LongMethod") // repair loop; render() may throw any RuntimeException
     fun refine(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
@@ -47,151 +48,217 @@ internal class BpmnRefinementEngine(
     ): ValidatedBpmnXml {
         val maxEvaluations = config.maxAttempts.coerceAtLeast(1)
         val initialMessages = promptFactory.initialMessages(request, rendered.definition)
-        var currentGraph = graph
-        var currentAttempt =
+        val initialAttempt =
             BpmnRepairAttempt(
                 attemptNumber = 1,
                 repairAttempts = 0,
-                graph = currentGraph,
+                graph = graph,
                 evaluation =
                     validator.evaluate(
-                        graph = currentGraph,
+                        graph = graph,
                         definition = rendered.definition,
                         rendered = rendered,
                         repairAttempts = 0,
                     ),
                 messages = initialMessages,
             )
-        var currentRecord = validator.toRecord(currentAttempt)
-        var history = BpmnAttemptHistory().append(currentRecord)
-        if (currentAttempt.evaluation.isSuccessful()) {
-            context.updateProgress("Validation passed after ${currentAttempt.repairAttempts} repair attempt(s)")
-            val result = currentAttempt.evaluation.toValidatedBpmnXml(currentAttempt.repairAttempts)
-            eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, currentAttempt.repairAttempts))
+        val initialRecord = validator.toRecord(initialAttempt)
+        var state =
+            RepairState(
+                graph = graph,
+                attempt = initialAttempt,
+                record = initialRecord,
+                history = BpmnAttemptHistory().append(initialRecord),
+            )
+
+        if (state.attempt.evaluation.isSuccessful()) {
+            context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
+            val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
+            eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
             return result
         }
 
-        while (history.size < maxEvaluations) {
-            validator.logDiagnosticSummary(currentAttempt.evaluation.globalDiagnostics.diagnostics)
-            val globalFeedbackDiagnostics = currentAttempt.evaluation.globalDiagnostics
-            context.updateProgress(
-                "Repair attempt ${currentAttempt.repairAttempts + 1}/${maxEvaluations - 1}: " +
-                    "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
-                    "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
-                    "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}",
-            )
-
-            eventPublisher.publishEvent(
-                BpmnValidationFailedEvent(
-                    request = request,
-                    diagnostics = currentAttempt.diagnostics,
-                    attemptNumber = currentAttempt.attemptNumber,
-                    repairAttempts = currentAttempt.repairAttempts,
-                ),
-            )
-
-            val repairPromptRunner =
-                promptRunner(context, request).let { runner ->
-                    val docsPrompt = promptFactory.lintRuleDocsPrompt(currentAttempt.diagnostics)
-                    if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
-                }
-            val repair = repairWithStrategies(currentAttempt, repairPromptRunner)
-            val repaired =
-                when (repair) {
-                    is BpmnRepairResult.Repaired -> {
-                        repair
-                    }
-
-                    is BpmnRepairResult.TerminalFailure -> {
-                        failRefinement(maxEvaluations, history, repair.reason, request)
-                    }
-
-                    BpmnRepairResult.NotApplicable -> {
-                        failRefinement(
-                            maxEvaluations = maxEvaluations,
-                            history = history,
-                            reason = "no repair strategy produced a candidate",
-                            request = request,
-                        )
-                    }
-                }
-
-            val correctedDefinitionFingerprint = fingerprints.definitionFingerprint(repaired.definition)
-            if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
-                failRefinement(
-                    maxEvaluations = maxEvaluations,
-                    history = history,
-                    reason = "unchanged patch on repair attempt ${currentAttempt.repairAttempts + 1}",
-                    request = request,
-                )
-            }
-            if (history.containsDefinitionFingerprint(correctedDefinitionFingerprint)) {
-                failRefinement(
-                    maxEvaluations = maxEvaluations,
-                    history = history,
-                    reason = "repeated invalid output on repair attempt ${currentAttempt.repairAttempts + 1}",
-                    request = request,
-                )
-            }
-
-            currentGraph = currentGraph.withUpdatedDefinition(repaired.definition)
-            var renderFailureMessage: String? = null
-            val correctedRendered =
-                try {
-                    bpmnRenderer.render(currentGraph)
-                } catch (e: IllegalStateException) {
-                    renderFailureMessage = e.message ?: e.javaClass.simpleName
-                    null
-                } catch (e: IllegalArgumentException) {
-                    renderFailureMessage = e.message ?: e.javaClass.simpleName
-                    null
-                }
-            val nextEvaluation =
-                validator.evaluate(
-                    graph = currentGraph,
-                    definition = repaired.definition,
-                    rendered = correctedRendered,
-                    renderFailureMessage = renderFailureMessage,
-                    repairAttempts = currentAttempt.repairAttempts + 1,
-                )
-            val nextAttempt =
-                BpmnRepairAttempt(
-                    attemptNumber = history.size + 1,
-                    repairAttempts = currentAttempt.repairAttempts + 1,
-                    graph = currentGraph,
-                    evaluation = nextEvaluation,
-                    messages = repaired.messages,
-                )
-            val nextRecord =
-                validator.toRecord(
-                    attempt = nextAttempt,
-                    repairPromptFingerprint = fingerprints.promptFingerprint(repaired.promptText),
-                )
-            history = history.append(nextRecord)
-            if (nextAttempt.evaluation.isSuccessful()) {
-                context.updateProgress("Validation passed after ${nextAttempt.repairAttempts} repair attempt(s)")
-                val result = nextAttempt.evaluation.toValidatedBpmnXml(nextAttempt.repairAttempts)
-                eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, nextAttempt.repairAttempts))
+        while (state.history.size < maxEvaluations) {
+            state = performRepairStep(request, state, maxEvaluations, context)
+            if (state.attempt.evaluation.isSuccessful()) {
+                context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
+                val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
+                eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
                 return result
             }
-            if (nextRecord.diagnosticFingerprint == currentRecord.diagnosticFingerprint) {
+        }
+
+        failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts", request)
+    }
+
+    private data class RepairState(
+        val graph: LaidOutProcessGraph,
+        val attempt: BpmnRepairAttempt,
+        val record: BpmnAttemptRecord,
+        val history: BpmnAttemptHistory,
+    )
+
+    private fun performRepairStep(
+        request: BpmnRequest,
+        state: RepairState,
+        maxEvaluations: Int,
+        context: ActionContext,
+    ): RepairState {
+        val currentAttempt = state.attempt
+        val currentRecord = state.record
+        var history = state.history
+
+        logAndPublishEvent(request, currentAttempt, maxEvaluations, context)
+
+        val repaired = runRepair(currentAttempt, maxEvaluations, history, request, context)
+
+        validateRepairEffect(repaired, currentRecord, history, maxEvaluations, request)
+
+        val nextGraph = state.graph.withUpdatedDefinition(repaired.definition)
+        val nextAttempt = evaluateNextAttempt(nextGraph, repaired, currentAttempt, history)
+        val nextRecord =
+            validator.toRecord(
+                attempt = nextAttempt,
+                repairPromptFingerprint = fingerprints.promptFingerprint(repaired.promptText),
+            )
+
+        history = history.append(nextRecord)
+
+        if (!nextAttempt.evaluation.isSuccessful() &&
+            nextRecord.diagnosticFingerprint == currentRecord.diagnosticFingerprint
+        ) {
+            failRefinement(
+                maxEvaluations = maxEvaluations,
+                history = history,
+                reason = "unchanged diagnostics after repair attempt ${nextAttempt.repairAttempts}",
+                request = request,
+            )
+        }
+
+        return RepairState(
+            graph = nextGraph,
+            attempt = nextAttempt,
+            record = nextRecord,
+            history = history,
+        )
+    }
+
+    private fun logAndPublishEvent(
+        request: BpmnRequest,
+        attempt: BpmnRepairAttempt,
+        maxEvaluations: Int,
+        context: ActionContext,
+    ) {
+        validator.logDiagnosticSummary(attempt.evaluation.globalDiagnostics.diagnostics)
+        val globalFeedbackDiagnostics = attempt.evaluation.globalDiagnostics
+        context.updateProgress(
+            "Repair attempt ${attempt.repairAttempts + 1}/${maxEvaluations - 1}: " +
+                "graph=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.GRAPH)}, " +
+                "xsd=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.XSD)}, " +
+                "lint=${globalFeedbackDiagnostics.countFor(BpmnDiagnosticSource.LINT)}",
+        )
+
+        eventPublisher.publishEvent(
+            BpmnValidationFailedEvent(
+                request = request,
+                diagnostics = attempt.diagnostics,
+                attemptNumber = attempt.attemptNumber,
+                repairAttempts = attempt.repairAttempts,
+            ),
+        )
+    }
+
+    private fun runRepair(
+        attempt: BpmnRepairAttempt,
+        maxEvaluations: Int,
+        history: BpmnAttemptHistory,
+        request: BpmnRequest,
+        context: ActionContext,
+    ): BpmnRepairResult.Repaired {
+        val repairPromptRunner =
+            promptRunner(context, request).let { runner ->
+                val docsPrompt = promptFactory.lintRuleDocsPrompt(attempt.diagnostics)
+                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
+            }
+        return when (val repair = repairWithStrategies(attempt, repairPromptRunner)) {
+            is BpmnRepairResult.Repaired -> {
+                repair
+            }
+
+            is BpmnRepairResult.TerminalFailure -> {
+                failRefinement(maxEvaluations, history, repair.reason, request)
+            }
+
+            BpmnRepairResult.NotApplicable -> {
                 failRefinement(
                     maxEvaluations = maxEvaluations,
                     history = history,
-                    reason = "unchanged diagnostics after repair attempt ${nextAttempt.repairAttempts}",
+                    reason = "no repair strategy produced a candidate",
                     request = request,
                 )
             }
-
-            currentAttempt = nextAttempt
-            currentRecord = nextRecord
         }
+    }
 
-        failRefinement(
-            maxEvaluations = maxEvaluations,
-            history = history,
-            reason = "exhausted BPMN repair attempts",
-            request = request,
+    private fun validateRepairEffect(
+        repaired: BpmnRepairResult.Repaired,
+        currentRecord: BpmnAttemptRecord,
+        history: BpmnAttemptHistory,
+        maxEvaluations: Int,
+        request: BpmnRequest,
+    ) {
+        val correctedDefinitionFingerprint = fingerprints.definitionFingerprint(repaired.definition)
+        if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
+            failRefinement(
+                maxEvaluations = maxEvaluations,
+                history = history,
+                reason = "unchanged patch on repair attempt ${currentRecord.attemptNumber}",
+                request = request,
+            )
+        }
+        if (history.containsDefinitionFingerprint(correctedDefinitionFingerprint)) {
+            failRefinement(
+                maxEvaluations = maxEvaluations,
+                history = history,
+                reason = "repeated invalid output on repair attempt ${currentRecord.attemptNumber}",
+                request = request,
+            )
+        }
+    }
+
+    private fun evaluateNextAttempt(
+        graph: LaidOutProcessGraph,
+        repaired: BpmnRepairResult.Repaired,
+        currentAttempt: BpmnRepairAttempt,
+        history: BpmnAttemptHistory,
+    ): BpmnRepairAttempt {
+        var renderFailureMessage: String? = null
+        val correctedRendered =
+            try {
+                bpmnRenderer.render(graph)
+            } catch (e: IllegalStateException) {
+                renderFailureMessage = e.message ?: e.javaClass.simpleName
+                null
+            } catch (e: IllegalArgumentException) {
+                renderFailureMessage = e.message ?: e.javaClass.simpleName
+                null
+            }
+
+        val nextEvaluation =
+            validator.evaluate(
+                graph = graph,
+                definition = repaired.definition,
+                rendered = correctedRendered,
+                renderFailureMessage = renderFailureMessage,
+                repairAttempts = currentAttempt.repairAttempts + 1,
+            )
+
+        return BpmnRepairAttempt(
+            attemptNumber = history.size + 1,
+            repairAttempts = currentAttempt.repairAttempts + 1,
+            graph = graph,
+            evaluation = nextEvaluation,
+            messages = repaired.messages,
         )
     }
 
