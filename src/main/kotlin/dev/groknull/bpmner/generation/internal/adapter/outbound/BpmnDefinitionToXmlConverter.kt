@@ -65,7 +65,16 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
         val plane = BpmnModelFactory.createDiagramPlane(modelInstance, definitions, process)
         val (nodeMap, shapeMap) = buildNodeMaps(modelInstance, definition, process, plane)
-        buildSequenceFlows(modelInstance, definition, process, plane, nodeMap, shapeMap)
+        buildSequenceFlows(
+            ConversionContext(
+                modelInstance = modelInstance,
+                definition = definition,
+                process = process,
+                plane = plane,
+                nodeMap = nodeMap,
+                shapeMap = shapeMap,
+            ),
+        )
         return modelInstance
     }
 
@@ -91,45 +100,46 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         return nodeMap to shapeMap
     }
 
-    @Suppress("LongParameterList") // all params structurally required; no meaningful grouping
-    private fun buildSequenceFlows(
-        modelInstance: BpmnModelInstance,
-        definition: BpmnDefinition,
-        process: Process,
-        plane: BpmnPlane,
-        nodeMap: Map<String, FlowNode>,
-        shapeMap: Map<String, BpmnShape>,
-    ) {
-        for (edge in definition.sequences) {
+    private data class ConversionContext(
+        val modelInstance: BpmnModelInstance,
+        val definition: BpmnDefinition,
+        val process: Process,
+        val plane: BpmnPlane,
+        val nodeMap: Map<String, FlowNode>,
+        val shapeMap: Map<String, BpmnShape>,
+    )
+
+    private fun buildSequenceFlows(context: ConversionContext) {
+        for (edge in context.definition.sequences) {
             val source =
-                nodeMap[edge.sourceRef]
+                context.nodeMap[edge.sourceRef]
                     ?: throw IllegalArgumentException("Unknown sourceRef '${edge.sourceRef}' on edge '${edge.id}'")
             val target =
-                nodeMap[edge.targetRef]
+                context.nodeMap[edge.targetRef]
                     ?: throw IllegalArgumentException("Unknown targetRef '${edge.targetRef}' on edge '${edge.id}'")
-            val sequenceFlow = modelInstance.newInstance(SequenceFlow::class.java)
+            val sequenceFlow = context.modelInstance.newInstance(SequenceFlow::class.java)
             sequenceFlow.id = edge.id
             if (!edge.name.isNullOrBlank()) sequenceFlow.name = edge.name
             if (!edge.conditionExpression.isNullOrBlank()) {
-                val conditionExpression = modelInstance.newInstance(ConditionExpression::class.java)
+                val conditionExpression = context.modelInstance.newInstance(ConditionExpression::class.java)
                 conditionExpression.textContent = edge.conditionExpression
                 sequenceFlow.conditionExpression = conditionExpression
             }
             sequenceFlow.source = source
             sequenceFlow.target = target
-            process.addChildElement(sequenceFlow)
+            context.process.addChildElement(sequenceFlow)
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
             val diEdge =
-                modelInstance.newInstance(org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge::class.java)
+                context.modelInstance.newInstance(org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge::class.java)
             diEdge.id = "${edge.id}_di"
             diEdge.bpmnElement = sequenceFlow
-            diEdge.sourceElement = shapeMap[edge.sourceRef]
-            diEdge.targetElement = shapeMap[edge.targetRef]
+            diEdge.sourceElement = context.shapeMap[edge.sourceRef]
+            diEdge.targetElement = context.shapeMap[edge.targetRef]
             edge.waypoints.forEach { waypoint ->
-                diEdge.addChildElement(BpmnModelFactory.newWaypoint(modelInstance, waypoint))
+                diEdge.addChildElement(BpmnModelFactory.newWaypoint(context.modelInstance, waypoint))
             }
-            plane.addChildElement(diEdge)
+            context.plane.addChildElement(diEdge)
         }
     }
 

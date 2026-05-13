@@ -11,11 +11,10 @@ import org.springframework.stereotype.Component
 internal class LlmValidator(
     private val catalogService: RuleCatalogService,
 ) {
-    @Suppress("UnusedParameter") // reserved for future LLM-based validation integration
     fun validate(
-        definition: BpmnDefinition,
-        graph: LaidOutProcessGraph,
-        promptRunner: PromptRunner,
+        _definition: BpmnDefinition,
+        _graph: LaidOutProcessGraph,
+        _promptRunner: PromptRunner,
     ): List<BpmnDiagnostic> {
         val llmRules = catalogService.catalog.rules.filter { !it.hasTsImplementation }
         if (llmRules.isEmpty()) return emptyList()
