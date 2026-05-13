@@ -9,11 +9,22 @@ build:
 style:
   MaxLineLength:
     maxLineLength: 130
+  UnusedParameter:
+    active: true
+    allowedNames: '(_.*)'
+
+naming:
+  FunctionParameterNaming:
+    active: true
+    parameterPattern: '[a-z_][A-Za-z0-9]*'
 
 complexity:
   TooManyFunctions:
     active: true
     ignoreOverridden: true
+  LongParameterList:
+    active: true
+    constructorThreshold: 10
 
 performance:
   SpreadOperator:

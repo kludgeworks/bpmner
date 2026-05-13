@@ -131,7 +131,7 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "unchanged diagnostics after repair attempt ${nextAttempt.repairAttempts}",
-                request = request,
+                _request = request,
             )
         }
 
@@ -194,7 +194,7 @@ internal class BpmnRefinementEngine(
                     maxEvaluations = maxEvaluations,
                     history = history,
                     reason = "no repair strategy produced a candidate",
-                    request = request,
+                    _request = request,
                 )
             }
         }
@@ -213,7 +213,7 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "unchanged patch on repair attempt ${currentRecord.attemptNumber}",
-                request = request,
+                _request = request,
             )
         }
         if (history.containsDefinitionFingerprint(correctedDefinitionFingerprint)) {
@@ -221,7 +221,7 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "repeated invalid output on repair attempt ${currentRecord.attemptNumber}",
-                request = request,
+                _request = request,
             )
         }
     }
@@ -285,12 +285,11 @@ internal class BpmnRefinementEngine(
         request: BpmnRequest,
     ): PromptRunner = config.repairer.promptRunner(context).withPromptContributor(request)
 
-    @Suppress("UnusedParameter") // request reserved for future error-context enrichment
     private fun failRefinement(
         maxEvaluations: Int,
         history: BpmnAttemptHistory,
         reason: String,
-        request: BpmnRequest,
+        _request: BpmnRequest,
     ): Nothing {
         val compactHistory = history.compact()
 

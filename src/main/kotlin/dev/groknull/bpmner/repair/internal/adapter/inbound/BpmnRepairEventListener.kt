@@ -9,8 +9,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnRepairEventListener {
     @EventListener
-    @Suppress("UnusedParameter") // Spring dispatches by parameter type
-    fun onBpmnGenerated(event: BpmnGeneratedEvent) {
+    fun onBpmnGenerated(_event: BpmnGeneratedEvent) {
         // This listener could trigger background refinement if needed,
         // but currently the orchestration is handled by Embabel agent chaining.
     }
