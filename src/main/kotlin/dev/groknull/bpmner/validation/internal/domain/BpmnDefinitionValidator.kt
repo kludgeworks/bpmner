@@ -9,20 +9,41 @@ import org.springframework.stereotype.Component
 @Service
 @Component
 internal class BpmnDefinitionValidator {
-    @Suppress("CyclomaticComplexMethod") // six independent structural checks; splitting adds no clarity
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
+        validateDuplicateIds(definition, errors)
+        validateNames(definition, errors)
+        validateEdges(definition, errors)
+        validateRequiredEvents(definition, errors)
+
+        return errors
+    }
+
+    private fun validateDuplicateIds(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
         val nodeIds = definition.nodes.map { it.id.trim() }
         val edgeIds = definition.sequences.map { it.id.trim() }
 
-        val duplicateNodeIds = nodeIds.groupBy { it }.filter { (id, all) -> id.isNotBlank() && all.size > 1 }.keys
-        duplicateNodeIds.forEach { errors.add("duplicate node id: $it") }
+        nodeIds
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate node id: $it") }
 
-        val duplicateEdgeIds = edgeIds.groupBy { it }.filter { (id, all) -> id.isNotBlank() && all.size > 1 }.keys
-        duplicateEdgeIds.forEach { errors.add("duplicate edge id: $it") }
+        edgeIds
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate edge id: $it") }
+    }
 
-        val nodeIdSet = definition.nodes.map { it.id }.toSet()
+    private fun validateNames(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
         val incomingCounts = definition.sequences.groupingBy { it.targetRef }.eachCount()
         val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
 
@@ -37,7 +58,13 @@ internal class BpmnDefinitionValidator {
                 errors.add(BpmnNodeNamingPolicy.missingNameMessage(node))
             }
         }
+    }
 
+    private fun validateEdges(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val nodeIdSet = definition.nodes.map { it.id }.toSet()
         definition.sequences.forEach { edge ->
             if (edge.sourceRef !in nodeIdSet) {
                 errors.add(
@@ -53,13 +80,17 @@ internal class BpmnDefinitionValidator {
                 errors.add("edge ${edge.id.ifBlank { "<blank>" }} must not self-reference source and target")
             }
         }
+    }
 
-        val startCount = definition.nodes.count { it.type == NodeType.START_EVENT }
-        if (startCount == 0) errors.add("definition must contain at least one START_EVENT")
-
-        val endCount = definition.nodes.count { it.type == NodeType.END_EVENT }
-        if (endCount == 0) errors.add("definition must contain at least one END_EVENT")
-
-        return errors
+    private fun validateRequiredEvents(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        if (definition.nodes.none { it.type == NodeType.START_EVENT }) {
+            errors.add("definition must contain at least one START_EVENT")
+        }
+        if (definition.nodes.none { it.type == NodeType.END_EVENT }) {
+            errors.add("definition must contain at least one END_EVENT")
+        }
     }
 }

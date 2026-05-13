@@ -61,7 +61,7 @@ class BpmnRefinementEngineTest {
                 FullLlmRewriteRepairStrategy(prompts),
                 LlmPatchRepairStrategy(prompts, patchApplier),
                 DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                TargetedLabelRepairStrategy(config, prompts, patchApplier),
+                TargetedLabelRepairStrategy(prompts, patchApplier),
             )
 
         AnnotationAwareOrderComparator.sort(strategies)
@@ -170,7 +170,7 @@ class BpmnRefinementEngineTest {
             strategies =
                 listOf(
                     DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                    TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                    TargetedLabelRepairStrategy(promptFactory, patchApplier),
                     LlmPatchRepairStrategy(promptFactory, patchApplier),
                     FullLlmRewriteRepairStrategy(promptFactory),
                 ),

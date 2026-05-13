@@ -83,7 +83,7 @@ class BpmnRepairAgentTest {
         val strategies =
             listOf(
                 DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                TargetedLabelRepairStrategy(promptFactory, patchApplier),
                 LlmPatchRepairStrategy(promptFactory, patchApplier),
                 FullLlmRewriteRepairStrategy(promptFactory),
             )
