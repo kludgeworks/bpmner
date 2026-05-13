@@ -12,7 +12,8 @@ import org.junit.jupiter.api.assertThrows
 class BpmnLintServiceIntegrationTest {
     @Test
     fun `lint returns issues for invalid BPMN XML using GraalJS bundle`() {
-        val service = BpmnLintService(catalogService = RuleCatalogService())
+        val engine = BpmnLintJsEngine().apply { init() }
+        val service = BpmnLintService(catalogService = RuleCatalogService(), engine = engine)
         service.init()
 
         val invalidXml =
@@ -38,9 +39,11 @@ class BpmnLintServiceIntegrationTest {
 
     @Test
     fun `lint detects duplicate diagram elements using BPMNER rule`() {
+        val engine = BpmnLintJsEngine().apply { init() }
         val service =
             BpmnLintService(
                 catalogService = RuleCatalogService(),
+                engine = engine,
                 properties =
                     BpmnLintProperties(
                         extends = listOf("bpmnlint:recommended", "plugin:bpmner/recommended"),
@@ -69,9 +72,11 @@ class BpmnLintServiceIntegrationTest {
 
     @Test
     fun `legacy duplicate diagram config and docs resolve through canonical rule`() {
+        val engine = BpmnLintJsEngine().apply { init() }
         val service =
             BpmnLintService(
                 catalogService = RuleCatalogService(),
+                engine = engine,
                 properties =
                     BpmnLintProperties(
                         rules =
@@ -105,9 +110,11 @@ class BpmnLintServiceIntegrationTest {
 
     @Test
     fun `autoFix clears named converging gateway using GraalJS bundle`() {
+        val engine = BpmnLintJsEngine().apply { init() }
         val service =
             BpmnLintService(
                 catalogService = RuleCatalogService(),
+                engine = engine,
                 properties =
                     BpmnLintProperties(
                         extends = listOf("plugin:bpmner/recommended"),
@@ -155,9 +162,11 @@ class BpmnLintServiceIntegrationTest {
 
     @Test
     fun `init fails fast for unknown lint rule id`() {
+        val engine = BpmnLintJsEngine().apply { init() }
         val service =
             BpmnLintService(
                 catalogService = RuleCatalogService(),
+                engine = engine,
                 properties =
                     BpmnLintProperties(
                         rules = mapOf("bpmner/act-verb-object-name" to "error"),

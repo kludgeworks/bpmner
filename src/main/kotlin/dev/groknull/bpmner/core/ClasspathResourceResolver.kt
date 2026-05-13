@@ -25,7 +25,7 @@ class ClasspathResourceResolver : LSResourceResolver {
             }
 }
 
-@Suppress("TooManyFunctions") // LSInput interface mandates 16 getters/setters
+@Suppress("UnusedPrivateProperty")
 private abstract class MutableLSInput : LSInput {
     private var publicIdValue: String? = null
     private var systemIdValue: String? = null

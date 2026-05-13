@@ -33,6 +33,7 @@ import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
@@ -184,7 +185,7 @@ class BpmnRefinementEngineTest {
 
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
-    ) : BpmnLintService(catalogService = RuleCatalogService()) {
+    ) : BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine()) {
         val xmls = mutableListOf<String>()
         private var index = 0
 

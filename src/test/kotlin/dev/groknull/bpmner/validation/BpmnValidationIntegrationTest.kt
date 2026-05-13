@@ -19,6 +19,7 @@ import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.ValidatedOutline
+import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
@@ -30,7 +31,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BpmnValidationIntegrationTest {
-    private val lintService = BpmnLintService(catalogService = RuleCatalogService())
+    private val lintService = BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine().apply { init() })
     private val xsdValidator = BpmnXsdValidator()
     private val validator =
         BpmnEvaluationPipeline(
