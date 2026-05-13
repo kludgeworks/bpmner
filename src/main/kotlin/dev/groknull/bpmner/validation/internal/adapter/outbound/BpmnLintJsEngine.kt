@@ -1,6 +1,5 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import jakarta.annotation.PostConstruct
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess

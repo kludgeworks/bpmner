@@ -9,15 +9,11 @@ import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import jakarta.annotation.PostConstruct
-import org.graalvm.polyglot.Context
-import org.graalvm.polyglot.HostAccess
-import org.graalvm.polyglot.Source
 import org.graalvm.polyglot.Value
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
-import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Service
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit

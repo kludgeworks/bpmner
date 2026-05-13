@@ -25,6 +25,5 @@ fun main(args: Array<String>) {
     System.getenv("BUILD_WORKING_DIRECTORY")?.let {
         System.setProperty("user.dir", it)
     }
-    @Suppress("SpreadOperator")
     runApplication<BpmnerApplication>(*args)
 }

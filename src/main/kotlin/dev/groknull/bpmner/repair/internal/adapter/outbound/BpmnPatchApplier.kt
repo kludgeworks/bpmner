@@ -3,10 +3,6 @@
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter

@@ -55,16 +55,13 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
         "embabel.agent.platform.models.openai.api-key=test-key",
     ],
 )
+@MockitoBean(types = [AgentPlatformBpmnAgentInvoker::class])
 class RepairModuleTest {
     @MockitoBean
     private lateinit var bpmnLintService: BpmnLintService
 
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
-
-    @MockitoBean
-    @Suppress("UnusedPrivateProperty") // Spring replaces the bean; not referenced in test code
-    private lateinit var agentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Autowired
     private lateinit var refinementEngine: BpmnRefinementEngine

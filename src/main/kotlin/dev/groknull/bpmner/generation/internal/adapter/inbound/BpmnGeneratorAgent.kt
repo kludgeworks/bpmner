@@ -15,8 +15,6 @@ import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.FinalValidatedBpmnXml
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.PhasePlan
 import dev.groknull.bpmner.core.PhasePlanSet

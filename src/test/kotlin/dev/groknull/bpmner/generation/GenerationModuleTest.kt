@@ -34,11 +34,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
         "embabel.agent.platform.models.openai.api-key=test-key",
     ],
 )
+@MockitoBean(types = [AgentPlatformBpmnAgentInvoker::class])
 class GenerationModuleTest {
-    @MockitoBean
-    @Suppress("UnusedPrivateProperty") // Spring replaces the bean; not referenced in test code
-    private lateinit var agentInvoker: AgentPlatformBpmnAgentInvoker
-
     @Autowired
     private lateinit var generationUseCase: BpmnGenerationUseCase
 
