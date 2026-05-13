@@ -25,74 +25,48 @@ class ClasspathResourceResolver : LSResourceResolver {
             }
 }
 
-@Suppress("UnusedPrivateProperty")
-private abstract class MutableLSInput : LSInput {
-    private var publicIdValue: String? = null
-    private var systemIdValue: String? = null
-    private var baseUriValue: String? = null
-    private var byteStreamValue: InputStream? = null
-    private var characterStreamValue: Reader? = null
-    private var stringDataValue: String? = null
-    private var certifiedTextValue: Boolean = false
-    private var encodingValue: String? = null
+private class ClasspathLSInput(
+    private var publicId: String?,
+    private var systemId: String?,
+    stream: InputStream,
+) : LSInput {
+    private var byteStream: InputStream? = stream
 
-    override fun getPublicId() = publicIdValue
-
-    override fun getSystemId() = systemIdValue
-
-    override fun getBaseURI() = baseUriValue
-
-    override fun getByteStream() = byteStreamValue
-
-    override fun getCharacterStream() = characterStreamValue
-
-    override fun getStringData() = stringDataValue
-
-    override fun getCertifiedText() = certifiedTextValue
-
-    override fun getEncoding() = encodingValue
+    override fun getPublicId() = publicId
 
     override fun setPublicId(publicId: String?) {
-        publicIdValue = publicId
+        this.publicId = publicId
     }
+
+    override fun getSystemId() = systemId
 
     override fun setSystemId(systemId: String?) {
-        systemIdValue = systemId
+        this.systemId = systemId
     }
 
-    override fun setBaseURI(baseURI: String?) {
-        baseUriValue = baseURI
-    }
+    override fun getByteStream() = byteStream
 
     override fun setByteStream(byteStream: InputStream?) {
-        byteStreamValue = byteStream
+        this.byteStream = byteStream
     }
 
-    override fun setCharacterStream(characterStream: Reader?) {
-        characterStreamValue = characterStream
-    }
+    override fun getBaseURI() = null
 
-    override fun setStringData(stringData: String?) {
-        stringDataValue = stringData
-    }
+    override fun setBaseURI(baseURI: String?) = Unit
 
-    override fun setCertifiedText(certifiedText: Boolean) {
-        certifiedTextValue = certifiedText
-    }
+    override fun getCharacterStream() = null
 
-    override fun setEncoding(encoding: String?) {
-        encodingValue = encoding
-    }
-}
+    override fun setCharacterStream(characterStream: Reader?) = Unit
 
-private class ClasspathLSInput(
-    publicId: String?,
-    systemId: String?,
-    stream: InputStream,
-) : MutableLSInput() {
-    init {
-        setPublicId(publicId)
-        setSystemId(systemId)
-        setByteStream(stream)
-    }
+    override fun getStringData() = null
+
+    override fun setStringData(stringData: String?) = Unit
+
+    override fun getCertifiedText() = false
+
+    override fun setCertifiedText(certifiedText: Boolean) = Unit
+
+    override fun getEncoding() = null
+
+    override fun setEncoding(encoding: String?) = Unit
 }

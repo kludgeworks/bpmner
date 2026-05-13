@@ -14,3 +14,7 @@ complexity:
   TooManyFunctions:
     active: true
     ignoreOverridden: true
+
+performance:
+  SpreadOperator:
+    active: false
