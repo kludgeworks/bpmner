@@ -34,6 +34,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class BpmnConfig(
     val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
+    val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
+    val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
+    val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
     val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
     @field:Valid
@@ -61,6 +64,46 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("generator"),
             )
+        val DEFAULT_LABEL_REPAIRER =
+            Actor(
+                persona =
+                    Persona(
+                        name = "BPMN Label Copy Editor",
+                        persona = "You are a fast, detail-oriented BPMN copy editor",
+                        objective =
+                            "Fix naming and label capitalization rules by providing targeted node and edge patches",
+                        voice = "concise and exact",
+                    ),
+                llm = LlmOptions.withLlmForRole("repair-label"),
+            )
+
+        val DEFAULT_PATCH_REPAIRER =
+            Actor(
+                persona =
+                    Persona(
+                        name = "BPMN Patch Repair Specialist",
+                        persona = "You are a strict BPMN 2.0 graph topology validator and patch expert",
+                        objective =
+                            "Fix structural and routing validation errors by adding or removing" +
+                                " specific elements without rewriting the whole definition",
+                        voice = "concise and exact",
+                    ),
+                llm = LlmOptions.withLlmForRole("repair-patch"),
+            )
+
+        val DEFAULT_REWRITE_REPAIRER =
+            Actor(
+                persona =
+                    Persona(
+                        name = "BPMN Full Rewrite Specialist",
+                        persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
+                        objective =
+                            "Fix complex, cascading validation errors by rewriting the complete BpmnDefinition object",
+                        voice = "concise and exact",
+                    ),
+                llm = LlmOptions.withLlmForRole("repair-rewrite"),
+            )
+
         val DEFAULT_REPAIRER =
             Actor(
                 persona =
