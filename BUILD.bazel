@@ -3,6 +3,7 @@ load("@bazel_skylib//rules:build_test.bzl", "build_test")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_detekt//detekt:defs.bzl", "detekt_test")
+load("//tools/pmd:cpd.bzl", "cpd_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -81,10 +82,42 @@ detekt_test(
     cfgs = ["config/detekt/detekt.yml"],
 )
 
+cpd_test(
+    name = "cpd_kotlin_main",
+    srcs = ["//src:cpd_srcs"],
+    language = "kotlin",
+    minimum_tokens = 100,
+)
+
+cpd_test(
+    name = "cpd_kotlin_test",
+    srcs = ["//src/test:cpd_srcs"],
+    language = "kotlin",
+    minimum_tokens = 100,
+)
+
+cpd_test(
+    name = "cpd_typescript_linter",
+    srcs = ["//linter:cpd_srcs"],
+    language = "typescript",
+    minimum_tokens = 100,
+)
+
+cpd_test(
+    name = "cpd_typescript_layout",
+    srcs = ["//layout:cpd_srcs"],
+    language = "typescript",
+    minimum_tokens = 100,
+)
+
 test_suite(
     name = "ci",
     tests = [
         ":buildifier_check",
+        ":cpd_kotlin_main",
+        ":cpd_kotlin_test",
+        ":cpd_typescript_layout",
+        ":cpd_typescript_linter",
         ":detekt_check",
         ":linter_bundle_build_test",
         ":typescript_build_test",
