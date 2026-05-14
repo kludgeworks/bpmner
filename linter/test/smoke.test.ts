@@ -96,40 +96,9 @@ describe("BpmnLinterApi bundle smoke test", () => {
 		assert.ok(doc?.includes("## Compatibility"))
 	})
 
-	it("fixXml clears a named converging gateway", async () => {
-		const issues = JSON.parse(
-			await api.lintXml(fixtures.gtw02Invalid, {
-				extends: ["plugin:klm/recommended"],
-			}),
-		)
-
-		const result = JSON.parse(
-			await api.fixXml(
-				fixtures.gtw02Invalid,
-				JSON.stringify(issues),
-				JSON.stringify({
-					extends: ["plugin:klm/recommended"],
-				}),
-			),
-		)
-
-		assert.equal(result.changed, true)
-		assert.equal(result.applied.length, 1)
-		assert.equal(result.applied[0].rule, "klm/gtw-converging-gateway-unnamed")
-		assert.equal(result.applied[0].elementId, "Gateway_1")
-		assert.ok(!result.xml.includes('name="Decision merged"'))
-
-		const postFixIssues: Array<{ rule: string }> = JSON.parse(
-			await api.lintXml(result.xml, {
-				extends: ["plugin:klm/recommended"],
-			}),
-		)
-		assert.ok(
-			!postFixIssues.some(
-				(i) => i.rule === "klm/gtw-converging-gateway-unnamed",
-			),
-		)
-	})
+	// gtw-converging-gateway-unnamed is now LOCAL_MODEL_FIX — repaired in Kotlin
+	// via ConvergingGatewayClearNameHandler; the TS auto-fix path is intentionally
+	// skipped, so we don't smoke-test it here.
 
 	it("fixXml returns a skip entry for non-fixable rules", async () => {
 		const issues = [

@@ -31,12 +31,14 @@ import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
+import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class LintLocalRepairStrategyTest {
     @Test
@@ -165,12 +167,115 @@ class LintLocalRepairStrategyTest {
     }
 
     @Test
-    fun `LOCAL_MODEL_FIX diagnostic without any LOCAL_XML_FIX returns NotApplicable`() {
+    fun `LOCAL_MODEL_FIX with no registered handler falls through to NotApplicable`() {
         val strategy = strategy(lint = FakeLintingPort())
         val context =
-            contextOf(diagnostics = listOf(lintDiagnostic(kind = RepairKind.LOCAL_MODEL_FIX)))
+            contextOf(
+                diagnostics =
+                    listOf(
+                        lintDiagnostic(
+                            kind = RepairKind.LOCAL_MODEL_FIX,
+                            fixHandler = "unregistered",
+                        ),
+                    ),
+            )
 
         assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
+    }
+
+    @Test
+    fun `LOCAL_MODEL_FIX with registered handler returning ops returns Repaired`() {
+        val strategy =
+            strategy(
+                lint = FakeLintingPort(),
+                handlers = listOf(StubModelFixHandler("renameTask")),
+            )
+        val context =
+            contextOf(
+                diagnostics =
+                    listOf(
+                        lintDiagnostic(
+                            kind = RepairKind.LOCAL_MODEL_FIX,
+                            fixHandler = "renameTask",
+                            elementId = "Task_1",
+                        ),
+                    ),
+            )
+
+        val result = assertIs<BpmnRepairResult.Repaired>(strategy.repair(context))
+        assertEquals(
+            "renamed",
+            result.definition.nodes
+                .single { it.id == "Task_1" }
+                .name,
+        )
+        assertTrue(result.promptText.contains("renameTask"))
+    }
+
+    @Test
+    fun `LOCAL_MODEL_FIX with handler returning empty ops falls through to LOCAL_XML_FIX`() {
+        val parsed = otherValidDefinition()
+        val lint =
+            FakeLintingPort(
+                autoFixResult =
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<fixed/>",
+                        applied = listOf(BpmnAutoFixChange("klm/name-01", "Task_1", "stripped")),
+                    ),
+            )
+        val strategy =
+            strategy(
+                lint = lint,
+                parser = FakeXmlParser(parsed),
+                handlers = listOf(StubModelFixHandler("noop", emitsOps = false)),
+            )
+        val context =
+            contextOf(
+                diagnostics =
+                    listOf(
+                        lintDiagnostic(
+                            kind = RepairKind.LOCAL_MODEL_FIX,
+                            fixHandler = "noop",
+                            elementId = "Task_1",
+                        ),
+                        lintDiagnostic(rule = "klm/name-01"),
+                    ),
+            )
+
+        val result = assertIs<BpmnRepairResult.Repaired>(strategy.repair(context))
+        assertEquals(parsed, result.definition)
+    }
+
+    @Test
+    fun `LOCAL_MODEL_FIX runs before LOCAL_XML_FIX when both present`() {
+        val lint = FakeLintingPort()
+        val strategy =
+            strategy(
+                lint = lint,
+                handlers = listOf(StubModelFixHandler("renameTask")),
+            )
+        val context =
+            contextOf(
+                diagnostics =
+                    listOf(
+                        lintDiagnostic(
+                            kind = RepairKind.LOCAL_MODEL_FIX,
+                            fixHandler = "renameTask",
+                            elementId = "Task_1",
+                        ),
+                        lintDiagnostic(rule = "klm/name-01"),
+                    ),
+            )
+
+        val result = assertIs<BpmnRepairResult.Repaired>(strategy.repair(context))
+        assertEquals(
+            "renamed",
+            result.definition.nodes
+                .single { it.id == "Task_1" }
+                .name,
+        )
+        assertEquals(0, lint.autoFixCalls, "Auto-fix must not be called when LOCAL_MODEL_FIX repairs first")
     }
 
     // ------------------------------------------------------------------ helpers
@@ -179,7 +284,14 @@ class LintLocalRepairStrategyTest {
         lint: BpmnLintingPort = FakeLintingPort(),
         xsd: BpmnXsdValidationPort = FakeXsdValidationPort(),
         parser: BpmnXmlParser = FakeXmlParser(otherValidDefinition()),
-    ) = LintLocalRepairStrategy(lint, xsd, parser)
+        handlers: List<BpmnLocalModelFixHandler> = emptyList(),
+    ) = LintLocalRepairStrategy(
+        lint,
+        xsd,
+        parser,
+        BpmnLocalModelFixHandlerRegistry(handlers),
+        BpmnPatchApplier(),
+    )
 
     private fun contextOf(
         diagnostics: List<BpmnDiagnostic>,
@@ -228,13 +340,16 @@ class LintLocalRepairStrategyTest {
     private fun lintDiagnostic(
         rule: String = "klm/name-01",
         kind: RepairKind? = RepairKind.LOCAL_XML_FIX,
+        fixHandler: String? = null,
+        elementId: String? = "Task_1",
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = "violation",
         rule = rule,
         category = "error",
-        elementId = "Task_1",
+        elementId = elementId,
         kind = kind,
+        fixHandler = fixHandler,
     )
 
     private fun validDefinition() =
@@ -342,6 +457,25 @@ class LintLocalRepairStrategyTest {
         override fun parse(xml: String): BpmnDefinition {
             calls++
             return definition
+        }
+    }
+
+    private class StubModelFixHandler(
+        override val handlerName: String,
+        private val emitsOps: Boolean = true,
+    ) : BpmnLocalModelFixHandler {
+        override fun buildPatch(
+            definition: BpmnDefinition,
+            elementId: String,
+        ): List<BpmnPatchOperation> {
+            if (!emitsOps) return emptyList()
+            return listOf(
+                BpmnPatchOperation(
+                    type = BpmnPatchOperationType.SET_NODE_NAME,
+                    nodeId = elementId,
+                    name = "renamed",
+                ),
+            )
         }
     }
 }

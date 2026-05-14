@@ -47,14 +47,6 @@ function setName(element: ModdleElement, value: string | undefined): void {
 	}
 }
 
-function setProp(element: ModdleElement, key: string, value: unknown): void {
-	if (typeof element.set === "function") {
-		element.set(key, value)
-	} else {
-		element[key] = value
-	}
-}
-
 // ─── handlers ───────────────────────────────────────────────────────────────
 
 /**
@@ -285,149 +277,6 @@ function deleteIncomingFlows(element: ModdleElement): AutoFixHandlerResult {
 	}
 }
 
-/**
- * ast-rewiring: Bypass a gateway with 1-in 1-out.
- */
-function bypassGateway(element: ModdleElement): AutoFixHandlerResult {
-	const incoming = element.incoming as ModdleElement[] | undefined
-	const outgoing = element.outgoing as ModdleElement[] | undefined
-	if (!incoming?.length || !outgoing?.length) {
-		return { changed: false, message: "Gateway has no flows to rewire" }
-	}
-
-	const inFlow = incoming[0]
-	const outFlow = outgoing[0]
-	const downstream = outFlow.targetRef as ModdleElement | undefined
-	if (!downstream)
-		return { changed: false, message: "Could not resolve downstream element" }
-
-	setProp(inFlow, "targetRef", downstream)
-
-	const downIncoming = downstream.incoming as ModdleElement[] | undefined
-	if (downIncoming) {
-		const idx = downIncoming.indexOf(outFlow)
-		if (idx !== -1) {
-			downIncoming.splice(idx, 1, inFlow)
-		} else {
-			downIncoming.push(inFlow)
-		}
-	}
-
-	const parent = element.$parent as ModdleElement | undefined
-	if (parent?.flowElements) {
-		removeFromArray(parent.flowElements as unknown[], element)
-		removeFromArray(parent.flowElements as unknown[], outFlow)
-	}
-
-	return {
-		changed: true,
-		message: "Removed superfluous gateway and rewired flows",
-	}
-}
-
-/**
- * ast-rewiring: Insert a converging gateway before an element with multiple incoming flows.
- */
-function insertConvergingGateway(
-	element: ModdleElement,
-	_issue: AutoFixLintIssue,
-	ctx: AutoFixContext,
-): AutoFixHandlerResult {
-	const inFlows = [...((element.incoming as ModdleElement[]) || [])]
-	if (inFlows.length < 2)
-		return {
-			changed: false,
-			message: "Task does not have multiple incoming flows",
-		}
-
-	const parent = element.$parent as ModdleElement | undefined
-	if (!parent?.flowElements)
-		return { changed: false, message: "Could not find parent container" }
-
-	const flowElements = parent.flowElements as ModdleElement[]
-
-	const newGateway = ctx.createElement("bpmn:ExclusiveGateway", {
-		id: ctx.generateId(),
-	})
-	newGateway.$parent = parent
-
-	const newFlow = ctx.createElement("bpmn:SequenceFlow", {
-		id: ctx.generateId(),
-		sourceRef: newGateway,
-		targetRef: element,
-	})
-	newFlow.$parent = parent
-
-	for (const flow of inFlows) {
-		setProp(flow, "targetRef", newGateway)
-	}
-
-	newGateway.incoming = [...inFlows]
-	newGateway.outgoing = [newFlow]
-	element.incoming = [newFlow]
-
-	flowElements.push(newGateway)
-	flowElements.push(newFlow)
-
-	return {
-		changed: true,
-		message:
-			"Inserted converging gateway before task with multiple incoming flows",
-	}
-}
-
-/**
- * ast-rewiring: Split a join-fork gateway into two.
- */
-function splitJoinForkGateway(
-	element: ModdleElement,
-	_issue: AutoFixLintIssue,
-	ctx: AutoFixContext,
-): AutoFixHandlerResult {
-	const inFlows = [...((element.incoming as ModdleElement[]) || [])]
-	const outFlows = [...((element.outgoing as ModdleElement[]) || [])]
-	if (inFlows.length < 2 || outFlows.length < 2) {
-		return {
-			changed: false,
-			message: "Gateway is not simultaneously a join and a fork",
-		}
-	}
-
-	const parent = element.$parent as ModdleElement | undefined
-	if (!parent?.flowElements)
-		return { changed: false, message: "Could not find parent container" }
-
-	const flowElements = parent.flowElements as ModdleElement[]
-	const gatewayType = element.$type as string
-
-	const newDiverging = ctx.createElement(gatewayType, { id: ctx.generateId() })
-	newDiverging.$parent = parent
-
-	const connectingFlow = ctx.createElement("bpmn:SequenceFlow", {
-		id: ctx.generateId(),
-		sourceRef: element,
-		targetRef: newDiverging,
-	})
-	connectingFlow.$parent = parent
-
-	for (const flow of outFlows) {
-		setProp(flow, "sourceRef", newDiverging)
-	}
-
-	element.outgoing = [connectingFlow]
-	newDiverging.incoming = [connectingFlow]
-	newDiverging.outgoing = [...outFlows]
-
-	flowElements.push(newDiverging)
-	flowElements.push(connectingFlow)
-
-	return {
-		changed: true,
-		message:
-			"Split join-fork gateway into separate converging and diverging gateways",
-	}
-}
-
 // ─── registration ───────────────────────────────────────────────────────────
 
 const HANDLERS: Record<string, AutoFixHandler> = {
@@ -440,9 +289,6 @@ const HANDLERS: Record<string, AutoFixHandler> = {
 	deleteBlankStartEvents,
 	keepFirstEventDefinition,
 	deleteIncomingFlows,
-	bypassGateway,
-	insertConvergingGateway,
-	splitJoinForkGateway,
 }
 
 const HANDLER_STRATEGIES: Record<string, AutoFixRuleMetadata["fixStrategy"]> = {
@@ -455,9 +301,6 @@ const HANDLER_STRATEGIES: Record<string, AutoFixRuleMetadata["fixStrategy"]> = {
 	deleteBlankStartEvents: "node-deletion",
 	keepFirstEventDefinition: "node-deletion",
 	deleteIncomingFlows: "node-deletion",
-	bypassGateway: "ast-rewiring",
-	insertConvergingGateway: "ast-rewiring",
-	splitJoinForkGateway: "ast-rewiring",
 }
 
 export function hasHandler(name: string): boolean {
@@ -511,36 +354,6 @@ export function autoFixRegistration(
 					fixStrategy: "node-deletion",
 				},
 				handler: keepFirstEventDefinition,
-			}
-		}
-		if (ruleId === "superfluous-gateway") {
-			return {
-				metadata: {
-					rule: ruleId,
-					autoFixable: true,
-					fixStrategy: "ast-rewiring",
-				},
-				handler: bypassGateway,
-			}
-		}
-		if (ruleId === "fake-join") {
-			return {
-				metadata: {
-					rule: ruleId,
-					autoFixable: true,
-					fixStrategy: "ast-rewiring",
-				},
-				handler: insertConvergingGateway,
-			}
-		}
-		if (ruleId === "no-gateway-join-fork") {
-			return {
-				metadata: {
-					rule: ruleId,
-					autoFixable: true,
-					fixStrategy: "ast-rewiring",
-				},
-				handler: splitJoinForkGateway,
 			}
 		}
 		return undefined

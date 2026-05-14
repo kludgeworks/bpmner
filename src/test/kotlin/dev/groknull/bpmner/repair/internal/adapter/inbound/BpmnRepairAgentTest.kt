@@ -40,8 +40,6 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.repair.internal.domain.BpmnTopologyRepair
-import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
@@ -82,7 +80,6 @@ class BpmnRepairAgentTest {
             )
         val strategies =
             listOf(
-                DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
                 LlmPatchRepairStrategy(promptFactory, patchApplier),
                 FullLlmRewriteRepairStrategy(promptFactory),
             )

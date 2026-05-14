@@ -151,10 +151,10 @@ describe("lint rules", () => {
 		)
 	})
 
-	it("gtw-converging-gateway-unnamed records current auto-fix capability in generated metadata", () => {
+	it("gtw-converging-gateway-unnamed routes to Kotlin model-level handler", () => {
 		const config = getRuleConfig("gtw-converging-gateway-unnamed")
-		assert.equal(config.repair.kind, "LOCAL_XML_FIX")
-		assert.equal(config.repair.handler, "clearName")
+		assert.equal(config.repair.kind, "LOCAL_MODEL_FIX")
+		assert.equal(config.repair.handler, "clearConvergingGatewayName")
 	})
 
 	it("valid baseline has no violations", async () => {

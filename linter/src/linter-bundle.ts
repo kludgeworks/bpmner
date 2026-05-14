@@ -293,15 +293,16 @@ export function getRuleCapabilities(): RuleCapability[] {
 		const replacementMap = repair.replacementMap ?? null
 
 		const isLocal = kind === "LOCAL_XML_FIX" || kind === "LOCAL_MODEL_FIX"
+		const isLocalXml = kind === "LOCAL_XML_FIX"
 		const handlerExists = handlerName !== null && hasHandler(handlerName)
 
 		if (isLocal && !handlerName) {
 			errors.push(
 				`Rule ${rule.id}: ${kind} requires a handler but none declared`,
 			)
-		} else if (isLocal && handlerName && !handlerExists) {
+		} else if (isLocalXml && handlerName && !handlerExists) {
 			errors.push(
-				`Rule ${rule.id}: declared handler "${handlerName}" is not registered`,
+				`Rule ${rule.id}: declared handler "${handlerName}" is not registered in the TS auto-fix registry`,
 			)
 		} else if (!isLocal && handlerName) {
 			errors.push(

@@ -42,13 +42,15 @@ describe("getRuleCapabilities", () => {
 		assert.equal(cap.handlerExists, true)
 	})
 
-	it("LOCAL_XML_FIX rule gtw-fake-join has correct capability", () => {
+	it("LOCAL_MODEL_FIX rule gtw-fake-join routes to Kotlin handler", () => {
 		const caps = getRuleCapabilities()
 		const cap = caps.find((c) => c.id === "gtw-fake-join")
 		assert.ok(cap, "gtw-fake-join not found in capabilities")
-		assert.equal(cap.kind, "LOCAL_XML_FIX")
+		assert.equal(cap.kind, "LOCAL_MODEL_FIX")
 		assert.equal(cap.handlerName, "insertConvergingGateway")
-		assert.equal(cap.handlerExists, true)
+		// handlerExists is false from the TS bundle perspective: LOCAL_MODEL_FIX
+		// handlers live in the Kotlin handler registry, not the TS auto-fix registry.
+		assert.equal(cap.handlerExists, false)
 	})
 
 	it("LLM_MODEL_PATCH rule name-business-meaningful-label has correct capability", () => {

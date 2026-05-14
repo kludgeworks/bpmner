@@ -15,25 +15,8 @@ async function roundTrip(xml: string): Promise<void> {
 describe("auto-fix engine", () => {
 	// ─── attribute-mutation ─────────────────────────────────────────────────────
 
-	it("gtw-02 metadata is registered as attribute-mutation", () => {
-		const m = autoFixMetadata("klm/gtw-converging-gateway-unnamed")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "attribute-mutation")
-	})
-
-	it("gtw-02: clears converging gateway name", async () => {
-		const issues: Issue[] = [
-			{
-				id: "Gateway_1",
-				rule: "bpmnlint-plugin-klm/gtw-converging-gateway-unnamed",
-			},
-		]
-		const result = await fixBpmnXml(fixtures.gtw02Invalid, issues)
-		assert.equal(result.changed, true)
-		assert.equal(result.applied[0].rule, "klm/gtw-converging-gateway-unnamed")
-		assert.ok(!result.xml.includes('name="Decision merged"'))
-		await roundTrip(result.xml)
-	})
+	// gtw-converging-gateway-unnamed (gtw-02) is now LOCAL_MODEL_FIX — repaired
+	// in Kotlin via ConvergingGatewayClearNameHandler; no TS auto-fix path.
 
 	it("gtw-03 metadata is registered as attribute-mutation", () => {
 		const m = autoFixMetadata("klm/gtw-gateway-no-work-label")
@@ -249,119 +232,9 @@ describe("auto-fix engine", () => {
 		await roundTrip(result.xml)
 	})
 
-	// ─── ast-rewiring ─────────────────────────────────────────────────────────────
-
-	it("superfluous-gateway metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("superfluous-gateway")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-22 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("klm/gtw-superfluous-gateway")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-22: removes superfluous gateway and rewires flows", async () => {
-		const issues: Issue[] = [
-			{
-				id: "Gateway_1",
-				rule: "bpmnlint-plugin-klm/gtw-superfluous-gateway",
-			},
-		]
-		const result = await fixBpmnXml(
-			fixtures.gtw22SuperfluousGatewayFixable,
-			issues,
-		)
-		assert.equal(result.changed, true)
-		assert.ok(!result.xml.includes('id="Gateway_1"'))
-		assert.ok(!result.xml.includes('id="Flow_2"'))
-		assert.ok(result.xml.includes('id="Flow_1"'))
-		await roundTrip(result.xml)
-
-		const moddle = new BpmnModdle()
-		const { rootElement } = await moddle.fromXML(result.xml)
-		type Def = {
-			rootElements?: Array<{
-				flowElements?: Array<{
-					id?: string
-					$type?: string
-					targetRef?: { id?: string }
-				}>
-			}>
-		}
-		const process = (rootElement as Def).rootElements?.[0]
-		const flow1 = process?.flowElements?.find((el) => el.id === "Flow_1")
-		assert.equal(flow1?.targetRef?.id, "Task_1")
-	})
-
-	it("fake-join metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("fake-join")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-21 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("klm/gtw-fake-join")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-21: inserts converging gateway before task with multiple incoming flows", async () => {
-		const issues: Issue[] = [
-			{ id: "Task_1", rule: "bpmnlint-plugin-klm/gtw-fake-join" },
-		]
-		const result = await fixBpmnXml(fixtures.gtw21FakeJoinFixable, issues)
-		assert.equal(result.changed, true)
-		await roundTrip(result.xml)
-
-		const moddle = new BpmnModdle()
-		const { rootElement } = await moddle.fromXML(result.xml)
-		type Def = {
-			rootElements?: Array<{ flowElements?: Array<{ $type?: string }> }>
-		}
-		const process = (rootElement as Def).rootElements?.[0]
-		const gateways = (process?.flowElements || []).filter(
-			(el) => el.$type === "bpmn:ExclusiveGateway",
-		)
-		assert.equal(gateways.length, 1)
-	})
-
-	it("no-gateway-join-fork metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("no-gateway-join-fork")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-20 metadata is registered as ast-rewiring", () => {
-		const m = autoFixMetadata("klm/gtw-no-gateway-join-fork")
-		assert.ok(m?.autoFixable)
-		assert.equal(m?.fixStrategy, "ast-rewiring")
-	})
-
-	it("gtw-20: splits join-fork gateway into two separate gateways", async () => {
-		const issues: Issue[] = [
-			{
-				id: "Gateway_1",
-				rule: "bpmnlint-plugin-klm/gtw-no-gateway-join-fork",
-			},
-		]
-		const result = await fixBpmnXml(fixtures.gtw20JoinForkFixable, issues)
-		assert.equal(result.changed, true)
-		await roundTrip(result.xml)
-
-		const moddle = new BpmnModdle()
-		const { rootElement } = await moddle.fromXML(result.xml)
-		type Def = {
-			rootElements?: Array<{ flowElements?: Array<{ $type?: string }> }>
-		}
-		const process = (rootElement as Def).rootElements?.[0]
-		const gateways = (process?.flowElements || []).filter(
-			(el) => el.$type === "bpmn:ExclusiveGateway",
-		)
-		assert.equal(gateways.length, 2)
-	})
+	// Topology rules (gtw-20 no-gateway-join-fork, gtw-21 fake-join,
+	// gtw-22 superfluous-gateway) are now LOCAL_MODEL_FIX — repaired in Kotlin
+	// via BpmnLocalModelFixHandler implementations; no TS auto-fix path.
 
 	// ─── idempotence and skips ───────────────────────────────────────────────────
 
