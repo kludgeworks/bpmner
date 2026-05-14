@@ -22,6 +22,14 @@ TYPE_DECL_SRCS = glob([
 
 ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
 
+filegroup(
+    name = "cpd_srcs",
+    srcs = glob(
+        ["src/**/*.ts", "test/**/*.ts"],
+        exclude = ["src/generated/**"],
+    ),
+)
+
 # This import path is generated from the Pkl catalog by Bazel.
 GENERATED_JSON_SRCS = [":linter_rules_json_for_ts"]
 
