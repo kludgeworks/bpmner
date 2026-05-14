@@ -1,3 +1,3 @@
-import { installPolyfills } from "../../tools/js/polyfills"
+import { installPolyfills } from "./polyfills-shared"
 
 installPolyfills()
