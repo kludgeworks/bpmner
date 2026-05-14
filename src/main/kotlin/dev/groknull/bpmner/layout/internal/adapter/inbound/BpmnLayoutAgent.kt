@@ -1,5 +1,3 @@
-@file:Suppress("ReturnCount")
-
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import com.embabel.agent.api.annotation.Action
@@ -33,17 +31,17 @@ internal class BpmnLayoutAgent(
 
     @Action(description = "Apply bounded deterministic XML auto-fixes before layout")
     fun autoFixBpmnXml(bpmn: ValidatedBpmnXml): AutoFixedBpmnXml {
-        val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
-        if (lintIssues == null) {
-            logger.warn("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
-            return AutoFixedBpmnXml(xml = bpmn.xml)
-        }
+        val lintIssues =
+            bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT) ?: run {
+                logger.warn("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
+                return AutoFixedBpmnXml(xml = bpmn.xml)
+            }
 
-        val autoFixResult = bpmnLintingPort.autoFix(bpmn.xml, lintIssues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
-        if (autoFixResult == null) {
-            logger.warn("BPMN XML auto-fix was unavailable; keeping validated XML")
-            return AutoFixedBpmnXml(xml = bpmn.xml)
-        }
+        val autoFixResult =
+            bpmnLintingPort.autoFix(bpmn.xml, lintIssues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT) ?: run {
+                logger.warn("BPMN XML auto-fix was unavailable; keeping validated XML")
+                return AutoFixedBpmnXml(xml = bpmn.xml)
+            }
 
         if (autoFixResult.applied.isNotEmpty() ||
             autoFixResult.skipped.isNotEmpty() ||

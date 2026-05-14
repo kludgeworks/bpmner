@@ -1,5 +1,3 @@
-@file:Suppress("ReturnCount")
-
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition

@@ -1,5 +1,3 @@
-@file:Suppress("ReturnCount")
-
 package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
@@ -26,15 +24,15 @@ data class BpmnElementIndex(
     fun objectRefForElementId(elementId: String?): String? {
         if (elementId == null) return null
         if (elementId == processId) return processObjectRef
-        nodeObjectRefs[elementId]?.let { return it }
-        edgeObjectRefs[elementId]?.let { return it }
-        shapeIdsByNodeId.entries.firstOrNull { (_, shapeId) -> shapeId == elementId }?.let { (nodeId, _) ->
-            return nodeObjectRefs[nodeId]
-        }
-        edgeDiagramIdsByEdgeId.entries.firstOrNull { (_, diagramId) -> diagramId == elementId }?.let { (edgeId, _) ->
-            return edgeObjectRefs[edgeId]
-        }
-        return null
+
+        return nodeObjectRefs[elementId]
+            ?: edgeObjectRefs[elementId]
+            ?: shapeIdsByNodeId.entries.firstOrNull { (_, shapeId) -> shapeId == elementId }?.let { (nodeId, _) ->
+                nodeObjectRefs[nodeId]
+            }
+            ?: edgeDiagramIdsByEdgeId.entries.firstOrNull { (_, diagramId) -> diagramId == elementId }?.let { (edgeId, _) ->
+                edgeObjectRefs[edgeId]
+            }
     }
 
     fun knownElementIds(): Set<String> =

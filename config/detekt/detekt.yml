@@ -12,6 +12,11 @@ style:
   UnusedParameter:
     active: true
     allowedNames: '(_.*)'
+  ReturnCount:
+    active: true
+    max: 4
+    excludeGuardClauses: true
+    excludeReturnFromLambda: true
 
 naming:
   FunctionParameterNaming:

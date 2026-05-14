@@ -1,5 +1,3 @@
-@file:Suppress("ReturnCount")
-
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
