@@ -133,7 +133,7 @@ class BpmnRefinementEngineTest {
         val result =
             engine.refine(
                 BpmnRequest("Generate a process"),
-                testLaidOutGraph(initial),
+                testLaidOutGraph(initial, withOwnership = true),
                 RecordingConverter().render(initial),
                 context,
             )
@@ -164,7 +164,7 @@ class BpmnRefinementEngineTest {
 
         engine.refine(
             BpmnRequest("Generate a process"),
-            testLaidOutGraph(initial),
+            testLaidOutGraph(initial, withOwnership = true),
             RecordingConverter().render(initial),
             context,
         )
@@ -249,7 +249,13 @@ class BpmnRefinementEngineTest {
         val engine = refinementEngine(BpmnConfig(maxAttempts = 3), lint, xsd, converter)
         val context = FakeActionContext()
 
-        val result = engine.refine(BpmnRequest("Route an order"), testLaidOutGraph(invalid), converter.render(invalid), context)
+        val result =
+            engine.refine(
+                BpmnRequest("Route an order"),
+                testLaidOutGraph(invalid, withOwnership = true),
+                converter.render(invalid),
+                context,
+            )
 
         assertEquals(1, result.repairAttempts)
         assertTrue(context.llmInvocations.isEmpty())
@@ -281,7 +287,7 @@ class BpmnRefinementEngineTest {
 
         val evaluation =
             pipeline.evaluate(
-                graph = testLaidOutGraph(invalid),
+                graph = testLaidOutGraph(invalid, withOwnership = true),
                 definition = invalid,
                 rendered = null,
                 repairAttempts = 0,

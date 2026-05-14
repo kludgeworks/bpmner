@@ -1,21 +1,20 @@
 def _cpd_test_impl(ctx):
     pmd_cli = ctx.executable._pmd_cli
-    
+
     # Create a file containing the list of source files to check
     sources_file = ctx.actions.declare_file(ctx.label.name + ".sources")
     ctx.actions.write(
         output = sources_file,
         content = "\n".join([f.path for f in ctx.files.srcs]),
     )
-    
+
     executable = ctx.actions.declare_file(ctx.label.name + ".sh")
-    
+
     # Construct the CPD command
     # PMD 6.x CPD CLI: cpd --minimum-tokens 100 --language kotlin --files <file> --format text
     # We use --filelist to avoid command line length limits
     cmd = [
         ctx.executable._pmd_cli.short_path,
-        "cpd",
         "--minimum-tokens",
         str(ctx.attr.minimum_tokens),
         "--language",
@@ -29,13 +28,13 @@ def _cpd_test_impl(ctx):
         "--filelist",
         sources_file.short_path,
     ]
-    
+
     ctx.actions.write(
         output = executable,
         content = "#!/bin/bash\nexec " + " ".join(cmd) + " \"$@\"",
         is_executable = True,
     )
-    
+
     return [
         DefaultInfo(
             executable = executable,
@@ -57,7 +56,7 @@ cpd_test = rule(
             mandatory = True,
             doc = "The language to use (e.g., kotlin, typescript)",
         ),
-        "minimum_tokens": attr.integer(
+        "minimum_tokens": attr.int(
             default = 100,
         ),
         "encoding": attr.string(
@@ -70,7 +69,7 @@ cpd_test = rule(
             default = True,
         ),
         "_pmd_cli": attr.label(
-            default = Label("@net_sourceforge_pmd//:pmd"),
+            default = Label("//tools/pmd:cpd_bin"),
             executable = True,
             cfg = "exec",
         ),

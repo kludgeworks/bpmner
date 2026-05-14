@@ -202,7 +202,6 @@ internal class BpmnLayoutAgent(
                 appendLine(": ${diagnostic.message}")
             }
         }.trim()
-
 }
 
 private fun BpmnAutoFixChange.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")
