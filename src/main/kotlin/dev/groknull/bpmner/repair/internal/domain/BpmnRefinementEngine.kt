@@ -6,6 +6,7 @@ import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnAttemptHistory
 import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
@@ -14,6 +15,7 @@ import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -110,7 +112,10 @@ internal class BpmnRefinementEngine(
 
         logAndPublishEvent(request, currentAttempt, maxEvaluations, context)
 
-        val repaired = runRepair(currentAttempt, maxEvaluations, history, request, context)
+        val resolution = runRepair(currentAttempt, maxEvaluations, history, request, context)
+        val repaired = resolution.repaired
+
+        logRouteSummary(currentAttempt, resolution)
 
         validateRepairEffect(repaired, currentRecord, history, maxEvaluations, request)
 
@@ -174,19 +179,20 @@ internal class BpmnRefinementEngine(
         history: BpmnAttemptHistory,
         request: BpmnRequest,
         context: ActionContext,
-    ): BpmnRepairResult.Repaired {
+    ): RepairStepResolution {
         val repairPromptRunner =
             promptRunner(context, request).let { runner ->
                 val docsPrompt = promptFactory.lintRuleDocsPrompt(attempt.diagnostics)
                 if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
             }
-        return when (val repair = repairWithStrategies(attempt, repairPromptRunner)) {
+        val (result, localOutcome) = repairWithStrategies(attempt, repairPromptRunner)
+        return when (result) {
             is BpmnRepairResult.Repaired -> {
-                repair
+                RepairStepResolution(result, localOutcome)
             }
 
             is BpmnRepairResult.TerminalFailure -> {
-                failRefinement(maxEvaluations, history, repair.reason, request)
+                failRefinement(maxEvaluations, history, result.reason, request)
             }
 
             BpmnRepairResult.NotApplicable,
@@ -201,6 +207,11 @@ internal class BpmnRefinementEngine(
             }
         }
     }
+
+    private data class RepairStepResolution(
+        val repaired: BpmnRepairResult.Repaired,
+        val localOutcome: BpmnLocalRepairOutcome,
+    )
 
     private fun validateRepairEffect(
         repaired: BpmnRepairResult.Repaired,
@@ -267,7 +278,7 @@ internal class BpmnRefinementEngine(
     private fun repairWithStrategies(
         attempt: BpmnRepairAttempt,
         promptRunner: PromptRunner,
-    ): BpmnRepairResult {
+    ): Pair<BpmnRepairResult, BpmnLocalRepairOutcome> {
         var localOutcome = BpmnLocalRepairOutcome.EMPTY
         for (strategy in strategies) {
             val strategyContext =
@@ -289,12 +300,66 @@ internal class BpmnRefinementEngine(
                 }
 
                 else -> {
-                    return result
+                    return result to localOutcome
                 }
             }
         }
-        return BpmnRepairResult.NotApplicable
+        return BpmnRepairResult.NotApplicable to localOutcome
     }
+
+    private fun logRouteSummary(
+        attempt: BpmnRepairAttempt,
+        resolution: RepairStepResolution,
+    ) {
+        val summary = computeRouteSummary(attempt.diagnostics, resolution)
+        if (summary.total == 0) return
+        logger.info(
+            "Repair attempt {} route summary: total={} localAttempted={} localApplied={} localFailed={} llmRouted={} unfixable={}",
+            attempt.attemptNumber,
+            summary.total,
+            summary.localAttempted,
+            summary.localApplied,
+            summary.localFailed,
+            summary.llmRouted,
+            summary.unfixable,
+        )
+    }
+
+    private fun computeRouteSummary(
+        diagnostics: List<BpmnDiagnostic>,
+        resolution: RepairStepResolution,
+    ): RouteSummary {
+        val lintDiagnostics = diagnostics.filter { it.source == BpmnDiagnosticSource.LINT }
+        var localAttempted = 0
+        var llmRouted = 0
+        var unfixable = 0
+        for (diagnostic in lintDiagnostics) {
+            when (diagnostic.kind) {
+                RepairKind.LOCAL_MODEL_FIX, RepairKind.LOCAL_XML_FIX -> localAttempted++
+                RepairKind.LLM_MODEL_PATCH, RepairKind.LLM_XML_REWRITE, null -> llmRouted++
+                RepairKind.UNFIXABLE -> unfixable++
+            }
+        }
+        val localApplied = resolution.repaired.localFixSummary?.total ?: 0
+        val localFailed = resolution.localOutcome.failures.size
+        return RouteSummary(
+            total = lintDiagnostics.size,
+            localAttempted = localAttempted,
+            localApplied = localApplied,
+            localFailed = localFailed,
+            llmRouted = llmRouted,
+            unfixable = unfixable,
+        )
+    }
+
+    private data class RouteSummary(
+        val total: Int,
+        val localAttempted: Int,
+        val localApplied: Int,
+        val localFailed: Int,
+        val llmRouted: Int,
+        val unfixable: Int,
+    )
 
     private fun promptRunner(
         context: OperationContext,

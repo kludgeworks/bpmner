@@ -3,6 +3,7 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.chat.Message
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnLocalFixSummary
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairAttempt
 import org.jmolecules.architecture.hexagonal.SecondaryPort
@@ -24,6 +25,7 @@ internal sealed class BpmnRepairResult {
         val definition: BpmnDefinition,
         val promptText: String,
         val messages: List<Message>,
+        val localFixSummary: BpmnLocalFixSummary? = null,
     ) : BpmnRepairResult()
 
     data object NotApplicable : BpmnRepairResult()
