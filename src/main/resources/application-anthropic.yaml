@@ -28,6 +28,9 @@ embabel:
     default-llm: claude-sonnet-4-0
     llms:
       generator: claude-sonnet-4-0
+      repair-label: claude-haiku-4-0
+      repair-patch: claude-haiku-4-0
+      repair-rewrite: claude-sonnet-4-0
       repairer: claude-sonnet-4-0
 
 bpmner:
