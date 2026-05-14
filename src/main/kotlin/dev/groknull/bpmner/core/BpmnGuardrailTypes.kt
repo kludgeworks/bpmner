@@ -196,6 +196,12 @@ data class ProcessContract(
     @field:NotBlank
     @get:JsonPropertyDescription("Concise process summary")
     val summary: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Process start trigger derived from the source input")
+    val trigger: String,
+    @field:Valid
+    @get:JsonPropertyDescription("Trace links grounding the trigger in source evidence")
+    val triggerTraceLinks: List<TraceLink> = emptyList(),
     @field:NotEmpty
     @field:Valid
     @get:JsonPropertyDescription("Activities required by the process contract")

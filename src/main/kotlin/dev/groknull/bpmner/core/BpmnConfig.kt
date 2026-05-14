@@ -10,6 +10,8 @@ data class BpmnConfig(
     val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
+    val contractExtractor: Actor<Persona> = DEFAULT_CONTRACT_EXTRACTOR,
+    val contract: BpmnContractConfig = BpmnContractConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
 ) {
@@ -41,8 +43,27 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("repairer"),
             )
+        val DEFAULT_CONTRACT_EXTRACTOR =
+            Actor(
+                persona =
+                    Persona(
+                        name = "Process Contract Extractor",
+                        persona =
+                            "You are a conservative business analyst who extracts source-grounded process contracts",
+                        objective =
+                            "Produce a typed ProcessContract whose every element is traceable to the source" +
+                                " input, an assessment evidence id, a clarification answer, or an explicit" +
+                                " assumption; never invent facts that are not grounded",
+                        voice = "specific and evidence-grounded",
+                    ),
+                llm = LlmOptions.withLlmForRole("contract-extractor"),
+            )
     }
 }
+
+data class BpmnContractConfig(
+    val maxAssumptions: Int = 10,
+)
 
 data class BpmnLoggingConfig(
     val dumpArtifacts: Boolean = false,
