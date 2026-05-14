@@ -52,7 +52,7 @@ internal class BpmnGenerationService(
         logger.info(
             "BPMN generation completed. outputFile={}, xmlLength={}",
             result.outputFile,
-            result.xml.length,
+            result.xml?.length ?: 0,
         )
         return result
     }
