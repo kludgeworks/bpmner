@@ -93,6 +93,7 @@ class ProcessContractMarkdownRendererTest {
             classification = AlignmentClassification.SUPPORTED,
         )
 
+    @Suppress("LongMethod") // exhaustive contract fixture — splitting it obscures the assertions
     private fun fullContract() =
         ProcessContract(
             id = "contract-1",

@@ -29,7 +29,10 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
-@Suppress("LongParameterList") // Spring constructor injection — no cleaner grouping possible
+@Suppress(
+    "LongParameterList", // Spring constructor injection — no cleaner grouping possible
+    "TooManyFunctions", // repair engine coordinates several distinct phases — splitting hurts cohesion
+)
 internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,
@@ -314,7 +317,8 @@ internal class BpmnRefinementEngine(
         val summary = computeRouteSummary(attempt.diagnostics, resolution)
         if (summary.total == 0) return
         logger.info(
-            "Repair attempt {} route summary: total={} localAttempted={} localApplied={} localFailed={} llmRouted={} unfixable={}",
+            "Repair attempt {} route summary: total={} localAttempted={} localApplied={}" +
+                " localFailed={} llmRouted={} unfixable={}",
             attempt.attemptNumber,
             summary.total,
             summary.localAttempted,

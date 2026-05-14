@@ -18,6 +18,8 @@ import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.ProcessContract
 import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.core.ReadinessDimensionScore
 import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.core.TraceLink
@@ -68,8 +70,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
-        whenCreateObject({ it.contains("Return only a structured ProcessInputAssessment object.") }, ProcessInputAssessment::class.java)
-            .thenReturn(validAssessment())
+        whenCreateObject(
+            { it.contains("Return only a structured ProcessInputAssessment object.") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(validAssessment())
         whenCreateObject({ it.contains("Return only a structured ProcessContract object.") }, ProcessContract::class.java)
             .thenReturn(validContract())
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
@@ -106,7 +110,14 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         ProcessInputAssessment(
             verdict = ReadinessVerdict.READY,
             overallScore = 90,
-            dimensions = emptyList(),
+            dimensions =
+                listOf(
+                    ReadinessDimensionScore(
+                        dimension = ReadinessDimension.START_TRIGGER,
+                        score = 90,
+                        rationale = "Order submission is an explicit trigger.",
+                    ),
+                ),
             evidence =
                 listOf(
                     SourceEvidence(

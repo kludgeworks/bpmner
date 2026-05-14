@@ -16,10 +16,16 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine("Use the original input only as secondary traceability context.")
             appendLine()
             appendLine("Contract-driven generation rules:")
-            appendLine("- Include the contract trigger, ordered activities, decisions, branches, exception or rework paths, and end states.")
+            appendLine(
+                "- Include the contract trigger, ordered activities, decisions, branches," +
+                    " exception or rework paths, and end states.",
+            )
             appendLine("- Represent actors only where current BPMN DTOs allow, usually in task names.")
             appendLine("- Do not add unsupported business tasks, decisions, branches, actors, or end states.")
-            appendLine("- You may infer layout coordinates, waypoints, sequence flows, and routing-only converging gateways needed for valid BPMN.")
+            appendLine(
+                "- You may infer layout coordinates, waypoints, sequence flows," +
+                    " and routing-only converging gateways needed for valid BPMN.",
+            )
             appendLine("- Leave routing-only converging gateways unnamed.")
             appendLine()
             appendLine("Primary validated ProcessContract:")
@@ -34,6 +40,8 @@ internal class BpmnContractGenerationPromptFactory {
             }
         }
 
+    // markdown rendering of the contract; one branch per contract section keeps output cohesive
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     private fun renderContract(contract: ProcessContract): String =
         buildString {
             appendLine("# ${contract.processName}")

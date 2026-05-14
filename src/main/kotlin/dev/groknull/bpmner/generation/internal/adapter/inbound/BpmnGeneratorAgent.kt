@@ -21,10 +21,10 @@ import dev.groknull.bpmner.core.PhasePlan
 import dev.groknull.bpmner.core.PhasePlanSet
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.ValidatedProcessContract
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.ValidatedPhasePlan
 import dev.groknull.bpmner.core.ValidatedPhasePlanSet
+import dev.groknull.bpmner.core.ValidatedProcessContract
 import dev.groknull.bpmner.core.format
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -57,11 +57,9 @@ internal class BpmnGeneratorAgent(
             val issues =
                 validatedContract.report.issues
                     .joinToString(separator = System.lineSeparator()) { "- ${it.format()}" }
-            throw IllegalStateException(
-                "Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues",
-            )
+            error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
-        val promptRunner = config.generator.promptRunner(context).withPromptContributor(request)
+        val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
         val definition = promptRunner.createObject(prompt, BpmnDefinition::class.java)
         val outline =
