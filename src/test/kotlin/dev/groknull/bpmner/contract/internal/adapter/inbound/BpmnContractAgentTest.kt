@@ -6,6 +6,7 @@ import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRende
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.ContractActivity
 import dev.groknull.bpmner.core.ContractEndState
 import dev.groknull.bpmner.core.EvidenceSourceType
@@ -60,6 +61,32 @@ class BpmnContractAgentTest {
         assertTrue(prompt.contains("One actor responsibility is underspecified."))
         assertTrue(prompt.contains("ev1: Ship approved order"))
         assertTrue(prompt.contains("Do not invent actors"))
+    }
+
+    @Test
+    fun `prompt sent to the LLM includes request clarification history`() {
+        val context = FakeOperationContext()
+        context.expectResponse(sampleContract())
+        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+
+        agent.extractProcessContract(
+            sampleRequest().copy(
+                clarificationHistory =
+                    listOf(
+                        ClarificationExchange(
+                            questionId = "q1",
+                            questionText = "What starts the process?",
+                            answerText = "The customer submits an order.",
+                        ),
+                    ),
+            ),
+            sampleAssessment(),
+            context,
+        )
+
+        val prompt = context.llmInvocations.single().prompt
+        assertTrue(prompt.contains("[q1] Q: What starts the process?"))
+        assertTrue(prompt.contains("A: The customer submits an order."))
     }
 
     private fun sampleRequest() = BpmnRequest(processDescription = "When a customer submits an order, ship it.")

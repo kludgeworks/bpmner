@@ -3,6 +3,7 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 import dev.groknull.bpmner.BpmnerApplicationShutdown
 import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -41,6 +42,7 @@ class BpmnGeneratorRunnerTest {
                 processDescription = "Ship order",
                 outputFile = "ship.bpmn",
                 styleGuide = "style.md",
+                mode = GenerationMode.SINGLE_SHOT,
             ),
             generationUseCase.calls.single(),
         )

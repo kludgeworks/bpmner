@@ -39,7 +39,7 @@ internal class BpmnContractAgent(
                 .withPromptContributor(request)
         val contract =
             promptRunner.createObject(
-                promptFactory.prompt(request, assessment, clarificationHistory = emptyList()),
+                promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
                 ProcessContract::class.java,
             )
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
