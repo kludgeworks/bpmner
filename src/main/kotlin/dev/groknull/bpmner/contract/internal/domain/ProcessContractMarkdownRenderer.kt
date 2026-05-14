@@ -5,6 +5,8 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class ProcessContractMarkdownRenderer {
+    // markdown rendering of the contract; one branch per contract section keeps output cohesive
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun render(contract: ProcessContract): String =
         buildString {
             appendLine("# ${contract.processName}")
