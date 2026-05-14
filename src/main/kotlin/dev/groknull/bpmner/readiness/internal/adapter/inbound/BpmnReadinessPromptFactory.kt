@@ -40,5 +40,15 @@ internal class BpmnReadinessPromptFactory(
             appendLine()
             appendLine("Original BPMN request text:")
             appendLine(request.processDescription)
+            if (request.clarificationHistory.isNotEmpty()) {
+                appendLine()
+                appendLine("Prior clarification answers:")
+                request.clarificationHistory.forEach {
+                    appendLine("- [${it.questionId}] Q: ${it.questionText}")
+                    appendLine("  A: ${it.answerText}")
+                }
+                appendLine()
+                appendLine("Re-assess readiness using both the original text and clarification answers.")
+            }
         }
 }
