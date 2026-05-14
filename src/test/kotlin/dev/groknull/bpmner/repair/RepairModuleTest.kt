@@ -1,5 +1,3 @@
-
-
 package dev.groknull.bpmner.repair
 
 import com.embabel.agent.api.common.ActionContext
@@ -17,7 +15,6 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -30,6 +27,7 @@ import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent

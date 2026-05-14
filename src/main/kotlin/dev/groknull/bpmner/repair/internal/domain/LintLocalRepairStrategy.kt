@@ -5,13 +5,13 @@ import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleIds
-import dev.groknull.bpmner.core.BpmnLocalFixFailure
-import dev.groknull.bpmner.core.BpmnLocalFixSummary
-import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.generation.BpmnXmlParser
+import dev.groknull.bpmner.repair.BpmnLocalFixFailure
+import dev.groknull.bpmner.repair.BpmnLocalFixSummary
+import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
+import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import org.jmolecules.ddd.annotation.Service

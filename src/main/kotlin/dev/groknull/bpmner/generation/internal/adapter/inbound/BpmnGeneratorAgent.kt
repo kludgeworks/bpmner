@@ -9,7 +9,6 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
@@ -27,6 +26,7 @@ import dev.groknull.bpmner.core.ValidatedPhasePlanSet
 import dev.groknull.bpmner.core.generationPrompt
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
 import dev.groknull.bpmner.generation.BpmnRenderer
+import dev.groknull.bpmner.guardrails.BpmnGenerationStatus
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher

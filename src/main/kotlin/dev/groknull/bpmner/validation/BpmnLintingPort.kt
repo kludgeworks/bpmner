@@ -1,8 +1,6 @@
 package dev.groknull.bpmner.validation
-
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.LintIssue
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 

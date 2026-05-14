@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.guardrails
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription

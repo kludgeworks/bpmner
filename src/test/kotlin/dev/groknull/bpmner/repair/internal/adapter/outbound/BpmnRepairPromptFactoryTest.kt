@@ -7,14 +7,9 @@ import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.BpmnEvaluation
 import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
-import dev.groknull.bpmner.core.BpmnLocalFixFailure
-import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
@@ -29,6 +24,11 @@ import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
+import dev.groknull.bpmner.repair.BpmnLocalFixFailure
+import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
+import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.validation.BpmnEvaluation
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import kotlin.test.Test

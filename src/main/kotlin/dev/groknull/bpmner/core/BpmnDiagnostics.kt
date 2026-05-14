@@ -17,6 +17,21 @@ enum class BpmnRepairScope {
     FULL_PROCESS,
 }
 
+enum class RepairKind {
+    LOCAL_MODEL_FIX,
+    LOCAL_XML_FIX,
+    LLM_MODEL_PATCH,
+    LLM_XML_REWRITE,
+    UNFIXABLE,
+    ;
+
+    fun isLocal(): Boolean = this == LOCAL_MODEL_FIX || this == LOCAL_XML_FIX
+
+    fun isLlm(): Boolean = this == LLM_MODEL_PATCH || this == LLM_XML_REWRITE
+}
+
+enum class BpmnRepairSafety { SAFE_AUTOMATIC, SAFE_MANUAL, LLM_ONLY }
+
 @JsonClassDescription(
     "Normalized BPMN validation or rendering diagnostic linked back to the typed definition where possible",
 )

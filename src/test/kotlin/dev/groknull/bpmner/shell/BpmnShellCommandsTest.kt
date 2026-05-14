@@ -1,9 +1,9 @@
 package dev.groknull.bpmner.shell
 
-import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.guardrails.BpmnGenerationStatus
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

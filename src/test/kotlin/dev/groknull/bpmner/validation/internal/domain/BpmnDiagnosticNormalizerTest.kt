@@ -5,7 +5,6 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -18,6 +17,7 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import kotlin.test.Test
 import kotlin.test.assertEquals

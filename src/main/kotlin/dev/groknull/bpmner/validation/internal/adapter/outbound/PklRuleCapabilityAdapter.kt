@@ -1,8 +1,8 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.RepairKind
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

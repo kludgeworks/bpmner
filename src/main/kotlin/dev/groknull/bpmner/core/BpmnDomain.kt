@@ -3,6 +3,9 @@ package dev.groknull.bpmner.core
 import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import dev.groknull.bpmner.guardrails.BpmnAlignmentReport
+import dev.groknull.bpmner.guardrails.BpmnGenerationStatus
+import dev.groknull.bpmner.guardrails.ProcessInputAssessment
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
