@@ -10,6 +10,7 @@ enum class ContractIssueSeverity {
 enum class ContractValidationCode {
     MISSING_PROCESS_NAME,
     MISSING_TRIGGER,
+    TRIGGER_WITHOUT_TRACE,
     NO_END_STATE,
     INSUFFICIENT_ACTIVITIES,
     DECISION_BRANCH_TOO_FEW,
@@ -31,6 +32,13 @@ data class ContractValidationReport(
     val issues: List<ContractValidationIssue>,
 ) {
     val isValid: Boolean = issues.none { it.severity == ContractIssueSeverity.ERROR }
+}
+
+data class ValidatedProcessContract(
+    val contract: ProcessContract,
+    val report: ContractValidationReport,
+) {
+    val isValid: Boolean = report.isValid
 }
 
 fun ContractValidationIssue.format(): String =

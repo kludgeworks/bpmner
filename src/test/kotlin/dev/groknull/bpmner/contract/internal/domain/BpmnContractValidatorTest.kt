@@ -127,6 +127,14 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `trigger without trace links produces an error`() {
+        val contract = linearContract().copy(triggerTraceLinks = emptyList())
+        val report = validator.validate(contract)
+        assertFalse(report.isValid)
+        assertTrue(report.issues.any { it.code == ContractValidationCode.TRIGGER_WITHOUT_TRACE })
+    }
+
+    @Test
     fun `untraced activity produces an error`() {
         val original = linearContract()
         val activitiesWithoutTrace =
