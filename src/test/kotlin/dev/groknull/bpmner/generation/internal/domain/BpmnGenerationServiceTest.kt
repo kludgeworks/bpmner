@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.InputPathResolver
@@ -89,7 +90,11 @@ class BpmnGenerationServiceTest {
 
         override fun generate(request: BpmnRequest): BpmnResult {
             lastRequest = request
-            return BpmnResult(outputFile = request.outputFile, xml = "<definitions />")
+            return BpmnResult(
+                outputFile = request.outputFile,
+                status = BpmnGenerationStatus.GENERATED,
+                xml = "<definitions />",
+            )
         }
     }
 }

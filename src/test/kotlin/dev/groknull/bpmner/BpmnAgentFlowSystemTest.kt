@@ -75,7 +75,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
                 )
 
         assertEquals(outputFile.toString(), result.outputFile)
-        assertTrue(result.xml.contains("<process"))
+        assertTrue(result.xml!!.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(org.mockito.ArgumentMatchers.anyString())
         verify(bpmnLintService, times(2)).lint(

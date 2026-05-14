@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.shell
 
+import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
@@ -57,7 +58,11 @@ class BpmnShellCommandsTest {
 
         override fun generate(input: BpmnGenerationInput): BpmnResult {
             calls += input
-            return BpmnResult(outputFile = input.outputFile, xml = "<definitions />")
+            return BpmnResult(
+                outputFile = input.outputFile,
+                status = BpmnGenerationStatus.GENERATED,
+                xml = "<definitions />",
+            )
         }
     }
 }
