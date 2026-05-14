@@ -55,12 +55,12 @@ class BpmnGeneratorRunner(
             BpmnGenerationStatus.NEEDS_CLARIFICATION ->
                 AnsiOutput.toString(
                     AnsiColor.BRIGHT_YELLOW,
-                    "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile}",
+                    "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile ?: "(not written)"}",
                 )
             BpmnGenerationStatus.NOT_A_PROCESS ->
                 AnsiOutput.toString(
                     AnsiColor.BRIGHT_YELLOW,
-                    "⚠ Generation blocked: input is not a process. Readiness report: ${result.reportFile}",
+                    "⚠ Generation blocked: input is not a process. Readiness report: ${result.reportFile ?: "(not written)"}",
                 )
             BpmnGenerationStatus.ALIGNMENT_FAILED,
             BpmnGenerationStatus.VALIDATION_FAILED,
