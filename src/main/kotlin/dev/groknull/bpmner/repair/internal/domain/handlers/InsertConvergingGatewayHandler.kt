@@ -20,6 +20,7 @@ internal class InsertConvergingGatewayHandler : BpmnLocalModelFixHandler {
         elementId: String,
     ): List<BpmnPatchOperation> {
         val task = definition.nodes.firstOrNull { it.id == elementId } ?: return emptyList()
+        if (task.type !in setOf(NodeType.USER_TASK, NodeType.SERVICE_TASK)) return emptyList()
         val incomingEdges = definition.sequences.filter { it.targetRef == elementId }
         if (incomingEdges.size < 2) return emptyList()
 
