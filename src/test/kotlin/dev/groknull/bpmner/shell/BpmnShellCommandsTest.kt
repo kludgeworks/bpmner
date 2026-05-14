@@ -113,6 +113,64 @@ class BpmnShellCommandsTest {
     }
 
     @Test
+    fun `alignment failed response includes report file path`() {
+        val generationUseCase =
+            CapturingGenerationUseCase(
+                results =
+                    ArrayDeque(
+                        listOf(
+                            BpmnResult(
+                                outputFile = "ship.bpmn",
+                                status = BpmnGenerationStatus.ALIGNMENT_FAILED,
+                                reportFile = "ship.alignment.md",
+                            ),
+                        ),
+                    ),
+            )
+        val commands = BpmnShellCommands(generationUseCase, CapturingPrompter())
+
+        val response =
+            commands.generate(
+                processDescription = "Ship order",
+                processFile = null,
+                output = "ship.bpmn",
+                styleGuide = null,
+            )
+
+        assertTrue(response.contains("semantic alignment failed"))
+        assertTrue(response.contains("report=ship.alignment.md"))
+    }
+
+    @Test
+    fun `validation failed response includes report file path`() {
+        val generationUseCase =
+            CapturingGenerationUseCase(
+                results =
+                    ArrayDeque(
+                        listOf(
+                            BpmnResult(
+                                outputFile = "ship.bpmn",
+                                status = BpmnGenerationStatus.VALIDATION_FAILED,
+                                reportFile = "ship.validation.md",
+                            ),
+                        ),
+                    ),
+            )
+        val commands = BpmnShellCommands(generationUseCase, CapturingPrompter())
+
+        val response =
+            commands.generate(
+                processDescription = "Ship order",
+                processFile = null,
+                output = "ship.bpmn",
+                styleGuide = null,
+            )
+
+        assertTrue(response.contains("validation failed"))
+        assertTrue(response.contains("report=ship.validation.md"))
+    }
+
+    @Test
     fun `blank clarification answers do not retry generation`() {
         val generationUseCase =
             CapturingGenerationUseCase(
