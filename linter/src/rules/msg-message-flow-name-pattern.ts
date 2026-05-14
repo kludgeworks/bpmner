@@ -1,22 +1,5 @@
 import { is } from "bpmnlint-utils"
-import model from "wink-eng-lite-web-model"
-import winkNLP from "wink-nlp"
-import type { ModdleElement, Reporter } from "./_helpers"
-
-const nlp = winkNLP(model)
-const its = nlp.its
-
-function startsWithVerbLike(name: string): boolean {
-	const doc = nlp.readDoc(name)
-	const first = doc.tokens().itemAt(0)
-
-	if (!first) {
-		return false
-	}
-
-	const pos = first.out(its.pos)
-	return pos === "VERB" || pos === "AUX"
-}
+import { startsWithVerbLike, type ModdleElement, type Reporter } from "./_helpers"
 
 export = () => {
 	function check(node: ModdleElement, reporter: Reporter) {
