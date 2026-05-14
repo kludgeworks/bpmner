@@ -21,6 +21,7 @@ object TestBpmnFixtures {
     /**
      * Creates a standard three-node BPMN definition (Start -> Task -> End).
      */
+    @Suppress("LongParameterList")
     fun testBpmnDefinition(
         processId: String = "Process_MakeToast",
         processName: String = "Make toast",

@@ -1,6 +1,7 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_project")
 
@@ -30,6 +31,12 @@ filegroup(
     ),
 )
 
+copy_file(
+    name = "copy_polyfills",
+    src = "//tools/js:polyfills.ts",
+    out = "src/polyfills-shared.ts",
+)
+
 # This import path is generated from the Pkl catalog by Bazel.
 GENERATED_JSON_SRCS = [":linter_rules_json_for_ts"]
 
@@ -49,9 +56,9 @@ js_library(
     ],
 )
 
-BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + ["//tools/js:polyfills.ts"]
+BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + [":copy_polyfills"]
 
-TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES + ["//tools/js:polyfills.ts"]
+TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES + [":copy_polyfills"]
 
 # Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
@@ -90,7 +97,7 @@ ts_config(
 
 bpmner_ts_project(
     name = "ts",
-    srcs = ALL_TSC_SRCS + ["//tools/js:polyfills.ts"],
+    srcs = ALL_TSC_SRCS + [":copy_polyfills"],
     assets = BPMN_FIXTURES,
     out_dir = "tsc",
     resolve_json_module = True,

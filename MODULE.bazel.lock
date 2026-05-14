@@ -1000,7 +1000,7 @@
     "@@rules_pmd+//pmd:extensions.bzl%pmd": {
       "general": {
         "bzlTransitiveDigest": "UU1v0CSeh22O4JdYP5u9M6gyD6coR7gAQVjx6+ah86M=",
-        "usagesDigest": "D/ifXkc9TXqizjh+7qDgY1iuQU0EBFbbpTY6LO6S5Tk=",
+        "usagesDigest": "PTIvMaXqdo6oCatraFOaCm0pyjCRwKlh9zOINprV+R4=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
