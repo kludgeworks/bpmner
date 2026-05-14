@@ -9,6 +9,7 @@ data class BpmnEvaluation(
     val globalDiagnostics: GlobalDiagnostics,
     val validatedXml: String?,
     val renderFailureMessage: String? = null,
+    val rawLintIssues: List<LintIssue>? = null,
 ) {
     fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
 

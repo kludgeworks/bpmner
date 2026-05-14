@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.core.GlobalDiagnostics
 import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnValidator
@@ -56,9 +57,12 @@ internal class BpmnEvaluationPipeline(
                 )
         }
 
-        if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
-            collectRenderedDiagnostics(rendered, renderFailureMessage, graph, diagnostics)
-        }
+        val rawLintIssues =
+            if (diagnostics.none { it.source == BpmnDiagnosticSource.GRAPH }) {
+                collectRenderedDiagnostics(rendered, renderFailureMessage, graph, diagnostics)
+            } else {
+                null
+            }
 
         val infrastructureDiagnostics = normalizer.infrastructureDiagnostics(diagnostics)
         if (infrastructureDiagnostics.isNotEmpty()) {
@@ -97,6 +101,7 @@ internal class BpmnEvaluationPipeline(
             globalDiagnostics = globalDiagnostics,
             validatedXml = if (diagnostics.isEmpty()) rendered?.xml else null,
             renderFailureMessage = renderFailureMessage,
+            rawLintIssues = rawLintIssues,
         )
     }
 
@@ -105,7 +110,7 @@ internal class BpmnEvaluationPipeline(
         renderFailureMessage: String?,
         graph: LaidOutProcessGraph,
         diagnostics: MutableList<BpmnDiagnostic>,
-    ) {
+    ): List<LintIssue>? {
         if (renderFailureMessage != null || rendered == null) {
             diagnostics +=
                 normalizer.scopedDiagnostic(
@@ -116,7 +121,7 @@ internal class BpmnEvaluationPipeline(
                             message = renderFailureMessage ?: "Unknown BPMN rendering error",
                         ),
                 )
-            return
+            return null
         }
         diagnostics.addAll(
             normalizer.normalizeXsdDiagnostics(
@@ -125,14 +130,16 @@ internal class BpmnEvaluationPipeline(
                 graph = graph,
             ),
         )
-        if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-            val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
-            if (lintIssues == null) {
-                logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
-            } else {
-                diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
-            }
+        if (diagnostics.any { it.source == BpmnDiagnosticSource.XSD }) {
+            return null
         }
+        val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        if (lintIssues == null) {
+            logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
+            return null
+        }
+        diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
+        return lintIssues
     }
 
     override fun toRecord(
