@@ -1,2 +1,5 @@
 # This file makes tools/js a Bazel package.
-exports_files(["ts.bzl"])
+exports_files([
+    "polyfills.ts",
+    "ts.bzl",
+])
