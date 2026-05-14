@@ -4,6 +4,8 @@ import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.BpmnLocalFixFailure
+import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.LintIssue
@@ -49,6 +51,17 @@ internal class LintLocalRepairStrategy(
             lintingPort.autoFix(xml, issues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
                 ?: return BpmnRepairResult.NotApplicable
         failOnDeclaredLocalSkipped(result, localXmlRules)
+        if (result.errors.isNotEmpty()) {
+            logger.warn(
+                "Local auto-fix errors; recording failures for LLM fallback context: {}",
+                result.errors.joinToString { "${it.rule}@${it.elementId ?: "-"}:${it.message}" },
+            )
+            val failures =
+                result.errors.map { err ->
+                    BpmnLocalFixFailure(rule = err.rule, elementId = err.elementId, reason = err.message)
+                }
+            return BpmnRepairResult.LocalAttemptedNoChange(BpmnLocalRepairOutcome(failures))
+        }
         return when {
             !isAutoFixUsable(result) -> BpmnRepairResult.NotApplicable
             !autoFixedXmlIsXsdValid(result) -> BpmnRepairResult.NotApplicable
@@ -86,16 +99,7 @@ internal class LintLocalRepairStrategy(
         }
     }
 
-    private fun isAutoFixUsable(result: BpmnAutoFixResult): Boolean {
-        if (result.errors.isNotEmpty()) {
-            logger.warn(
-                "Local auto-fix errors; falling through to LLM strategies: {}",
-                result.errors.joinToString { "${it.rule}@${it.elementId ?: "-"}:${it.message}" },
-            )
-            return false
-        }
-        return result.changed && result.applied.isNotEmpty()
-    }
+    private fun isAutoFixUsable(result: BpmnAutoFixResult): Boolean = result.changed && result.applied.isNotEmpty()
 
     private fun autoFixedXmlIsXsdValid(result: BpmnAutoFixResult): Boolean {
         val xsdIssues = xsdValidationPort.validateDetailed(result.xml)

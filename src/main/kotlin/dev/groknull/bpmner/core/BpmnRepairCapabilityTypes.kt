@@ -15,3 +15,20 @@ data class BpmnLintRuleCapability(
     val handlerExists: Boolean,
     val replacementMap: Map<String, String>?,
 )
+
+data class BpmnLocalFixFailure(
+    val rule: String,
+    val elementId: String?,
+    val reason: String,
+)
+
+data class BpmnLocalRepairOutcome(
+    val failures: List<BpmnLocalFixFailure>,
+) {
+    fun matches(diagnostic: BpmnDiagnostic): BpmnLocalFixFailure? =
+        failures.firstOrNull { it.rule == diagnostic.rule && it.elementId == diagnostic.elementId }
+
+    companion object {
+        val EMPTY = BpmnLocalRepairOutcome(emptyList())
+    }
+}

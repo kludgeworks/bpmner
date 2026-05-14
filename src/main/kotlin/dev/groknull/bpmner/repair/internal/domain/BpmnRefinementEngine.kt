@@ -8,6 +8,7 @@ import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnFingerprintService
+import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
@@ -189,7 +190,9 @@ internal class BpmnRefinementEngine(
                 failRefinement(maxEvaluations, history, repair.reason, request)
             }
 
-            BpmnRepairResult.NotApplicable -> {
+            BpmnRepairResult.NotApplicable,
+            is BpmnRepairResult.LocalAttemptedNoChange,
+            -> {
                 failRefinement(
                     maxEvaluations = maxEvaluations,
                     history = history,
@@ -266,15 +269,29 @@ internal class BpmnRefinementEngine(
         attempt: BpmnRepairAttempt,
         promptRunner: PromptRunner,
     ): BpmnRepairResult {
-        val strategyContext =
-            BpmnRepairStrategyContext(
-                attempt = attempt,
-                promptRunner = promptRunner,
-            )
+        var localOutcome = BpmnLocalRepairOutcome.EMPTY
         for (strategy in strategies) {
+            val strategyContext =
+                BpmnRepairStrategyContext(
+                    attempt = attempt,
+                    promptRunner = promptRunner,
+                    localOutcome = localOutcome,
+                )
             when (val result = strategy.repair(strategyContext)) {
-                BpmnRepairResult.NotApplicable -> Unit
-                else -> return result
+                BpmnRepairResult.NotApplicable -> {
+                    Unit
+                }
+
+                is BpmnRepairResult.LocalAttemptedNoChange -> {
+                    localOutcome =
+                        BpmnLocalRepairOutcome(
+                            failures = localOutcome.failures + result.outcome.failures,
+                        )
+                }
+
+                else -> {
+                    return result
+                }
             }
         }
         return BpmnRepairResult.NotApplicable

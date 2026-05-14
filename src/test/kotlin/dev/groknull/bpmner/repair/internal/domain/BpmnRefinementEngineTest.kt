@@ -64,14 +64,13 @@ class BpmnRefinementEngineTest {
         val fingerprints = BpmnFingerprintService()
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
-        val prompts = BpmnRepairPromptFactory(config, lint, fingerprints, llmValidator)
+        val prompts = BpmnRepairPromptFactory(lint, fingerprints, llmValidator)
         val patchApplier = BpmnPatchApplier()
         val strategies =
             mutableListOf<BpmnRepairStrategy>(
                 FullLlmRewriteRepairStrategy(prompts),
                 LlmPatchRepairStrategy(prompts, patchApplier),
                 DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                TargetedLabelRepairStrategy(prompts, patchApplier),
                 LintLocalRepairStrategy(lint, xsd, parser),
             )
 
@@ -81,7 +80,6 @@ class BpmnRefinementEngineTest {
             listOf(
                 DeterministicTopologyRepairStrategy::class,
                 LintLocalRepairStrategy::class,
-                TargetedLabelRepairStrategy::class,
                 LlmPatchRepairStrategy::class,
                 FullLlmRewriteRepairStrategy::class,
             ),
@@ -145,6 +143,80 @@ class BpmnRefinementEngineTest {
         assertEquals(1, lint.autoFixCalls)
         assertEquals(1, parser.parseCalls)
     }
+
+    @Test
+    fun `mixed local-failed and LLM diagnostics route LLM with annotated context`() {
+        val initial = validDefinition()
+        val corrected = initial.copy(processName = "Test corrected")
+        val lint = mixedDiagnosticLintService()
+        val xsd = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val parser = RecordingXmlParser(corrected)
+        val engine =
+            refinementEngine(
+                config = BpmnConfig(maxAttempts = 3),
+                lintService = lint,
+                xsdValidator = xsd,
+                converter = RecordingConverter(),
+                xmlParser = parser,
+            )
+        val context = FakeActionContext()
+        context.expectResponse(setNodeNamePatch(nodeId = "EndEvent_1", name = "Order completed"))
+
+        engine.refine(
+            BpmnRequest("Generate a process"),
+            graph(initial),
+            RecordingConverter().render(initial),
+            context,
+        )
+
+        assertEquals(1, context.llmInvocations.size, "expected exactly one LLM call after local repair fell through")
+        val prompt =
+            context.llmInvocations
+                .single()
+                .messages
+                .joinToString("\n") { it.content }
+        assertTrue(prompt.contains("rule=klm/name-02"), "LLM diagnostic should appear in prompt")
+        assertTrue(prompt.contains("rule=klm/name-01"), "failed-local diagnostic should appear in prompt")
+        assertTrue(
+            prompt.contains("[local-fix-failed: handler boom]"),
+            "failed-local diagnostic should be annotated; got: $prompt",
+        )
+        assertEquals(1, lint.autoFixCalls)
+    }
+
+    private fun mixedDiagnosticLintService(): RecordingLintService {
+        val localLintIssue =
+            LintIssue(id = "Task_1", rule = "klm/name-01", message = "Element name must not include its BPMN element type")
+        val llmLintIssue =
+            LintIssue(id = "EndEvent_1", rule = "klm/name-02", message = "Use a verb-object name")
+        val localCapability =
+            BpmnLintRuleCapability(
+                id = "name-01",
+                repairRoute = BpmnRepairRoute.LOCAL_XML,
+                editSurface = BpmnEditSurface.BPMN_XML,
+                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                fixHandler = "stripTypeWords",
+                handlerExists = true,
+                replacementMap = null,
+            )
+        val autoFixError =
+            dev.groknull.bpmner.core
+                .BpmnAutoFixError(rule = "klm/name-01", elementId = "Task_1", message = "handler boom")
+        return RecordingLintService(
+            lintResponses = listOf(listOf(localLintIssue, llmLintIssue), emptyList()),
+            autoFixResponse = BpmnAutoFixResult(changed = false, xml = "", errors = listOf(autoFixError)),
+            capabilities = mapOf("name-01" to localCapability),
+        )
+    }
+
+    private fun setNodeNamePatch(
+        nodeId: String,
+        name: String,
+    ): BpmnRepairPatch =
+        BpmnRepairPatch(
+            operations =
+                listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
+        )
 
     @Test
     fun `deterministic topology strategy repairs without calling LLM`() {
@@ -221,7 +293,7 @@ class BpmnRefinementEngineTest {
         val normalizer = BpmnDiagnosticNormalizer(lintService)
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
-        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
+        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, llmValidator)
         val patchApplier = BpmnPatchApplier()
         return BpmnRefinementEngine(
             config = config,
@@ -241,7 +313,6 @@ class BpmnRefinementEngineTest {
                 listOf(
                     DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
                     LintLocalRepairStrategy(lintService, xsdValidator, xmlParser),
-                    TargetedLabelRepairStrategy(promptFactory, patchApplier),
                     LlmPatchRepairStrategy(promptFactory, patchApplier),
                     FullLlmRewriteRepairStrategy(promptFactory),
                 ),
@@ -326,6 +397,10 @@ class BpmnRefinementEngineTest {
 
         val llmInvocations
             get() = delegate.llmInvocations
+
+        fun expectResponse(response: Any) {
+            delegate.expectResponse(response)
+        }
 
         override fun promptRunner(
             llm: LlmOptions,
