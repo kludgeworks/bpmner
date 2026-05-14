@@ -56,9 +56,9 @@ class BpmnShellCommands(
         when (result.status) {
             BpmnGenerationStatus.GENERATED -> "BPMN written to: ${result.outputFile}"
             BpmnGenerationStatus.NEEDS_CLARIFICATION ->
-                "Generation blocked: input needs clarification. Readiness report: ${result.reportFile}"
+                "Generation blocked: input needs clarification. Readiness report: ${result.reportFile ?: "(not written)"}"
             BpmnGenerationStatus.NOT_A_PROCESS ->
-                "Generation blocked: input is not a process. Readiness report: ${result.reportFile}"
+                "Generation blocked: input is not a process. Readiness report: ${result.reportFile ?: "(not written)"}"
             BpmnGenerationStatus.ALIGNMENT_FAILED,
             BpmnGenerationStatus.VALIDATION_FAILED,
             -> "Generation finished with status ${result.status}."
