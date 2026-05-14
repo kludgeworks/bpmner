@@ -18,6 +18,7 @@ internal class ConvergingGatewayClearNameHandler : BpmnLocalModelFixHandler {
         if (node.name.isNullOrBlank()) return emptyList()
         val incoming = definition.sequences.count { it.targetRef == elementId }
         val outgoing = definition.sequences.count { it.sourceRef == elementId }
+        // Converging-only: two or more incoming flows and at most one outgoing flow.
         if (incoming <= 1 || outgoing > 1) return emptyList()
         return listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = elementId, name = null))
     }
