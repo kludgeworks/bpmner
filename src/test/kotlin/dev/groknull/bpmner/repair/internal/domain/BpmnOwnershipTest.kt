@@ -1,4 +1,4 @@
-@file:Suppress("MaxLineLength")
+@file:Suppress("TooManyFunctions")
 
 package dev.groknull.bpmner.repair.internal.domain
 
@@ -226,7 +226,12 @@ class BpmnOwnershipTest {
             repair.buildTopologyPatch(
                 definition,
                 listOf(
-                    BpmnDiagnostic(BpmnDiagnosticSource.LINT, "topology violation", rule = "klm/gtw-12-fake-join", elementId = "Task_1"),
+                    BpmnDiagnostic(
+                        BpmnDiagnosticSource.LINT,
+                        "topology violation",
+                        rule = "klm/gtw-12-fake-join",
+                        elementId = "Task_1",
+                    ),
                 ),
             )!!
         val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition

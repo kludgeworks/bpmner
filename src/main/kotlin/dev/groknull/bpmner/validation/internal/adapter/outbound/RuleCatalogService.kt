@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -12,6 +13,15 @@ data class RuleCategoryMetadata(
     val shortCode: String,
 )
 
+data class RepairMetadata(
+    val route: String? = null,
+    val editSurface: String? = null,
+    val safety: String? = null,
+    val handler: String? = null,
+    val replacementMap: Map<String, String>? = null,
+)
+
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class BpmnRuleMetadata(
     val id: String,
     val name: String,
@@ -24,10 +34,9 @@ data class BpmnRuleMetadata(
     val severity: String,
     val errorMessages: Map<String, String>,
     val staticConfig: Any?,
-    val autoFixable: Boolean,
-    val fixStrategy: String,
-    val fixMethod: String?,
-    val replacementMap: Map<String, String>?,
+    val repair: RepairMetadata? = null,
+    val autoFixable: Boolean = false,
+    val fixStrategy: String? = null,
     val hasTsImplementation: Boolean,
     val aliases: List<String>,
     val deprecated: Boolean,

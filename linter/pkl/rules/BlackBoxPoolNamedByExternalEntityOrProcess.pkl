@@ -21,6 +21,3 @@ errorMessages = new {
 staticConfig = new {
   cookbookCode = "POOL-02"
 }
-
-autoFixable = false
-fixStrategy = "LLM"

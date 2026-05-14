@@ -1,5 +1,3 @@
-@file:Suppress("MaxLineLength")
-
 package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.core.BpmnBounds

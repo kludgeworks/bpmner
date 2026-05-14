@@ -24,6 +24,3 @@ errorMessages = new {
 }
 
 staticConfig = new {}
-
-autoFixable = false
-fixStrategy = "LLM"

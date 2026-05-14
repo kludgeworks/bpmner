@@ -45,6 +45,3 @@ staticConfig = new {
       "bpmn:EscalationEventDefinition",
     )
 }
-
-autoFixable = false
-fixStrategy = "LLM"

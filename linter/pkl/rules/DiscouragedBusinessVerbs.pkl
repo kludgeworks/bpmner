@@ -25,6 +25,3 @@ errorMessages = new {
 staticConfig = new {
   discouragedLeadingVerbs = List("handle", "manage", "process", "perform", "do")
 }
-
-autoFixable = false
-fixStrategy = "LLM"

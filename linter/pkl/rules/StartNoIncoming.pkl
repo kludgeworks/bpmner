@@ -18,6 +18,9 @@ errorMessages = new {
 
 staticConfig = new {}
 
-autoFixable = true
-fixStrategy = "node-deletion"
-fixMethod = "deleteIncomingFlows"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+  handler = "deleteIncomingFlows"
+}

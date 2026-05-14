@@ -22,6 +22,4 @@ staticConfig = new {
   cookbookCode = "LANE-02"
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

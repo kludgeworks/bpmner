@@ -2,27 +2,38 @@ import "RuleCategory.pkl"
 
 typealias NonEmptyString = String(!isEmpty)
 typealias Severity = "error" | "warning" | "info" | "off"
-typealias FixStrategy =
-  "string-manipulation" | "attribute-mutation" | "node-deletion" | "ast-rewiring" | "LLM"
+typealias RepairRoute = "LOCAL_MODEL" | "LOCAL_XML" | "LLM" | "UNFIXABLE"
+typealias EditSurface = "BPMN_DEFINITION" | "BPMN_XML" | "NONE"
+typealias RepairSafety = "SAFE_AUTOMATIC" | "SAFE_MANUAL" | "LLM_ONLY"
+
+class Repair {
+  route: RepairRoute = "LLM"
+  editSurface: EditSurface = "NONE"
+  safety: RepairSafety = "LLM_ONLY"
+  handler: String?(
+    if (route == "LOCAL_MODEL" || route == "LOCAL_XML")
+      this != null && !this.isEmpty
+    else
+      this == null,
+  ) = null
+  replacementMap: Mapping<String, String>? = null
+}
 
 name: NonEmptyString
 category: RuleCategory.RuleCategory
-slug: NonEmptyString = name.toLowerCase().replaceAll(" ", "-")
-id: NonEmptyString = "\(category.shortCode)-\(slug)"
+slug: String = name.toLowerCase().replaceAll(Regex("[^a-z0-9]+"), "-")
+id: String = "\(category.shortCode)-\(slug)"
 
 intent: NonEmptyString
 forModellers: NonEmptyString
 forAI: NonEmptyString
 
 targetElements: List<NonEmptyString>(!isEmpty)
-severity: Severity
+severity: Severity = "warning"
 errorMessages: Mapping<NonEmptyString, NonEmptyString>(!isEmpty)
 staticConfig: Dynamic? = null
 
-autoFixable: Boolean = false
-fixStrategy: FixStrategy = "LLM"
-fixMethod: String?(if (autoFixable && fixStrategy != "LLM") this != null else true) = null
-replacementMap: Mapping<String, String>? = null
+repair: Repair = new {}
 
 hasTsImplementation: Boolean = true
 

@@ -40,6 +40,3 @@ staticConfig = new {
       "closed",
     )
 }
-
-autoFixable = false
-fixStrategy = "LLM"

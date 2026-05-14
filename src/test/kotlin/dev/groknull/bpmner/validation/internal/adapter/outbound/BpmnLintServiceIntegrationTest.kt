@@ -1,5 +1,3 @@
-@file:Suppress("MaxLineLength")
-
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnLintPhase
@@ -19,7 +17,10 @@ class BpmnLintServiceIntegrationTest {
         val invalidXml =
             """
             <?xml version="1.0" encoding="UTF-8"?>
-            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+            <bpmn:definitions
+                xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                id="Definitions_1"
+                targetNamespace="http://example.com/bpmn">
               <bpmn:process id="Process_1" />
             </bpmn:definitions>
             """.trimIndent()
@@ -58,8 +59,12 @@ class BpmnLintServiceIntegrationTest {
               xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
               id="Definitions_1" targetNamespace="http://example.com/bpmn">
               <bpmn:process id="Process_1" />
-              <bpmndi:BPMNDiagram id="Diagram_1"><bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
-              <bpmndi:BPMNDiagram id="Diagram_2"><bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="Diagram_1">
+                <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" />
+              </bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="Diagram_2">
+                <bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" />
+              </bpmndi:BPMNDiagram>
             </bpmn:definitions>
             """.trimIndent()
 
@@ -95,16 +100,26 @@ class BpmnLintServiceIntegrationTest {
               xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
               id="Definitions_1" targetNamespace="http://example.com/bpmn">
               <bpmn:process id="Process_1" />
-              <bpmndi:BPMNDiagram id="Diagram_1"><bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
-              <bpmndi:BPMNDiagram id="Diagram_2"><bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" /></bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="Diagram_1">
+                <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Process_1" />
+              </bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="Diagram_2">
+                <bpmndi:BPMNPlane id="Plane_2" bpmnElement="Process_1" />
+              </bpmndi:BPMNDiagram>
             </bpmn:definitions>
             """.trimIndent()
 
         val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty()
         val docs = service.ruleDocs(listOf("klm/gen-02-no-duplicate-diagrams"))
 
-        assertTrue(issues.any { it.rule == "klm/gen-no-duplicate-diagrams" }, "Legacy config should report canonical rule")
-        assertTrue(issues.none { it.rule == "klm/gen-02-no-duplicate-diagrams" }, "Legacy rule id should not leak into diagnostics")
+        assertTrue(
+            issues.any { it.rule == "klm/gen-no-duplicate-diagrams" },
+            "Legacy config should report canonical rule",
+        )
+        assertTrue(
+            issues.none { it.rule == "klm/gen-02-no-duplicate-diagrams" },
+            "Legacy rule id should not leak into diagnostics",
+        )
         assertTrue(docs["klm/gen-02-no-duplicate-diagrams"]?.contains("## Compatibility") == true)
     }
 
@@ -125,7 +140,10 @@ class BpmnLintServiceIntegrationTest {
         val xml =
             """
             <?xml version="1.0" encoding="UTF-8"?>
-            <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+            <bpmn:definitions
+                xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                id="Definitions_1"
+                targetNamespace="http://example.com/bpmn">
               <bpmn:process id="Process_1">
                 <bpmn:task id="Task_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:task>
                 <bpmn:task id="Task_2"><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:task>
@@ -169,7 +187,7 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 properties =
                     BpmnLintProperties(
-                        rules = mapOf("klm/act-verb-object-name" to "error"),
+                        rules = mapOf("klm/truly-unknown-rule" to "error"),
                     ),
             )
 
@@ -178,6 +196,9 @@ class BpmnLintServiceIntegrationTest {
                 service.init()
             }
 
-        assertTrue(exception.message!!.contains("klm/act-verb-object-name"), "Error message should contain the unknown rule id")
+        assertTrue(
+            exception.message!!.contains("klm/truly-unknown-rule"),
+            "Error message should contain the unknown rule id",
+        )
     }
 }
