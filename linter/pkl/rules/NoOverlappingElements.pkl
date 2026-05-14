@@ -1,0 +1,25 @@
+amends "../schema/BpmnRule.pkl"
+
+import "../schema/RuleCategory.pkl"
+
+name = "No Overlapping Elements"
+category = RuleCategory.General
+id = "no-overlapping-elements"
+
+intent = "Ensure diagram elements do not overlap on the canvas."
+forModellers =
+  "Position shapes so their bounding boxes do not intersect; overlapping shapes make the diagram unreadable."
+forAI =
+  "This rule depends on diagram coordinates and only produces meaningful diagnostics after auto-layout has positioned every shape."
+
+targetElements = List("bpmndi:BPMNShape")
+
+severity = "warning"
+errorMessages = new {
+  ["default"] = "Element overlaps with another shape on the diagram"
+}
+
+hasTsImplementation = false
+layoutSensitive = true
+
+aliases = List("bpmnlint/no-overlapping-elements")

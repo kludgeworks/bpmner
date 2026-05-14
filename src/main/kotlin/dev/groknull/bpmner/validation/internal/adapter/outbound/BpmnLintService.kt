@@ -49,11 +49,10 @@ internal open class BpmnLintService(
     private val logger = LoggerFactory.getLogger(BpmnLintService::class.java)
     private val objectMapper = jacksonObjectMapper()
 
-    private lateinit var ruleCapabilities: Map<String, BpmnLintRuleCapability>
+    private val ruleCapabilities: Map<String, BpmnLintRuleCapability> by lazy { pklAdapter.loadCapabilities() }
 
     @PostConstruct
     fun init() {
-        ruleCapabilities = pklAdapter.loadCapabilities()
         try {
             val api = engine.linterApi
             if (api != null) {
@@ -145,8 +144,15 @@ internal open class BpmnLintService(
         val finalConfig = baseConfig.copy(rules = mergedRules)
 
         if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) return finalConfig
-        return finalConfig.copy(rules = finalConfig.rules + LAYOUT_SENSITIVE_RULES.associateWith { "off" })
+        val layoutSensitiveOff = layoutSensitiveRuleKeys().associateWith { "off" }
+        return finalConfig.copy(rules = finalConfig.rules + layoutSensitiveOff)
     }
+
+    private fun layoutSensitiveRuleKeys(): Set<String> =
+        ruleCapabilities.entries
+            .filter { it.value.layoutSensitive }
+            .map { it.key }
+            .toSet()
 
     fun destroy() {
         engine.destroy()
@@ -173,11 +179,5 @@ internal open class BpmnLintService(
         private const val LINT_TIMEOUT_SECONDS = 10L
         private val STRING_MAP_TYPE = object : TypeLiteral<Map<String, String>>() {}
         private val STRING_LIST_TYPE = object : TypeLiteral<List<String>>() {}
-
-        private val LAYOUT_SENSITIVE_RULES =
-            setOf(
-                "no-overlapping-elements",
-                "bpmnlint/no-overlapping-elements",
-            )
     }
 }

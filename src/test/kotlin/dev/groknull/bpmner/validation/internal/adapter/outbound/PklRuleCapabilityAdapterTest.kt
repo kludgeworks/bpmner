@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -49,5 +50,25 @@ class PklRuleCapabilityAdapterTest {
             val aliasEntry = caps.entries.first { it.value == capWithAlias && it.key != capWithAlias.id }
             assertTrue(caps[aliasEntry.key] === caps[capWithAlias.id])
         }
+    }
+
+    @Test
+    fun `layoutSensitive flag is surfaced for no-overlapping-elements via both id and alias`() {
+        val caps = adapter.loadCapabilities()
+        val byId = caps["no-overlapping-elements"]
+        val byAlias = caps["bpmnlint/no-overlapping-elements"]
+        assertNotNull(byId, "no-overlapping-elements capability not loaded")
+        assertNotNull(byAlias, "bpmnlint/no-overlapping-elements alias not loaded")
+        assertTrue(byId!!.layoutSensitive, "no-overlapping-elements should be layoutSensitive=true")
+        assertTrue(byAlias!!.layoutSensitive, "alias should resolve to the same layoutSensitive capability")
+    }
+
+    @Test
+    fun `layoutSensitive defaults to false for KLM rules`() {
+        val caps = adapter.loadCapabilities()
+        val nonLayoutSensitive = caps.values.filter { !it.layoutSensitive }
+        assertTrue(nonLayoutSensitive.isNotEmpty(), "Expected at least one non layout-sensitive capability")
+        val layoutSensitive = caps.values.distinct().filter { it.layoutSensitive }
+        assertEquals(1, layoutSensitive.size, "Only no-overlapping-elements should be layoutSensitive today")
     }
 }
