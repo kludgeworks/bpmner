@@ -27,7 +27,7 @@ class BpmnGuardrailTypesTest {
                             questionText = "Who approves the order?",
                             answerText = "A supervisor approves it.",
                             relatedMissingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
-                            relatedDimensions = listOf(ReadinessDimension.ACTORS),
+                            relatedDimensions = listOf(ReadinessDimension.ACTORS_ROLES),
                             evidence =
                                 listOf(
                                     SourceEvidence(
@@ -162,7 +162,7 @@ class BpmnGuardrailTypesTest {
             dimensions =
                 listOf(
                     ReadinessDimensionScore(
-                        dimension = ReadinessDimension.ACTORS,
+                        dimension = ReadinessDimension.ACTORS_ROLES,
                         score = 50,
                         rationale = "Approver is unclear.",
                         missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
@@ -175,7 +175,7 @@ class BpmnGuardrailTypesTest {
                         id = "q1",
                         questionText = "Who approves the order?",
                         relatedMissingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
-                        relatedDimensions = listOf(ReadinessDimension.ACTORS),
+                        relatedDimensions = listOf(ReadinessDimension.ACTORS_ROLES),
                     ),
                 ),
             evidence =
