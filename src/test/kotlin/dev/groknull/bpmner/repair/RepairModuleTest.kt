@@ -1,4 +1,4 @@
-@file:Suppress("MaxLineLength")
+
 
 package dev.groknull.bpmner.repair
 
@@ -100,7 +100,12 @@ class RepairModuleTest {
         context.expectResponse(definition) // repair returns same definition → unchanged patch → fails fast
 
         assertThrows(BpmnRefinementFailureException::class.java) {
-            refinementEngine.refine(BpmnRequest(processDescription = "Make toast"), graph, rendered, context)
+            refinementEngine.refine(
+                request = BpmnRequest(processDescription = "Make toast"),
+                graph = graph,
+                rendered = rendered,
+                context = context,
+            )
         }
 
         val failedEvents = events.ofType(BpmnValidationFailedEvent::class.java).toList()
@@ -110,7 +115,14 @@ class RepairModuleTest {
     private fun graph(definition: BpmnDefinition): LaidOutProcessGraph {
         val composed =
             ComposedProcessGraph(
-                outline = ValidatedOutline(ProcessOutline(BpmnRequest("test"), definition, OutlineMetrics(1, 0, 0, 0))),
+                outline =
+                    ValidatedOutline(
+                        ProcessOutline(
+                            BpmnRequest("test"),
+                            definition,
+                            OutlineMetrics(1, 0, 0, 0),
+                        ),
+                    ),
                 definition = definition,
                 objectOwnersByObjectRef = emptyMap(),
             )
@@ -123,9 +135,24 @@ class RepairModuleTest {
             processName = "Make toast",
             nodes =
                 listOf(
-                    BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-                    BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
+                    BpmnNode(
+                        id = "StartEvent_1",
+                        name = "Order received",
+                        type = NodeType.START_EVENT,
+                        bounds = BpmnBounds(80.0, 120.0, 36.0, 36.0),
+                    ),
+                    BpmnNode(
+                        id = "Task_1",
+                        name = "Toast bread",
+                        type = NodeType.SERVICE_TASK,
+                        bounds = BpmnBounds(180.0, 98.0, 100.0, 80.0),
+                    ),
+                    BpmnNode(
+                        id = "EndEvent_1",
+                        name = "Toast served",
+                        type = NodeType.END_EVENT,
+                        bounds = BpmnBounds(320.0, 120.0, 36.0, 36.0),
+                    ),
                 ),
             sequences =
                 listOf(
@@ -133,13 +160,21 @@ class RepairModuleTest {
                         "Flow_1",
                         "StartEvent_1",
                         "Task_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
+                        waypoints =
+                            listOf(
+                                BpmnWaypoint(116.0, 138.0),
+                                BpmnWaypoint(180.0, 138.0),
+                            ),
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "Task_1",
                         "EndEvent_1",
-                        waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+                        waypoints =
+                            listOf(
+                                BpmnWaypoint(280.0, 138.0),
+                                BpmnWaypoint(320.0, 138.0),
+                            ),
                     ),
                 ),
         )

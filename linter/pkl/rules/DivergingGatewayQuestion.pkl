@@ -56,6 +56,3 @@ staticConfig = new {
       "whom",
     )
 }
-
-autoFixable = false
-fixStrategy = "LLM"

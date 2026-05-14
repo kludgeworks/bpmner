@@ -36,6 +36,9 @@ staticConfig = new {
   discouragedWords = List("activity", "process", "event")
 }
 
-autoFixable = true
-fixStrategy = "string-manipulation"
-fixMethod = "stripTypeWords"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+  handler = "stripTypeWords"
+}

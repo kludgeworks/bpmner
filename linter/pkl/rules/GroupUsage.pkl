@@ -21,6 +21,4 @@ staticConfig = new {
   cookbookCode = "ART-01"
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

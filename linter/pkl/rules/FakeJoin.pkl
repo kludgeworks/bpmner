@@ -31,6 +31,9 @@ errorMessages = new {
 
 staticConfig = new {}
 
-autoFixable = true
-fixStrategy = "ast-rewiring"
-fixMethod = "insertConvergingGateway"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+  handler = "insertConvergingGateway"
+}

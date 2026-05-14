@@ -1,5 +1,3 @@
-@file:Suppress("MaxLineLength")
-
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.ActionContext
@@ -290,7 +288,12 @@ class BpmnRefinementEngineTest {
                         "Task_1",
                         waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
                     ),
-                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1", waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0))),
+                    BpmnEdge(
+                        "Flow_2",
+                        "Task_1",
+                        "EndEvent_1",
+                        waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
+                    ),
                 ),
         )
 
@@ -321,10 +324,30 @@ class BpmnRefinementEngineTest {
                         "Gateway_1",
                         waypoints = listOf(BpmnWaypoint(76.0, 198.0), BpmnWaypoint(160.0, 155.0)),
                     ),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 120.0))),
-                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 220.0))),
-                    BpmnEdge("Flow_5", "Task_1", "EndEvent_1", waypoints = listOf(BpmnWaypoint(380.0, 120.0), BpmnWaypoint(440.0, 148.0))),
-                    BpmnEdge("Flow_6", "Task_2", "EndEvent_1", waypoints = listOf(BpmnWaypoint(380.0, 220.0), BpmnWaypoint(440.0, 148.0))),
+                    BpmnEdge(
+                        "Flow_3",
+                        "Gateway_1",
+                        "Task_1",
+                        waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 120.0)),
+                    ),
+                    BpmnEdge(
+                        "Flow_4",
+                        "Gateway_1",
+                        "Task_2",
+                        waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 220.0)),
+                    ),
+                    BpmnEdge(
+                        "Flow_5",
+                        "Task_1",
+                        "EndEvent_1",
+                        waypoints = listOf(BpmnWaypoint(380.0, 120.0), BpmnWaypoint(440.0, 148.0)),
+                    ),
+                    BpmnEdge(
+                        "Flow_6",
+                        "Task_2",
+                        "EndEvent_1",
+                        waypoints = listOf(BpmnWaypoint(380.0, 220.0), BpmnWaypoint(440.0, 148.0)),
+                    ),
                 ),
         )
 }

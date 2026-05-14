@@ -1,4 +1,4 @@
-@file:Suppress("MaxLineLength")
+
 
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
@@ -77,11 +77,20 @@ class BpmnLayoutAgentTest {
         assertEquals("<definitions fixed=\"true\" />", autoFixed.xml)
         assertEquals("<definitions fixed=\"true\" />", layoutService.xmls.single())
         assertEquals("<definitions fixed=\"true\" layouted=\"true\" />", result.xml)
-        assertEquals(listOf("<definitions />", "<definitions fixed=\"true\" layouted=\"true\" />"), lintService.xmls)
+        assertEquals(
+            listOf("<definitions />", "<definitions fixed=\"true\" layouted=\"true\" />"),
+            lintService.xmls,
+        )
         assertEquals(listOf("<definitions />"), lintService.autoFixXmls)
-        assertEquals(listOf("<definitions fixed=\"true\" />", "<definitions fixed=\"true\" layouted=\"true\" />"), xsdValidator.xmls)
+        assertEquals(
+            listOf("<definitions fixed=\"true\" />", "<definitions fixed=\"true\" layouted=\"true\" />"),
+            xsdValidator.xmls,
+        )
         assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.autoFixPhases)
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT, BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
+        assertEquals(
+            listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT, BpmnLintPhase.FINAL_POST_LAYOUT),
+            lintService.phases,
+        )
     }
 
     @Test

@@ -22,6 +22,4 @@ staticConfig = new {
   cookbookCode = "POOL-03"
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

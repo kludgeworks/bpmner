@@ -18,6 +18,4 @@ errorMessages = new {
     "Use Receive Task for explicit participant interaction; use Intermediate Message Event for passive events."
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

@@ -24,6 +24,4 @@ staticConfig = new {
   deterministicLinting = false
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

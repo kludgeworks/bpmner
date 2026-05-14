@@ -1,4 +1,4 @@
-@file:Suppress("MaxLineLength")
+@file:Suppress("TooManyFunctions")
 
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
@@ -49,7 +49,10 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `SET_NODE_NAME updates node name`() {
-        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "New name"))
+        val patch =
+            patch(
+                BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "New name"),
+            )
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
         assertEquals(
             "New name",
@@ -227,7 +230,10 @@ class BpmnPatchApplierTest {
     @Test
     fun `REPLACE_NODE swaps in replacement`() {
         val replacement = BpmnNode("Task_1", "Replaced task", NodeType.SERVICE_TASK, taskBounds.copy(x = 200.0))
-        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement))
+        val patch =
+            patch(
+                BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement),
+            )
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
         assertEquals(
             "Replaced task",
@@ -240,7 +246,10 @@ class BpmnPatchApplierTest {
     @Test
     fun `REPLACE_NODE with id mismatch is invalid`() {
         val replacement = BpmnNode("Task_2", "Wrong id", NodeType.SERVICE_TASK, taskBounds)
-        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement))
+        val patch =
+            patch(
+                BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement),
+            )
         val result = assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
         assertTrue(result.reason.contains("mismatch") || result.reason.contains("Task_2"))
     }
@@ -311,7 +320,10 @@ class BpmnPatchApplierTest {
     @Test
     fun `REPLACE_EDGE swaps in replacement`() {
         val replacement = BpmnEdge("Flow_1", "Start_1", "Task_1", name = "start flow", waypoints = standardWaypoints)
-        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_EDGE, edgeId = "Flow_1", edge = replacement))
+        val patch =
+            patch(
+                BpmnPatchOperation(BpmnPatchOperationType.REPLACE_EDGE, edgeId = "Flow_1", edge = replacement),
+            )
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
         assertEquals(
             "start flow",
@@ -324,7 +336,10 @@ class BpmnPatchApplierTest {
     @Test
     fun `REPLACE_EDGE with id mismatch is invalid`() {
         val replacement = BpmnEdge("Flow_2", "Start_1", "Task_1", waypoints = standardWaypoints)
-        val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REPLACE_EDGE, edgeId = "Flow_1", edge = replacement))
+        val patch =
+            patch(
+                BpmnPatchOperation(BpmnPatchOperationType.REPLACE_EDGE, edgeId = "Flow_1", edge = replacement),
+            )
         assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
     }
 
@@ -410,7 +425,12 @@ class BpmnPatchApplierTest {
                     BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
                     BpmnNode("Task_1", "Do work", NodeType.USER_TASK, taskBounds),
                     BpmnNode("Task_2", "Do other work", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
-                    BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(320.0, 140.0, 50.0, 50.0)),
+                    BpmnNode(
+                        "Gateway_1",
+                        gatewayName,
+                        NodeType.EXCLUSIVE_GATEWAY,
+                        BpmnBounds(320.0, 140.0, 50.0, 50.0),
+                    ),
                     BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),
                 ),
             sequences =
@@ -430,7 +450,12 @@ class BpmnPatchApplierTest {
             nodes =
                 listOf(
                     BpmnNode("Start_1", "Start", NodeType.START_EVENT, startBounds),
-                    BpmnNode("Gateway_1", "Is request valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(160.0, 120.0, 50.0, 50.0)),
+                    BpmnNode(
+                        "Gateway_1",
+                        "Is request valid?",
+                        NodeType.EXCLUSIVE_GATEWAY,
+                        BpmnBounds(160.0, 120.0, 50.0, 50.0),
+                    ),
                     BpmnNode("Task_1", "Approve request", NodeType.USER_TASK, taskBounds),
                     BpmnNode("Task_2", "Reject request", NodeType.USER_TASK, taskBounds.copy(y = 220.0)),
                     BpmnNode("End_1", "End", NodeType.END_EVENT, endBounds),

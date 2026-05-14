@@ -27,6 +27,9 @@ staticConfig = new {
     List("check", "validate", "verify", "approve", "reject", "review", "assess", "confirm")
 }
 
-autoFixable = true
-fixStrategy = "attribute-mutation"
-fixMethod = "clearName"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+  handler = "clearName"
+}

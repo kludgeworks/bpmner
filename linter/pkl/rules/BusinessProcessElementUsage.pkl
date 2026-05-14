@@ -18,6 +18,4 @@ errorMessages = new {
     "Business Process elements should only be used for high-level overviews, not detailed flows."
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

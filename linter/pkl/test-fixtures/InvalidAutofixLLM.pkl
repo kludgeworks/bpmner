@@ -2,12 +2,12 @@ amends "../schema/BpmnRule.pkl"
 
 import "../schema/RuleCategory.pkl"
 
-name = "Invalid Autofix"
+name = "Invalid Local Route Without Handler"
 category = RuleCategory.Activity
 
-intent = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
-forModellers = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
-forAI = "This fixture should fail because an auto-fixable rule cannot use the LLM strategy."
+intent = "This fixture must fail: LOCAL_XML route requires a non-empty handler."
+forModellers = "This fixture must fail: LOCAL_XML route requires a non-empty handler."
+forAI = "This fixture must fail: LOCAL_XML route requires a non-empty handler."
 
 targetElements = List("bpmn:Task")
 severity = "warning"
@@ -15,5 +15,8 @@ errorMessages = new {
   ["default"] = "This fixture should fail"
 }
 
-autoFixable = true
-fixStrategy = "LLM"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+}

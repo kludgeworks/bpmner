@@ -37,16 +37,18 @@ staticConfig = new {
   commonAcronyms = List("BPMN", "BPMNER", "SLA", "API", "IT")
 }
 
-autoFixable = true
-fixStrategy = "string-manipulation"
-fixMethod = "expandAbbreviations"
-
-replacementMap = new Mapping<String, String> {
-  ["REQ"] = "request"
-  ["RESP"] = "response"
-  ["AUTH"] = "authentication"
-  ["CFG"] = "configuration"
-  ["MSG"] = "message"
-  ["DOC"] = "document"
-  ["ITBL"] = "itinerary block"
+repair = new {
+  route = "LOCAL_XML"
+  editSurface = "BPMN_XML"
+  safety = "SAFE_AUTOMATIC"
+  handler = "expandAbbreviations"
+  replacementMap = new Mapping<String, String> {
+    ["REQ"] = "request"
+    ["RESP"] = "response"
+    ["AUTH"] = "authentication"
+    ["CFG"] = "configuration"
+    ["MSG"] = "message"
+    ["DOC"] = "document"
+    ["ITBL"] = "itinerary block"
+  }
 }

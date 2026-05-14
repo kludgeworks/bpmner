@@ -35,6 +35,4 @@ staticConfig = new {
     )
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false

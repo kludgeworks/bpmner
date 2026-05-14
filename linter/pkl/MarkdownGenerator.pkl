@@ -46,14 +46,16 @@ output {
           ## Diagnostic Messages
           \(rule.errorMessages.toMap().entries.map((e) -> "- `\(e.first)`: \(e.second)").join("\n"))
 
-          ## Auto-Fix
-          - **Auto-Fixable**: \(if (rule.autoFixable) "Yes" else "No")
-          - **Strategy**: `\(rule.fixStrategy)`
-          \(if (rule.replacementMap != null)
+          ## Repair
+          - **Route**: `\(rule.repair.route)`
+          - **Edit Surface**: `\(rule.repair.editSurface)`
+          - **Safety**: `\(rule.repair.safety)`
+          \(if (rule.repair.handler != null) "- **Handler**: `\(rule.repair.handler)`\n          " else "")
+          \(if (rule.repair.replacementMap != null)
             """
 
             ### Replacements
-            \(rule.replacementMap.toMap().entries.map((e) -> "- `\(e.first)` → `\(e.second)`").join("\n"))
+            \(rule.repair.replacementMap.toMap().entries.map((e) -> "- `\(e.first)` → `\(e.second)`").join("\n"))
             """
           else
             "")

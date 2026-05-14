@@ -23,6 +23,3 @@ errorMessages = new {
 staticConfig = new {
   timerExpressionFields = List("timeDate", "timeDuration", "timeCycle")
 }
-
-autoFixable = false
-fixStrategy = "LLM"

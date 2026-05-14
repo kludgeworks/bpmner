@@ -18,6 +18,4 @@ errorMessages = new {
     "Ensure correct use of Task, Subprocess, or Call Activity based on atomicity and reusability."
 }
 
-autoFixable = false
-fixStrategy = "LLM"
 hasTsImplementation = false
