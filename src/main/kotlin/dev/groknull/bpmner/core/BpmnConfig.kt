@@ -12,9 +12,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 data class BpmnConfig(
     val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
-    val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
-    val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
-    val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
     val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
     @field:Valid
@@ -23,6 +20,9 @@ data class BpmnConfig(
     val contract: BpmnContractConfig = BpmnContractConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
+    val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
+    val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
+    val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
 ) {
     companion object {
         const val DEFAULT_MAX_ATTEMPTS = 5
@@ -73,7 +73,7 @@ data class BpmnConfig(
                         name = "BPMN Full Rewrite Specialist",
                         persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
                         objective =
-                            "Fix complex, cascading validation errors by rewriting the complete BpmnDefinition object",
+                            "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
                         voice = "concise and exact",
                     ),
                 llm = LlmOptions.withLlmForRole("repair-rewrite"),

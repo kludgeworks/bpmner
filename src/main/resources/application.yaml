@@ -16,6 +16,9 @@ embabel:
   models:
     llms:
       generator: gpt-4.1
+      repair-label: gpt-4.1-nano
+      repair-patch: gpt-4.1-mini
+      repair-rewrite: gpt-4.1
       repairer: gpt-4.1-mini
   agent:
     shell:
