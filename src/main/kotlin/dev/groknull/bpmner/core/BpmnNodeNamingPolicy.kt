@@ -5,7 +5,6 @@ object BpmnNodeNamingPolicy {
 
     fun requiresName(
         node: BpmnNode,
-        @Suppress("UNUSED_PARAMETER") incomingCount: Int,
         outgoingCount: Int,
     ): Boolean =
         when (node.type) {

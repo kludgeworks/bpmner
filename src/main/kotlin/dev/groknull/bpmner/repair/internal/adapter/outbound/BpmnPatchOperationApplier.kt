@@ -57,7 +57,6 @@ internal object BpmnPatchOperationApplier {
     private fun BpmnNode.requiresName(definition: BpmnDefinition): Boolean =
         BpmnNodeNamingPolicy.requiresName(
             node = this,
-            incomingCount = definition.sequences.count { it.targetRef == id },
             outgoingCount = definition.sequences.count { it.sourceRef == id },
         )
 

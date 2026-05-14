@@ -44,14 +44,12 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        val incomingCounts = definition.sequences.groupingBy { it.targetRef }.eachCount()
         val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
 
         definition.nodes.forEach { node ->
             val requiresName =
                 BpmnNodeNamingPolicy.requiresName(
                     node = node,
-                    incomingCount = incomingCounts[node.id] ?: 0,
                     outgoingCount = outgoingCounts[node.id] ?: 0,
                 )
             if (requiresName && node.name.isNullOrBlank()) {
