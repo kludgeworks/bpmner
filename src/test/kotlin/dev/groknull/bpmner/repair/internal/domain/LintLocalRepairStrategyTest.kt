@@ -93,7 +93,7 @@ class LintLocalRepairStrategyTest {
     }
 
     @Test
-    fun `auto-fix errors return NotApplicable without calling XSD or parser`() {
+    fun `auto-fix errors return LocalAttemptedNoChange carrying failure records and skip XSD or parser`() {
         val parser = FakeXmlParser(otherValidDefinition())
         val xsd = FakeXsdValidationPort(issues = emptyList())
         val lint =
@@ -108,7 +108,12 @@ class LintLocalRepairStrategyTest {
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
         val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
 
-        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
+        val result = assertIs<BpmnRepairResult.LocalAttemptedNoChange>(strategy.repair(context))
+        val failure = result.outcome.failures.single()
+        assertEquals(1, result.outcome.failures.size)
+        assertEquals("bpmner/name-01", failure.rule)
+        assertEquals("Task_1", failure.elementId)
+        assertEquals("handler boom", failure.reason)
         assertEquals(0, xsd.calls)
         assertEquals(0, parser.calls)
     }

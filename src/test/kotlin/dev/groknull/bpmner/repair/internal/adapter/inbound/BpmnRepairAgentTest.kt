@@ -46,7 +46,6 @@ import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStr
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
-import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -74,7 +73,7 @@ class BpmnRepairAgentTest {
         val normalizer = BpmnDiagnosticNormalizer(lintService)
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
-        val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
+        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, llmValidator)
         val evaluationPipeline =
             BpmnEvaluationPipeline(
                 config = config,
@@ -87,7 +86,6 @@ class BpmnRepairAgentTest {
         val strategies =
             listOf(
                 DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                TargetedLabelRepairStrategy(promptFactory, patchApplier),
                 LlmPatchRepairStrategy(promptFactory, patchApplier),
                 FullLlmRewriteRepairStrategy(promptFactory),
             )
