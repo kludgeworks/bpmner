@@ -15,8 +15,7 @@ data class RuleCategoryMetadata(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class RepairMetadata(
-    val route: String = "LLM",
-    val editSurface: String = "NONE",
+    val kind: String = "LLM_MODEL_PATCH",
     val safety: String = "LLM_ONLY",
     val handler: String? = null,
     val replacementMap: Map<String, String>? = null,

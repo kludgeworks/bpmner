@@ -2,16 +2,15 @@ import "RuleCategory.pkl"
 
 typealias NonEmptyString = String(!isEmpty)
 typealias Severity = "error" | "warning" | "info" | "off"
-typealias RepairRoute = "LOCAL_MODEL" | "LOCAL_XML" | "LLM" | "UNFIXABLE"
-typealias EditSurface = "BPMN_DEFINITION" | "BPMN_XML" | "NONE"
+typealias RepairKind =
+  "LOCAL_MODEL_FIX" | "LOCAL_XML_FIX" | "LLM_MODEL_PATCH" | "LLM_XML_REWRITE" | "UNFIXABLE"
 typealias RepairSafety = "SAFE_AUTOMATIC" | "SAFE_MANUAL" | "LLM_ONLY"
 
 class Repair {
-  route: RepairRoute = "LLM"
-  editSurface: EditSurface = "NONE"
+  kind: RepairKind = "LLM_MODEL_PATCH"
   safety: RepairSafety = "LLM_ONLY"
   handler: String?(
-    if (route == "LOCAL_MODEL" || route == "LOCAL_XML")
+    if (kind == "LOCAL_MODEL_FIX" || kind == "LOCAL_XML_FIX")
       this != null && !this.isEmpty
     else
       this == null,

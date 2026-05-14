@@ -47,8 +47,7 @@ output {
           \(rule.errorMessages.toMap().entries.map((e) -> "- `\(e.first)`: \(e.second)").join("\n"))
 
           ## Repair
-          - **Route**: `\(rule.repair.route)`
-          - **Edit Surface**: `\(rule.repair.editSurface)`
+          - **Kind**: `\(rule.repair.kind)`
           - **Safety**: `\(rule.repair.safety)`
           \(if (rule.repair.handler != null) "- **Handler**: `\(rule.repair.handler)`\n          " else "")
           \(if (rule.repair.replacementMap != null)

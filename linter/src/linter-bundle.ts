@@ -11,9 +11,8 @@ import {
 	resolver,
 } from "./generated/static-rules"
 import type {
-	EditSurface,
 	Repair,
-	RepairRoute,
+	RepairKind,
 	RepairSafety,
 	RuleConfig,
 } from "./rule-config"
@@ -274,8 +273,7 @@ export async function fixXml(
 type RuleCapability = {
 	id: string
 	severity: string
-	route: RepairRoute
-	editSurface: EditSurface
+	kind: RepairKind
 	safety: RepairSafety
 	handlerName: string | null
 	handlerExists: boolean
@@ -290,16 +288,16 @@ export function getRuleCapabilities(): RuleCapability[] {
 
 	for (const rule of (catalog as unknown as RuleCatalog).rules) {
 		const repair = rule.repair as Repair
-		const { route, editSurface, safety } = repair
+		const { kind, safety } = repair
 		const handlerName = repair.handler ?? null
 		const replacementMap = repair.replacementMap ?? null
 
-		const isLocal = route === "LOCAL_XML" || route === "LOCAL_MODEL"
+		const isLocal = kind === "LOCAL_XML_FIX" || kind === "LOCAL_MODEL_FIX"
 		const handlerExists = handlerName !== null && hasHandler(handlerName)
 
 		if (isLocal && !handlerName) {
 			errors.push(
-				`Rule ${rule.id}: ${route} route requires a handler but none declared`,
+				`Rule ${rule.id}: ${kind} requires a handler but none declared`,
 			)
 		} else if (isLocal && handlerName && !handlerExists) {
 			errors.push(
@@ -307,15 +305,14 @@ export function getRuleCapabilities(): RuleCapability[] {
 			)
 		} else if (!isLocal && handlerName) {
 			errors.push(
-				`Rule ${rule.id}: ${route} route must not declare a handler (got "${handlerName}")`,
+				`Rule ${rule.id}: ${kind} must not declare a handler (got "${handlerName}")`,
 			)
 		}
 
 		capabilities.push({
 			id: rule.id,
 			severity: rule.severity,
-			route,
-			editSurface,
+			kind,
 			safety,
 			handlerName,
 			handlerExists,

@@ -16,7 +16,6 @@ import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -28,6 +27,7 @@ import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
@@ -40,9 +40,9 @@ import kotlin.test.assertIs
 
 class LintLocalRepairStrategyTest {
     @Test
-    fun `returns NotApplicable when no LOCAL_XML diagnostics are stamped`() {
+    fun `returns NotApplicable when no LOCAL_XML_FIX diagnostics are stamped`() {
         val strategy = strategy(lint = FakeLintingPort())
-        val context = contextOf(diagnostics = listOf(lintDiagnostic(repairRoute = BpmnRepairRoute.LLM)))
+        val context = contextOf(diagnostics = listOf(lintDiagnostic(kind = RepairKind.LLM_MODEL_PATCH)))
 
         assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
     }
@@ -165,10 +165,10 @@ class LintLocalRepairStrategyTest {
     }
 
     @Test
-    fun `LOCAL_MODEL diagnostic without any LOCAL_XML returns NotApplicable`() {
+    fun `LOCAL_MODEL_FIX diagnostic without any LOCAL_XML_FIX returns NotApplicable`() {
         val strategy = strategy(lint = FakeLintingPort())
         val context =
-            contextOf(diagnostics = listOf(lintDiagnostic(repairRoute = BpmnRepairRoute.LOCAL_MODEL)))
+            contextOf(diagnostics = listOf(lintDiagnostic(kind = RepairKind.LOCAL_MODEL_FIX)))
 
         assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
     }
@@ -227,14 +227,14 @@ class LintLocalRepairStrategyTest {
 
     private fun lintDiagnostic(
         rule: String = "bpmner/name-01",
-        repairRoute: BpmnRepairRoute? = BpmnRepairRoute.LOCAL_XML,
+        kind: RepairKind? = RepairKind.LOCAL_XML_FIX,
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = "violation",
         rule = rule,
         category = "error",
         elementId = "Task_1",
-        repairRoute = repairRoute,
+        kind = kind,
     )
 
     private fun validDefinition() =

@@ -1,9 +1,8 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnEditSurface
 import dev.groknull.bpmner.core.BpmnLintRuleCapability
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairSafety
+import dev.groknull.bpmner.core.RepairKind
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -32,14 +31,13 @@ internal class PklRuleCapabilityAdapter(
 
     internal fun toCapability(rule: BpmnRuleMetadata): BpmnLintRuleCapability {
         val repair = rule.repair
-        val route = BpmnRepairRoute.valueOf(repair.route)
+        val kind = RepairKind.valueOf(repair.kind)
         return BpmnLintRuleCapability(
             id = rule.id,
-            repairRoute = route,
-            editSurface = BpmnEditSurface.valueOf(repair.editSurface),
+            kind = kind,
             repairSafety = BpmnRepairSafety.valueOf(repair.safety),
             fixHandler = repair.handler,
-            handlerExists = route == BpmnRepairRoute.LOCAL_XML || route == BpmnRepairRoute.LOCAL_MODEL,
+            handlerExists = kind.isLocal(),
             replacementMap = repair.replacementMap,
         )
     }

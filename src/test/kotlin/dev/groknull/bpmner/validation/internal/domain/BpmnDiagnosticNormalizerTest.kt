@@ -3,11 +3,9 @@ package dev.groknull.bpmner.validation.internal.domain
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnEditSurface
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleCapability
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -17,6 +15,7 @@ import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.validation.BpmnLintingPort
@@ -28,8 +27,7 @@ class BpmnDiagnosticNormalizerTest {
     private val localXmlCapability =
         BpmnLintRuleCapability(
             id = "gtw-converging-gateway-unnamed",
-            repairRoute = BpmnRepairRoute.LOCAL_XML,
-            editSurface = BpmnEditSurface.BPMN_XML,
+            kind = RepairKind.LOCAL_XML_FIX,
             repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
             fixHandler = "clearGatewayName",
             handlerExists = true,
@@ -38,8 +36,7 @@ class BpmnDiagnosticNormalizerTest {
     private val llmCapability =
         BpmnLintRuleCapability(
             id = "act-verb-object-name",
-            repairRoute = BpmnRepairRoute.LLM,
-            editSurface = BpmnEditSurface.NONE,
+            kind = RepairKind.LLM_MODEL_PATCH,
             repairSafety = BpmnRepairSafety.LLM_ONLY,
             fixHandler = null,
             handlerExists = false,
@@ -107,55 +104,53 @@ class BpmnDiagnosticNormalizerTest {
         )
 
     @Test
-    fun `normalizeLintDiagnostics stamps LOCAL_XML route for known rule`() {
+    fun `normalizeLintDiagnostics stamps LOCAL_XML_FIX kind for known rule`() {
         val issues = listOf(LintIssue(id = null, rule = "bpmner/gtw-converging-gateway-unnamed", message = "named converging"))
 
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 
         assertEquals(1, diagnostics.size)
-        assertEquals(BpmnRepairRoute.LOCAL_XML, diagnostics[0].repairRoute)
-        assertEquals(BpmnEditSurface.BPMN_XML, diagnostics[0].editSurface)
+        assertEquals(RepairKind.LOCAL_XML_FIX, diagnostics[0].kind)
         assertEquals("clearGatewayName", diagnostics[0].fixHandler)
     }
 
     @Test
-    fun `normalizeLintDiagnostics stamps LLM route for known LLM rule`() {
+    fun `normalizeLintDiagnostics stamps LLM_MODEL_PATCH kind for known LLM rule`() {
         val issues = listOf(LintIssue(id = null, rule = "bpmner/act-verb-object-name", message = "bad label"))
 
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 
-        assertEquals(BpmnRepairRoute.LLM, diagnostics[0].repairRoute)
+        assertEquals(RepairKind.LLM_MODEL_PATCH, diagnostics[0].kind)
         assertNull(diagnostics[0].fixHandler)
     }
 
     @Test
-    fun `normalizeLintDiagnostics falls back to LLM for unknown rule`() {
+    fun `normalizeLintDiagnostics falls back to LLM_MODEL_PATCH for unknown rule`() {
         val issues = listOf(LintIssue(id = null, rule = "bpmner/some-unknown-rule", message = "unknown"))
 
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 
-        assertEquals(BpmnRepairRoute.LLM, diagnostics[0].repairRoute)
+        assertEquals(RepairKind.LLM_MODEL_PATCH, diagnostics[0].kind)
         assertNull(diagnostics[0].fixHandler)
-        assertNull(diagnostics[0].editSurface)
         assertNull(diagnostics[0].repairSafety)
     }
 
     @Test
-    fun `normalizeXsdDiagnostics does not stamp repairRoute`() {
+    fun `normalizeXsdDiagnostics does not stamp kind`() {
         val issues = listOf(XsdValidationIssue(message = "xsd error", elementId = null))
 
         val diagnostics = normalizer.normalizeXsdDiagnostics(issues, mockRendered(), emptyGraph)
 
         assertEquals(BpmnDiagnosticSource.XSD, diagnostics[0].source)
-        assertNull(diagnostics[0].repairRoute)
+        assertNull(diagnostics[0].kind)
     }
 
     @Test
-    fun `graphDiagnostic does not stamp repairRoute`() {
+    fun `graphDiagnostic does not stamp kind`() {
         val diagnostic = normalizer.graphDiagnostic(emptyGraph, "graph error")
 
         assertEquals(BpmnDiagnosticSource.GRAPH, diagnostic.source)
-        assertNull(diagnostic.repairRoute)
+        assertNull(diagnostic.kind)
     }
 
     @Test
@@ -164,7 +159,7 @@ class BpmnDiagnosticNormalizerTest {
 
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 
-        assertEquals(BpmnRepairRoute.LOCAL_XML, diagnostics[0].repairRoute)
+        assertEquals(RepairKind.LOCAL_XML_FIX, diagnostics[0].kind)
     }
 
     private fun mockRendered(): RenderedBpmn =

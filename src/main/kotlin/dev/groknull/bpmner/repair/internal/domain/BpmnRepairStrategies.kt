@@ -5,8 +5,8 @@ import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
+import dev.groknull.bpmner.core.RepairKind
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -110,8 +110,8 @@ private fun eligibleForLlm(
     diagnostic: BpmnDiagnostic,
     localOutcome: BpmnLocalRepairOutcome,
 ): Boolean {
-    val route = diagnostic.repairRoute
-    val routedToLlm = route == BpmnRepairRoute.LLM || route == null
+    val kind = diagnostic.kind
+    val routedToLlm = kind == null || kind == RepairKind.LLM_MODEL_PATCH || kind == RepairKind.LLM_XML_REWRITE
     val failedLocally = localOutcome.matches(diagnostic) != null
     return routedToLlm || failedLocally
 }
