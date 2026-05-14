@@ -54,6 +54,11 @@ filegroup(
     srcs = glob(["main/kotlin/**/*.kt"]),
 )
 
+filegroup(
+    name = "cpd_srcs",
+    srcs = glob(["main/kotlin/**/*.kt"]),
+)
+
 java_library(
     name = "linter_rules_json_res",
     resource_strip_prefix = "linter/pkl",
@@ -72,6 +77,7 @@ kt_jvm_library(
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
         "@maven//:com_embabel_agent_embabel_agent_starter_shell",
+        "@maven//:com_embabel_agent_embabel_agent_test",
         "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
         "@maven//:org_graalvm_polyglot_js",
         "@maven//:org_graalvm_polyglot_polyglot",
