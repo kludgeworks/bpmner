@@ -145,6 +145,13 @@ class TopologyHandlersTest {
         assertTrue(ops.isEmpty())
     }
 
+    @Test
+    fun `insertConverging returns empty ops for non-task node with multiple incoming`() {
+        val definition = multiIncomingEndEventDefinition()
+        val ops = insertConverging.buildPatch(definition, "End_1")
+        assertTrue(ops.isEmpty())
+    }
+
     // ---- BypassGatewayHandler ---------------------------------------------
 
     @Test
@@ -315,6 +322,23 @@ class TopologyHandlersTest {
                 listOf(
                     BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
                     BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
+                ),
+        )
+
+    private fun multiIncomingEndEventDefinition() =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Multi Incoming End Event",
+            nodes =
+                listOf(
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
+                    BpmnNode("End_1", "Done", NodeType.END_EVENT, BpmnBounds(300.0, 160.0, 36.0, 36.0)),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_2", "Start_2", "End_1", waypoints = stdWaypoints),
                 ),
         )
 
