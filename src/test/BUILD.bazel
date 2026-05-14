@@ -55,6 +55,11 @@ filegroup(
     srcs = glob(["kotlin/**/*.kt"]),
 )
 
+filegroup(
+    name = "cpd_srcs",
+    srcs = glob(["kotlin/**/*.kt"]),
+)
+
 ktlint_test(
     name = "ktlint_check",
     srcs = glob(["kotlin/**/*.kt"]),
