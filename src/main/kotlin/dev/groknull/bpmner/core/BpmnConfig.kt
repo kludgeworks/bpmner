@@ -10,6 +10,8 @@ data class BpmnConfig(
     val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
+    val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
+    val readiness: BpmnReadinessConfig = BpmnReadinessConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
 ) {
@@ -41,8 +43,28 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("repairer"),
             )
+        val DEFAULT_READINESS_ASSESSOR =
+            Actor(
+                persona =
+                    Persona(
+                        name = "BPMN Readiness Assessor",
+                        persona = "You are a conservative business process intake reviewer",
+                        objective =
+                            "Assess whether source text contains enough grounded process detail" +
+                                " for BPMN generation without inventing missing facts",
+                        voice = "specific and evidence-grounded",
+                    ),
+                llm = LlmOptions.withLlmForRole("readiness-assessor"),
+            )
     }
 }
+
+data class BpmnReadinessConfig(
+    val readyThreshold: Int = 75,
+    val clarificationThreshold: Int = 40,
+    val minimumActivityCount: Int = 2,
+    val maxClarificationQuestions: Int = 5,
+)
 
 data class BpmnLoggingConfig(
     val dumpArtifacts: Boolean = false,
