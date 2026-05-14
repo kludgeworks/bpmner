@@ -9,6 +9,7 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
@@ -206,7 +207,11 @@ internal class BpmnGeneratorAgent(
             bpmn.xml.length,
             request.outputFile,
         )
-        return BpmnResult(outputFile = request.outputFile, xml = bpmn.xml)
+        return BpmnResult(
+            outputFile = request.outputFile,
+            status = BpmnGenerationStatus.GENERATED,
+            xml = bpmn.xml,
+        )
     }
 
     private fun logArtifactDump(
