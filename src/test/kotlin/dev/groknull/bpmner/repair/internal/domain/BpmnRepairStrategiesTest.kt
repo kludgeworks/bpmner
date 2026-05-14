@@ -33,8 +33,7 @@ import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
-import dev.groknull.bpmner.validation.internal.domain.LlmValidator
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -147,15 +146,13 @@ class BpmnRepairStrategiesTest {
 
     private fun strategy(): LlmPatchRepairStrategy {
         val fingerprints = BpmnFingerprintService()
-        val llmValidator = LlmValidator(RuleCatalogService())
-        val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, llmValidator)
+        val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
         return LlmPatchRepairStrategy(factory, BpmnPatchApplier())
     }
 
     private fun fullRewriteStrategy(): FullLlmRewriteRepairStrategy {
         val fingerprints = BpmnFingerprintService()
-        val llmValidator = LlmValidator(RuleCatalogService())
-        val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, llmValidator)
+        val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
         return FullLlmRewriteRepairStrategy(factory)
     }
 
@@ -280,5 +277,9 @@ class BpmnRepairStrategiesTest {
         override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
 
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
+    }
+
+    private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
+        override fun getLlmRuleGuidance(): String = ""
     }
 }

@@ -30,8 +30,7 @@ import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
-import dev.groknull.bpmner.validation.internal.domain.LlmValidator
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -63,7 +62,7 @@ class BpmnRepairPromptFactoryTest {
         val factory = factory()
         val diag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", BpmnRepairRoute.LLM)
 
-        val prompt = factory.patchFeedback(sampleDefinition(), listOf(diag))
+        val prompt = factory.patchFeedback(sampleDefinition(), listOf(diag), BpmnLocalRepairOutcome.EMPTY)
 
         assertTrue(prompt.contains("rule=klm/name-02"))
         assertFalse(prompt.contains("local-fix-failed"))
@@ -89,8 +88,7 @@ class BpmnRepairPromptFactoryTest {
 
     private fun factory(): BpmnRepairPromptFactory {
         val fingerprints = BpmnFingerprintService()
-        val llmValidator = LlmValidator(RuleCatalogService())
-        return BpmnRepairPromptFactory(NoopLintingPort, fingerprints, llmValidator)
+        return BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
     }
 
     private fun lintDiagnostic(
@@ -202,5 +200,9 @@ class BpmnRepairPromptFactoryTest {
         override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
 
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
+    }
+
+    private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
+        override fun getLlmRuleGuidance(): String = ""
     }
 }

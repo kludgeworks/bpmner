@@ -39,6 +39,7 @@ import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -47,7 +48,6 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogServi
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
-import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.annotation.AnnotationAwareOrderComparator
 import kotlin.test.Test
@@ -62,9 +62,7 @@ class BpmnRefinementEngineTest {
         val xsd = RecordingXsdValidator(listOf(emptyList()))
         val parser = RecordingXmlParser(validDefinition())
         val fingerprints = BpmnFingerprintService()
-        val catalogService = RuleCatalogService()
-        val llmValidator = LlmValidator(catalogService)
-        val prompts = BpmnRepairPromptFactory(lint, fingerprints, llmValidator)
+        val prompts = BpmnRepairPromptFactory(lint, fingerprints, NoopRuleGuidancePort)
         val patchApplier = BpmnPatchApplier()
         val strategies =
             mutableListOf<BpmnRepairStrategy>(
@@ -291,9 +289,7 @@ class BpmnRefinementEngineTest {
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer(lintService)
-        val catalogService = RuleCatalogService()
-        val llmValidator = LlmValidator(catalogService)
-        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, llmValidator)
+        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, NoopRuleGuidancePort)
         val patchApplier = BpmnPatchApplier()
         return BpmnRefinementEngine(
             config = config,
@@ -529,4 +525,8 @@ class BpmnRefinementEngineTest {
                     ),
                 ),
         )
+
+    private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
+        override fun getLlmRuleGuidance(): String = ""
+    }
 }

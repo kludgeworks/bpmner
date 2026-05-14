@@ -14,8 +14,9 @@ import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.format
 import dev.groknull.bpmner.core.generationPrompt
+import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.internal.domain.LlmValidator
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 
@@ -24,9 +25,9 @@ import org.springframework.stereotype.Component
 internal class BpmnRepairPromptFactory(
     private val bpmnLintingPort: BpmnLintingPort,
     private val fingerprints: BpmnFingerprintService,
-    private val llmValidator: LlmValidator,
-) {
-    fun initialMessages(
+    private val ruleGuidance: BpmnRuleGuidancePort,
+) : BpmnRepairPromptPort {
+    override fun initialMessages(
         request: BpmnRequest,
         definition: BpmnDefinition,
     ): List<Message> =
@@ -35,10 +36,10 @@ internal class BpmnRepairPromptFactory(
             AssistantMessage(fingerprints.serializeDefinition(definition)),
         )
 
-    fun patchFeedback(
+    override fun patchFeedback(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
-        localOutcome: BpmnLocalRepairOutcome = BpmnLocalRepairOutcome.EMPTY,
+        localOutcome: BpmnLocalRepairOutcome,
     ): String =
         buildString {
             appendLine("The following diagnostics can be fixed with targeted name or label patches.")
@@ -48,7 +49,7 @@ internal class BpmnRepairPromptFactory(
                     "directly address the listed diagnostics.",
             )
             appendLine()
-            val guidance = llmValidator.getLlmRuleGuidance()
+            val guidance = ruleGuidance.getLlmRuleGuidance()
             if (guidance.isNotEmpty()) {
                 appendLine(guidance)
                 appendLine()
@@ -60,10 +61,10 @@ internal class BpmnRepairPromptFactory(
             diagnostics.forEach { d -> appendLine(formatDiagnosticWithLocalContext(d, localOutcome)) }
         }
 
-    fun fullRepairFeedback(
+    override fun fullRepairFeedback(
         attempt: BpmnRepairAttempt,
-        diagnostics: List<BpmnDiagnostic> = attempt.diagnostics,
-        localOutcome: BpmnLocalRepairOutcome = BpmnLocalRepairOutcome.EMPTY,
+        diagnostics: List<BpmnDiagnostic>,
+        localOutcome: BpmnLocalRepairOutcome,
     ): String =
         fullRepairFeedback(
             definition = attempt.definition,
@@ -72,7 +73,7 @@ internal class BpmnRepairPromptFactory(
             localOutcome = localOutcome,
         )
 
-    fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
+    override fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules =
             diagnostics
                 .asSequence()
@@ -109,7 +110,7 @@ internal class BpmnRepairPromptFactory(
         buildString {
             appendLine("The BPMN definition needs repair. Return the full corrected BpmnDefinition object.")
             appendLine()
-            val guidance = llmValidator.getLlmRuleGuidance()
+            val guidance = ruleGuidance.getLlmRuleGuidance()
             if (guidance.isNotEmpty()) {
                 appendLine(guidance)
                 appendLine()

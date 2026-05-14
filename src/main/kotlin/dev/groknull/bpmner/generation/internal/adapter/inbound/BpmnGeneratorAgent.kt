@@ -25,7 +25,7 @@ import dev.groknull.bpmner.core.ValidatedPhasePlan
 import dev.groknull.bpmner.core.ValidatedPhasePlanSet
 import dev.groknull.bpmner.core.generationPrompt
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
-import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.generation.BpmnRenderer
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -35,7 +35,7 @@ import java.io.File
 @Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language business process description")
 internal class BpmnGeneratorAgent(
     private val config: BpmnConfig,
-    private val bpmnConverter: BpmnDefinitionToXmlConverter,
+    private val bpmnConverter: BpmnRenderer,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val eventPublisher: ApplicationEventPublisher,
 ) {

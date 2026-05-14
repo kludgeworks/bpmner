@@ -1,26 +1,31 @@
 package dev.groknull.bpmner
 
-import org.junit.jupiter.api.Assertions.assertTrue
+import com.tngtech.archunit.core.importer.ImportOption
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules
+import org.springframework.modulith.core.VerificationOptions
 
 class BpmnerModulithTest {
-    private val modules = ApplicationModules.of(BpmnerApplication::class.java)
+    private val modules =
+        ApplicationModules.of(
+            BpmnerApplication::class.java,
+            ImportOption { location ->
+                !location.contains("bpmner_tests_lib")
+            },
+        )
 
     @Test
     fun `verifies expected modules are detected`() {
         val moduleNames = modules.map { it.name }.toSet()
-        assertTrue(moduleNames.contains("core"), "Expected 'core' module, found: $moduleNames")
-        assertTrue(moduleNames.contains("generation"), "Expected 'generation' module, found: $moduleNames")
-        assertTrue(moduleNames.contains("validation"), "Expected 'validation' module, found: $moduleNames")
-        assertTrue(moduleNames.contains("repair"), "Expected 'repair' module, found: $moduleNames")
-        assertTrue(moduleNames.contains("layout"), "Expected 'layout' module, found: $moduleNames")
-        assertTrue(moduleNames.contains("observability"), "Expected 'observability' module, found: $moduleNames")
+        assertEquals(
+            setOf("config", "core", "generation", "validation", "repair", "layout", "observability", "shell"),
+            moduleNames,
+        )
     }
 
     @Test
     fun `verifies no illegal cross-module dependencies`() {
-        val violations = modules.detectViolations()
-        assertTrue(violations.getMessages().isNotEmpty(), "Expected current module boundary report to stay available")
+        modules.verify(VerificationOptions.defaults().withoutAdditionalVerifications())
     }
 }

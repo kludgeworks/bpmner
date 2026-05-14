@@ -7,8 +7,6 @@ import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
-import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -16,8 +14,8 @@ import org.springframework.stereotype.Component
 @Service
 @Component
 internal class LlmPatchRepairStrategy(
-    private val promptFactory: BpmnRepairPromptFactory,
-    private val patchApplier: BpmnPatchApplier,
+    private val promptFactory: BpmnRepairPromptPort,
+    private val patchApplier: BpmnPatchApplicationPort,
 ) : BpmnRepairStrategy {
     override fun getOrder(): Int = 200
 
@@ -60,7 +58,7 @@ internal class LlmPatchRepairStrategy(
 @Service
 @Component
 internal class FullLlmRewriteRepairStrategy(
-    private val promptFactory: BpmnRepairPromptFactory,
+    private val promptFactory: BpmnRepairPromptPort,
 ) : BpmnRepairStrategy {
     override fun getOrder(): Int = 300
 

@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
+import dev.groknull.bpmner.layout.BpmnLayoutPort
 import jakarta.annotation.PostConstruct
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess
@@ -15,7 +16,7 @@ import java.util.function.Consumer
 
 @SecondaryAdapter
 @Service
-internal open class BpmnLayoutService {
+internal open class BpmnLayoutService : BpmnLayoutPort {
     private val logger = LoggerFactory.getLogger(BpmnLayoutService::class.java)
     private var jsContext: Context? = null
     private var layoutApi: Value? = null
@@ -55,7 +56,7 @@ internal open class BpmnLayoutService {
         }
     }
 
-    fun layout(xml: String): String {
+    override fun layout(xml: String): String {
         val api = layoutApi ?: return xml
         logger.debug("Starting in-process BPMN auto-layout. xmlLength={}", xml.length)
 

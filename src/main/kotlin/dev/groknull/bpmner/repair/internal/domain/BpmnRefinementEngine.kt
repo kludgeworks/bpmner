@@ -17,7 +17,6 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
-import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnValidator
@@ -33,7 +32,7 @@ internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,
     private val validator: BpmnValidator,
-    private val promptFactory: BpmnRepairPromptFactory,
+    private val promptFactory: BpmnRepairPromptPort,
     private val fingerprints: BpmnFingerprintService,
     private val strategies: List<BpmnRepairStrategy>,
     private val eventPublisher: ApplicationEventPublisher,
