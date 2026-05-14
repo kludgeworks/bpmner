@@ -9,6 +9,7 @@ import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import jakarta.annotation.PostConstruct
+import org.graalvm.polyglot.TypeLiteral
 import org.graalvm.polyglot.Value
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
@@ -106,19 +107,17 @@ internal open class BpmnLintService(
         val api = engine.linterApi ?: return emptyMap()
         if (ruleNames.isEmpty()) return emptyMap()
         return engine.safePolyglotCall("Failed to resolve lint rule docs: {}") {
-            @Suppress("UNCHECKED_CAST")
             api
                 .getMember("getRuleDocs")
                 .execute(objectMapper.writeValueAsString(ruleNames.distinct().sorted()))
-                .`as`(Map::class.java) as Map<String, String>
+                .`as`(STRING_MAP_TYPE)
         } ?: emptyMap()
     }
 
     fun resolvedRules(): Map<String, String> {
         val api = engine.linterApi ?: return emptyMap()
         return engine.safePolyglotCall("Failed to resolve active lint rules: {}") {
-            @Suppress("UNCHECKED_CAST")
-            api.getMember("getRules").execute(lintConfigJson()).`as`(Map::class.java) as Map<String, String>
+            api.getMember("getRules").execute(lintConfigJson()).`as`(STRING_MAP_TYPE)
         } ?: emptyMap()
     }
 
@@ -151,8 +150,7 @@ internal open class BpmnLintService(
     private fun validateLintConfiguration(api: Value) {
         val invalidRules =
             try {
-                @Suppress("UNCHECKED_CAST")
-                api.getMember("getInvalidRules").execute(lintConfigJson()).`as`(List::class.java) as List<String>
+                api.getMember("getInvalidRules").execute(lintConfigJson()).`as`(STRING_LIST_TYPE)
             } catch (e: org.graalvm.polyglot.PolyglotException) {
                 throw BpmnLintConfigurationException("Invalid BPMN lint configuration: ${e.message}", e)
             }
@@ -168,6 +166,8 @@ internal open class BpmnLintService(
 
     companion object {
         private const val LINT_TIMEOUT_SECONDS = 10L
+        private val STRING_MAP_TYPE = object : TypeLiteral<Map<String, String>>() {}
+        private val STRING_LIST_TYPE = object : TypeLiteral<List<String>>() {}
 
         private val LAYOUT_SENSITIVE_RULES =
             setOf(
