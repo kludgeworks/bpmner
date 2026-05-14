@@ -10,6 +10,7 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ContractIssueSeverity
 import dev.groknull.bpmner.core.ProcessContract
 import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.core.ValidatedProcessContract
 import dev.groknull.bpmner.core.format
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
@@ -31,7 +32,7 @@ internal class BpmnContractAgent(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
         context: OperationContext,
-    ): ProcessContract {
+    ): ValidatedProcessContract {
         val promptRunner =
             config.contractExtractor
                 .promptRunner(context)
@@ -51,6 +52,6 @@ internal class BpmnContractAgent(
                 report.issues.joinToString { it.format() },
             )
         }
-        return contract
+        return ValidatedProcessContract(contract = contract, report = report)
     }
 }
