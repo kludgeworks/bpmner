@@ -26,6 +26,7 @@ export type RuleConfig = {
 	errorMessages: Record<string, string | undefined>
 	staticConfig?: unknown
 	repair: Repair
+	layoutSensitive?: boolean
 }
 
 type RuleCatalog = {

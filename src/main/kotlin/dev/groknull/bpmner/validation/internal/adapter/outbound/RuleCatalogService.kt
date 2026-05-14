@@ -41,6 +41,7 @@ data class BpmnRuleMetadata(
     val replacedBy: List<String>,
     val deprecationReason: String?,
     val repair: RepairMetadata = RepairMetadata(),
+    val layoutSensitive: Boolean = false,
 )
 
 data class RuleCatalog(

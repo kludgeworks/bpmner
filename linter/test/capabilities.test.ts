@@ -118,4 +118,18 @@ describe("getRuleCapabilities", () => {
 			)
 		}
 	})
+
+	it("no-overlapping-elements is flagged layoutSensitive=true", () => {
+		const caps = getRuleCapabilities()
+		const cap = caps.find((c) => c.id === "no-overlapping-elements")
+		assert.ok(cap, "no-overlapping-elements not found in capabilities")
+		assert.equal(cap.layoutSensitive, true)
+	})
+
+	it("BPMNER rules default to layoutSensitive=false", () => {
+		const caps = getRuleCapabilities()
+		const cap = caps.find((c) => c.id === "name-uncommon-abbreviations")
+		assert.ok(cap, "name-uncommon-abbreviations not found in capabilities")
+		assert.equal(cap.layoutSensitive, false)
+	})
 })

@@ -152,9 +152,11 @@ internal class BpmnLayoutAgent(
             if (lintIssues == null) {
                 logger.warn("Final bpmn-lint validation was unavailable; continuing without lint feedback")
             } else {
+                val capabilities = bpmnLintingPort.lintRuleCapabilities()
                 diagnostics +=
                     lintIssues.map { issue ->
-                        val isLayoutDiagnostic = issue.rule.isLayoutSensitiveLintRule()
+                        val isLayoutDiagnostic =
+                            capabilities[BpmnLintRuleIds.bareRuleId(issue.rule)]?.layoutSensitive == true
                         BpmnDiagnostic(
                             source = BpmnDiagnosticSource.LINT,
                             message = issue.message,
@@ -201,8 +203,6 @@ internal class BpmnLayoutAgent(
             }
         }.trim()
 
-    private fun String.isLayoutSensitiveLintRule(): Boolean =
-        this == "no-overlapping-elements" || this == "bpmnlint/no-overlapping-elements"
 }
 
 private fun BpmnAutoFixChange.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")

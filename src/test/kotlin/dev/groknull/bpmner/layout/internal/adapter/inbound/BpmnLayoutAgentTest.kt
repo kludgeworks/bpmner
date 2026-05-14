@@ -49,6 +49,17 @@ class BpmnLayoutAgentTest {
             replacementMap = null,
         )
 
+    private fun layoutSensitiveCapability(id: String) =
+        BpmnLintRuleCapability(
+            id = id,
+            kind = RepairKind.UNFIXABLE,
+            repairSafety = BpmnRepairSafety.LLM_ONLY,
+            fixHandler = null,
+            handlerExists = false,
+            replacementMap = null,
+            layoutSensitive = true,
+        )
+
     @Test
     fun `final validation runs full post-layout lint and succeeds`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
@@ -373,6 +384,7 @@ class BpmnLayoutAgentTest {
                         ),
                     ),
                 ),
+                capabilities = mapOf("no-overlapping-elements" to layoutSensitiveCapability("no-overlapping-elements")),
             )
         val agent = buildLayoutAgent(lintService, xsdValidator)
 
