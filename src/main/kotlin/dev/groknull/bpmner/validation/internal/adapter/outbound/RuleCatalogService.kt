@@ -13,10 +13,11 @@ data class RuleCategoryMetadata(
     val shortCode: String,
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 data class RepairMetadata(
-    val route: String? = null,
-    val editSurface: String? = null,
-    val safety: String? = null,
+    val route: String = "LLM",
+    val editSurface: String = "NONE",
+    val safety: String = "LLM_ONLY",
     val handler: String? = null,
     val replacementMap: Map<String, String>? = null,
 )
@@ -34,14 +35,12 @@ data class BpmnRuleMetadata(
     val severity: String,
     val errorMessages: Map<String, String>,
     val staticConfig: Any?,
-    val repair: RepairMetadata? = null,
-    val autoFixable: Boolean = false,
-    val fixStrategy: String? = null,
     val hasTsImplementation: Boolean,
     val aliases: List<String>,
     val deprecated: Boolean,
     val replacedBy: List<String>,
     val deprecationReason: String?,
+    val repair: RepairMetadata = RepairMetadata(),
 )
 
 data class RuleCatalog(

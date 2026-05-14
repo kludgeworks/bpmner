@@ -29,6 +29,10 @@ data class BpmnDiagnostic(
     val objectRef: String? = null,
     val repairScope: BpmnRepairScope? = null,
     val ownerRef: String? = null,
+    val repairRoute: BpmnRepairRoute? = null,
+    val editSurface: BpmnEditSurface? = null,
+    val repairSafety: BpmnRepairSafety? = null,
+    val fixHandler: String? = null,
 )
 
 data class GlobalDiagnostics(
@@ -46,5 +50,6 @@ fun BpmnDiagnostic.format(): String =
         objectRef?.let { append(", objectRef=$it") }
         repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
         ownerRef?.let { append(", owner=$it") }
+        repairRoute?.let { append(", repairRoute=${it.name.lowercase()}") }
         append(": $message")
     }

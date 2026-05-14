@@ -34,6 +34,7 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFact
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.PklRuleCapabilityAdapter
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
@@ -116,7 +117,7 @@ class BpmnRefinementEngineTest {
             )
         val xsd = RecordingXsdValidator(listOf(emptyList()))
         val lint = RecordingLintService(listOf(emptyList()))
-        val normalizer = BpmnDiagnosticNormalizer()
+        val normalizer = BpmnDiagnosticNormalizer(lint)
         val pipeline =
             BpmnEvaluationPipeline(
                 config = BpmnConfig(),
@@ -147,7 +148,7 @@ class BpmnRefinementEngineTest {
         converter: BpmnDefinitionToXmlConverter,
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
-        val normalizer = BpmnDiagnosticNormalizer()
+        val normalizer = BpmnDiagnosticNormalizer(lintService)
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
         val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
@@ -183,7 +184,11 @@ class BpmnRefinementEngineTest {
 
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
-    ) : BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine()) {
+    ) : BpmnLintService(
+            catalogService = RuleCatalogService(),
+            engine = BpmnLintJsEngine(),
+            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+        ) {
         val xmls = mutableListOf<String>()
         private var index = 0
 
@@ -194,6 +199,8 @@ class BpmnRefinementEngineTest {
             xmls += bpmnXml
             return responses[index++]
         }
+
+        override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.core.BpmnLintRuleCapability>()
     }
 
     private class RecordingXsdValidator(

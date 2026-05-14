@@ -265,6 +265,8 @@ class BpmnLayoutAgentTest {
                     docs[ruleName]?.let { put(ruleName, it) }
                 }
             }
+
+        override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.core.BpmnLintRuleCapability>()
     }
 
     private class RecordingXsdValidator(

@@ -50,6 +50,7 @@ import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.PklRuleCapabilityAdapter
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
@@ -70,7 +71,7 @@ class BpmnRepairAgentTest {
         patchApplier: BpmnPatchApplier = BpmnPatchApplier(),
     ): BpmnRepairAgent {
         val fingerprints = BpmnFingerprintService()
-        val normalizer = BpmnDiagnosticNormalizer()
+        val normalizer = BpmnDiagnosticNormalizer(lintService)
         val catalogService = RuleCatalogService()
         val llmValidator = LlmValidator(catalogService)
         val promptFactory = BpmnRepairPromptFactory(config, lintService, fingerprints, llmValidator)
@@ -595,7 +596,11 @@ class BpmnRepairAgentTest {
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
-    ) : BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine()) {
+    ) : BpmnLintService(
+            catalogService = RuleCatalogService(),
+            engine = BpmnLintJsEngine(),
+            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+        ) {
         val xmls = mutableListOf<String>()
         val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0
@@ -615,6 +620,8 @@ class BpmnRepairAgentTest {
                     docs[ruleName]?.let { put(ruleName, it) }
                 }
             }
+
+        override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.core.BpmnLintRuleCapability>()
     }
 
     private class RecordingXsdValidator(

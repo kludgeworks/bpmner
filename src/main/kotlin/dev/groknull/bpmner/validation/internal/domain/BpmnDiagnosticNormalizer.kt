@@ -2,19 +2,23 @@ package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.core.format
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Service
 @Component
-internal class BpmnDiagnosticNormalizer {
+internal class BpmnDiagnosticNormalizer(
+    private val lintingPort: BpmnLintingPort,
+) {
     private val logger = LoggerFactory.getLogger(BpmnDiagnosticNormalizer::class.java)
 
     fun normalizeXsdDiagnostics(
@@ -40,9 +44,12 @@ internal class BpmnDiagnosticNormalizer {
         lintIssues: List<LintIssue>,
         elementIndex: dev.groknull.bpmner.core.BpmnElementIndex,
         graph: LaidOutProcessGraph,
-    ): List<BpmnDiagnostic> =
-        lintIssues.map { issue ->
+    ): List<BpmnDiagnostic> {
+        val caps = lintingPort.lintRuleCapabilities()
+        return lintIssues.map { issue ->
             val elementId = issue.id?.takeIf { elementIndex.knownElementIds().contains(it) }
+            val bareId = issue.rule?.replace("^(bpmner|bpmnlint-plugin-bpmner)/".toRegex(), "")
+            val cap = bareId?.let { caps[it] }
             scopedDiagnostic(
                 graph = graph,
                 diagnostic =
@@ -53,9 +60,14 @@ internal class BpmnDiagnosticNormalizer {
                         category = issue.category,
                         elementId = elementId,
                         objectRef = elementIndex.objectRefForElementId(elementId),
+                        repairRoute = cap?.repairRoute ?: BpmnRepairRoute.LLM,
+                        editSurface = cap?.editSurface,
+                        repairSafety = cap?.repairSafety,
+                        fixHandler = cap?.fixHandler,
                     ),
             )
         }
+    }
 
     fun graphDiagnostic(
         graph: LaidOutProcessGraph,

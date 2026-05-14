@@ -11,7 +11,12 @@ class BpmnLintServiceIntegrationTest {
     @Test
     fun `lint returns issues for invalid BPMN XML using GraalJS bundle`() {
         val engine = BpmnLintJsEngine().apply { init() }
-        val service = BpmnLintService(catalogService = RuleCatalogService(), engine = engine)
+        val service =
+            BpmnLintService(
+                catalogService = RuleCatalogService(),
+                engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+            )
         service.init()
 
         val invalidXml =
@@ -45,6 +50,7 @@ class BpmnLintServiceIntegrationTest {
             BpmnLintService(
                 catalogService = RuleCatalogService(),
                 engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
                     BpmnLintProperties(
                         extends = listOf("bpmnlint:recommended", "plugin:bpmner/recommended"),
@@ -82,6 +88,7 @@ class BpmnLintServiceIntegrationTest {
             BpmnLintService(
                 catalogService = RuleCatalogService(),
                 engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
                     BpmnLintProperties(
                         rules =
@@ -130,6 +137,7 @@ class BpmnLintServiceIntegrationTest {
             BpmnLintService(
                 catalogService = RuleCatalogService(),
                 engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
                     BpmnLintProperties(
                         extends = listOf("plugin:bpmner/recommended"),
@@ -185,6 +193,7 @@ class BpmnLintServiceIntegrationTest {
             BpmnLintService(
                 catalogService = RuleCatalogService(),
                 engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
                     BpmnLintProperties(
                         rules = mapOf("bpmner/truly-unknown-rule" to "error"),
