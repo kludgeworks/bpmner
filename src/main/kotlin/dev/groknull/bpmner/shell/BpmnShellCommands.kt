@@ -1,5 +1,7 @@
 package dev.groknull.bpmner.shell
 
+import dev.groknull.bpmner.core.BpmnGenerationStatus
+import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -47,6 +49,18 @@ class BpmnShellCommands(
                     styleGuide = styleGuide,
                 ),
             )
-        return "BPMN written to: ${result.outputFile}"
+        return messageFor(result)
     }
+
+    private fun messageFor(result: BpmnResult): String =
+        when (result.status) {
+            BpmnGenerationStatus.GENERATED -> "BPMN written to: ${result.outputFile}"
+            BpmnGenerationStatus.NEEDS_CLARIFICATION ->
+                "Generation blocked: input needs clarification. Readiness report: ${result.reportFile}"
+            BpmnGenerationStatus.NOT_A_PROCESS ->
+                "Generation blocked: input is not a process. Readiness report: ${result.reportFile}"
+            BpmnGenerationStatus.ALIGNMENT_FAILED,
+            BpmnGenerationStatus.VALIDATION_FAILED,
+            -> "Generation finished with status ${result.status}."
+        }
 }

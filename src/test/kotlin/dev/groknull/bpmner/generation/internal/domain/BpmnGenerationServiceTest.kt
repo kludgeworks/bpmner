@@ -4,9 +4,18 @@ import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.core.ReadinessDimensionScore
+import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
@@ -19,11 +28,9 @@ class BpmnGenerationServiceTest {
     @Test
     fun `generates from inline process description and resolves output path`() {
         val invoker = CapturingBpmnAgentInvoker()
-        val service =
-            BpmnGenerationService(
-                agentInvoker = invoker,
-                inputPathResolver = InputPathResolver(cwd = tempDir),
-            )
+        val readiness = StubReadinessInvoker(assessment(ReadinessVerdict.READY, 92))
+        val reportWriter = CapturingReportWriter()
+        val service = service(invoker, readiness, reportWriter)
 
         val result =
             service.generate(
@@ -36,6 +43,9 @@ class BpmnGenerationServiceTest {
         assertEquals(tempDir.resolve("order.bpmn").toString(), invoker.lastRequest.outputFile)
         assertEquals("Order is packed and shipped", invoker.lastRequest.processDescription)
         assertEquals(tempDir.resolve("order.bpmn").toString(), result.outputFile)
+        assertEquals(BpmnGenerationStatus.GENERATED, result.status)
+        assertNull(result.reportFile)
+        assertTrue(reportWriter.calls.isEmpty())
     }
 
     @Test
@@ -45,11 +55,8 @@ class BpmnGenerationServiceTest {
         processFile.writeText("  Approve invoice and pay supplier  ")
         styleGuideFile.writeText("  Use verb object task names  ")
         val invoker = CapturingBpmnAgentInvoker()
-        val service =
-            BpmnGenerationService(
-                agentInvoker = invoker,
-                inputPathResolver = InputPathResolver(cwd = tempDir),
-            )
+        val readiness = StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90))
+        val service = service(invoker, readiness, CapturingReportWriter())
 
         service.generate(
             BpmnGenerationInput(
@@ -67,9 +74,10 @@ class BpmnGenerationServiceTest {
     @Test
     fun `requires exactly one process source`() {
         val service =
-            BpmnGenerationService(
-                agentInvoker = CapturingBpmnAgentInvoker(),
-                inputPathResolver = InputPathResolver(cwd = tempDir),
+            service(
+                CapturingBpmnAgentInvoker(),
+                StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90)),
+                CapturingReportWriter(),
             )
 
         assertThrows(IllegalArgumentException::class.java) {
@@ -85,16 +93,125 @@ class BpmnGenerationServiceTest {
         }
     }
 
+    @Test
+    fun `blocks generation and writes report when readiness needs clarification`() {
+        val invoker = CapturingBpmnAgentInvoker()
+        val assessment = assessment(ReadinessVerdict.NEEDS_CLARIFICATION, 55)
+        val readiness = StubReadinessInvoker(assessment)
+        val reportWriter = CapturingReportWriter(reportPath = tempDir.resolve("weak.bpmn.readiness.md").toString())
+        val service = service(invoker, readiness, reportWriter)
+
+        val result =
+            service.generate(
+                BpmnGenerationInput(
+                    processDescription = "Make it nicer for users",
+                    outputFile = "weak.bpmn",
+                ),
+            )
+
+        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION, result.status)
+        assertNull(result.xml)
+        assertNotNull(result.readinessReport)
+        assertEquals(tempDir.resolve("weak.bpmn.readiness.md").toString(), result.reportFile)
+        assertTrue(invoker.calls.isEmpty(), "generator must not run when readiness blocks generation")
+        val writerCall = reportWriter.calls.single()
+        assertEquals("Make it nicer for users", writerCall.originalInput)
+        assertEquals(tempDir.resolve("weak.bpmn").toString(), writerCall.outputFile)
+        assertEquals(assessment, writerCall.assessment)
+    }
+
+    @Test
+    fun `blocks generation and writes report when input is not a process`() {
+        val invoker = CapturingBpmnAgentInvoker()
+        val assessment = assessment(ReadinessVerdict.NOT_A_PROCESS, 20)
+        val readiness = StubReadinessInvoker(assessment)
+        val reportWriter = CapturingReportWriter(reportPath = tempDir.resolve("haiku.bpmn.readiness.md").toString())
+        val service = service(invoker, readiness, reportWriter)
+
+        val result =
+            service.generate(
+                BpmnGenerationInput(
+                    processDescription = "Cherry blossoms drift on the spring breeze",
+                    outputFile = "haiku.bpmn",
+                ),
+            )
+
+        assertEquals(BpmnGenerationStatus.NOT_A_PROCESS, result.status)
+        assertNull(result.xml)
+        assertNotNull(result.readinessReport)
+        assertEquals(tempDir.resolve("haiku.bpmn.readiness.md").toString(), result.reportFile)
+        assertTrue(invoker.calls.isEmpty(), "generator must not run when readiness blocks generation")
+    }
+
+    private fun service(
+        invoker: BpmnAgentInvoker,
+        readinessInvoker: BpmnReadinessInvoker,
+        reportWriter: ReadinessReportWriter,
+    ) = BpmnGenerationService(
+        agentInvoker = invoker,
+        readinessInvoker = readinessInvoker,
+        readinessReportWriter = reportWriter,
+        inputPathResolver = InputPathResolver(cwd = tempDir),
+    )
+
+    private fun assessment(
+        verdict: ReadinessVerdict,
+        score: Int,
+    ): ProcessInputAssessment =
+        ProcessInputAssessment(
+            verdict = verdict,
+            overallScore = score,
+            dimensions =
+                ReadinessDimension.entries.map {
+                    ReadinessDimensionScore(
+                        dimension = it,
+                        score = score,
+                        rationale = "Stubbed dimension score.",
+                    )
+                },
+            rationale = "Stubbed rationale.",
+        )
+
     private class CapturingBpmnAgentInvoker : BpmnAgentInvoker {
-        lateinit var lastRequest: BpmnRequest
+        val calls = mutableListOf<BpmnRequest>()
+
+        val lastRequest: BpmnRequest
+            get() = calls.last()
 
         override fun generate(request: BpmnRequest): BpmnResult {
-            lastRequest = request
+            calls += request
             return BpmnResult(
                 outputFile = request.outputFile,
                 status = BpmnGenerationStatus.GENERATED,
                 xml = "<definitions />",
             )
+        }
+    }
+
+    private class StubReadinessInvoker(
+        private val assessment: ProcessInputAssessment,
+    ) : BpmnReadinessInvoker {
+        override fun assess(request: BpmnRequest): ProcessInputAssessment = assessment
+    }
+
+    private data class ReportWriterCall(
+        val originalInput: String,
+        val assessment: ProcessInputAssessment,
+        val outputFile: String,
+    )
+
+    private class CapturingReportWriter(
+        private val reportPath: String = "/tmp/report.md",
+    ) : ReadinessReportWriter {
+        val calls = mutableListOf<ReportWriterCall>()
+
+        override fun writeReport(
+            originalInput: String,
+            assessment: ProcessInputAssessment,
+            outputFile: String,
+        ): String {
+            calls += ReportWriterCall(originalInput, assessment, outputFile)
+            return reportPath
         }
     }
 }

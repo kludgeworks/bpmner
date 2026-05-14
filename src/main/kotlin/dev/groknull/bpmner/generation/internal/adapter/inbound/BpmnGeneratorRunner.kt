@@ -1,6 +1,9 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.BpmnerApplicationShutdown
+import dev.groknull.bpmner.core.BpmnGenerationStatus
+import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -38,9 +41,33 @@ class BpmnGeneratorRunner(
                     processFile = args.getOptionValues("process-file")?.firstOrNull(),
                     outputFile = args.getOptionValues("output")?.firstOrNull() ?: "output.bpmn",
                     styleGuide = args.getOptionValues("style-guide")?.firstOrNull(),
+                    mode = GenerationMode.SINGLE_SHOT,
                 ),
             )
-        println(AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}"))
+        println(messageFor(result))
         applicationShutdown.exit()
     }
+
+    private fun messageFor(result: BpmnResult): String =
+        when (result.status) {
+            BpmnGenerationStatus.GENERATED ->
+                AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}")
+            BpmnGenerationStatus.NEEDS_CLARIFICATION ->
+                AnsiOutput.toString(
+                    AnsiColor.BRIGHT_YELLOW,
+                    "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile}",
+                )
+            BpmnGenerationStatus.NOT_A_PROCESS ->
+                AnsiOutput.toString(
+                    AnsiColor.BRIGHT_YELLOW,
+                    "⚠ Generation blocked: input is not a process. Readiness report: ${result.reportFile}",
+                )
+            BpmnGenerationStatus.ALIGNMENT_FAILED,
+            BpmnGenerationStatus.VALIDATION_FAILED,
+            ->
+                AnsiOutput.toString(
+                    AnsiColor.BRIGHT_RED,
+                    "⚠ Generation finished with status ${result.status}.",
+                )
+        }
 }
