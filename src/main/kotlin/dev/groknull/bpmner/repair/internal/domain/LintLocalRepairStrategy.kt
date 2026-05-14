@@ -6,6 +6,7 @@ import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleIds
 import dev.groknull.bpmner.core.BpmnLocalFixFailure
+import dev.groknull.bpmner.core.BpmnLocalFixSummary
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.LintIssue
@@ -77,6 +78,7 @@ internal class LintLocalRepairStrategy(
                     definition = applied.definition,
                     promptText = patch.reason ?: "Local model fix",
                     messages = attempt.messages,
+                    localFixSummary = BpmnLocalFixSummary(modelApplied = 1, xmlApplied = 0, xmlErrors = 0),
                 )
             }
 
@@ -174,6 +176,12 @@ internal class LintLocalRepairStrategy(
             definition = newDefinition,
             promptText = "Local lint auto-fix (" + result.applied.joinToString { it.rule } + ")",
             messages = attempt.messages,
+            localFixSummary =
+                BpmnLocalFixSummary(
+                    modelApplied = 0,
+                    xmlApplied = result.applied.size,
+                    xmlErrors = result.errors.size,
+                ),
         )
     }
 
