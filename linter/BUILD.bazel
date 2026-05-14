@@ -49,9 +49,9 @@ js_library(
     ],
 )
 
-BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
+BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + ["//tools/js:polyfills.ts"]
 
-TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES
+TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES + ["//tools/js:polyfills.ts"]
 
 # Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
@@ -90,7 +90,7 @@ ts_config(
 
 bpmner_ts_project(
     name = "ts",
-    srcs = ALL_TSC_SRCS,
+    srcs = ALL_TSC_SRCS + ["//tools/js:polyfills.ts"],
     assets = BPMN_FIXTURES,
     out_dir = "tsc",
     resolve_json_module = True,
