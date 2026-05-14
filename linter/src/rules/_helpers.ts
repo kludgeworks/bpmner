@@ -1,4 +1,6 @@
 import { is, isAny } from "bpmnlint-utils"
+import model from "wink-eng-lite-web-model"
+import winkNLP from "wink-nlp"
 
 export type ModdleElement = {
 	id?: string
@@ -33,6 +35,24 @@ export type ModdleElement = {
 
 export type Reporter = {
 	report: (id: string | undefined, message: string) => void
+}
+
+const nlp = winkNLP(model)
+const its = nlp.its
+
+/**
+ * Checks if the given name starts with a verb or auxiliary verb.
+ */
+export function startsWithVerbLike(name: string): boolean {
+	const doc = nlp.readDoc(name)
+	const first = doc.tokens().itemAt(0)
+
+	if (!first) {
+		return false
+	}
+
+	const pos = first.out(its.pos)
+	return pos === "VERB" || pos === "AUX"
 }
 
 export function getDefinitions(node: ModdleElement): ModdleElement | null {
@@ -128,6 +148,25 @@ export function getPoolIdForNode(
 	}
 
 	return null
+}
+
+/**
+ * Returns the source and target pool IDs for a flow.
+ */
+export function getFlowPools(
+	node: ModdleElement,
+	definitions: ModdleElement,
+): { sourcePool: string | null; targetPool: string | null } {
+	const sourcePool = getPoolIdForNode(
+		node.sourceRef as ModdleElement | undefined,
+		definitions,
+	)
+	const targetPool = getPoolIdForNode(
+		node.targetRef as ModdleElement | undefined,
+		definitions,
+	)
+
+	return { sourcePool, targetPool }
 }
 
 function collectAssociations(definitions: ModdleElement): ModdleElement[] {
