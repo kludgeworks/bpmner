@@ -28,6 +28,7 @@ class BpmnerModulithTest {
                 "layout",
                 "observability",
                 "readiness",
+                "contract",
                 "shell",
             ),
             moduleNames,
