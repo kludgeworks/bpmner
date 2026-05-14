@@ -19,7 +19,7 @@ import org.springframework.shell.standard.ShellOption
 @ShellComponent
 class BpmnShellCommands(
     private val generationUseCase: BpmnGenerationUseCase,
-    private val prompter: BpmnShellPrompter = StandardBpmnShellPrompter(),
+    private val prompter: BpmnShellPrompter,
 ) {
     @ShellMethod(
         value = "Generate a BPMN 2.0 diagram from a process description",
@@ -102,8 +102,10 @@ class BpmnShellCommands(
             BpmnGenerationStatus.GENERATED -> "BPMN written to: ${result.outputFile}"
             BpmnGenerationStatus.NEEDS_CLARIFICATION -> "Clarification required. ${readinessSummary(result)}"
             BpmnGenerationStatus.NOT_A_PROCESS -> "BPMN not generated. ${readinessSummary(result)}"
-            BpmnGenerationStatus.ALIGNMENT_FAILED -> "BPMN not generated because semantic alignment failed."
-            BpmnGenerationStatus.VALIDATION_FAILED -> "BPMN not generated because validation failed."
+            BpmnGenerationStatus.ALIGNMENT_FAILED ->
+                "BPMN not generated because semantic alignment failed.${reportFileSuffix(result)}"
+            BpmnGenerationStatus.VALIDATION_FAILED ->
+                "BPMN not generated because validation failed.${reportFileSuffix(result)}"
         }
 
     private fun readinessSummary(result: BpmnResult): String {
