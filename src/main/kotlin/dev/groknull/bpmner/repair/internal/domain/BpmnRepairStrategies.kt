@@ -81,31 +81,6 @@ internal class FullLlmRewriteRepairStrategy(
     }
 }
 
-@Service
-@Component
-internal class DeterministicTopologyRepairStrategy(
-    private val topologyRepair: BpmnTopologyRepair,
-) : BpmnRepairStrategy {
-    override fun getOrder(): Int = 50
-
-    override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
-        val result = topologyRepair.repair(context.attempt.definition, context.attempt.diagnostics)
-        return when (result) {
-            is PatchApplicationResult.Success -> {
-                BpmnRepairResult.Repaired(
-                    definition = result.definition,
-                    promptText = "Deterministic topology repair",
-                    messages = context.attempt.messages,
-                )
-            }
-
-            else -> {
-                BpmnRepairResult.NotApplicable
-            }
-        }
-    }
-}
-
 private fun eligibleForLlm(
     diagnostic: BpmnDiagnostic,
     localOutcome: BpmnLocalRepairOutcome,

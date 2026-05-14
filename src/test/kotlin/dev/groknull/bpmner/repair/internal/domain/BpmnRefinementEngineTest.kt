@@ -38,6 +38,10 @@ import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
+import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
@@ -67,15 +71,19 @@ class BpmnRefinementEngineTest {
             mutableListOf<BpmnRepairStrategy>(
                 FullLlmRewriteRepairStrategy(prompts),
                 LlmPatchRepairStrategy(prompts, patchApplier),
-                DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                LintLocalRepairStrategy(lint, xsd, parser),
+                LintLocalRepairStrategy(
+                    lint,
+                    xsd,
+                    parser,
+                    BpmnLocalModelFixHandlerRegistry(emptyList()),
+                    patchApplier,
+                ),
             )
 
         AnnotationAwareOrderComparator.sort(strategies)
 
         assertEquals(
             listOf(
-                DeterministicTopologyRepairStrategy::class,
                 LintLocalRepairStrategy::class,
                 LlmPatchRepairStrategy::class,
                 FullLlmRewriteRepairStrategy::class,
@@ -214,21 +222,32 @@ class BpmnRefinementEngineTest {
         )
 
     @Test
-    fun `deterministic topology strategy repairs without calling LLM`() {
+    fun `local model fix strategy repairs topology diagnostic without calling LLM`() {
         val invalid = joinForkDefinition()
         val xsd = RecordingXsdValidator(listOf(emptyList(), emptyList()))
+        val topologyCapability =
+            BpmnLintRuleCapability(
+                id = "no-gateway-join-fork",
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                fixHandler = "splitJoinForkGateway",
+                handlerExists = true,
+                replacementMap = null,
+            )
         val lint =
             RecordingLintService(
-                listOf(
+                lintResponses =
                     listOf(
-                        LintIssue(
-                            id = "Gateway_1",
-                            rule = "bpmner/no-gateway-join-fork",
-                            message = "Gateway joins and forks at the same point",
+                        listOf(
+                            LintIssue(
+                                id = "Gateway_1",
+                                rule = "bpmner/no-gateway-join-fork",
+                                message = "Gateway joins and forks at the same point",
+                            ),
                         ),
+                        emptyList(),
                     ),
-                    emptyList(),
-                ),
+                capabilities = mapOf("no-gateway-join-fork" to topologyCapability),
             )
         val converter = RecordingConverter()
         val engine = refinementEngine(BpmnConfig(maxAttempts = 3), lint, xsd, converter)
@@ -304,8 +323,20 @@ class BpmnRefinementEngineTest {
             fingerprints = fingerprints,
             strategies =
                 listOf(
-                    DeterministicTopologyRepairStrategy(BpmnTopologyRepair(patchApplier)),
-                    LintLocalRepairStrategy(lintService, xsdValidator, xmlParser),
+                    LintLocalRepairStrategy(
+                        lintService,
+                        xsdValidator,
+                        xmlParser,
+                        BpmnLocalModelFixHandlerRegistry(
+                            listOf(
+                                SplitJoinForkGatewayHandler(),
+                                InsertConvergingGatewayHandler(),
+                                BypassGatewayHandler(),
+                                ConvergingGatewayClearNameHandler(),
+                            ),
+                        ),
+                        patchApplier,
+                    ),
                     LlmPatchRepairStrategy(promptFactory, patchApplier),
                     FullLlmRewriteRepairStrategy(promptFactory),
                 ),

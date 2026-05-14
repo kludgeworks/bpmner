@@ -78,9 +78,9 @@ facts {
       .discouragedLeadingVerbs
       .contains("manage")
     Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").repair.kind
-      == "LOCAL_XML_FIX"
+      == "LOCAL_MODEL_FIX"
     Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").repair.handler
-      == "clearName"
+      == "clearConvergingGatewayName"
     Catalog.rules
       .find((rule) -> rule.id == "name-uncommon-abbreviations")
       .staticConfig

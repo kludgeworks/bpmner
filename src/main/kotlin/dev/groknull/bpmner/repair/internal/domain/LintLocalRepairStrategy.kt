@@ -23,6 +23,8 @@ internal class LintLocalRepairStrategy(
     private val lintingPort: BpmnLintingPort,
     private val xsdValidationPort: BpmnXsdValidationPort,
     private val xmlParser: BpmnXmlParser,
+    private val modelFixHandlerRegistry: BpmnLocalModelFixHandlerRegistry,
+    private val patchApplier: BpmnPatchApplicationPort,
 ) : BpmnRepairStrategy {
     private val logger = LoggerFactory.getLogger(LintLocalRepairStrategy::class.java)
 
@@ -30,15 +32,67 @@ internal class LintLocalRepairStrategy(
 
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val attempt = context.attempt
+        val modelFixResult = tryLocalModelFix(attempt)
+        if (modelFixResult !is BpmnRepairResult.NotApplicable) {
+            return modelFixResult
+        }
         val rendered = attempt.evaluation.rendered ?: return BpmnRepairResult.NotApplicable
         val rawIssues = attempt.evaluation.rawLintIssues ?: return BpmnRepairResult.NotApplicable
-        warnIfLocalModelDiagnosticsPresent(attempt)
         val localXmlRules = collectLocalXmlRules(attempt.diagnostics)
         val issuesForFix = rawIssues.filter { it.bareRuleId() in localXmlRules }
         return when {
             localXmlRules.isEmpty() -> BpmnRepairResult.NotApplicable
             issuesForFix.isEmpty() -> BpmnRepairResult.NotApplicable
             else -> runAutoFixAndDecide(rendered.xml, issuesForFix, localXmlRules, attempt)
+        }
+    }
+
+    private fun tryLocalModelFix(attempt: BpmnRepairAttempt): BpmnRepairResult {
+        attempt.diagnostics.forEach { diagnostic ->
+            val repaired = applyLocalModelFix(attempt, diagnostic)
+            if (repaired != null) return repaired
+        }
+        return BpmnRepairResult.NotApplicable
+    }
+
+    private fun applyLocalModelFix(
+        attempt: BpmnRepairAttempt,
+        diagnostic: BpmnDiagnostic,
+    ): BpmnRepairResult.Repaired? {
+        if (diagnostic.kind != RepairKind.LOCAL_MODEL_FIX) return null
+        val handlerName = diagnostic.fixHandler ?: return null
+        val elementId = diagnostic.elementId ?: return null
+        val handler = modelFixHandlerRegistry.lookup(handlerName) ?: return null
+        val ops = handler.buildPatch(attempt.definition, elementId)
+        if (ops.isEmpty()) return null
+        val patch =
+            BpmnRepairPatch(
+                operations = ops,
+                reason = "LOCAL_MODEL_FIX: $handlerName on $elementId",
+            )
+        return when (val applied = patchApplier.apply(attempt.definition, patch)) {
+            is PatchApplicationResult.Success -> {
+                logger.info("Local model fix applied: handler={}, elementId={}", handlerName, elementId)
+                BpmnRepairResult.Repaired(
+                    definition = applied.definition,
+                    promptText = patch.reason ?: "Local model fix",
+                    messages = attempt.messages,
+                )
+            }
+
+            is PatchApplicationResult.Failure -> {
+                logger.warn(
+                    "Local model fix produced invalid patch; falling through. handler={}, elementId={}, reason={}",
+                    handlerName,
+                    elementId,
+                    applied.reason,
+                )
+                null
+            }
+
+            PatchApplicationResult.NoOp -> {
+                null
+            }
         }
     }
 
@@ -67,14 +121,6 @@ internal class LintLocalRepairStrategy(
             !isAutoFixUsable(result) -> BpmnRepairResult.NotApplicable
             !autoFixedXmlIsXsdValid(result) -> BpmnRepairResult.NotApplicable
             else -> toRepaired(result, attempt)
-        }
-    }
-
-    private fun warnIfLocalModelDiagnosticsPresent(attempt: BpmnRepairAttempt) {
-        if (attempt.diagnostics.any { it.kind == RepairKind.LOCAL_MODEL_FIX }) {
-            logger.info(
-                "LOCAL_MODEL_FIX diagnostics present but not handled in this phase (see #30); falling through",
-            )
         }
     }
 

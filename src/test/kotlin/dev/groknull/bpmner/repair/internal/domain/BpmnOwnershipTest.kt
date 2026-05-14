@@ -4,8 +4,6 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
@@ -19,6 +17,9 @@ import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
+import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -27,7 +28,9 @@ import kotlin.test.assertTrue
 
 class BpmnOwnershipTest {
     private val applier = BpmnPatchApplier()
-    private val repair = BpmnTopologyRepair(applier)
+    private val splitJoinFork = SplitJoinForkGatewayHandler()
+    private val insertConverging = InsertConvergingGatewayHandler()
+    private val bypassGateway = BypassGatewayHandler()
     private val stdWaypoints = listOf(BpmnWaypoint(100.0, 100.0), BpmnWaypoint(200.0, 100.0))
 
     // -------------------------------------------------------------------------
@@ -200,17 +203,10 @@ class BpmnOwnershipTest {
         val definition = joinForkDefinition()
         val graph = graphFor(definition)
         val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(
-                    BpmnDiagnostic(
-                        BpmnDiagnosticSource.LINT,
-                        "topology violation",
-                        rule = "bpmner/gtw-20-no-gateway-join-fork",
-                        elementId = "Gateway_1",
-                    ),
-                ),
-            )!!
+            BpmnRepairPatch(
+                operations = splitJoinFork.buildPatch(definition, "Gateway_1"),
+                reason = "test",
+            )
         val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
         val updated = graph.withUpdatedDefinition(newDef)
         val newNodeId = newDef.nodes.first { it.id !in definition.nodes.map { n -> n.id } }.id
@@ -223,17 +219,10 @@ class BpmnOwnershipTest {
         val definition = fakeJoinDefinition()
         val graph = graphFor(definition)
         val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(
-                    BpmnDiagnostic(
-                        BpmnDiagnosticSource.LINT,
-                        "topology violation",
-                        rule = "bpmner/gtw-12-fake-join",
-                        elementId = "Task_1",
-                    ),
-                ),
-            )!!
+            BpmnRepairPatch(
+                operations = insertConverging.buildPatch(definition, "Task_1"),
+                reason = "test",
+            )
         val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
         val updated = graph.withUpdatedDefinition(newDef)
         assertTrue(updated.validateOwnership().isEmpty(), "Ownership must be complete after fake-join repair")
@@ -244,17 +233,10 @@ class BpmnOwnershipTest {
         val definition = superfluousGatewayDefinition()
         val graph = graphFor(definition)
         val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(
-                    BpmnDiagnostic(
-                        BpmnDiagnosticSource.LINT,
-                        "topology violation",
-                        rule = "bpmner/gtw-15-superfluous-gateway",
-                        elementId = "Gateway_1",
-                    ),
-                ),
-            )!!
+            BpmnRepairPatch(
+                operations = bypassGateway.buildPatch(definition, "Gateway_1"),
+                reason = "test",
+            )
         val newDef = (applier.apply(definition, patch) as PatchApplicationResult.Success).definition
         val updated = graph.withUpdatedDefinition(newDef)
         assertNull(updated.ownerForElementId("Gateway_1"), "Removed gateway must no longer have an owner")

@@ -4,13 +4,15 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
+import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
+import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -19,28 +21,25 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-class BpmnTopologyRepairTest {
+class TopologyHandlersTest {
     private val applier = BpmnPatchApplier()
-    private val repair = BpmnTopologyRepair(applier)
     private val validator = BpmnDefinitionValidator()
+
+    private val splitJoinFork = SplitJoinForkGatewayHandler()
+    private val insertConverging = InsertConvergingGatewayHandler()
+    private val bypassGateway = BypassGatewayHandler()
+    private val clearConvergingName = ConvergingGatewayClearNameHandler()
 
     private val stdWaypoints = listOf(BpmnWaypoint(100.0, 100.0), BpmnWaypoint(200.0, 100.0))
 
-    // -------------------------------------------------------------------------
-    // no-gateway-join-fork: split mixed join+fork gateway
-    // -------------------------------------------------------------------------
+    // ---- SplitJoinForkGatewayHandler --------------------------------------
 
     @Test
-    fun `no-gateway-join-fork adds converging gateway before mixed gateway`() {
+    fun `splitJoinFork adds converging gateway before mixed gateway`() {
         val definition = joinForkDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork")),
-            )
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
 
-        assertNotNull(patch)
-        val ops = patch.operations
+        assertTrue(ops.isNotEmpty())
         val addNode = ops.single { it.type == BpmnPatchOperationType.ADD_NODE }
         val addEdge = ops.single { it.type == BpmnPatchOperationType.ADD_EDGE }
         val replaceEdges = ops.filter { it.type == BpmnPatchOperationType.REPLACE_EDGE }
@@ -56,53 +55,51 @@ class BpmnTopologyRepairTest {
     }
 
     @Test
-    fun `no-gateway-join-fork repair produces valid definition`() {
+    fun `splitJoinFork produces valid definition`() {
         val definition = joinForkDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork")),
-            )!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
         val errors = validator.validate(result.definition)
         assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
     }
 
     @Test
-    fun `no-gateway-join-fork repair leaves original gateway with single incoming`() {
+    fun `splitJoinFork leaves original gateway with single incoming`() {
         val definition = joinForkDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork")),
-            )!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
         val incomingToGw1 = result.definition.sequences.count { it.targetRef == "Gateway_1" }
         assertEquals(1, incomingToGw1, "Gateway_1 should have exactly 1 incoming after split")
     }
 
     @Test
-    fun `no-gateway-join-fork returns null for non-mixed gateway`() {
+    fun `splitJoinFork returns empty ops for non-mixed gateway`() {
         val definition = divergingGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork")),
-            )
-        assertNull(patch)
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
+        assertTrue(ops.isEmpty())
     }
 
-    // -------------------------------------------------------------------------
-    // fake-join: insert converging gateway before multi-incoming task
-    // -------------------------------------------------------------------------
+    @Test
+    fun `splitJoinFork returns empty ops for unknown element id`() {
+        val definition = joinForkDefinition()
+        val ops = splitJoinFork.buildPatch(definition, "NotPresent")
+        assertTrue(ops.isEmpty())
+    }
+
+    // ---- InsertConvergingGatewayHandler -----------------------------------
 
     @Test
-    fun `fake-join adds converging gateway before task with multiple incoming`() {
+    fun `insertConverging adds gateway before task with multiple incoming`() {
         val definition = fakeJoinDefinition()
-        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Task_1", "bpmner/gtw-21-fake-join")))
+        val ops = insertConverging.buildPatch(definition, "Task_1")
 
-        assertNotNull(patch)
-        val ops = patch.operations
+        assertTrue(ops.isNotEmpty())
         val addNode = ops.single { it.type == BpmnPatchOperationType.ADD_NODE }
         val addEdge = ops.single { it.type == BpmnPatchOperationType.ADD_EDGE }
         val replaceEdges = ops.filter { it.type == BpmnPatchOperationType.REPLACE_EDGE }
@@ -118,47 +115,44 @@ class BpmnTopologyRepairTest {
     }
 
     @Test
-    fun `fake-join repair produces valid definition`() {
+    fun `insertConverging produces valid definition`() {
         val definition = fakeJoinDefinition()
-        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Task_1", "bpmner/gtw-21-fake-join")))!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = insertConverging.buildPatch(definition, "Task_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
         val errors = validator.validate(result.definition)
         assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
     }
 
     @Test
-    fun `fake-join repair leaves task with single incoming`() {
+    fun `insertConverging leaves task with single incoming`() {
         val definition = fakeJoinDefinition()
-        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Task_1", "bpmner/gtw-21-fake-join")))!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = insertConverging.buildPatch(definition, "Task_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
         val incomingToTask = result.definition.sequences.count { it.targetRef == "Task_1" }
         assertEquals(1, incomingToTask, "Task_1 should have exactly 1 incoming after repair")
     }
 
     @Test
-    fun `fake-join returns null for single-incoming task`() {
+    fun `insertConverging returns empty ops for single-incoming task`() {
         val definition = singleIncomingTaskDefinition()
-        val patch = repair.buildTopologyPatch(definition, listOf(topologyDiag("Task_1", "bpmner/gtw-21-fake-join")))
-        assertNull(patch)
+        val ops = insertConverging.buildPatch(definition, "Task_1")
+        assertTrue(ops.isEmpty())
     }
 
-    // -------------------------------------------------------------------------
-    // superfluous-gateway: contract single-in/single-out gateway
-    // -------------------------------------------------------------------------
+    // ---- BypassGatewayHandler ---------------------------------------------
 
     @Test
-    fun `superfluous-gateway produces replace-remove-remove operations`() {
+    fun `bypassGateway produces replace-remove-remove operations`() {
         val definition = superfluousGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-22-superfluous-gateway")),
-            )
+        val ops = bypassGateway.buildPatch(definition, "Gateway_1")
 
-        assertNotNull(patch)
-        val ops = patch.operations
         assertEquals(3, ops.size)
-        assertIs<BpmnPatchOperationType>(ops[0].type)
         assertEquals(BpmnPatchOperationType.REPLACE_EDGE, ops[0].type)
         assertEquals(BpmnPatchOperationType.REMOVE_EDGE, ops[1].type)
         assertEquals(BpmnPatchOperationType.REMOVE_NODE, ops[2].type)
@@ -166,14 +160,13 @@ class BpmnTopologyRepairTest {
     }
 
     @Test
-    fun `superfluous-gateway repair bypasses gateway`() {
+    fun `bypassGateway removes gateway and rewires flow`() {
         val definition = superfluousGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-22-superfluous-gateway")),
-            )!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = bypassGateway.buildPatch(definition, "Gateway_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
 
         assertNull(result.definition.nodes.firstOrNull { it.id == "Gateway_1" }, "Gateway should be removed")
         val incomingToTask = result.definition.sequences.filter { it.targetRef == "Task_1" }
@@ -182,83 +175,88 @@ class BpmnTopologyRepairTest {
     }
 
     @Test
-    fun `superfluous-gateway repair produces valid definition`() {
+    fun `bypassGateway produces valid definition`() {
         val definition = superfluousGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-22-superfluous-gateway")),
-            )!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
+        val ops = bypassGateway.buildPatch(definition, "Gateway_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
+            )
         val errors = validator.validate(result.definition)
         assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
     }
 
     @Test
-    fun `superfluous-gateway returns null for diverging gateway`() {
+    fun `bypassGateway returns empty ops for diverging gateway`() {
         val definition = divergingGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-22-superfluous-gateway")),
+        val ops = bypassGateway.buildPatch(definition, "Gateway_1")
+        assertTrue(ops.isEmpty())
+    }
+
+    // ---- ConvergingGatewayClearNameHandler --------------------------------
+
+    @Test
+    fun `clearConvergingName clears name from named converging gateway`() {
+        val definition = convergingNamedGatewayDefinition("Join")
+        val ops = clearConvergingName.buildPatch(definition, "Gateway_1")
+
+        assertEquals(1, ops.size)
+        val op = ops.single()
+        assertEquals(BpmnPatchOperationType.SET_NODE_NAME, op.type)
+        assertEquals("Gateway_1", op.nodeId)
+        assertNull(op.name, "Converging gateway name must be cleared to null")
+    }
+
+    @Test
+    fun `clearConvergingName produces valid definition`() {
+        val definition = convergingNamedGatewayDefinition("Join")
+        val ops = clearConvergingName.buildPatch(definition, "Gateway_1")
+        val result =
+            assertIs<PatchApplicationResult.Success>(
+                applier.apply(definition, BpmnRepairPatch(operations = ops, reason = "test")),
             )
-        assertNull(patch)
-    }
-
-    // -------------------------------------------------------------------------
-    // No topology diagnostics
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `returns null when no topology diagnostics present`() {
-        val definition = superfluousGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.LINT,
-                        message = "label issue",
-                        rule = "bpmner/gtw-01-diverging-gateway-question",
-                    ),
-                ),
-            )
-        assertNull(patch)
+        val errors = validator.validate(result.definition)
+        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
+        assertNull(
+            result.definition.nodes
+                .single { it.id == "Gateway_1" }
+                .name,
+        )
     }
 
     @Test
-    fun `returns null for empty diagnostics`() {
-        assertNull(repair.buildTopologyPatch(superfluousGatewayDefinition(), emptyList()))
+    fun `clearConvergingName returns empty ops for already unnamed converging gateway`() {
+        val definition = convergingNamedGatewayDefinition(gatewayName = null)
+        val ops = clearConvergingName.buildPatch(definition, "Gateway_1")
+        assertTrue(ops.isEmpty())
     }
 
     @Test
-    fun `picks first topology diagnostic when multiple present`() {
+    fun `clearConvergingName returns empty ops for diverging gateway`() {
+        val definition = divergingGatewayDefinition()
+        val ops = clearConvergingName.buildPatch(definition, "Gateway_1")
+        assertTrue(ops.isEmpty())
+    }
+
+    // ---- Handler-name invariants ------------------------------------------
+
+    @Test
+    fun `handler names match Pkl repair handler fields`() {
+        assertEquals("splitJoinForkGateway", splitJoinFork.handlerName)
+        assertEquals("insertConvergingGateway", insertConverging.handlerName)
+        assertEquals("bypassGateway", bypassGateway.handlerName)
+        assertEquals("clearConvergingGatewayName", clearConvergingName.handlerName)
+    }
+
+    @Test
+    fun `splitJoinFork builds non-empty operations for valid input`() {
         val definition = joinForkDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(
-                    topologyDiag("Gateway_1", "bpmner/gtw-20-no-gateway-join-fork"),
-                    topologyDiag("Task_1", "bpmner/gtw-21-fake-join"),
-                ),
-            )
-        assertNotNull(patch)
-        assertTrue(patch.reason?.contains("no-gateway-join-fork") == true)
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
+        assertNotNull(ops)
+        assertTrue(ops.isNotEmpty())
     }
 
-    // -------------------------------------------------------------------------
-    // Helpers
-    // -------------------------------------------------------------------------
-
-    private fun topologyDiag(
-        elementId: String,
-        rule: String,
-    ) = BpmnDiagnostic(
-        source = BpmnDiagnosticSource.LINT,
-        message = "topology violation",
-        rule = rule,
-        elementId = elementId,
-    )
+    // ---- Fixtures ----------------------------------------------------------
 
     private fun joinForkDefinition() =
         BpmnDefinition(
@@ -391,64 +389,4 @@ class BpmnTopologyRepairTest {
                     BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
                 ),
         )
-
-    // -------------------------------------------------------------------------
-    // gtw-02: clear converging gateway name
-    // -------------------------------------------------------------------------
-
-    @Test
-    fun `gtw-02 clears name from named converging gateway`() {
-        val definition = convergingNamedGatewayDefinition("Join")
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-02-converging-gateway-unnamed")),
-            )
-
-        assertNotNull(patch)
-        val op = patch.operations.single()
-        assertEquals(BpmnPatchOperationType.SET_NODE_NAME, op.type)
-        assertEquals("Gateway_1", op.nodeId)
-        assertNull(op.name, "Converging gateway name must be cleared to null")
-    }
-
-    @Test
-    fun `gtw-02 repair produces valid definition`() {
-        val definition = convergingNamedGatewayDefinition("Join")
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-02-converging-gateway-unnamed")),
-            )!!
-        val result = assertIs<PatchApplicationResult.Success>(applier.apply(definition, patch))
-        val errors = validator.validate(result.definition)
-        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
-        assertNull(
-            result.definition.nodes
-                .single { it.id == "Gateway_1" }
-                .name,
-        )
-    }
-
-    @Test
-    fun `gtw-02 returns null for already unnamed converging gateway`() {
-        val definition = convergingNamedGatewayDefinition(gatewayName = null)
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-02-converging-gateway-unnamed")),
-            )
-        assertNull(patch)
-    }
-
-    @Test
-    fun `gtw-02 returns null for diverging gateway`() {
-        val definition = divergingGatewayDefinition()
-        val patch =
-            repair.buildTopologyPatch(
-                definition,
-                listOf(topologyDiag("Gateway_1", "bpmner/gtw-02-converging-gateway-unnamed")),
-            )
-        assertNull(patch)
-    }
 }

@@ -10,7 +10,6 @@ import dev.groknull.bpmner.core.BpmnAutoFixSkip
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnLintRuleIds
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.FinalValidatedBpmnXml
