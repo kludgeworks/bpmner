@@ -1,7 +1,9 @@
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
@@ -17,6 +19,10 @@ internal class BpmnReadinessAgent(
     private val promptFactory = BpmnReadinessPromptFactory(config.readiness)
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
 
+    @AchievesGoal(
+        description = "Produce a readiness assessment for BPMN generation input",
+        export = Export(name = "assessBpmnReadiness", remote = true, startingInputTypes = [BpmnRequest::class]),
+    )
     @Action(description = "Assess raw BPMN generation input for process readiness")
     fun assessReadiness(
         request: BpmnRequest,
