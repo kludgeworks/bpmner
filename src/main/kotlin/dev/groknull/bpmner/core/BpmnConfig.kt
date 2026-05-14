@@ -3,6 +3,9 @@ package dev.groknull.bpmner.core
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.LlmOptions
+import jakarta.validation.Valid
+import jakarta.validation.constraints.Max
+import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("bpmner")
@@ -11,6 +14,7 @@ data class BpmnConfig(
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
     val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
+    @field:Valid
     val readiness: BpmnReadinessConfig = BpmnReadinessConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
@@ -60,9 +64,15 @@ data class BpmnConfig(
 }
 
 data class BpmnReadinessConfig(
+    @field:Min(0)
+    @field:Max(100)
     val readyThreshold: Int = 75,
+    @field:Min(0)
+    @field:Max(100)
     val clarificationThreshold: Int = 40,
+    @field:Min(1)
     val minimumActivityCount: Int = 2,
+    @field:Min(1)
     val maxClarificationQuestions: Int = 5,
 )
 
