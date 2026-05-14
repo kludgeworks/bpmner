@@ -1,0 +1,157 @@
+package dev.groknull.bpmner.generation.internal.adapter.inbound
+
+import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
+import dev.groknull.bpmner.core.AlignmentClassification
+import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnElementIndex
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.ContractActivity
+import dev.groknull.bpmner.core.ContractEndState
+import dev.groknull.bpmner.core.ContractIssueSeverity
+import dev.groknull.bpmner.core.ContractValidationCode
+import dev.groknull.bpmner.core.ContractValidationIssue
+import dev.groknull.bpmner.core.ContractValidationReport
+import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.ProcessContract
+import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.TraceLink
+import dev.groknull.bpmner.core.ValidatedProcessContract
+import dev.groknull.bpmner.generation.BpmnRenderer
+import org.springframework.context.ApplicationEventPublisher
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
+
+class BpmnGeneratorAgentTest {
+    @Test
+    fun `createProcessOutline sends a contract-first prompt and returns outline metrics`() {
+        val context = FakeOperationContext()
+        val definition = testBpmnDefinition(processName = "Handle claim")
+        context.expectResponse(definition)
+        val agent = agent()
+
+        val outline =
+            agent.createProcessOutline(
+                BpmnRequest(
+                    processDescription = "Raw prose kept for traceability.",
+                    styleGuide = "Use sentence case names.",
+                ),
+                validContract(),
+                context,
+            )
+
+        assertEquals(definition, outline.definition)
+        assertEquals(1, outline.metrics.phaseCount)
+        assertEquals(1, context.llmInvocations.size)
+        val prompt = context.llmInvocations.single().prompt
+        assertTrue(prompt.contains("Primary validated ProcessContract:"))
+        assertTrue(prompt.contains("Handle claim"))
+        assertTrue(prompt.contains("Original input for traceability only:"))
+        assertTrue(prompt.contains("Raw prose kept for traceability."))
+        assertTrue(
+            prompt.indexOf("Primary validated ProcessContract:") <
+                prompt.indexOf("Original input for traceability only:"),
+        )
+    }
+
+    @Test
+    fun `createProcessOutline fails before LLM generation for invalid contracts`() {
+        val context = FakeOperationContext()
+        val agent = agent()
+        val invalid =
+            ValidatedProcessContract(
+                contract = validContract().contract,
+                report =
+                    ContractValidationReport(
+                        listOf(
+                            ContractValidationIssue(
+                                code = ContractValidationCode.INSUFFICIENT_ACTIVITIES,
+                                severity = ContractIssueSeverity.ERROR,
+                                message = "At least two activities are required",
+                                targetId = "contract-claim",
+                            ),
+                        ),
+                    ),
+            )
+
+        val error =
+            assertFailsWith<IllegalStateException> {
+                agent.createProcessOutline(BpmnRequest("Generate this"), invalid, context)
+            }
+
+        assertTrue(error.message.orEmpty().contains("invalid process contract"))
+        assertTrue(error.message.orEmpty().contains("insufficient_activities"))
+        assertTrue(context.llmInvocations.isEmpty())
+    }
+
+    private fun agent() =
+        BpmnGeneratorAgent(
+            config = BpmnConfig(),
+            bpmnConverter = NoopRenderer,
+            metricsCalculator = BpmnGeneratorMetrics(),
+            eventPublisher = ApplicationEventPublisher {},
+        )
+
+    private fun validContract() =
+        ValidatedProcessContract(
+            contract =
+                ProcessContract(
+                    id = "contract-claim",
+                    processName = "Handle claim",
+                    summary = "Claims are reviewed and closed.",
+                    trigger = "Claim is submitted",
+                    triggerTraceLinks = listOf(trace("trigger")),
+                    activities =
+                        listOf(
+                            ContractActivity(
+                                id = "a-review",
+                                name = "Review claim",
+                                traceLinks = listOf(trace("a-review")),
+                            ),
+                            ContractActivity(
+                                id = "a-close",
+                                name = "Close claim",
+                                traceLinks = listOf(trace("a-close")),
+                            ),
+                        ),
+                    endStates =
+                        listOf(
+                            ContractEndState(
+                                id = "end-done",
+                                name = "Claim closed",
+                                traceLinks = listOf(trace("end-done")),
+                            ),
+                        ),
+                ),
+            report = ContractValidationReport(emptyList()),
+        )
+
+    private fun trace(target: String) =
+        TraceLink(
+            id = "trace-$target",
+            sourceId = "ev1",
+            targetId = target,
+            classification = AlignmentClassification.SUPPORTED,
+        )
+
+    private object NoopRenderer : BpmnRenderer {
+        override fun render(definition: BpmnDefinition): RenderedBpmn =
+            RenderedBpmn(
+                definition = definition,
+                xml = "<definitions />",
+                elementIndex =
+                    BpmnElementIndex(
+                        processId = definition.processId,
+                        nodeObjectRefs = emptyMap(),
+                        edgeObjectRefs = emptyMap(),
+                        shapeIdsByNodeId = emptyMap(),
+                        edgeDiagramIdsByEdgeId = emptyMap(),
+                    ),
+            )
+
+        override fun render(graph: LaidOutProcessGraph): RenderedBpmn = render(graph.definition)
+    }
+}
