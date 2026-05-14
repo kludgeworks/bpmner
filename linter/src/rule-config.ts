@@ -3,6 +3,18 @@ import catalog from "./generated/linter-rules.json"
 export type PklSeverity = "error" | "warning" | "info" | "off"
 export type BpmnlintRuleLevel = "error" | "warn" | "off"
 
+export type RepairRoute = "LOCAL_MODEL" | "LOCAL_XML" | "LLM" | "UNFIXABLE"
+export type EditSurface = "BPMN_DEFINITION" | "BPMN_XML" | "NONE"
+export type RepairSafety = "SAFE_AUTOMATIC" | "SAFE_MANUAL" | "LLM_ONLY"
+
+export type Repair = {
+	route: RepairRoute
+	editSurface: EditSurface
+	safety: RepairSafety
+	handler?: string | null
+	replacementMap?: Record<string, string> | null
+}
+
 export type RuleConfig = {
 	id: string
 	aliases?: string[]
@@ -10,15 +22,7 @@ export type RuleConfig = {
 	targetElements?: string[]
 	errorMessages: Record<string, string | undefined>
 	staticConfig?: unknown
-	autoFixable: boolean
-	fixStrategy:
-		| "string-manipulation"
-		| "attribute-mutation"
-		| "node-deletion"
-		| "ast-rewiring"
-		| "LLM"
-	fixMethod?: string | null
-	replacementMap?: Record<string, string>
+	repair: Repair
 }
 
 type RuleCatalog = {

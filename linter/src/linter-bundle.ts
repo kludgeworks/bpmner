@@ -1,13 +1,22 @@
 import BpmnModdle from "bpmn-moddle"
 import { Linter } from "bpmnlint"
 import { fixBpmnXml } from "./auto-fix/engine"
+import { hasHandler } from "./auto-fix/registry"
 import type { AutoFixResult } from "./auto-fix/types"
+import catalog from "./generated/linter-rules.json"
 import {
 	configs,
 	customRuleAliases,
 	customRuleDocs,
 	resolver,
 } from "./generated/static-rules"
+import type {
+	EditSurface,
+	Repair,
+	RepairRoute,
+	RepairSafety,
+	RuleConfig,
+} from "./rule-config"
 
 type RuleLevel = "off" | "warn" | "error"
 
@@ -262,6 +271,65 @@ export async function fixXml(
 	}
 }
 
+type RuleCapability = {
+	id: string
+	severity: string
+	route: RepairRoute
+	editSurface: EditSurface
+	safety: RepairSafety
+	handlerName: string | null
+	handlerExists: boolean
+	replacementMap: Record<string, string> | null
+}
+
+type RuleCatalog = { rules: RuleConfig[] }
+
+export function getRuleCapabilities(): RuleCapability[] {
+	const capabilities: RuleCapability[] = []
+	const errors: string[] = []
+
+	for (const rule of (catalog as unknown as RuleCatalog).rules) {
+		const repair = rule.repair as Repair
+		const { route, editSurface, safety } = repair
+		const handlerName = repair.handler ?? null
+		const replacementMap = repair.replacementMap ?? null
+
+		const isLocal = route === "LOCAL_XML" || route === "LOCAL_MODEL"
+		const handlerExists = handlerName !== null && hasHandler(handlerName)
+
+		if (isLocal && !handlerName) {
+			errors.push(
+				`Rule ${rule.id}: ${route} route requires a handler but none declared`,
+			)
+		} else if (isLocal && handlerName && !handlerExists) {
+			errors.push(
+				`Rule ${rule.id}: declared handler "${handlerName}" is not registered`,
+			)
+		} else if (!isLocal && handlerName) {
+			errors.push(
+				`Rule ${rule.id}: ${route} route must not declare a handler (got "${handlerName}")`,
+			)
+		}
+
+		capabilities.push({
+			id: rule.id,
+			severity: rule.severity,
+			route,
+			editSurface,
+			safety,
+			handlerName,
+			handlerExists,
+			replacementMap,
+		})
+	}
+
+	if (errors.length > 0) {
+		throw new Error(`Rule capability validation failed:\n${errors.join("\n")}`)
+	}
+
+	return capabilities
+}
+
 // Expose the API to the global scope for GraalJS/Polyglot
 export const BpmnLinterApi = {
 	lintXml,
@@ -281,6 +349,7 @@ export const BpmnLinterApi = {
 
 		return {}
 	},
+	getRuleCapabilities,
 }
 
 ;(globalThis as typeof globalThis & { BpmnLinterApi?: unknown }).BpmnLinterApi =

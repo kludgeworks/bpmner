@@ -132,7 +132,7 @@ function expandAbbreviations(
 	issue: AutoFixLintIssue,
 ): AutoFixHandlerResult {
 	const ruleId = issue.rule.replace(/^bpmner\//, "")
-	const map = getRuleConfig(ruleId).replacementMap || {}
+	const map = getRuleConfig(ruleId).repair.replacementMap || {}
 	const raw = getName(element).trim()
 	if (!raw) return { changed: false, message: "Element has no name" }
 	if (!Object.keys(map).length)
@@ -445,6 +445,25 @@ const HANDLERS: Record<string, AutoFixHandler> = {
 	splitJoinForkGateway,
 }
 
+const HANDLER_STRATEGIES: Record<string, AutoFixRuleMetadata["fixStrategy"]> = {
+	clearName: "attribute-mutation",
+	removeTerminateDefinition: "attribute-mutation",
+	fixSentenceCase: "string-manipulation",
+	expandAbbreviations: "string-manipulation",
+	stripTypeWords: "string-manipulation",
+	deleteSequenceFlow: "node-deletion",
+	deleteBlankStartEvents: "node-deletion",
+	keepFirstEventDefinition: "node-deletion",
+	deleteIncomingFlows: "node-deletion",
+	bypassGateway: "ast-rewiring",
+	insertConvergingGateway: "ast-rewiring",
+	splitJoinForkGateway: "ast-rewiring",
+}
+
+export function hasHandler(name: string): boolean {
+	return name in HANDLERS
+}
+
 export function autoFixRegistration(
 	ruleId: string,
 ): AutoFixRegistration | undefined {
@@ -527,14 +546,15 @@ export function autoFixRegistration(
 		return undefined
 	}
 
-	if (!config.autoFixable || !config.fixMethod) {
+	const { route, handler: handlerName, replacementMap } = config.repair
+	if (route === "UNFIXABLE" || route === "LLM" || !handlerName) {
 		return undefined
 	}
 
-	const handler = HANDLERS[config.fixMethod]
+	const handler = HANDLERS[handlerName]
 	if (!handler) {
 		console.error(
-			`No JS handler found for fixMethod: ${config.fixMethod} (rule: ${ruleId})`,
+			`No JS handler found for handler: ${handlerName} (rule: ${ruleId})`,
 		)
 		return undefined
 	}
@@ -542,10 +562,10 @@ export function autoFixRegistration(
 	return {
 		metadata: {
 			rule: ruleId,
-			autoFixable: config.autoFixable,
-			fixStrategy: config.fixStrategy,
-			fixMethod: config.fixMethod,
-			replacementMap: config.replacementMap,
+			autoFixable: true,
+			fixStrategy: HANDLER_STRATEGIES[handlerName] ?? "ast-rewiring",
+			fixMethod: handlerName,
+			replacementMap: replacementMap ?? undefined,
 		},
 		handler,
 	}
