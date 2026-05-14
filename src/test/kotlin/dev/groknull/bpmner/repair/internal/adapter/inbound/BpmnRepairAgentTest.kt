@@ -306,7 +306,12 @@ class BpmnRepairAgentTest {
 
         val error =
             assertFailsWith<BpmnRefinementFailureException> {
-                agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(initial, withOwnership = false), initialRendered, context)
+                agent.repair(
+                    BpmnRequest("Make toast"),
+                    testLaidOutGraph(initial, withOwnership = false),
+                    initialRendered,
+                    context,
+                )
             }
 
         assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
@@ -329,7 +334,12 @@ class BpmnRepairAgentTest {
 
         val error =
             assertFailsWith<BpmnRefinementFailureException> {
-                agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(initial, withOwnership = false), initialRendered, context)
+                agent.repair(
+                    BpmnRequest("Make toast"),
+                    testLaidOutGraph(initial, withOwnership = false),
+                    initialRendered,
+                    context,
+                )
             }
 
         assertTrue(error.message!!.contains("unchanged diagnostics"))
@@ -363,7 +373,12 @@ class BpmnRepairAgentTest {
 
         val error =
             assertFailsWith<BpmnRefinementFailureException> {
-                agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(initial, withOwnership = false), initialRendered, context)
+                agent.repair(
+                    BpmnRequest("Make toast"),
+                    testLaidOutGraph(initial, withOwnership = false),
+                    initialRendered,
+                    context,
+                )
             }
 
         assertTrue(error.message!!.contains("unchanged patch"))
@@ -394,7 +409,12 @@ class BpmnRepairAgentTest {
 
         val error =
             assertFailsWith<BpmnRefinementFailureException> {
-                agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(initial, withOwnership = false), initialRendered, context)
+                agent.repair(
+                    BpmnRequest("Make toast"),
+                    testLaidOutGraph(initial, withOwnership = false),
+                    initialRendered,
+                    context,
+                )
             }
 
         assertTrue(error.message!!.contains("repeated invalid output"))
@@ -464,9 +484,9 @@ class BpmnRepairAgentTest {
 
     @Test
     fun `no-op patch fails refinement fast`() {
-        val patchable_lintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
+        val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(listOf(listOf(patchable_lintIssue)))
+        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue)))
         val converter = RecordingConverter()
         val patchApplier =
             object : BpmnPatchApplier() {
