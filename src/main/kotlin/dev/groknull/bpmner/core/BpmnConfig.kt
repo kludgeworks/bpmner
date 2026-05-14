@@ -82,16 +82,20 @@ data class BpmnConfig(
 
 data class BpmnReadinessConfig(
     @field:Min(0)
-    @field:Max(100)
+    @field:Max(MAX_PERCENT_SCORE)
     val readyThreshold: Int = 75,
     @field:Min(0)
-    @field:Max(100)
+    @field:Max(MAX_PERCENT_SCORE)
     val clarificationThreshold: Int = 40,
     @field:Min(1)
     val minimumActivityCount: Int = 2,
     @field:Min(1)
     val maxClarificationQuestions: Int = 5,
-)
+) {
+    companion object {
+        const val MAX_PERCENT_SCORE = 100L
+    }
+}
 
 data class BpmnContractConfig(
     val maxAssumptions: Int = 10,

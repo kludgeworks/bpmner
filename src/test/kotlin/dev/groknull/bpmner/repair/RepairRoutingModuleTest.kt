@@ -205,6 +205,7 @@ class RepairRoutingModuleTest {
     }
 
     @Test
+    @Suppress("LongMethod") // integration-style test exercising the full local-then-LLM routing path
     fun `mixed local and LLM diagnostics route local first then LLM with only unresolved diagnostic`() {
         val localCapability =
             BpmnLintRuleCapability(

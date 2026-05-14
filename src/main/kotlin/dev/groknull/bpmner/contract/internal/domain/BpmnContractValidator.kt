@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnContractValidator {
+    // contract validator; one branch per validation rule keeps rules co-located
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun validate(contract: ProcessContract): ContractValidationReport {
         val issues = mutableListOf<ContractValidationIssue>()
 
