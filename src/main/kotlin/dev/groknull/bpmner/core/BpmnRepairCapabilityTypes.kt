@@ -1,15 +1,23 @@
 package dev.groknull.bpmner.core
 
-enum class BpmnRepairRoute { LOCAL_MODEL, LOCAL_XML, LLM, UNFIXABLE }
+enum class RepairKind {
+    LOCAL_MODEL_FIX,
+    LOCAL_XML_FIX,
+    LLM_MODEL_PATCH,
+    LLM_XML_REWRITE,
+    UNFIXABLE,
+    ;
 
-enum class BpmnEditSurface { BPMN_DEFINITION, BPMN_XML, NONE }
+    fun isLocal(): Boolean = this == LOCAL_MODEL_FIX || this == LOCAL_XML_FIX
+
+    fun isLlm(): Boolean = this == LLM_MODEL_PATCH || this == LLM_XML_REWRITE
+}
 
 enum class BpmnRepairSafety { SAFE_AUTOMATIC, SAFE_MANUAL, LLM_ONLY }
 
 data class BpmnLintRuleCapability(
     val id: String,
-    val repairRoute: BpmnRepairRoute,
-    val editSurface: BpmnEditSurface,
+    val kind: RepairKind,
     val repairSafety: BpmnRepairSafety,
     val fixHandler: String?,
     val handlerExists: Boolean,

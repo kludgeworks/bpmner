@@ -2,11 +2,11 @@ package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.core.format
 import dev.groknull.bpmner.validation.BpmnLintingPort
@@ -60,8 +60,7 @@ internal class BpmnDiagnosticNormalizer(
                         category = issue.category,
                         elementId = elementId,
                         objectRef = elementIndex.objectRefForElementId(elementId),
-                        repairRoute = cap?.repairRoute ?: BpmnRepairRoute.LLM,
-                        editSurface = cap?.editSurface,
+                        kind = cap?.kind ?: RepairKind.LLM_MODEL_PATCH,
                         repairSafety = cap?.repairSafety,
                         fixHandler = cap?.fixHandler,
                     ),

@@ -1,6 +1,5 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -23,25 +22,22 @@ class PklRuleCapabilityAdapterTest {
     }
 
     @Test
-    fun `LLM route rules have no fixHandler`() {
+    fun `LLM kind rules have no fixHandler`() {
         val caps = adapter.loadCapabilities()
-        val llmCaps = caps.values.filter { it.repairRoute == BpmnRepairRoute.LLM }
+        val llmCaps = caps.values.filter { it.kind.isLlm() }
         llmCaps.forEach { cap ->
-            assertTrue(cap.fixHandler == null, "LLM route should have no handler: ${cap.id}")
-            assertFalse(cap.handlerExists, "LLM route should have handlerExists=false: ${cap.id}")
+            assertTrue(cap.fixHandler == null, "LLM kind should have no handler: ${cap.id}")
+            assertFalse(cap.handlerExists, "LLM kind should have handlerExists=false: ${cap.id}")
         }
     }
 
     @Test
-    fun `LOCAL_XML and LOCAL_MODEL route rules have handlerExists true`() {
+    fun `LOCAL_XML_FIX and LOCAL_MODEL_FIX rules have handlerExists true`() {
         val caps = adapter.loadCapabilities()
-        val localCaps =
-            caps.values.filter {
-                it.repairRoute == BpmnRepairRoute.LOCAL_XML || it.repairRoute == BpmnRepairRoute.LOCAL_MODEL
-            }
+        val localCaps = caps.values.filter { it.kind.isLocal() }
         localCaps.forEach { cap ->
-            assertTrue(cap.handlerExists, "Local route should have handlerExists=true: ${cap.id}")
-            assertNotNull(cap.fixHandler, "Local route should have a handler: ${cap.id}")
+            assertTrue(cap.handlerExists, "Local kind should have handlerExists=true: ${cap.id}")
+            assertNotNull(cap.fixHandler, "Local kind should have a handler: ${cap.id}")
         }
     }
 

@@ -17,12 +17,10 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEditSurface
 import dev.groknull.bpmner.core.BpmnFingerprintService
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
@@ -33,6 +31,7 @@ import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
@@ -98,8 +97,7 @@ class BpmnRefinementEngineTest {
         val capability =
             BpmnLintRuleCapability(
                 id = "name-01",
-                repairRoute = BpmnRepairRoute.LOCAL_XML,
-                editSurface = BpmnEditSurface.BPMN_XML,
+                kind = RepairKind.LOCAL_XML_FIX,
                 repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
@@ -190,8 +188,7 @@ class BpmnRefinementEngineTest {
         val localCapability =
             BpmnLintRuleCapability(
                 id = "name-01",
-                repairRoute = BpmnRepairRoute.LOCAL_XML,
-                editSurface = BpmnEditSurface.BPMN_XML,
+                kind = RepairKind.LOCAL_XML_FIX,
                 repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,

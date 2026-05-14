@@ -15,7 +15,6 @@ import dev.groknull.bpmner.core.BpmnLocalFixFailure
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
@@ -28,6 +27,7 @@ import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
@@ -40,8 +40,8 @@ class BpmnRepairPromptFactoryTest {
     fun `patchFeedback annotates failed-local diagnostics and includes LLM diagnostics`() {
         val factory = factory()
         val definition = sampleDefinition()
-        val llmDiag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", BpmnRepairRoute.LLM)
-        val localFailedDiag = lintDiagnostic("klm/name-01", "Task_2", "Strip type word", BpmnRepairRoute.LOCAL_XML)
+        val llmDiag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
+        val localFailedDiag = lintDiagnostic("klm/name-01", "Task_2", "Strip type word", RepairKind.LOCAL_XML_FIX)
         val outcome =
             BpmnLocalRepairOutcome(
                 listOf(BpmnLocalFixFailure(rule = "klm/name-01", elementId = "Task_2", reason = "handler boom")),
@@ -60,7 +60,7 @@ class BpmnRepairPromptFactoryTest {
     @Test
     fun `patchFeedback without local outcome renders diagnostics without local-fix marker`() {
         val factory = factory()
-        val diag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", BpmnRepairRoute.LLM)
+        val diag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
 
         val prompt = factory.patchFeedback(sampleDefinition(), listOf(diag), BpmnLocalRepairOutcome.EMPTY)
 
@@ -73,8 +73,8 @@ class BpmnRepairPromptFactoryTest {
         val factory = factory()
         val definition = sampleDefinition()
         val attempt = attempt(definition, diagnostics = emptyList())
-        val llmDiag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", BpmnRepairRoute.LLM)
-        val localFailedDiag = lintDiagnostic("klm/name-01", "Task_2", "Strip type word", BpmnRepairRoute.LOCAL_XML)
+        val llmDiag = lintDiagnostic("klm/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
+        val localFailedDiag = lintDiagnostic("klm/name-01", "Task_2", "Strip type word", RepairKind.LOCAL_XML_FIX)
         val outcome =
             BpmnLocalRepairOutcome(
                 listOf(BpmnLocalFixFailure(rule = "klm/name-01", elementId = "Task_2", reason = "xsd invalid")),
@@ -95,14 +95,14 @@ class BpmnRepairPromptFactoryTest {
         rule: String,
         elementId: String?,
         message: String,
-        route: BpmnRepairRoute,
+        kind: RepairKind,
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = message,
         rule = rule,
         category = "error",
         elementId = elementId,
-        repairRoute = route,
+        kind = kind,
         repairScope = BpmnRepairScope.PHASE,
     )
 

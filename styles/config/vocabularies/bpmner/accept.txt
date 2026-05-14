@@ -36,6 +36,10 @@ TypeScript
 JavaScript
 Vc
 XSD
+classpath
+codegen
+enum
+substrings
 wink-nlp
 yet-another-bpmn-auto-layout
 reusability

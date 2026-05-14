@@ -153,8 +153,8 @@ describe("lint rules", () => {
 
 	it("gtw-converging-gateway-unnamed records current auto-fix capability in generated metadata", () => {
 		const config = getRuleConfig("gtw-converging-gateway-unnamed")
-		assert.equal(config.autoFixable, true)
-		assert.equal(config.fixStrategy, "attribute-mutation")
+		assert.equal(config.repair.kind, "LOCAL_XML_FIX")
+		assert.equal(config.repair.handler, "clearName")
 	})
 
 	it("valid baseline has no violations", async () => {

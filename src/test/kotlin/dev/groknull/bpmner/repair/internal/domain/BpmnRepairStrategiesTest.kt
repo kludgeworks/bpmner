@@ -16,7 +16,6 @@ import dev.groknull.bpmner.core.BpmnLocalFixFailure
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
@@ -29,6 +28,7 @@ import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
@@ -45,7 +45,7 @@ class BpmnRepairStrategiesTest {
     fun `LlmPatchRepairStrategy is NotApplicable when only LOCAL_XML diagnostics exist with no failed-local matches`() {
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "klm/name-01", elementId = "Task_1", route = BpmnRepairRoute.LOCAL_XML)),
+                diagnostics = listOf(diag(rule = "klm/name-01", elementId = "Task_1", kind = RepairKind.LOCAL_XML_FIX)),
             )
 
         val result = strategy().repair(ctx)
@@ -61,8 +61,8 @@ class BpmnRepairStrategiesTest {
             contextOf(
                 diagnostics =
                     listOf(
-                        diag(rule = "klm/name-02", elementId = "Task_1", route = BpmnRepairRoute.LLM),
-                        diag(rule = "klm/name-01", elementId = "Task_2", route = BpmnRepairRoute.LOCAL_XML),
+                        diag(rule = "klm/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
+                        diag(rule = "klm/name-01", elementId = "Task_2", kind = RepairKind.LOCAL_XML_FIX),
                     ),
                 operationContext = operationContext,
             )
@@ -82,12 +82,12 @@ class BpmnRepairStrategiesTest {
     fun `LlmPatchRepairStrategy includes failed-local diagnostics with annotation`() {
         val operationContext = FakeOperationContext()
         operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))
-        val localFailedDiag = diag(rule = "klm/name-01", elementId = "Task_2", route = BpmnRepairRoute.LOCAL_XML)
+        val localFailedDiag = diag(rule = "klm/name-01", elementId = "Task_2", kind = RepairKind.LOCAL_XML_FIX)
         val ctx =
             contextOf(
                 diagnostics =
                     listOf(
-                        diag(rule = "klm/name-02", elementId = "Task_1", route = BpmnRepairRoute.LLM),
+                        diag(rule = "klm/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
                         localFailedDiag,
                     ),
                 outcome =
@@ -114,7 +114,7 @@ class BpmnRepairStrategiesTest {
         val operationContext = FakeOperationContext()
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "klm/name-01", elementId = "Task_1", route = BpmnRepairRoute.LOCAL_XML)),
+                diagnostics = listOf(diag(rule = "klm/name-01", elementId = "Task_1", kind = RepairKind.LOCAL_XML_FIX)),
                 operationContext = operationContext,
             )
 
@@ -130,7 +130,7 @@ class BpmnRepairStrategiesTest {
         operationContext.expectResponse(sampleDefinition())
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "klm/name-02", elementId = "Task_1", route = BpmnRepairRoute.LLM)),
+                diagnostics = listOf(diag(rule = "klm/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH)),
                 operationContext = operationContext,
             )
 
@@ -159,14 +159,14 @@ class BpmnRepairStrategiesTest {
     private fun diag(
         rule: String,
         elementId: String,
-        route: BpmnRepairRoute,
+        kind: RepairKind,
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = "violation of $rule",
         rule = rule,
         category = "error",
         elementId = elementId,
-        repairRoute = route,
+        kind = kind,
         repairScope = BpmnRepairScope.PHASE,
     )
 

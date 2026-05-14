@@ -3,13 +3,16 @@ import catalog from "./generated/linter-rules.json"
 export type PklSeverity = "error" | "warning" | "info" | "off"
 export type BpmnlintRuleLevel = "error" | "warn" | "off"
 
-export type RepairRoute = "LOCAL_MODEL" | "LOCAL_XML" | "LLM" | "UNFIXABLE"
-export type EditSurface = "BPMN_DEFINITION" | "BPMN_XML" | "NONE"
+export type RepairKind =
+	| "LOCAL_MODEL_FIX"
+	| "LOCAL_XML_FIX"
+	| "LLM_MODEL_PATCH"
+	| "LLM_XML_REWRITE"
+	| "UNFIXABLE"
 export type RepairSafety = "SAFE_AUTOMATIC" | "SAFE_MANUAL" | "LLM_ONLY"
 
 export type Repair = {
-	route: RepairRoute
-	editSurface: EditSurface
+	kind: RepairKind
 	safety: RepairSafety
 	handler?: string | null
 	replacementMap?: Record<string, string> | null

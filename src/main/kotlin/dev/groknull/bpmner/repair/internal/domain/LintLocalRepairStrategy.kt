@@ -7,8 +7,8 @@ import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLocalFixFailure
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRepairRoute
 import dev.groknull.bpmner.core.LintIssue
+import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
@@ -70,9 +70,9 @@ internal class LintLocalRepairStrategy(
     }
 
     private fun warnIfLocalModelDiagnosticsPresent(attempt: BpmnRepairAttempt) {
-        if (attempt.diagnostics.any { it.repairRoute == BpmnRepairRoute.LOCAL_MODEL }) {
+        if (attempt.diagnostics.any { it.kind == RepairKind.LOCAL_MODEL_FIX }) {
             logger.info(
-                "LOCAL_MODEL diagnostics present but not handled in this phase (see #30); falling through",
+                "LOCAL_MODEL_FIX diagnostics present but not handled in this phase (see #30); falling through",
             )
         }
     }
@@ -80,7 +80,7 @@ internal class LintLocalRepairStrategy(
     private fun collectLocalXmlRules(diagnostics: List<BpmnDiagnostic>): Set<String> =
         diagnostics
             .asSequence()
-            .filter { it.source == BpmnDiagnosticSource.LINT && it.repairRoute == BpmnRepairRoute.LOCAL_XML }
+            .filter { it.source == BpmnDiagnosticSource.LINT && it.kind == RepairKind.LOCAL_XML_FIX }
             .mapNotNull { it.bareRuleId() }
             .toSet()
 

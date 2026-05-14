@@ -38,8 +38,7 @@ staticConfig = new {
 }
 
 repair = new {
-  route = "LOCAL_XML"
-  editSurface = "BPMN_XML"
+  kind = "LOCAL_XML_FIX"
   safety = "SAFE_AUTOMATIC"
   handler = "expandAbbreviations"
   replacementMap = new Mapping<String, String> {

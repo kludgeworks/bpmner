@@ -56,6 +56,10 @@ The test suite covers:
 - direct rule tests across deterministic and heuristic rule coverage
 - a bundle smoke test that exercises `BpmnLinterApi`
 
+## Repair Architecture
+
+For the end-to-end repair subsystem (Pkl contract, Bazel codegen, Kotlin orchestration, local-first vs LLM fallback), see [`docs/repair-architecture.md`](docs/repair-architecture.md).
+
 ## Adding or Changing a Rule
 
 1. Add or update the rule implementation under `rules/`.

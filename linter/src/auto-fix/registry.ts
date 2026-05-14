@@ -546,8 +546,13 @@ export function autoFixRegistration(
 		return undefined
 	}
 
-	const { route, handler: handlerName, replacementMap } = config.repair
-	if (route === "UNFIXABLE" || route === "LLM" || !handlerName) {
+	const { kind, handler: handlerName, replacementMap } = config.repair
+	if (
+		kind === "UNFIXABLE" ||
+		kind === "LLM_MODEL_PATCH" ||
+		kind === "LLM_XML_REWRITE" ||
+		!handlerName
+	) {
 		return undefined
 	}
 

@@ -77,8 +77,8 @@ facts {
       .staticConfig
       .discouragedLeadingVerbs
       .contains("manage")
-    Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").repair.route
-      == "LOCAL_XML"
+    Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").repair.kind
+      == "LOCAL_XML_FIX"
     Catalog.rules.find((rule) -> rule.id == "gtw-converging-gateway-unnamed").repair.handler
       == "clearName"
     Catalog.rules
@@ -105,8 +105,8 @@ facts {
       .contains("bpmn:Participant")
     Catalog.rules.find((rule) -> rule.id == "pool-white-box-pool-named-by-process").errorMessages["default"]
       == "White-box pool name should match the referenced process name"
-    Catalog.rules.find((rule) -> rule.id == "pool-white-box-pool-named-by-process").repair.route
-      == "LLM"
+    Catalog.rules.find((rule) -> rule.id == "pool-white-box-pool-named-by-process").repair.kind
+      == "LLM_MODEL_PATCH"
     Catalog.rules
       .find((rule) -> rule.id == "pool-black-box-pool-named-by-external-entity-or-process")
       .targetElements
@@ -164,10 +164,16 @@ facts {
       "name-no-element-type-words",
     )
 
-  ["migrated rules have valid repair routes"] {
+  ["migrated rules have valid repair kinds"] {
     Catalog.rules.every((rule) ->
       List("error", "warning", "info", "off").contains(rule.severity)
-        && List("LOCAL_MODEL", "LOCAL_XML", "LLM", "UNFIXABLE").contains(rule.repair.route)
+        && List(
+          "LOCAL_MODEL_FIX",
+          "LOCAL_XML_FIX",
+          "LLM_MODEL_PATCH",
+          "LLM_XML_REWRITE",
+          "UNFIXABLE",
+        ).contains(rule.repair.kind)
     )
   }
 
@@ -175,7 +181,7 @@ facts {
     Catalog.rules
       .filter((rule) -> fixableRuleIds.contains(rule.id))
       .every((rule) ->
-        (rule.repair.route == "LOCAL_XML" || rule.repair.route == "LOCAL_MODEL")
+        (rule.repair.kind == "LOCAL_XML_FIX" || rule.repair.kind == "LOCAL_MODEL_FIX")
           && rule.repair.handler != null
           && rule.repair.safety == "SAFE_AUTOMATIC"
       )
