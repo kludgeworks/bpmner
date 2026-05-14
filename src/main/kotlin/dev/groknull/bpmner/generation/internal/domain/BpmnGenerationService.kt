@@ -1,10 +1,15 @@
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
@@ -19,6 +24,8 @@ internal interface BpmnAgentInvoker {
 @Component
 internal class BpmnGenerationService(
     private val agentInvoker: BpmnAgentInvoker,
+    private val readinessInvoker: BpmnReadinessInvoker,
+    private val readinessReportWriter: ReadinessReportWriter,
     private val inputPathResolver: InputPathResolver,
 ) : BpmnGenerationUseCase {
     private val logger = LoggerFactory.getLogger(BpmnGenerationService::class.java)
@@ -52,13 +59,54 @@ internal class BpmnGenerationService(
         logger.debug("Process description:\n{}", description)
         if (styleGuide != null) logger.debug("Style guide:\n{}", styleGuide)
 
-        val result = agentInvoker.generate(request)
+        val assessment = readinessInvoker.assess(request)
         logger.info(
-            "BPMN generation completed. outputFile={}, xmlLength={}",
-            result.outputFile,
-            result.xml?.length ?: 0,
+            "Readiness assessment complete. verdict={}, overallScore={}",
+            assessment.verdict,
+            assessment.overallScore,
         )
-        return result
+
+        return when (assessment.verdict) {
+            ReadinessVerdict.READY -> {
+                val result = agentInvoker.generate(request)
+                logger.info(
+                    "BPMN generation completed. outputFile={}, xmlLength={}",
+                    result.outputFile,
+                    result.xml?.length ?: 0,
+                )
+                result
+            }
+            ReadinessVerdict.NEEDS_CLARIFICATION ->
+                blockedResult(request, assessment, BpmnGenerationStatus.NEEDS_CLARIFICATION)
+            ReadinessVerdict.NOT_A_PROCESS ->
+                blockedResult(request, assessment, BpmnGenerationStatus.NOT_A_PROCESS)
+        }
+    }
+
+    private fun blockedResult(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+        status: BpmnGenerationStatus,
+    ): BpmnResult {
+        val reportPath =
+            readinessReportWriter.writeReport(
+                originalInput = request.processDescription,
+                assessment = assessment,
+                outputFile = request.outputFile,
+            )
+        logger.warn(
+            "BPMN generation blocked. verdict={}, status={}, reportFile={}",
+            assessment.verdict,
+            status,
+            reportPath,
+        )
+        return BpmnResult(
+            outputFile = request.outputFile,
+            status = status,
+            xml = null,
+            readinessReport = assessment,
+            reportFile = reportPath,
+        )
     }
 
     private fun resolveProcessDescription(input: BpmnGenerationInput): String {
