@@ -1,6 +1,5 @@
 package dev.groknull.bpmner.readiness.internal.domain
 
-import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnReadinessConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationQuestion
@@ -49,6 +48,18 @@ class BpmnReadinessPostCheckerTest {
     }
 
     @Test
+    fun `custom thresholds cap deterministic failures below ready threshold`() {
+        val result =
+            BpmnReadinessPostChecker(BpmnReadinessConfig(readyThreshold = 50, clarificationThreshold = 20)).apply(
+                BpmnRequest("Review the request"),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+
+        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.verdict)
+        assertEquals(49, result.overallScore)
+    }
+
+    @Test
     fun `non-process text returns NOT_A_PROCESS`() {
         val result =
             checker.apply(
@@ -59,6 +70,30 @@ class BpmnReadinessPostCheckerTest {
         assertEquals(ReadinessVerdict.NOT_A_PROCESS, result.verdict)
         assertTrue(result.overallScore < 40)
         assertTrue(MissingProcessArea.BPMN_PROCESS_SUITABILITY in result.missingAreas)
+    }
+
+    @Test
+    fun `blank process text returns NOT_A_PROCESS without clarification questions`() {
+        val result =
+            checker.apply(
+                BpmnRequest(""),
+                assessment(
+                    verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+                    score = 60,
+                    questions =
+                        listOf(
+                            ClarificationQuestion(
+                                id = "q1",
+                                questionText = "What starts the process?",
+                                relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                                relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
+                            ),
+                        ),
+                ),
+            )
+
+        assertEquals(ReadinessVerdict.NOT_A_PROCESS, result.verdict)
+        assertTrue(result.clarificationQuestions.isEmpty())
     }
 
     @Test
@@ -77,8 +112,8 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `fewer than minimum activities lowers readiness`() {
         val result =
-            BpmnReadinessPostChecker(BpmnConfig(readiness = BpmnReadinessConfig(minimumActivityCount = 3))).apply(
-                BpmnRequest("When a request is submitted, review it, then the request is completed."),
+            BpmnReadinessPostChecker(BpmnReadinessConfig(minimumActivityCount = 3)).apply(
+                BpmnRequest("When an application arrives, review it, then the application is completed."),
                 assessment(ReadinessVerdict.READY, 85),
             )
 
@@ -89,7 +124,7 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `clarification questions are capped and tied to missing dimensions`() {
         val result =
-            BpmnReadinessPostChecker(BpmnConfig(readiness = BpmnReadinessConfig(maxClarificationQuestions = 2))).apply(
+            BpmnReadinessPostChecker(BpmnReadinessConfig(maxClarificationQuestions = 2)).apply(
                 BpmnRequest("Review the request"),
                 assessment(
                     verdict = ReadinessVerdict.NEEDS_CLARIFICATION,

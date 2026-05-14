@@ -19,7 +19,17 @@ class BpmnerModulithTest {
     fun `verifies expected modules are detected`() {
         val moduleNames = modules.map { it.name }.toSet()
         assertEquals(
-            setOf("config", "core", "generation", "validation", "repair", "layout", "observability", "readiness", "shell"),
+            setOf(
+                "config",
+                "core",
+                "generation",
+                "validation",
+                "repair",
+                "layout",
+                "observability",
+                "readiness",
+                "shell",
+            ),
             moduleNames,
         )
     }
