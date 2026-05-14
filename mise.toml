@@ -13,12 +13,14 @@ shfmt = "latest"
 shellcheck = "latest"
 vale = "latest"
 detekt = "1.23.8"
+actionlint = "latest"
 
 [env]
 HK_MISE = 1
 
 [settings]
 experimental = true
+locked = true
 
 [hooks]
 postinstall = "hk install --mise"
