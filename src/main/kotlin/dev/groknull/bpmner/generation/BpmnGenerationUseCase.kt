@@ -10,6 +10,10 @@ data class BpmnGenerationInput(
     val processFile: String? = null,
     val outputFile: String = "output.bpmn",
     val styleGuide: String? = null,
+    /**
+     * Currently informational; only `SINGLE_SHOT` semantics are implemented and the readiness gate
+     * runs for both values. `INTERACTIVE` behaviour lands with issue #66 (interactive clarification flow).
+     */
     val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     val clarificationHistory: List<ClarificationExchange> = emptyList(),
 )
