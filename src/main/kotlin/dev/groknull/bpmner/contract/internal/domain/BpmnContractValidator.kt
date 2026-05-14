@@ -29,6 +29,14 @@ internal class BpmnContractValidator {
                     message = "process trigger must not be blank",
                     targetId = contract.id,
                 )
+        } else if (contract.triggerTraceLinks.isEmpty()) {
+            issues +=
+                ContractValidationIssue(
+                    code = ContractValidationCode.TRIGGER_WITHOUT_TRACE,
+                    severity = ContractIssueSeverity.ERROR,
+                    message = "process trigger must carry at least one trace link",
+                    targetId = contract.id,
+                )
         }
         if (contract.endStates.isEmpty()) {
             issues +=

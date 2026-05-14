@@ -20,7 +20,7 @@ import kotlin.test.assertTrue
 
 class BpmnContractAgentTest {
     @Test
-    fun `extractProcessContract returns the LLM-produced contract unchanged`() {
+    fun `extractProcessContract wraps a valid LLM response in a passing report`() {
         val context = FakeOperationContext()
         val expected = sampleContract()
         context.expectResponse(expected)
@@ -28,8 +28,23 @@ class BpmnContractAgentTest {
 
         val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
 
-        assertEquals(expected, result)
+        assertEquals(expected, result.contract)
+        assertTrue(result.isValid, "expected sample contract to pass validation, got ${result.report.issues}")
         assertEquals(1, context.llmInvocations.size)
+    }
+
+    @Test
+    fun `extractProcessContract surfaces validation errors instead of swallowing them`() {
+        val context = FakeOperationContext()
+        val invalid = sampleContract().copy(triggerTraceLinks = emptyList())
+        context.expectResponse(invalid)
+        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+
+        val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
+
+        assertEquals(invalid, result.contract)
+        assertTrue(!result.isValid)
+        assertTrue(result.report.issues.any { it.code.name == "TRIGGER_WITHOUT_TRACE" })
     }
 
     @Test
