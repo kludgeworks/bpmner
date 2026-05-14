@@ -4,6 +4,7 @@ import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.BpmnLintRuleIds
 import dev.groknull.bpmner.core.BpmnLocalFixFailure
 import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.core.BpmnRepairAttempt
@@ -90,7 +91,7 @@ internal class LintLocalRepairStrategy(
     ) {
         val declaredLocalSkipped =
             result.skipped.filter { skip ->
-                bareRuleId(skip.rule) in localXmlRules
+                BpmnLintRuleIds.bareRuleId(skip.rule) in localXmlRules
             }
         check(declaredLocalSkipped.isEmpty()) {
             "Local lint auto-fix skipped declared-local rule(s) " +
@@ -130,13 +131,7 @@ internal class LintLocalRepairStrategy(
         )
     }
 
-    private fun BpmnDiagnostic.bareRuleId(): String? = rule?.let { bareRuleId(it) }
+    private fun BpmnDiagnostic.bareRuleId(): String? = rule?.let(BpmnLintRuleIds::bareRuleId)
 
-    private fun LintIssue.bareRuleId(): String = bareRuleId(rule)
-
-    private fun bareRuleId(rule: String): String = rule.replace(RULE_PREFIX_REGEX, "")
-
-    companion object {
-        private val RULE_PREFIX_REGEX = "^(klm|bpmnlint-plugin-klm)/".toRegex()
-    }
+    private fun LintIssue.bareRuleId(): String = BpmnLintRuleIds.bareRuleId(rule)
 }

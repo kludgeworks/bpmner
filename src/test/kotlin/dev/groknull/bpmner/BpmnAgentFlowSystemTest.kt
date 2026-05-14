@@ -19,7 +19,6 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
-import org.mockito.ArgumentMatchers.anyList
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -61,13 +60,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
-        doReturn(null)
-            .`when`(bpmnLintService)
-            .autoFix(
-                org.mockito.ArgumentMatchers.anyString(),
-                anyList(),
-                eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
-            )
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
 
@@ -93,11 +85,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         verify(bpmnLintService).lint(
             org.mockito.ArgumentMatchers.anyString(),
             eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT),
-        )
-        verify(bpmnLintService).autoFix(
-            org.mockito.ArgumentMatchers.anyString(),
-            anyList(),
-            eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
         )
     }
 

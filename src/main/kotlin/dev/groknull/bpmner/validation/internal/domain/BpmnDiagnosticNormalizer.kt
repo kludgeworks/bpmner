@@ -2,6 +2,7 @@ package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.BpmnDiagnosticSource
+import dev.groknull.bpmner.core.BpmnLintRuleIds
 import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.LintIssue
@@ -48,7 +49,7 @@ internal class BpmnDiagnosticNormalizer(
         val caps = lintingPort.lintRuleCapabilities()
         return lintIssues.map { issue ->
             val elementId = issue.id?.takeIf { elementIndex.knownElementIds().contains(it) }
-            val bareId = issue.rule?.replace("^(klm|bpmnlint-plugin-klm)/".toRegex(), "")
+            val bareId = issue.rule?.let(BpmnLintRuleIds::bareRuleId)
             val cap = bareId?.let { caps[it] }
             scopedDiagnostic(
                 graph = graph,
