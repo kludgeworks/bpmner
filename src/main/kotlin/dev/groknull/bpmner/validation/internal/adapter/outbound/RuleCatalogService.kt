@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import dev.groknull.bpmner.core.BpmnLintRuleIds
 import org.slf4j.LoggerFactory
 import org.springframework.core.io.ClassPathResource
 import org.springframework.stereotype.Component
@@ -67,7 +68,7 @@ class RuleCatalogService {
     }
 
     fun getRule(id: String): BpmnRuleMetadata? {
-        val bareId = id.replace("^(bpmner|bpmnlint-plugin-bpmner)/".toRegex(), "")
+        val bareId = BpmnLintRuleIds.bareRuleId(id)
         return catalog.rules.find { it.id == bareId || it.aliases.contains(bareId) }
     }
 }
