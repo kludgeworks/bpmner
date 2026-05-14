@@ -37,13 +37,17 @@ internal class BpmnGenerationService(
                 processDescription = description,
                 outputFile = outputFile,
                 styleGuide = styleGuide,
+                mode = input.mode,
+                clarificationHistory = input.clarificationHistory,
             )
 
         logger.info(
-            "Starting BPMN generation. outputFile={}, descriptionLength={}, styleGuidePresent={}",
+            "Starting BPMN generation. outputFile={}, mode={}, descriptionLength={}, styleGuidePresent={}, clarifications={}",
             outputFile,
+            input.mode,
             description.length,
             styleGuide != null,
+            input.clarificationHistory.size,
         )
         logger.debug("Process description:\n{}", description)
         if (styleGuide != null) logger.debug("Style guide:\n{}", styleGuide)

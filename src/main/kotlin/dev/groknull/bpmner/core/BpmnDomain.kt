@@ -16,6 +16,11 @@ data class BpmnRequest(
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
     val outputFile: String = "output.bpmn",
+    @get:JsonPropertyDescription("Generation mode requested by the inbound adapter")
+    val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
+    @field:Valid
+    @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
+    val clarificationHistory: List<ClarificationExchange> = emptyList(),
 ) : PromptContributor {
     override fun contribution(): String =
         buildString {
@@ -48,6 +53,16 @@ data class BpmnRequest(
                 appendLine()
                 appendLine(styleGuide)
             }
+            if (clarificationHistory.isNotEmpty()) {
+                appendLine()
+                appendLine("---")
+                appendLine()
+                appendLine("## Clarification answers")
+                clarificationHistory.forEach {
+                    appendLine("- [${it.questionId}] ${it.questionText}")
+                    appendLine("  Answer: ${it.answerText}")
+                }
+            }
         }
 }
 
@@ -57,6 +72,14 @@ fun BpmnRequest.generationPrompt(): String =
         appendLine()
         appendLine("Business process description:")
         appendLine(processDescription)
+        if (clarificationHistory.isNotEmpty()) {
+            appendLine()
+            appendLine("Clarification answers:")
+            clarificationHistory.forEach {
+                appendLine("- [${it.questionId}] ${it.questionText}")
+                appendLine("  Answer: ${it.answerText}")
+            }
+        }
     }
 
 @JsonClassDescription("Typed BPMN process definition including topology and diagram layout")
