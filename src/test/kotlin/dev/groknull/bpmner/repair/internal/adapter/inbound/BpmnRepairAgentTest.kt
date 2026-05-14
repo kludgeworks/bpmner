@@ -1,5 +1,4 @@
 
-
 @file:Suppress("TooManyFunctions")
 
 package dev.groknull.bpmner.repair.internal.adapter.inbound
@@ -46,6 +45,7 @@ import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStr
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -54,7 +54,6 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogServi
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
-import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -71,9 +70,7 @@ class BpmnRepairAgentTest {
     ): BpmnRepairAgent {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer(lintService)
-        val catalogService = RuleCatalogService()
-        val llmValidator = LlmValidator(catalogService)
-        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, llmValidator)
+        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, NoopRuleGuidancePort)
         val evaluationPipeline =
             BpmnEvaluationPipeline(
                 config = config,
@@ -742,4 +739,8 @@ class BpmnRepairAgentTest {
                 ),
             ),
     )
+
+    private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
+        override fun getLlmRuleGuidance(): String = ""
+    }
 }

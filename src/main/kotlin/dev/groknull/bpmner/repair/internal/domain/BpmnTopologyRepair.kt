@@ -8,7 +8,6 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -16,7 +15,7 @@ import org.springframework.stereotype.Component
 @Service
 @Component
 internal class BpmnTopologyRepair(
-    private val patchApplier: BpmnPatchApplier,
+    private val patchApplier: BpmnPatchApplicationPort,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnTopologyRepair::class.java)
 

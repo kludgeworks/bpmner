@@ -4,13 +4,14 @@ import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import org.springframework.stereotype.Component
 
 @Component
 internal class LlmValidator(
     private val catalogService: RuleCatalogService,
-) {
+) : BpmnRuleGuidancePort {
     fun validate(
         _definition: BpmnDefinition,
         _graph: LaidOutProcessGraph,
@@ -26,7 +27,7 @@ internal class LlmValidator(
         return emptyList()
     }
 
-    fun getLlmRuleGuidance(): String {
+    override fun getLlmRuleGuidance(): String {
         val llmRules = catalogService.catalog.rules.filter { !it.hasTsImplementation }
         if (llmRules.isEmpty()) return ""
 

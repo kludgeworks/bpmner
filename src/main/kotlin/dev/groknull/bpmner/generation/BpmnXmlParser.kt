@@ -1,9 +1,9 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.core.BpmnDefinition
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.hexagonal.SecondaryPort
 
-@PrimaryPort
+@SecondaryPort
 interface BpmnXmlParser {
     fun parse(xml: String): BpmnDefinition
 }

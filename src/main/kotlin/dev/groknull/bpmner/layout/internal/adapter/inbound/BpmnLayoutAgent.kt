@@ -14,7 +14,7 @@ import dev.groknull.bpmner.core.FinalValidatedBpmnXml
 import dev.groknull.bpmner.core.LayoutedBpmnXml
 import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.XsdValidationIssue
-import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
+import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -23,7 +23,7 @@ import org.slf4j.LoggerFactory
 @PrimaryAdapter
 @Agent(description = "Apply auto-layout and final validation to validated BPMN XML")
 internal class BpmnLayoutAgent(
-    private val layoutService: BpmnLayoutService,
+    private val layoutService: BpmnLayoutPort,
     private val bpmnLintingPort: BpmnLintingPort,
     private val bpmnXsdValidationPort: BpmnXsdValidationPort,
 ) {
