@@ -16,6 +16,8 @@ data class BpmnConfig(
     val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
     @field:Valid
     val readiness: BpmnReadinessConfig = BpmnReadinessConfig(),
+    val contractExtractor: Actor<Persona> = DEFAULT_CONTRACT_EXTRACTOR,
+    val contract: BpmnContractConfig = BpmnContractConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
 ) {
@@ -60,6 +62,21 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("readiness-assessor"),
             )
+        val DEFAULT_CONTRACT_EXTRACTOR =
+            Actor(
+                persona =
+                    Persona(
+                        name = "Process Contract Extractor",
+                        persona =
+                            "You are a conservative business analyst who extracts source-grounded process contracts",
+                        objective =
+                            "Produce a typed ProcessContract whose every element is traceable to the source" +
+                                " input, an assessment evidence id, a clarification answer, or an explicit" +
+                                " assumption; never invent facts that are not grounded",
+                        voice = "specific and evidence-grounded",
+                    ),
+                llm = LlmOptions.withLlmForRole("contract-extractor"),
+            )
     }
 }
 
@@ -74,6 +91,10 @@ data class BpmnReadinessConfig(
     val minimumActivityCount: Int = 2,
     @field:Min(1)
     val maxClarificationQuestions: Int = 5,
+)
+
+data class BpmnContractConfig(
+    val maxAssumptions: Int = 10,
 )
 
 data class BpmnLoggingConfig(

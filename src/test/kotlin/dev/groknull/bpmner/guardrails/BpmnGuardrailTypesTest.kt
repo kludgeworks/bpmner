@@ -145,6 +145,7 @@ class BpmnGuardrailTypesTest {
                 id = "",
                 processName = "",
                 summary = "",
+                trigger = "",
                 activities = emptyList(),
                 endStates = emptyList(),
             )
@@ -195,6 +196,15 @@ class BpmnGuardrailTypesTest {
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
+            trigger = "An approved order is received",
+            triggerTraceLinks =
+                listOf(
+                    TraceLink(
+                        id = "trace-trigger",
+                        sourceId = "ev1",
+                        targetId = "trigger",
+                    ),
+                ),
             activities = validContractActivities(),
             decisions = validContractDecisions(),
             actors = validContractActors(),
