@@ -1,6 +1,5 @@
 package dev.groknull.bpmner.readiness.internal.domain
 
-import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnReadinessConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationQuestion
@@ -9,14 +8,15 @@ import dev.groknull.bpmner.core.ProcessInputAssessment
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.ReadinessDimensionScore
 import dev.groknull.bpmner.core.ReadinessVerdict
-import org.springframework.stereotype.Component
 
-@Component
 internal class BpmnReadinessPostChecker(
-    private val bpmnConfig: BpmnConfig = BpmnConfig(),
+    private val config: BpmnReadinessConfig = BpmnReadinessConfig(),
 ) {
-    private val config: BpmnReadinessConfig
-        get() = bpmnConfig.readiness
+    private val clarificationCeiling: Int
+        get() = config.readyThreshold - 1
+
+    private val notAProcessCeiling: Int
+        get() = config.clarificationThreshold - 1
 
     fun apply(
         request: BpmnRequest,
@@ -39,39 +39,39 @@ internal class BpmnReadinessPostChecker(
         }
         dimensions.replaceAll { _, score -> score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE)) }
 
-        val processVerbCount = PROCESS_VERBS.count { it.containsMatchIn(text) }
-        val hasProcessVerb = processVerbCount > 0
+        val distinctProcessVerbCount = PROCESS_VERBS.count { it.containsMatchIn(text) }
+        val hasProcessVerb = distinctProcessVerbCount > 0
         val hasStartTrigger = START_TRIGGER_MARKERS.any { it.containsMatchIn(text) }
         val hasEndState = END_STATE_MARKERS.any { it.containsMatchIn(text) }
         val hasSequence = SEQUENCE_MARKERS.any { it.containsMatchIn(text) }
 
         if (!hasStartTrigger) {
-            overallScore = minOf(overallScore, CLARIFICATION_CEILING)
+            overallScore = minOf(overallScore, clarificationCeiling)
             missingAreas += MissingProcessArea.START_TRIGGER
             dimensions.lower(ReadinessDimension.START_TRIGGER, MissingProcessArea.START_TRIGGER)
         }
         if (!hasEndState) {
-            overallScore = minOf(overallScore, CLARIFICATION_CEILING)
+            overallScore = minOf(overallScore, clarificationCeiling)
             missingAreas += MissingProcessArea.END_STATE
             dimensions.lower(ReadinessDimension.END_STATES, MissingProcessArea.END_STATE)
         }
-        if (processVerbCount < config.minimumActivityCount) {
-            overallScore = minOf(overallScore, CLARIFICATION_CEILING)
+        if (distinctProcessVerbCount < config.minimumActivityCount) {
+            overallScore = minOf(overallScore, clarificationCeiling)
             missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
             dimensions.lower(ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
         }
         if (!hasSequence) {
-            overallScore = minOf(overallScore, CLARIFICATION_CEILING)
+            overallScore = minOf(overallScore, clarificationCeiling)
             missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
             dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
         }
         if (!hasProcessVerb) {
-            overallScore = minOf(overallScore, NOT_A_PROCESS_CEILING)
+            overallScore = minOf(overallScore, notAProcessCeiling)
             missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
             dimensions.lower(
                 dimension = ReadinessDimension.BPMN_SUITABILITY,
                 missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
-                scoreCeiling = NOT_A_PROCESS_CEILING,
+                scoreCeiling = notAProcessCeiling,
             )
         }
 
@@ -130,6 +130,8 @@ internal class BpmnReadinessPostChecker(
         missingAreas: List<MissingProcessArea>,
         verdict: ReadinessVerdict,
     ): List<ClarificationQuestion> {
+        if (verdict == ReadinessVerdict.NOT_A_PROCESS) return emptyList()
+
         val normalizedQuestions =
             questions.mapIndexed { index, question ->
                 val areas = question.relatedMissingAreas.ifEmpty { missingAreas.take(1) }
@@ -199,19 +201,27 @@ internal class BpmnReadinessPostChecker(
         const val MAX_SCORE = 100
         const val DEFAULT_DIMENSION_SCORE = 50
         const val MISSING_DIMENSION_CEILING = 40
-        const val CLARIFICATION_CEILING = 74
-        const val NOT_A_PROCESS_CEILING = 39
 
+        // Deliberately conservative heuristic fallback; the model assessment remains the primary signal.
         val PROCESS_VERBS =
             listOf(
                 "approve",
                 "review",
                 "submit",
+                "send",
                 "receive",
+                "deliver",
+                "publish",
+                "execute",
+                "process",
+                "request",
+                "respond",
+                "generate",
                 "validate",
                 "create",
                 "update",
                 "notify",
+                "complete",
                 "ship",
                 "invoice",
                 "pay",

@@ -13,9 +13,9 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
     private val config: BpmnConfig,
-    private val postChecker: BpmnReadinessPostChecker,
 ) {
     private val promptFactory = BpmnReadinessPromptFactory(config.readiness)
+    private val postChecker = BpmnReadinessPostChecker(config.readiness)
 
     @Action(description = "Assess raw BPMN generation input for process readiness")
     fun assessReadiness(
