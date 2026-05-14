@@ -1,6 +1,10 @@
 package dev.groknull.bpmner.shell
 
 import dev.groknull.bpmner.core.ClarificationQuestion
+import org.jline.reader.EndOfFileException
+import org.jline.reader.LineReader
+import org.jline.reader.UserInterruptException
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
 interface BpmnShellPrompter {
@@ -8,13 +12,20 @@ interface BpmnShellPrompter {
 }
 
 @Component
-class StandardBpmnShellPrompter : BpmnShellPrompter {
+class StandardBpmnShellPrompter(
+    @Lazy private val lineReader: LineReader,
+) : BpmnShellPrompter {
     override fun ask(question: ClarificationQuestion): String? {
-        println(question.questionText)
+        lineReader.printAbove(question.questionText)
         if (question.options.isNotEmpty()) {
-            question.options.forEachIndexed { index, option -> println("${index + 1}. $option") }
+            question.options.forEachIndexed { index, option -> lineReader.printAbove("${index + 1}. $option") }
         }
-        print("> ")
-        return readlnOrNull()
+        return try {
+            lineReader.readLine("> ")
+        } catch (_: UserInterruptException) {
+            null
+        } catch (_: EndOfFileException) {
+            null
+        }
     }
 }

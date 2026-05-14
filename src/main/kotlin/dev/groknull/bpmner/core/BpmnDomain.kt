@@ -16,7 +16,6 @@ data class BpmnRequest(
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
     val outputFile: String = "output.bpmn",
-    @get:JsonPropertyDescription("Generation mode requested by the inbound adapter")
     val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
@@ -52,16 +51,6 @@ data class BpmnRequest(
                 appendLine("## Style guide")
                 appendLine()
                 appendLine(styleGuide)
-            }
-            if (clarificationHistory.isNotEmpty()) {
-                appendLine()
-                appendLine("---")
-                appendLine()
-                appendLine("## Clarification answers")
-                clarificationHistory.forEach {
-                    appendLine("- [${it.questionId}] ${it.questionText}")
-                    appendLine("  Answer: ${it.answerText}")
-                }
             }
         }
 }
