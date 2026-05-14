@@ -23,7 +23,6 @@ jobs:
         with:
           install: true
           cache: true
-          log_level: debug
         env:
           MISE_LOCKED: 0 # core:java does not support multi-platform locking yet
 
