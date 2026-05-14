@@ -221,3 +221,31 @@ js_test(
     entry_point = "dist/test/auto-fix.test.js",
     node_options = ["--test-reporter=spec"],
 )
+
+esbuild(
+    name = "capabilities_test_bundle",
+    srcs = TEST_BUNDLE_SRCS,
+    config = {
+        "loader": {
+            ".bpmn": "text",
+        },
+        "sourcemap": False,
+    },
+    entry_point = "test/capabilities.test.ts",
+    external = [
+        "node:test",
+        "node:assert",
+    ],
+    format = "cjs",
+    output = "dist/test/capabilities.test.js",
+    platform = "node",
+    target = "es2022",
+    deps = LINTER_TS_DEPS,
+)
+
+js_test(
+    name = "capabilities_test",
+    data = [":capabilities_test_bundle"],
+    entry_point = "dist/test/capabilities.test.js",
+    node_options = ["--test-reporter=spec"],
+)
