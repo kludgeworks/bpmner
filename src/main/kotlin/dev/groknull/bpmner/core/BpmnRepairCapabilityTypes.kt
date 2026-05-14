@@ -31,6 +31,18 @@ data class BpmnLocalFixFailure(
     val reason: String,
 )
 
+data class BpmnLocalFixSummary(
+    val modelApplied: Int,
+    val xmlApplied: Int,
+    val xmlErrors: Int,
+) {
+    val total: Int get() = modelApplied + xmlApplied
+
+    companion object {
+        val EMPTY = BpmnLocalFixSummary(modelApplied = 0, xmlApplied = 0, xmlErrors = 0)
+    }
+}
+
 data class BpmnLocalRepairOutcome(
     val failures: List<BpmnLocalFixFailure>,
 ) {
