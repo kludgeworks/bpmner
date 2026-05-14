@@ -1,5 +1,3 @@
-@file:Suppress("ReturnCount")
-
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBounds
