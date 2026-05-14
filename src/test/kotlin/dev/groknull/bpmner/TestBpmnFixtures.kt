@@ -1,18 +1,13 @@
 package dev.groknull.bpmner
+import dev.groknull.bpmner.layout.ProcessOutline
 
-import dev.groknull.bpmner.core.BpmnBounds
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.layout.LaidOutProcessGraph
+
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
-import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
-import dev.groknull.bpmner.core.ValidatedOutline
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
+
 
 /**
  * Shared test fixtures for BPMN definitions and graphs to prevent duplication.

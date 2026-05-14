@@ -1,19 +1,9 @@
 @file:Suppress("TooManyFunctions")
 
 package dev.groknull.bpmner.repair.internal.domain
-
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
-import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
-import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
-import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
-import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
-import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
+
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

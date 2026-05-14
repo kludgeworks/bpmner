@@ -1,9 +1,7 @@
 package dev.groknull.bpmner.observability.internal.adapter.inbound
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.GlobalDiagnostics
-import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
-import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
+
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.context.event.EventListener

@@ -1,13 +1,7 @@
 package dev.groknull.bpmner.repair.internal.domain
-
-import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnRepairSafety
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
+
+
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

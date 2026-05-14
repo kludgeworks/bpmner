@@ -1,36 +1,19 @@
 package dev.groknull.bpmner.repair.internal.adapter.outbound
-
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnBounds
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.GlobalDiagnostics
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
-import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
-import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedOutline
-import dev.groknull.bpmner.repair.BpmnLocalFixFailure
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
+
+import dev.groknull.bpmner.layout.ProcessOutline
+
+import dev.groknull.bpmner.layout.LaidOutProcessGraph
+
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
+import dev.groknull.bpmner.core.BpmnRequest
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
+
 import kotlin.test.Test
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue

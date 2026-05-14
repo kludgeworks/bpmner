@@ -1,6 +1,7 @@
 package dev.groknull.bpmner.repair
+import dev.groknull.bpmner.validation.BpmnDiagnostic
 
-import dev.groknull.bpmner.core.BpmnDiagnostic
+
 
 data class BpmnLocalFixFailure(
     val rule: String,

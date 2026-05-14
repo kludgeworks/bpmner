@@ -1,6 +1,5 @@
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnLintPhase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue

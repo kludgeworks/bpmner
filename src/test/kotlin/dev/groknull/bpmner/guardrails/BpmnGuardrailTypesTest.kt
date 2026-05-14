@@ -1,8 +1,10 @@
 package dev.groknull.bpmner.guardrails
+import dev.groknull.bpmner.guardrails.BpmnResult
+
+
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.groknull.bpmner.core.BpmnResult
 import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

@@ -1,6 +1,5 @@
-package dev.groknull.bpmner.layout.internal.adapter.outbound
+package dev.groknull.bpmner.layout
 
-import dev.groknull.bpmner.layout.BpmnLayoutPort
 import jakarta.annotation.PostConstruct
 import org.graalvm.polyglot.Context
 import org.graalvm.polyglot.HostAccess

@@ -1,26 +1,11 @@
-package dev.groknull.bpmner.layout.internal.adapter.inbound
+package dev.groknull.bpmner.layout
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
 
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
-import dev.groknull.bpmner.core.AutoFixedBpmnXml
-import dev.groknull.bpmner.core.BpmnAutoFixChange
-import dev.groknull.bpmner.core.BpmnAutoFixError
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnAutoFixSkip
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleIds
-import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.core.FinalValidatedBpmnXml
-import dev.groknull.bpmner.core.LayoutedBpmnXml
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedBpmnXml
-import dev.groknull.bpmner.core.XsdValidationIssue
-import dev.groknull.bpmner.layout.BpmnLayoutPort
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 

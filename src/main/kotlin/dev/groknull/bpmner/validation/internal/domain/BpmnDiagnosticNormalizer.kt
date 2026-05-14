@@ -1,16 +1,9 @@
-package dev.groknull.bpmner.validation.internal.domain
+package dev.groknull.bpmner.validation
+import dev.groknull.bpmner.layout.LaidOutProcessGraph
 
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnLintRuleIds
-import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.XsdValidationIssue
-import dev.groknull.bpmner.core.format
-import dev.groknull.bpmner.validation.BpmnLintingPort
+
+
+
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

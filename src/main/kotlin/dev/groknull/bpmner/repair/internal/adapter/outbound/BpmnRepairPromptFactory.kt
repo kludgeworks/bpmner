@@ -1,22 +1,19 @@
 package dev.groknull.bpmner.repair.internal.adapter.outbound
+import dev.groknull.bpmner.validation.BpmnEvaluation
+
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
+import dev.groknull.bpmner.core.BpmnRequest
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.format
-import dev.groknull.bpmner.core.generationPrompt
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
-import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 

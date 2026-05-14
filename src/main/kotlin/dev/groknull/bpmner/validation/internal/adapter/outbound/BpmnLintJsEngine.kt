@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.validation.internal.adapter.outbound
+package dev.groknull.bpmner.validation
 
 import jakarta.annotation.PostConstruct
 import org.graalvm.polyglot.Context

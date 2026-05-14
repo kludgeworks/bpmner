@@ -1,10 +1,14 @@
 package dev.groknull.bpmner.repair
+import dev.groknull.bpmner.validation.BpmnEvaluation
+
+import dev.groknull.bpmner.layout.LaidOutProcessGraph
+
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import com.embabel.chat.Message
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.validation.BpmnEvaluation
 
 data class BpmnRepairAttempt(
     val attemptNumber: Int,

@@ -1,4 +1,12 @@
 package dev.groknull.bpmner.repair
+import dev.groknull.bpmner.layout.ProcessOutline
+
+import dev.groknull.bpmner.layout.LaidOutProcessGraph
+
+import dev.groknull.bpmner.core.BpmnRequest
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.ContextualPromptElement
@@ -10,29 +18,6 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.core.BpmnBounds
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
-import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
-import dev.groknull.bpmner.core.ValidatedOutline
-import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
-import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
-import dev.groknull.bpmner.repair.BpmnRefinementFailureException
-import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
-import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
-import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

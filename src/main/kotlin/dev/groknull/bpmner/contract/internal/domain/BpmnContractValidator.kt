@@ -1,10 +1,8 @@
 package dev.groknull.bpmner.contract.internal.domain
 
-import dev.groknull.bpmner.core.ContractIssueSeverity
-import dev.groknull.bpmner.core.ContractValidationCode
-import dev.groknull.bpmner.core.ContractValidationIssue
-import dev.groknull.bpmner.core.ContractValidationReport
-import dev.groknull.bpmner.core.ProcessContract
+
+
+
 import org.springframework.stereotype.Component
 
 @Component

@@ -1,9 +1,7 @@
 package dev.groknull.bpmner.repair.internal.adapter.outbound
-
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchApplicationPort
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
+
+
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 

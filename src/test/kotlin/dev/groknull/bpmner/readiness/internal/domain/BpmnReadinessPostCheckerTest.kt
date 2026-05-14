@@ -1,13 +1,8 @@
 package dev.groknull.bpmner.readiness.internal.domain
-
-import dev.groknull.bpmner.core.BpmnReadinessConfig
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ClarificationQuestion
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ProcessInputAssessment
-import dev.groknull.bpmner.core.ReadinessDimension
-import dev.groknull.bpmner.core.ReadinessDimensionScore
-import dev.groknull.bpmner.core.ReadinessVerdict
+
+
+
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

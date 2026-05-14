@@ -1,19 +1,5 @@
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
-import dev.groknull.bpmner.core.BpmnAutoFixChange
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnAutoFixSkip
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnRepairSafety
-import dev.groknull.bpmner.core.LayoutedBpmnXml
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedBpmnXml
-import dev.groknull.bpmner.core.XsdValidationIssue
-import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

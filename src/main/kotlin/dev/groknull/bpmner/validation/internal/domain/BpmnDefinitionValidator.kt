@@ -1,8 +1,7 @@
-package dev.groknull.bpmner.validation.internal.domain
-
+package dev.groknull.bpmner.validation
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.core.NodeType
+
+
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 

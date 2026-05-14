@@ -1,11 +1,10 @@
 package dev.groknull.bpmner.core
 
+
+
 import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.guardrails.BpmnAlignmentReport
-import dev.groknull.bpmner.guardrails.BpmnGenerationStatus
-import dev.groknull.bpmner.guardrails.ProcessInputAssessment
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -150,22 +149,3 @@ enum class NodeType {
     EXCLUSIVE_GATEWAY,
     END_EVENT,
 }
-
-@JsonClassDescription("Result of a BPMN generation request")
-data class BpmnResult(
-    @field:NotBlank
-    @get:JsonPropertyDescription("Requested BPMN output file path")
-    val outputFile: String,
-    @get:JsonPropertyDescription("Generation status")
-    val status: BpmnGenerationStatus,
-    @get:JsonPropertyDescription("Generated BPMN XML when generation succeeds")
-    val xml: String? = null,
-    @field:Valid
-    @get:JsonPropertyDescription("Readiness report when generation needs clarification or is blocked")
-    val readinessReport: ProcessInputAssessment? = null,
-    @field:Valid
-    @get:JsonPropertyDescription("Alignment report when alignment has been evaluated")
-    val alignmentReport: BpmnAlignmentReport? = null,
-    @get:JsonPropertyDescription("Optional report output file path for guardrail diagnostics")
-    val reportFile: String? = null,
-)

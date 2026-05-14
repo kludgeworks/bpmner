@@ -1,10 +1,9 @@
 package dev.groknull.bpmner.repair.internal.domain
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.repair.BpmnAttemptRecord
-import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
+
 import org.springframework.stereotype.Component
 
 @Component

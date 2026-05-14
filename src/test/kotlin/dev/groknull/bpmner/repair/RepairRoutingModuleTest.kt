@@ -1,4 +1,8 @@
 package dev.groknull.bpmner.repair
+import dev.groknull.bpmner.core.BpmnRequest
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import ch.qos.logback.classic.Level
 import ch.qos.logback.classic.Logger
@@ -14,27 +18,6 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
-import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
-import dev.groknull.bpmner.core.BpmnAutoFixChange
-import dev.groknull.bpmner.core.BpmnAutoFixError
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnRepairSafety
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
-import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
-import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

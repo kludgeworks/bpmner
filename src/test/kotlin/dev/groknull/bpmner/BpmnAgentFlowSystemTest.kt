@@ -1,20 +1,15 @@
 package dev.groknull.bpmner
+import dev.groknull.bpmner.guardrails.BpmnResult
+
+import dev.groknull.bpmner.core.BpmnRequest
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
+
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.core.BpmnBounds
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnResult
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

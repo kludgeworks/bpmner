@@ -1,12 +1,11 @@
 package dev.groknull.bpmner.repair.internal.domain
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

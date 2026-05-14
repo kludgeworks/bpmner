@@ -1,11 +1,9 @@
 package dev.groknull.bpmner.repair.internal.domain
+import dev.groknull.bpmner.core.BpmnDefinition
+
 
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.chat.Message
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.repair.BpmnLocalFixSummary
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import org.springframework.core.Ordered
 

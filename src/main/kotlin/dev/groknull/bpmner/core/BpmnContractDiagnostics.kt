@@ -1,5 +1,6 @@
 package dev.groknull.bpmner.core
 
+
 import com.fasterxml.jackson.annotation.JsonClassDescription
 
 enum class ContractIssueSeverity {

@@ -1,7 +1,6 @@
 package dev.groknull.bpmner
 
 import com.google.devtools.build.runfiles.Runfiles
-import dev.groknull.bpmner.core.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

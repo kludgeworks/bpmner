@@ -1,10 +1,5 @@
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnBounds
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.NodeType
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.Definitions
 import org.camunda.bpm.model.bpmn.instance.EndEvent

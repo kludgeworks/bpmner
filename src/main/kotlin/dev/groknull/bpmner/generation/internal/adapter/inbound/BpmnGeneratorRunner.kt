@@ -1,8 +1,5 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
-import dev.groknull.bpmner.BpmnerApplicationShutdown
-import dev.groknull.bpmner.generation.BpmnGenerationInput
-import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
