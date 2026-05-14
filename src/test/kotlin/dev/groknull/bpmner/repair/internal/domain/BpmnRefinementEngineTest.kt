@@ -10,6 +10,8 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
+import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
+import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
 import dev.groknull.bpmner.core.BpmnAutoFixChange
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnBounds
@@ -24,15 +26,9 @@ import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
-import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
@@ -137,7 +133,7 @@ class BpmnRefinementEngineTest {
         val result =
             engine.refine(
                 BpmnRequest("Generate a process"),
-                graph(initial),
+                testLaidOutGraph(initial),
                 RecordingConverter().render(initial),
                 context,
             )
@@ -168,7 +164,7 @@ class BpmnRefinementEngineTest {
 
         engine.refine(
             BpmnRequest("Generate a process"),
-            graph(initial),
+            testLaidOutGraph(initial),
             RecordingConverter().render(initial),
             context,
         )
@@ -253,7 +249,7 @@ class BpmnRefinementEngineTest {
         val engine = refinementEngine(BpmnConfig(maxAttempts = 3), lint, xsd, converter)
         val context = FakeActionContext()
 
-        val result = engine.refine(BpmnRequest("Route an order"), graph(invalid), converter.render(invalid), context)
+        val result = engine.refine(BpmnRequest("Route an order"), testLaidOutGraph(invalid), converter.render(invalid), context)
 
         assertEquals(1, result.repairAttempts)
         assertTrue(context.llmInvocations.isEmpty())
@@ -285,7 +281,7 @@ class BpmnRefinementEngineTest {
 
         val evaluation =
             pipeline.evaluate(
-                graph = graph(invalid),
+                graph = testLaidOutGraph(invalid),
                 definition = invalid,
                 rendered = null,
                 repairAttempts = 0,
@@ -444,60 +440,14 @@ class BpmnRefinementEngineTest {
             )
     }
 
-    private fun graph(definition: BpmnDefinition): LaidOutProcessGraph {
-        val owner = "phase:main"
-        val objectOwners =
-            buildMap {
-                put("process", owner)
-                definition.nodes.forEach { put("nodes[id=${it.id}]", owner) }
-                definition.sequences.forEach { put("sequences[id=${it.id}]", owner) }
-            }
-        val composed =
-            ComposedProcessGraph(
-                outline = ValidatedOutline(ProcessOutline(BpmnRequest("test"), definition, OutlineMetrics(1, 0, 0, 0))),
-                definition = definition,
-                objectOwnersByObjectRef = objectOwners,
-            )
-        val elementOwners =
-            buildMap {
-                put(definition.processId, owner)
-                definition.nodes.forEach {
-                    put(it.id, owner)
-                    put("${it.id}_di", owner)
-                }
-                definition.sequences.forEach {
-                    put(it.id, owner)
-                    put("${it.id}_di", owner)
-                }
-            }
-        return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)
-    }
-
     private fun validDefinition(): BpmnDefinition =
-        BpmnDefinition(
+        testBpmnDefinition(
             processId = "Process_Test",
             processName = "Test",
-            nodes =
-                listOf(
-                    BpmnNode("StartEvent_1", "Started", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-                    BpmnNode("EndEvent_1", "Done", NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "Flow_1",
-                        "StartEvent_1",
-                        "Task_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
-                    ),
-                    BpmnEdge(
-                        "Flow_2",
-                        "Task_1",
-                        "EndEvent_1",
-                        waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
-                    ),
-                ),
+            nodeType = NodeType.USER_TASK,
+            startName = "Started",
+            taskName = "Do work",
+            endName = "Done",
         )
 
     private fun joinForkDefinition(): BpmnDefinition =
