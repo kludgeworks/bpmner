@@ -4,6 +4,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnLintPhase
+import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import jakarta.annotation.PostConstruct
@@ -43,12 +44,16 @@ internal open class BpmnLintService(
     private val properties: BpmnLintProperties = BpmnLintProperties(),
     private val catalogService: RuleCatalogService,
     private val engine: BpmnLintJsEngine,
+    private val pklAdapter: PklRuleCapabilityAdapter,
 ) : BpmnLintingPort {
     private val logger = LoggerFactory.getLogger(BpmnLintService::class.java)
     private val objectMapper = jacksonObjectMapper()
 
+    private lateinit var ruleCapabilities: Map<String, BpmnLintRuleCapability>
+
     @PostConstruct
     fun init() {
+        ruleCapabilities = pklAdapter.loadCapabilities()
         try {
             val api = engine.linterApi
             if (api != null) {
@@ -65,6 +70,8 @@ internal open class BpmnLintService(
             throw e
         }
     }
+
+    override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = ruleCapabilities
 
     override fun lint(
         bpmnXml: String,

@@ -20,6 +20,7 @@ import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
+import dev.groknull.bpmner.validation.internal.adapter.outbound.PklRuleCapabilityAdapter
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
@@ -29,7 +30,15 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BpmnValidationIntegrationTest {
-    private val lintService = BpmnLintService(catalogService = RuleCatalogService(), engine = BpmnLintJsEngine().apply { init() })
+    private val lintService =
+        BpmnLintService(
+            catalogService = RuleCatalogService(),
+            engine =
+                BpmnLintJsEngine().apply {
+                    init()
+                },
+            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+        )
     private val xsdValidator = BpmnXsdValidator()
     private val validator =
         BpmnEvaluationPipeline(
@@ -37,7 +46,7 @@ class BpmnValidationIntegrationTest {
             bpmnLintingPort = lintService,
             bpmnXsdValidationPort = xsdValidator,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
-            normalizer = BpmnDiagnosticNormalizer(),
+            normalizer = BpmnDiagnosticNormalizer(lintService),
             fingerprints = BpmnFingerprintService(),
         )
 
