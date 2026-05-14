@@ -18,8 +18,13 @@ bazel_dep(name = "rules_shell", version = "0.8.0")
 bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
 bazel_dep(name = "rules_pkl", version = "0.15.0")
 bazel_dep(name = "rules_detekt", version = "0.8.1.13")
+bazel_dep(name = "rules_pmd", version = "0.4.0")
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.0.2", dev_dependency = True)
+
+# --- PMD Tooling ---
+pmd = use_extension("@rules_pmd//pmd:extensions.bzl", "pmd")
+use_repo(pmd, "net_sourceforge_pmd")
 
 # --- Kotlin Toolchain ---
 register_toolchains("//tools/kotlin:kotlin_toolchain")
