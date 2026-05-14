@@ -52,6 +52,7 @@ class BpmnContractGenerationPromptFactoryTest {
         assertTrue(prompt.contains("Leave routing-only converging gateways unnamed."))
     }
 
+    @Suppress("LongMethod") // exhaustive contract fixture — splitting it obscures the assertions
     private fun contract(): ProcessContract =
         ProcessContract(
             id = "contract-claim",
