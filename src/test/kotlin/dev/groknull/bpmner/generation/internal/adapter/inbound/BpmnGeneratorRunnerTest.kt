@@ -1,6 +1,7 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.BpmnerApplicationShutdown
+import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
@@ -51,7 +52,11 @@ class BpmnGeneratorRunnerTest {
 
         override fun generate(input: BpmnGenerationInput): BpmnResult {
             calls += input
-            return BpmnResult(outputFile = input.outputFile, xml = "<definitions />")
+            return BpmnResult(
+                outputFile = input.outputFile,
+                status = BpmnGenerationStatus.GENERATED,
+                xml = "<definitions />",
+            )
         }
     }
 
