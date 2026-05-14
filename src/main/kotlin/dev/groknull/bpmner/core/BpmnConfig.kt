@@ -64,6 +64,7 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("generator"),
             )
+
         val DEFAULT_LABEL_REPAIRER =
             Actor(
                 persona =
@@ -74,7 +75,7 @@ data class BpmnConfig(
                             "Fix naming and label capitalization rules by providing targeted node and edge patches",
                         voice = "concise and exact",
                     ),
-                llm = LlmOptions.withLlmForRole("repair-label"),
+                llm = LlmOptions.withLlmForRole("label-repairer"),
             )
 
         val DEFAULT_PATCH_REPAIRER =
