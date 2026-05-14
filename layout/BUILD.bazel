@@ -41,7 +41,7 @@ ts_config(
 
 bpmner_ts_project(
     name = "ts",
-    srcs = LIB_TS_SRCS + TEST_TS_SRCS,
+    srcs = LIB_TS_SRCS + TEST_TS_SRCS + ["//tools/js:polyfills.ts"],
     out_dir = "tsc",
     tsconfig = ":tsconfig_bazel",
     deps = LAYOUT_TS_DEPS,
@@ -49,7 +49,7 @@ bpmner_ts_project(
 
 esbuild(
     name = "bundle",
-    srcs = LIB_TS_SRCS,
+    srcs = LIB_TS_SRCS + ["//tools/js:polyfills.ts"],
     config = {
         "inject": ["layout/src/polyfills.ts"],
         "sourcemap": False,
@@ -64,7 +64,7 @@ esbuild(
 
 esbuild(
     name = "smoke_test_bundle",
-    srcs = LIB_TS_SRCS + TEST_TS_SRCS,
+    srcs = LIB_TS_SRCS + TEST_TS_SRCS + ["//tools/js:polyfills.ts"],
     entry_point = "test/smoke.test.ts",
     external = [
         "node:test",
