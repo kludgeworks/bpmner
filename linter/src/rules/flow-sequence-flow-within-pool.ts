@@ -1,7 +1,7 @@
 import { is } from "bpmnlint-utils"
 import {
 	getDefinitions,
-	getPoolIdForNode,
+	getFlowPools,
 	type ModdleElement,
 	type Reporter,
 } from "./_helpers"
@@ -18,14 +18,7 @@ export = () => {
 			return
 		}
 
-		const sourcePool = getPoolIdForNode(
-			node.sourceRef as ModdleElement | undefined,
-			definitions,
-		)
-		const targetPool = getPoolIdForNode(
-			node.targetRef as ModdleElement | undefined,
-			definitions,
-		)
+		const { sourcePool, targetPool } = getFlowPools(node, definitions)
 
 		if (sourcePool && targetPool && sourcePool !== targetPool) {
 			reporter.report(node.id, "Sequence flow must not cross pool boundaries")
