@@ -1,8 +1,8 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
-import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
