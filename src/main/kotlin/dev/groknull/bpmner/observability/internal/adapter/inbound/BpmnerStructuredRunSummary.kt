@@ -109,18 +109,9 @@ internal class BpmnerStructuredRunSummaryFactory {
         validationEvents: BpmnerCollectedValidationEvents,
     ): BpmnerStructuredRunSummary {
         val usage = process.usage()
-        val objects = process.blackboard.objects
-        val request = objects.filterIsInstance<BpmnRequest>().lastOrNull()
-        val result = objects.filterIsInstance<BpmnResult>().lastOrNull()
-        val outline = objects.filterIsInstance<ProcessOutline>().lastOrNull()
-        val rendered = objects.filterIsInstance<RenderedBpmn>().lastOrNull()
-        val validated = objects.filterIsInstance<ValidatedBpmnXml>().lastOrNull()
-        val autoFixed = objects.filterIsInstance<AutoFixedBpmnXml>().lastOrNull()
-        val final = objects.filterIsInstance<FinalValidatedBpmnXml>().lastOrNull()
-        val autoFix =
-            autoFixed?.autoFixResult
-                ?: objects.filterIsInstance<BpmnAutoFixResult>().lastOrNull()
-        val definition = final?.let { rendered?.definition } ?: rendered?.definition ?: outline?.definition
+        val artifacts = process.blackboard.objects.toArtifacts()
+        val autoFix = artifacts.autoFixed?.autoFixResult ?: artifacts.autoFixResult
+        val definition = artifacts.rendered?.definition ?: artifacts.outline?.definition
 
         return BpmnerStructuredRunSummary(
             runId = process.id,
@@ -145,23 +136,55 @@ internal class BpmnerStructuredRunSummaryFactory {
                     completionTokens = usage.completionTokens ?: 0,
                     totalTokens = usage.totalTokens ?: 0,
                 ),
-            request = request?.toSummary(),
+            request = artifacts.request?.toSummary(),
             artifacts =
                 BpmnerArtifactSummary(
                     processId = definition?.processId,
                     processName = definition?.processName,
-                    outline = outline?.toSummary(),
-                    renderedXmlLength = rendered?.xml?.length,
-                    validatedXmlLength = validated?.xml?.length,
-                    finalXmlLength = final?.xml?.length ?: result?.xml?.length,
-                    outputFile = result?.outputFile ?: request?.outputFile,
-                    generationStatus = result?.status?.name ?: BpmnGenerationStatus.GENERATED.name.takeIf { final != null },
+                    outline = artifacts.outline?.toSummary(),
+                    renderedXmlLength = artifacts.rendered?.xml?.length,
+                    validatedXmlLength = artifacts.validated?.xml?.length,
+                    finalXmlLength = artifacts.final?.xml?.length ?: artifacts.result?.xml?.length,
+                    outputFile = artifacts.result?.outputFile ?: artifacts.request?.outputFile,
+                    generationStatus =
+                        artifacts.result?.status?.name
+                            ?: BpmnGenerationStatus.GENERATED.name.takeIf { artifacts.final != null },
                     autoFix = autoFix?.toSummary(),
                 ),
             validation = validationEvents.toSummary(),
             failure = process.failureInfo?.toString(),
         )
     }
+}
+
+private data class BlackboardArtifacts(
+    val request: BpmnRequest? = null,
+    val result: BpmnResult? = null,
+    val outline: ProcessOutline? = null,
+    val rendered: RenderedBpmn? = null,
+    val validated: ValidatedBpmnXml? = null,
+    val autoFixed: AutoFixedBpmnXml? = null,
+    val final: FinalValidatedBpmnXml? = null,
+    val autoFixResult: BpmnAutoFixResult? = null,
+)
+
+private fun List<Any>.toArtifacts(): BlackboardArtifacts {
+    var artifacts = BlackboardArtifacts()
+    forEach { obj ->
+        artifacts =
+            when (obj) {
+                is BpmnRequest -> artifacts.copy(request = obj)
+                is BpmnResult -> artifacts.copy(result = obj)
+                is ProcessOutline -> artifacts.copy(outline = obj)
+                is RenderedBpmn -> artifacts.copy(rendered = obj)
+                is ValidatedBpmnXml -> artifacts.copy(validated = obj)
+                is AutoFixedBpmnXml -> artifacts.copy(autoFixed = obj)
+                is FinalValidatedBpmnXml -> artifacts.copy(final = obj)
+                is BpmnAutoFixResult -> artifacts.copy(autoFixResult = obj)
+                else -> artifacts
+            }
+    }
+    return artifacts
 }
 
 private fun BpmnRequest.toSummary(): BpmnerRequestSummary =
