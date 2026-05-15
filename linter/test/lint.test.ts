@@ -174,12 +174,9 @@ describe("lint rules", () => {
 		}
 	})
 
-	it("gen-bpmnsubset-allowed-elements", async () => {
+	it("gen-bpmn-subset", async () => {
 		assert.ok(
-			hasRule(
-				await lint(fixtures.gen01Choreography),
-				"gen-bpmnsubset-allowed-elements",
-			),
+			hasRule(await lint(fixtures.gen01Choreography), "gen-bpmn-subset"),
 		)
 	})
 
@@ -739,7 +736,7 @@ describe("lint rules", () => {
 		const config = getStaticConfig<{ commonAcronyms: string[] }>(
 			"name-uncommon-abbreviations",
 		)
-		assert.ok(config.commonAcronyms.includes("BPMNER"))
+		assert.ok(config.commonAcronyms.includes("ACME"))
 		assert.ok(
 			!hasRule(await lint(fixtures.name02Valid), "name-uncommon-abbreviations"),
 		)

@@ -234,7 +234,7 @@ class BpmnRepairAgentTest {
             context.llmInvocations.single().interaction.promptContributors.joinToString("\n") {
                 it.contribution()
             }
-        assertTrue(promptContributions.contains("BPMNER lint rule documentation for current violations"))
+        assertTrue(promptContributions.contains("BPMN lint rule documentation for current violations"))
         assertTrue(promptContributions.contains("# gen-02-no-duplicate-diagrams"))
     }
 

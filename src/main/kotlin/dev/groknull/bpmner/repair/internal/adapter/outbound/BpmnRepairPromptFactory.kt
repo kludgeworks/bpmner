@@ -88,7 +88,7 @@ internal class BpmnRepairPromptFactory(
 
         val content =
             buildString {
-                appendLine("BPMNER lint rule documentation for current violations:")
+                appendLine("BPMN lint rule documentation for current violations:")
                 appendLine()
                 docs.toSortedMap().forEach { (rule, markdown) ->
                     appendLine("## $rule")

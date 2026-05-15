@@ -22,7 +22,7 @@ export = () => {
 
 		reporter.report(
 			node.id,
-			`Element type <${node.$type}> is outside the BpmnSubset BPMN subset`,
+			`Element type <${node.$type}> is outside the supported BPMN subset`,
 		)
 	}
 

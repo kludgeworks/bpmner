@@ -167,6 +167,42 @@ url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.2
 [tools.detekt."platforms.windows-x64"]
 url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
 
+[[tools."github:detekt/detekt"]]
+version = "1.23.8"
+backend = "github:detekt/detekt"
+
+[tools."github:detekt/detekt".options]
+asset_pattern = "detekt-cli-{version}.zip"
+
+[tools."github:detekt/detekt"."platforms.linux-arm64"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.linux-arm64-musl"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.linux-x64"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.linux-x64-musl"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.macos-arm64"]
+checksum = "blake3:2eb4ed043ac0a781ccc01afc409d797ec4d9f247395b82cdc18e2b4e411af6af"
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.macos-x64"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
+[tools."github:detekt/detekt"."platforms.windows-x64"]
+url = "https://github.com/detekt/detekt/releases/download/v1.23.8/detekt-cli-1.23.8.zip"
+url_api = "https://api.github.com/repos/detekt/detekt/releases/assets/231650829"
+
 [[tools.hk]]
 version = "1.45.0"
 backend = "aqua:jdx/hk"

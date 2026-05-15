@@ -126,7 +126,7 @@ describe("getRuleCapabilities", () => {
 		assert.equal(cap.layoutSensitive, true)
 	})
 
-	it("BPMNER rules default to layoutSensitive=false", () => {
+	it("plugin rules default to layoutSensitive=false", () => {
 		const caps = getRuleCapabilities()
 		const cap = caps.find((c) => c.id === "name-uncommon-abbreviations")
 		assert.ok(cap, "name-uncommon-abbreviations not found in capabilities")

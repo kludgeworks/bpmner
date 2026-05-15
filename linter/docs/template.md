@@ -1,16 +1,16 @@
 # Work Instruction (WI) Template for BPMN 2.0 Modeling
 
-This template outlines the mandatory and optional information required to generate a high-quality, valid BPMN 2.0 model for BPMNER Operations.
+This template outlines the mandatory and optional information required to generate a high-quality, valid BPMN 2.0 model for your organization.
 
 ## 1. Process Overview
-- **Name of the Process**: (e.g., "Ground Services Implementation")
+- **Name of the Process**: (e.g., "Order Fulfillment")
 - **Process Goal**: What is the final achievement of this process?
 - **Scope**: Where does it start and where does it end?
 
 ## 2. Participants (Pools & Lanes)
-- **Primary Pool**: Usually the organization (e.g., "BPMNER Operations").
+- **Primary Pool**: Usually the organization (e.g., "ACME Operations").
 - **Lanes**: Every role or system that performs an action must be listed.
-    - *Example*: SCMM Part-CAMO, Safety Investigator, MyLearning System.
+    - *Example*: HR Officer, Compliance Auditor, Learning Management System.
 
 ## 3. Process Steps (Activities)
 For each step, provide:
@@ -25,11 +25,11 @@ For each step, provide:
 
 ## 5. Events
 - **Start Event**: What triggers the process? (e.g., "New training request received")
-- **End Event**: What signifies completion? (e.g., "Staff qualified in MyLearning")
+- **End Event**: What signifies completion? (e.g., "Employee qualified")
 - **Intermediate Events**: Are there timers or wait states? (e.g., "Wait for 2 days", "Receive approval email")
 
 ## 6. Business Rules & Compliance
-- **References**: List any regulatory references (e.g., "EASA Annex Vc").
+- **References**: List any regulatory references (e.g., "ISO 9001 §4.2").
 - **SLA**: Are there time constraints for specific steps?
 
 ---

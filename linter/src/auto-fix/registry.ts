@@ -315,7 +315,7 @@ export function autoFixRegistration(
 	try {
 		config = getRuleConfig(normalizedId)
 	} catch {
-		// Fallback for non-BPMNER rules or manual registrations
+		// Fallback for non-plugin rules or manual registrations
 		if (ruleId === "superfluous-termination") {
 			return {
 				metadata: {

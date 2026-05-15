@@ -65,7 +65,7 @@ output {
     ["README.md"] {
       text =
         """
-        # BPMNER Rule Documentation
+        # Plugin Rule Documentation
 
         This folder documents each custom rule implemented by `bpmnlint-plugin-bpmner`.
 

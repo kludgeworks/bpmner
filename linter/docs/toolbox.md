@@ -1,24 +1,19 @@
-# BPMNER BPMN AI Style Rules
+# Plugin BPMN Style Rules
 
 Author: Rovo Chat (AI assistant)
-Scope: BPMN modeling within BPMNER Operations (BpmnSubset)
-Primary sources:
-- **2.1 – BPMN Toolbox**
-  https://afbpmner.atlassian.net/wiki/spaces/BPM/pages/188483501/2.1+-+BPMN+Toolbox
-- **4.1 – Naming conventions for BPMN models in BpmnSubset**
-  https://afbpmner.atlassian.net/wiki/spaces/BPM/pages/187668405/4.1+-+Naming+conventions+for+BPMN+models+in+BpmnSubset
+Scope: BPMN modeling guidance for the supported subset of BPMN 2.0 enforced by this plugin.
 
 ---
 
 ## 1. General Principles
 
-**GEN‑01 – Use only the BpmnSubset BPMN subset**
+**GEN‑01 – Use only the supported BPMN subset**
 
 - **For modellers:**
-  Use only the BPMN elements described in the *BpmnSubset BPMN Toolbox* (activities, events, gateways, pools/lanes, connecting objects, artifacts, data elements). Avoid other “exotic” BPMN 2.0 elements.
+  Use only the BPMN elements described in the supported BPMN subset (activities, events, gateways, pools/lanes, connecting objects, artifacts, data elements). Avoid other “exotic” BPMN 2.0 elements.
 - **For AI:**
-  - Maintain an *allow‑list* of permitted element types exactly as listed in 2.1.
-  - Flag and propose replacements for any BPMN element not mentioned in the toolbox page.
+  - Maintain an *allow‑list* of permitted element types exactly as listed in the supported subset.
+  - Flag and propose replacements for any BPMN element not in the allow‑list.
 
 **GEN‑02 – Prefer business clarity over technical detail**
 
@@ -40,17 +35,17 @@ Source: 4.1 Activities – guideline 1
 
 - **For modellers:**
   - Name all activities, tasks and subprocesses as:
-    `Present‑tense verb (imperative) + business object`, e.g. `Approve request`, `Handle baggage`.
+    `Present‑tense verb (imperative) + business object`, e.g. `Approve request`, `Process order`.
   - Do **not** label multiple activities with the same name within the same process.
 - **For AI:**
   - Enforce pattern: first token is a verb, followed by at least one noun phrase representing a business object.
   - Detect and flag:
-    - Pure noun phrases or gerunds (`Order creation`, `Baggage handling`).
-    - Passive forms where an active form is possible (`Passenger accepted` → `Accept passenger`).
+    - Pure noun phrases or gerunds (`Order creation`, `Request handling`).
+    - Passive forms where an active form is possible (`Customer registered` → `Register customer`).
     - Duplicate activity names within the same process.
   - Auto‑suggest compliant renames, e.g.:
     - `Order creation` → `Create order`
-    - `Passenger accepted` → `Accept passenger`
+    - `Customer registered` → `Register customer`
 
 **ACT‑02 – Capitalization of activity labels**
 
@@ -58,7 +53,7 @@ Source: 4.1 Activities – guideline 3
 
 - **For modellers:**
   - Only capitalize the **first word** of the label and **proper nouns** (e.g. departments, systems).
-  - Example: `Confirm passenger booking`, `Inform Department Lost-and-Found`.
+  - Example: `Confirm customer order`, `Inform Returns Department`.
 - **For AI:**
   - Normalize labels to:
     - First word capitalized; subsequent words lower‑case except known/proper nouns and acronyms.
@@ -70,7 +65,7 @@ Source: 4.1 Activities – guideline 2
 
 - **For modellers:**
   - Use verbs that clearly express business actions (e.g., `Create`, `Validate`, `Assign`, `Confirm`).
-  - Avoid vague verbs such as `Handle` where a more specific one exists (see verb list page: https://afbpmner.atlassian.net/wiki/spaces/BPM/pages/187636531).
+  - Avoid vague verbs such as `Handle` where a more specific one exists.
 - **For AI:**
   - Maintain a list of recommended and discouraged verbs from the referenced page.
   - When encountering discouraged verbs, propose more precise alternatives.
@@ -115,7 +110,7 @@ Source: 2.1.1 Multi-instance Task (sequential / parallel)
 - **For modellers:**
   - Use **Multi‑Instance Task or Subprocess** when repeating work for each item in a list (each iteration has different data).
   - Always attach a **Text Annotation** describing items processed in the form:
-    `For each <item>` (e.g., `For each passenger` or `For each tire`).
+    `For each <item>` (e.g., `For each customer` or `For each line item`).
   - Choose **sequential** MI when items are processed one after another; **parallel** MI when processed simultaneously.
 - **For AI:**
   - Enforce: every Multi‑Instance activity must have a Text Annotation referencing `For each`.
@@ -268,7 +263,7 @@ Source: 4.1 Gateways – guideline 1
 - **For modellers:**
   - Name diverging (splitting) **Exclusive** and **Inclusive** gateways using a **question** that expresses the decision, e.g.:
     `Is document valid?`
-    `Passenger eligible for upgrade or special assistance?`
+    `Customer eligible for premium service?`
 - **For AI:**
   - Enforce:
     - Diverging exclusive/inclusive gateways must have a non‑empty label ending with `?` (or equivalent interrogative form).
@@ -347,10 +342,10 @@ Source: 4.1 Pools – guideline 1
 
 - **For modellers:**
   - Name a **white‑box pool** with the **process name**, not with an organization or role, e.g.:
-    - `Check-in passengers at manned check-in desk`
-    - `Handle rebooking request`
+    - `Process customer orders at service desk`
+    - `Handle change request`
 - **For AI:**
-  - Detect pool names that look like organization/role names (`Department Passenger Services`, `Agent`) and suggest process‑oriented names.
+  - Detect pool names that look like organization/role names (`Customer Service Department`, `Agent`) and suggest process‑oriented names.
 
 **POOL‑02 – Black‑box pool named by external entity or process**
 
@@ -378,10 +373,10 @@ Source: 4.1 Lanes – guideline 1; 2.1.4 Lane
 
 - **For modellers:**
   - Name each lane by the **business role or performer** of the activities, e.g.:
-    - `Team Member Apron Services`, `Cockpit Crew`, `Department Baggage Services`.
+    - `Customer Service Agent`, `Compliance Officer`, `Returns Department`.
   - Lanes sit inside a **white‑box pool** and represent responsibility from start to end of the process.
 - **For AI:**
-  - Flag overly generic or unclear labels like `BPMNER Employee`, `Cleaning`.
+  - Flag overly generic or unclear labels like `Employee`, `Cleaning`.
   - Suggest more specific role/department names when context is available.
 
 **LANE‑02 – Actor artifact usage**
@@ -522,7 +517,7 @@ Source: 2.1.6 Text Annotation
 Source: 4.1 Data – guideline 1
 
 - **For modellers:**
-  - Name data objects with a **qualified noun** that is the name of a business or information object meaningful to the business (e.g., `Passenger manifest`, `Baggage tag data`).
+  - Name data objects with a **qualified noun** that is the name of a business or information object meaningful to the business (e.g., `Customer record`, `Order line data`).
 - **For AI:**
   - Enforce that data object names are nouns or noun phrases, not actions.
   - Reject labels that include `activity`, `process`, etc., in the name.
@@ -533,10 +528,10 @@ Source: 2.1.7 Data
 
 - **For modellers:**
   - Use `Information Item` as a temporary custom BPMN artifact in Function Allocation Diagrams (FAD) to allocate Application Components to Business Processes or Activities.
-  - Note: In the PRADA project, `Application Component (Archimate)` is **not** used to depict IT applications; `Information Item` is used instead, until a central PaxOps repository integration is complete.
+  - Where the local convention forbids `Application Component (Archimate)` for depicting IT applications, `Information Item` is used instead until a central repository integration is available.
 - **For AI:**
-  - In PRADA/FAD contexts, prefer `Information Item` for application allocation, not `Application Component`.
-  - When analyzing older diagrams, be prepared to see `Application Component` but promote convergence toward `Information Item` as per the update.
+  - In FAD contexts that follow this convention, prefer `Information Item` for application allocation, not `Application Component`.
+  - When analyzing older diagrams, be prepared to see `Application Component` but promote convergence toward `Information Item` per the local convention.
 
 ---
 
@@ -560,8 +555,8 @@ Source: 4.1 General naming – guideline 2
     - A glossary, or
     - A Text Annotation explaining the abbreviation.
   - Example:
-    - Good: `Clear passengers from Ineligible-To-Board list (ITBL)`
-    - Bad: `Clear ITBL pax`
+    - Good: `Remove customers from Restricted Access List (RAL)`
+    - Bad: `Clear RAL custs`
 - **For AI:**
   - Detect sequences of uppercase letters or domain‑specific short forms.
   - If abbreviation is not a well‑known acronym, suggest adding its expansion either to the label or via Text Annotation.
@@ -573,8 +568,8 @@ Source: 4.1 General naming – guideline 3
 - **For modellers:**
   - Do not append words like `activity`, `process`, `event` in element names. The BPMN shape already indicates type.
   - Example:
-    - Good: `Clean aircraft interior`
-    - Bad: `Clean aircraft interior activity`, `Deep clean interior process`
+    - Good: `Clean facility interior`
+    - Bad: `Clean facility interior activity`, `Deep clean interior process`
 - **For AI:**
   - Strip redundant words such as `activity`, `process`, `event` from labels and suggest cleaner versions.
 

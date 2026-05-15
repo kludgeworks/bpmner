@@ -44,7 +44,7 @@ class BpmnLintServiceIntegrationTest {
     }
 
     @Test
-    fun `lint detects duplicate diagram elements using BPMNER rule`() {
+    fun `lint detects duplicate diagram elements using plugin rule`() {
         val engine = BpmnLintJsEngine().apply { init() }
         val service =
             BpmnLintService(
@@ -78,7 +78,7 @@ class BpmnLintServiceIntegrationTest {
 
         assertNotNull(issues)
         issues!!
-        assertTrue(issues.any { it.rule == "bpmner/gen-no-duplicate-diagrams" }, "Should find BPMNER duplicate diagram issue")
+        assertTrue(issues.any { it.rule == "bpmner/gen-no-duplicate-diagrams" }, "Should find duplicate diagram issue")
     }
 
     @Test

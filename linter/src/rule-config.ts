@@ -55,7 +55,7 @@ export function getRuleConfig(id: string): RuleConfig {
 	const config = migratedRuleConfigs.get(bareId)
 
 	if (!config) {
-		throw new Error(`Unknown BPMNER rule metadata: ${id}`)
+		throw new Error(`Unknown plugin rule metadata: ${id}`)
 	}
 
 	return config
@@ -66,7 +66,7 @@ export function getRuleMessage(id: string, key = "default"): string {
 	const message = config.errorMessages[key] || config.errorMessages.default
 
 	if (!message) {
-		throw new Error(`Missing message "${key}" for BPMNER rule metadata: ${id}`)
+		throw new Error(`Missing message "${key}" for plugin rule metadata: ${id}`)
 	}
 
 	return message

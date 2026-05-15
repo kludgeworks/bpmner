@@ -16,7 +16,7 @@ describe("BpmnLinterApi bundle smoke test", () => {
 		assert.ok(issues.some((i) => i.rule === "start-event-required"))
 	})
 
-	it("does not enable BPMNER rules unless explicitly configured", async () => {
+	it("does not enable plugin rules unless explicitly configured", async () => {
 		const issues: Array<{ rule: string }> = JSON.parse(
 			await api.lintXml(fixtures.gen02DuplicateDiagram, {
 				extends: ["bpmnlint:recommended"],
@@ -83,7 +83,7 @@ describe("BpmnLinterApi bundle smoke test", () => {
 		assert.deepEqual(invalidRules, ["bpmner/unknown-rule"])
 	})
 
-	it("returns markdown docs for BPMNER rules", () => {
+	it("returns markdown docs for plugin rules", () => {
 		const docs = api.getRuleDocs(["bpmner/gen-no-duplicate-diagrams"])
 		const doc = docs["bpmner/gen-no-duplicate-diagrams"]
 		assert.ok(doc?.includes("# gen-no-duplicate-diagrams"))

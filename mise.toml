@@ -12,7 +12,7 @@ taplo = "latest"
 shfmt = "latest"
 shellcheck = "latest"
 vale = "latest"
-"github:detekt/detekt" = { version = "1.23.8", asset_pattern = "detekt-cli-{{version}}.zip", bin_path = "detekt-cli-{{version}}/bin", filter_bins = "detekt-cli" }
+"github:detekt/detekt" = { version = "1.23.8", asset_pattern = "detekt-cli-{version}.zip", bin_path = "detekt-cli-{version}/bin", filter_bins = "detekt-cli" }
 actionlint = "latest"
 
 [env]
@@ -20,7 +20,7 @@ HK_MISE = 1
 
 [settings]
 experimental = true
-locked = true
+lockfile = true
 
 [hooks]
 postinstall = "hk install --mise"

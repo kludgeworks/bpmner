@@ -53,7 +53,7 @@ class BpmnLintPropertiesBindingTest {
 
         assertFalse(
             properties.rules.keys.any { it in expectedOverrides.map { rule -> rule.replace("/", "") } },
-            "Configured BPMNER overrides must preserve their slash: ${properties.rules.keys}",
+            "Configured plugin overrides must preserve their slash: ${properties.rules.keys}",
         )
     }
 }

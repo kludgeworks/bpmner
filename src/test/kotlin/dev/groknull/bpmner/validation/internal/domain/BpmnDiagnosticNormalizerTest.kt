@@ -147,7 +147,14 @@ class BpmnDiagnosticNormalizerTest {
 
     @Test
     fun `bpmnlint-plugin-bpmner prefix is stripped for lookup`() {
-        val issues = listOf(LintIssue(id = null, rule = "bpmnlint-plugin-bpmner/gtw-converging-gateway-unnamed", message = "named"))
+        val issues =
+            listOf(
+                LintIssue(
+                    id = null,
+                    rule = "bpmnlint-plugin-bpmner/gtw-converging-gateway-unnamed",
+                    message = "named",
+                ),
+            )
 
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 

@@ -34,7 +34,7 @@ errorMessages = new {
 }
 
 staticConfig = new {
-  commonAcronyms = List("BPMN", "BPMNER", "SLA", "API", "IT")
+  commonAcronyms = List("BPMN", "ACME", "SLA", "API", "IT")
 }
 
 repair = new {

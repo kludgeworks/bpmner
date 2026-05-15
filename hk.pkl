@@ -15,7 +15,7 @@ local linters = new Mapping<String, Step> {
   }
   ["vale"] = new Step {
     glob = List("README.md", "linter/**/*.md")
-    check = "vale sync && vale README.md linter/README.md linter/docs"
+    check = "vale sync && vale {{files}}"
   }
   ["taplo_format"] = Builtins.taplo_format
   ["check_merge_conflict"] = Builtins.check_merge_conflict
@@ -31,7 +31,7 @@ local linters = new Mapping<String, Step> {
   ["detekt"] = new Step {
     glob = List("src/**/*.kt")
     check =
-      "detekt --build-upon-default-config --config config/detekt/detekt.yml --input src/main/kotlin,src/test/kotlin --language-version 2.1 --jvm-target 21 --base-path ."
+      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input src/main/kotlin,src/test/kotlin --language-version 2.1 --jvm-target 21 --base-path ."
   }
 }
 

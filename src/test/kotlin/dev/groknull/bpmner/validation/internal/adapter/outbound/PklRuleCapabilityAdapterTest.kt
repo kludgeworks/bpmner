@@ -64,7 +64,7 @@ class PklRuleCapabilityAdapterTest {
     }
 
     @Test
-    fun `layoutSensitive defaults to false for BPMNER rules`() {
+    fun `layoutSensitive defaults to false for plugin rules`() {
         val caps = adapter.loadCapabilities()
         val nonLayoutSensitive = caps.values.filter { !it.layoutSensitive }
         assertTrue(nonLayoutSensitive.isNotEmpty(), "Expected at least one non layout-sensitive capability")

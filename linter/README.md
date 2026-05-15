@@ -11,7 +11,7 @@ The primary artifact is not an npm package. It is a Bazel-built JavaScript bundl
 There are three layers:
 
 1. `rules/*.ts`
-   Custom BPMNER rule implementations.
+   Custom plugin rule implementations.
 2. `src/generated/static-rules.ts`
    Generated static resolver catalog for GraalJS bundling.
 3. `src/linter-bundle.ts`

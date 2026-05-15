@@ -14,9 +14,6 @@ Embabel
 esbuild
 globals
 GraalJS
-BPMNER
-BpmnSubset
-bpmnsubset
 moddle
 modellers
 npm
