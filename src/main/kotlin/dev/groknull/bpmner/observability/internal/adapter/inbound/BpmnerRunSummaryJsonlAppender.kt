@@ -2,7 +2,6 @@ package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import com.fasterxml.jackson.core.JsonProcessingException
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.nio.file.Files
@@ -11,7 +10,7 @@ import java.nio.file.StandardOpenOption
 
 @Component
 class BpmnerRunSummaryJsonlAppender(
-    private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules(),
+    private val objectMapper: ObjectMapper,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnerRunSummaryJsonlAppender::class.java)
 

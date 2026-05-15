@@ -3,6 +3,7 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.core.BpmnAttemptHistory
 import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
@@ -79,7 +80,14 @@ internal class BpmnRefinementEngine(
         if (state.attempt.evaluation.isSuccessful()) {
             context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
             val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-            eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
+            eventPublisher.publishEvent(
+                BpmnValidationPassedEvent(
+                    request = request,
+                    xml = result.xml,
+                    repairAttempts = state.attempt.repairAttempts,
+                    processId = AgentProcess.get()?.id,
+                ),
+            )
             return result
         }
 
@@ -88,7 +96,14 @@ internal class BpmnRefinementEngine(
             if (state.attempt.evaluation.isSuccessful()) {
                 context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
                 val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-                eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
+                eventPublisher.publishEvent(
+                    BpmnValidationPassedEvent(
+                        request = request,
+                        xml = result.xml,
+                        repairAttempts = state.attempt.repairAttempts,
+                        processId = AgentProcess.get()?.id,
+                    ),
+                )
                 return result
             }
         }
@@ -172,6 +187,7 @@ internal class BpmnRefinementEngine(
                 diagnostics = attempt.diagnostics,
                 attemptNumber = attempt.attemptNumber,
                 repairAttempts = attempt.repairAttempts,
+                processId = AgentProcess.get()?.id,
             ),
         )
     }

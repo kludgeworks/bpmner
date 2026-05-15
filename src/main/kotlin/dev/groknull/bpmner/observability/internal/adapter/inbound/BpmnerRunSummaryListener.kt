@@ -4,7 +4,6 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -36,13 +35,9 @@ class BpmnerRunSummaryListener(
         p.history.forEach { action ->
             logger.info("  {} {}ms", action.actionName.substringAfterLast("."), action.runningTime.toMillis())
         }
-        val request =
-            p.blackboard.objects
-                .filterIsInstance<BpmnRequest>()
-                .lastOrNull()
-        val collectedEvents = validationEvents.removeFor(request)
+        val collectedEvents = validationEvents.removeFor(p.id)
         jsonlAppender.append(
-            logDir = Path.of(config.logging.dir),
+            logDir = Path.of(config.logging.dir).toAbsolutePath().normalize(),
             summary =
                 summaryFactory.from(
                     process = p,
