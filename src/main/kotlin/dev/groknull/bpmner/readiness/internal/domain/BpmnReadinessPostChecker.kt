@@ -18,6 +18,7 @@ internal class BpmnReadinessPostChecker(
     private val notAProcessCeiling: Int
         get() = config.clarificationThreshold - 1
 
+    @Suppress("LongMethod") // applies multiple deterministic heuristics in one pass over the request
     fun apply(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
@@ -183,16 +184,25 @@ internal class BpmnReadinessPostChecker(
     private fun dimensionFor(area: MissingProcessArea): ReadinessDimension? =
         when (area) {
             MissingProcessArea.PROCESS_BOUNDARY -> ReadinessDimension.PROCESS_BOUNDARY
+
             MissingProcessArea.START_TRIGGER -> ReadinessDimension.START_TRIGGER
+
             MissingProcessArea.END_STATE -> ReadinessDimension.END_STATES
+
             MissingProcessArea.ACTIVITY_SEQUENCE -> ReadinessDimension.SEQUENCE_ORDER
+
             MissingProcessArea.ACTOR_RESPONSIBILITY -> ReadinessDimension.ACTORS_ROLES
+
             MissingProcessArea.DECISION_CRITERIA -> ReadinessDimension.DECISIONS_BRANCHES
+
             MissingProcessArea.EXCEPTION_HANDLING -> ReadinessDimension.EXCEPTIONS_REWORK
+
             MissingProcessArea.INPUT_ARTIFACT,
             MissingProcessArea.OUTPUT_ARTIFACT,
             -> ReadinessDimension.INPUTS_OUTPUTS_ARTIFACTS
+
             MissingProcessArea.BPMN_PROCESS_SUITABILITY -> ReadinessDimension.BPMN_SUITABILITY
+
             MissingProcessArea.SOURCE_TRACE -> ReadinessDimension.TRACEABILITY_TO_SOURCE
         }
 

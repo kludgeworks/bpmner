@@ -3,6 +3,8 @@ package dev.groknull.bpmner.generation.internal.domain
 import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.ClarificationExchange
+import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.core.InputPathResolver
 import dev.groknull.bpmner.core.ProcessInputAssessment
 import dev.groknull.bpmner.core.ReadinessDimension
@@ -46,6 +48,35 @@ class BpmnGenerationServiceTest {
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
         assertNull(result.reportFile)
         assertTrue(reportWriter.calls.isEmpty())
+    }
+
+    @Test
+    fun `preserves mode and clarification history on request`() {
+        val invoker = CapturingBpmnAgentInvoker()
+        val service =
+            service(
+                invoker,
+                StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90)),
+                CapturingReportWriter(),
+            )
+        val clarification =
+            ClarificationExchange(
+                questionId = "q1",
+                questionText = "What starts the process?",
+                answerText = "The customer submits an order.",
+            )
+
+        service.generate(
+            BpmnGenerationInput(
+                processDescription = "Ship order",
+                outputFile = "order.bpmn",
+                mode = GenerationMode.INTERACTIVE,
+                clarificationHistory = listOf(clarification),
+            ),
+        )
+
+        assertEquals(GenerationMode.INTERACTIVE, invoker.lastRequest.mode)
+        assertEquals(listOf(clarification), invoker.lastRequest.clarificationHistory)
     }
 
     @Test

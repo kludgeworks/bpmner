@@ -1,6 +1,7 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.core.BpmnResult
+import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.GenerationMode
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
@@ -14,6 +15,7 @@ data class BpmnGenerationInput(
      * runs for both values. `INTERACTIVE` behaviour lands with issue #66 (interactive clarification flow).
      */
     val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
+    val clarificationHistory: List<ClarificationExchange> = emptyList(),
 )
 
 @PrimaryPort

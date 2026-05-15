@@ -11,8 +11,18 @@ import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.BpmnWaypoint
+import dev.groknull.bpmner.core.ContractActivity
+import dev.groknull.bpmner.core.ContractEndState
+import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.ProcessContract
+import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.core.ReadinessDimensionScore
+import dev.groknull.bpmner.core.ReadinessVerdict
+import dev.groknull.bpmner.core.SourceEvidence
+import dev.groknull.bpmner.core.TraceLink
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -60,6 +70,12 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
             .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
+        whenCreateObject(
+            { it.contains("Return only a structured ProcessInputAssessment object.") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(validAssessment())
+        whenCreateObject({ it.contains("Return only a structured ProcessContract object.") }, ProcessContract::class.java)
+            .thenReturn(validContract())
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
 
@@ -67,7 +83,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             AgentPlatformTypedOps(agentPlatform)
                 .transform(
                     BpmnRequest(
-                        processDescription = "Make toast",
+                        processDescription = "When an order is submitted, review it, then close it as completed.",
                         outputFile = outputFile.toString(),
                     ),
                     BpmnResult::class.java,
@@ -89,6 +105,66 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     }
 
     private fun eqPhase(phase: BpmnLintPhase): BpmnLintPhase = org.mockito.ArgumentMatchers.eq(phase) ?: phase
+
+    private fun validAssessment() =
+        ProcessInputAssessment(
+            verdict = ReadinessVerdict.READY,
+            overallScore = 90,
+            dimensions =
+                listOf(
+                    ReadinessDimensionScore(
+                        dimension = ReadinessDimension.START_TRIGGER,
+                        score = 90,
+                        rationale = "Order submission is an explicit trigger.",
+                    ),
+                ),
+            evidence =
+                listOf(
+                    SourceEvidence(
+                        id = "ev1",
+                        text = "When an order is submitted, review it, then close it as completed.",
+                        sourceType = EvidenceSourceType.ORIGINAL_INPUT,
+                    ),
+                ),
+            rationale = "The input contains a trigger, ordered activities, and an end state.",
+        )
+
+    private fun validContract() =
+        ProcessContract(
+            id = "contract-order",
+            processName = "Handle order",
+            summary = "Submitted orders are reviewed and closed.",
+            trigger = "Order is submitted",
+            triggerTraceLinks = listOf(trace("trigger")),
+            activities =
+                listOf(
+                    ContractActivity(
+                        id = "a-review",
+                        name = "Review order",
+                        traceLinks = listOf(trace("a-review")),
+                    ),
+                    ContractActivity(
+                        id = "a-close",
+                        name = "Close order",
+                        traceLinks = listOf(trace("a-close")),
+                    ),
+                ),
+            endStates =
+                listOf(
+                    ContractEndState(
+                        id = "end-completed",
+                        name = "Order completed",
+                        traceLinks = listOf(trace("end-completed")),
+                    ),
+                ),
+        )
+
+    private fun trace(target: String) =
+        TraceLink(
+            id = "trace-$target",
+            sourceId = "ev1",
+            targetId = target,
+        )
 
     private fun validDefinition() =
         BpmnDefinition(

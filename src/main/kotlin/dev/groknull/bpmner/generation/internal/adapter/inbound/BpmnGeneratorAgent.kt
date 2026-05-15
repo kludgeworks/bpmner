@@ -24,7 +24,8 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.core.ValidatedPhasePlan
 import dev.groknull.bpmner.core.ValidatedPhasePlanSet
-import dev.groknull.bpmner.core.generationPrompt
+import dev.groknull.bpmner.core.ValidatedProcessContract
+import dev.groknull.bpmner.core.format
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
 import dev.groknull.bpmner.generation.BpmnRenderer
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -41,17 +42,26 @@ internal class BpmnGeneratorAgent(
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
+    private val contractPromptFactory = BpmnContractGenerationPromptFactory()
 
     @Action(
         description =
-            "Create a high-level process outline and initial typed BPMN artifact from a business-process description",
+            "Create a high-level process outline and initial typed BPMN artifact from a validated process contract",
     )
     fun createProcessOutline(
         request: BpmnRequest,
+        validatedContract: ValidatedProcessContract,
         context: OperationContext,
     ): ProcessOutline {
-        val promptRunner = config.generator.promptRunner(context).withPromptContributor(request)
-        val definition = promptRunner.createObject(request.generationPrompt(), BpmnDefinition::class.java)
+        if (!validatedContract.isValid) {
+            val issues =
+                validatedContract.report.issues
+                    .joinToString(separator = System.lineSeparator()) { "- ${it.format()}" }
+            error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
+        }
+        val promptRunner = config.generator.promptRunner(context)
+        val prompt = contractPromptFactory.prompt(request, validatedContract)
+        val definition = promptRunner.createObject(prompt, BpmnDefinition::class.java)
         val outline =
             ProcessOutline(
                 request = request,

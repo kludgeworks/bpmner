@@ -1,13 +1,48 @@
-package dev.groknull.bpmner.contract.internal.domain
+package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ProcessContract
-import org.springframework.stereotype.Component
+import dev.groknull.bpmner.core.ValidatedProcessContract
 
-@Component
-internal class ProcessContractMarkdownRenderer {
+internal class BpmnContractGenerationPromptFactory {
+    fun prompt(
+        request: BpmnRequest,
+        validatedContract: ValidatedProcessContract,
+    ): String =
+        buildString {
+            appendLine("Generate a BPMN definition object from the validated process contract.")
+            appendLine()
+            appendLine("The validated ProcessContract is the primary and authoritative generation input.")
+            appendLine("Use the original input only as secondary traceability context.")
+            appendLine()
+            appendLine("Contract-driven generation rules:")
+            appendLine(
+                "- Include the contract trigger, ordered activities, decisions, branches," +
+                    " exception or rework paths, and end states.",
+            )
+            appendLine("- Represent actors only where current BPMN DTOs allow, usually in task names.")
+            appendLine("- Do not add unsupported business tasks, decisions, branches, actors, or end states.")
+            appendLine(
+                "- You may infer layout coordinates, waypoints, sequence flows," +
+                    " and routing-only converging gateways needed for valid BPMN.",
+            )
+            appendLine("- Leave routing-only converging gateways unnamed.")
+            appendLine()
+            appendLine("Primary validated ProcessContract:")
+            appendLine(renderContract(validatedContract.contract).trim())
+            appendLine()
+            appendLine("Original input for traceability only:")
+            appendLine(request.processDescription)
+            if (!request.styleGuide.isNullOrBlank()) {
+                appendLine()
+                appendLine("Style guide:")
+                appendLine(request.styleGuide)
+            }
+        }
+
     // markdown rendering of the contract; one branch per contract section keeps output cohesive
     @Suppress("LongMethod", "CyclomaticComplexMethod")
-    fun render(contract: ProcessContract): String =
+    private fun renderContract(contract: ProcessContract): String =
         buildString {
             appendLine("# ${contract.processName}")
             appendLine("Trigger: ${contract.trigger}")
@@ -40,7 +75,7 @@ internal class ProcessContractMarkdownRenderer {
                     appendLine("- ${decision.id}: ${decision.question}")
                     decision.branches.forEach { branch ->
                         val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
-                        appendLine("  - ${branch.id} → \"${branch.label}\"$condition")
+                        appendLine("  - ${branch.id} -> \"${branch.label}\"$condition")
                     }
                 }
             }
@@ -49,7 +84,7 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine()
                 appendLine("## Artifacts")
                 contract.artifacts.forEach { artifact ->
-                    val description = artifact.description?.let { " — $it" }.orEmpty()
+                    val description = artifact.description?.let { " - $it" }.orEmpty()
                     appendLine("- ${artifact.id}: ${artifact.name}$description")
                 }
             }
@@ -76,7 +111,7 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine()
                 appendLine("## Trace links")
                 contract.traceLinks.forEach { link ->
-                    appendLine("- ${link.sourceId} → ${link.targetId} [${link.classification.name.lowercase()}]")
+                    appendLine("- ${link.sourceId} -> ${link.targetId} [${link.classification.name.lowercase()}]")
                 }
             }
         }
