@@ -1,16 +1,16 @@
 package dev.groknull.bpmner.repair
 
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
-import dev.groknull.bpmner.core.BpmnRepairSafety
-import dev.groknull.bpmner.core.LintIssue
-import dev.groknull.bpmner.core.RepairKind
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairCapabilityValidationException
+import dev.groknull.bpmner.validation.BpmnAutoFixResult
+import dev.groknull.bpmner.validation.BpmnLintPhase
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
+import dev.groknull.bpmner.validation.BpmnRepairSafety
+import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.validation.RepairKind
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

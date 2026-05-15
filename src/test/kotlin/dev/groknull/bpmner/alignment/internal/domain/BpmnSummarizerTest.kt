@@ -1,5 +1,10 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.alignment.internal.domain
 
+import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.NodeType
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

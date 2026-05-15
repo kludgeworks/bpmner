@@ -1,8 +1,8 @@
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.GenerationMode
+import dev.groknull.bpmner.generation.BpmnResult
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 data class BpmnGenerationInput(

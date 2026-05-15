@@ -4,9 +4,8 @@ import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -43,10 +42,9 @@ class BpmnValidationIntegrationTest {
     @Test
     fun `full validation cycle of toast sample`() {
         lintService.init()
-        val request = BpmnRequest("Make toast")
         val definition = testBpmnDefinition()
 
-        val graph = testLaidOutGraph(definition, request)
+        val graph = testLaidOutGraph(definition)
 
         val rendered =
             RenderedBpmn(

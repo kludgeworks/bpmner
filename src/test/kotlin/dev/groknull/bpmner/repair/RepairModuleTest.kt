@@ -15,24 +15,21 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
-import dev.groknull.bpmner.core.ValidatedOutline
 import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
+import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
+import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -115,14 +112,6 @@ class RepairModuleTest {
     private fun graph(definition: BpmnDefinition): LaidOutProcessGraph {
         val composed =
             ComposedProcessGraph(
-                outline =
-                    ValidatedOutline(
-                        ProcessOutline(
-                            BpmnRequest("test"),
-                            definition,
-                            OutlineMetrics(1, 0, 0, 0),
-                        ),
-                    ),
                 definition = definition,
                 objectOwnersByObjectRef = emptyMap(),
             )

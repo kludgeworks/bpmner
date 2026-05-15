@@ -3,10 +3,10 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.chat.Message
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
+import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.validation.BpmnDiagnostic
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

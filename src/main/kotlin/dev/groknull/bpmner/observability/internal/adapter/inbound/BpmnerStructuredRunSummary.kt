@@ -1,19 +1,19 @@
 package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentProcess
-import dev.groknull.bpmner.core.AutoFixedBpmnXml
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnGenerationStatus
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnResult
-import dev.groknull.bpmner.core.FinalValidatedBpmnXml
-import dev.groknull.bpmner.core.GlobalDiagnostics
-import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.ValidatedBpmnXml
-import dev.groknull.bpmner.core.format
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
+import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.ProcessOutline
+import dev.groknull.bpmner.repair.AutoFixedBpmnXml
+import dev.groknull.bpmner.validation.BpmnAutoFixResult
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
+import dev.groknull.bpmner.validation.GlobalDiagnostics
+import dev.groknull.bpmner.validation.ValidatedBpmnXml
+import dev.groknull.bpmner.validation.format
 import java.time.Instant
 
 data class BpmnerStructuredRunSummary(

@@ -4,8 +4,8 @@ import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.ProcessOptions
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 

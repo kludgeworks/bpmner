@@ -1,23 +1,21 @@
 package dev.groknull.bpmner.validation.internal.domain
 
-import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnEvaluation
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRepairScope
-import dev.groknull.bpmner.core.BpmnValidatorInfrastructureException
-import dev.groknull.bpmner.core.GlobalDiagnostics
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.validation.BpmnEvaluation
+import dev.groknull.bpmner.validation.BpmnFingerprintService
+import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintingPort
+import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnValidator
+import dev.groknull.bpmner.validation.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
+import dev.groknull.bpmner.validation.GlobalDiagnostics
+import dev.groknull.bpmner.validation.LintIssue
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -142,25 +140,6 @@ internal class BpmnEvaluationPipeline(
         return lintIssues
     }
 
-    override fun toRecord(
-        attempt: BpmnRepairAttempt,
-        repairPromptFingerprint: String?,
-    ): BpmnAttemptRecord {
-        val globalDiagnostics = attempt.evaluation.globalDiagnostics
-        return BpmnAttemptRecord(
-            attemptNumber = attempt.attemptNumber,
-            repairAttempts = attempt.repairAttempts,
-            graphDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.GRAPH),
-            renderDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.RENDER),
-            xsdDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
-            lintDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.LINT),
-            diagnosticFingerprint = fingerprints.diagnosticFingerprint(attempt.diagnostics),
-            definitionFingerprint = fingerprints.definitionFingerprint(attempt.definition),
-            repairPromptFingerprint = repairPromptFingerprint,
-            topDiagnostics = attempt.diagnostics.take(TOP_DIAGNOSTICS_LIMIT).map { formatTopDiagnostic(it) },
-        )
-    }
-
     override fun logDiagnosticSummary(diagnostics: List<BpmnDiagnostic>) {
         logger.warn(
             "Diagnostic summary: total={}, graph={}, xsd={}, lint={}, scopes={}",
@@ -190,14 +169,6 @@ internal class BpmnEvaluationPipeline(
         }
     }
 
-    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String =
-        buildString {
-            append(diagnostic.source.name.lowercase())
-            diagnostic.rule?.let { append(" [$it]") }
-            diagnostic.elementId?.let { append(" @$it") }
-            append(": ${diagnostic.message.take(DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH)}")
-        }
-
     private fun logArtifactsIfEnabled(
         definition: BpmnDefinition,
         rendered: RenderedBpmn?,
@@ -215,10 +186,5 @@ internal class BpmnEvaluationPipeline(
     private fun String.truncate(maxLength: Int): String {
         if (length <= maxLength) return this
         return "${substring(0, min(length, maxLength))}…<truncated>"
-    }
-
-    companion object {
-        private const val TOP_DIAGNOSTICS_LIMIT = 5
-        private const val DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH = 120
     }
 }

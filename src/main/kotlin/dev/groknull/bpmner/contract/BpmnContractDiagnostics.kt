@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.contract
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 

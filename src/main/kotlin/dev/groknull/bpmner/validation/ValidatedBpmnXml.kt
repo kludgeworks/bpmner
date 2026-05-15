@@ -1,0 +1,16 @@
+package dev.groknull.bpmner.validation
+
+import dev.groknull.bpmner.core.BpmnDefinition
+
+data class ValidatedBpmnXml(
+    val definition: BpmnDefinition,
+    val xml: String,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+    val repairAttempts: Int = 0,
+)
+
+data class FinalValidatedBpmnXml(
+    val definition: BpmnDefinition,
+    val xml: String,
+    val diagnostics: List<BpmnDiagnostic> = emptyList(),
+)

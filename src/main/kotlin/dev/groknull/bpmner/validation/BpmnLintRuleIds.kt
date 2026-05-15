@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.validation
 
 object BpmnLintRuleIds {
     private val PREFIX_REGEX = "^(klm|bpmnlint-plugin-klm)/".toRegex()

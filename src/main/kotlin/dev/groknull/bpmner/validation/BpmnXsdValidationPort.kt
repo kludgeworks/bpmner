@@ -1,6 +1,6 @@
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.core.XsdValidationIssue
+import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

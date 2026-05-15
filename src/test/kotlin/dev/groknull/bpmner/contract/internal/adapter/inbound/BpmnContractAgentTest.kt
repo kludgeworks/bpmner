@@ -1,20 +1,20 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
-import dev.groknull.bpmner.core.ContractActivity
-import dev.groknull.bpmner.core.ContractEndState
 import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.ProcessContract
-import dev.groknull.bpmner.core.ProcessInputAssessment
-import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.core.SourceEvidence
-import dev.groknull.bpmner.core.TraceLink
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessVerdict
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

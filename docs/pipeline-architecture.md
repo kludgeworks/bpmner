@@ -11,10 +11,13 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | Module | Owns | Key public types |
 | --- | --- | --- |
 | `core/` | Shared domain model, configuration, fingerprints, naming policy. No Spring visibility restrictions. | `BpmnRequest`, `BpmnDefinition`, `BpmnConfig`, `BpmnDiagnostic`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`, `BpmnResult`. |
+| `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`. |
+| `contract/` | Guardrail 2: Extraction of source-grounded process contracts, multi-source evidence tracking. | `BpmnContractAgent`, `ProcessContract`, `ValidatedProcessContract`. |
 | `generation/` | LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGeneratorAgent`, `BpmnRenderer` (port), `BpmnGeneratedEvent`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, bpmn-lint via GraalJS, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
 | `repair/` | Local-first deterministic repair, LLM patch / rewrite strategies, refinement loop with stuck-state detection. | `BpmnRepairAgent`, `BpmnRefinementEngine` (internal), `BpmnLocalFixSummary`. |
 | `layout/` | Bounded pre-layout XML cleanup, deterministic auto-layout, final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort`. |
+| `alignment/` | Guardrail 3: Semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAlignmentAgent`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`. |
 | `shell/` | `generate` / `gen` Spring Shell commands. | `BpmnShellCommands`. |
 | `config/` | GitHub Models / Anthropic model configuration. | `GitHubModelsConfig`, `GitHubCatalogClient`. |
@@ -29,6 +32,24 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
                               │  (process + style)   │
                               └──────────┬───────────┘
                                          ▼
+            ┌─────────────────────────────────────────────────────────┐
+            │           BpmnReadinessAgent  (readiness/)              │
+            │                                                         │
+            │  assessReadiness ── LLM ──► ProcessInputAssessment      │
+            │              │                                          │
+            │              ▼                                          │
+            │       if !READY ──► write report & block/ask            │
+            └──────────────┬──────────────────────────────────────────┘
+                           ▼
+            ┌─────────────────────────────────────────────────────────┐
+            │           BpmnContractAgent  (contract/)                │
+            │                                                         │
+            │  extractProcessContract ── LLM ──► ProcessContract      │
+            │              │                                          │
+            │              ▼                                          │
+            │       validateContract ──► ValidatedProcessContract     │
+            └──────────────┬──────────────────────────────────────────┘
+                           ▼
             ┌─────────────────────────────────────────────────────────┐
             │           BpmnGeneratorAgent  (generation/)             │
             │                                                         │
@@ -81,6 +102,15 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │              └─ publish BpmnValidationPassed/Failed     │
             │                                                         │
             │                ──► ValidatedBpmnXml                     │
+            └──────────────┬──────────────────────────────────────────┘
+                           ▼
+            ┌─────────────────────────────────────────────────────────┐
+            │           BpmnAlignmentAgent  (alignment/)              │
+            │                                                         │
+            │  checkAlignment ── LLM ──► BpmnAlignmentReport          │
+            │              │                                          │
+            │              ▼                                          │
+            │       if FAILED ──► block & throw                       │
             └──────────────┬──────────────────────────────────────────┘
                            ▼
             ┌─────────────────────────────────────────────────────────┐
