@@ -57,7 +57,7 @@ bazel run //src:bpmner_app -- --spring.profiles.active=anth \
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: TypeScript `bpmn-lint` plugin and custom rule catalog.
-- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md) and [Hexagonal Design](docs/hexagonal-architecture.md).
+- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), and [Repair Architecture](docs/repair-architecture.md).
 
 ## Contributing
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
