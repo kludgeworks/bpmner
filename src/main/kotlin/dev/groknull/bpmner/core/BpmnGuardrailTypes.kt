@@ -65,7 +65,10 @@ enum class AlignmentVerdict {
 
 enum class AlignmentClassification {
     SUPPORTED,
+    ASSUMED,
     UNSUPPORTED,
+    COVERED,
+    PARTIALLY_COVERED,
     MISSING,
     EXTRA,
     CONTRADICTED,
@@ -365,6 +368,8 @@ data class BpmnDefinitionSummary(
     @field:Valid
     @get:JsonPropertyDescription("Summary of generated BPMN sequence flows")
     val flows: List<BpmnSummaryFlow> = emptyList(),
+    @get:JsonPropertyDescription("IDs of elements that are unreachable from start events")
+    val unreachableElementIds: List<String> = emptyList(),
 )
 
 @JsonClassDescription("Summary of a single generated BPMN element")
@@ -392,6 +397,8 @@ data class BpmnSummaryFlow(
     val targetRef: String,
     @get:JsonPropertyDescription("Optional sequence flow name")
     val name: String? = null,
+    @get:JsonPropertyDescription("Optional sequence flow condition expression")
+    val conditionExpression: String? = null,
 )
 
 @JsonClassDescription("Alignment report comparing the process contract with generated BPMN")
@@ -430,3 +437,8 @@ data class AlignedElement(
     @get:JsonPropertyDescription("Trace links supporting this element alignment")
     val traceLinks: List<TraceLink> = emptyList(),
 )
+
+class BpmnAlignmentException(
+    message: String,
+    val report: BpmnAlignmentReport,
+) : RuntimeException(message)

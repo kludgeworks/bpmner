@@ -5,6 +5,7 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.core.AlignedBpmnXml
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnDiagnostic
@@ -14,7 +15,6 @@ import dev.groknull.bpmner.core.BpmnRepairScope
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.FinalValidatedBpmnXml
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.PhasePlan
@@ -209,11 +209,11 @@ internal class BpmnGeneratorAgent(
     @Action(description = "Write the layouted BPMN XML to disk")
     fun writeBpmn(
         request: BpmnRequest,
-        bpmn: FinalValidatedBpmnXml,
+        bpmn: AlignedBpmnXml,
     ): BpmnResult {
         File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
         logger.info(
-            "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
+            "Final BPMN summary: layout applied, alignment verified, finalXmlLength={}, outputFile={}",
             bpmn.xml.length,
             request.outputFile,
         )
@@ -221,6 +221,7 @@ internal class BpmnGeneratorAgent(
             outputFile = request.outputFile,
             status = BpmnGenerationStatus.GENERATED,
             xml = bpmn.xml,
+            alignmentReport = bpmn.alignmentReport,
         )
     }
 

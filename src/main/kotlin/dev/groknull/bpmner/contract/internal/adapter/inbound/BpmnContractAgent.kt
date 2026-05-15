@@ -54,4 +54,7 @@ internal class BpmnContractAgent(
         }
         return ValidatedProcessContract(contract = contract, report = report)
     }
+
+    @Action(description = "Unwrap the process contract from a validated contract")
+    fun unwrapProcessContract(validated: ValidatedProcessContract): ProcessContract = validated.contract
 }

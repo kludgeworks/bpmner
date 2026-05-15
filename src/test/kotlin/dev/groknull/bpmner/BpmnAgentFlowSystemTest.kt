@@ -3,8 +3,11 @@ package dev.groknull.bpmner
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import dev.groknull.bpmner.core.AlignmentVerdict
+import dev.groknull.bpmner.core.BpmnAlignmentReport
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
@@ -78,6 +81,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(validContract())
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
+        whenCreateObject({ it.contains("Assess whether the generated BPMN process aligns semantically") }, BpmnAlignmentReport::class.java)
+            .thenReturn(validAlignmentReport())
 
         val result =
             AgentPlatformTypedOps(agentPlatform)
@@ -152,65 +157,88 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             endStates =
                 listOf(
                     ContractEndState(
-                        id = "end-completed",
+                        id = "e-completed",
                         name = "Order completed",
-                        traceLinks = listOf(trace("end-completed")),
+                        traceLinks = listOf(trace("e-completed")),
                     ),
                 ),
         )
 
-    private fun trace(target: String) =
+    private fun validAlignmentReport() =
+        BpmnAlignmentReport(
+            verdict = AlignmentVerdict.ALIGNED,
+            bpmnSummary = BpmnDefinitionSummary("Process_1", "Handle order", emptyList()),
+            rationale = "Everything is aligned.",
+        )
+
+    private fun trace(targetId: String) =
         TraceLink(
-            id = "trace-$target",
+            id = "trace-$targetId",
             sourceId = "ev1",
-            targetId = target,
+            targetId = targetId,
         )
 
     private fun validDefinition() =
         BpmnDefinition(
-            processId = "Process_MakeToast",
-            processName = "Make toast",
+            processId = "Process_1",
+            processName = "Handle order",
             nodes =
                 listOf(
                     BpmnNode(
                         id = "StartEvent_1",
-                        name = "Order received",
+                        name = "Order submitted",
                         type = NodeType.START_EVENT,
-                        bounds = BpmnBounds(80.0, 120.0, 36.0, 36.0),
+                        bounds = BpmnBounds(100.0, 100.0, 36.0, 36.0),
                     ),
                     BpmnNode(
-                        id = "Task_1",
-                        name = "Toast bread",
-                        type = NodeType.SERVICE_TASK,
-                        bounds = BpmnBounds(180.0, 98.0, 100.0, 80.0),
+                        id = "Activity_1",
+                        name = "Review order",
+                        type = NodeType.USER_TASK,
+                        bounds = BpmnBounds(200.0, 100.0, 100.0, 80.0),
+                    ),
+                    BpmnNode(
+                        id = "Activity_2",
+                        name = "Close order",
+                        type = NodeType.USER_TASK,
+                        bounds = BpmnBounds(400.0, 100.0, 100.0, 80.0),
                     ),
                     BpmnNode(
                         id = "EndEvent_1",
-                        name = "Toast served",
+                        name = "Order completed",
                         type = NodeType.END_EVENT,
-                        bounds = BpmnBounds(320.0, 120.0, 36.0, 36.0),
+                        bounds = BpmnBounds(600.0, 100.0, 36.0, 36.0),
                     ),
                 ),
             sequences =
                 listOf(
                     BpmnEdge(
-                        "Flow_1",
-                        "StartEvent_1",
-                        "Task_1",
+                        id = "Flow_1",
+                        sourceRef = "StartEvent_1",
+                        targetRef = "Activity_1",
                         waypoints =
                             listOf(
-                                BpmnWaypoint(116.0, 138.0),
-                                BpmnWaypoint(180.0, 138.0),
+                                BpmnWaypoint(136.0, 118.0),
+                                BpmnWaypoint(200.0, 118.0),
                             ),
                     ),
                     BpmnEdge(
-                        "Flow_2",
-                        "Task_1",
-                        "EndEvent_1",
+                        id = "Flow_2",
+                        sourceRef = "Activity_1",
+                        targetRef = "Activity_2",
                         waypoints =
                             listOf(
-                                BpmnWaypoint(280.0, 138.0),
-                                BpmnWaypoint(320.0, 138.0),
+                                BpmnWaypoint(300.0, 118.0),
+                                BpmnWaypoint(400.0, 118.0),
+                            ),
+                    ),
+                    BpmnEdge(
+                        id = "Flow_3",
+                        sourceRef = "Activity_2",
+                        targetRef = "EndEvent_1",
+                        waypoints =
+                            listOf(
+                                BpmnWaypoint(500.0, 118.0),
+                                BpmnWaypoint(600.0, 118.0),
                             ),
                     ),
                 ),
