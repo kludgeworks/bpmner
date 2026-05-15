@@ -3,7 +3,6 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
-import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -30,10 +29,7 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
-@Suppress(
-    "LongParameterList", // Spring constructor injection — no cleaner grouping possible
-    "TooManyFunctions", // repair engine coordinates several distinct phases — splitting hurts cohesion
-)
+@Suppress("LongParameterList", "TooManyFunctions") // Spring constructor injection and cohesive repair orchestration
 internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,
@@ -81,14 +77,7 @@ internal class BpmnRefinementEngine(
         if (state.attempt.evaluation.isSuccessful()) {
             context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
             val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-            eventPublisher.publishEvent(
-                BpmnValidationPassedEvent(
-                    request = request,
-                    xml = result.xml,
-                    repairAttempts = state.attempt.repairAttempts,
-                    processId = AgentProcess.get()?.id,
-                ),
-            )
+            eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
             return result
         }
 
@@ -97,14 +86,7 @@ internal class BpmnRefinementEngine(
             if (state.attempt.evaluation.isSuccessful()) {
                 context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
                 val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-                eventPublisher.publishEvent(
-                    BpmnValidationPassedEvent(
-                        request = request,
-                        xml = result.xml,
-                        repairAttempts = state.attempt.repairAttempts,
-                        processId = AgentProcess.get()?.id,
-                    ),
-                )
+                eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
                 return result
             }
         }
@@ -185,10 +167,10 @@ internal class BpmnRefinementEngine(
         eventPublisher.publishEvent(
             BpmnValidationFailedEvent(
                 request = request,
+                xml = attempt.evaluation.rendered?.xml ?: "",
                 diagnostics = attempt.diagnostics,
                 attemptNumber = attempt.attemptNumber,
                 repairAttempts = attempt.repairAttempts,
-                processId = AgentProcess.get()?.id,
             ),
         )
     }
@@ -334,8 +316,8 @@ internal class BpmnRefinementEngine(
         val summary = computeRouteSummary(attempt.diagnostics, resolution)
         if (summary.total == 0) return
         logger.info(
-            "Repair attempt {} route summary: total={} localAttempted={} localApplied={}" +
-                " localFailed={} llmRouted={} unfixable={}",
+            "Repair attempt {} route summary: total={} localAttempted={} localApplied={} " +
+                "localFailed={} llmRouted={} unfixable={}",
             attempt.attemptNumber,
             summary.total,
             summary.localAttempted,

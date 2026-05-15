@@ -1,11 +1,10 @@
-package dev.groknull.bpmner.contract
+package dev.groknull.bpmner.contract.internal.domain
 
 import dev.groknull.bpmner.contract.ProcessContract
 import org.springframework.stereotype.Component
 
 @Component
-class ProcessContractMarkdownRenderer {
-    // markdown rendering of the contract; one branch per contract section keeps output cohesive
+internal class ProcessContractMarkdownRenderer {
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun render(contract: ProcessContract): String =
         buildString {

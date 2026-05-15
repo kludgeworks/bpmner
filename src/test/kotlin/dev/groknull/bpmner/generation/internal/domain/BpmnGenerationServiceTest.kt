@@ -195,6 +195,45 @@ class BpmnGenerationServiceTest {
         assertEquals(AlignmentVerdict.FAILED, result.alignmentReport?.verdict)
     }
 
+    @Test
+    fun `startAsync returns process id when ready and uses inline style guide content`() {
+        val invoker = CapturingBpmnAgentInvoker(startAsyncProcessId = "p-42")
+        val service =
+            service(
+                invoker,
+                StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90)),
+                CapturingReportWriter(),
+            )
+
+        val outcome =
+            service.startAsync(
+                BpmnGenerationInput(
+                    processDescription = "Order is packed and shipped",
+                    styleGuideContent = "  Use verb-object task names  ",
+                ),
+            )
+
+        assertEquals(StartGenerationOutcome.Started("p-42"), outcome)
+        assertEquals(1, invoker.asyncStarts.size)
+        assertTrue(invoker.calls.isEmpty(), "sync generate must not run for startAsync")
+        assertEquals("Use verb-object task names", invoker.asyncStarts.single().styleGuide)
+    }
+
+    @Test
+    fun `startAsync returns blocked outcome with report when readiness needs clarification`() {
+        val invoker = CapturingBpmnAgentInvoker()
+        val readiness = StubReadinessInvoker(assessment(ReadinessVerdict.NEEDS_CLARIFICATION, 40))
+        val reportWriter = CapturingReportWriter(reportPath = "/tmp/blocked.md")
+        val service = service(invoker, readiness, reportWriter)
+
+        val outcome = service.startAsync(BpmnGenerationInput(processDescription = "Make it nicer"))
+
+        outcome as StartGenerationOutcome.Blocked
+        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION, outcome.result.status)
+        assertEquals("/tmp/blocked.md", outcome.result.reportFile)
+        assertTrue(invoker.asyncStarts.isEmpty(), "async start must not run when readiness blocks")
+    }
+
     private fun service(
         invoker: BpmnAgentInvoker,
         readinessInvoker: BpmnReadinessInvoker,
@@ -224,8 +263,11 @@ class BpmnGenerationServiceTest {
             rationale = "Stubbed rationale.",
         )
 
-    private class CapturingBpmnAgentInvoker : BpmnAgentInvoker {
+    private class CapturingBpmnAgentInvoker(
+        private val startAsyncProcessId: String = "process-stub",
+    ) : BpmnAgentInvoker {
         val calls = mutableListOf<BpmnRequest>()
+        val asyncStarts = mutableListOf<BpmnRequest>()
 
         val lastRequest: BpmnRequest
             get() = calls.last()
@@ -237,6 +279,11 @@ class BpmnGenerationServiceTest {
                 status = BpmnGenerationStatus.GENERATED,
                 xml = "<definitions />",
             )
+        }
+
+        override fun startAsync(request: BpmnRequest): String {
+            asyncStarts += request
+            return startAsyncProcessId
         }
     }
 
@@ -251,6 +298,8 @@ class BpmnGenerationServiceTest {
                         bpmnSummary = BpmnDefinitionSummary("P1", "Order", emptyList()),
                     ),
             )
+
+        override fun startAsync(request: BpmnRequest): String = error("Not implemented for alignment-failing fixture")
     }
 
     private class StubReadinessInvoker(
@@ -262,7 +311,7 @@ class BpmnGenerationServiceTest {
     private data class ReportWriterCall(
         val originalInput: String,
         val assessment: ProcessInputAssessment,
-        val outputFile: String,
+        val outputFile: String?,
     )
 
     private class CapturingReportWriter(
@@ -273,7 +322,7 @@ class BpmnGenerationServiceTest {
         override fun writeReport(
             originalInput: String,
             assessment: ProcessInputAssessment,
-            outputFile: String,
+            outputFile: String?,
         ): String {
             calls += ReportWriterCall(originalInput, assessment, outputFile)
             return reportPath

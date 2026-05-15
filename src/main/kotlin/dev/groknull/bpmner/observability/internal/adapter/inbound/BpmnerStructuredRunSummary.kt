@@ -49,7 +49,7 @@ data class BpmnerUsageSummary(
 data class BpmnerRequestSummary(
     val processDescription: String,
     val styleGuidePresent: Boolean,
-    val outputFile: String,
+    val outputFile: String?,
     val mode: String,
     val clarificationCount: Int,
 )

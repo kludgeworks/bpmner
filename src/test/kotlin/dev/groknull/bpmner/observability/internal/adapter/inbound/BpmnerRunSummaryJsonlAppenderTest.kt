@@ -55,6 +55,7 @@ class BpmnerRunSummaryJsonlAppenderTest {
         collector.onValidationFailed(
             BpmnValidationFailedEvent(
                 request = request,
+                xml = "<definitions />",
                 diagnostics =
                     listOf(
                         BpmnDiagnostic(
@@ -136,6 +137,7 @@ class BpmnerRunSummaryJsonlAppenderTest {
     ): BpmnValidationFailedEvent =
         BpmnValidationFailedEvent(
             request = request,
+            xml = "<definitions />",
             diagnostics =
                 listOf(
                     BpmnDiagnostic(

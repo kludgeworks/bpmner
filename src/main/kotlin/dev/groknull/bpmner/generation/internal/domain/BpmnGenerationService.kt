@@ -8,6 +8,7 @@ import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.StartGenerationOutcome
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
@@ -20,6 +21,8 @@ import org.springframework.stereotype.Component
 @SecondaryPort
 internal interface BpmnAgentInvoker {
     fun generate(request: BpmnRequest): BpmnResult
+
+    fun startAsync(request: BpmnRequest): String
 }
 
 @Service
@@ -33,32 +36,8 @@ internal class BpmnGenerationService(
     private val logger = LoggerFactory.getLogger(BpmnGenerationService::class.java)
 
     override fun generate(input: BpmnGenerationInput): BpmnResult {
-        val description = resolveProcessDescription(input)
-        val outputFile = inputPathResolver.resolveOutputPath(input.outputFile).toString()
-        val styleGuide =
-            input.styleGuide?.let {
-                logger.info("Loading style guide from file: {}", it)
-                inputPathResolver.readUtf8(it).trim()
-            }
-
-        val request =
-            BpmnRequest(
-                processDescription = description,
-                outputFile = outputFile,
-                styleGuide = styleGuide,
-                mode = input.mode,
-                clarificationHistory = input.clarificationHistory,
-            )
-
-        logGenerationStart(outputFile, input, description, styleGuide)
-
-        val assessment = readinessInvoker.assess(request)
-        logger.info(
-            "Readiness assessment complete. verdict={}, overallScore={}",
-            assessment.verdict,
-            assessment.overallScore,
-        )
-
+        val request = buildRequest(input)
+        val assessment = assessReadiness(request)
         return when (assessment.verdict) {
             ReadinessVerdict.READY -> {
                 performGeneration(request)
@@ -74,15 +53,73 @@ internal class BpmnGenerationService(
         }
     }
 
+    override fun startAsync(input: BpmnGenerationInput): StartGenerationOutcome {
+        val request = buildRequest(input)
+        val assessment = assessReadiness(request)
+        return when (assessment.verdict) {
+            ReadinessVerdict.READY -> {
+                StartGenerationOutcome.Started(agentInvoker.startAsync(request))
+            }
+
+            ReadinessVerdict.NEEDS_CLARIFICATION -> {
+                StartGenerationOutcome.Blocked(
+                    blockedResult(request, assessment, BpmnGenerationStatus.NEEDS_CLARIFICATION),
+                )
+            }
+
+            ReadinessVerdict.NOT_A_PROCESS -> {
+                StartGenerationOutcome.Blocked(
+                    blockedResult(request, assessment, BpmnGenerationStatus.NOT_A_PROCESS),
+                )
+            }
+        }
+    }
+
+    private fun buildRequest(input: BpmnGenerationInput): BpmnRequest {
+        val description = resolveProcessDescription(input)
+        val outputFile = input.outputFile?.let { inputPathResolver.resolveOutputPath(it).toString() }
+        val styleGuide = resolveStyleGuide(input)
+
+        logGenerationStart(outputFile, input, description, styleGuide)
+
+        return BpmnRequest(
+            processDescription = description,
+            outputFile = outputFile,
+            styleGuide = styleGuide,
+            mode = input.mode,
+            clarificationHistory = input.clarificationHistory,
+        )
+    }
+
+    private fun assessReadiness(request: BpmnRequest): ProcessInputAssessment {
+        val assessment = readinessInvoker.assess(request)
+        logger.info(
+            "Readiness assessment complete. verdict={}, overallScore={}",
+            assessment.verdict,
+            assessment.overallScore,
+        )
+        return assessment
+    }
+
+    private fun resolveStyleGuide(input: BpmnGenerationInput): String? {
+        if (input.styleGuideContent != null) {
+            return input.styleGuideContent.trim().takeIf { it.isNotEmpty() }
+        }
+        return input.styleGuide?.let {
+            logger.info("Loading style guide from file: {}", it)
+            inputPathResolver.readUtf8(it).trim()
+        }
+    }
+
     private fun logGenerationStart(
-        outputFile: String,
+        outputFile: String?,
         input: BpmnGenerationInput,
         description: String,
         styleGuide: String?,
     ) {
         logger.info(
             "Starting BPMN generation. outputFile={}, mode={}, descriptionLength={}, styleGuidePresent={}, clarifications={}",
-            outputFile,
+            outputFile ?: "(none)",
             input.mode,
             description.length,
             styleGuide != null,
@@ -106,7 +143,6 @@ internal class BpmnGenerationService(
             handleGenerationException(e, request)
         }
 
-    @Suppress("TooGenericExceptionCaught")
     private fun handleGenerationException(
         e: Exception,
         request: BpmnRequest,

@@ -15,9 +15,9 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
     override fun writeReport(
         originalInput: String,
         assessment: ProcessInputAssessment,
-        outputFile: String,
+        outputFile: String?,
     ): String {
-        val outPath = Path.of(outputFile)
+        val outPath = Path.of(outputFile ?: DEFAULT_OUTPUT_FILE)
         val reportPath = outPath.resolveSibling(outPath.fileName.toString() + READINESS_REPORT_SUFFIX)
         reportPath.parent?.let { Files.createDirectories(it) }
         Files.writeString(reportPath, render(originalInput, assessment), StandardCharsets.UTF_8)
@@ -130,6 +130,7 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
         }
 
     private companion object {
+        const val DEFAULT_OUTPUT_FILE = "output.bpmn"
         const val READINESS_REPORT_SUFFIX = ".readiness.md"
         const val INPUT_PREVIEW_LENGTH = 1000
         const val INPUT_PREVIEW_TRUNCATION_MARKER = "\n…"

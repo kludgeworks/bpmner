@@ -1,0 +1,8 @@
+{
+	"name": "@bpmner/web",
+	"version": "0.1.0",
+	"private": true,
+	"dependencies": {
+		"bpmn-js": "^18.16.1"
+	}
+}

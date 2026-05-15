@@ -27,7 +27,6 @@ local linters = new Mapping<String, Step> {
   ["check_executables_have_shebangs"] = Builtins.check_executables_have_shebangs
   ["check_byte_order_marker"] = Builtins.check_byte_order_marker
   ["detect_private_key"] = Builtins.detect_private_key
-  ["actionlint"] = Builtins.actionlint
   ["detekt"] = new Step {
     glob = List("src/**/*.kt")
     check =

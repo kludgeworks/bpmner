@@ -202,20 +202,28 @@ internal class BpmnGeneratorAgent(
     }
 
     @AchievesGoal(
-        description = "Write validated BPMN 2.0 XML to the requested output file",
+        description = "Return validated BPMN 2.0 XML and optionally write it to the requested output file",
         export = Export(name = "generateBpmn", remote = true, startingInputTypes = [BpmnRequest::class]),
     )
-    @Action(description = "Write the layouted BPMN XML to disk")
-    fun writeBpmn(
+    @Action(description = "Return the layouted BPMN XML and write to disk if requested")
+    fun finalizeBpmn(
         request: BpmnRequest,
         bpmn: AlignedBpmnXml,
     ): BpmnResult {
-        File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
-        logger.info(
-            "Final BPMN summary: layout applied, alignment verified, finalXmlLength={}, outputFile={}",
-            bpmn.xml.length,
-            request.outputFile,
-        )
+        if (request.outputFile != null) {
+            File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
+            logger.info(
+                "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
+                bpmn.xml.length,
+                request.outputFile,
+            )
+        } else {
+            logger.info(
+                "Final BPMN summary: layout applied, finalXmlLength={}, (no output file requested)",
+                bpmn.xml.length,
+            )
+        }
+
         return BpmnResult(
             outputFile = request.outputFile,
             status = BpmnGenerationStatus.GENERATED,

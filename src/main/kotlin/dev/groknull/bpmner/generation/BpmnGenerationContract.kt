@@ -6,7 +6,6 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import jakarta.validation.Valid
-import jakarta.validation.constraints.NotBlank
 
 enum class BpmnGenerationStatus {
     GENERATED,
@@ -34,9 +33,8 @@ fun BpmnRequest.generationPrompt(): String =
 
 @JsonClassDescription("Result of a BPMN generation request")
 data class BpmnResult(
-    @field:NotBlank
-    @get:JsonPropertyDescription("Requested BPMN output file path")
-    val outputFile: String,
+    @get:JsonPropertyDescription("Requested BPMN output file path, if any")
+    val outputFile: String?,
     @get:JsonPropertyDescription("Generation status")
     val status: BpmnGenerationStatus,
     @get:JsonPropertyDescription("Generated BPMN XML when generation succeeds")

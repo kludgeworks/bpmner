@@ -18,7 +18,7 @@ internal class BpmnReadinessPostChecker(
     private val notAProcessCeiling: Int
         get() = config.clarificationThreshold - 1
 
-    @Suppress("LongMethod") // applies multiple deterministic heuristics in one pass over the request
+    @Suppress("LongMethod")
     fun apply(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
