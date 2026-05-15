@@ -4,19 +4,16 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
-import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.AlignedBpmnXml
 import dev.groknull.bpmner.core.AlignmentVerdict
 import dev.groknull.bpmner.core.BpmnAlignmentException
 import dev.groknull.bpmner.core.BpmnAlignmentReport
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnSummarizer
 import dev.groknull.bpmner.core.FinalValidatedBpmnXml
 import dev.groknull.bpmner.core.ProcessContract
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
-import org.springframework.stereotype.Component
 
 @PrimaryAdapter
 @Agent(description = "Verify semantic alignment between process contract and generated BPMN")
@@ -24,10 +21,8 @@ internal class BpmnAlignmentAgent(
     private val config: BpmnConfig,
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
-    private val contractRenderer: ProcessContractMarkdownRenderer,
+    private val promptFactory: BpmnAlignmentPromptFactory,
 ) {
-    private val promptFactory = BpmnAlignmentPromptFactory(contractRenderer)
-
     @Action(description = "Check if generated BPMN aligns with the process contract")
     fun checkAlignment(
         request: BpmnRequest,
