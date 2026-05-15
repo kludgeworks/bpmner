@@ -10,4 +10,5 @@ data class BpmnValidationFailedEvent(
     val diagnostics: List<BpmnDiagnostic>,
     val attemptNumber: Int,
     val repairAttempts: Int,
+    val processId: String? = null,
 )
