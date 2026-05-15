@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.contract.internal.domain
+package dev.groknull.bpmner.contract
 
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.ContractActivity
