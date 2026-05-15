@@ -2,7 +2,7 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
+import dev.groknull.bpmner.generation.OutlineMetrics
 import org.springframework.stereotype.Component
 
 @Component

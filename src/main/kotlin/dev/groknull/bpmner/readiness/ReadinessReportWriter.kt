@@ -1,6 +1,6 @@
 package dev.groknull.bpmner.readiness
 
-import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

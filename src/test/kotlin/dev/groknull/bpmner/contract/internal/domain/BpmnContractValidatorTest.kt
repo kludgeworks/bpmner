@@ -1,15 +1,15 @@
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBranch
+import dev.groknull.bpmner.contract.ContractDecision
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIssueSeverity
+import dev.groknull.bpmner.contract.ContractValidationCode
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.ContractActivity
-import dev.groknull.bpmner.core.ContractAssumption
-import dev.groknull.bpmner.core.ContractBranch
-import dev.groknull.bpmner.core.ContractDecision
-import dev.groknull.bpmner.core.ContractEndState
-import dev.groknull.bpmner.core.ContractIssueSeverity
-import dev.groknull.bpmner.core.ContractValidationCode
-import dev.groknull.bpmner.core.ProcessContract
-import dev.groknull.bpmner.core.TraceLink
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

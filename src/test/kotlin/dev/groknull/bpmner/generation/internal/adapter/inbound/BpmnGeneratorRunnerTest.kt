@@ -1,11 +1,11 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.BpmnerApplicationShutdown
-import dev.groknull.bpmner.core.BpmnGenerationStatus
-import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.generation.BpmnResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

@@ -1,9 +1,9 @@
 package dev.groknull.bpmner.alignment.internal.adapter.inbound
 
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.core.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ProcessContract
 import org.springframework.stereotype.Component
 
 @Component

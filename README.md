@@ -84,6 +84,16 @@ pnpm vale:docs
 bazel test //:vale_docs_test //:vale_fixtures_test
 ```
 
+## Guardrails & Alignment
+
+`bpmner` uses a three-stage semantic guardrail pipeline to ensure generated BPMN matches user intent and is grounded in evidence:
+
+1.  **Readiness Assessment:** Heuristically and LLM-checks if the input contains enough detail (triggers, activities, end states) to model a process without inventing facts. Blocks or requests clarification if the score is low.
+2.  **Process Contract Extraction:** Produces a structured, source-grounded "contract" (nodes, roles, decisions) that serves as the single source of truth for the generator.
+3.  **Semantic Alignment:** Compares the final generated BPMN definition against the process contract to detect and block "hallucinated" elements or missing branches.
+
+These semantic checks complement technical validation (XSD and 27 `bpmn-lint` rules) to provide defense-in-depth against model drift.
+
 ## Configuration
 
 Key properties in `src/main/resources/application.yaml`:

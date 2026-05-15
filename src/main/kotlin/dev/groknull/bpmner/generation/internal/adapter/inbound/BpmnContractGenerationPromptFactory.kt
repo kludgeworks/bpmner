@@ -1,8 +1,8 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ProcessContract
-import dev.groknull.bpmner.core.ValidatedProcessContract
 
 internal class BpmnContractGenerationPromptFactory {
     fun prompt(

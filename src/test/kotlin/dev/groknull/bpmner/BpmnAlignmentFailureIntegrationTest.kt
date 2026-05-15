@@ -3,31 +3,32 @@ package dev.groknull.bpmner
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.core.AlignedElement
+import dev.groknull.bpmner.alignment.AlignedElement
+import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentException
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.AlignmentVerdict
-import dev.groknull.bpmner.core.BpmnAlignmentException
-import dev.groknull.bpmner.core.BpmnAlignmentReport
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.ContractActivity
-import dev.groknull.bpmner.core.ContractEndState
 import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.ProcessContract
-import dev.groknull.bpmner.core.ProcessInputAssessment
 import dev.groknull.bpmner.core.ReadinessDimension
-import dev.groknull.bpmner.core.ReadinessDimensionScore
-import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.core.SourceEvidence
+import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimensionScore
+import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.validation.BpmnLintPhase
+import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -149,9 +150,7 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
                 ),
         )
 
-    private fun trace(targetId: String) =
-        dev.groknull.bpmner.core
-            .TraceLink("trace-$targetId", "ev1", targetId)
+    private fun trace(targetId: String) = TraceLink("trace-$targetId", "ev1", targetId)
 
     private fun anyPhase(): BpmnLintPhase = org.mockito.ArgumentMatchers.any() ?: BpmnLintPhase.SEMANTIC_PRE_LAYOUT
 }
