@@ -1,6 +1,6 @@
 package dev.groknull.bpmner.contract
 
-import dev.groknull.bpmner.core.ProcessContract
+import dev.groknull.bpmner.contract.ProcessContract
 import org.springframework.stereotype.Component
 
 @Component

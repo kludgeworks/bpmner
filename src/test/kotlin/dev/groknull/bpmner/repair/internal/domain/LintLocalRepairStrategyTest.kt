@@ -1,39 +1,35 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.core.BpmnAutoFixChange
-import dev.groknull.bpmner.core.BpmnAutoFixError
-import dev.groknull.bpmner.core.BpmnAutoFixResult
-import dev.groknull.bpmner.core.BpmnAutoFixSkip
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.BpmnEvaluation
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.GlobalDiagnostics
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedOutline
-import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
+import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
+import dev.groknull.bpmner.validation.BpmnAutoFixChange
+import dev.groknull.bpmner.validation.BpmnAutoFixError
+import dev.groknull.bpmner.validation.BpmnAutoFixResult
+import dev.groknull.bpmner.validation.BpmnAutoFixSkip
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.validation.BpmnEvaluation
+import dev.groknull.bpmner.validation.BpmnLintPhase
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
+import dev.groknull.bpmner.validation.GlobalDiagnostics
+import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.validation.RepairKind
+import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -391,7 +387,6 @@ class LintLocalRepairStrategyTest {
             }
         val composed =
             ComposedProcessGraph(
-                outline = ValidatedOutline(ProcessOutline(BpmnRequest("test"), definition, OutlineMetrics(1, 0, 0, 0))),
                 definition = definition,
                 objectOwnersByObjectRef = objectOwners,
             )

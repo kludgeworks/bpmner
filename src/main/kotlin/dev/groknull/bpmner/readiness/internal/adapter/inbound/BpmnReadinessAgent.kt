@@ -7,14 +7,17 @@ import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.springframework.context.ApplicationEventPublisher
 
 @PrimaryAdapter
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
     private val config: BpmnConfig,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val promptFactory = BpmnReadinessPromptFactory(config.readiness)
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
@@ -34,6 +37,8 @@ internal class BpmnReadinessAgent(
                 promptFactory.prompt(request),
                 ProcessInputAssessment::class.java,
             )
-        return postChecker.apply(request, modelAssessment)
+        val assessment = postChecker.apply(request, modelAssessment)
+        eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
+        return assessment
     }
 }

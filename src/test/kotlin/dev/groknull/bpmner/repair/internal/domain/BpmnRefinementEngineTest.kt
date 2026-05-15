@@ -12,33 +12,35 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
-import dev.groknull.bpmner.core.BpmnAutoFixChange
-import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRepairSafety
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
+import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
 import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
+import dev.groknull.bpmner.validation.BpmnAutoFixChange
+import dev.groknull.bpmner.validation.BpmnAutoFixError
+import dev.groknull.bpmner.validation.BpmnAutoFixResult
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.validation.BpmnFingerprintService
+import dev.groknull.bpmner.validation.BpmnLintPhase
+import dev.groknull.bpmner.validation.BpmnLintRuleCapability
+import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
+import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.validation.RepairKind
+import dev.groknull.bpmner.validation.XsdValidationIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -199,8 +201,7 @@ class BpmnRefinementEngineTest {
                 replacementMap = null,
             )
         val autoFixError =
-            dev.groknull.bpmner.core
-                .BpmnAutoFixError(rule = "bpmner/name-01", elementId = "Task_1", message = "handler boom")
+            BpmnAutoFixError(rule = "bpmner/name-01", elementId = "Task_1", message = "handler boom")
         return RecordingLintService(
             lintResponses = listOf(listOf(localLintIssue, llmLintIssue), emptyList()),
             autoFixResponse = BpmnAutoFixResult(changed = false, xml = "", errors = listOf(autoFixError)),
@@ -321,6 +322,7 @@ class BpmnRefinementEngineTest {
                     normalizer = normalizer,
                     fingerprints = fingerprints,
                 ),
+            attemptRecordFactory = BpmnAttemptRecordFactory(fingerprints),
             promptFactory = promptFactory,
             fingerprints = fingerprints,
             strategies =

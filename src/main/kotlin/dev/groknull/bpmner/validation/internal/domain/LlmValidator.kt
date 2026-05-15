@@ -2,8 +2,8 @@ package dev.groknull.bpmner.validation.internal.domain
 
 import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnDiagnostic
 import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
 import org.springframework.stereotype.Component

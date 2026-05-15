@@ -4,25 +4,25 @@ import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.core.AgentProcess
-import dev.groknull.bpmner.core.BpmnAttemptHistory
-import dev.groknull.bpmner.core.BpmnAttemptRecord
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnDiagnostic
-import dev.groknull.bpmner.core.BpmnDiagnosticSource
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnLocalRepairOutcome
-import dev.groknull.bpmner.core.BpmnRefinementFailureException
-import dev.groknull.bpmner.core.BpmnRepairAttempt
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.RepairKind
-import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
+import dev.groknull.bpmner.repair.BpmnAttemptHistory
+import dev.groknull.bpmner.repair.BpmnAttemptRecord
+import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
+import dev.groknull.bpmner.repair.BpmnRefinementFailureException
+import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnValidator
+import dev.groknull.bpmner.validation.RepairKind
+import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -38,6 +38,7 @@ internal class BpmnRefinementEngine(
     private val config: BpmnConfig,
     private val bpmnRenderer: BpmnRenderer,
     private val validator: BpmnValidator,
+    private val attemptRecordFactory: BpmnAttemptRecordFactory,
     private val promptFactory: BpmnRepairPromptPort,
     private val fingerprints: BpmnFingerprintService,
     private val strategies: List<BpmnRepairStrategy>,
@@ -68,7 +69,7 @@ internal class BpmnRefinementEngine(
                     ),
                 messages = initialMessages,
             )
-        val initialRecord = validator.toRecord(initialAttempt)
+        val initialRecord = attemptRecordFactory.toRecord(initialAttempt)
         var state =
             RepairState(
                 graph = graph,
@@ -140,7 +141,7 @@ internal class BpmnRefinementEngine(
         val nextGraph = state.graph.withUpdatedDefinition(repaired.definition)
         val nextAttempt = evaluateNextAttempt(nextGraph, repaired, currentAttempt, history)
         val nextRecord =
-            validator.toRecord(
+            attemptRecordFactory.toRecord(
                 attempt = nextAttempt,
                 repairPromptFingerprint = fingerprints.promptFingerprint(repaired.promptText),
             )

@@ -7,8 +7,8 @@ import com.embabel.agent.core.ActionRetryPolicy
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.ValidatedBpmnXml
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
+import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 
 @PrimaryAdapter

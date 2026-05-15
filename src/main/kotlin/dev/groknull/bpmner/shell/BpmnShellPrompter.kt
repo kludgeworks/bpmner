@@ -1,6 +1,6 @@
 package dev.groknull.bpmner.shell
 
-import dev.groknull.bpmner.core.ClarificationQuestion
+import dev.groknull.bpmner.readiness.ClarificationQuestion
 import org.jline.reader.EndOfFileException
 import org.jline.reader.LineReader
 import org.jline.reader.UserInterruptException

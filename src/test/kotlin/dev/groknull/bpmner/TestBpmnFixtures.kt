@@ -4,15 +4,11 @@ import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
-import dev.groknull.bpmner.core.OutlineMetrics
 import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.ProcessOutline
-import dev.groknull.bpmner.core.ValidatedOutline
 
 /**
  * Shared test fixtures for BPMN definitions and graphs to prevent duplication.
@@ -60,7 +56,6 @@ object TestBpmnFixtures {
      */
     fun testLaidOutGraph(
         definition: BpmnDefinition,
-        request: BpmnRequest = BpmnRequest("test"),
         withOwnership: Boolean = false,
     ): LaidOutProcessGraph {
         val owner = if (withOwnership) "phase:main" else null
@@ -74,7 +69,6 @@ object TestBpmnFixtures {
             }
         val composed =
             ComposedProcessGraph(
-                outline = ValidatedOutline(ProcessOutline(request, definition, OutlineMetrics(1, 0, 0, 0))),
                 definition = definition,
                 objectOwnersByObjectRef = objectOwners,
             )

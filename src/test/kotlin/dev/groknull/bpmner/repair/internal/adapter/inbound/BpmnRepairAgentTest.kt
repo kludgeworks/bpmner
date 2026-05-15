@@ -17,23 +17,24 @@ import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnFingerprintService
-import dev.groknull.bpmner.core.BpmnLintPhase
-import dev.groknull.bpmner.core.BpmnRefinementFailureException
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnValidatorInfrastructureException
-import dev.groknull.bpmner.core.LintIssue
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.XsdValidationIssue
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
+import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
+import dev.groknull.bpmner.validation.BpmnFingerprintService
+import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
+import dev.groknull.bpmner.validation.BpmnValidatorInfrastructureException
+import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.validation.XsdValidationIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -78,6 +79,7 @@ class BpmnRepairAgentTest {
                 config = config,
                 bpmnRenderer = converter,
                 validator = evaluationPipeline,
+                attemptRecordFactory = BpmnAttemptRecordFactory(fingerprints),
                 promptFactory = promptFactory,
                 fingerprints = fingerprints,
                 strategies = strategies,
@@ -623,7 +625,7 @@ class BpmnRepairAgentTest {
                 }
             }
 
-        override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.core.BpmnLintRuleCapability>()
+        override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.validation.BpmnLintRuleCapability>()
     }
 
     private class RecordingXsdValidator(

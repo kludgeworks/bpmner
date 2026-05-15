@@ -1,7 +1,7 @@
 package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
@@ -84,18 +84,49 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
 
     private fun assumptionPhrase(area: MissingProcessArea): String =
         when (area) {
-            MissingProcessArea.PROCESS_BOUNDARY -> "process boundary would be assumed"
-            MissingProcessArea.START_TRIGGER -> "a start trigger would be invented"
-            MissingProcessArea.END_STATE -> "an end state would be invented"
-            MissingProcessArea.ACTIVITY_SEQUENCE -> "activities and their order would be invented"
-            MissingProcessArea.ACTOR_RESPONSIBILITY -> "actor responsibilities would be assigned without grounding"
-            MissingProcessArea.DECISION_CRITERIA -> "decision criteria would be invented"
-            MissingProcessArea.EXCEPTION_HANDLING -> "exception paths would be invented"
-            MissingProcessArea.INPUT_ARTIFACT -> "input artifacts would be invented"
-            MissingProcessArea.OUTPUT_ARTIFACT -> "output artifacts would be invented"
-            MissingProcessArea.BPMN_PROCESS_SUITABILITY ->
+            MissingProcessArea.PROCESS_BOUNDARY -> {
+                "process boundary would be assumed"
+            }
+
+            MissingProcessArea.START_TRIGGER -> {
+                "a start trigger would be invented"
+            }
+
+            MissingProcessArea.END_STATE -> {
+                "an end state would be invented"
+            }
+
+            MissingProcessArea.ACTIVITY_SEQUENCE -> {
+                "activities and their order would be invented"
+            }
+
+            MissingProcessArea.ACTOR_RESPONSIBILITY -> {
+                "actor responsibilities would be assigned without grounding"
+            }
+
+            MissingProcessArea.DECISION_CRITERIA -> {
+                "decision criteria would be invented"
+            }
+
+            MissingProcessArea.EXCEPTION_HANDLING -> {
+                "exception paths would be invented"
+            }
+
+            MissingProcessArea.INPUT_ARTIFACT -> {
+                "input artifacts would be invented"
+            }
+
+            MissingProcessArea.OUTPUT_ARTIFACT -> {
+                "output artifacts would be invented"
+            }
+
+            MissingProcessArea.BPMN_PROCESS_SUITABILITY -> {
                 "the source text would be treated as a process despite weak suitability"
-            MissingProcessArea.SOURCE_TRACE -> "process details would be added without traceability to the source"
+            }
+
+            MissingProcessArea.SOURCE_TRACE -> {
+                "process details would be added without traceability to the source"
+            }
         }
 
     private companion object {

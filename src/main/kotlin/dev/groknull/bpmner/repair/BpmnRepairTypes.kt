@@ -1,26 +1,10 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.repair
 
 import com.embabel.chat.Message
-
-data class BpmnEvaluation(
-    val definition: BpmnDefinition,
-    val rendered: RenderedBpmn?,
-    val diagnostics: List<BpmnDiagnostic>,
-    val globalDiagnostics: GlobalDiagnostics,
-    val validatedXml: String?,
-    val renderFailureMessage: String? = null,
-    val rawLintIssues: List<LintIssue>? = null,
-) {
-    fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
-
-    fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml =
-        ValidatedBpmnXml(
-            definition = definition,
-            xml = validatedXml ?: error("No validated BPMN XML available"),
-            diagnostics = diagnostics,
-            repairAttempts = repairAttempts,
-        )
-}
+import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnEvaluation
 
 data class BpmnRepairAttempt(
     val attemptNumber: Int,
@@ -66,10 +50,6 @@ data class BpmnAttemptRecord(
             "xsd=$xsdDiagnostics,lint=$lintDiagnostics,diag=$diagnosticFingerprint," +
             "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
 }
-
-class BpmnValidatorInfrastructureException(
-    message: String,
-) : IllegalStateException(message)
 
 class BpmnRefinementFailureException(
     message: String,

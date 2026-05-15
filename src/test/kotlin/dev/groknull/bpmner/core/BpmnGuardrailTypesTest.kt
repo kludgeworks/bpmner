@@ -2,6 +2,27 @@ package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import dev.groknull.bpmner.alignment.AlignedElement
+import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.alignment.BpmnSummaryElement
+import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractActor
+import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractBranch
+import dev.groknull.bpmner.contract.ContractDecision
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.TraceLink
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
+import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.readiness.ClarificationQuestion
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimensionScore
+import dev.groknull.bpmner.readiness.ReadinessVerdict
 import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -11,48 +32,6 @@ import org.junit.jupiter.api.Test
 class BpmnGuardrailTypesTest {
     private val objectMapper = jacksonObjectMapper().findAndRegisterModules()
     private val validator = Validation.buildDefaultValidatorFactory().validator
-
-    @Test
-    fun `round trips generation context with ordered clarification history`() {
-        val context =
-            BpmnGenerationContext(
-                originalInputText = "Ship approved order",
-                styleGuide = "Use verb object task names",
-                outputFile = "order.bpmn",
-                mode = GenerationMode.INTERACTIVE,
-                clarificationHistory =
-                    listOf(
-                        ClarificationExchange(
-                            questionId = "q1",
-                            questionText = "Who approves the order?",
-                            answerText = "A supervisor approves it.",
-                            relatedMissingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
-                            relatedDimensions = listOf(ReadinessDimension.ACTORS_ROLES),
-                            evidence =
-                                listOf(
-                                    SourceEvidence(
-                                        id = "ev1",
-                                        text = "A supervisor approves it.",
-                                        sourceType = EvidenceSourceType.CLARIFICATION,
-                                        sourceRef = "q1",
-                                    ),
-                                ),
-                        ),
-                        ClarificationExchange(
-                            questionId = "q2",
-                            questionText = "What is the end state?",
-                            answerText = "The order is shipped.",
-                            relatedMissingAreas = listOf(MissingProcessArea.END_STATE),
-                            relatedDimensions = listOf(ReadinessDimension.END_STATES),
-                        ),
-                    ),
-            )
-
-        val roundTripped = roundTrip<BpmnGenerationContext>(context)
-
-        assertEquals(context, roundTripped)
-        assertEquals(listOf("q1", "q2"), roundTripped.clarificationHistory.map { it.questionId })
-    }
 
     @Test
     fun `round trips process input assessment`() {
@@ -111,19 +90,6 @@ class BpmnGuardrailTypesTest {
 
     @Test
     fun `required guardrail fields fail bean validation`() {
-        val invalidContext =
-            BpmnGenerationContext(
-                originalInputText = "",
-                outputFile = "",
-                clarificationHistory =
-                    listOf(
-                        ClarificationExchange(
-                            questionId = "",
-                            questionText = "What happens next?",
-                            answerText = "",
-                        ),
-                    ),
-            )
         val invalidAssessment =
             ProcessInputAssessment(
                 verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
@@ -149,7 +115,6 @@ class BpmnGuardrailTypesTest {
                 endStates = emptyList(),
             )
 
-        assertFalse(validator.validate(invalidContext).isEmpty())
         assertFalse(validator.validate(invalidAssessment).isEmpty())
         assertFalse(validator.validate(invalidContract).isEmpty())
     }

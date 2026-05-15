@@ -1,18 +1,22 @@
 package dev.groknull.bpmner.generation.internal.domain
 
-import dev.groknull.bpmner.core.BpmnGenerationStatus
+import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentException
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.core.InputPathResolver
-import dev.groknull.bpmner.core.ProcessInputAssessment
 import dev.groknull.bpmner.core.ReadinessDimension
-import dev.groknull.bpmner.core.ReadinessDimensionScore
-import dev.groknull.bpmner.core.ReadinessVerdict
 import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
+import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
+import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -53,12 +57,9 @@ class BpmnGenerationServiceTest {
     @Test
     fun `preserves mode and clarification history on request`() {
         val invoker = CapturingBpmnAgentInvoker()
-        val service =
-            service(
-                invoker,
-                StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90)),
-                CapturingReportWriter(),
-            )
+        val readiness = StubReadinessInvoker(assessment(ReadinessVerdict.READY, 90))
+        val service = service(invoker, readiness, CapturingReportWriter())
+
         val clarification =
             ClarificationExchange(
                 questionId = "q1",
@@ -174,6 +175,26 @@ class BpmnGenerationServiceTest {
         assertTrue(invoker.calls.isEmpty(), "generator must not run when readiness blocks generation")
     }
 
+    @Test
+    fun `blocks generation when alignment failure occurs`() {
+        val invoker = AlignmentFailingBpmnAgentInvoker()
+        val readiness = StubReadinessInvoker(assessment(ReadinessVerdict.READY, 95))
+        val service = service(invoker, readiness, CapturingReportWriter())
+
+        val result =
+            service.generate(
+                BpmnGenerationInput(
+                    processDescription = "Ship order",
+                    outputFile = "order.bpmn",
+                ),
+            )
+
+        assertEquals(BpmnGenerationStatus.ALIGNMENT_FAILED, result.status)
+        assertNull(result.xml)
+        assertNotNull(result.alignmentReport)
+        assertEquals(AlignmentVerdict.FAILED, result.alignmentReport?.verdict)
+    }
+
     private fun service(
         invoker: BpmnAgentInvoker,
         readinessInvoker: BpmnReadinessInvoker,
@@ -217,6 +238,19 @@ class BpmnGenerationServiceTest {
                 xml = "<definitions />",
             )
         }
+    }
+
+    private class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
+        override fun generate(request: BpmnRequest): BpmnResult =
+            throw BpmnAlignmentException(
+                message = "Alignment failed.",
+                report =
+                    BpmnAlignmentReport(
+                        verdict = AlignmentVerdict.FAILED,
+                        rationale = "Hallucinated tasks found.",
+                        bpmnSummary = BpmnDefinitionSummary("P1", "Order", emptyList()),
+                    ),
+            )
     }
 
     private class StubReadinessInvoker(

@@ -1,9 +1,9 @@
 package dev.groknull.bpmner.alignment.internal.domain
 
+import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.AlignmentVerdict
 import dev.groknull.bpmner.core.BpmnAlignmentConfig
-import dev.groknull.bpmner.core.BpmnAlignmentReport
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

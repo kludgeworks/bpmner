@@ -1,11 +1,11 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.BpmnerApplicationShutdown
-import dev.groknull.bpmner.core.BpmnGenerationStatus
-import dev.groknull.bpmner.core.BpmnResult
 import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.generation.BpmnGenerationInput
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.generation.BpmnResult
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.boot.ApplicationArguments
@@ -50,24 +50,31 @@ class BpmnGeneratorRunner(
 
     private fun messageFor(result: BpmnResult): String =
         when (result.status) {
-            BpmnGenerationStatus.GENERATED ->
+            BpmnGenerationStatus.GENERATED -> {
                 AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}")
-            BpmnGenerationStatus.NEEDS_CLARIFICATION ->
+            }
+
+            BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
                 AnsiOutput.toString(
                     AnsiColor.BRIGHT_YELLOW,
                     "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile ?: "(not written)"}",
                 )
-            BpmnGenerationStatus.NOT_A_PROCESS ->
+            }
+
+            BpmnGenerationStatus.NOT_A_PROCESS -> {
                 AnsiOutput.toString(
                     AnsiColor.BRIGHT_YELLOW,
                     "⚠ Generation blocked: input is not a process. Readiness report: ${result.reportFile ?: "(not written)"}",
                 )
+            }
+
             BpmnGenerationStatus.ALIGNMENT_FAILED,
             BpmnGenerationStatus.VALIDATION_FAILED,
-            ->
+            -> {
                 AnsiOutput.toString(
                     AnsiColor.BRIGHT_RED,
                     "⚠ Generation finished with status ${result.status}.",
                 )
+            }
         }
 }

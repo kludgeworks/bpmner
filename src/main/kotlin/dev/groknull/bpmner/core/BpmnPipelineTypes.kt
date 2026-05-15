@@ -44,32 +44,3 @@ data class BpmnElementIndex(
             addAll(edgeDiagramIdsByEdgeId.values)
         }
 }
-
-data class ValidatedBpmnXml(
-    val definition: BpmnDefinition,
-    val xml: String,
-    val diagnostics: List<BpmnDiagnostic> = emptyList(),
-    val repairAttempts: Int = 0,
-)
-
-data class AutoFixedBpmnXml(
-    val definition: BpmnDefinition,
-    val xml: String,
-    val autoFixResult: BpmnAutoFixResult? = null,
-)
-
-data class LayoutedBpmnXml(
-    val definition: BpmnDefinition,
-    val xml: String,
-)
-
-data class FinalValidatedBpmnXml(
-    val definition: BpmnDefinition,
-    val xml: String,
-    val diagnostics: List<BpmnDiagnostic> = emptyList(),
-)
-
-data class AlignedBpmnXml(
-    val xml: String,
-    val alignmentReport: BpmnAlignmentReport,
-)

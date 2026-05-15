@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.validation
 
 import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnore
