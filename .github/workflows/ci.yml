@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
 
       - name: Setup mise
-        uses: jdx/mise-action@c37c93293d6b742fc901e1406b8f764f6fb19dac # v2
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
         with:
           install: true
           cache: true
@@ -27,7 +27,7 @@ jobs:
           MISE_LOCKED: 0 # core:java does not support multi-platform locking yet
 
       - name: Cache pnpm store
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
         with:
           path: ~/.local/share/pnpm/store
           key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
@@ -35,7 +35,7 @@ jobs:
             pnpm-${{ runner.os }}-
 
       - name: Cache Bazel
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
         with:
           path: |
             ~/.cache/bazel
