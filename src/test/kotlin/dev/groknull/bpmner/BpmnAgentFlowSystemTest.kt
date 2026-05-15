@@ -81,8 +81,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(validContract())
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
             .thenReturn(definition)
-        whenCreateObject({ it.contains("Assess whether the generated BPMN process aligns semantically") }, BpmnAlignmentReport::class.java)
-            .thenReturn(validAlignmentReport())
+        whenCreateObject(
+            { it.contains("Assess whether generated BPMN aligns semantically with process contract") },
+            BpmnAlignmentReport::class.java,
+        ).thenReturn(validAlignmentReport())
 
         val result =
             AgentPlatformTypedOps(agentPlatform)
@@ -184,63 +186,43 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Handle order",
             nodes =
                 listOf(
-                    BpmnNode(
-                        id = "StartEvent_1",
-                        name = "Order submitted",
-                        type = NodeType.START_EVENT,
-                        bounds = BpmnBounds(100.0, 100.0, 36.0, 36.0),
-                    ),
-                    BpmnNode(
-                        id = "Activity_1",
-                        name = "Review order",
-                        type = NodeType.USER_TASK,
-                        bounds = BpmnBounds(200.0, 100.0, 100.0, 80.0),
-                    ),
-                    BpmnNode(
-                        id = "Activity_2",
-                        name = "Close order",
-                        type = NodeType.USER_TASK,
-                        bounds = BpmnBounds(400.0, 100.0, 100.0, 80.0),
-                    ),
-                    BpmnNode(
-                        id = "EndEvent_1",
-                        name = "Order completed",
-                        type = NodeType.END_EVENT,
-                        bounds = BpmnBounds(600.0, 100.0, 36.0, 36.0),
-                    ),
+                    node("StartEvent_1", "Order submitted", NodeType.START_EVENT, 100.0),
+                    node("Activity_1", "Review order", NodeType.USER_TASK, 200.0),
+                    node("Activity_2", "Close order", NodeType.USER_TASK, 400.0),
+                    node("EndEvent_1", "Order completed", NodeType.END_EVENT, 600.0),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge(
-                        id = "Flow_1",
-                        sourceRef = "StartEvent_1",
-                        targetRef = "Activity_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(136.0, 118.0),
-                                BpmnWaypoint(200.0, 118.0),
-                            ),
-                    ),
-                    BpmnEdge(
-                        id = "Flow_2",
-                        sourceRef = "Activity_1",
-                        targetRef = "Activity_2",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(300.0, 118.0),
-                                BpmnWaypoint(400.0, 118.0),
-                            ),
-                    ),
-                    BpmnEdge(
-                        id = "Flow_3",
-                        sourceRef = "Activity_2",
-                        targetRef = "EndEvent_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(500.0, 118.0),
-                                BpmnWaypoint(600.0, 118.0),
-                            ),
-                    ),
+                    edge("Flow_1", "StartEvent_1", "Activity_1", 136.0, 200.0),
+                    edge("Flow_2", "Activity_1", "Activity_2", 300.0, 400.0),
+                    edge("Flow_3", "Activity_2", "EndEvent_1", 500.0, 600.0),
                 ),
         )
+
+    private fun node(
+        id: String,
+        name: String,
+        type: NodeType,
+        x: Double,
+    ): BpmnNode {
+        val (w, h) =
+            when (type) {
+                NodeType.START_EVENT, NodeType.END_EVENT -> 36.0 to 36.0
+                else -> 100.0 to 80.0
+            }
+        return BpmnNode(id = id, name = name, type = type, bounds = BpmnBounds(x, 100.0, w, h))
+    }
+
+    private fun edge(
+        id: String,
+        source: String,
+        target: String,
+        x1: Double,
+        x2: Double,
+    ) = BpmnEdge(
+        id = id,
+        sourceRef = source,
+        targetRef = target,
+        waypoints = listOf(BpmnWaypoint(x1, 118.0), BpmnWaypoint(x2, 118.0)),
+    )
 }

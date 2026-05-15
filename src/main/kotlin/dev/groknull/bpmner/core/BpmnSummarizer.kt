@@ -9,36 +9,12 @@ import java.util.Queue
  */
 @Component
 class BpmnSummarizer {
-
     fun summarize(definition: BpmnDefinition): BpmnDefinitionSummary {
         val nodeMap = definition.nodes.associateBy { it.id }
         val outgoingFlows = definition.sequences.groupBy { it.sourceRef }
-
         val visited = TraversalState()
-        val queue: Queue<String> = LinkedList()
-        
-        definition.nodes.filter { it.type == NodeType.START_EVENT }
-            .sortedBy { it.id }.forEach { node ->
-                if (visited.nodes.add(node.id)) {
-                    queue.add(node.id)
-                    visited.orderedNodes.add(node)
-                }
-            }
 
-        while (queue.isNotEmpty()) {
-            val nodeId = queue.poll()
-            val flows = outgoingFlows[nodeId]?.sortedBy { it.id } ?: emptyList()
-            
-            for (flow in flows) {
-                if (visited.flows.add(flow.id)) visited.orderedFlows.add(flow)
-                if (visited.nodes.add(flow.targetRef)) {
-                    nodeMap[flow.targetRef]?.let { targetNode ->
-                        queue.add(flow.targetRef)
-                        visited.orderedNodes.add(targetNode)
-                    }
-                }
-            }
-        }
+        traverseFromStartEvents(definition, nodeMap, outgoingFlows, visited)
 
         val unreachableNodes = definition.nodes.filter { it.id !in visited.nodes }.sortedBy { it.id }
         val unreachableFlows = definition.sequences.filter { it.id !in visited.flows }.sortedBy { it.id }
@@ -48,8 +24,51 @@ class BpmnSummarizer {
             processName = definition.processName,
             elements = (visited.orderedNodes + unreachableNodes).map { it.toSummary() },
             flows = (visited.orderedFlows + unreachableFlows).map { it.toSummary() },
-            unreachableElementIds = unreachableNodes.map { it.id } + unreachableFlows.map { it.id }
+            unreachableElementIds = unreachableNodes.map { it.id } + unreachableFlows.map { it.id },
         )
+    }
+
+    private fun traverseFromStartEvents(
+        definition: BpmnDefinition,
+        nodeMap: Map<String, BpmnNode>,
+        outgoingFlows: Map<String, List<BpmnEdge>>,
+        visited: TraversalState,
+    ) {
+        val queue: Queue<String> = LinkedList()
+        definition.nodes
+            .filter { it.type == NodeType.START_EVENT }
+            .sortedBy { it.id }
+            .forEach { node -> enqueue(node, queue, visited) }
+
+        while (queue.isNotEmpty()) {
+            val nodeId = queue.poll()
+            val flows = outgoingFlows[nodeId]?.sortedBy { it.id } ?: emptyList()
+            flows.forEach { flow -> visitFlow(flow, nodeMap, queue, visited) }
+        }
+    }
+
+    private fun visitFlow(
+        flow: BpmnEdge,
+        nodeMap: Map<String, BpmnNode>,
+        queue: Queue<String>,
+        visited: TraversalState,
+    ) {
+        if (visited.flows.add(flow.id)) visited.orderedFlows.add(flow)
+        if (!visited.nodes.add(flow.targetRef)) return
+        val targetNode = nodeMap[flow.targetRef] ?: return
+        queue.add(flow.targetRef)
+        visited.orderedNodes.add(targetNode)
+    }
+
+    private fun enqueue(
+        node: BpmnNode,
+        queue: Queue<String>,
+        visited: TraversalState,
+    ) {
+        if (visited.nodes.add(node.id)) {
+            queue.add(node.id)
+            visited.orderedNodes.add(node)
+        }
     }
 
     private class TraversalState {
@@ -60,11 +79,13 @@ class BpmnSummarizer {
     }
 
     private fun BpmnNode.toSummary() = BpmnSummaryElement(id = id, type = type.name, name = name)
-    private fun BpmnEdge.toSummary() = BpmnSummaryFlow(
-        id = id,
-        sourceRef = sourceRef,
-        targetRef = targetRef,
-        name = name,
-        conditionExpression = conditionExpression
-    )
+
+    private fun BpmnEdge.toSummary() =
+        BpmnSummaryFlow(
+            id = id,
+            sourceRef = sourceRef,
+            targetRef = targetRef,
+            name = name,
+            conditionExpression = conditionExpression,
+        )
 }
