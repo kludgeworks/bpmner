@@ -40,3 +40,4 @@ linter/docs/rules/*.md
 
 # Bazel
 /bazel-*
+report.txt
