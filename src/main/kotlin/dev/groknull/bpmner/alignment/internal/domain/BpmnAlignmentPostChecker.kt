@@ -17,34 +17,54 @@ internal class BpmnAlignmentPostChecker(
         val assumptions = report.alignedElements.count { it.classification == AlignmentClassification.ASSUMED }
         val unsupported = report.alignedElements.count { it.classification == AlignmentClassification.UNSUPPORTED }
         val missing = report.alignedElements.count { it.classification == AlignmentClassification.MISSING }
+        val partiallyCovered = report.alignedElements.count { it.classification == AlignmentClassification.PARTIALLY_COVERED }
 
-        val verdict =
+        val policyVerdict =
             when {
                 unsupported > 0 && config.blockOnUnsupportedElements -> AlignmentVerdict.FAILED
                 missing > 0 && config.blockOnMissingContractItems -> AlignmentVerdict.FAILED
                 assumptions > config.maxAssumptions -> AlignmentVerdict.FAILED
-                unsupported > 0 || missing > 0 || assumptions > 0 -> AlignmentVerdict.PARTIALLY_ALIGNED
+                unsupported > 0 || missing > 0 || partiallyCovered > 0 || assumptions > 0 -> AlignmentVerdict.PARTIALLY_ALIGNED
                 else -> AlignmentVerdict.ALIGNED
             }
 
+        // Worst-of: policy may downgrade an LLM ALIGNED verdict, and an LLM FAILED verdict is never upgraded by counts.
+        val verdict = worstOf(report.verdict, policyVerdict)
+
         if (verdict == AlignmentVerdict.FAILED) {
             logger.warn(
-                "Alignment failed: unsupported={}, missing={}, assumptions={} (threshold={})",
+                "Alignment failed: llmVerdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={} (threshold={})",
+                report.verdict,
                 unsupported,
                 missing,
+                partiallyCovered,
                 assumptions,
                 config.maxAssumptions,
             )
         } else {
             logger.info(
-                "Alignment passed: verdict={}, unsupported={}, missing={}, assumptions={}",
+                "Alignment passed: verdict={}, llmVerdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={}",
                 verdict,
+                report.verdict,
                 unsupported,
                 missing,
+                partiallyCovered,
                 assumptions,
             )
         }
 
         return report.copy(verdict = verdict)
     }
+
+    private fun worstOf(
+        a: AlignmentVerdict,
+        b: AlignmentVerdict,
+    ): AlignmentVerdict = if (severity(a) >= severity(b)) a else b
+
+    private fun severity(verdict: AlignmentVerdict): Int =
+        when (verdict) {
+            AlignmentVerdict.ALIGNED -> 0
+            AlignmentVerdict.PARTIALLY_ALIGNED -> 1
+            AlignmentVerdict.FAILED -> 2
+        }
 }
