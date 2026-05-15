@@ -40,3 +40,4 @@ substrings
 wink-nlp
 yet-another-bpmn-auto-layout
 reusability
+agentic
