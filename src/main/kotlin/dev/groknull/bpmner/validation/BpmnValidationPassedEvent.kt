@@ -8,4 +8,5 @@ data class BpmnValidationPassedEvent(
     val request: BpmnRequest,
     val xml: String,
     val repairAttempts: Int,
+    val processId: String? = null,
 )
