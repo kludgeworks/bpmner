@@ -93,7 +93,8 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
             MissingProcessArea.EXCEPTION_HANDLING -> "exception paths would be invented"
             MissingProcessArea.INPUT_ARTIFACT -> "input artifacts would be invented"
             MissingProcessArea.OUTPUT_ARTIFACT -> "output artifacts would be invented"
-            MissingProcessArea.BPMN_PROCESS_SUITABILITY -> "the source text would be treated as a process despite weak suitability"
+            MissingProcessArea.BPMN_PROCESS_SUITABILITY ->
+                "the source text would be treated as a process despite weak suitability"
             MissingProcessArea.SOURCE_TRACE -> "process details would be added without traceability to the source"
         }
 
