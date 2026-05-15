@@ -1,6 +1,6 @@
 package dev.groknull.bpmner.alignment.internal.adapter.inbound
 
-import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ProcessContract
@@ -35,7 +35,7 @@ internal class BpmnAlignmentPromptFactory(
                 val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
                 appendLine("- [${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition${flow.name?.let { " ($it)" } ?: ""}")
             }
-            
+
             if (bpmnSummary.unreachableElementIds.isNotEmpty()) {
                 appendLine()
                 appendLine("### Unreachable Elements")
