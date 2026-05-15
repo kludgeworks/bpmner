@@ -3,8 +3,8 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
-import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ContractIssueSeverity
