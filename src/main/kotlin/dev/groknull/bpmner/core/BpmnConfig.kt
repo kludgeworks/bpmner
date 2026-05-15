@@ -125,6 +125,7 @@ data class BpmnAlignmentConfig(
 )
 
 data class BpmnLoggingConfig(
+    val dir: String = "logs",
     val dumpArtifacts: Boolean = false,
     val artifactPreviewLength: Int = DEFAULT_ARTIFACT_PREVIEW_LENGTH,
 ) {
