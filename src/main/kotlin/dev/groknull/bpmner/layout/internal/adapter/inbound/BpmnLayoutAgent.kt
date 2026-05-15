@@ -52,11 +52,12 @@ internal class BpmnLayoutAgent(
      */
     @Action(description = "Apply bounded deterministic XML auto-fixes before layout")
     fun autoFixBpmnXml(bpmn: ValidatedBpmnXml): AutoFixedBpmnXml {
-        val result = tryAutoFix(bpmn.xml) ?: return AutoFixedBpmnXml(xml = bpmn.xml)
+        val result = tryAutoFix(bpmn.xml) ?: return AutoFixedBpmnXml(definition = bpmn.definition, xml = bpmn.xml)
         if (result.changed && !autoFixedXmlIsXsdValid(result)) {
-            return AutoFixedBpmnXml(xml = bpmn.xml, autoFixResult = result)
+            return AutoFixedBpmnXml(definition = bpmn.definition, xml = bpmn.xml, autoFixResult = result)
         }
         return AutoFixedBpmnXml(
+            definition = bpmn.definition,
             xml = if (result.changed) result.xml else bpmn.xml,
             autoFixResult = result,
         )
@@ -131,7 +132,7 @@ internal class BpmnLayoutAgent(
     @Action(description = "Apply auto-layout to the auto-fixed BPMN XML")
     fun layoutBpmnXml(bpmn: AutoFixedBpmnXml): LayoutedBpmnXml {
         val layoutedXml = layoutService.layout(bpmn.xml)
-        return LayoutedBpmnXml(xml = layoutedXml)
+        return LayoutedBpmnXml(definition = bpmn.definition, xml = layoutedXml)
     }
 
     @Action(description = "Validate the final layouted BPMN XML without semantic repair")
@@ -175,7 +176,7 @@ internal class BpmnLayoutAgent(
         }
 
         logger.info("Final BPMN validation passed after auto-layout")
-        return FinalValidatedBpmnXml(xml = bpmn.xml)
+        return FinalValidatedBpmnXml(definition = bpmn.definition, xml = bpmn.xml)
     }
 
     private fun finalValidationMessage(diagnostics: List<BpmnDiagnostic>): String =

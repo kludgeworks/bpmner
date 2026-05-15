@@ -99,13 +99,25 @@ class BpmnShellCommands(
 
     private fun responseFor(result: BpmnResult): String =
         when (result.status) {
-            BpmnGenerationStatus.GENERATED -> "BPMN written to: ${result.outputFile}"
-            BpmnGenerationStatus.NEEDS_CLARIFICATION -> "Clarification required. ${readinessSummary(result)}"
-            BpmnGenerationStatus.NOT_A_PROCESS -> "BPMN not generated. ${readinessSummary(result)}"
-            BpmnGenerationStatus.ALIGNMENT_FAILED ->
+            BpmnGenerationStatus.GENERATED -> {
+                "BPMN written to: ${result.outputFile}"
+            }
+
+            BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
+                "Clarification required. ${readinessSummary(result)}"
+            }
+
+            BpmnGenerationStatus.NOT_A_PROCESS -> {
+                "BPMN not generated. ${readinessSummary(result)}"
+            }
+
+            BpmnGenerationStatus.ALIGNMENT_FAILED -> {
                 "BPMN not generated because semantic alignment failed.${reportFileSuffix(result)}"
-            BpmnGenerationStatus.VALIDATION_FAILED ->
+            }
+
+            BpmnGenerationStatus.VALIDATION_FAILED -> {
                 "BPMN not generated because validation failed.${reportFileSuffix(result)}"
+            }
         }
 
     private fun readinessSummary(result: BpmnResult): String {
@@ -122,6 +134,5 @@ class BpmnShellCommands(
             ", missing=${missingAreas.joinToString { it.name }}"
         }
 
-    private fun reportFileSuffix(result: BpmnResult): String =
-        result.reportFile?.let { ", report=$it" }.orEmpty()
+    private fun reportFileSuffix(result: BpmnResult): String = result.reportFile?.let { ", report=$it" }.orEmpty()
 }
