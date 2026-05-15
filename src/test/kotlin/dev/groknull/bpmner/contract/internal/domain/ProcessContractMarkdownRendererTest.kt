@@ -1,4 +1,4 @@
-package dev.groknull.bpmner.contract
+package dev.groknull.bpmner.contract.internal.domain
 
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
@@ -94,7 +94,7 @@ class ProcessContractMarkdownRendererTest {
             classification = AlignmentClassification.SUPPORTED,
         )
 
-    @Suppress("LongMethod") // exhaustive contract fixture — splitting it obscures the assertions
+    @Suppress("LongMethod")
     private fun fullContract() =
         ProcessContract(
             id = "contract-1",

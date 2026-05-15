@@ -5,10 +5,10 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
+import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -54,7 +54,4 @@ internal class BpmnContractAgent(
         }
         return ValidatedProcessContract(contract = contract, report = report)
     }
-
-    @Action(description = "Unwrap the process contract from a validated contract")
-    fun unwrapProcessContract(validated: ValidatedProcessContract): ProcessContract = validated.contract
 }

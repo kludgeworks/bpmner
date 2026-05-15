@@ -100,7 +100,7 @@ class BpmnShellCommands(
     private fun responseFor(result: BpmnResult): String =
         when (result.status) {
             BpmnGenerationStatus.GENERATED -> {
-                "BPMN written to: ${result.outputFile}"
+                "BPMN written to: ${result.outputFile ?: "(none)"}"
             }
 
             BpmnGenerationStatus.NEEDS_CLARIFICATION -> {

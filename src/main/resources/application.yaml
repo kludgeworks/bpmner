@@ -11,6 +11,8 @@ spring:
       gh:
         - github
         - verbose
+      web:
+        - web
 
 embabel:
   models:

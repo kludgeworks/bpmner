@@ -6,18 +6,16 @@ import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.StartGenerationOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.boot.DefaultApplicationArguments
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
 
 class BpmnGeneratorRunnerTest {
     @Test
     fun `no arguments do not trigger one shot generation`() {
-        val generationUseCase = StubGenerationUseCase()
+        val generationUseCase = CapturingGenerationUseCase()
         val shutdown = CapturingApplicationShutdown()
         val runner = BpmnGeneratorRunner(generationUseCase, shutdown)
 
@@ -28,8 +26,8 @@ class BpmnGeneratorRunnerTest {
     }
 
     @Test
-    fun `process arguments are forwarded to generation use case with single shot mode`() {
-        val generationUseCase = StubGenerationUseCase()
+    fun `process arguments are forwarded to generation use case`() {
+        val generationUseCase = CapturingGenerationUseCase()
         val shutdown = CapturingApplicationShutdown()
         val runner = BpmnGeneratorRunner(generationUseCase, shutdown)
 
@@ -54,68 +52,109 @@ class BpmnGeneratorRunnerTest {
     }
 
     @Test
-    fun `prints success message when generated`() {
-        val output = runAndCaptureStdout(StubGenerationUseCase(BpmnGenerationStatus.GENERATED))
-        assertTrue(output.contains("Done!"))
-        assertTrue(output.contains("ship.bpmn"))
+    fun `prints needs-clarification message with readiness report path`() {
+        val message =
+            messageOnResult(
+                BpmnResult(
+                    outputFile = null,
+                    status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                    xml = null,
+                    reportFile = "/tmp/clar.readiness.md",
+                ),
+            )
+
+        assertTrue(message.contains("needs clarification"), "expected clarification phrasing, got: $message")
+        assertTrue(message.contains("/tmp/clar.readiness.md"), "expected report path in message, got: $message")
     }
 
     @Test
-    fun `prints blocked message and report path for needs clarification`() {
-        val output =
-            runAndCaptureStdout(
-                StubGenerationUseCase(
-                    BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                    reportFile = "/tmp/ship.bpmn.readiness.md",
+    fun `prints not-a-process message with readiness report path`() {
+        val message =
+            messageOnResult(
+                BpmnResult(
+                    outputFile = null,
+                    status = BpmnGenerationStatus.NOT_A_PROCESS,
+                    xml = null,
+                    reportFile = "/tmp/not-a-process.readiness.md",
                 ),
             )
-        assertTrue(output.contains("Generation blocked"))
-        assertTrue(output.contains("needs clarification"))
-        assertTrue(output.contains("/tmp/ship.bpmn.readiness.md"))
-        assertFalse(output.contains("Done!"))
+
+        assertTrue(message.contains("not a process"), "expected not-a-process phrasing, got: $message")
+        assertTrue(message.contains("/tmp/not-a-process.readiness.md"), "expected report path, got: $message")
     }
 
     @Test
-    fun `prints blocked message and report path for not a process`() {
-        val output =
-            runAndCaptureStdout(
-                StubGenerationUseCase(
-                    BpmnGenerationStatus.NOT_A_PROCESS,
-                    reportFile = "/tmp/ship.bpmn.readiness.md",
+    fun `prints fallback when no readiness report path was written`() {
+        val message =
+            messageOnResult(
+                BpmnResult(
+                    outputFile = null,
+                    status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                    xml = null,
+                    reportFile = null,
                 ),
             )
-        assertTrue(output.contains("Generation blocked"))
-        assertTrue(output.contains("not a process"))
-        assertTrue(output.contains("/tmp/ship.bpmn.readiness.md"))
+
+        assertTrue(message.contains("(not written)"), "expected (not written) marker, got: $message")
     }
 
-    private fun runAndCaptureStdout(useCase: StubGenerationUseCase): String {
-        val original = System.out
-        val buffer = ByteArrayOutputStream()
-        return try {
-            System.setOut(PrintStream(buffer, true, Charsets.UTF_8))
-            BpmnGeneratorRunner(useCase, CapturingApplicationShutdown())
-                .run(DefaultApplicationArguments("--process=Ship order", "--output=ship.bpmn"))
-            buffer.toString(Charsets.UTF_8)
+    @Test
+    fun `prints alignment-failed message`() {
+        val message =
+            messageOnResult(
+                BpmnResult(
+                    outputFile = null,
+                    status = BpmnGenerationStatus.ALIGNMENT_FAILED,
+                    xml = null,
+                ),
+            )
+
+        assertTrue(message.contains("ALIGNMENT_FAILED"), "expected status name in message, got: $message")
+    }
+
+    @Test
+    fun `prints validation-failed message`() {
+        val message =
+            messageOnResult(
+                BpmnResult(
+                    outputFile = null,
+                    status = BpmnGenerationStatus.VALIDATION_FAILED,
+                    xml = null,
+                ),
+            )
+
+        assertTrue(message.contains("VALIDATION_FAILED"), "expected status name in message, got: $message")
+    }
+
+    private fun messageOnResult(result: BpmnResult): String {
+        val runner = BpmnGeneratorRunner(CapturingGenerationUseCase(result), CapturingApplicationShutdown())
+        val bytes = java.io.ByteArrayOutputStream()
+        val originalOut = System.out
+        System.setOut(java.io.PrintStream(bytes, true, Charsets.UTF_8))
+        try {
+            runner.run(DefaultApplicationArguments("--process=anything"))
         } finally {
-            System.setOut(original)
+            System.setOut(originalOut)
         }
+        return bytes.toString(Charsets.UTF_8)
     }
 
-    private class StubGenerationUseCase(
-        private val status: BpmnGenerationStatus = BpmnGenerationStatus.GENERATED,
-        private val reportFile: String? = null,
+    private class CapturingGenerationUseCase(
+        private val nextResult: BpmnResult? = null,
     ) : BpmnGenerationUseCase {
         val calls = mutableListOf<BpmnGenerationInput>()
 
         override fun generate(input: BpmnGenerationInput): BpmnResult {
             calls += input
-            return BpmnResult(
+            return nextResult ?: BpmnResult(
                 outputFile = input.outputFile,
-                status = status,
-                xml = if (status == BpmnGenerationStatus.GENERATED) "<definitions />" else null,
-                reportFile = reportFile,
+                status = BpmnGenerationStatus.GENERATED,
+                xml = "<definitions />",
             )
+        }
+
+        override fun startAsync(input: BpmnGenerationInput): StartGenerationOutcome {
+            error("BpmnGeneratorRunner should not call startAsync")
         }
     }
 

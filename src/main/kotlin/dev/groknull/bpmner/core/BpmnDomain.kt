@@ -20,7 +20,8 @@ data class BpmnRequest(
     val processDescription: String,
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
-    val outputFile: String = "output.bpmn",
+    @get:JsonPropertyDescription("Optional BPMN output file path. Required for file generation mode.")
+    val outputFile: String? = null,
     val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")

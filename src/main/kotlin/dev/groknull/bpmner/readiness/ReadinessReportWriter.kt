@@ -8,6 +8,6 @@ interface ReadinessReportWriter {
     fun writeReport(
         originalInput: String,
         assessment: ProcessInputAssessment,
-        outputFile: String,
+        outputFile: String?,
     ): String
 }

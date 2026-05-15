@@ -51,7 +51,10 @@ class BpmnGeneratorRunner(
     private fun messageFor(result: BpmnResult): String =
         when (result.status) {
             BpmnGenerationStatus.GENERATED -> {
-                AnsiOutput.toString(AnsiColor.BRIGHT_GREEN, "✨ Done! BPMN written to: ${result.outputFile}")
+                AnsiOutput.toString(
+                    AnsiColor.BRIGHT_GREEN,
+                    "✨ Done! BPMN written to: ${result.outputFile ?: "(none)"}",
+                )
             }
 
             BpmnGenerationStatus.NEEDS_CLARIFICATION -> {

@@ -5,3 +5,4 @@ node_modules
 .idea
 linter/node_modules
 layout/node_modules
+web/node_modules
