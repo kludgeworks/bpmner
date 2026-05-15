@@ -15,6 +15,7 @@ data class BpmnEvaluation(
 
     fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml =
         ValidatedBpmnXml(
+            definition = definition,
             xml = validatedXml ?: error("No validated BPMN XML available"),
             diagnostics = diagnostics,
             repairAttempts = repairAttempts,

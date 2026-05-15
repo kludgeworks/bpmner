@@ -3,6 +3,7 @@ package dev.groknull.bpmner.layout.internal.adapter.inbound
 import dev.groknull.bpmner.core.BpmnAutoFixChange
 import dev.groknull.bpmner.core.BpmnAutoFixResult
 import dev.groknull.bpmner.core.BpmnAutoFixSkip
+import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnLintPhase
 import dev.groknull.bpmner.core.BpmnLintRuleCapability
 import dev.groknull.bpmner.core.BpmnRepairSafety
@@ -60,13 +61,15 @@ class BpmnLayoutAgentTest {
             layoutSensitive = true,
         )
 
+    private fun dummyDefinition() = BpmnDefinition("Process_1", "Dummy", emptyList(), emptyList())
+
     @Test
     fun `final validation runs full post-layout lint and succeeds`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
         val lintService = RecordingLintService(listOf(emptyList()))
         val agent = buildLayoutAgent(lintService, xsdValidator)
 
-        val result = agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
+        val result = agent.validateFinalBpmnXml(LayoutedBpmnXml(dummyDefinition(), "<definitions />"))
 
         assertEquals("<definitions />", result.xml)
         assertTrue(result.diagnostics.isEmpty())
@@ -106,7 +109,7 @@ class BpmnLayoutAgentTest {
         val layoutService = RecordingLayoutService(listOf("<definitions fixed=\"true\" layouted=\"true\" />"))
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
 
-        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
         val layouted = agent.layoutBpmnXml(autoFixed)
         val result = agent.validateFinalBpmnXml(layouted)
 
@@ -164,7 +167,7 @@ class BpmnLayoutAgentTest {
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
-        val result = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val result = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
 
         assertEquals("<definitions />", result.xml)
         assertEquals(false, result.autoFixResult?.changed)
@@ -182,7 +185,7 @@ class BpmnLayoutAgentTest {
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
-        val result = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val result = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
 
         assertEquals("<definitions />", result.xml)
         assertNull(result.autoFixResult, "filtered-out diagnostics must not invoke the auto-fixer")
@@ -225,7 +228,7 @@ class BpmnLayoutAgentTest {
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
-        agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
 
         assertEquals(
             listOf("klm/gtw-converging-gateway-unnamed"),
@@ -245,7 +248,7 @@ class BpmnLayoutAgentTest {
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
-        val result = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val result = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
 
         assertNull(result.autoFixResult, "diagnostics with no capability entry must not reach the auto-fixer")
         assertTrue(lintService.autoFixXmls.isEmpty())
@@ -268,7 +271,7 @@ class BpmnLayoutAgentTest {
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())), layoutService)
 
-        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
         agent.layoutBpmnXml(autoFixed)
 
         assertEquals("<definitions />", autoFixed.xml)
@@ -310,7 +313,7 @@ class BpmnLayoutAgentTest {
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
 
-        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
         agent.layoutBpmnXml(autoFixed)
 
         assertEquals("<definitions />", autoFixed.xml)
@@ -353,7 +356,7 @@ class BpmnLayoutAgentTest {
         val layoutService = RecordingLayoutService(listOf("<definitions laid-out=\"true\" />"), callLog = callLog)
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
 
-        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml("<definitions />"))
+        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml(dummyDefinition(), "<definitions />"))
         val layouted = agent.layoutBpmnXml(autoFixed)
         agent.validateFinalBpmnXml(layouted)
 
@@ -390,7 +393,7 @@ class BpmnLayoutAgentTest {
 
         val error =
             assertFailsWith<BpmnFinalValidationException> {
-                agent.validateFinalBpmnXml(LayoutedBpmnXml("<definitions />"))
+                agent.validateFinalBpmnXml(LayoutedBpmnXml(dummyDefinition(), "<definitions />"))
             }
 
         assertTrue(error.message!!.contains("Final BPMN validation failed after auto-layout"))
