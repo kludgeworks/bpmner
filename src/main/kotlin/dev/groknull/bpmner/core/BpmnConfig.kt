@@ -18,6 +18,9 @@ data class BpmnConfig(
     val readiness: BpmnReadinessConfig = BpmnReadinessConfig(),
     val contractExtractor: Actor<Persona> = DEFAULT_CONTRACT_EXTRACTOR,
     val contract: BpmnContractConfig = BpmnContractConfig(),
+    val alignmentValidator: Actor<Persona> = DEFAULT_ALIGNMENT_VALIDATOR,
+    @field:Valid
+    val alignment: BpmnAlignmentConfig = BpmnAlignmentConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
 ) {
@@ -77,6 +80,19 @@ data class BpmnConfig(
                     ),
                 llm = LlmOptions.withLlmForRole("contract-extractor"),
             )
+        val DEFAULT_ALIGNMENT_VALIDATOR =
+            Actor(
+                persona =
+                    Persona(
+                        name = "BPMN Alignment Guard",
+                        persona = "You are a strict BPMN semantic validator",
+                        objective =
+                            "Verify that generated BPMN process matches the process contract exactly;" +
+                                " flag any invented tasks, missing branches, or unsupported end states",
+                        voice = "critical and precise",
+                    ),
+                llm = LlmOptions.withLlmForRole("alignment-validator"),
+            )
     }
 }
 
@@ -99,6 +115,13 @@ data class BpmnReadinessConfig(
 
 data class BpmnContractConfig(
     val maxAssumptions: Int = 10,
+)
+
+data class BpmnAlignmentConfig(
+    @field:Min(0)
+    val maxAssumptions: Int = 3,
+    val blockOnUnsupportedElements: Boolean = true,
+    val blockOnMissingContractItems: Boolean = true,
 )
 
 data class BpmnLoggingConfig(
