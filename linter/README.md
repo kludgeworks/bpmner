@@ -2,7 +2,7 @@
 
 This module contains the custom `bpmnlint` rules used by `bpmner`.
 
-The primary artifact is not an npm package. It is a Bazel-built JavaScript bundle embedded into the JVM app and executed through GraalJS by [BpmnLintService](../src/main/kotlin/dev/groknull/bpmner/agent/BpmnLintService.kt).
+The primary artifact is not an npm package. It is a Bazel-built JavaScript bundle embedded into the JVM app and executed through GraalJS by [BpmnLintService](../src/main/kotlin/dev/groknull/bpmner/validation/internal/adapter/outbound/BpmnLintService.kt).
 
 `linter/` is still a standalone Node package. It owns its own `package.json` and `tsconfig.json`, while Bazel consumes that package in place.
 

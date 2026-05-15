@@ -1,132 +1,63 @@
 # bpmner
 
-Generates valid BPMN 2.0 XML from a plain-language business process description. Built on the [Embabel](https://github.com/embabel/embabel-agent) agent framework: an LLM produces a typed process definition, which is rendered to XML and validated against the BPMN 2.0 XSD and 27 custom bpmn-lint rules. Validation errors are fed back to the LLM for correction (up to `maxAttempts` rounds).
+Generates valid, semantically-grounded BPMN 2.0 XML from plain-language business process descriptions.
 
-## Prerequisites
+`bpmner` is more than a simple BPMN generator. It is a high-integrity modeling assistant that bridges the gap between ambiguous human language and technical process standards. Built on the [Embabel](https://github.com/embabel/embabel-agent) agentic framework, it employs a defense-in-depth pipeline to ensure every generated diagram is not only syntactically correct but also semantically aligned with user intent.
 
-- Bazel 8.6.0 (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk)
-- An LLM API key (Anthropic or GitHub Models / OpenAI)
+## Core Pillars
 
-No Node.js or npm required at runtime — the bpmn-lint bundle is compiled into the jar.
+### 1. Semantic Integrity (The Guardrail Pipeline)
+Traditional LLM generation often suffers from "hallucinations" or missing requirements. `bpmner` mitigates this with a unique three-stage guardrail system:
+- **Readiness Assessment:** Analyzes the input for modeling suitability. If the description is too vague (missing triggers, end states, or activities), the system blocks generation and initiates an **Interactive Clarification Flow** to gather missing facts.
+- **Process Contract Extraction:** Derives a structured "contract" from the source text and clarifications. This contract serves as the source of truth, grounding every subsequent generation step in evidence.
+- **Semantic Alignment:** After generation, the system performs a terminal check comparing the BPMN elements against the Process Contract. Any invented tasks or missing branches are detected and reported, preventing ungrounded models from being delivered.
 
-## Build
+### 2. Technical Quality (XSD & bpmn-lint)
+Every diagram is strictly validated against:
+- The official **BPMN 2.0 XSD**.
+- A custom **bpmn-lint plugin** with 27 specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic).
 
+### 3. Deterministic Repair
+When validation fails, `bpmner` doesn't just "try again." It uses a **local-first repair loop** that attempts to fix technical issues (like ID mismatches or simple naming violations) using deterministic Kotlin and TypeScript code before falling back to the LLM for more complex semantic refactoring.
+
+## Getting Started
+
+### Prerequisites
+- **Bazel 8.6.0** (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk).
+- **Mise** for environment and tool management.
+- An LLM API key (Anthropic, OpenAI, or GitHub Models).
+
+### Build
 ```bash
 bazel build //src:bpmner_app
 ```
 
-## Run
+### Run
+The application supports both an interactive shell and one-shot generation.
 
-Pick a provider profile and export the matching key.
-
-### Interactive Shell
-
-Run without `--process` or `--process-file` to start the Embabel Spring Shell:
-
+#### Interactive Shell
+Start the shell to use the `generate` command with interactive clarification:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 bazel run //src:bpmner_app -- --spring.profiles.active=anth
 ```
 
-From the shell, use the BPMN-specific `generate` command:
-
-```text
-generate --process "Order goes from customer to warehouse to shipping" --output order.bpmn
-gen --process-file toast-process.txt --output toast.bpmn --style-guide style.md
-```
-
-The shell also includes Embabel's generic agent commands, such as `execute`, `chat`, `agents`, `goals`, and `runs`.
-
-### One-Shot Generation
-
-**Anthropic:**
+#### One-Shot Generation
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
 bazel run //src:bpmner_app -- --spring.profiles.active=anth \
   --process-file=toast-process.txt --output=toast.bpmn
 ```
 
-**GitHub Models (OpenAI-compatible):**
-```bash
-export GITHUB_TOKEN="ghp_..."
-bazel run //src:bpmner_app -- --spring.profiles.active=gh \
-  --process-file=toast-process.txt --output=toast.bpmn
-```
+## Observability & Tracing
+`bpmner` is built for production observability:
+- **Structured Run Summaries:** Every run produces a JSONL summary containing execution timings, token usage, model costs, and a detailed audit of the repair loop.
+- **Validation Events:** Real-time logging of diagnostic discovery and repair attempts.
+- **Evidence Tracing:** Process contracts include trace links that map contract elements back to specific excerpts in the source text or clarification answers.
 
-Pass `--process "your description here"` instead of `--process-file` to supply the description inline.
-One-shot mode still writes the BPMN file and exits after generation.
+## Project Structure
+- `src/`: Kotlin/JVM application (Spring Boot + Embabel).
+- `linter/`: TypeScript `bpmn-lint` plugin and custom rule catalog.
+- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md) and [Hexagonal Design](docs/hexagonal-architecture.md).
 
-For arbitrary local files, prefer an absolute filesystem path:
-
-```bash
-bazel run //src:bpmner_app -- --spring.profiles.active=anth \
-  --process-file=/absolute/path/to/process.txt --output=process.bpmn
-```
-
-Bundled sample inputs declared in `bazelrun_data` can be loaded as Bazel runfiles using workspace-relative paths such as `bpmner/toast-process.txt`. Arbitrary local files are not automatically added to Bazel runfiles.
-
-## Test
-
-```bash
-# Unit tests (fast, no API key needed)
-bazel test //src/test/...
-
-# Integration tests (require API key)
-bazel test --test_tag_filters=integration //src/test/...
-```
-
-## Prose Linting
-
-Vale checks Markdown and text documentation for BPMN terminology and inclusive language.
-
-```bash
-pnpm vale:docs
-bazel test //:vale_docs_test //:vale_fixtures_test
-```
-
-## Guardrails & Alignment
-
-`bpmner` uses a three-stage semantic guardrail pipeline to ensure generated BPMN matches user intent and is grounded in evidence:
-
-1.  **Readiness Assessment:** Heuristically and LLM-checks if the input contains enough detail (triggers, activities, end states) to model a process without inventing facts. Blocks or requests clarification if the score is low.
-2.  **Process Contract Extraction:** Produces a structured, source-grounded "contract" (nodes, roles, decisions) that serves as the single source of truth for the generator.
-3.  **Semantic Alignment:** Compares the final generated BPMN definition against the process contract to detect and block "hallucinated" elements or missing branches.
-
-These semantic checks complement technical validation (XSD and 27 `bpmn-lint` rules) to provide defense-in-depth against model drift.
-
-## Configuration
-
-Key properties in `src/main/resources/application.yaml`:
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `bpmner.max-attempts` | `5` | Maximum LLM correction rounds |
-| `bpmner.logging.dir` | `logs` | Directory for per-run timestamped log files |
-| `bpmner.logging.file` | (unset) | Optional explicit full log file path override |
-| `bpmner.logging.dump-artifacts` | `false` | Emit truncated outline/definition/XML artifact snapshots in debug logs |
-| `bpmner.model` | (auto) | Override the LLM model name |
-| `embabel.agent.shell.web-application-type` | `none` | Keep shell mode as a non-web Spring Boot application |
-| `embabel.agent.shell.interactive.enabled` | `true` | Enable the interactive shell when no one-shot process input is supplied |
-| `embabel.agent.shell.interactive.history-enabled` | `true` | Enable command history in the interactive shell |
-
-Profile configs live in `application-anthropic.yaml` and `application-github.yaml`.
-
-## Structure
-
-```
-src/          Kotlin/JVM application (Spring Boot + Embabel)
-linter/       TypeScript bpmn-lint plugin (27 custom rules, bundled at build time)
-tools/kotlin/ Bazel Kotlin toolchain config
-```
-
-## Commit Message Conventions
-
-We use a simplified version of [Conventional Commits](https://www.conventionalcommits.org/). Every commit message must take the form:
-`<type>(<optional scope>): <subject>`
-
-### Accepted Types
-* **`feat`**: A new feature.
-* **`fix`**: A bug fix.
-* **`docs`**: Documentation only changes.
-* **`refactor`**: Code changes that neither fix a bug nor add a feature (includes performance and formatting improvements).
-* **`chore`**: Changes that don't modify `src` or `test` files (includes CI, build system, tooling, and adding missing tests).
+## Contributing
+We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
