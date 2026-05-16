@@ -26,16 +26,16 @@ spring:
 
 embabel:
   models:
-    default-llm: openai/gpt-4o
+    default-llm: openai/gpt-4.1
     llms:
-      generator: openai/gpt-4o
-      repairer: openai/gpt-4o
-      repair-label: openai/gpt-4o-mini
-      repair-patch: openai/gpt-4o-mini
-      repair-rewrite: openai/gpt-4o
-      readiness-assessor: openai/gpt-4o-mini
-      contract-extractor: openai/gpt-4o
-      alignment-validator: openai/gpt-4o
+      generator: openai/gpt-4.1
+      repairer: openai/gpt-4.1
+      repair-label: openai/gpt-4.1-nano
+      repair-patch: openai/gpt-4.1-mini
+      repair-rewrite: openai/gpt-4.1
+      readiness-assessor: openai/gpt-4.1-mini
+      contract-extractor: openai/gpt-4.1
+      alignment-validator: openai/gpt-4.1
   agent:
     platform:
       models:
