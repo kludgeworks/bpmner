@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>bpmner - Generative BPMN</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="bpmn-js.css">
+  <link rel="stylesheet" href="diagram-js.css">
+  <link rel="stylesheet" href="bpmn-font/css/bpmn.css">
+</head>
+<body>
+  <div class="layout">
+    <div class="sidebar">
+      <h2>Generate BPMN</h2>
+      <textarea id="process-description" rows="10" placeholder="Enter process description..."></textarea>
+      <button id="generate-btn">Generate</button>
+
+      <div id="progress-container" class="hidden">
+        <h3>Progress</h3>
+        <ul id="progress-list"></ul>
+      </div>
+
+      <div id="diagnostics-container" class="hidden">
+        <h3>Diagnostics</h3>
+        <ul id="diagnostics-list"></ul>
+      </div>
+
+      <div id="download-container" class="hidden">
+          <a id="download-xml" download="generated.bpmn" href="#">Download BPMN XML</a>
+      </div>
+    </div>
+    <div class="main-content">
+      <div id="canvas"></div>
+    </div>
+  </div>
+  <script src="js/app-bundle.js"></script>
+</body>
+</html>

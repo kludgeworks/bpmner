@@ -30,6 +30,7 @@ class BpmnerModulithTest {
                 "readiness",
                 "contract",
                 "shell",
+                "web",
             ),
             moduleNames,
         )

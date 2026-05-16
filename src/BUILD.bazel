@@ -42,6 +42,18 @@ java_library(
     resources = ["//layout:bundle"],
 )
 
+java_library(
+    name = "web_bundle_res",
+    resource_strip_prefix = "web/dist",
+    resources = ["//web:bundle"],
+)
+
+java_library(
+    name = "web_static_res",
+    resource_strip_prefix = "web/src/static",
+    resources = ["//web:static_assets"],
+)
+
 filegroup(
     name = "bazelrun_samples",
     srcs = [
@@ -74,6 +86,8 @@ kt_jvm_library(
         ":layout_bundle_res",
         ":linter_bundle_res",
         ":linter_rules_json_res",
+        ":web_bundle_res",
+        ":web_static_res",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
         "@maven//:com_embabel_agent_embabel_agent_starter_shell",
@@ -88,8 +102,10 @@ kt_jvm_library(
         "@maven//:org_jmolecules_jmolecules_events",
         "@maven//:org_jmolecules_jmolecules_hexagonal_architecture",
         "@maven//:org_jmolecules_jmolecules_onion_architecture",
+        "@maven//:com_embabel_agent_embabel_agent_starter_webmvc",
         "@maven//:org_springframework_boot_spring_boot_loader",
         "@maven//:org_springframework_boot_spring_boot_starter",
+        "@maven//:org_springframework_boot_spring_boot_starter_web",
         "@maven//:org_springframework_modulith_spring_modulith_starter_core",
         "@rules_java//java/runfiles",
     ],

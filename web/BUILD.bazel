@@ -1,0 +1,58 @@
+load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//tools/js:ts.bzl", "bpmner_ts_project")
+
+package(default_visibility = ["//visibility:public"])
+
+# Link the standalone web package's node_modules
+npm_link_all_packages(name = "node_modules")
+
+exports_files([
+    "tsconfig.bazel.json",
+    "tsconfig.json",
+])
+
+ts_config(
+    name = "tsconfig",
+    src = "tsconfig.json",
+)
+
+ts_config(
+    name = "tsconfig_bazel",
+    src = "tsconfig.bazel.json",
+    deps = [":tsconfig"],
+)
+
+WEB_TS_DEPS = [
+    "//:node_modules/@types/node",
+    "//:node_modules/bpmn-js",
+]
+
+bpmner_ts_project(
+    name = "ts",
+    srcs = glob(["src/**/*.ts"]),
+    out_dir = "tsc",
+    resolve_json_module = True,
+    deps = WEB_TS_DEPS,
+)
+
+esbuild(
+    name = "bundle",
+    srcs = glob(["src/**/*.ts"]),
+    config = {
+        "sourcemap": False,
+    },
+    entry_point = "src/app.ts",
+    format = "iife",
+    output = "dist/js/app-bundle.js",
+    platform = "browser",
+    target = "es2022",
+    deps = WEB_TS_DEPS,
+)
+
+filegroup(
+    name = "static_assets",
+    srcs = glob(["src/static/**/*"]),
+)

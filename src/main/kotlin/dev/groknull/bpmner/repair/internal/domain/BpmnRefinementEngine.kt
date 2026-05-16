@@ -166,6 +166,7 @@ internal class BpmnRefinementEngine(
         eventPublisher.publishEvent(
             BpmnValidationFailedEvent(
                 request = request,
+                xml = attempt.evaluation.rendered?.xml ?: "",
                 diagnostics = attempt.diagnostics,
                 attemptNumber = attempt.attemptNumber,
                 repairAttempts = attempt.repairAttempts,

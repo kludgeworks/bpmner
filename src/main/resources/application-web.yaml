@@ -1,0 +1,9 @@
+spring:
+  main:
+    web-application-type: servlet
+
+embabel:
+  agent:
+    shell:
+      interactive:
+        enabled: false

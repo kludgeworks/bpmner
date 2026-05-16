@@ -25,7 +25,7 @@ internal class BpmnGenerationService(
 
     override fun generate(input: BpmnGenerationInput): BpmnResult {
         val description = resolveProcessDescription(input)
-        val outputFile = inputPathResolver.resolveOutputPath(input.outputFile).toString()
+        val outputFile = input.outputFile?.let { inputPathResolver.resolveOutputPath(it).toString() }
         val styleGuide =
             input.styleGuide?.let {
                 logger.info("Loading style guide from file: {}", it)
@@ -43,7 +43,7 @@ internal class BpmnGenerationService(
 
         logger.info(
             "Starting BPMN generation. outputFile={}, mode={}, descriptionLength={}, styleGuidePresent={}, clarifications={}",
-            outputFile,
+            outputFile ?: "(none)",
             input.mode,
             description.length,
             styleGuide != null,

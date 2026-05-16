@@ -6,6 +6,7 @@
 		"vale:fixtures": "node tools/vale/vale-test.mjs fixtures"
 	},
 	"dependencies": {
+		"bpmn-js": "^18.16.1",
 		"bpmn-moddle": "^9.0.4",
 		"bpmnlint": "^11.12.1",
 		"bpmnlint-utils": "^1.1.1",

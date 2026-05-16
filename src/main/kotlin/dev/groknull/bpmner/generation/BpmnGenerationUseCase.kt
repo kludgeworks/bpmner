@@ -8,7 +8,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
 data class BpmnGenerationInput(
     val processDescription: String? = null,
     val processFile: String? = null,
-    val outputFile: String = "output.bpmn",
+    val outputFile: String? = null,
     val styleGuide: String? = null,
     val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     val clarificationHistory: List<ClarificationExchange> = emptyList(),

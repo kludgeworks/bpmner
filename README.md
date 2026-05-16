@@ -19,6 +19,17 @@ bazel build //src:bpmner_app
 
 Pick a provider profile and export the matching key.
 
+### Web Interface
+
+The easiest way to use `bpmner` locally is via its web UI. This mode starts an HTTP server and allows you to submit a process, view live generation progress, inspect intermediate validation snapshots, and download the final BPMN XML.
+
+```bash
+export ANTHROPIC_API_KEY="sk-ant-..."
+bazel run //src:bpmner_app -- --spring.profiles.active=anth,web
+```
+
+Once started, open `http://localhost:8080` in your browser. The web UI will not write `.bpmn` files to your disk.
+
 ### Interactive Shell
 
 Run without `--process` or `--process-file` to start the Embabel Spring Shell:
