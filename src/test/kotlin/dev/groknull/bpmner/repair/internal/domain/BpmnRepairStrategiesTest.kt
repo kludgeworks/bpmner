@@ -22,11 +22,8 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import com.embabel.agent.api.common.Actor
-import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
-import com.embabel.common.ai.model.LlmOptions
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -243,6 +240,27 @@ class BpmnRepairStrategiesTest {
         assertTrue(prompt.contains("rule=bpmner/name-02"))
     }
 
+    @Test
+    fun `FullLlmRewriteRepairStrategy includes repair history in prompt`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(sampleDefinition())
+        val historyMessage = com.embabel.chat.AssistantMessage("Previous attempt was close")
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH)),
+                operationContext = operationContext,
+                messages = listOf(historyMessage),
+            )
+
+        fullRewriteStrategy().repair(ctx)
+
+        val invocation = operationContext.llmInvocations.single()
+        assertTrue(
+            invocation.messages.contains(historyMessage),
+            "expected repair history to be included in LLM invocation",
+        )
+    }
+
     private fun labelStrategy(): TargetedLabelRepairStrategy {
         val fingerprints = BpmnFingerprintService()
         val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
@@ -282,6 +300,7 @@ class BpmnRepairStrategiesTest {
         diagnostics: List<BpmnDiagnostic>,
         outcome: BpmnLocalRepairOutcome = BpmnLocalRepairOutcome.EMPTY,
         operationContext: FakeOperationContext = FakeOperationContext(),
+        messages: List<com.embabel.chat.Message> = emptyList(),
     ): BpmnRepairStrategyContext {
         val definition = sampleDefinition()
         val rendered = renderedFrom(definition)
@@ -299,7 +318,7 @@ class BpmnRepairStrategiesTest {
                 repairAttempts = 0,
                 graph = laidOutGraph(definition),
                 evaluation = evaluation,
-                messages = emptyList(),
+                messages = messages,
             )
         return BpmnRepairStrategyContext(
             attempt = attempt,
