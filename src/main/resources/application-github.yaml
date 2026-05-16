@@ -29,10 +29,13 @@ embabel:
     default-llm: openai/gpt-4o
     llms:
       generator: openai/gpt-4o
+      repairer: openai/gpt-4o
       repair-label: openai/gpt-4o-mini
       repair-patch: openai/gpt-4o-mini
       repair-rewrite: openai/gpt-4o
-      repairer: openai/gpt-4o
+      readiness-assessor: openai/gpt-4o-mini
+      contract-extractor: openai/gpt-4o
+      alignment-validator: openai/gpt-4o
   agent:
     platform:
       models:

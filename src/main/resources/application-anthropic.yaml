@@ -28,10 +28,13 @@ embabel:
     default-llm: claude-sonnet-4-0
     llms:
       generator: claude-sonnet-4-0
+      repairer: claude-sonnet-4-0
       repair-label: claude-haiku-4-0
       repair-patch: claude-haiku-4-0
       repair-rewrite: claude-sonnet-4-0
-      repairer: claude-sonnet-4-0
+      readiness-assessor: claude-haiku-4-0
+      contract-extractor: claude-sonnet-4-0
+      alignment-validator: claude-sonnet-4-0
 
 bpmner:
   max-attempts: 8

@@ -20,7 +20,7 @@
 
 #:schema https://mise.jdx.dev/schema/mise-task.json
 
-[tasks.gh-models]
+[gh-models]
 description = "List the GitHub Models catalog (table / CSV / JSON) [nushell]"
 tools = { "github:nushell/nushell" = "latest" }
 usage = '''
@@ -111,6 +111,94 @@ if $format == "json" {
     caps:      (shorten-caps $m.capabilities)
     inputs:    ($m.supported_input_modalities | str join "+")
     tags:      ($m.tags | str join ",")
+  }} | table
+
+}
+'''
+
+[anthropic-models]
+description = "List the Anthropic models catalog (table / CSV / JSON) [nushell]"
+tools = { "github:nushell/nushell" = "latest" }
+usage = '''
+flag "-f --format <format>" help="Output format" default="table" {
+  choices "table" "csv" "json"
+}
+'''
+run = '''
+#!/usr/bin/env nu
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+# Accepts int or nothing
+def humanize [n] {
+  if ($n == null) {
+    "-"
+  } else if ($n >= 1_000_000) {
+    $"(($n / 1_000_000 | math round))M"
+  } else if ($n >= 1_000) {
+    $"(($n / 1_000 | math round))K"
+  } else {
+    $"($n)"
+  }
+}
+
+def get-caps [m] {
+  let caps = []
+  let c = ($m.capabilities? | default {})
+
+  let caps = if ($c.image_input? | default {} | get -o supported | default false) { $caps | append "vision" } else { $caps }
+  let caps = if ($c.thinking? | get -o types | default {} | get -o adaptive | default {} | get -o supported | default false) { $caps | append "thinking" } else { $caps }
+  let caps = if ($c.structured_outputs? | default {} | get -o supported | default false) { $caps | append "json" } else { $caps }
+
+  $caps | str join "+"
+}
+
+# ── args (injected by mise from the `usage` field above) ─────────────────────
+let format = ($env | get -o usage_format | default "table")
+
+# ── fetch ─────────────────────────────────────────────────────────────────────
+let api_key = ($env.ANTHROPIC_API_KEY? | default "")
+if ($api_key | is-empty) {
+  print "Error: ANTHROPIC_API_KEY environment variable is not set."
+  exit 1
+}
+
+let url = "https://api.anthropic.com/v1/models"
+let response = (http get --headers {
+  "x-api-key":         $api_key
+  "anthropic-version": "2023-06-01"
+} $url)
+
+let models = $response.data
+
+# ── sort ─────────────────────────────────────────────────────────────
+let sorted = $models | sort-by display_name
+
+# ── render ────────────────────────────────────────────────────────────────────
+if $format == "json" {
+
+  $sorted | to json
+
+} else if $format == "csv" {
+
+  $sorted | each {|m| {
+    id:               $m.id
+    display_name:     $m.display_name
+    max_input_tokens: ($m.max_input_tokens? | default 0)
+    max_output_tokens: ($m.max_tokens? | default 0)
+    capabilities:     (get-caps $m)
+    created_at:       $m.created_at
+  }} | to csv
+
+} else {
+
+  $sorted | each {|m| {
+    id:        $m.id
+    name:      $m.display_name
+    "ctx-in":  (humanize $m.max_input_tokens?)
+    "ctx-out": (humanize $m.max_tokens?)
+    caps:      (get-caps $m)
+    created:   ($m.created_at | str substring 0..9)
   }} | table
 
 }
