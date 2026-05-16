@@ -129,10 +129,6 @@ class BpmnShellCommands(
                 "Clarification required. ${readinessSummary(result)}"
             }
 
-            BpmnGenerationStatus.NOT_A_PROCESS -> {
-                "BPMN not generated. ${readinessSummary(result)}"
-            }
-
             BpmnGenerationStatus.ALIGNMENT_FAILED -> {
                 "BPMN not generated because semantic alignment failed.${reportFileSuffix(result)}"
             }

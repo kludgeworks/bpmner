@@ -95,11 +95,11 @@ class BpmnWebControllerTest {
     }
 
     @Test
-    fun `returns 422 with status when readiness rejects non-process input`() {
+    fun `returns 422 with status when readiness rejects workflow-less input`() {
         val blocked =
             BpmnResult(
                 outputFile = null,
-                status = BpmnGenerationStatus.NOT_A_PROCESS,
+                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
                 xml = null,
                 reportFile = null,
             )
@@ -110,7 +110,7 @@ class BpmnWebControllerTest {
 
         assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
         val body = response.body as WebGenerationBlockedResponse
-        assertEquals(BpmnGenerationStatus.NOT_A_PROCESS.name, body.status)
+        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION.name, body.status)
         assertNull(body.reportFile)
     }
 }

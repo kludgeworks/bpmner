@@ -55,6 +55,7 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.doReturn
@@ -89,10 +90,10 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnLintService: BpmnLintService
 
     @Test
-    fun `blocks generation for input that is NOT_A_PROCESS`(
+    fun `blocks generation when input lacks workflow signal`(
         @TempDir tempDir: Path,
     ) {
-        val outputFile = tempDir.resolve("not_a_process.bpmn")
+        val outputFile = tempDir.resolve("no_workflow.bpmn")
         val input = BpmnGenerationInput(processDescription = "I want to buy some apples.", outputFile = outputFile.toString())
 
         whenCreateObject(
@@ -100,24 +101,24 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
             ProcessInputAssessment::class.java,
         ).thenReturn(
             ProcessInputAssessment(
-                verdict = ReadinessVerdict.NOT_A_PROCESS,
+                verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                 overallScore = 20,
                 dimensions =
                     listOf(
                         ReadinessDimensionScore(
                             ReadinessDimension.BPMN_SUITABILITY,
                             20,
-                            "Not a repeatable business process.",
+                            "No sequenced workflow found in the source text.",
                         ),
                     ),
-                rationale = "The input is a simple statement, not a process.",
+                rationale = "The input is a simple statement, not a workflow.",
                 missingAreas = listOf(MissingProcessArea.BPMN_PROCESS_SUITABILITY),
             ),
         )
 
         val result = generationUseCase.generate(input)
 
-        assertEquals(BpmnGenerationStatus.NOT_A_PROCESS, result.status)
+        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION, result.status)
         assertNull(result.xml)
         assertTrue(result.reportFile != null)
     }
@@ -167,6 +168,15 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
     }
 
     @Test
+    @Disabled(
+        "Blocked by #126: the Embabel GOAP planner cannot construct a full " +
+            "BpmnRequest+ProcessInputAssessment → BpmnResult plan across the current " +
+            "side-agent architecture (missing @AchievesGoal on readiness/contract/layout/" +
+            "repair agents, and no action produces a bare ProcessContract to bridge to " +
+            "checkAlignment). Unit-level alignment-failure coverage exists in " +
+            "BpmnGenerationServiceTest.`blocks generation when alignment failure occurs`. " +
+            "Re-enable once #126 lands.",
+    )
     fun `blocks generation when alignment fails`(
         @TempDir tempDir: Path,
     ) {

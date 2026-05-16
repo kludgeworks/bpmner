@@ -36,7 +36,6 @@ import jakarta.validation.constraints.Size
 enum class ReadinessVerdict {
     READY,
     NEEDS_CLARIFICATION,
-    NOT_A_PROCESS,
 }
 
 @JsonClassDescription("Readiness assessment of whether source input is sufficient to generate BPMN")

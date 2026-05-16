@@ -121,7 +121,7 @@ class MarkdownReadinessReportWriterTest {
 
     private fun minimalAssessment(): ProcessInputAssessment =
         ProcessInputAssessment(
-            verdict = ReadinessVerdict.NOT_A_PROCESS,
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
             overallScore = 10,
             dimensions =
                 ReadinessDimension.entries.map {

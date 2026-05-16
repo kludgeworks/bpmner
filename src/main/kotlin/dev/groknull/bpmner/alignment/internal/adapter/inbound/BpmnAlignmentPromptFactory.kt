@@ -71,7 +71,7 @@ internal class BpmnAlignmentPromptFactory(
             appendLine("- Compare every generated semantic element against the contract.")
             appendLine("- Classify each generated element as:")
             appendLine("  - SUPPORTED: explicitly mentioned or clearly implied by the contract.")
-            appendLine("  - ASSUMED: plausible business logic necessary for flow.")
+            appendLine("  - ASSUMED: plausible workflow logic necessary for flow.")
             appendLine("  - UNSUPPORTED: contradicts contract or adds behavior not in source.")
             appendLine("- Compare every item in the process contract against the generated BPMN.")
             appendLine("- Classify each contract item as:")

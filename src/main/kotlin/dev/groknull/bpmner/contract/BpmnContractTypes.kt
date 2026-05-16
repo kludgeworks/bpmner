@@ -77,7 +77,7 @@ data class ContractActivity(
     @get:JsonPropertyDescription("Stable activity id")
     val id: String,
     @field:NotBlank
-    @get:JsonPropertyDescription("Business activity name")
+    @get:JsonPropertyDescription("Activity name from the workflow")
     val name: String,
     @get:JsonPropertyDescription("Optional actor id responsible for the activity")
     val actorId: String? = null,
@@ -96,7 +96,7 @@ data class ContractDecision(
     @get:JsonPropertyDescription("Stable decision id")
     val id: String,
     @field:NotBlank
-    @get:JsonPropertyDescription("Business decision question")
+    @get:JsonPropertyDescription("Decision question from the workflow")
     val question: String,
     @field:NotEmpty
     @field:Valid

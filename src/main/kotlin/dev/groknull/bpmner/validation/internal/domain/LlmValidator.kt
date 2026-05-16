@@ -54,7 +54,7 @@ internal class LlmValidator(
         if (llmRules.isEmpty()) return ""
 
         return buildString {
-            appendLine("General Business Rule Guidance (Heuristic):")
+            appendLine("General Workflow Rule Guidance (Heuristic):")
             for (rule in llmRules) {
                 appendLine("## ${rule.id}: ${rule.name}")
                 appendLine("Intent: ${rule.intent}")

@@ -43,6 +43,34 @@ class BpmnReadinessPromptFactoryTest {
     }
 
     @Test
+    fun `prompt scopes workflow types beyond business processes`() {
+        val prompt =
+            BpmnReadinessPromptFactory(BpmnConfig().readiness)
+                .prompt(BpmnRequest("When an order is submitted, review it, then ship it."))
+
+        assertTrue(
+            prompt.contains("automated", ignoreCase = true),
+            "prompt should name automated workflows as in scope",
+        )
+        assertTrue(
+            prompt.contains("technical", ignoreCase = true),
+            "prompt should name technical workflows as in scope",
+        )
+        assertTrue(
+            prompt.contains("software agents", ignoreCase = true),
+            "prompt should clarify that software agents are valid BPMN actors",
+        )
+        assertTrue(
+            prompt.contains("never penalise a workflow solely for being automated, technical, or non-business"),
+            "prompt should explicitly forbid rejecting solely on domain (e.g. automated/technical)",
+        )
+        assertTrue(
+            !prompt.contains("NOT_A_PROCESS"),
+            "prompt should no longer reference the retired NOT_A_PROCESS verdict",
+        )
+    }
+
+    @Test
     fun `prompt includes prior clarification answers`() {
         val prompt =
             BpmnReadinessPromptFactory(BpmnConfig().readiness)

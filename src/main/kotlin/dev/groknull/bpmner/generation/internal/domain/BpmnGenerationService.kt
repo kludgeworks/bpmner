@@ -42,9 +42,15 @@ import org.springframework.stereotype.Component
 
 @SecondaryPort
 internal interface BpmnAgentInvoker {
-    fun generate(request: BpmnRequest): BpmnResult
+    fun generate(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): BpmnResult
 
-    fun startAsync(request: BpmnRequest): String
+    fun startAsync(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): String
 }
 
 @Service
@@ -62,15 +68,11 @@ internal class BpmnGenerationService(
         val assessment = assessReadiness(request)
         return when (assessment.verdict) {
             ReadinessVerdict.READY -> {
-                performGeneration(request)
+                performGeneration(request, assessment)
             }
 
             ReadinessVerdict.NEEDS_CLARIFICATION -> {
                 blockedResult(request, assessment, BpmnGenerationStatus.NEEDS_CLARIFICATION)
-            }
-
-            ReadinessVerdict.NOT_A_PROCESS -> {
-                blockedResult(request, assessment, BpmnGenerationStatus.NOT_A_PROCESS)
             }
         }
     }
@@ -80,18 +82,12 @@ internal class BpmnGenerationService(
         val assessment = assessReadiness(request)
         return when (assessment.verdict) {
             ReadinessVerdict.READY -> {
-                StartGenerationOutcome.Started(agentInvoker.startAsync(request))
+                StartGenerationOutcome.Started(agentInvoker.startAsync(request, assessment))
             }
 
             ReadinessVerdict.NEEDS_CLARIFICATION -> {
                 StartGenerationOutcome.Blocked(
                     blockedResult(request, assessment, BpmnGenerationStatus.NEEDS_CLARIFICATION),
-                )
-            }
-
-            ReadinessVerdict.NOT_A_PROCESS -> {
-                StartGenerationOutcome.Blocked(
-                    blockedResult(request, assessment, BpmnGenerationStatus.NOT_A_PROCESS),
                 )
             }
         }
@@ -152,9 +148,12 @@ internal class BpmnGenerationService(
     }
 
     @Suppress("TooGenericExceptionCaught")
-    private fun performGeneration(request: BpmnRequest): BpmnResult =
+    private fun performGeneration(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): BpmnResult =
         try {
-            val result = agentInvoker.generate(request)
+            val result = agentInvoker.generate(request, assessment)
             logger.info(
                 "BPMN generation completed. outputFile={}, xmlLength={}",
                 result.outputFile,

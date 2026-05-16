@@ -72,7 +72,7 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `custom thresholds cap deterministic failures below ready threshold`() {
         val result =
-            BpmnReadinessPostChecker(BpmnReadinessConfig(readyThreshold = 50, clarificationThreshold = 20)).apply(
+            BpmnReadinessPostChecker(BpmnReadinessConfig(readyThreshold = 50)).apply(
                 BpmnRequest("Review the request"),
                 assessment(ReadinessVerdict.READY, 90),
             )
@@ -82,20 +82,26 @@ class BpmnReadinessPostCheckerTest {
     }
 
     @Test
-    fun `non-process text returns NOT_A_PROCESS`() {
+    fun `non-process text returns NEEDS_CLARIFICATION with a single guiding question`() {
         val result =
             checker.apply(
                 BpmnRequest("The dashboard should be blue and have three tabs."),
                 assessment(ReadinessVerdict.READY, 91),
             )
 
-        assertEquals(ReadinessVerdict.NOT_A_PROCESS, result.verdict)
-        assertTrue(result.overallScore < 40)
+        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.verdict)
+        assertTrue(result.overallScore < 75)
         assertTrue(MissingProcessArea.BPMN_PROCESS_SUITABILITY in result.missingAreas)
+        assertEquals(1, result.clarificationQuestions.size)
+        val question = result.clarificationQuestions.single()
+        assertTrue(question.questionText.contains("workflow"))
+        assertTrue(question.questionText.contains("sequence"))
+        assertTrue(MissingProcessArea.BPMN_PROCESS_SUITABILITY in question.relatedMissingAreas)
+        assertTrue(ReadinessDimension.BPMN_SUITABILITY in question.relatedDimensions)
     }
 
     @Test
-    fun `blank process text returns NOT_A_PROCESS without clarification questions`() {
+    fun `blank process text returns NEEDS_CLARIFICATION with a single guiding question`() {
         val result =
             checker.apply(
                 BpmnRequest(""),
@@ -114,8 +120,14 @@ class BpmnReadinessPostCheckerTest {
                 ),
             )
 
-        assertEquals(ReadinessVerdict.NOT_A_PROCESS, result.verdict)
-        assertTrue(result.clarificationQuestions.isEmpty())
+        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.verdict)
+        assertEquals(1, result.clarificationQuestions.size)
+        assertTrue(
+            result.clarificationQuestions
+                .single()
+                .questionText
+                .contains("workflow"),
+        )
     }
 
     @Test
@@ -141,6 +153,40 @@ class BpmnReadinessPostCheckerTest {
 
         assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.verdict)
         assertDimensionLowered(result, ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
+    }
+
+    @Test
+    fun `automated technical workflow returns READY`() {
+        val result =
+            checker.apply(
+                BpmnRequest(
+                    "When the request arrives, extract the contract, then validate the outline, " +
+                        "then render the BPMN, then repair invalid output, and finally the diagram " +
+                        "is generated.",
+                ),
+                assessment(ReadinessVerdict.READY, 88),
+            )
+
+        assertEquals(ReadinessVerdict.READY, result.verdict)
+        assertEquals(88, result.overallScore)
+        assertTrue(result.missingAreas.isEmpty(), "expected no missing areas, got ${result.missingAreas}")
+    }
+
+    @Test
+    fun `clinical workflow returns READY`() {
+        val result =
+            checker.apply(
+                BpmnRequest(
+                    "When the patient arrives, the nurse reviews the case, then the doctor " +
+                        "validates the diagnosis, then a prescription is generated, and the visit " +
+                        "is completed.",
+                ),
+                assessment(ReadinessVerdict.READY, 86),
+            )
+
+        assertEquals(ReadinessVerdict.READY, result.verdict)
+        assertEquals(86, result.overallScore)
+        assertTrue(result.missingAreas.isEmpty(), "expected no missing areas, got ${result.missingAreas}")
     }
 
     @Test

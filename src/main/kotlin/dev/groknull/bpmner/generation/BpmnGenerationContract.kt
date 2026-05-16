@@ -32,16 +32,15 @@ import jakarta.validation.Valid
 enum class BpmnGenerationStatus {
     GENERATED,
     NEEDS_CLARIFICATION,
-    NOT_A_PROCESS,
     ALIGNMENT_FAILED,
     VALIDATION_FAILED,
 }
 
 fun BpmnRequest.generationPrompt(): String =
     buildString {
-        appendLine("Generate a BPMN definition object for this business process.")
+        appendLine("Generate a BPMN definition object for this workflow.")
         appendLine()
-        appendLine("Business process description:")
+        appendLine("Workflow description:")
         appendLine(processDescription)
         if (clarificationHistory.isNotEmpty()) {
             appendLine()
