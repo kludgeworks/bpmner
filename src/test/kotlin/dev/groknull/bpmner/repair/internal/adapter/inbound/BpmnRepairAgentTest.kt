@@ -48,9 +48,11 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFact
 import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
+import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
+import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
 import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
@@ -65,6 +67,8 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogServi
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
+import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnXmlToDefinitionConverter
+import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -93,8 +97,16 @@ class BpmnRepairAgentTest {
             )
         val strategies =
             listOf(
-                LlmPatchRepairStrategy(promptFactory, patchApplier),
-                FullLlmRewriteRepairStrategy(promptFactory),
+                DeterministicTopologyRepairStrategy(
+                    lintService,
+                    xsdValidator,
+                    BpmnXmlToDefinitionConverter(),
+                    BpmnLocalModelFixHandlerRegistry(emptyList()),
+                    patchApplier,
+                ),
+                TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                LlmPatchRepairStrategy(config, promptFactory, patchApplier),
+                FullLlmRewriteRepairStrategy(config, promptFactory),
             )
         val refinementEngine =
             BpmnRefinementEngine(

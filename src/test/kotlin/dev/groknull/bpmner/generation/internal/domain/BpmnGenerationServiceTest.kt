@@ -34,6 +34,7 @@ import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.StartGenerationOutcome
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore

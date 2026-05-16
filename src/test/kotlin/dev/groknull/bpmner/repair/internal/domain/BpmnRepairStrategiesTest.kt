@@ -23,11 +23,17 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
+import com.embabel.agent.api.common.Actor
+import com.embabel.agent.api.common.OperationContext
+import com.embabel.common.ai.model.LlmOptions
 import dev.groknull.bpmner.core.BpmnBounds
+import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -60,13 +66,64 @@ import kotlin.test.assertTrue
 
 class BpmnRepairStrategiesTest {
     @Test
+    fun `TargetedLabelRepairStrategy routes through repair-label actor`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "label-rule", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH, scope = BpmnRepairScope.LABEL)),
+                operationContext = operationContext,
+            )
+
+        labelStrategy().repair(ctx)
+
+        val invocation = operationContext.llmInvocations.single()
+        val criteria = invocation.interaction.llm.criteria as ByRoleModelSelectionCriteria
+        assertEquals("repair-label", criteria.role)
+    }
+
+    @Test
+    fun `LlmPatchRepairStrategy routes through repair-patch actor`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "patch-rule", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH, scope = BpmnRepairScope.OUTLINE)),
+                operationContext = operationContext,
+            )
+
+        patchStrategy().repair(ctx)
+
+        val invocation = operationContext.llmInvocations.single()
+        val criteria = invocation.interaction.llm.criteria as ByRoleModelSelectionCriteria
+        assertEquals("repair-patch", criteria.role)
+    }
+
+    @Test
+    fun `FullLlmRewriteRepairStrategy routes through repair-rewrite actor`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(sampleDefinition())
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "rewrite-rule", elementId = "Task_1", kind = RepairKind.LLM_XML_REWRITE, scope = BpmnRepairScope.FULL_PROCESS)),
+                operationContext = operationContext,
+            )
+
+        fullRewriteStrategy().repair(ctx)
+
+        val invocation = operationContext.llmInvocations.single()
+        val criteria = invocation.interaction.llm.criteria as ByRoleModelSelectionCriteria
+        assertEquals("repair-rewrite", criteria.role)
+    }
+
+    @Test
     fun `LlmPatchRepairStrategy is NotApplicable when only LOCAL_XML diagnostics exist with no failed-local matches`() {
         val ctx =
             contextOf(
                 diagnostics = listOf(diag(rule = "bpmner/name-01", elementId = "Task_1", kind = RepairKind.LOCAL_XML_FIX)),
             )
 
-        val result = strategy().repair(ctx)
+        val result = patchStrategy().repair(ctx)
 
         assertIs<BpmnRepairResult.NotApplicable>(result)
     }
@@ -85,7 +142,7 @@ class BpmnRepairStrategiesTest {
                 operationContext = operationContext,
             )
 
-        strategy().repair(ctx)
+        patchStrategy().repair(ctx)
 
         val prompt =
             operationContext.llmInvocations
@@ -115,7 +172,7 @@ class BpmnRepairStrategiesTest {
                 operationContext = operationContext,
             )
 
-        strategy().repair(ctx)
+        patchStrategy().repair(ctx)
 
         val prompt =
             operationContext.llmInvocations
@@ -162,22 +219,31 @@ class BpmnRepairStrategiesTest {
         assertTrue(prompt.contains("rule=bpmner/name-02"))
     }
 
-    private fun strategy(): LlmPatchRepairStrategy {
+    private fun labelStrategy(): TargetedLabelRepairStrategy {
         val fingerprints = BpmnFingerprintService()
         val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
-        return LlmPatchRepairStrategy(factory, BpmnPatchApplier())
+        return TargetedLabelRepairStrategy(config(), factory, BpmnPatchApplier())
+    }
+
+    private fun patchStrategy(): LlmPatchRepairStrategy {
+        val fingerprints = BpmnFingerprintService()
+        val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
+        return LlmPatchRepairStrategy(config(), factory, BpmnPatchApplier())
     }
 
     private fun fullRewriteStrategy(): FullLlmRewriteRepairStrategy {
         val fingerprints = BpmnFingerprintService()
         val factory = BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
-        return FullLlmRewriteRepairStrategy(factory)
+        return FullLlmRewriteRepairStrategy(config(), factory)
     }
+
+    private fun config() = BpmnConfig()
 
     private fun diag(
         rule: String,
         elementId: String,
         kind: RepairKind,
+        scope: BpmnRepairScope = BpmnRepairScope.PHASE,
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = "violation of $rule",
@@ -185,7 +251,7 @@ class BpmnRepairStrategiesTest {
         category = "error",
         elementId = elementId,
         kind = kind,
-        repairScope = BpmnRepairScope.PHASE,
+        repairScope = scope,
     )
 
     private fun contextOf(
@@ -213,7 +279,8 @@ class BpmnRepairStrategiesTest {
             )
         return BpmnRepairStrategyContext(
             attempt = attempt,
-            promptRunner = operationContext.promptRunner(),
+            request = BpmnRequest("do thing"),
+            operationContext = operationContext,
             localOutcome = outcome,
         )
     }

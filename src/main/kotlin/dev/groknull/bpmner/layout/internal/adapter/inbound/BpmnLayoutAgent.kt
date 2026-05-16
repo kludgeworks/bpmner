@@ -50,7 +50,7 @@ import org.slf4j.LoggerFactory
  * Owns the post-repair pipeline: bounded pre-layout XML cleanup, auto-layout, and final validation.
  *
  * The `autoFixBpmnXml` action is intentionally narrow. It is **not** the main semantic repair loop
- * — that is `LintLocalRepairStrategy` plus the LLM strategies, which all run before this agent ever
+ * — that is `DeterministicTopologyRepairStrategy` plus the LLM strategies, which all run before this agent ever
  * sees the XML. This stage exists only to apply XML-local cleanup whose `RepairKind` is
  * `LOCAL_XML_FIX`, and it falls back to the input XML on any failure.
  */

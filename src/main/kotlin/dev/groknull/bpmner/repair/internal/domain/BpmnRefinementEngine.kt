@@ -204,12 +204,7 @@ internal class BpmnRefinementEngine(
         request: BpmnRequest,
         context: ActionContext,
     ): RepairStepResolution {
-        val repairPromptRunner =
-            promptRunner(context, request).let { runner ->
-                val docsPrompt = promptFactory.lintRuleDocsPrompt(attempt.diagnostics)
-                if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
-            }
-        val (result, localOutcome) = repairWithStrategies(attempt, repairPromptRunner)
+        val (result, localOutcome) = repairWithStrategies(attempt, request, context)
         return when (result) {
             is BpmnRepairResult.Repaired -> {
                 RepairStepResolution(result, localOutcome)
@@ -301,14 +296,16 @@ internal class BpmnRefinementEngine(
 
     private fun repairWithStrategies(
         attempt: BpmnRepairAttempt,
-        promptRunner: PromptRunner,
+        request: BpmnRequest,
+        operationContext: OperationContext,
     ): Pair<BpmnRepairResult, BpmnLocalRepairOutcome> {
         var localOutcome = BpmnLocalRepairOutcome.EMPTY
         for (strategy in strategies) {
             val strategyContext =
                 BpmnRepairStrategyContext(
                     attempt = attempt,
-                    promptRunner = promptRunner,
+                    request = request,
+                    operationContext = operationContext,
                     localOutcome = localOutcome,
                 )
             when (val result = strategy.repair(strategyContext)) {
@@ -389,7 +386,8 @@ internal class BpmnRefinementEngine(
     private fun promptRunner(
         context: OperationContext,
         request: BpmnRequest,
-    ): PromptRunner = config.repairer.promptRunner(context).withPromptContributor(request)
+        actor: com.embabel.agent.api.common.Actor<com.embabel.agent.prompt.persona.Persona>,
+    ): PromptRunner = actor.promptRunner(context).withPromptContributor(request)
 
     private fun failRefinement(
         maxEvaluations: Int,

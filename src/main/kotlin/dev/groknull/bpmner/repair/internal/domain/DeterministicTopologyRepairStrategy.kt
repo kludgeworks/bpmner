@@ -42,14 +42,14 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
-internal class LintLocalRepairStrategy(
+internal class DeterministicTopologyRepairStrategy(
     private val lintingPort: BpmnLintingPort,
     private val xsdValidationPort: BpmnXsdValidationPort,
     private val xmlParser: BpmnXmlParser,
     private val modelFixHandlerRegistry: BpmnLocalModelFixHandlerRegistry,
     private val patchApplier: BpmnPatchApplicationPort,
 ) : BpmnRepairStrategy {
-    private val logger = LoggerFactory.getLogger(LintLocalRepairStrategy::class.java)
+    private val logger = LoggerFactory.getLogger(DeterministicTopologyRepairStrategy::class.java)
 
     override fun getOrder(): Int = 75
 

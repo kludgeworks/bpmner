@@ -30,6 +30,7 @@ import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.StartGenerationOutcome
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -241,6 +242,15 @@ class BpmnShellCommandsTest {
                 status = BpmnGenerationStatus.GENERATED,
                 xml = "<definitions />",
             )
+        }
+
+        override fun startAsync(input: BpmnGenerationInput): StartGenerationOutcome {
+            val result = generate(input)
+            return if (result.status == BpmnGenerationStatus.GENERATED) {
+                StartGenerationOutcome.Started("p-42")
+            } else {
+                StartGenerationOutcome.Blocked(result)
+            }
         }
     }
 
