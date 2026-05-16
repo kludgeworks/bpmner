@@ -22,8 +22,6 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import com.embabel.agent.api.common.Actor
-import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
@@ -61,7 +59,10 @@ internal class TargetedLabelRepairStrategy(
         val runner = context.promptRunner(config.labelRepairer, promptFactory)
         val patch =
             try {
-                runner.createObject(feedback, BpmnRepairPatch::class.java)
+                runner.createObject(
+                    context.attempt.messages + UserMessage(feedback),
+                    BpmnRepairPatch::class.java,
+                )
             } catch (e: RuntimeException) {
                 logger.warn("LLM label patch creation failed: {}", e.message)
                 return BpmnRepairResult.NotApplicable
@@ -114,7 +115,10 @@ internal class LlmPatchRepairStrategy(
         val runner = context.promptRunner(config.patchRepairer, promptFactory)
         val patch =
             try {
-                runner.createObject(feedback, BpmnRepairPatch::class.java)
+                runner.createObject(
+                    context.attempt.messages + UserMessage(feedback),
+                    BpmnRepairPatch::class.java,
+                )
             } catch (e: RuntimeException) {
                 logger.warn("LLM patch creation failed: {}", e.message)
                 return BpmnRepairResult.NotApplicable
@@ -165,7 +169,10 @@ internal class FullLlmRewriteRepairStrategy(
         val runner = context.promptRunner(config.rewriteRepairer, promptFactory)
         val repaired =
             try {
-                runner.createObject(feedback, BpmnDefinition::class.java)
+                runner.createObject(
+                    context.attempt.messages + UserMessage(feedback),
+                    BpmnDefinition::class.java,
+                )
             } catch (e: RuntimeException) {
                 logger.warn("LLM rewrite failed: {}", e.message)
                 return BpmnRepairResult.NotApplicable
@@ -180,15 +187,6 @@ internal class FullLlmRewriteRepairStrategy(
     }
 }
 
-private fun BpmnRepairStrategyContext.promptRunner(
-    actor: Actor<Persona>,
-    promptFactory: BpmnRepairPromptPort,
-): PromptRunner {
-    val runner = actor.promptRunner(operationContext).withPromptContributor(request)
-    val docsPrompt = promptFactory.lintRuleDocsPrompt(attempt.diagnostics)
-    return if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
-}
-
 private fun eligibleForLlm(
     diagnostic: BpmnDiagnostic,
     localOutcome: BpmnLocalRepairOutcome,
@@ -197,4 +195,16 @@ private fun eligibleForLlm(
     val routedToLlm = kind == null || kind == RepairKind.LLM_MODEL_PATCH || kind == RepairKind.LLM_XML_REWRITE
     val failedLocally = localOutcome.matches(diagnostic) != null
     return routedToLlm || failedLocally
+}
+
+private fun BpmnRepairStrategyContext.promptRunner(
+    actor: Actor<Persona>,
+    promptFactory: BpmnRepairPromptPort,
+): PromptRunner {
+    val runner =
+        actor
+            .promptRunner(operationContext)
+            .withPromptContributor(request)
+    val docsPrompt = promptFactory.lintRuleDocsPrompt(attempt.diagnostics)
+    return if (docsPrompt != null) runner.withPromptContributor(docsPrompt) else runner
 }

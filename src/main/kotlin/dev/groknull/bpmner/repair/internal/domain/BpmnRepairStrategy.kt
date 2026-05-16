@@ -25,10 +25,10 @@ package dev.groknull.bpmner.repair.internal.domain
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.chat.Message
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.repair.BpmnLocalFixSummary
 import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.core.BpmnRequest
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import org.springframework.core.Ordered
 
