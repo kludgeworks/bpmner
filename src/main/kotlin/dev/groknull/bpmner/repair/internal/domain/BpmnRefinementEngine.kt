@@ -299,7 +299,7 @@ internal class BpmnRefinementEngine(
         operationContext: OperationContext,
     ): Pair<BpmnRepairResult, BpmnLocalRepairOutcome> {
         var localOutcome = BpmnLocalRepairOutcome.EMPTY
-        for (strategy in strategies) {
+        for (strategy in strategies.sortedBy { it.getOrder() }) {
             val strategyContext =
                 BpmnRepairStrategyContext(
                     attempt = attempt,
