@@ -24,7 +24,8 @@ package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import com.embabel.agent.api.event.AbstractAgentProcessEvent
 import com.embabel.agent.core.AgentProcess
-import dev.groknull.bpmner.core.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 
 class BpmnSnapshotEvent(
     process: AgentProcess,
@@ -33,8 +34,7 @@ class BpmnSnapshotEvent(
     val xml: String,
     val diagnostics: List<BpmnDiagnostic> = emptyList(),
 ) : AbstractAgentProcessEvent(process) {
-    // Adding structural counts to make it easier for the UI
-    val graphIssues: Int = diagnostics.count { it.source == dev.groknull.bpmner.core.BpmnDiagnosticSource.GRAPH }
-    val xsdIssues: Int = diagnostics.count { it.source == dev.groknull.bpmner.core.BpmnDiagnosticSource.XSD }
-    val lintIssues: Int = diagnostics.count { it.source == dev.groknull.bpmner.core.BpmnDiagnosticSource.LINT }
+    val graphIssues: Int = diagnostics.count { it.source == BpmnDiagnosticSource.GRAPH }
+    val xsdIssues: Int = diagnostics.count { it.source == BpmnDiagnosticSource.XSD }
+    val lintIssues: Int = diagnostics.count { it.source == BpmnDiagnosticSource.LINT }
 }
