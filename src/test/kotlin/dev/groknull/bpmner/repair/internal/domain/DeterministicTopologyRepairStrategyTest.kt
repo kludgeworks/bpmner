@@ -113,6 +113,53 @@ class DeterministicTopologyRepairStrategyTest {
         assertEquals(1, result.localFixSummary?.modelApplied)
     }
 
+    @Test
+    fun `auto-fix that produces XSD-invalid XML returns NotApplicable and skips parsing`() {
+        val parser = FakeXmlParser(otherValidDefinition())
+        val lint =
+            FakeLintingPort(
+                autoFixResult =
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<broken/>",
+                        applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+                    ),
+            )
+        val xsd = FakeXsdValidationPort(issues = listOf(XsdValidationIssue("cvc-something")))
+        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
+        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+
+        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
+        assertEquals(1, xsd.calls)
+        assertEquals(0, parser.calls)
+    }
+
+    @Test
+    fun `auto-fix errors return LocalAttemptedNoChange carrying failure records and skip XSD or parser`() {
+        val parser = FakeXmlParser(otherValidDefinition())
+        val xsd = FakeXsdValidationPort(issues = emptyList())
+        val lint =
+            FakeLintingPort(
+                autoFixResult =
+                    BpmnAutoFixResult(
+                        changed = false,
+                        xml = "<unchanged/>",
+                        errors = listOf(BpmnAutoFixError("bpmner/name-01", "Task_1", "handler boom")),
+                    ),
+            )
+        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
+        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+
+        val result = assertIs<BpmnRepairResult.LocalAttemptedNoChange>(strategy.repair(context))
+        val failure = result.outcome.failures.single()
+        assertEquals(1, result.outcome.failures.size)
+        assertEquals("bpmner/name-01", failure.rule)
+        assertEquals("Task_1", failure.elementId)
+        assertEquals("handler boom", failure.reason)
+        assertEquals(0, xsd.calls)
+        assertEquals(0, parser.calls)
+    }
+
     private fun strategy(
         lint: BpmnLintingPort = FakeLintingPort(),
         xsd: BpmnXsdValidationPort = FakeXsdValidationPort(),
@@ -143,9 +190,10 @@ class DeterministicTopologyRepairStrategyTest {
                         diagnostics = diagnostics,
                         globalDiagnostics = GlobalDiagnostics(diagnostics),
                         validatedXml = null,
-                        rawLintIssues = diagnostics
-                            .filter { it.source == BpmnDiagnosticSource.LINT }
-                            .mapNotNull { d -> d.rule?.let { LintIssue(id = d.elementId, rule = it, message = d.message) } },
+                        rawLintIssues =
+                            diagnostics
+                                .filter { it.source == BpmnDiagnosticSource.LINT }
+                                .mapNotNull { d -> d.rule?.let { LintIssue(id = d.elementId, rule = it, message = d.message) } },
                     ),
                 messages = emptyList(),
             )

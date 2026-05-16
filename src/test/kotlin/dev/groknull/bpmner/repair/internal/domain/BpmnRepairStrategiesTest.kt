@@ -22,10 +22,10 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import com.embabel.agent.test.unit.FakeOperationContext
-import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.test.unit.FakeOperationContext
+import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
 import com.embabel.common.ai.model.LlmOptions
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnConfig
@@ -71,7 +71,15 @@ class BpmnRepairStrategiesTest {
         operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "label-rule", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH, scope = BpmnRepairScope.LABEL)),
+                diagnostics =
+                    listOf(
+                        diag(
+                            rule = "label-rule",
+                            elementId = "Task_1",
+                            kind = RepairKind.LLM_MODEL_PATCH,
+                            scope = BpmnRepairScope.LABEL,
+                        ),
+                    ),
                 operationContext = operationContext,
             )
 
@@ -88,7 +96,15 @@ class BpmnRepairStrategiesTest {
         operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "patch-rule", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH, scope = BpmnRepairScope.OUTLINE)),
+                diagnostics =
+                    listOf(
+                        diag(
+                            rule = "patch-rule",
+                            elementId = "Task_1",
+                            kind = RepairKind.LLM_MODEL_PATCH,
+                            scope = BpmnRepairScope.OUTLINE,
+                        ),
+                    ),
                 operationContext = operationContext,
             )
 
@@ -105,7 +121,15 @@ class BpmnRepairStrategiesTest {
         operationContext.expectResponse(sampleDefinition())
         val ctx =
             contextOf(
-                diagnostics = listOf(diag(rule = "rewrite-rule", elementId = "Task_1", kind = RepairKind.LLM_XML_REWRITE, scope = BpmnRepairScope.FULL_PROCESS)),
+                diagnostics =
+                    listOf(
+                        diag(
+                            rule = "rewrite-rule",
+                            elementId = "Task_1",
+                            kind = RepairKind.LLM_XML_REWRITE,
+                            scope = BpmnRepairScope.FULL_PROCESS,
+                        ),
+                    ),
                 operationContext = operationContext,
             )
 

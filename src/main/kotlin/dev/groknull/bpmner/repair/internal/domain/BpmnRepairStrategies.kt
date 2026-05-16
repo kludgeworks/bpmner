@@ -45,8 +45,11 @@ internal class TargetedLabelRepairStrategy(
     private val promptFactory: BpmnRepairPromptPort,
     private val patchApplier: BpmnPatchApplicationPort,
 ) : BpmnRepairStrategy {
+    private val logger = LoggerFactory.getLogger(TargetedLabelRepairStrategy::class.java)
+
     override fun getOrder(): Int = 150
 
+    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -56,7 +59,13 @@ internal class TargetedLabelRepairStrategy(
 
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
         val runner = context.promptRunner(config.labelRepairer, promptFactory)
-        val patch = runner.createObject(feedback, BpmnRepairPatch::class.java)
+        val patch =
+            try {
+                runner.createObject(feedback, BpmnRepairPatch::class.java)
+            } catch (e: RuntimeException) {
+                logger.warn("LLM label patch creation failed: {}", e.message)
+                return BpmnRepairResult.NotApplicable
+            }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -70,9 +79,7 @@ internal class TargetedLabelRepairStrategy(
             }
 
             is PatchApplicationResult.Failure -> {
-                LoggerFactory
-                    .getLogger(this::class.java)
-                    .warn("LLM label patch application failed, falling back: {}", application.reason)
+                logger.warn("LLM label patch application failed, falling back: {}", application.reason)
                 BpmnRepairResult.NotApplicable
             }
 
@@ -90,8 +97,11 @@ internal class LlmPatchRepairStrategy(
     private val promptFactory: BpmnRepairPromptPort,
     private val patchApplier: BpmnPatchApplicationPort,
 ) : BpmnRepairStrategy {
+    private val logger = LoggerFactory.getLogger(LlmPatchRepairStrategy::class.java)
+
     override fun getOrder(): Int = 200
 
+    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -102,7 +112,13 @@ internal class LlmPatchRepairStrategy(
 
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
         val runner = context.promptRunner(config.patchRepairer, promptFactory)
-        val patch = runner.createObject(feedback, BpmnRepairPatch::class.java)
+        val patch =
+            try {
+                runner.createObject(feedback, BpmnRepairPatch::class.java)
+            } catch (e: RuntimeException) {
+                logger.warn("LLM patch creation failed: {}", e.message)
+                return BpmnRepairResult.NotApplicable
+            }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -116,9 +132,7 @@ internal class LlmPatchRepairStrategy(
             }
 
             is PatchApplicationResult.Failure -> {
-                LoggerFactory
-                    .getLogger(this::class.java)
-                    .warn("LLM patch application failed, falling back: {}", application.reason)
+                logger.warn("LLM patch application failed, falling back: {}", application.reason)
                 BpmnRepairResult.NotApplicable
             }
 
@@ -135,8 +149,11 @@ internal class FullLlmRewriteRepairStrategy(
     private val config: BpmnConfig,
     private val promptFactory: BpmnRepairPromptPort,
 ) : BpmnRepairStrategy {
+    private val logger = LoggerFactory.getLogger(FullLlmRewriteRepairStrategy::class.java)
+
     override fun getOrder(): Int = 300
 
+    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -146,7 +163,13 @@ internal class FullLlmRewriteRepairStrategy(
 
         val feedback = promptFactory.fullRepairFeedback(context.attempt, candidates, context.localOutcome)
         val runner = context.promptRunner(config.rewriteRepairer, promptFactory)
-        val repaired = runner.createObject(feedback, BpmnDefinition::class.java)
+        val repaired =
+            try {
+                runner.createObject(feedback, BpmnDefinition::class.java)
+            } catch (e: RuntimeException) {
+                logger.warn("LLM rewrite failed: {}", e.message)
+                return BpmnRepairResult.NotApplicable
+            }
 
         return BpmnRepairResult.Repaired(
             definition = repaired,
