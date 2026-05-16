@@ -86,13 +86,6 @@ class BpmnGeneratorRunner(
                 )
             }
 
-            BpmnGenerationStatus.NOT_A_PROCESS -> {
-                AnsiOutput.toString(
-                    AnsiColor.BRIGHT_YELLOW,
-                    "⚠ Generation blocked: input is not a process. Readiness report: ${result.reportFile ?: "(not written)"}",
-                )
-            }
-
             BpmnGenerationStatus.ALIGNMENT_FAILED,
             BpmnGenerationStatus.VALIDATION_FAILED,
             -> {

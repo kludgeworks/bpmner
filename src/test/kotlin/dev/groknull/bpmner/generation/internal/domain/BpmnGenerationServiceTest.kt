@@ -176,9 +176,9 @@ class BpmnGenerationServiceTest {
     }
 
     @Test
-    fun `blocks generation and writes report when input is not a process`() {
+    fun `blocks generation and writes report when input lacks workflow signal`() {
         val invoker = CapturingBpmnAgentInvoker()
-        val assessment = assessment(ReadinessVerdict.NOT_A_PROCESS, 20)
+        val assessment = assessment(ReadinessVerdict.NEEDS_CLARIFICATION, 20)
         val readiness = StubReadinessInvoker(assessment)
         val reportWriter = CapturingReportWriter(reportPath = tempDir.resolve("haiku.bpmn.readiness.md").toString())
         val service = service(invoker, readiness, reportWriter)
@@ -191,7 +191,7 @@ class BpmnGenerationServiceTest {
                 ),
             )
 
-        assertEquals(BpmnGenerationStatus.NOT_A_PROCESS, result.status)
+        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION, result.status)
         assertNull(result.xml)
         assertNotNull(result.readinessReport)
         assertEquals(tempDir.resolve("haiku.bpmn.readiness.md").toString(), result.reportFile)
@@ -295,7 +295,10 @@ class BpmnGenerationServiceTest {
         val lastRequest: BpmnRequest
             get() = calls.last()
 
-        override fun generate(request: BpmnRequest): BpmnResult {
+        override fun generate(
+            request: BpmnRequest,
+            assessment: ProcessInputAssessment,
+        ): BpmnResult {
             calls += request
             return BpmnResult(
                 outputFile = request.outputFile,
@@ -304,14 +307,20 @@ class BpmnGenerationServiceTest {
             )
         }
 
-        override fun startAsync(request: BpmnRequest): String {
+        override fun startAsync(
+            request: BpmnRequest,
+            assessment: ProcessInputAssessment,
+        ): String {
             asyncStarts += request
             return startAsyncProcessId
         }
     }
 
     private class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
-        override fun generate(request: BpmnRequest): BpmnResult =
+        override fun generate(
+            request: BpmnRequest,
+            assessment: ProcessInputAssessment,
+        ): BpmnResult =
             throw BpmnAlignmentException(
                 message = "Alignment failed.",
                 report =
@@ -322,7 +331,10 @@ class BpmnGenerationServiceTest {
                     ),
             )
 
-        override fun startAsync(request: BpmnRequest): String = error("Not implemented for alignment-failing fixture")
+        override fun startAsync(
+            request: BpmnRequest,
+            assessment: ProcessInputAssessment,
+        ): String = error("Not implemented for alignment-failing fixture")
     }
 
     private class StubReadinessInvoker(

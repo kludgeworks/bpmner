@@ -1,6 +1,6 @@
 # bpmner
 
-Generates valid, semantically-grounded BPMN 2.0 XML from plain-language business process descriptions.
+Generates valid, semantically-grounded BPMN 2.0 XML from plain-language workflow descriptions — business, automated, technical, scientific, or personal.
 
 `bpmner` is more than a simple BPMN generator. It is a high-integrity modeling assistant that bridges the gap between ambiguous human language and technical process standards. Built on the [Embabel](https://github.com/embabel/embabel-agent) agentic framework, it employs a defense-in-depth pipeline to ensure every generated diagram is not only syntactically correct but also semantically aligned with user intent.
 

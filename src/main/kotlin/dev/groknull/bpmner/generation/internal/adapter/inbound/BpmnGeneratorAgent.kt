@@ -47,6 +47,7 @@ import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -56,7 +57,7 @@ import org.springframework.context.ApplicationEventPublisher
 import java.io.File
 
 @PrimaryAdapter
-@Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language business process description")
+@Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language workflow description")
 internal class BpmnGeneratorAgent(
     private val config: BpmnConfig,
     private val bpmnConverter: BpmnRenderer,
@@ -225,7 +226,12 @@ internal class BpmnGeneratorAgent(
 
     @AchievesGoal(
         description = "Return validated BPMN 2.0 XML and optionally write it to the requested output file",
-        export = Export(name = "generateBpmn", remote = true, startingInputTypes = [BpmnRequest::class]),
+        export =
+            Export(
+                name = "generateBpmn",
+                remote = true,
+                startingInputTypes = [BpmnRequest::class, ProcessInputAssessment::class],
+            ),
     )
     @Action(description = "Return the layouted BPMN XML and write to disk if requested")
     fun finalizeBpmn(

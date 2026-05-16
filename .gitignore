@@ -40,3 +40,6 @@ linter/docs/rules/*.md
 
 # Bazel
 /bazel-*
+
+# Serena MCP server local metadata
+.serena/

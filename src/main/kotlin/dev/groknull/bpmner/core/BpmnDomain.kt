@@ -38,7 +38,7 @@ enum class GenerationMode {
 }
 
 data class BpmnRequest(
-    @get:JsonPropertyDescription("Natural-language description of the business process to model")
+    @get:JsonPropertyDescription("Natural-language description of the workflow to model")
     val processDescription: String,
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
     val styleGuide: String? = null,
@@ -53,15 +53,16 @@ data class BpmnRequest(
         buildString {
             appendLine(
                 """
-                You are a BPMN process design expert. Given a business process description, generate
-                a typed BPMN process definition object that can be converted to valid BPMN 2.0 XML.
+                You are a BPMN process design expert. Given a workflow description — business, automated,
+                technical, scientific, or personal — generate a typed BPMN process definition object that
+                can be converted to valid BPMN 2.0 XML.
 
                 Rules:
                 - Return a single process definition object with processId, processName, nodes, and sequences.
                 - Every node id and sequence id must be unique.
                 - Every sequence sourceRef and targetRef must reference an existing node id.
                 - Include at least one START_EVENT and one END_EVENT.
-                - Use clear, descriptive business names on tasks and events.
+                - Use clear, descriptive names on tasks and events that faithfully reflect the source workflow.
                 - Name diverging gateways as decision questions; leave converging gateways unnamed.
                 - Keep process topology coherent with no dangling references or self-loop sequence flows.
                 - Every node must include explicit bounds with x, y, width, and height.

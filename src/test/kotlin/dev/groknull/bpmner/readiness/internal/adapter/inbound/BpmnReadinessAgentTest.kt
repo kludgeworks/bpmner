@@ -48,7 +48,7 @@ class BpmnReadinessAgentTest {
                 context,
             )
 
-        assertEquals(ReadinessVerdict.NOT_A_PROCESS, result.verdict)
+        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, result.verdict)
         assertEquals(1, context.llmInvocations.size)
     }
 

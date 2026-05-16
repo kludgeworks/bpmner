@@ -43,7 +43,7 @@ internal class BpmnContractGenerationPromptFactory {
                     " exception or rework paths, and end states.",
             )
             appendLine("- Represent actors only where current BPMN DTOs allow, usually in task names.")
-            appendLine("- Do not add unsupported business tasks, decisions, branches, actors, or end states.")
+            appendLine("- Do not add unsupported tasks, decisions, branches, actors, or end states.")
             appendLine(
                 "- You may infer layout coordinates, waypoints, sequence flows," +
                     " and routing-only converging gateways needed for valid BPMN.",

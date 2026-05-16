@@ -37,9 +37,6 @@ internal class BpmnReadinessPostChecker(
     private val clarificationCeiling: Int
         get() = config.readyThreshold - 1
 
-    private val notAProcessCeiling: Int
-        get() = config.clarificationThreshold - 1
-
     @Suppress("LongMethod")
     fun apply(
         request: BpmnRequest,
@@ -89,21 +86,21 @@ internal class BpmnReadinessPostChecker(
             dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
         }
         if (!hasProcessVerb) {
-            overallScore = minOf(overallScore, notAProcessCeiling)
+            overallScore = minOf(overallScore, clarificationCeiling)
             missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
             dimensions.lower(
                 dimension = ReadinessDimension.BPMN_SUITABILITY,
                 missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
-                scoreCeiling = notAProcessCeiling,
             )
         }
 
-        val verdict = verdictFor(overallScore, hasProcessVerb)
+        val verdict = verdictFor(overallScore)
         val questions =
             normalizeQuestions(
                 questions = assessment.clarificationQuestions,
                 missingAreas = missingAreas.toList(),
                 verdict = verdict,
+                hasProcessVerb = hasProcessVerb,
             )
 
         return assessment.copy(
@@ -137,23 +134,22 @@ internal class BpmnReadinessPostChecker(
         )
     }
 
-    private fun verdictFor(
-        overallScore: Int,
-        hasProcessVerb: Boolean,
-    ): ReadinessVerdict =
-        when {
-            !hasProcessVerb -> ReadinessVerdict.NOT_A_PROCESS
-            overallScore >= config.readyThreshold -> ReadinessVerdict.READY
-            overallScore >= config.clarificationThreshold -> ReadinessVerdict.NEEDS_CLARIFICATION
-            else -> ReadinessVerdict.NOT_A_PROCESS
+    private fun verdictFor(overallScore: Int): ReadinessVerdict =
+        if (overallScore >= config.readyThreshold) {
+            ReadinessVerdict.READY
+        } else {
+            ReadinessVerdict.NEEDS_CLARIFICATION
         }
 
     private fun normalizeQuestions(
         questions: List<ClarificationQuestion>,
         missingAreas: List<MissingProcessArea>,
         verdict: ReadinessVerdict,
+        hasProcessVerb: Boolean,
     ): List<ClarificationQuestion> {
-        if (verdict == ReadinessVerdict.NOT_A_PROCESS) return emptyList()
+        if (verdict == ReadinessVerdict.NEEDS_CLARIFICATION && !hasProcessVerb) {
+            return listOf(guidingWorkflowQuestion())
+        }
 
         val normalizedQuestions =
             questions.mapIndexed { index, question ->
@@ -176,6 +172,14 @@ internal class BpmnReadinessPostChecker(
             .filter { it.relatedMissingAreas.isNotEmpty() && it.relatedDimensions.isNotEmpty() }
             .take(config.maxClarificationQuestions)
     }
+
+    private fun guidingWorkflowQuestion(): ClarificationQuestion =
+        ClarificationQuestion(
+            id = "q1",
+            questionText = "Could you describe the workflow as a sequence of steps with a clear start and end?",
+            relatedMissingAreas = listOf(MissingProcessArea.BPMN_PROCESS_SUITABILITY),
+            relatedDimensions = listOf(ReadinessDimension.BPMN_SUITABILITY),
+        )
 
     private fun questionFor(
         number: Int,
@@ -234,9 +238,12 @@ internal class BpmnReadinessPostChecker(
         const val DEFAULT_DIMENSION_SCORE = 50
         const val MISSING_DIMENSION_CEILING = 40
 
-        // Deliberately conservative heuristic fallback; the model assessment remains the primary signal.
+        // Domain-broad heuristic fallback covering business, automated, technical, scientific, and
+        // personal workflows. The model assessment remains the primary signal; these markers are the
+        // floor the deterministic post-check uses to detect workflow signal.
         val PROCESS_VERBS =
             listOf(
+                // Business / operational
                 "approve",
                 "review",
                 "submit",
@@ -261,18 +268,89 @@ internal class BpmnReadinessPostChecker(
                 "escalate",
                 "assign",
                 "close",
+                // Technical / automated / pipeline
+                "build",
+                "compile",
+                "compose",
+                "deploy",
+                "dispatch",
+                "emit",
+                "extract",
+                "fetch",
+                "finalize",
+                "forward",
+                "import",
+                "ingest",
+                "merge",
+                "parse",
+                "produce",
+                "refine",
+                "render",
+                "repair",
+                "retrieve",
+                "route",
+                "store",
+                "transform",
+                "transmit",
+                "verify",
             ).map { Regex("\\b${it}\\w*\\b") }
 
         val START_TRIGGER_MARKERS =
-            listOf("when", "after", "once", "starts", "begins", "receives", "submitted", "requested")
-                .map { Regex("\\b$it\\b") }
+            listOf(
+                "when",
+                "after",
+                "once",
+                "starts",
+                "begins",
+                "receives",
+                "submitted",
+                "requested",
+                "triggered",
+                "on",
+                "upon",
+                "fires",
+                "arrives",
+                "invoked",
+                "called",
+            ).map { Regex("\\b$it\\b") }
 
         val END_STATE_MARKERS =
-            listOf("ends", "complete", "completed", "closed", "shipped", "paid", "rejected", "approved", "archived")
-                .map { Regex("\\b$it\\b") }
+            listOf(
+                "ends",
+                "complete",
+                "completed",
+                "closed",
+                "shipped",
+                "paid",
+                "rejected",
+                "approved",
+                "archived",
+                "returned",
+                "emitted",
+                "produced",
+                "finalized",
+                "generated",
+                "delivered",
+                "done",
+                "terminates",
+                "terminated",
+            ).map { Regex("\\b$it\\b") }
 
         val SEQUENCE_MARKERS =
-            listOf("then", "next", "after", "before", "if", "otherwise", "finally", "once")
-                .map { Regex("\\b$it\\b") }
+            listOf(
+                "then",
+                "next",
+                "after",
+                "before",
+                "if",
+                "otherwise",
+                "finally",
+                "once",
+                "subsequently",
+                "meanwhile",
+                "until",
+                "whereupon",
+                "following",
+            ).map { Regex("\\b$it\\b") }
     }
 }

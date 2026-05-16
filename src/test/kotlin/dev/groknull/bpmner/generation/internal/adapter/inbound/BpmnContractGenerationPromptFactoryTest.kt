@@ -68,7 +68,7 @@ class BpmnContractGenerationPromptFactoryTest {
         assertTrue(prompt.contains("- end-rejected: Claim rejected"))
         assertTrue(prompt.contains("- assume-cutoff: Claims after cutoff move to next business day"))
         assertTrue(prompt.contains("Use sentence case task names."))
-        assertTrue(prompt.contains("Do not add unsupported business tasks, decisions, branches, actors, or end states."))
+        assertTrue(prompt.contains("Do not add unsupported tasks, decisions, branches, actors, or end states."))
         assertTrue(prompt.contains("layout coordinates, waypoints, sequence flows"))
         assertTrue(prompt.contains("routing-only converging gateways"))
         assertTrue(prompt.contains("Leave routing-only converging gateways unnamed."))

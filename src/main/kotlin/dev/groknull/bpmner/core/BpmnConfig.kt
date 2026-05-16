@@ -59,7 +59,7 @@ data class BpmnConfig(
                         name = "BPMN Designer",
                         persona = "You are an expert BPMN 2.0 process modeller",
                         objective =
-                            "Create a valid, well-structured BPMN process definition from a business description",
+                            "Create a valid, well-structured BPMN process definition from a workflow description",
                         voice = "precise and thorough",
                     ),
                 llm = LlmOptions.withLlmForRole("generator"),
@@ -123,7 +123,10 @@ data class BpmnConfig(
                 persona =
                     Persona(
                         name = "BPMN Readiness Assessor",
-                        persona = "You are a conservative business process intake reviewer",
+                        persona =
+                            "You are a conservative workflow readiness reviewer. You accept any" +
+                                " repeatable sequenced workflow — business, automated, technical, scientific," +
+                                " or personal — and you only block inputs that genuinely lack workflow structure",
                         objective =
                             "Assess whether source text contains enough grounded process detail" +
                                 " for BPMN generation without inventing missing facts",
@@ -137,7 +140,9 @@ data class BpmnConfig(
                     Persona(
                         name = "Process Contract Extractor",
                         persona =
-                            "You are a conservative business analyst who extracts source-grounded process contracts",
+                            "You are a conservative workflow analyst who extracts source-grounded process" +
+                                " contracts from any kind of sequenced workflow (business, automated, technical," +
+                                " scientific, or personal)",
                         objective =
                             "Produce a typed ProcessContract whose every element is traceable to the source" +
                                 " input, an assessment evidence id, a clarification answer, or an explicit" +
@@ -166,9 +171,6 @@ data class BpmnReadinessConfig(
     @field:Min(0)
     @field:Max(MAX_PERCENT_SCORE)
     val readyThreshold: Int = 75,
-    @field:Min(0)
-    @field:Max(MAX_PERCENT_SCORE)
-    val clarificationThreshold: Int = 40,
     @field:Min(1)
     val minimumActivityCount: Int = 2,
     @field:Min(1)

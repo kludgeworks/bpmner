@@ -90,19 +90,19 @@ class BpmnGeneratorRunnerTest {
     }
 
     @Test
-    fun `prints not-a-process message with readiness report path`() {
+    fun `prints clarification message even for inputs without workflow signal`() {
         val message =
             messageOnResult(
                 BpmnResult(
                     outputFile = null,
-                    status = BpmnGenerationStatus.NOT_A_PROCESS,
+                    status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
                     xml = null,
-                    reportFile = "/tmp/not-a-process.readiness.md",
+                    reportFile = "/tmp/no-workflow.readiness.md",
                 ),
             )
 
-        assertTrue(message.contains("not a process"), "expected not-a-process phrasing, got: $message")
-        assertTrue(message.contains("/tmp/not-a-process.readiness.md"), "expected report path, got: $message")
+        assertTrue(message.contains("needs clarification"), "expected clarification phrasing, got: $message")
+        assertTrue(message.contains("/tmp/no-workflow.readiness.md"), "expected report path, got: $message")
     }
 
     @Test
