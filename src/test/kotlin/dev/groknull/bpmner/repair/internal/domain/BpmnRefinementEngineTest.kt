@@ -89,9 +89,10 @@ class BpmnRefinementEngineTest {
         val patchApplier = BpmnPatchApplier()
         val strategies =
             mutableListOf<BpmnRepairStrategy>(
-                FullLlmRewriteRepairStrategy(prompts),
-                LlmPatchRepairStrategy(prompts, patchApplier),
-                LintLocalRepairStrategy(
+                FullLlmRewriteRepairStrategy(config, prompts),
+                LlmPatchRepairStrategy(config, prompts, patchApplier),
+                TargetedLabelRepairStrategy(config, prompts, patchApplier),
+                DeterministicTopologyRepairStrategy(
                     lint,
                     xsd,
                     parser,
@@ -104,7 +105,8 @@ class BpmnRefinementEngineTest {
 
         assertEquals(
             listOf(
-                LintLocalRepairStrategy::class,
+                DeterministicTopologyRepairStrategy::class,
+                TargetedLabelRepairStrategy::class,
                 LlmPatchRepairStrategy::class,
                 FullLlmRewriteRepairStrategy::class,
             ),
@@ -349,7 +351,7 @@ class BpmnRefinementEngineTest {
             fingerprints = fingerprints,
             strategies =
                 listOf(
-                    LintLocalRepairStrategy(
+                    DeterministicTopologyRepairStrategy(
                         lintService,
                         xsdValidator,
                         xmlParser,
@@ -363,8 +365,9 @@ class BpmnRefinementEngineTest {
                         ),
                         patchApplier,
                     ),
-                    LlmPatchRepairStrategy(promptFactory, patchApplier),
-                    FullLlmRewriteRepairStrategy(promptFactory),
+                    TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                    LlmPatchRepairStrategy(config, promptFactory, patchApplier),
+                    FullLlmRewriteRepairStrategy(config, promptFactory),
                 ),
             eventPublisher = NoOpEventPublisher,
         )

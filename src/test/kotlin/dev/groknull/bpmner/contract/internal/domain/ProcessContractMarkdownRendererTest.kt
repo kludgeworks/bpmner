@@ -30,7 +30,7 @@ import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
 import kotlin.test.Test

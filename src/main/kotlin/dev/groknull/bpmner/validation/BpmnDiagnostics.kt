@@ -32,6 +32,7 @@ enum class BpmnDiagnosticSource {
 }
 
 enum class BpmnRepairScope {
+    LABEL,
     OUTLINE,
     PHASE,
     COMPOSITION,
