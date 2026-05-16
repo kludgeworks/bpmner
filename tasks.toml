@@ -1,0 +1,117 @@
+# Copyright (c) 2026 The Project Contributors
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+#:schema https://mise.jdx.dev/schema/mise-task.json
+
+[tasks.gh-models]
+description = "List the GitHub Models catalog (table / CSV / JSON) [nushell]"
+tools = { "github:nushell/nushell" = "latest" }
+usage = '''
+flag "-f --format <format>" help="Output format" default="table" {
+  choices "table" "csv" "json"
+}
+flag "-p --publisher <publisher>" help="Filter by publisher name (case-insensitive)"
+'''
+run = '''
+#!/usr/bin/env nu
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+# Accepts int or nothing (null fields in the API response)
+def humanize [n] {
+  if ($n == null) {
+    "-"
+  } else if ($n >= 1_000_000) {
+    $"(($n / 1_000_000 | math round))M"
+  } else if ($n >= 1_000) {
+    $"(($n / 1_000 | math round))K"
+  } else {
+    $"($n)"
+  }
+}
+
+def shorten-caps [caps: list<string>] {
+  $caps | each {|c|
+    $c | str replace "tool-calling" "tools"
+       | str replace "streaming"    "stream"
+  } | str join "+"
+}
+
+# ── args (injected by mise from the `usage` field above) ─────────────────────
+let format    = ($env | get -o usage_format    | default "table")
+let publisher = ($env | get -o usage_publisher | default "")
+
+# ── fetch ─────────────────────────────────────────────────────────────────────
+let token = (gh auth token | str trim)
+
+# URL must be on the same line as `http get` — nushell parses a bare string
+# literal on its own line as a new pipeline stage, not a positional argument.
+let url = "https://models.github.ai/catalog/models"
+let models = (http get --headers {
+  Accept:                 "application/vnd.github+json"
+  Authorization:          $"Bearer ($token)"
+  "X-GitHub-Api-Version": "2026-03-10"
+} $url)
+
+# ── filter + sort ─────────────────────────────────────────────────────────────
+let filtered = if ($publisher | is-empty) {
+  $models
+} else {
+  $models | where {|m|
+    ($m.publisher | str downcase | str contains ($publisher | str downcase))
+  }
+}
+
+let sorted = $filtered | sort-by publisher name
+
+# ── render ────────────────────────────────────────────────────────────────────
+if $format == "json" {
+
+  $sorted | to json
+
+} else if $format == "csv" {
+
+  $sorted | each {|m| {
+    id:                $m.id
+    name:              $m.name
+    publisher:         $m.publisher
+    rate_limit_tier:   ($m.rate_limit_tier? | default "-")
+    max_input_tokens:  $m.limits.max_input_tokens
+    max_output_tokens: $m.limits.max_output_tokens
+    capabilities:      ($m.capabilities | str join "+")
+    input_modalities:  ($m.supported_input_modalities | str join "+")
+    output_modalities: ($m.supported_output_modalities | str join "+")
+    tags:              ($m.tags | str join "+")
+  }} | to csv
+
+} else {
+
+  $sorted | each {|m| {
+    id:        $m.id
+    tier:      ($m.rate_limit_tier? | default "-")
+    "ctx-in":  (humanize $m.limits.max_input_tokens)
+    "ctx-out": (humanize $m.limits.max_output_tokens)
+    caps:      (shorten-caps $m.capabilities)
+    inputs:    ($m.supported_input_modalities | str join "+")
+    tags:      ($m.tags | str join ",")
+  }} | table
+
+}
+'''

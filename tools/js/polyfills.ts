@@ -1,3 +1,25 @@
+/**
+ * Copyright (c) 2026 The Project Contributors
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 // GraalJS runs this bundle without Node globals, so we inject only the
 // minimal shims required by the bundled dependencies.
 
@@ -44,7 +66,9 @@ export function installPolyfills() {
 		graalGlobal.atob = (input: string) => {
 			try {
 				const Base64 = Java.type("java.util.Base64") as JavaBase64
-				const JavaString = Java.type("java.lang.String") as JavaStringConstructor
+				const JavaString = Java.type(
+					"java.lang.String",
+				) as JavaStringConstructor
 				const StandardCharsets = Java.type(
 					"java.nio.charset.StandardCharsets",
 				) as JavaCharsets
@@ -57,8 +81,8 @@ export function installPolyfills() {
 			} catch (_error) {
 				// Node-based smoke tests run without Java interop.
 				// In Node, global Buffer is available.
-				return (globalThis as any).Buffer.from(input, "base64").toString(
-					"binary",
+				return (
+					graalGlobal.Buffer?.from(input, "base64").toString("binary") ?? ""
 				)
 			}
 		}
