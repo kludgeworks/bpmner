@@ -50,7 +50,7 @@ data class BpmnConfig(
                             "Fix naming and label capitalization rules by providing targeted node and edge patches",
                         voice = "concise and exact",
                     ),
-                llm = LlmOptions.withLlmForRole("label-repairer"),
+                llm = LlmOptions.withLlmForRole("repair-label"),
             )
 
         val DEFAULT_PATCH_REPAIRER =
