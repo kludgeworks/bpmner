@@ -42,7 +42,6 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
@@ -56,9 +55,7 @@ import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import kotlin.test.assertTrue
 
 class DeterministicTopologyRepairStrategyTest {
     @Test
@@ -84,13 +81,19 @@ class DeterministicTopologyRepairStrategyTest {
         val xsd = FakeXsdValidationPort(issues = emptyList())
         val parser = FakeXmlParser(parsed)
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+        val operationContext = FakeOperationContext()
+        val context =
+            contextOf(
+                diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")),
+                operationContext = operationContext,
+            )
 
         val result = assertIs<BpmnRepairResult.Repaired>(strategy.repair(context))
         assertEquals(parsed, result.definition)
         assertEquals(1, xsd.calls)
         assertEquals(1, parser.calls)
         assertEquals(1, lint.autoFixCalls)
+        assertEquals(0, operationContext.llmInvocations.size, "deterministic LOCAL_XML_FIX path must not invoke the LLM")
     }
 
     @Test
@@ -105,12 +108,19 @@ class DeterministicTopologyRepairStrategyTest {
                 fixHandler = "some-handler",
                 elementId = "Task_1",
             )
-        val ctx = contextOf(diagnostics = listOf(diag), definition = definition)
+        val operationContext = FakeOperationContext()
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag),
+                definition = definition,
+                operationContext = operationContext,
+            )
 
         val result = strategy(handlers = listOf(handler)).repair(ctx)
 
         assertIs<BpmnRepairResult.Repaired>(result)
         assertEquals(1, result.localFixSummary?.modelApplied)
+        assertEquals(0, operationContext.llmInvocations.size, "deterministic LOCAL_MODEL_FIX path must not invoke the LLM")
     }
 
     @Test
@@ -148,7 +158,12 @@ class DeterministicTopologyRepairStrategyTest {
                     ),
             )
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+        val operationContext = FakeOperationContext()
+        val context =
+            contextOf(
+                diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")),
+                operationContext = operationContext,
+            )
 
         val result = assertIs<BpmnRepairResult.LocalAttemptedNoChange>(strategy.repair(context))
         val failure = result.outcome.failures.single()
@@ -158,6 +173,7 @@ class DeterministicTopologyRepairStrategyTest {
         assertEquals("handler boom", failure.reason)
         assertEquals(0, xsd.calls)
         assertEquals(0, parser.calls)
+        assertEquals(0, operationContext.llmInvocations.size, "deterministic failure path must not fall through to the LLM")
     }
 
     private fun strategy(
