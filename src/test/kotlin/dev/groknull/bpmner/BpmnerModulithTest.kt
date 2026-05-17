@@ -18,10 +18,7 @@ class BpmnerModulithTest {
             ImportOption { location ->
                 DO_NOT_INCLUDE_TESTS.includes(location) &&
                     !location.contains("bpmner_tests_lib") &&
-                    !location.contains("test-classes") &&
-                    !location.contains("test_classes") &&
-                    !location.contains("/test/") &&
-                    !location.contains("/src/test")
+                    !location.contains("test_classes")
             },
         )
 
