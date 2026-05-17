@@ -79,6 +79,11 @@ bazel run //src:bpmner_app -- --spring.profiles.active=anth \
 - **Validation Events:** Real-time logging of diagnostic discovery and repair attempts.
 - **Evidence Tracing:** Process contracts include trace links that map contract elements back to specific excerpts in the source text or clarification answers.
 
+## Static Analysis
+Kotlin code is checked by three complementary tools:
+- **detekt** and **ktlint** run on every PR via `bazel test //:ci` — fast, style/complexity-focused, configured in `config/detekt/detekt.yml`.
+- **Qodana** (JetBrains, [`qodana.yaml`](qodana.yaml)) runs on every PR as a required check. It performs deeper IntelliJ-grade inspections and pushes results into the repo's **Security → Code scanning** tab as well as the [Qodana Cloud dashboard](https://qodana.cloud). Local report: `mise exec -- qodana scan --show-report` (no token required).
+
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: TypeScript `bpmn-lint` plugin and custom rule catalog.
