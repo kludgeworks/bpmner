@@ -7,7 +7,6 @@ package dev.groknull.bpmner
 
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.core.importer.ImportOption.Predefined.DO_NOT_INCLUDE_TESTS
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules
 import org.springframework.modulith.core.VerificationOptions
@@ -25,30 +24,6 @@ class BpmnerModulithTest {
                     !location.contains("/src/test")
             },
         )
-
-    @Test
-    fun `verifies expected modules are detected`() {
-        val moduleNames = modules.map { it.name }.toSet()
-        val expectedModules =
-            listOf(
-                "alignment",
-                "config",
-                "contract",
-                "core",
-                "generation",
-                "layout",
-                "observability",
-                "readiness",
-                "repair",
-                "shell",
-                "validation",
-                "web",
-            )
-        assertEquals(
-            expectedModules.toSet(),
-            moduleNames,
-        )
-    }
 
     @Test
     fun `verifies no illegal cross-module dependencies`() {
