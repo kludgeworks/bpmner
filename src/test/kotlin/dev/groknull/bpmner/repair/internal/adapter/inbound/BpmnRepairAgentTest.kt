@@ -25,10 +25,12 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnXmlToDefinitionConverter
 import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
+import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.repair.internal.domain.DeterministicTopologyRepairStrategy
@@ -50,8 +52,6 @@ import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogServi
 import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline
-import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnXmlToDefinitionConverter
-import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
