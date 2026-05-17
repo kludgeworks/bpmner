@@ -10,6 +10,8 @@ import org.springframework.modulith.PackageInfo
 
 @PackageInfo
 @ApplicationModule(
-    allowedDependencies = ["core", "readiness", "observability", "alignment", "validation", "contract"],
+    displayName = "BPMN Generation",
+    allowedDependencies = ["core", "readiness", "alignment", "validation", "contract"],
+    type = ApplicationModule.Type.OPEN,
 )
 internal class ModuleMetadata
