@@ -19,6 +19,12 @@ internal class BpmnReadinessPromptFactory(
         buildString {
             appendLine("Return only a structured ${ProcessInputAssessment::class.simpleName} object.")
             appendLine()
+            appendLine(
+                "JSON formatting: when any string field (especially evidence.text) needs to mention a" +
+                    " quoted term from the source, escape every inner double quote as \\\" or use single" +
+                    " quotes or backticks. Never let an unescaped \" appear inside a JSON string value.",
+            )
+            appendLine()
             appendLine("Assess whether the source text describes a workflow that is ready for BPMN modelling.")
             appendLine()
             appendLine("What counts as a workflow:")

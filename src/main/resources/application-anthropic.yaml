@@ -7,6 +7,11 @@ spring:
       - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
 
 embabel:
+  agent:
+    platform:
+      llm-operations:
+        prompts:
+          default-timeout: PT180S
   models:
     default-llm: claude-sonnet-4-6
     llms:

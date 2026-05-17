@@ -22,6 +22,13 @@ internal class BpmnContractPromptFactory(
         buildString {
             appendLine("Return only a structured ${ProcessContract::class.simpleName} object.")
             appendLine()
+            appendLine(
+                "JSON formatting: when any string field (TraceLink text, assumption rationale, branch" +
+                    " label, etc.) needs to mention a quoted term from the source, escape every inner" +
+                    " double quote as \\\" or use single quotes or backticks. Never let an unescaped \"" +
+                    " appear inside a JSON string value.",
+            )
+            appendLine()
             appendLine("Extract a source-grounded process contract from the supplied inputs.")
             appendLine("Do not invent actors, triggers, end states, decisions, branches, or artifacts.")
             appendLine(
