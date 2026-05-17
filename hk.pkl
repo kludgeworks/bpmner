@@ -30,20 +30,7 @@ local linters = new Mapping<String, Step> {
   ["actionlint"] = Builtins.actionlint
   ["addlicense"] = new Step {
     required = List("LICENSE_HOLDER", "LICENSE_TYPE")
-    glob = List(
-      "**/*.kt",
-      "**/*.ts",
-      "**/*.bazel",
-      "**/MODULE.bazel",
-      "**/WORKSPACE",
-      "**/*.pkl",
-      "**/*.sh",
-      "**/*.yaml",
-      "**/*.yml",
-      "**/*.css",
-      "**/*.html",
-      "**/*.xml"
-    )
+    glob = List("**/*")
     batch = true
     check = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" -check {{files}}"
     fix = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" {{files}}"
@@ -53,8 +40,9 @@ local linters = new Mapping<String, Step> {
       ["JAVA_TOOL_OPTIONS"] = "--sun-misc-unsafe-memory-access=allow"
     }
     glob = List("src/**/*.kt")
+    batch = true
     check =
-      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input src/main/kotlin,src/test/kotlin --language-version 2.1 --jvm-target 21 --base-path ."
+      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=':') }} --language-version 2.1 --jvm-target 21 --base-path ."
   }
   }
 
