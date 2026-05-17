@@ -337,7 +337,7 @@ internal class BpmnRefinementEngine(
     ) {
         val summary = computeRouteSummary(attempt.diagnostics, resolution)
         if (summary.total == 0) return
-        logger.info(
+        logger.debug(
             "Repair attempt {} route summary: total={} localAttempted={} localApplied={} " +
                 "localFailed={} llmRouted={} unfixable={}",
             attempt.attemptNumber,

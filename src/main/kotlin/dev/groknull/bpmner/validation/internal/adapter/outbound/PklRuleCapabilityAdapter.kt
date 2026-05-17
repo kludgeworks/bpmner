@@ -38,7 +38,7 @@ internal class PklRuleCapabilityAdapter(
         logger.debug("Loading lint rule capabilities from Pkl-generated catalog")
         val rules = catalogService.catalog.rules
         return buildCapabilityMap(rules).also {
-            logger.info("Loaded {} lint rule capabilities from Pkl-generated catalog", it.size)
+            logger.debug("Loaded {} lint rule capabilities from Pkl-generated catalog", it.size)
         }
     }
 

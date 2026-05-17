@@ -115,7 +115,7 @@ internal class BpmnGenerationService(
 
     private fun assessReadiness(request: BpmnRequest): ProcessInputAssessment {
         val assessment = readinessInvoker.assess(request)
-        logger.info(
+        logger.debug(
             "Readiness assessment complete. verdict={}, overallScore={}",
             assessment.verdict,
             assessment.overallScore,
@@ -128,7 +128,7 @@ internal class BpmnGenerationService(
             return input.styleGuideContent.trim().takeIf { it.isNotEmpty() }
         }
         return input.styleGuide?.let {
-            logger.info("Loading style guide from file: {}", it)
+            logger.debug("Loading style guide from file: {}", it)
             inputPathResolver.readUtf8(it).trim()
         }
     }
@@ -139,7 +139,7 @@ internal class BpmnGenerationService(
         description: String,
         styleGuide: String?,
     ) {
-        logger.info(
+        logger.debug(
             "Starting BPMN generation. outputFile={}, mode={}, descriptionLength={}, styleGuidePresent={}, clarifications={}",
             outputFile ?: "(none)",
             input.mode,
@@ -155,7 +155,7 @@ internal class BpmnGenerationService(
     private fun performGeneration(request: BpmnRequest): BpmnResult =
         try {
             val result = agentInvoker.generate(request)
-            logger.info(
+            logger.debug(
                 "BPMN generation completed. outputFile={}, xmlLength={}",
                 result.outputFile,
                 result.xml?.length ?: 0,
@@ -241,7 +241,7 @@ internal class BpmnGenerationService(
 
         if (hasInlineDescription) return input.processDescription!!.trim()
 
-        logger.info("Loading process description from file: {}", input.processFile)
+        logger.debug("Loading process description from file: {}", input.processFile)
         return inputPathResolver.readUtf8(input.processFile!!).trim()
     }
 }

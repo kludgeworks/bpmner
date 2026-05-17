@@ -90,7 +90,7 @@ internal class BpmnGeneratorAgent(
                 definition = definition,
                 metrics = metricsCalculator.calculate(definition),
             )
-        logger.info(
+        logger.debug(
             "Outline summary: phases={}, branches={}, loops={}, subprocesses={}",
             outline.metrics.phaseCount,
             outline.metrics.branchCount,
@@ -123,7 +123,7 @@ internal class BpmnGeneratorAgent(
                 )
         }
         if (diagnostics.isNotEmpty()) {
-            logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
+            logger.debug("Outline validation summary: {} issue(s)", diagnostics.size)
         }
         return ValidatedOutline(outline = outline, diagnostics = diagnostics)
     }
@@ -138,7 +138,7 @@ internal class BpmnGeneratorAgent(
                     definition = outline.definition,
                 ),
             )
-        logger.info("Phase generation summary: generated {} phase(s), 0 failed local validation", phasePlans.size)
+        logger.debug("Phase generation summary: generated {} phase(s), 0 failed local validation", phasePlans.size)
         return PhasePlanSet(outline = outline, phasePlans = phasePlans)
     }
 
@@ -154,7 +154,7 @@ internal class BpmnGeneratorAgent(
                 )
             }
         val failedPlans = validatedPlans.count { it.diagnostics.isNotEmpty() }
-        logger.info(
+        logger.debug(
             "Phase validation summary: generated {} phase(s), {} failed local validation",
             validatedPlans.size,
             failedPlans,
@@ -172,7 +172,7 @@ internal class BpmnGeneratorAgent(
                 definition.nodes.forEach { put("nodes[id=${it.id}]", phaseOwner) }
                 definition.sequences.forEach { put("sequences[id=${it.id}]", phaseOwner) }
             }
-        logger.info(
+        logger.debug(
             "Composition summary: nodes={}, edges={}, subprocesses={}",
             definition.nodes.size,
             definition.sequences.size,
@@ -234,13 +234,13 @@ internal class BpmnGeneratorAgent(
     ): BpmnResult {
         if (request.outputFile != null) {
             File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
-            logger.info(
+            logger.debug(
                 "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
                 bpmn.xml.length,
                 request.outputFile,
             )
         } else {
-            logger.info(
+            logger.debug(
                 "Final BPMN summary: layout applied, finalXmlLength={}, (no output file requested)",
                 bpmn.xml.length,
             )

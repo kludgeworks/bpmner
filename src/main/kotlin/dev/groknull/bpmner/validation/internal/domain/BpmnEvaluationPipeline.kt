@@ -94,12 +94,12 @@ internal class BpmnEvaluationPipeline(
 
         val globalDiagnostics = GlobalDiagnostics(diagnostics)
         if (diagnostics.isEmpty()) {
-            logger.info(
+            logger.debug(
                 "Validation summary: graph=0, xsd=0, lint=0, repairScope=none, accepted=true, repairs={}",
                 repairAttempts,
             )
         } else {
-            logger.info(
+            logger.debug(
                 "Validation summary: graph={}, xsd={}, lint={}, repairScope={}, accepted=false, repairs={}",
                 globalDiagnostics.countFor(BpmnDiagnosticSource.GRAPH),
                 globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
@@ -155,7 +155,7 @@ internal class BpmnEvaluationPipeline(
         }
         val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
         if (lintIssues == null) {
-            logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
+            logger.debug("bpmn-lint was unavailable; continuing without lint feedback")
             return null
         }
         diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))
@@ -163,7 +163,7 @@ internal class BpmnEvaluationPipeline(
     }
 
     override fun logDiagnosticSummary(diagnostics: List<BpmnDiagnostic>) {
-        logger.warn(
+        logger.debug(
             "Diagnostic summary: total={}, graph={}, xsd={}, lint={}, scopes={}",
             diagnostics.size,
             diagnostics.count { it.source == BpmnDiagnosticSource.GRAPH },
@@ -176,7 +176,7 @@ internal class BpmnEvaluationPipeline(
                 .joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
         )
         diagnostics.forEach { diagnostic ->
-            logger.warn(
+            logger.debug(
                 "Diagnostic detail: source={}, rule={}, category={}, elementId={}, " +
                     "objectRef={}, repairScope={}, owner={}, message={}",
                 diagnostic.source.name.lowercase(),

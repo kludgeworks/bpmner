@@ -103,21 +103,21 @@ class GitHubModelsConfig(
                         optionsConverter = StandardOpenAiOptionsConverter,
                     )
                 configurableBeanFactory.registerSingleton(modelId, llm)
-                logger.info("Registered GitHub model: {}", modelId)
+                logger.debug("Registered GitHub model: {}", modelId)
                 RegisteredModel(beanName = modelId, modelId = modelId)
             }
 
         return ProviderInitialization(provider = PROVIDER, registeredLlms = registeredLlms)
-            .also { logger.info(it.summary()) }
+            .also { logger.debug(it.summary()) }
     }
 
     private fun printCatalog() {
         val models = GitHubCatalogClient.fetchTextModels(properties.catalogUrl)
         if (models.isEmpty()) return
-        logger.info("Available GitHub Models (use IDs in embabel.agent.platform.models.github.models):")
+        logger.debug("Available GitHub Models (use IDs in embabel.agent.platform.models.github.models):")
         models.groupBy { it.publisher }.forEach { (publisher, entries) ->
-            logger.info("  {}:", publisher)
-            entries.forEach { logger.info("    {}", it.id) }
+            logger.debug("  {}:", publisher)
+            entries.forEach { logger.debug("    {}", it.id) }
         }
     }
 }

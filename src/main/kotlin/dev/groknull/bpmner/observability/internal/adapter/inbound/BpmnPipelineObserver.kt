@@ -58,7 +58,7 @@ class BpmnPipelineObserver(
 
     @EventListener
     fun onReadinessAssessed(event: BpmnReadinessAssessedEvent) {
-        logger.info(
+        logger.debug(
             "Readiness assessed: verdict={}, score={}, missingAreas={}, questions={}",
             event.assessment.verdict,
             event.assessment.overallScore,
@@ -73,7 +73,7 @@ class BpmnPipelineObserver(
         val missingCount = event.report.alignedElements.count { it.classification == AlignmentClassification.MISSING }
         val assumptionCount = event.report.alignedElements.count { it.classification == AlignmentClassification.ASSUMED }
 
-        logger.info(
+        logger.debug(
             "Alignment checked: verdict={}, unsupported={}, missing={}, assumptions={}",
             event.report.verdict,
             unsupportedCount,
@@ -85,7 +85,7 @@ class BpmnPipelineObserver(
     @EventListener
     fun onValidationFailed(event: BpmnValidationFailedEvent) {
         val global = GlobalDiagnostics(event.diagnostics)
-        logger.info(
+        logger.debug(
             "Validation failed on attempt {}: graph={}, xsd={}, lint={}, repairAttempts={}",
             event.attemptNumber,
             global.countFor(BpmnDiagnosticSource.GRAPH),
@@ -108,7 +108,7 @@ class BpmnPipelineObserver(
 
     @EventListener
     fun onValidationPassed(event: BpmnValidationPassedEvent) {
-        logger.info(
+        logger.debug(
             "Validation passed after {} repair attempt(s), xmlLength={}",
             event.repairAttempts,
             event.xml.length,

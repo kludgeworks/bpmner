@@ -59,7 +59,7 @@
     </appender>
 
     <logger name="dev.groknull.bpmner" level="DEBUG" additivity="true"/>
-    <logger name="Embabel" level="DEBUG" additivity="true"/>
+    <logger name="Embabel" level="WARN" additivity="true"/>
 
     <root level="INFO">
         <appender-ref ref="CONSOLE"/>

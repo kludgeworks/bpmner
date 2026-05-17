@@ -40,7 +40,7 @@ internal class BpmnLintJsEngine {
     @PostConstruct
     fun init() {
         try {
-            logger.info("Initializing GraalJS bpmn-lint context...")
+            logger.debug("Initializing GraalJS bpmn-lint context...")
             jsContext =
                 Context
                     .newBuilder("js")

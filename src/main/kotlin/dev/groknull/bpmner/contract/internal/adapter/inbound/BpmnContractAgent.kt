@@ -64,11 +64,11 @@ internal class BpmnContractAgent(
                 promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
                 ProcessContract::class.java,
             )
-        logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
+        logger.debug("Contract extracted:\n{}", markdownRenderer.render(contract))
         val report = validator.validate(contract)
         if (!report.isValid) {
             val errorCount = report.issues.count { it.severity == ContractIssueSeverity.ERROR }
-            logger.warn(
+            logger.debug(
                 "Contract validation found {} error(s): {}",
                 errorCount,
                 report.issues.joinToString { it.format() },

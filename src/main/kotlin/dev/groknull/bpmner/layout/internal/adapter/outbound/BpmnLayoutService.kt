@@ -46,7 +46,7 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
     @PostConstruct
     fun init() {
         try {
-            logger.info("Initializing GraalJS layout context...")
+            logger.debug("Initializing GraalJS layout context...")
             jsContext =
                 Context
                     .newBuilder("js")
@@ -69,7 +69,7 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
             layoutApi = jsContext?.getBindings("js")?.getMember("BpmnLayoutApi")
 
             if (layoutApi != null) {
-                logger.info("GraalJS layout context initialized successfully.")
+                logger.debug("GraalJS layout context initialized successfully.")
             } else {
                 logger.warn("BpmnLayoutApi not found in the JS bundle.")
             }

@@ -95,7 +95,7 @@ internal class LintLocalRepairStrategy(
             )
         return when (val applied = patchApplier.apply(attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
-                logger.info("Local model fix applied: handler={}, elementId={}", handlerName, elementId)
+                logger.debug("Local model fix applied: handler={}, elementId={}", handlerName, elementId)
                 BpmnRepairResult.Repaired(
                     definition = applied.definition,
                     promptText = patch.reason ?: "Local model fix",
@@ -105,7 +105,7 @@ internal class LintLocalRepairStrategy(
             }
 
             is PatchApplicationResult.Failure -> {
-                logger.warn(
+                logger.debug(
                     "Local model fix produced invalid patch; falling through. handler={}, elementId={}, reason={}",
                     handlerName,
                     elementId,
@@ -131,7 +131,7 @@ internal class LintLocalRepairStrategy(
                 ?: return BpmnRepairResult.NotApplicable
         failOnDeclaredLocalSkipped(result, localXmlRules)
         if (result.errors.isNotEmpty()) {
-            logger.warn(
+            logger.debug(
                 "Local auto-fix errors; recording failures for LLM fallback context: {}",
                 result.errors.joinToString { "${it.rule}@${it.elementId ?: "-"}:${it.message}" },
             )
@@ -175,7 +175,7 @@ internal class LintLocalRepairStrategy(
     private fun autoFixedXmlIsXsdValid(result: BpmnAutoFixResult): Boolean {
         val xsdIssues = xsdValidationPort.validateDetailed(result.xml)
         if (xsdIssues.isNotEmpty()) {
-            logger.warn(
+            logger.debug(
                 "Local auto-fix produced XSD-invalid XML; falling through. xsdErrors={}",
                 xsdIssues.joinToString { it.message },
             )
@@ -189,7 +189,7 @@ internal class LintLocalRepairStrategy(
         attempt: BpmnRepairAttempt,
     ): BpmnRepairResult.Repaired {
         val newDefinition = xmlParser.parse(result.xml)
-        logger.info(
+        logger.debug(
             "Local lint auto-fix applied {} fix(es): {}",
             result.applied.size,
             result.applied.joinToString { "${it.rule}@${it.elementId ?: "-"}" },

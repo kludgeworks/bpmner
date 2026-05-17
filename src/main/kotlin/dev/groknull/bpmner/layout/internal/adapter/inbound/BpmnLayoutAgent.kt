@@ -88,14 +88,14 @@ internal class BpmnLayoutAgent(
     private fun tryAutoFix(xml: String): BpmnAutoFixResult? {
         val rawIssues = bpmnLintingPort.lint(xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
         if (rawIssues == null) {
-            logger.warn("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
+            logger.debug("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
             return null
         }
         val eligible = selectEligible(rawIssues)
         if (eligible.isEmpty()) return null
         val result = bpmnLintingPort.autoFix(xml, eligible, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
         if (result == null) {
-            logger.warn("BPMN XML auto-fix was unavailable; keeping validated XML")
+            logger.debug("BPMN XML auto-fix was unavailable; keeping validated XML")
             return null
         }
         logAutoFixOutcome(result)
@@ -116,7 +116,7 @@ internal class BpmnLayoutAgent(
                     .eachCount()
                     .entries
                     .joinToString(", ") { "${it.key}=${it.value}" }
-            logger.info(
+            logger.debug(
                 "BPMN XML auto-fix filter: total={}, eligible={}, filtered={} [{}]",
                 rawIssues.size,
                 eligible.size,
@@ -129,7 +129,7 @@ internal class BpmnLayoutAgent(
 
     private fun logAutoFixOutcome(result: BpmnAutoFixResult) {
         if (result.applied.isEmpty() && result.skipped.isEmpty() && result.errors.isEmpty()) return
-        logger.info(
+        logger.debug(
             "BPMN XML auto-fix outcome: changed={}, applied={}, skipped={}, errors={}",
             result.changed,
             result.applied.joinToString("; ") { it.summary() },
@@ -141,7 +141,7 @@ internal class BpmnLayoutAgent(
     private fun autoFixedXmlIsXsdValid(result: BpmnAutoFixResult): Boolean {
         val xsdIssues = bpmnXsdValidationPort.validateDetailed(result.xml)
         if (xsdIssues.isEmpty()) return true
-        logger.warn(
+        logger.debug(
             "BPMN XML auto-fix rejected: XSD-invalid output, keeping validated XML. " +
                 "applied={}, errors={}, xsdErrors={}",
             result.applied.joinToString("; ") { it.summary() },
@@ -173,7 +173,7 @@ internal class BpmnLayoutAgent(
         if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
             val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.FINAL_POST_LAYOUT)
             if (lintIssues == null) {
-                logger.warn("Final bpmn-lint validation was unavailable; continuing without lint feedback")
+                logger.debug("Final bpmn-lint validation was unavailable; continuing without lint feedback")
             } else {
                 val capabilities = bpmnLintingPort.lintRuleCapabilities()
                 diagnostics +=
@@ -197,7 +197,7 @@ internal class BpmnLayoutAgent(
             throw BpmnFinalValidationException(finalValidationMessage(diagnostics))
         }
 
-        logger.info("Final BPMN validation passed after auto-layout")
+        logger.debug("Final BPMN validation passed after auto-layout")
         return FinalValidatedBpmnXml(definition = bpmn.definition, xml = bpmn.xml)
     }
 

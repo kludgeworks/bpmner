@@ -38,7 +38,7 @@ class BpmnerRunSummaryListener : AgenticEventListener {
         if (event !is AgentProcessFinishedEvent) return
         val p = event.agentProcess
         val usage = p.usage()
-        logger.info(
+        logger.debug(
             "Run complete in {}s | actions={} | models={} | cost=\${} | tokens={}prompt/{}completion",
             p.runningTime.seconds,
             p.history.size,
@@ -48,7 +48,7 @@ class BpmnerRunSummaryListener : AgenticEventListener {
             usage.completionTokens ?: 0,
         )
         p.history.forEach { action ->
-            logger.info("  {} {}ms", action.actionName.substringAfterLast("."), action.runningTime.toMillis())
+            logger.debug("  {} {}ms", action.actionName.substringAfterLast("."), action.runningTime.toMillis())
         }
     }
 }

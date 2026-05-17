@@ -64,7 +64,7 @@ internal class BpmnAlignmentPostChecker(
                 config.maxAssumptions,
             )
         } else {
-            logger.info(
+            logger.debug(
                 "Alignment passed: verdict={}, llmVerdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={}",
                 verdict,
                 report.verdict,

@@ -64,7 +64,7 @@ internal class BpmnLocalRepairCapabilityValidator(
                 "Unbound rule handler(s): ${unbound.joinToString()}",
             )
         }
-        logger.info(
+        logger.debug(
             "Validated repair handler bindings: {} capabilities, {} Kotlin handler(s), {} TS handler(s)",
             capabilities.size,
             kotlinHandlerNames.size,

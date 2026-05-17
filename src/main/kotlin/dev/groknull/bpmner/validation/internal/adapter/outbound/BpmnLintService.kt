@@ -80,7 +80,7 @@ internal open class BpmnLintService(
             if (api != null) {
                 validateLintConfiguration(api)
                 val activeRules = resolvedRules()
-                logger.info(
+                logger.debug(
                     "GraalJS bpmn-lint context initialized. Active rules: {}",
                     activeRules.keys.sorted().joinToString(", "),
                 )
