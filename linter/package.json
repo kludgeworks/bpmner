@@ -1,17 +1,19 @@
 {
-	"name": "@bpmner/linter",
-	"version": "0.1.0",
+	"name": "bpmner-linter",
+	"version": "1.0.0",
+	"description": "BPMN 2.0 Linter rules and tools",
+	"main": "dist/js/bpmnlint-bundle.js",
 	"private": true,
-	"scripts": {
-		"generate:static-rules": "node ./scripts/generate-static-rules.mjs",
-		"test:build": "cd .. && bazel build //linter:lint_test_bundle //linter:smoke_test_bundle",
-		"test": "node --test --test-reporter=tap ../bazel-bin/linter/dist/test/lint.test.js ../bazel-bin/linter/dist/test/smoke.test.js"
-	},
 	"dependencies": {
 		"bpmn-moddle": "^9.0.4",
 		"bpmnlint": "^11.12.1",
 		"bpmnlint-utils": "^1.1.1",
 		"wink-eng-lite-web-model": "^1.8.1",
 		"wink-nlp": "^2.4.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.19.17",
+		"esbuild": "^0.25.0",
+		"typescript": "^5.8.3"
 	}
 }
