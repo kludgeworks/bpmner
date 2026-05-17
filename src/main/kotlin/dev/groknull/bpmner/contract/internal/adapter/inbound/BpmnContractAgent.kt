@@ -5,15 +5,17 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
-import dev.groknull.bpmner.contract.internal.domain.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -30,6 +32,18 @@ internal class BpmnContractAgent(
     private val promptFactory = BpmnContractPromptFactory(config.contract)
     private val logger = LoggerFactory.getLogger(BpmnContractAgent::class.java)
 
+    @AchievesGoal(
+        description = "Extract a source-grounded process contract from natural-language input",
+        export =
+            Export(
+                name = "extractProcessContract",
+                remote = true,
+                startingInputTypes = [
+                    BpmnRequest::class,
+                    ProcessInputAssessment::class,
+                ],
+            ),
+    )
     @Action(
         description = "Extract a source-grounded process contract from a BPMN request and readiness assessment",
     )
@@ -42,11 +56,13 @@ internal class BpmnContractAgent(
             config.contractExtractor
                 .promptRunner(context)
                 .withPromptContributor(request)
+
         val contract =
             promptRunner.createObject(
                 promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
                 ProcessContract::class.java,
-            )
+            ) ?: error("Contract extractor failed to produce a structured contract.")
+
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
         val report = validator.validate(contract)
         if (!report.isValid) {

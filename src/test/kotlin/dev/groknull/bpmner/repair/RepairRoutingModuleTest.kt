@@ -74,6 +74,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
     ],
 )
 @MockitoBean(types = [AgentPlatformBpmnAgentInvoker::class])
+@Suppress("TooManyFunctions")
 class RepairRoutingModuleTest {
     @MockitoBean
     private lateinit var bpmnLintService: BpmnLintService
@@ -410,7 +411,8 @@ class RepairRoutingModuleTest {
 
     private fun anyRuleNames(): Collection<String> = ArgumentMatchers.anyCollection()
 
-    private class FakeActionContext(
+    private @Suppress("TooManyFunctions")
+class FakeActionContext(
         private val delegate: FakeOperationContext = FakeOperationContext(),
     ) : ActionContext,
         OperationContext by delegate {

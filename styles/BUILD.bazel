@@ -1,0 +1,11 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+
+package(default_visibility = ["//visibility:public"])
+
+js_library(
+    name = "styles",
+    srcs = glob(["**/*"]),
+)

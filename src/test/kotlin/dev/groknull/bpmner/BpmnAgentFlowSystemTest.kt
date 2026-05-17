@@ -8,6 +8,13 @@ package dev.groknull.bpmner
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.TraceLink
+import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -16,6 +23,8 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
@@ -24,6 +33,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
@@ -57,16 +67,59 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     ) {
         val definition = validDefinition()
         val outputFile = tempDir.resolve("process.bpmn")
-        `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString()))
+
+        // 1. Mock Readiness
+        whenCreateObject(
+            { it.contains("Assess whether the source text describes a workflow") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(
+            ProcessInputAssessment(
+                verdict = ReadinessVerdict.READY,
+                overallScore = 100,
+                dimensions = emptyList(),
+                evidence = emptyList(),
+                rationale = "Ready",
+            ),
+        )
+
+        // 2. Mock Contract
+        whenCreateObject(
+            { it.contains("Extract a source-grounded process contract") },
+            ProcessContract::class.java,
+        ).thenReturn(sampleContract())
+
+        // 3. Mock Generation
+        whenCreateObject(
+            { it.contains("Generate a BPMN definition object from the validated process contract") },
+            BpmnDefinition::class.java,
+        ).thenReturn(definition)
+
+        // 4. Mock Alignment
+        whenCreateObject(
+            { it.contains("Assess whether generated BPMN aligns semantically") },
+            BpmnAlignmentReport::class.java,
+        ).thenReturn(
+            BpmnAlignmentReport(
+                verdict = AlignmentVerdict.ALIGNED,
+                bpmnSummary =
+                    dev.groknull.bpmner.alignment.BpmnDefinitionSummary(
+                        definition.processId,
+                        definition.processName,
+                        emptyList(),
+                    ),
+                rationale = "Aligned",
+            ),
+        )
+
+        // 5. Mock Validators
+        `when`(bpmnXsdValidator.validateDetailed(anyString()))
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
+            .lint(anyString(), eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(org.mockito.ArgumentMatchers.anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
-        whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
-            .thenReturn(definition)
+            .lint(anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
 
         val result =
             AgentPlatformTypedOps(agentPlatform)
@@ -82,13 +135,13 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals(outputFile.toString(), result.outputFile)
         assertTrue(result.xml!!.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
-        verify(bpmnXsdValidator, times(2)).validateDetailed(org.mockito.ArgumentMatchers.anyString())
+        verify(bpmnXsdValidator, times(2)).validateDetailed(anyString())
         verify(bpmnLintService, times(2)).lint(
-            org.mockito.ArgumentMatchers.anyString(),
+            anyString(),
             eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
         )
         verify(bpmnLintService).lint(
-            org.mockito.ArgumentMatchers.anyString(),
+            anyString(),
             eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT),
         )
     }
@@ -98,50 +151,53 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     private fun validDefinition() =
         BpmnDefinition(
             processId = "Process_MakeToast",
-            processName = "Make toast",
+            processName = "Make Toast",
             nodes =
                 listOf(
-                    BpmnNode(
-                        id = "StartEvent_1",
-                        name = "Order received",
-                        type = NodeType.START_EVENT,
-                        bounds = BpmnBounds(80.0, 120.0, 36.0, 36.0),
-                    ),
-                    BpmnNode(
-                        id = "Task_1",
-                        name = "Toast bread",
-                        type = NodeType.SERVICE_TASK,
-                        bounds = BpmnBounds(180.0, 98.0, 100.0, 80.0),
-                    ),
-                    BpmnNode(
-                        id = "EndEvent_1",
-                        name = "Toast served",
-                        type = NodeType.END_EVENT,
-                        bounds = BpmnBounds(320.0, 120.0, 36.0, 36.0),
-                    ),
+                    BpmnNode(id = "start", name = "Start", type = NodeType.START_EVENT, bounds = BpmnBounds(0.0, 0.0, 36.0, 36.0)),
+                    BpmnNode(id = "task1", name = "Toast bread", type = NodeType.USER_TASK, bounds = BpmnBounds(100.0, 0.0, 100.0, 80.0)),
+                    BpmnNode(id = "end", name = "End", type = NodeType.END_EVENT, bounds = BpmnBounds(300.0, 0.0, 36.0, 36.0)),
                 ),
             sequences =
                 listOf(
                     BpmnEdge(
-                        "Flow_1",
-                        "StartEvent_1",
-                        "Task_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(116.0, 138.0),
-                                BpmnWaypoint(180.0, 138.0),
-                            ),
+                        id = "f1",
+                        sourceRef = "start",
+                        targetRef = "task1",
+                        waypoints = listOf(BpmnWaypoint(36.0, 18.0), BpmnWaypoint(100.0, 40.0)),
                     ),
                     BpmnEdge(
-                        "Flow_2",
-                        "Task_1",
-                        "EndEvent_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(280.0, 138.0),
-                                BpmnWaypoint(320.0, 138.0),
-                            ),
+                        id = "f2",
+                        sourceRef = "task1",
+                        targetRef = "end",
+                        waypoints = listOf(BpmnWaypoint(200.0, 40.0), BpmnWaypoint(300.0, 18.0)),
                     ),
                 ),
         )
+
+    private fun sampleContract(): ProcessContract {
+        val trace =
+            TraceLink(
+                id = "trace-1",
+                sourceId = "s1",
+                targetId = "t1",
+                classification = AlignmentClassification.SUPPORTED,
+            )
+        return ProcessContract(
+            id = "contract-1",
+            processName = "Make Toast",
+            summary = "Toast making process",
+            trigger = "Hunger",
+            triggerTraceLinks = listOf(trace),
+            activities =
+                listOf(
+                    ContractActivity(id = "a1", name = "Get bread", traceLinks = listOf(trace)),
+                    ContractActivity(id = "a2", name = "Toast bread", traceLinks = listOf(trace)),
+                ),
+            endStates =
+                listOf(
+                    ContractEndState(id = "e1", name = "Toast ready", traceLinks = listOf(trace)),
+                ),
+        )
+    }
 }

@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
@@ -25,6 +27,10 @@ internal class BpmnReadinessAgent(
     private val promptFactory = BpmnReadinessPromptFactory(config.readiness)
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
 
+    @AchievesGoal(
+        description = "Assess raw BPMN generation input for process readiness",
+        export = Export(name = "assessReadiness", remote = true, startingInputTypes = [BpmnRequest::class]),
+    )
     @Action(description = "Assess raw BPMN generation input for process readiness")
     fun assessReadiness(
         request: BpmnRequest,
@@ -35,7 +41,7 @@ internal class BpmnReadinessAgent(
             promptRunner.createObject(
                 promptFactory.prompt(request),
                 ProcessInputAssessment::class.java,
-            )
+            ) ?: error("Readiness model failed to produce a structured assessment.")
         val assessment = postChecker.apply(request, modelAssessment)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment

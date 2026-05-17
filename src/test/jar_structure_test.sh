@@ -11,13 +11,13 @@ manifest="$(unzip -p "${jar_path}" META-INF/MANIFEST.MF)"
 entries="$(jar tf "${jar_path}")"
 
 assert_contains() {
-  local haystack="$1"
-  local needle="$2"
+	local haystack="$1"
+	local needle="$2"
 
-  if [[ "${haystack}" != *"${needle}"* ]]; then
-    echo "Expected to find '${needle}' in ${jar_path}" >&2
-    exit 1
-  fi
+	if [[ "${haystack}" != *"${needle}"* ]]; then
+		echo "Expected to find '${needle}' in ${jar_path}" >&2
+		exit 1
+	fi
 }
 
 assert_contains "${manifest}" "Main-Class: org.springframework.boot.loader.launch.JarLauncher"

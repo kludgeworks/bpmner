@@ -33,6 +33,7 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
+@Suppress("TooManyFunctions")
 class BpmnGenerationServiceTest {
     @TempDir
     lateinit var tempDir: Path
@@ -269,7 +270,8 @@ class BpmnGenerationServiceTest {
             rationale = "Stubbed rationale.",
         )
 
-    private class CapturingBpmnAgentInvoker(
+    private @Suppress("TooManyFunctions")
+class CapturingBpmnAgentInvoker(
         private val startAsyncProcessId: String = "process-stub",
     ) : BpmnAgentInvoker {
         val calls = mutableListOf<BpmnRequest>()
@@ -299,7 +301,8 @@ class BpmnGenerationServiceTest {
         }
     }
 
-    private class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
+    private @Suppress("TooManyFunctions")
+class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
         override fun generate(
             request: BpmnRequest,
             assessment: ProcessInputAssessment,
@@ -320,19 +323,22 @@ class BpmnGenerationServiceTest {
         ): String = error("Not implemented for alignment-failing fixture")
     }
 
-    private class StubReadinessInvoker(
+    private @Suppress("TooManyFunctions")
+class StubReadinessInvoker(
         private val assessment: ProcessInputAssessment,
     ) : BpmnReadinessInvoker {
         override fun assess(request: BpmnRequest): ProcessInputAssessment = assessment
     }
 
-    private data class ReportWriterCall(
+    private data @Suppress("TooManyFunctions")
+class ReportWriterCall(
         val originalInput: String,
         val assessment: ProcessInputAssessment,
         val outputFile: String?,
     )
 
-    private class CapturingReportWriter(
+    private @Suppress("TooManyFunctions")
+class CapturingReportWriter(
         private val reportPath: String = "/tmp/report.md",
     ) : ReadinessReportWriter {
         val calls = mutableListOf<ReportWriterCall>()

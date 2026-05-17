@@ -40,6 +40,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
+@Suppress("TooManyFunctions")
 class DeterministicTopologyRepairStrategyTest {
     @Test
     fun `returns NotApplicable when no LOCAL_XML_FIX diagnostics are stamped`() {
@@ -291,7 +292,8 @@ class DeterministicTopologyRepairStrategyTest {
         return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)
     }
 
-    private class FakeLintingPort(
+    private @Suppress("TooManyFunctions")
+class FakeLintingPort(
         private val autoFixResult: BpmnAutoFixResult? =
             BpmnAutoFixResult(changed = false, xml = ""),
     ) : BpmnLintingPort {
@@ -317,7 +319,8 @@ class DeterministicTopologyRepairStrategyTest {
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
     }
 
-    private class FakeXsdValidationPort(
+    private @Suppress("TooManyFunctions")
+class FakeXsdValidationPort(
         private val issues: List<XsdValidationIssue> = emptyList(),
     ) : BpmnXsdValidationPort {
         var calls = 0
@@ -329,7 +332,8 @@ class DeterministicTopologyRepairStrategyTest {
         }
     }
 
-    private class FakeXmlParser(
+    private @Suppress("TooManyFunctions")
+class FakeXmlParser(
         private val definition: BpmnDefinition,
     ) : BpmnXmlParser {
         var calls = 0
@@ -341,7 +345,8 @@ class DeterministicTopologyRepairStrategyTest {
         }
     }
 
-    private class StubModelFixHandler(
+    private @Suppress("TooManyFunctions")
+class StubModelFixHandler(
         override val handlerName: String,
         private val emitsOps: Boolean = true,
     ) : BpmnLocalModelFixHandler {

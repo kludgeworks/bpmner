@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.repair.AutoFixedBpmnXml
@@ -140,6 +142,10 @@ internal class BpmnLayoutAgent(
         return LayoutedBpmnXml(definition = bpmn.definition, xml = layoutedXml)
     }
 
+    @AchievesGoal(
+        description = "Apply auto-layout and final validation to validated BPMN XML",
+        export = Export(name = "finalizeLayout", remote = true, startingInputTypes = [LayoutedBpmnXml::class]),
+    )
     @Action(description = "Validate the final layouted BPMN XML without semantic repair")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
         val diagnostics = mutableListOf<BpmnDiagnostic>()

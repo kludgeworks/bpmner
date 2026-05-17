@@ -17,6 +17,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class BpmnReadinessPostCheckerTest {
     private val checker = BpmnReadinessPostChecker()
 

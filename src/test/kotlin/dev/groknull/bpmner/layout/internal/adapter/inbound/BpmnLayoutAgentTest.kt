@@ -26,6 +26,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class BpmnLayoutAgentTest {
     private fun buildLayoutAgent(
         lintService: BpmnLintingPort,
@@ -415,7 +416,8 @@ class BpmnLayoutAgentTest {
         assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
     }
 
-    private class RecordingLayoutService(
+    private @Suppress("TooManyFunctions")
+class RecordingLayoutService(
         private val responses: List<String> = emptyList(),
         private val callLog: MutableList<String>? = null,
     ) : BpmnLayoutService() {
@@ -429,7 +431,8 @@ class BpmnLayoutAgentTest {
         }
     }
 
-    private class RecordingLintService(
+    private @Suppress("TooManyFunctions")
+class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
         private val autoFixResponses: List<BpmnAutoFixResult?> = emptyList(),
@@ -476,7 +479,8 @@ class BpmnLayoutAgentTest {
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = capabilities
     }
 
-    private class RecordingXsdValidator(
+    private @Suppress("TooManyFunctions")
+class RecordingXsdValidator(
         private val responses: List<List<XsdValidationIssue>>,
         private val callLog: MutableList<String>? = null,
     ) : BpmnXsdValidationPort {

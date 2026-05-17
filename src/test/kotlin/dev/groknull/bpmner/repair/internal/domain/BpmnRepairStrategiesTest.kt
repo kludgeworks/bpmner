@@ -44,6 +44,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class BpmnRepairStrategiesTest {
     @Test
     fun `TargetedLabelRepairStrategy routes through repair-label actor`() {

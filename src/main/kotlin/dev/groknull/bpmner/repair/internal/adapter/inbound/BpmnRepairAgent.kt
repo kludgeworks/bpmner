@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.core.ActionRetryPolicy
 import dev.groknull.bpmner.core.BpmnRequest
@@ -17,10 +19,27 @@ import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 
 @PrimaryAdapter
-@Agent(description = "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity")
+@Agent(
+    description =
+        "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+)
 internal class BpmnRepairAgent(
     private val refinementEngine: BpmnRefinementEngine,
 ) {
+    @AchievesGoal(
+        description =
+            "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+        export =
+            Export(
+                name = "repairBpmn",
+                remote = true,
+                startingInputTypes = [
+                    BpmnRequest::class,
+                    LaidOutProcessGraph::class,
+                    RenderedBpmn::class,
+                ],
+            ),
+    )
     @Action(
         description =
             "Iteratively validate and repair a generated BPMN process graph" +

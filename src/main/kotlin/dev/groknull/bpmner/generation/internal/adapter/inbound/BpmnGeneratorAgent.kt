@@ -30,7 +30,6 @@ import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
-import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -68,6 +67,7 @@ internal class BpmnGeneratorAgent(
         val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
         val definition = promptRunner.createObject(prompt, BpmnDefinition::class.java)
+            ?: error("Outline generator failed to produce a structured outline.")
         val outline =
             ProcessOutline(
                 request = request,
@@ -213,7 +213,7 @@ internal class BpmnGeneratorAgent(
             Export(
                 name = "generateBpmn",
                 remote = true,
-                startingInputTypes = [BpmnRequest::class, ProcessInputAssessment::class],
+                startingInputTypes = [BpmnRequest::class],
             ),
     )
     @Action(description = "Return the layouted BPMN XML and write to disk if requested")

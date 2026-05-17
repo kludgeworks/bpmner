@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.contract.internal.domain
+package dev.groknull.bpmner.contract
 
 import dev.groknull.bpmner.contract.ProcessContract
 import org.springframework.stereotype.Component

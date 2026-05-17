@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.alignment.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
+import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.AlignmentVerdict
@@ -15,7 +17,7 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
-import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
@@ -31,10 +33,23 @@ internal class BpmnAlignmentAgent(
     private val promptFactory: BpmnAlignmentPromptFactory,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    @Action(description = "Check if generated BPMN aligns with the process contract")
+    @AchievesGoal(
+        description = "Verify semantic alignment between process contract and generated BPMN",
+        export =
+            Export(
+                name = "checkAlignment",
+                remote = true,
+                startingInputTypes = [
+                    BpmnRequest::class,
+                    ValidatedProcessContract::class,
+                    FinalValidatedBpmnXml::class,
+                ],
+            ),
+    )
+    @Action(description = "Verify semantic alignment between process contract and generated BPMN")
     fun checkAlignment(
         request: BpmnRequest,
-        contract: ProcessContract,
+        contract: ValidatedProcessContract,
         bpmn: FinalValidatedBpmnXml,
         context: OperationContext,
     ): AlignedBpmnXml {
@@ -46,7 +61,7 @@ internal class BpmnAlignmentAgent(
 
         val modelReport =
             promptRunner.createObject(
-                promptFactory.prompt(request, contract, summary),
+                promptFactory.prompt(request, contract.contract, summary),
                 BpmnAlignmentReport::class.java,
             ) ?: BpmnAlignmentReport(
                 verdict = AlignmentVerdict.FAILED,
