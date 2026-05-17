@@ -4,11 +4,12 @@
  */
 
 import catalog from "./generated/linter-rules.json"
+import { type PklSeverity, severityToBpmnlintLevel } from "./rule-config"
 
 type RuleConfig = {
 	id: string
 	aliases?: string[]
-	severity: string
+	severity: PklSeverity
 	hasTsImplementation: boolean
 }
 
@@ -21,7 +22,7 @@ const tsRules = (catalog as RuleCatalog).rules.filter(
 )
 
 const recommendedPluginRules = Object.fromEntries(
-	tsRules.map((r) => [r.id, r.severity === "error" ? "error" : "warn"]),
+	tsRules.map((r) => [r.id, severityToBpmnlintLevel[r.severity]]),
 ) as Record<string, string>
 
 const allPluginRules = Object.fromEntries(
