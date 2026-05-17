@@ -2,15 +2,20 @@ amends "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Config.
 import "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Builtins.pkl"
 
 local linters = new Mapping<String, Step> {
-  ["biome"] = Builtins.biome
-  ["ktlint"] = Builtins.ktlint
+  ["biome"] = (Builtins.biome) {
+    batch = true
+  }
+  ["ktlint"] = (Builtins.ktlint) {
+    batch = true
+  }
   ["pkl_format"] = Builtins.pkl_format
   ["buildifier_format"] = Builtins.buildifier_format
   ["buildifier_lint"] = Builtins.buildifier_lint
   ["shellcheck"] = Builtins.shellcheck
   ["shfmt"] = (Builtins.shfmt) {
-    check = "shfmt -i 2 -d --apply-ignore {{files}}"
-    fix = "shfmt -i 2 -w --apply-ignore {{files}}"
+    batch = true
+    check = "shfmt -i 2 -d {{files}}"
+    fix = "shfmt -i 2 -w {{files}}"
   }
   ["vale"] = (Builtins.vale) {
     glob = List("README.md", "linter/**/*.md")
@@ -42,7 +47,9 @@ local linters = new Mapping<String, Step> {
     glob = List("src/**/*.kt")
     batch = true
     check =
-      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=':') }} --language-version 2.1 --jvm-target 21 --base-path ."
+      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path ."
+    fix =
+      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path . --auto-correct"
   }
   }
 
