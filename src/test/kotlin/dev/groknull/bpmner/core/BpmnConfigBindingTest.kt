@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
+import kotlin.test.assertIs
 
 @SpringBootTest(classes = [BpmnConfigBindingTest.Config::class])
 class BpmnConfigBindingTest {
@@ -70,10 +71,11 @@ class BpmnConfigBindingTest {
         role: String,
     ) {
         assertEquals(persona, actor.persona.name, "unexpected persona name for role '$role'")
-        val criteria = actor.llm.criteria
-        check(criteria is ByRoleModelSelectionCriteria) {
-            "expected ByRoleModelSelectionCriteria for role '$role', got ${criteria::class.simpleName}"
-        }
+        val criteria =
+            assertIs<ByRoleModelSelectionCriteria>(
+                actor.llm.criteria,
+                "expected ByRoleModelSelectionCriteria for role '$role'",
+            )
         assertEquals(role, criteria.role, "unexpected role for persona '$persona'")
     }
 }
