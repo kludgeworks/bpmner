@@ -139,13 +139,22 @@ const coreRecommendedErrorConfigEntries = builtinRules
 	.map(({ id }) => `    '${id}': 'error',`)
 	.join("\n")
 
-// For custom rules, use the severity from Pkl as the recommended level
+// Translate a Pkl-declared severity to a bpmnlint config level.
+// bpmnlint understands "off" | "warn" | "error". Pkl additionally allows
+// "warning" and "info" — both map to "warn". "off" must be preserved so the
+// rule is disabled at the bpmnlint level, not just in the catalog metadata.
+const bpmnlintLevel = (severity) =>
+	severity === "off" ? "off" : severity === "error" ? "error" : "warn"
+
+// For custom rules, use the severity from Pkl as the recommended level.
 const customRecommendedConfigEntries = tsRules
-	.map((r) => `    '${r.id}': '${r.severity === "error" ? "error" : "warn"}',`)
+	.map((r) => `    '${r.id}': '${bpmnlintLevel(r.severity)}',`)
 	.join("\n")
 
+// "all"-style presets promote every rule to error, except those explicitly
+// disabled in Pkl — disabling a rule there means "don't run it anywhere".
 const customAllConfigEntries = tsRules
-	.map((r) => `    '${r.id}': 'error',`)
+	.map((r) => `    '${r.id}': '${r.severity === "off" ? "off" : "error"}',`)
 	.join("\n")
 
 const customRuleDocsEntries = tsRules
