@@ -7,6 +7,7 @@ load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_project")
+load("//tools/pmd:cpd.bzl", "cpd_test")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -35,6 +36,13 @@ filegroup(
         ],
         exclude = ["src/generated/**"],
     ),
+)
+
+cpd_test(
+    name = "cpd_check",
+    srcs = [":cpd_srcs"],
+    language = "typescript",
+    minimum_tokens = 100,
 )
 
 copy_file(

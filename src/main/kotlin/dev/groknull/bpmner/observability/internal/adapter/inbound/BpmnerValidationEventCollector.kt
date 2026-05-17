@@ -7,7 +7,7 @@ package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Adapter
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 import java.time.Clock
@@ -20,7 +20,7 @@ data class BpmnerCollectedValidationEvents(
     val passed: BpmnValidationPassedEvent? = null,
 )
 
-@PrimaryAdapter
+@Adapter
 @Component
 class BpmnerValidationEventCollector {
     private val clock: Clock = Clock.systemUTC()

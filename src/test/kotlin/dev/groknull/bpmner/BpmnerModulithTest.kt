@@ -9,7 +9,6 @@ import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.core.importer.ImportOption.Predefined.DO_NOT_INCLUDE_TESTS
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules
-import org.springframework.modulith.core.VerificationOptions
 
 class BpmnerModulithTest {
     private val modules =
@@ -24,6 +23,6 @@ class BpmnerModulithTest {
 
     @Test
     fun `verifies no illegal cross-module dependencies`() {
-        modules.verify(VerificationOptions.defaults().withoutAdditionalVerifications())
+        modules.verify()
     }
 }
