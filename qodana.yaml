@@ -6,8 +6,59 @@
 ####################################################################################################################
 
 version: "1.0"
-linter: jetbrains/qodana-jvm-community:2026.1
+image: jetbrains/qodana-jvm-community:2026.1
+
+# Kotlin toolchain compiles to JVM 21 (tools/kotlin/BUILD.bazel: jvm_target = "21").
+projectJDK: "21"
+
 profile:
   name: qodana.recommended
+
+# NOTE: no `bootstrap:` block here. Running `bazel build` inside the
+# qodana-jvm-community container is blocked by three combined constraints
+# we hit while iterating on this config:
+#   * the container runs as a non-root user;
+#   * apt is non-functional in the image (no package lists);
+#   * rules_kotlin's `ksp2` transitively requires a C toolchain that
+#     the JVM-only image doesn't ship.
+# Without a built classpath, Qodana runs source-only Kotlin AST analysis
+# (style, naming, complexity, common smells, basic null-safety) — still
+# useful, and detekt + ktlint in `bazel test //:ci` already cover most of
+# what's lost. Full-resolution analysis would need a custom image (FROM
+# jetbrains/qodana-jvm-community + apt-get install gcc, published to GHCR)
+# or a bazel-bsp generated IntelliJ project model. See repo issues.
+
 include:
   - name: CheckDependencyLicenses
+
+exclude:
+  - name: All
+    paths:
+      # Bazel cache symlinks — point outside the workspace, never source
+      - bazel-out
+      - bazel-bin
+      - bazel-testlogs
+      - bazel-bpmner
+      - bazel-qodana-setup
+      # TypeScript / JS subprojects — JVM linter can't analyze them.
+      # If you ever want JS analysis, add a separate qodana-js job.
+      - linter
+      - layout
+      - web
+      # Generated TypeScript (also git-ignored)
+      - linter/src/generated
+      # Node and build artefacts (defence in depth vs .bazelignore not being read)
+      - node_modules
+      - dist
+      # Non-source content
+      - docs
+      - styles
+      - test/prose
+      - logs
+      # Tooling configs (Bazel files in tools/* are not Kotlin sources)
+      - tools/vale
+      # Local-state
+      - .git
+      - .idea
+      - .claude
+      - .serena

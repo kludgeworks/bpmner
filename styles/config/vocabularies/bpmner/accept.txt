@@ -1,5 +1,9 @@
 Bazel
 Bazelisk
+detekt
+ktlint
+Qodana
+repo
 BPMN
 BPMNDI
 bpmn-lint
