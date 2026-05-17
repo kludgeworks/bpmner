@@ -28,7 +28,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
                 "unfix-01" to cap("unfix-01", RepairKind.UNFIXABLE, fixHandler = null),
             )
         val validator = validatorWith(handlers = setOf("splitJoinForkGateway"))
-        validator.validate(caps, setOf("splitJoinForkGateway"), setOf("stripTypeWords"))
+        validator.validate(caps, setOf("splitJoinForkGateway"))
     }
 
     @Test
@@ -37,22 +37,17 @@ class BpmnLocalRepairCapabilityValidatorTest {
         val validator = validatorWith(handlers = emptySet())
         val error =
             assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
+                validator.validate(caps, emptySet())
             }
         assertTrue(error.message!!.contains("missingHandler"))
         assertTrue(error.message!!.contains("LOCAL_MODEL_FIX"))
     }
 
     @Test
-    fun `validate fails when LOCAL_XML_FIX handler is missing from TS registry`() {
-        val caps = mapOf("name-01" to cap("name-01", RepairKind.LOCAL_XML_FIX, fixHandler = "missingTs"))
+    fun `validate passes for LOCAL_XML_FIX handler even if unknown to Kotlin`() {
+        val caps = mapOf("name-01" to cap("name-01", RepairKind.LOCAL_XML_FIX, fixHandler = "anyTsHandler"))
         val validator = validatorWith(handlers = emptySet())
-        val error =
-            assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
-            }
-        assertTrue(error.message!!.contains("missingTs"))
-        assertTrue(error.message!!.contains("LOCAL_XML_FIX"))
+        validator.validate(caps, emptySet())
     }
 
     @Test
@@ -61,7 +56,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
         val validator = validatorWith(handlers = emptySet())
         val error =
             assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
+                validator.validate(caps, emptySet())
             }
         assertTrue(error.message!!.contains("topo-01"))
     }
@@ -75,7 +70,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
                 "unfix-01" to cap("unfix-01", RepairKind.UNFIXABLE, fixHandler = null),
             )
         val validator = validatorWith(handlers = emptySet())
-        validator.validate(caps, emptySet(), emptySet())
+        validator.validate(caps, emptySet())
     }
 
     private fun validatorWith(handlers: Set<String>): BpmnLocalRepairCapabilityValidator {
