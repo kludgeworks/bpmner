@@ -33,12 +33,12 @@ import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import java.io.File
 
-@PrimaryAdapter
+@Application
 @Agent(description = "Generate a valid BPMN 2.0 diagram from a plain-language workflow description")
 internal class BpmnGeneratorAgent(
     private val config: BpmnConfig,

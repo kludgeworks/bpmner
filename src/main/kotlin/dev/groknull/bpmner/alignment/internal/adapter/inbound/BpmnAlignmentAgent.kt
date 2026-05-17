@@ -21,10 +21,10 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Application
 import org.springframework.context.ApplicationEventPublisher
 
-@PrimaryAdapter
+@Application
 @Agent(description = "Verify semantic alignment between process contract and generated BPMN")
 internal class BpmnAlignmentAgent(
     private val config: BpmnConfig,

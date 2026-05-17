@@ -11,7 +11,7 @@ import org.springframework.modulith.PackageInfo
 @PackageInfo
 @ApplicationModule(
     displayName = "BPMN Observability",
-    allowedDependencies = ["core", "validation", "generation", "repair", "alignment", "readiness"],
+    allowedDependencies = ["alignment", "core", "generation", "readiness", "repair", "validation"],
     type = ApplicationModule.Type.OPEN,
 )
 internal class ModuleMetadata
