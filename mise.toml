@@ -51,4 +51,4 @@ lockfile = true
 includes = [".mise/tasks.toml", "tasks.toml"]
 
 [hooks]
-postinstall = "hk install --mise"
+postinstall = "hk install --mise && vale sync"

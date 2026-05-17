@@ -8,14 +8,14 @@ local linters = new Mapping<String, Step> {
   ["buildifier_format"] = Builtins.buildifier_format
   ["buildifier_lint"] = Builtins.buildifier_lint
   ["shellcheck"] = Builtins.shellcheck
-  ["shfmt"] = new Step {
-    types = List("shell")
+  ["shfmt"] = (Builtins.shfmt) {
     check = "shfmt -i 2 -d --apply-ignore {{files}}"
     fix = "shfmt -i 2 -w --apply-ignore {{files}}"
   }
-  ["vale"] = new Step {
+  ["vale"] = (Builtins.vale) {
     glob = List("README.md", "linter/**/*.md")
-    check = "vale sync && vale {{files}}"
+    batch = true
+    check = "vale {{files}}"
   }
   ["taplo_format"] = Builtins.taplo_format
   ["check_merge_conflict"] = Builtins.check_merge_conflict
@@ -30,9 +30,23 @@ local linters = new Mapping<String, Step> {
   ["actionlint"] = Builtins.actionlint
   ["addlicense"] = new Step {
     required = List("LICENSE_HOLDER", "LICENSE_TYPE")
-    check =
-      "f=\"{{files}}\"; addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" -check ${f:-.}"
-    fix = "f=\"{{files}}\"; addlicense -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" -s=only ${f:-.}"
+    glob = List(
+      "**/*.kt",
+      "**/*.ts",
+      "**/*.bazel",
+      "**/MODULE.bazel",
+      "**/WORKSPACE",
+      "**/*.pkl",
+      "**/*.sh",
+      "**/*.yaml",
+      "**/*.yml",
+      "**/*.css",
+      "**/*.html",
+      "**/*.xml"
+    )
+    batch = true
+    check = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" -check {{files}}"
+    fix = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" {{files}}"
   }
   ["detekt"] = new Step {
     env {
@@ -42,7 +56,7 @@ local linters = new Mapping<String, Step> {
     check =
       "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input src/main/kotlin,src/test/kotlin --language-version 2.1 --jvm-target 21 --base-path ."
   }
-}
+  }
 
 hooks {
   ["pre-commit"] {
