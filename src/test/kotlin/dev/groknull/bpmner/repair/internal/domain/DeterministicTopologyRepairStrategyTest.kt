@@ -25,6 +25,7 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
+import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
@@ -125,6 +126,27 @@ class DeterministicTopologyRepairStrategyTest {
 
         assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
         assertEquals(1, xsd.calls)
+        assertEquals(0, parser.calls)
+    }
+
+    @Test
+    fun `auto-fix that skips a declared-local rule with no errors returns NotApplicable so LLM can take over`() {
+        val parser = FakeXmlParser(otherValidDefinition())
+        val xsd = FakeXsdValidationPort(issues = emptyList())
+        val lint =
+            FakeLintingPort(
+                autoFixResult =
+                    BpmnAutoFixResult(
+                        changed = false,
+                        xml = "<unchanged/>",
+                        skipped = listOf(BpmnAutoFixSkip("bpmner/name-01", "Task_1", "no fixable tokens")),
+                    ),
+            )
+        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
+        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+
+        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
+        assertEquals(0, xsd.calls)
         assertEquals(0, parser.calls)
     }
 
@@ -292,8 +314,8 @@ class DeterministicTopologyRepairStrategyTest {
         return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)
     }
 
-    private @Suppress("TooManyFunctions")
-class FakeLintingPort(
+    @Suppress("TooManyFunctions")
+    private class FakeLintingPort(
         private val autoFixResult: BpmnAutoFixResult? =
             BpmnAutoFixResult(changed = false, xml = ""),
     ) : BpmnLintingPort {
@@ -319,8 +341,8 @@ class FakeLintingPort(
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
     }
 
-    private @Suppress("TooManyFunctions")
-class FakeXsdValidationPort(
+    @Suppress("TooManyFunctions")
+    private class FakeXsdValidationPort(
         private val issues: List<XsdValidationIssue> = emptyList(),
     ) : BpmnXsdValidationPort {
         var calls = 0
@@ -332,8 +354,8 @@ class FakeXsdValidationPort(
         }
     }
 
-    private @Suppress("TooManyFunctions")
-class FakeXmlParser(
+    @Suppress("TooManyFunctions")
+    private class FakeXmlParser(
         private val definition: BpmnDefinition,
     ) : BpmnXmlParser {
         var calls = 0
@@ -345,8 +367,8 @@ class FakeXmlParser(
         }
     }
 
-    private @Suppress("TooManyFunctions")
-class StubModelFixHandler(
+    @Suppress("TooManyFunctions")
+    private class StubModelFixHandler(
         override val handlerName: String,
         private val emitsOps: Boolean = true,
     ) : BpmnLocalModelFixHandler {

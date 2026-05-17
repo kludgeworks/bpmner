@@ -38,7 +38,7 @@ type RuleCatalog = {
 	rules: RuleConfig[]
 }
 
-const severityToBpmnlintLevel: Record<PklSeverity, BpmnlintRuleLevel> = {
+export const severityToBpmnlintLevel: Record<PklSeverity, BpmnlintRuleLevel> = {
 	error: "error",
 	warning: "warn",
 	info: "warn",

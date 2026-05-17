@@ -49,7 +49,7 @@ internal class DeterministicTopologyRepairStrategy(
         return when {
             localXmlRules.isEmpty() -> BpmnRepairResult.NotApplicable
             issuesForFix.isEmpty() -> BpmnRepairResult.NotApplicable
-            else -> runAutoFixAndDecide(rendered.xml, issuesForFix, localXmlRules, attempt)
+            else -> runAutoFixAndDecide(rendered.xml, issuesForFix, attempt)
         }
     }
 
@@ -106,13 +106,11 @@ internal class DeterministicTopologyRepairStrategy(
     private fun runAutoFixAndDecide(
         xml: String,
         issues: List<LintIssue>,
-        localXmlRules: Set<String>,
         attempt: BpmnRepairAttempt,
     ): BpmnRepairResult {
         val result =
             lintingPort.autoFix(xml, issues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
                 ?: return BpmnRepairResult.NotApplicable
-        failOnDeclaredLocalSkipped(result, localXmlRules)
         if (result.errors.isNotEmpty()) {
             logger.warn(
                 "Local auto-fix errors; recording failures for LLM fallback context: {}",
@@ -137,21 +135,6 @@ internal class DeterministicTopologyRepairStrategy(
             .filter { it.source == BpmnDiagnosticSource.LINT && it.kind == RepairKind.LOCAL_XML_FIX }
             .mapNotNull { it.bareRuleId() }
             .toSet()
-
-    private fun failOnDeclaredLocalSkipped(
-        result: BpmnAutoFixResult,
-        localXmlRules: Set<String>,
-    ) {
-        val declaredLocalSkipped =
-            result.skipped.filter { skip ->
-                BpmnLintRuleIds.bareRuleId(skip.rule) in localXmlRules
-            }
-        check(declaredLocalSkipped.isEmpty()) {
-            "Local lint auto-fix skipped declared-local rule(s) " +
-                declaredLocalSkipped.joinToString { "${it.rule}@${it.elementId ?: "-"}" } +
-                "; startup validation should have caught this"
-        }
-    }
 
     private fun isAutoFixUsable(result: BpmnAutoFixResult): Boolean = result.changed && result.applied.isNotEmpty()
 
