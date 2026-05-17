@@ -37,8 +37,7 @@ class BpmnXmlToDefinitionConverterTest {
 
     private fun assertProcessShellEqual(
         a: BpmnDefinition,
-        b: BpmnDefinition,
-    ) {
+        b: BpmnDefinition) {
         assertEquals(a.processId, b.processId)
         assertEquals(a.processName, b.processName)
         assertEquals(a.nodes.size, b.nodes.size)
@@ -58,24 +57,19 @@ class BpmnXmlToDefinitionConverterTest {
                 listOf(
                     BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
                     BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 100.0, 36.0, 36.0)),
-                ),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 100.0, 36.0, 36.0))),
             sequences =
                 listOf(
                     BpmnEdge(
                         "Flow_1",
                         "Start_1",
-                        "Task_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 118.0), BpmnWaypoint(200.0, 120.0)),
-                    ),
+                        "Task_1"
+                    )
                     BpmnEdge(
                         "Flow_2",
                         "Task_1",
-                        "End_1",
-                        waypoints = listOf(BpmnWaypoint(300.0, 120.0), BpmnWaypoint(360.0, 118.0)),
-                    ),
-                ),
-        )
+                        "End_1"
+                    )))
 
     private fun branchingDefinition() =
         BpmnDefinition(
@@ -88,47 +82,38 @@ class BpmnXmlToDefinitionConverterTest {
                         "Gateway_1",
                         "Is valid?",
                         NodeType.EXCLUSIVE_GATEWAY,
-                        BpmnBounds(180.0, 135.0, 50.0, 50.0),
-                    ),
+                        BpmnBounds(180.0, 135.0, 50.0, 50.0)),
                     BpmnNode("Task_1", "Approve", NodeType.USER_TASK, BpmnBounds(300.0, 100.0, 100.0, 80.0)),
                     BpmnNode("Task_2", "Reject", NodeType.SERVICE_TASK, BpmnBounds(300.0, 200.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
-                ),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0))),
             sequences =
                 listOf(
                     BpmnEdge(
                         "Flow_1",
                         "Start_1",
-                        "Gateway_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 158.0), BpmnWaypoint(180.0, 160.0)),
+                        "Gateway_1"
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "Gateway_1",
                         "Task_1",
-                        name = "Yes",
-                        waypoints = listOf(BpmnWaypoint(205.0, 135.0), BpmnWaypoint(350.0, 140.0)),
+                        name = "Yes"
                     ),
                     BpmnEdge(
                         "Flow_3",
                         "Gateway_1",
                         "Task_2",
                         name = "No",
-                        conditionExpression = "\${value < 0}",
-                        waypoints = listOf(BpmnWaypoint(205.0, 185.0), BpmnWaypoint(350.0, 240.0)),
+                        conditionExpression = "\${value < 0}"
                     ),
                     BpmnEdge(
                         "Flow_4",
                         "Task_1",
-                        "End_1",
-                        waypoints = listOf(BpmnWaypoint(400.0, 140.0), BpmnWaypoint(460.0, 158.0)),
+                        "End_1"
                     ),
                     BpmnEdge(
                         "Flow_5",
                         "Task_2",
-                        "End_1",
-                        waypoints = listOf(BpmnWaypoint(400.0, 240.0), BpmnWaypoint(460.0, 158.0)),
-                    ),
-                ),
-        )
+                        "End_1"
+                    )))
 }

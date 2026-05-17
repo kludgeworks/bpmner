@@ -12,7 +12,6 @@ import org.camunda.bpm.model.bpmn.instance.Definitions
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
-import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnPlane
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
@@ -62,51 +61,34 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             modelInstance.definitions
                 ?: error("Unable to locate definitions in Camunda model instance")
         configureDefinitions(definitions)
-
-        val plane = BpmnModelFactory.createDiagramPlane(modelInstance, definitions, process)
-        val (nodeMap, shapeMap) = buildNodeMaps(modelInstance, definition, process, plane)
+        val nodeMap = buildNodeMaps(modelInstance, definition, process)
         buildSequenceFlows(
             ConversionContext(
                 modelInstance = modelInstance,
                 definition = definition,
                 process = process,
-                plane = plane,
                 nodeMap = nodeMap,
-                shapeMap = shapeMap,
             ),
         )
         return modelInstance
     }
 
-    private fun buildNodeMaps(
-        modelInstance: BpmnModelInstance,
-        definition: BpmnDefinition,
-        process: Process,
-        plane: BpmnPlane,
-    ): Pair<Map<String, FlowNode>, Map<String, BpmnShape>> {
+    private fun buildNodeMaps(modelInstance: BpmnModelInstance, definition: BpmnDefinition, process: org.camunda.bpm.model.bpmn.instance.Process): Map<String, FlowNode> {
         val nodeMap = mutableMapOf<String, FlowNode>()
-        val shapeMap = mutableMapOf<String, BpmnShape>()
-        for (node in definition.nodes) {
+                for (node in definition.nodes) {
             val flowNode = BpmnModelFactory.newFlowNode(modelInstance, node)
             process.addChildElement(flowNode)
             nodeMap[node.id] = flowNode
-            val shape = modelInstance.newInstance(BpmnShape::class.java)
-            shape.id = "${node.id}_di"
-            shape.bpmnElement = flowNode
-            shape.bounds = BpmnModelFactory.newBounds(modelInstance, node.bounds)
-            plane.addChildElement(shape)
-            shapeMap[node.id] = shape
-        }
-        return nodeMap to shapeMap
+
+                    }
+        return nodeMap
     }
 
     private data class ConversionContext(
         val modelInstance: BpmnModelInstance,
         val definition: BpmnDefinition,
         val process: Process,
-        val plane: BpmnPlane,
-        val nodeMap: Map<String, FlowNode>,
-        val shapeMap: Map<String, BpmnShape>,
+        val nodeMap: Map<String, FlowNode>
     )
 
     private fun buildSequenceFlows(context: ConversionContext) {
@@ -130,17 +112,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             context.process.addChildElement(sequenceFlow)
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
-            val diEdge =
-                context.modelInstance.newInstance(org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge::class.java)
-            diEdge.id = "${edge.id}_di"
-            diEdge.bpmnElement = sequenceFlow
-            diEdge.sourceElement = context.shapeMap[edge.sourceRef]
-            diEdge.targetElement = context.shapeMap[edge.targetRef]
-            edge.waypoints.forEach { waypoint ->
-                diEdge.addChildElement(BpmnModelFactory.newWaypoint(context.modelInstance, waypoint))
-            }
-            context.plane.addChildElement(diEdge)
-        }
+                    }
     }
 
     private fun configureDefinitions(definitions: Definitions) {
