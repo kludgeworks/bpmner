@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
@@ -22,6 +22,11 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.TraceLink
+import dev.groknull.bpmner.core.AlignmentClassification
+import dev.groknull.bpmner.core.EvidenceSourceType
+import dev.groknull.bpmner.core.MissingProcessArea
+import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ClarificationQuestion
