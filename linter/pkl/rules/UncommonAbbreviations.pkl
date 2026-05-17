@@ -28,7 +28,8 @@ targetElements =
     "bpmn:DataStoreReference",
   )
 
-severity = "warning"
+// TEMP: disabled pending kludgeworks/bpmner#147. Re-enable when per-diagnostic dispositions land.
+severity = "off"
 errorMessages = new {
   ["default"] = "Avoid uncommon abbreviations in labels or explain them via annotation/glossary"
 }
