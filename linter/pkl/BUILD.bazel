@@ -3,7 +3,7 @@
 
 load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_library", "pkl_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//linter:__subpackages__"])
 
 PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
 
@@ -15,7 +15,7 @@ pkl_library(
 )
 
 pkl_eval(
-    name = "linter_rules_json",
+    name = "catalog_json",
     srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["Catalog.pkl"],
     outs = ["linter-rules.json"],
     entrypoints = ["Catalog.pkl"],
@@ -23,7 +23,7 @@ pkl_eval(
 )
 
 pkl_eval(
-    name = "uncommon_abbreviations_json",
+    name = "uncommon_abbreviations_fixture_json",
     srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
     outs = ["uncommon_abbreviations.json"],
     entrypoints = ["test-fixtures/UncommonAbbreviations.pkl"],
@@ -31,7 +31,7 @@ pkl_eval(
 )
 
 pkl_eval(
-    name = "docs",
+    name = "generated_docs",
     srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + [
         "Catalog.pkl",
         "MarkdownGenerator.pkl",

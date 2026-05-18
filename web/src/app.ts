@@ -128,10 +128,10 @@ function connectSse(url: string) {
 			return
 		}
 
-		if (event.type === "ProgressUpdateEvent") {
-			addProgress(event.name)
-		} else if (event.type === "BpmnSnapshotEvent") {
-			await handleSnapshot(event)
+		if (event.type === "ProgressUpdateEvent" && "name" in event) {
+			addProgress(event.name as string)
+		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
+			await handleSnapshot(event as BpmnSnapshotEvent)
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
 			if (currentXml) {
@@ -163,7 +163,7 @@ function addProgress(msg: string) {
 }
 
 async function handleSnapshot(event: BpmnSnapshotEvent) {
-	currentXml = event.xml
+	currentXml = event.xml || ""
 	if (!currentXml) return
 
 	try {

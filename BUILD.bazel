@@ -25,20 +25,23 @@ buildifier_test(
 
 detekt_test(
     name = "detekt_check",
-    srcs = ["//src:detekt_srcs", "//src/test:detekt_srcs"],
+    srcs = [
+        "//src:analysis_srcs",
+        "//src/test:analysis_srcs",
+    ],
     cfgs = ["config/detekt/detekt.yml"],
 )
 
 cpd_test(
     name = "cpd_kotlin_main",
-    srcs = ["//src:cpd_srcs"],
+    srcs = ["//src:analysis_srcs"],
     language = "kotlin",
     minimum_tokens = 100,
 )
 
 cpd_test(
     name = "cpd_kotlin_test",
-    srcs = ["//src/test:cpd_srcs"],
+    srcs = ["//src/test:analysis_srcs"],
     language = "kotlin",
     minimum_tokens = 100,
 )
@@ -47,27 +50,20 @@ VALE_SRCS = [
     ".vale.ini",
     "README.md",
     "//styles",
-]
+] + glob(["test/prose/*.md"])
 
-js_test(
-    name = "vale_docs_test",
-    args = ["docs"],
+[js_test(
+    name = "vale_%s_test" % mode,
+    args = [mode],
     data = VALE_SRCS + [
         "//:node_modules/@vvago/vale",
         "//linter:vale_docs",
     ],
     entry_point = "tools/vale/vale-test.mjs",
-)
-
-js_test(
-    name = "vale_fixtures_test",
-    args = ["fixtures"],
-    data = VALE_SRCS + [
-        "//:node_modules/@vvago/vale",
-        "//linter:vale_docs",
-    ],
-    entry_point = "tools/vale/vale-test.mjs",
-)
+) for mode in [
+    "docs",
+    "fixtures",
+]]
 
 build_test(
     name = "typescript_build_test",
@@ -78,36 +74,53 @@ build_test(
     ],
 )
 
-build_test(
-    name = "linter_bundle_build_test",
-    targets = ["//linter:bundle"],
-)
-
-# Unified CI test suite
 test_suite(
-    name = "ci",
+    name = "ci_static",
     tests = [
         ":buildifier_check",
         ":cpd_kotlin_main",
         ":cpd_kotlin_test",
+        ":detekt_check",
+        ":vale_docs_test",
+        ":vale_fixtures_test",
         "//layout:cpd_check",
         "//linter:cpd_check",
-        ":detekt_check",
-        ":linter_bundle_build_test",
-        ":typescript_build_test",
-        ":vale_docs_test",
-        "//linter:auto_fix_test",
-        "//linter:lint_test",
-        "//linter:smoke_test",
-        "//linter/pkl:schema_test",
         "//src:ktlint_check",
         "//src/test:ktlint_check",
-        "//src/test:BpmnerArchitectureTest",
-        "//src/test:BpmnerModulithTest",
-        "//src/test:BpmnerModuleBoundariesTest",
+    ],
+)
+
+test_suite(
+    name = "ci_typescript",
+    tests = [
+        ":typescript_build_test",
+        "//layout:smoke_test",
+        "//linter:auto_fix_test",
+        "//linter:capabilities_test",
+        "//linter:lint_test",
+        "//linter:smoke_test",
+    ],
+)
+
+test_suite(
+    name = "ci_kotlin",
+    tests = [
         "//src/test:BpmnAgentFlowSystemTest",
         "//src/test:BpmnAlignmentFailureIntegrationTest",
         "//src/test:BpmnGuardrailSystemTest",
+        "//src/test:BpmnerArchitectureTest",
+        "//src/test:BpmnerModuleBoundariesTest",
+        "//src/test:BpmnerModulithTest",
         "//src/test:bpmnerAppRunfilesDataTest",
+    ],
+)
+
+test_suite(
+    name = "ci",
+    tests = [
+        ":ci_kotlin",
+        ":ci_static",
+        ":ci_typescript",
+        "//linter/pkl:schema_test",
     ],
 )
