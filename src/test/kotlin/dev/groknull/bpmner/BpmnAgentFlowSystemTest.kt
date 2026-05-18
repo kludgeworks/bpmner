@@ -115,9 +115,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
             .lint(anyString())
-        doReturn(emptyList<LintIssue>())
-            .`when`(bpmnLintService)
-            .lint(anyString())
 
         val result =
             AgentPlatformTypedOps(agentPlatform)

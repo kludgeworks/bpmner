@@ -89,7 +89,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │              │    │ definition checks                   │
             │              │    │ ownership checks                    │
             │              │    │ XSD validation                      │
-            │              │    │ bpmn-lint (SEMANTIC_PRE_LAYOUT)     │
+            │              │    │ bpmn-lint (semantic)                │
             │              │    │ normalize + stamp RepairKind        │
             │              │    ▼                                     │
             │              ├─ repair strategies, in @Order:           │
@@ -124,8 +124,8 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │     │ deterministic layout via embedded bpmn-auto-layout│
             │     ▼                                                   │
             │  LayoutedBpmnXml ─► validateFinalBpmnXml                │
-            │     │ XSD + bpmn-lint (FINAL_POST_LAYOUT)               │
-            │     │ throws if any diagnostic remains                  │
+            │     │ XSD validation only                               │
+            │     │ throws BpmnLayoutCorruptionException on failure   │
             │     ▼                                                   │
             │  FinalValidatedBpmnXml                                  │
             └──────────────┬──────────────────────────────────────────┘
@@ -150,14 +150,14 @@ The arrows between domain types are exact: each agent action declares its input 
 | `generatePhasePlans` | `ValidatedOutline → PhasePlanSet` | Currently emits a single `phase:main` plan covering the whole process. Reserved for future multi-phase decomposition. |
 | `validatePhasePlans` | `PhasePlanSet → ValidatedPhasePlanSet` | Per-phase validation hook; today a no-op pass-through with empty diagnostics. |
 | `composeProcessGraph` | `ValidatedPhasePlanSet → ComposedProcessGraph` | Builds the `objectOwnersByObjectRef` map: every node and sequence gets stamped with its owning phase. This is the foundation for `repairScope` inference downstream. |
-| `assignOwnership` | `ComposedProcessGraph → OwnedElementGraph` | Mirrors the object-ref ownership into an `elementOwnersByElementId` map, including `_di` shape ids. The diagnostic normalizer uses this to resolve `ownerRef` from `elementId`. |
-| `assignLayout` | `OwnedElementGraph → LaidOutProcessGraph` | Passes through; the layout coordinates come from the LLM output (every node has explicit `bounds`, every edge has `waypoints`). Reserved for a future deterministic layout pass. |
-| `renderBpmnXml` | `(BpmnRequest, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds the XML and a `BpmnElementIndex` mapping element ids to render objects and `_di` shape ids. Emits `BpmnGeneratedEvent`. |
+| `assignOwnership` | `ComposedProcessGraph → OwnedElementGraph` | Mirrors the object-ref ownership into an `elementOwnersByElementId` map. The diagnostic normalizer uses this to resolve `ownerRef` from `elementId`. |
+| `assignLayout` | `OwnedElementGraph → LaidOutProcessGraph` | Passes through. Layout coordinates are not part of the semantic model; they are assigned downstream in the layout stage by `yet-another-bpmn-auto-layout`. |
+| `renderBpmnXml` | `(BpmnRequest, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds semantic XML (no BPMNDI) and a `BpmnElementIndex` mapping element ids to render objects. Emits `BpmnGeneratedEvent`. |
 | `writeBpmn` (final step) | `(BpmnRequest, FinalValidatedBpmnXml) → BpmnResult` | UTF-8 writes the final XML to the requested output file. Carries `@AchievesGoal` for the agent platform's planner. |
 
 ### Why a typed `BpmnDefinition`, not raw XML
 
-The LLM produces an object with explicit fields (nodes, sequences, bounds, waypoints). This makes deterministic repair possible: a model-level patch like `SET_NODE_NAME(id, name)` operates on the typed graph, not a regex on XML. XML rendering happens *after* all validation and repair; it's the last deterministic step, not the first thing the LLM sees.
+The LLM produces an object with explicit semantic fields (nodes, sequences). This makes deterministic repair possible: a model-level patch like `SET_NODE_NAME(id, name)` operates on the typed graph, not a regex on XML. XML rendering happens *after* all validation and repair; it's the last deterministic step, not the first thing the LLM sees. Diagram coordinates are deliberately absent — they are computed downstream by the auto-layout stage so the LLM can never produce a layout that fights the layout engine.
 
 ## Stage 2 — Repair (`repair/`)
 
@@ -217,11 +217,11 @@ The repair contract itself — what each `RepairKind` means, where capabilities 
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout cleanup. Re-lints in `SEMANTIC_PRE_LAYOUT` phase, filters issues to those whose capability `kind` is `LOCAL_XML_FIX`, applies the TS auto-fix bundle, XSD-validates the result. If the auto-fixed XML is XSD-invalid, the original validated XML is kept. |
+| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout cleanup. Re-lints, filters issues to those whose capability `kind` is `LOCAL_XML_FIX`, applies the TS auto-fix bundle, XSD-validates the result. If the auto-fixed XML is XSD-invalid, the original validated XML is kept. |
 | `layoutBpmnXml` | `AutoFixedBpmnXml → LayoutedBpmnXml` | `BpmnLayoutPort` runs the embedded `bpmn-auto-layout` JS bundle in GraalJS to assign deterministic diagram coordinates (waypoints, shape bounds). |
-| `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | Final XSD pass plus `FINAL_POST_LAYOUT` lint. Layout-sensitive rules (declared in Pkl with `layoutSensitive = true`) are evaluated here, not earlier. Any remaining diagnostic throws `BpmnFinalValidationException` — the agent does **not** re-enter repair. |
+| `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | XSD-validates the layouted XML against the Camunda BPMN schema. Semantic lint rules already ran pre-layout and don't repeat here. XSD failure throws `BpmnLayoutCorruptionException` — the agent does **not** re-enter repair. |
 
-Final validation is intentionally terminal. Anything still wrong after layout is a bug in either the layout engine, a layout-sensitive rule, or the contract between them — not something the LLM should be asked to fix.
+Final validation is intentionally narrow: it catches structural corruption from the layout library itself. Semantic correctness was settled by the repair loop; if the auto-layout pass somehow breaks the XML schema, that's a layout-engine bug, not something the LLM should be asked to fix.
 
 ## Validation as a shared service
 
