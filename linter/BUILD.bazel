@@ -2,45 +2,36 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary", "js_test")
-load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("//tools/js:ts.bzl", "bpmner_ts_project")
+load("//tools/js:test.bzl", "bpmner_node_test")
+load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 load("//tools/pmd:cpd.bzl", "cpd_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
 
-LIB_TS_SRCS = glob([
+LIB_SRCS = glob([
     "src/**/*.ts",
-])
-
-TEST_TS_SRCS = glob([
-    "test/**/*.ts",
-])
-
-TYPE_DECL_SRCS = glob([
     "types/**/*.d.ts",
 ])
 
-ALL_TS_SRCS = LIB_TS_SRCS + TEST_TS_SRCS + TYPE_DECL_SRCS
+TEST_SRCS = glob([
+    "test/**/*.ts",
+])
 
-filegroup(
-    name = "cpd_srcs",
-    srcs = glob(
-        [
-            "src/**/*.ts",
-            "test/**/*.ts",
-        ],
-        exclude = ["src/generated/**"],
-    ),
-)
+BPMN_FIXTURES = glob([
+    "test/fixtures/**/*.bpmn",
+])
 
 cpd_test(
     name = "cpd_check",
-    srcs = [":cpd_srcs"],
+    srcs = [":analysis_srcs"],
     language = "typescript",
     minimum_tokens = 100,
 )
@@ -51,14 +42,17 @@ copy_file(
     out = "src/polyfills-shared.ts",
 )
 
-# This import path is generated from the Pkl catalog by Bazel.
-GENERATED_JSON_SRCS = [":linter_rules_json_for_ts"]
+copy_file(
+    name = "linter_rules_json",
+    src = "//linter/pkl:catalog_json",
+    out = "src/generated/linter-rules.json",
+)
 
-ALL_TSC_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS
-
-BPMN_FIXTURES = glob([
-    "test/fixtures/**/*.bpmn",
-])
+GENERATED_SRCS = [
+    ":generated_rule_registry_ts",
+    ":linter_rules_json",
+    ":copy_polyfills",
+]
 
 js_library(
     name = "vale_docs",
@@ -66,23 +60,12 @@ js_library(
         "README.md",
         "docs/template.md",
         "docs/toolbox.md",
-        "//linter/pkl:docs",
+        "//linter/pkl:generated_docs",
     ],
 )
 
-BUNDLE_TS_SRCS = LIB_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + [":copy_polyfills"]
-
-TEST_BUNDLE_SRCS = ALL_TS_SRCS + [":static_rules"] + GENERATED_JSON_SRCS + BPMN_FIXTURES + [":copy_polyfills"]
-
 # Link the standalone linter package's node_modules
 npm_link_all_packages(name = "node_modules")
-
-genrule(
-    name = "linter_rules_json_for_ts",
-    srcs = ["//linter/pkl:linter-rules.json"],
-    outs = ["src/generated/linter-rules.json"],
-    cmd = "cp $(location //linter/pkl:linter-rules.json) $@",
-)
 
 LINTER_TS_DEPS = [
     "//:node_modules/@types/node",
@@ -93,38 +76,35 @@ LINTER_TS_DEPS = [
     "//:node_modules/wink-nlp",
 ]
 
-exports_files([
-    "tsconfig.bazel.json",
-    "tsconfig.json",
-])
-
-ts_config(
-    name = "tsconfig",
-    src = "tsconfig.json",
+filegroup(
+    name = "analysis_srcs",
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "test/**/*.ts",
+        ],
+        exclude = ["src/generated/**"],
+    ),
 )
 
-ts_config(
-    name = "tsconfig_bazel",
-    src = "tsconfig.bazel.json",
-    deps = [":tsconfig"],
-)
+bpmner_ts_configs()
 
 bpmner_ts_project(
     name = "ts",
-    srcs = ALL_TSC_SRCS + [":copy_polyfills"],
+    srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS,
     assets = BPMN_FIXTURES,
     out_dir = "tsc",
     resolve_json_module = True,
+    tsconfig = ":tsconfig_bazel",
     deps = LINTER_TS_DEPS,
 )
 
 js_binary(
-    name = "generate_static_rules_bin",
+    name = "generate_rule_registry_bin",
     data = [
-        "scripts/generate-static-rules.mjs",
         "src/generated/linter-rules.json",
         "//:node_modules/bpmnlint",
-        "//linter/pkl:docs",
+        "//linter/pkl:generated_docs",
     ] + glob([
         "src/rules/**/*.ts",
     ]),
@@ -132,29 +112,27 @@ js_binary(
 )
 
 js_run_binary(
-    name = "static_rules",
+    name = "generated_rule_registry_ts",
     srcs = [
-        "scripts/generate-static-rules.mjs",
         "src/generated/linter-rules.json",
-        "//:node_modules/bpmnlint",
-        "//linter/pkl:docs",
+        "//linter/pkl:generated_docs",
     ] + glob([
         "src/rules/**/*.ts",
     ]),
     outs = [STATIC_RULES_OUTPUT],
     args = [
         "$(location %s)" % STATIC_RULES_OUTPUT,
-        "$(location //linter/pkl:docs)",
+        "$(location //linter/pkl:generated_docs)",
         "$(location src/generated/linter-rules.json)",
     ],
-    mnemonic = "GenerateStaticRules",
+    mnemonic = "GenerateRuleRegistry",
     progress_message = "Generating %{label}",
-    tool = ":generate_static_rules_bin",
+    tool = ":generate_rule_registry_bin",
 )
 
 esbuild(
     name = "bundle",
-    srcs = BUNDLE_TS_SRCS,
+    srcs = LIB_SRCS + GENERATED_SRCS,
     config = {
         "inject": ["linter/src/polyfills.ts"],
         "sourcemap": False,
@@ -167,114 +145,15 @@ esbuild(
     deps = LINTER_TS_DEPS,
 )
 
-esbuild(
-    name = "lint_test_bundle",
-    srcs = TEST_BUNDLE_SRCS,
-    config = {
-        "loader": {
-            ".bpmn": "text",
-        },
-        "sourcemap": False,
-    },
-    entry_point = "test/lint.test.ts",
-    external = [
-        "node:test",
-        "node:assert",
-    ],
-    format = "cjs",
-    output = "dist/test/lint.test.js",
-    platform = "node",
-    target = "es2022",
+[bpmner_node_test(
+    name = t,
+    srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS + BPMN_FIXTURES,
+    entry_point = "test/%s.test.ts" % t.replace("_test", "").replace("_", "-"),
+    loaders = {".bpmn": "text"},
     deps = LINTER_TS_DEPS,
-)
-
-esbuild(
-    name = "smoke_test_bundle",
-    srcs = TEST_BUNDLE_SRCS,
-    config = {
-        "loader": {
-            ".bpmn": "text",
-        },
-        "sourcemap": False,
-    },
-    entry_point = "test/smoke.test.ts",
-    external = [
-        "node:test",
-        "node:assert",
-    ],
-    format = "cjs",
-    output = "dist/test/smoke.test.js",
-    platform = "node",
-    target = "es2022",
-    deps = LINTER_TS_DEPS,
-)
-
-js_test(
-    name = "lint_test",
-    data = [":lint_test_bundle"],
-    entry_point = "dist/test/lint.test.js",
-    node_options = ["--test-reporter=spec"],
-)
-
-js_test(
-    name = "smoke_test",
-    data = [":smoke_test_bundle"],
-    entry_point = "dist/test/smoke.test.js",
-    node_options = ["--test-reporter=spec"],
-)
-
-esbuild(
-    name = "auto_fix_test_bundle",
-    srcs = TEST_BUNDLE_SRCS,
-    config = {
-        "loader": {
-            ".bpmn": "text",
-        },
-        "sourcemap": False,
-    },
-    entry_point = "test/auto-fix.test.ts",
-    external = [
-        "node:test",
-        "node:assert",
-    ],
-    format = "cjs",
-    output = "dist/test/auto-fix.test.js",
-    platform = "node",
-    target = "es2022",
-    deps = LINTER_TS_DEPS,
-)
-
-js_test(
-    name = "auto_fix_test",
-    data = [":auto_fix_test_bundle"],
-    entry_point = "dist/test/auto-fix.test.js",
-    node_options = ["--test-reporter=spec"],
-)
-
-esbuild(
-    name = "capabilities_test_bundle",
-    srcs = TEST_BUNDLE_SRCS,
-    config = {
-        "loader": {
-            ".bpmn": "text",
-        },
-        "sourcemap": False,
-    },
-    entry_point = "test/capabilities.test.ts",
-    external = [
-        "node:test",
-        "node:assert",
-    ],
-    format = "cjs",
-    output = "dist/test/capabilities.test.js",
-    platform = "node",
-    target = "es2022",
-    deps = LINTER_TS_DEPS,
-)
-
-js_test(
-    name = "capabilities_test",
-    data = [":capabilities_test_bundle"],
-    entry_point = "dist/test/capabilities.test.js",
-    node_options = ["--test-reporter=spec"],
-)
+) for t in [
+    "lint_test",
+    "smoke_test",
+    "auto_fix_test",
+    "capabilities_test",
+]]

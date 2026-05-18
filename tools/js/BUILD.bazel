@@ -4,4 +4,5 @@
 exports_files([
     "polyfills.ts",
     "ts.bzl",
+    "test.bzl",
 ])

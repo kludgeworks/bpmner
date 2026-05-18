@@ -5,8 +5,9 @@ load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
+load("//tools/kotlin:spring.bzl", "spring_allopen_plugins")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = ["//visibility:private"])
 
 sh_test(
     name = "bpmnerAppJarStructureTest",
@@ -22,20 +23,11 @@ sh_test(
     data = ["//src:bpmner_app"],
 )
 
-SPRING_OPEN_ANNOTATIONS = [
-    "org.springframework.stereotype.Component",
-    "org.springframework.transaction.annotation.Transactional",
-    "org.springframework.scheduling.annotation.Async",
-    "org.springframework.cache.annotation.Cacheable",
-    "org.springframework.boot.test.context.SpringBootTest",
-    "org.springframework.validation.annotation.Validated",
-]
-
 kt_jvm_library(
     name = "bpmner_tests_lib",
     srcs = glob(["kotlin/**/*.kt"]),
     associates = ["//src:bpmner_core"],
-    plugins = ["//src:allopen_" + a.split(".")[-1].lower() for a in SPRING_OPEN_ANNOTATIONS],
+    plugins = spring_allopen_plugins(),
     resources = glob(["resources/**"]),
     deps = [
         "@maven//:com_embabel_agent_embabel_agent_test",
@@ -54,18 +46,9 @@ kt_jvm_library(
 )
 
 filegroup(
-    name = "detekt_srcs",
+    name = "analysis_srcs",
     srcs = glob(["kotlin/**/*.kt"]),
-)
-
-filegroup(
-    name = "cpd_srcs",
-    srcs = glob(["kotlin/**/*.kt"]),
-)
-
-ktlint_test(
-    name = "ktlint_check",
-    srcs = glob(["kotlin/**/*.kt"]),
+    visibility = ["//visibility:public"],
 )
 
 TEST_FILES = glob(["kotlin/**/*Test.kt"])
@@ -75,6 +58,7 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     timeout = "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f else "short",
     tags = ["integration"] if "IntegrationTest" in f else [],
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    visibility = ["//visibility:public"],
     runtime_deps = [
         ":bpmner_tests_lib",
         "@maven//:org_junit_jupiter_junit_jupiter_engine",
@@ -82,3 +66,9 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
         "@maven//:org_junit_platform_junit_platform_reporting",
     ],
 ) for f in TEST_FILES]
+
+ktlint_test(
+    name = "ktlint_check",
+    srcs = glob(["kotlin/**/*.kt"]),
+    visibility = ["//visibility:public"],
+)

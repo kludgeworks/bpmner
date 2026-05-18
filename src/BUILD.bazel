@@ -6,6 +6,7 @@ load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
+load("//tools/kotlin:spring.bzl", "SPRING_OPEN_ANNOTATIONS", "spring_allopen_plugins")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -16,15 +17,6 @@ kt_compiler_plugin(
     deps = ["@rules_kotlin//kotlin/compiler:allopen-compiler-plugin"],
 )
 
-SPRING_OPEN_ANNOTATIONS = [
-    "org.springframework.stereotype.Component",
-    "org.springframework.transaction.annotation.Transactional",
-    "org.springframework.scheduling.annotation.Async",
-    "org.springframework.cache.annotation.Cacheable",
-    "org.springframework.boot.test.context.SpringBootTest",
-    "org.springframework.validation.annotation.Validated",
-]
-
 [kt_plugin_cfg(
     name = "allopen_" + a.split(".")[-1].lower(),
     options = {"annotation": [a]},
@@ -34,25 +26,25 @@ SPRING_OPEN_ANNOTATIONS = [
 # Wrap the JS bundle in a java_library to handle resource path stripping.
 # This ensures it ends up at /js/bpmnlint-bundle.js on the classpath.
 java_library(
-    name = "linter_bundle_res",
+    name = "linter_bundle_resources",
     resource_strip_prefix = "linter/dist",
     resources = ["//linter:bundle"],
 )
 
 java_library(
-    name = "layout_bundle_res",
+    name = "layout_bundle_resources",
     resource_strip_prefix = "layout/dist",
     resources = ["//layout:bundle"],
 )
 
 java_library(
-    name = "web_bundle_res",
+    name = "web_bundle_resources",
     resource_strip_prefix = "web/dist",
     resources = ["//web:bundle"],
 )
 
 java_library(
-    name = "web_static_res",
+    name = "web_static_resources",
     resource_strip_prefix = "web/src/static",
     resources = ["//web:static_assets"],
 )
@@ -65,32 +57,27 @@ filegroup(
 )
 
 filegroup(
-    name = "detekt_srcs",
-    srcs = glob(["main/kotlin/**/*.kt"]),
-)
-
-filegroup(
-    name = "cpd_srcs",
+    name = "analysis_srcs",
     srcs = glob(["main/kotlin/**/*.kt"]),
 )
 
 java_library(
-    name = "linter_rules_json_res",
-    resource_strip_prefix = "linter/pkl",
-    resources = ["//linter/pkl:linter_rules_json"],
+    name = "linter_rules_resources",
+    resource_strip_prefix = "linter/src/generated",
+    resources = ["//linter:linter_rules_json"],
 )
 
 kt_jvm_library(
     name = "bpmner_core",
     srcs = glob(["main/kotlin/**/*.kt"]),
-    plugins = [":allopen_" + a.split(".")[-1].lower() for a in SPRING_OPEN_ANNOTATIONS],
+    plugins = spring_allopen_plugins(),
     resources = glob(["main/resources/**"]),
     deps = [
-        ":layout_bundle_res",
-        ":linter_bundle_res",
-        ":linter_rules_json_res",
-        ":web_bundle_res",
-        ":web_static_res",
+        ":layout_bundle_resources",
+        ":linter_bundle_resources",
+        ":linter_rules_resources",
+        ":web_bundle_resources",
+        ":web_static_resources",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
         "@maven//:com_embabel_agent_embabel_agent_starter_shell",

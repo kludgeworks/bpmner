@@ -2,47 +2,40 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("//tools/js:ts.bzl", "bpmner_ts_project")
+load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
 # Link the standalone web package's node_modules
 npm_link_all_packages(name = "node_modules")
 
-exports_files([
-    "tsconfig.bazel.json",
-    "tsconfig.json",
-])
+WEB_SRCS = glob(["src/**/*.ts"])
 
-ts_config(
-    name = "tsconfig",
-    src = "tsconfig.json",
-)
-
-ts_config(
-    name = "tsconfig_bazel",
-    src = "tsconfig.bazel.json",
-    deps = [":tsconfig"],
-)
+WEB_STATIC_ASSETS = glob(["src/static/**/*"])
 
 WEB_TS_DEPS = [
     "//:node_modules/@types/node",
     "//:node_modules/bpmn-js",
 ]
 
+bpmner_ts_configs()
+
 bpmner_ts_project(
     name = "ts",
-    srcs = glob(["src/**/*.ts"]),
+    srcs = WEB_SRCS,
     out_dir = "tsc",
     resolve_json_module = True,
+    tsconfig = ":tsconfig_bazel",
     deps = WEB_TS_DEPS,
 )
 
 esbuild(
     name = "bundle",
-    srcs = glob(["src/**/*.ts"]),
+    srcs = WEB_SRCS,
     config = {
         "sourcemap": False,
     },
@@ -56,5 +49,5 @@ esbuild(
 
 filegroup(
     name = "static_assets",
-    srcs = glob(["src/static/**/*"]),
+    srcs = WEB_STATIC_ASSETS,
 )

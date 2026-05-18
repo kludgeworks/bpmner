@@ -2,26 +2,28 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@aspect_rules_js//js:defs.bzl", "js_test")
-load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
-load("//tools/js:ts.bzl", "bpmner_ts_project")
+load("//tools/js:test.bzl", "bpmner_node_test")
+load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 load("//tools/pmd:cpd.bzl", "cpd_test")
 
-package(default_visibility = ["//visibility:public"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
-LIB_TS_SRCS = glob([
+LIB_SRCS = glob([
     "src/**/*.ts",
     "types/**/*.d.ts",
 ])
 
-TEST_TS_SRCS = glob([
+TEST_SRCS = glob([
     "test/**/*.ts",
 ])
 
 filegroup(
-    name = "cpd_srcs",
+    name = "analysis_srcs",
     srcs = glob([
         "src/**/*.ts",
         "test/**/*.ts",
@@ -30,7 +32,7 @@ filegroup(
 
 cpd_test(
     name = "cpd_check",
-    srcs = [":cpd_srcs"],
+    srcs = [":analysis_srcs"],
     language = "typescript",
     minimum_tokens = 100,
 )
@@ -49,20 +51,11 @@ LAYOUT_TS_DEPS = [
     "//:node_modules/yet-another-bpmn-auto-layout",
 ]
 
-ts_config(
-    name = "tsconfig",
-    src = "tsconfig.json",
-)
-
-ts_config(
-    name = "tsconfig_bazel",
-    src = "tsconfig.bazel.json",
-    deps = [":tsconfig"],
-)
+bpmner_ts_configs()
 
 bpmner_ts_project(
     name = "ts",
-    srcs = LIB_TS_SRCS + TEST_TS_SRCS + [":copy_polyfills"],
+    srcs = LIB_SRCS + TEST_SRCS + [":copy_polyfills"],
     out_dir = "tsc",
     tsconfig = ":tsconfig_bazel",
     deps = LAYOUT_TS_DEPS,
@@ -70,7 +63,7 @@ bpmner_ts_project(
 
 esbuild(
     name = "bundle",
-    srcs = LIB_TS_SRCS + [":copy_polyfills"],
+    srcs = LIB_SRCS + [":copy_polyfills"],
     config = {
         "inject": ["layout/src/polyfills.ts"],
         "sourcemap": False,
@@ -83,24 +76,9 @@ esbuild(
     deps = LAYOUT_TS_DEPS,
 )
 
-esbuild(
-    name = "smoke_test_bundle",
-    srcs = LIB_TS_SRCS + TEST_TS_SRCS + [":copy_polyfills"],
-    entry_point = "test/smoke.test.ts",
-    external = [
-        "node:test",
-        "node:assert",
-    ],
-    format = "cjs",
-    output = "dist/test/smoke.test.js",
-    platform = "node",
-    target = "es2022",
-    deps = LAYOUT_TS_DEPS,
-)
-
-js_test(
+bpmner_node_test(
     name = "smoke_test",
-    data = [":smoke_test_bundle"],
-    entry_point = "dist/test/smoke.test.js",
-    node_options = ["--test-reporter=spec"],
+    srcs = LIB_SRCS + TEST_SRCS + [":copy_polyfills"],
+    entry_point = "test/smoke.test.ts",
+    deps = LAYOUT_TS_DEPS,
 )
