@@ -14,6 +14,7 @@ sh_test(
     srcs = ["jar_structure_test.sh"],
     args = ["$(location //src:bpmner_app.jar)"],
     data = ["//src:bpmner_app.jar"],
+    visibility = ["//visibility:public"],
 )
 
 sh_test(
@@ -21,6 +22,7 @@ sh_test(
     srcs = ["runfiles_data_test.sh"],
     args = ["$(location //src:bpmner_app)"],
     data = ["//src:bpmner_app"],
+    visibility = ["//visibility:public"],
 )
 
 kt_jvm_library(
@@ -58,13 +60,13 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     timeout = "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f else "short",
     tags = ["integration"] if "IntegrationTest" in f else [],
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    visibility = ["//visibility:public"],
     runtime_deps = [
         ":bpmner_tests_lib",
         "@maven//:org_junit_jupiter_junit_jupiter_engine",
         "@maven//:org_junit_platform_junit_platform_launcher",
         "@maven//:org_junit_platform_junit_platform_reporting",
     ],
-    visibility = ["//visibility:public"],
 ) for f in TEST_FILES]
 
 ktlint_test(
