@@ -3,10 +3,7 @@
 
 load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_library", "pkl_test")
 
-package(default_visibility = [
-    "//:__pkg__",
-    "//linter:__subpackages__",
-])
+package(default_visibility = ["//linter:__subpackages__"])
 
 PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
 
