@@ -99,7 +99,6 @@ class ProcessContractMarkdownRendererTest {
             classification = AlignmentClassification.SUPPORTED,
         )
 
-    @Suppress("LongMethod")
     private fun fullContract() =
         ProcessContract(
             id = "contract-1",
@@ -111,65 +110,11 @@ class ProcessContractMarkdownRendererTest {
                 listOf(
                     ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),
                 ),
-            activities =
-                listOf(
-                    ContractActivity(
-                        id = "a-pack",
-                        name = "Pack order",
-                        actorId = "actor-warehouse",
-                        traceLinks = listOf(trace("a-pack")),
-                    ),
-                    ContractActivity(
-                        id = "a-ship",
-                        name = "Ship order",
-                        actorId = "actor-warehouse",
-                        traceLinks = listOf(trace("a-ship")),
-                    ),
-                ),
-            decisions =
-                listOf(
-                    ContractDecision(
-                        id = "d-stock",
-                        question = "Is the item in stock?",
-                        branches =
-                            listOf(
-                                ContractBranch(id = "b-yes", label = "In stock", condition = "stock > 0"),
-                                ContractBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
-                            ),
-                        traceLinks = listOf(trace("d-stock")),
-                    ),
-                ),
-            artifacts =
-                listOf(
-                    ContractArtifact(
-                        id = "art-package",
-                        name = "Package",
-                        description = "Wrapped order ready to ship",
-                    ),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState(
-                        id = "end-shipped",
-                        name = "Order shipped",
-                        traceLinks = listOf(trace("end-shipped")),
-                    ),
-                ),
-            assumptions =
-                listOf(
-                    ContractAssumption(
-                        id = "assume-payment",
-                        text = "Payment is authorised upstream",
-                        traceLinks =
-                            listOf(
-                                TraceLink(
-                                    id = "trace-assume-payment",
-                                    sourceId = "ev1",
-                                    targetId = "assume-payment",
-                                ),
-                            ),
-                    ),
-                ),
+            activities = buildActivities(),
+            decisions = buildDecisions(),
+            artifacts = buildArtifacts(),
+            endStates = buildEndStates(),
+            assumptions = buildAssumptions(),
             traceLinks =
                 listOf(
                     TraceLink(
@@ -179,5 +124,69 @@ class ProcessContractMarkdownRendererTest {
                         classification = AlignmentClassification.SUPPORTED,
                     ),
                 ),
+        )
+
+    private fun buildActivities() =
+        listOf(
+            ContractActivity(
+                id = "a-pack",
+                name = "Pack order",
+                actorId = "actor-warehouse",
+                traceLinks = listOf(trace("a-pack")),
+            ),
+            ContractActivity(
+                id = "a-ship",
+                name = "Ship order",
+                actorId = "actor-warehouse",
+                traceLinks = listOf(trace("a-ship")),
+            ),
+        )
+
+    private fun buildDecisions() =
+        listOf(
+            ContractDecision(
+                id = "d-stock",
+                question = "Is the item in stock?",
+                branches =
+                    listOf(
+                        ContractBranch(id = "b-yes", label = "In stock", condition = "stock > 0"),
+                        ContractBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
+                    ),
+                traceLinks = listOf(trace("d-stock")),
+            ),
+        )
+
+    private fun buildArtifacts() =
+        listOf(
+            ContractArtifact(
+                id = "art-package",
+                name = "Package",
+                description = "Wrapped order ready to ship",
+            ),
+        )
+
+    private fun buildEndStates() =
+        listOf(
+            ContractEndState(
+                id = "end-shipped",
+                name = "Order shipped",
+                traceLinks = listOf(trace("end-shipped")),
+            ),
+        )
+
+    private fun buildAssumptions() =
+        listOf(
+            ContractAssumption(
+                id = "assume-payment",
+                text = "Payment is authorised upstream",
+                traceLinks =
+                    listOf(
+                        TraceLink(
+                            id = "trace-assume-payment",
+                            sourceId = "ev1",
+                            targetId = "assume-payment",
+                        ),
+                    ),
+            ),
         )
 }

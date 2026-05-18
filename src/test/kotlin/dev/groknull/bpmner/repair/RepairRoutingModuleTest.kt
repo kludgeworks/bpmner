@@ -211,65 +211,26 @@ class RepairRoutingModuleTest {
     }
 
     @Test
-    @Suppress("LongMethod")
     fun `mixed local and LLM diagnostics route local first then LLM with only unresolved diagnostic`() {
-        val localCapability =
-            BpmnLintRuleCapability(
-                id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
-                handlerExists = true,
-                replacementMap = null,
-            )
-        val llmCapability =
-            BpmnLintRuleCapability(
-                id = "name-clarity",
-                kind = RepairKind.LLM_MODEL_PATCH,
-                repairSafety = BpmnRepairSafety.LLM_ONLY,
-                fixHandler = null,
-                handlerExists = false,
-                replacementMap = null,
-            )
-        val localIssue =
-            LintIssue(
-                id = "Task_1",
-                rule = "bpmner/name-01",
-                message = "Element name must not include its BPMN element type",
-            )
-        val llmIssue =
-            LintIssue(
-                id = "EndEvent_1",
-                rule = "bpmner/name-clarity",
-                message = "End event name should describe a business outcome",
-            )
+        val (localCapability, llmCapability) = createMixedCapabilities()
+        val (localIssue, llmIssue) = createMixedIssues()
+
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(
-            mapOf(
-                "name-01" to localCapability,
-                "name-clarity" to llmCapability,
-            ),
+            mapOf("name-01" to localCapability, "name-clarity" to llmCapability),
         )
+
         // attempt 1: both → after local fix attempt 2: only LLM → after LLM rewrite: clean
         `when`(bpmnLintService.lint(anyString(), anyPhase()))
             .thenReturn(listOf(localIssue, llmIssue))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
-        val locallyFixed = testBpmnDefinition(processName = "Locally fixed")
+
         `when`(bpmnLintService.autoFix(anyString(), anyLintIssues(), anyPhase()))
-            .thenReturn(
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = renderedXmlOf(locallyFixed),
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                ),
-            )
+            .thenReturn(createSuccessfulAutoFixResult())
         `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
-        val context =
-            FakeActionContext().also {
-                it.expectResponse(setNodeNamePatch("EndEvent_1", "Toast served to customer"))
-            }
+        val context = FakeActionContext().apply { expectResponse(setNodeNamePatch("EndEvent_1", "Toast served to customer")) }
         val definition = testBpmnDefinition()
         val graph = testLaidOutGraph(definition, withOwnership = true)
         val rendered = BpmnDefinitionToXmlConverter().render(graph)
@@ -281,32 +242,53 @@ class RepairRoutingModuleTest {
             context = context,
         )
 
+        assertMixedRoutingResult(context)
+    }
+
+    private fun createMixedCapabilities(): Pair<BpmnLintRuleCapability, BpmnLintRuleCapability> =
+        Pair(
+            BpmnLintRuleCapability(
+                id = "name-01",
+                kind = RepairKind.LOCAL_XML_FIX,
+                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                fixHandler = "stripTypeWords",
+                handlerExists = true,
+                replacementMap = null,
+            ),
+            BpmnLintRuleCapability(
+                id = "name-clarity",
+                kind = RepairKind.LLM_MODEL_PATCH,
+                repairSafety = BpmnRepairSafety.LLM_ONLY,
+                fixHandler = null,
+                handlerExists = false,
+                replacementMap = null,
+            ),
+        )
+
+    private fun createMixedIssues(): Pair<LintIssue, LintIssue> =
+        Pair(
+            LintIssue(id = "Task_1", rule = "bpmner/name-01", message = "Element name must not include its BPMN element type"),
+            LintIssue(id = "EndEvent_1", rule = "bpmner/name-clarity", message = "End event name should describe a business outcome"),
+        )
+
+    private fun createSuccessfulAutoFixResult() =
+        BpmnAutoFixResult(
+            changed = true,
+            xml = renderedXmlOf(testBpmnDefinition(processName = "Locally fixed")),
+            applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+        )
+
+    private fun assertMixedRoutingResult(context: FakeActionContext) {
         assertEquals(1, context.llmInvocations.size, "expected exactly one LLM call after the local diagnostic was resolved")
         val prompt =
             context.llmInvocations
                 .single()
                 .messages
                 .joinToString("\n") { it.content }
-        assertTrue(
-            prompt.contains("rule=bpmner/name-clarity"),
-            "LLM prompt must reference the unresolved LLM rule; got: $prompt",
-        )
-        assertFalse(
-            prompt.contains("rule=bpmner/name-01"),
-            "LLM prompt must not include the locally-resolved rule; got: $prompt",
-        )
-        assertRouteSummaryLogged(
-            attemptNumber = 1,
-            "localAttempted=1",
-            "localApplied=1",
-            "localFailed=0",
-            "llmRouted=1",
-        )
-        assertRouteSummaryLogged(
-            attemptNumber = 2,
-            "localAttempted=0",
-            "llmRouted=1",
-        )
+        assertTrue(prompt.contains("rule=bpmner/name-clarity"), "LLM prompt must reference the unresolved LLM rule; got: $prompt")
+        assertFalse(prompt.contains("rule=bpmner/name-01"), "LLM prompt must not include the locally-resolved rule; got: $prompt")
+        assertRouteSummaryLogged(attemptNumber = 1, "localAttempted=1", "localApplied=1", "localFailed=0", "llmRouted=1")
+        assertRouteSummaryLogged(attemptNumber = 2, "localAttempted=0", "llmRouted=1")
     }
 
     @Test
@@ -411,8 +393,8 @@ class RepairRoutingModuleTest {
 
     private fun anyRuleNames(): Collection<String> = ArgumentMatchers.anyCollection()
 
-    private @Suppress("TooManyFunctions")
-class FakeActionContext(
+    @Suppress("TooManyFunctions")
+    private class FakeActionContext(
         private val delegate: FakeOperationContext = FakeOperationContext(),
     ) : ActionContext,
         OperationContext by delegate {

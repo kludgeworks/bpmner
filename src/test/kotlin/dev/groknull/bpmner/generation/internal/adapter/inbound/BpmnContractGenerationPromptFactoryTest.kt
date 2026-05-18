@@ -57,7 +57,6 @@ class BpmnContractGenerationPromptFactoryTest {
         assertTrue(prompt.contains("Leave routing-only converging gateways unnamed."))
     }
 
-    @Suppress("LongMethod") // exhaustive contract fixture — splitting it obscures the assertions
     private fun contract(): ProcessContract =
         ProcessContract(
             id = "contract-claim",
@@ -66,59 +65,67 @@ class BpmnContractGenerationPromptFactoryTest {
             trigger = "Claim is submitted",
             triggerTraceLinks = listOf(trace("trigger")),
             actors = listOf(ContractActor(id = "actor-claims", name = "Claims team")),
-            activities =
-                listOf(
-                    ContractActivity(
-                        id = "a-review",
-                        name = "Claims team reviews claim",
-                        actorId = "actor-claims",
-                        traceLinks = listOf(trace("a-review")),
+            activities = buildActivities(),
+            decisions = buildDecisions(),
+            endStates = buildEndStates(),
+            assumptions = buildAssumptions(),
+        )
+
+    private fun buildActivities() =
+        listOf(
+            ContractActivity(
+                id = "a-review",
+                name = "Claims team reviews claim",
+                actorId = "actor-claims",
+                traceLinks = listOf(trace("a-review")),
+            ),
+            ContractActivity(
+                id = "a-rework",
+                name = "Request corrected claim details",
+                actorId = "actor-claims",
+                traceLinks = listOf(trace("a-rework")),
+            ),
+        )
+
+    private fun buildDecisions() =
+        listOf(
+            ContractDecision(
+                id = "d-complete",
+                question = "Is the claim complete?",
+                branches =
+                    listOf(
+                        ContractBranch(id = "b-complete", label = "Complete", condition = "claim is complete"),
+                        ContractBranch(
+                            id = "b-rework",
+                            label = "Needs rework",
+                            condition = "claim is incomplete",
+                        ),
                     ),
-                    ContractActivity(
-                        id = "a-rework",
-                        name = "Request corrected claim details",
-                        actorId = "actor-claims",
-                        traceLinks = listOf(trace("a-rework")),
-                    ),
-                ),
-            decisions =
-                listOf(
-                    ContractDecision(
-                        id = "d-complete",
-                        question = "Is the claim complete?",
-                        branches =
-                            listOf(
-                                ContractBranch(id = "b-complete", label = "Complete", condition = "claim is complete"),
-                                ContractBranch(
-                                    id = "b-rework",
-                                    label = "Needs rework",
-                                    condition = "claim is incomplete",
-                                ),
-                            ),
-                        traceLinks = listOf(trace("d-complete")),
-                    ),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState(
-                        id = "end-approved",
-                        name = "Claim approved",
-                        traceLinks = listOf(trace("end-approved")),
-                    ),
-                    ContractEndState(
-                        id = "end-rejected",
-                        name = "Claim rejected",
-                        traceLinks = listOf(trace("end-rejected")),
-                    ),
-                ),
-            assumptions =
-                listOf(
-                    ContractAssumption(
-                        id = "assume-cutoff",
-                        text = "Claims after cutoff move to next business day",
-                        traceLinks = listOf(trace("assume-cutoff")),
-                    ),
-                ),
+                traceLinks = listOf(trace("d-complete")),
+            ),
+        )
+
+    private fun buildEndStates() =
+        listOf(
+            ContractEndState(
+                id = "end-approved",
+                name = "Claim approved",
+                traceLinks = listOf(trace("end-approved")),
+            ),
+            ContractEndState(
+                id = "end-rejected",
+                name = "Claim rejected",
+                traceLinks = listOf(trace("end-rejected")),
+            ),
+        )
+
+    private fun buildAssumptions() =
+        listOf(
+            ContractAssumption(
+                id = "assume-cutoff",
+                text = "Claims after cutoff move to next business day",
+                traceLinks = listOf(trace("assume-cutoff")),
+            ),
         )
 
     private fun trace(target: String) =

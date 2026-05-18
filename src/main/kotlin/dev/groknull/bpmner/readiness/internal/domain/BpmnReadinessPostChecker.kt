@@ -20,79 +20,108 @@ internal class BpmnReadinessPostChecker(
     private val clarificationCeiling: Int
         get() = config.readyThreshold - 1
 
-    @Suppress("LongMethod")
     fun apply(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): ProcessInputAssessment {
         val text = request.processDescription.lowercase()
-        val missingAreas = assessment.missingAreas.toMutableSet()
-        val dimensions = assessment.dimensions.associateBy { it.dimension }.toMutableMap()
-        var overallScore = assessment.overallScore.coerceIn(MIN_SCORE, MAX_SCORE)
+        val state = CheckerState(assessment)
 
-        ReadinessDimension.entries.forEach { dimension ->
-            dimensions.putIfAbsent(
-                dimension,
-                ReadinessDimensionScore(
-                    dimension = dimension,
-                    score = DEFAULT_DIMENSION_SCORE,
-                    rationale = "No model score was provided for ${dimension.name}.",
-                ),
-            )
-        }
-        dimensions.replaceAll { _, score -> score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE)) }
+        state.ensureAllDimensionsPresent()
 
         val distinctProcessVerbCount = PROCESS_VERBS.count { it.containsMatchIn(text) }
         val hasProcessVerb = distinctProcessVerbCount > 0
-        val hasStartTrigger = START_TRIGGER_MARKERS.any { it.containsMatchIn(text) }
-        val hasEndState = END_STATE_MARKERS.any { it.containsMatchIn(text) }
-        val hasSequence = SEQUENCE_MARKERS.any { it.containsMatchIn(text) }
 
-        if (!hasStartTrigger) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.START_TRIGGER
-            dimensions.lower(ReadinessDimension.START_TRIGGER, MissingProcessArea.START_TRIGGER)
-        }
-        if (!hasEndState) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.END_STATE
-            dimensions.lower(ReadinessDimension.END_STATES, MissingProcessArea.END_STATE)
-        }
-        if (distinctProcessVerbCount < config.minimumActivityCount) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
-            dimensions.lower(ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
-        }
-        if (!hasSequence) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
-            dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
-        }
-        if (!hasProcessVerb) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
-            dimensions.lower(
-                dimension = ReadinessDimension.BPMN_SUITABILITY,
-                missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
-            )
-        }
+        state.checkStartTrigger(text)
+        state.checkEndState(text)
+        state.checkActivitySequence(distinctProcessVerbCount)
+        state.checkSequenceOrder(text)
+        state.checkProcessSuitability(hasProcessVerb)
 
-        val verdict = verdictFor(overallScore)
+        val verdict = verdictFor(state.overallScore)
         val questions =
             normalizeQuestions(
                 questions = assessment.clarificationQuestions,
-                missingAreas = missingAreas.toList(),
+                missingAreas = state.missingAreas.toList(),
                 verdict = verdict,
                 hasProcessVerb = hasProcessVerb,
             )
 
         return assessment.copy(
             verdict = verdict,
-            overallScore = overallScore,
-            dimensions = ReadinessDimension.entries.map { dimensions.getValue(it) },
-            missingAreas = missingAreas.toList(),
+            overallScore = state.overallScore,
+            dimensions = ReadinessDimension.entries.map { state.dimensions.getValue(it) },
+            missingAreas = state.missingAreas.toList(),
             clarificationQuestions = questions,
         )
+    }
+
+    private inner class CheckerState(
+        assessment: ProcessInputAssessment,
+    ) {
+        val missingAreas = assessment.missingAreas.toMutableSet()
+        val dimensions = assessment.dimensions.associateBy { it.dimension }.toMutableMap()
+        var overallScore = assessment.overallScore.coerceIn(MIN_SCORE, MAX_SCORE)
+
+        fun ensureAllDimensionsPresent() {
+            ReadinessDimension.entries.forEach { dimension ->
+                dimensions.putIfAbsent(
+                    dimension,
+                    ReadinessDimensionScore(
+                        dimension = dimension,
+                        score = DEFAULT_DIMENSION_SCORE,
+                        rationale = "No model score was provided for ${dimension.name}.",
+                    ),
+                )
+            }
+            dimensions.replaceAll { _, score -> score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE)) }
+        }
+
+        fun checkStartTrigger(text: String) {
+            val hasStartTrigger = START_TRIGGER_MARKERS.any { it.containsMatchIn(text) }
+            if (!hasStartTrigger) {
+                overallScore = minOf(overallScore, clarificationCeiling)
+                missingAreas += MissingProcessArea.START_TRIGGER
+                dimensions.lower(ReadinessDimension.START_TRIGGER, MissingProcessArea.START_TRIGGER)
+            }
+        }
+
+        fun checkEndState(text: String) {
+            val hasEndState = END_STATE_MARKERS.any { it.containsMatchIn(text) }
+            if (!hasEndState) {
+                overallScore = minOf(overallScore, clarificationCeiling)
+                missingAreas += MissingProcessArea.END_STATE
+                dimensions.lower(ReadinessDimension.END_STATES, MissingProcessArea.END_STATE)
+            }
+        }
+
+        fun checkActivitySequence(distinctProcessVerbCount: Int) {
+            if (distinctProcessVerbCount < config.minimumActivityCount) {
+                overallScore = minOf(overallScore, clarificationCeiling)
+                missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
+                dimensions.lower(ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
+            }
+        }
+
+        fun checkSequenceOrder(text: String) {
+            val hasSequence = SEQUENCE_MARKERS.any { it.containsMatchIn(text) }
+            if (!hasSequence) {
+                overallScore = minOf(overallScore, clarificationCeiling)
+                missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
+                dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
+            }
+        }
+
+        fun checkProcessSuitability(hasProcessVerb: Boolean) {
+            if (!hasProcessVerb) {
+                overallScore = minOf(overallScore, clarificationCeiling)
+                missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
+                dimensions.lower(
+                    dimension = ReadinessDimension.BPMN_SUITABILITY,
+                    missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
+                )
+            }
+        }
     }
 
     private fun MutableMap<ReadinessDimension, ReadinessDimensionScore>.lower(
