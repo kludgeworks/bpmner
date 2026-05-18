@@ -29,6 +29,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
         private const val EXPORTER = "bpmner"
         private const val EXPORTER_VERSION = "0.0.1"
+        private val UNUSED_DI_NAMESPACES_REGEX = Regex("\\s+xmlns:(?:bpmndi|omgdi|di|dc)=\"[^\"]*\"")
     }
 
     fun toXml(definition: BpmnDefinition): String = render(definition).xml
@@ -53,12 +54,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     // present. We render semantic XML only; the downstream auto-layout stage adds BPMNDI. Strip
     // the unused namespace declaration so the output is clean and our own strict parser accepts
     // a round-trip.
-    private fun stripUnusedDiNamespaces(xml: String): String =
-        xml
-            .replace(Regex("\\s+xmlns:bpmndi=\"[^\"]*\""), "")
-            .replace(Regex("\\s+xmlns:omgdi=\"[^\"]*\""), "")
-            .replace(Regex("\\s+xmlns:di=\"[^\"]*\""), "")
-            .replace(Regex("\\s+xmlns:dc=\"[^\"]*\""), "")
+    private fun stripUnusedDiNamespaces(xml: String): String = xml.replace(UNUSED_DI_NAMESPACES_REGEX, "")
 
     private fun toModelInstance(definition: BpmnDefinition): BpmnModelInstance {
         val modelInstance =
