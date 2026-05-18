@@ -157,5 +157,5 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     private fun trace(targetId: String) = TraceLink("trace-$targetId", "ev1", targetId)
 
-    private fun anyPhase(): BpmnLintPhase = org.mockito.ArgumentMatchers.any() ?: BpmnLintPhase.SEMANTIC_PRE_LAYOUT
+    private fun anyPhase(): BpmnLintPhase = org.mockito.kotlin.any()
 }

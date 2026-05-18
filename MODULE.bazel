@@ -78,6 +78,7 @@ maven.install(
         "org.junit.jupiter:junit-jupiter-api:" + JUNIT_JUPITER_VERSION,
         "org.junit.jupiter:junit-jupiter-engine:" + JUNIT_JUPITER_VERSION,
         "org.camunda.bpm.model:camunda-bpmn-model:7.24.0",
+        "org.mockito.kotlin:mockito-kotlin:5.4.0",
         "org.graalvm.polyglot:polyglot:" + GRAALVM_VERSION,
         "org.graalvm.polyglot:js:" + GRAALVM_VERSION,
         "org.springframework.modulith:spring-modulith-starter-core:" + SPRING_MODULITH_VERSION,

@@ -13,11 +13,10 @@ import dev.groknull.bpmner.generation.StartGenerationOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
-import org.mockito.ArgumentCaptor
-import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.argumentCaptor
 import org.springframework.http.HttpStatus
 
 class BpmnWebControllerTest {
@@ -26,7 +25,7 @@ class BpmnWebControllerTest {
 
     @Test
     fun `accepted with relative sseUrl when readiness is ready`() {
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
+        `when`(generationUseCase.startAsync(org.mockito.kotlin.any()))
             .thenReturn(StartGenerationOutcome.Started("test-process-123"))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Order is shipped"))
@@ -39,7 +38,7 @@ class BpmnWebControllerTest {
 
     @Test
     fun `delegates process description and inline style guide to use case`() {
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
+        `when`(generationUseCase.startAsync(org.mockito.kotlin.any()))
             .thenReturn(StartGenerationOutcome.Started("p-1"))
 
         controller.startGeneration(
@@ -49,9 +48,9 @@ class BpmnWebControllerTest {
             ),
         )
 
-        val captor = ArgumentCaptor.forClass(BpmnGenerationInput::class.java)
-        verify(generationUseCase).startAsync(captor.capture() ?: BpmnGenerationInput())
-        val input = captor.value
+        val captor = argumentCaptor<BpmnGenerationInput>()
+        verify(generationUseCase).startAsync(captor.capture())
+        val input = captor.firstValue
         assertEquals("Order is shipped", input.processDescription)
         assertEquals("Use verb-object task names", input.styleGuideContent)
         assertNull(input.styleGuide)
@@ -66,7 +65,7 @@ class BpmnWebControllerTest {
                 xml = null,
                 reportFile = "/tmp/readiness.md",
             )
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
+        `when`(generationUseCase.startAsync(org.mockito.kotlin.any()))
             .thenReturn(StartGenerationOutcome.Blocked(blocked))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Make it nicer"))
@@ -86,7 +85,7 @@ class BpmnWebControllerTest {
                 xml = null,
                 reportFile = null,
             )
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
+        `when`(generationUseCase.startAsync(org.mockito.kotlin.any()))
             .thenReturn(StartGenerationOutcome.Blocked(blocked))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Cherry blossoms drift"))

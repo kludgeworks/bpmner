@@ -411,8 +411,8 @@ class RepairRoutingModuleTest {
 
     private fun anyRuleNames(): Collection<String> = ArgumentMatchers.anyCollection()
 
-    private @Suppress("TooManyFunctions")
-class FakeActionContext(
+    @Suppress("TooManyFunctions")
+    private class FakeActionContext(
         private val delegate: FakeOperationContext = FakeOperationContext(),
     ) : ActionContext,
         OperationContext by delegate {

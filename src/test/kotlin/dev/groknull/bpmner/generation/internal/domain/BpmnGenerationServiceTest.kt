@@ -270,8 +270,8 @@ class BpmnGenerationServiceTest {
             rationale = "Stubbed rationale.",
         )
 
-    private @Suppress("TooManyFunctions")
-class CapturingBpmnAgentInvoker(
+    @Suppress("TooManyFunctions")
+    private class CapturingBpmnAgentInvoker(
         private val startAsyncProcessId: String = "process-stub",
     ) : BpmnAgentInvoker {
         val calls = mutableListOf<BpmnRequest>()
@@ -301,8 +301,8 @@ class CapturingBpmnAgentInvoker(
         }
     }
 
-    private @Suppress("TooManyFunctions")
-class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
+    @Suppress("TooManyFunctions")
+    private class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
         override fun generate(
             request: BpmnRequest,
             assessment: ProcessInputAssessment,
@@ -323,22 +323,22 @@ class AlignmentFailingBpmnAgentInvoker : BpmnAgentInvoker {
         ): String = error("Not implemented for alignment-failing fixture")
     }
 
-    private @Suppress("TooManyFunctions")
-class StubReadinessInvoker(
+    @Suppress("TooManyFunctions")
+    private class StubReadinessInvoker(
         private val assessment: ProcessInputAssessment,
     ) : BpmnReadinessInvoker {
         override fun assess(request: BpmnRequest): ProcessInputAssessment = assessment
     }
 
-    private data @Suppress("TooManyFunctions")
-class ReportWriterCall(
+    @Suppress("TooManyFunctions")
+    private data class ReportWriterCall(
         val originalInput: String,
         val assessment: ProcessInputAssessment,
         val outputFile: String?,
     )
 
-    private @Suppress("TooManyFunctions")
-class CapturingReportWriter(
+    @Suppress("TooManyFunctions")
+    private class CapturingReportWriter(
         private val reportPath: String = "/tmp/report.md",
     ) : ReadinessReportWriter {
         val calls = mutableListOf<ReportWriterCall>()

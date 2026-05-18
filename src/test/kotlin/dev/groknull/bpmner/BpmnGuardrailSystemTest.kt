@@ -189,8 +189,8 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
         ).thenReturn(validDefinition())
 
         // 4. Validation passes (XSD + Lint)
-        `when`(bpmnXsdValidator.validateDetailed(anyNonNull())).thenReturn(emptyList())
-        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(anyNonNull(), anyNonNull())
+        `when`(bpmnXsdValidator.validateDetailed(org.mockito.kotlin.any())).thenReturn(emptyList())
+        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(org.mockito.kotlin.any(), org.mockito.kotlin.any())
 
         // 5. Alignment check fails (LLM detects invented tasks)
         val alignmentPrompt = "Assess whether generated BPMN aligns semantically with process contract"
@@ -219,14 +219,6 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals(BpmnGenerationStatus.ALIGNMENT_FAILED, result.status)
         assertNull(result.xml)
     }
-
-    private fun <T> anyNonNull(): T {
-        org.mockito.ArgumentMatchers.any<T>()
-        return castNull()
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun <T> castNull(): T = null as T
 
     private fun validAssessment() =
         ProcessInputAssessment(

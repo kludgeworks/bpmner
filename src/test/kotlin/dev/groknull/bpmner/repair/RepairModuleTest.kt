@@ -173,7 +173,7 @@ class RepairModuleTest {
 
     private fun anyString(): String = ArgumentMatchers.anyString()
 
-    private fun anyPhase(): BpmnLintPhase = ArgumentMatchers.any(BpmnLintPhase::class.java) ?: BpmnLintPhase.FINAL_POST_LAYOUT
+    private fun anyPhase(): BpmnLintPhase = org.mockito.kotlin.any()
 
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 
