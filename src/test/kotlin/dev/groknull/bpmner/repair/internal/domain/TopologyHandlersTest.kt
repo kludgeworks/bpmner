@@ -7,11 +7,9 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
@@ -34,8 +32,6 @@ class TopologyHandlersTest {
     private val insertConverging = InsertConvergingGatewayHandler()
     private val bypassGateway = BypassGatewayHandler()
     private val clearConvergingName = ConvergingGatewayClearNameHandler()
-
-    private val stdWaypoints = listOf(BpmnWaypoint(100.0, 100.0), BpmnWaypoint(200.0, 100.0))
 
     // ---- SplitJoinForkGatewayHandler --------------------------------------
 
@@ -276,21 +272,21 @@ class TopologyHandlersTest {
             processName = "Join Fork Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 160.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 260.0, 36.0, 36.0)),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 155.0, 50.0, 50.0)),
-                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK, BpmnBounds(360.0, 140.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK, BpmnBounds(360.0, 250.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
+                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK),
+                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_5", "Task_1", "End_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_6", "Task_2", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
+                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
+                    BpmnEdge("Flow_5", "Task_1", "End_1"),
+                    BpmnEdge("Flow_6", "Task_2", "End_1"),
                 ),
         )
 
@@ -300,16 +296,16 @@ class TopologyHandlersTest {
             processName = "Fake Join Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(240.0, 138.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Task_1"),
+                    BpmnEdge("Flow_3", "Task_1", "End_1"),
                 ),
         )
 
@@ -319,14 +315,14 @@ class TopologyHandlersTest {
             processName = "Single Incoming",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 120.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "End_1"),
                 ),
         )
 
@@ -336,14 +332,14 @@ class TopologyHandlersTest {
             processName = "Multi Incoming End Event",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
-                    BpmnNode("End_1", "Done", NodeType.END_EVENT, BpmnBounds(300.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
+                    BpmnNode("End_1", "Done", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "End_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "End_1"),
+                    BpmnEdge("Flow_2", "Start_2", "End_1"),
                 ),
         )
 
@@ -353,16 +349,16 @@ class TopologyHandlersTest {
             processName = "Superfluous Gateway Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(300.0, 118.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1"),
+                    BpmnEdge("Flow_3", "Task_1", "End_1"),
                 ),
         )
 
@@ -372,24 +368,23 @@ class TopologyHandlersTest {
             processName = "Diverging Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
                     BpmnNode(
                         "Gateway_1",
                         "Is valid?",
                         NodeType.EXCLUSIVE_GATEWAY,
-                        BpmnBounds(180.0, 135.0, 50.0, 50.0),
                     ),
-                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK, BpmnBounds(300.0, 100.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Reject", NodeType.USER_TASK, BpmnBounds(300.0, 200.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK),
+                    BpmnNode("Task_2", "Reject", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_5", "Task_2", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No"),
+                    BpmnEdge("Flow_4", "Task_1", "End_1"),
+                    BpmnEdge("Flow_5", "Task_2", "End_1"),
                 ),
         )
 
@@ -399,23 +394,22 @@ class TopologyHandlersTest {
             processName = "Converging Named Gateway Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Path A", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Path B", NodeType.START_EVENT, BpmnBounds(80.0, 200.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Path A", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Path B", NodeType.START_EVENT),
                     BpmnNode(
                         "Gateway_1",
                         gatewayName,
                         NodeType.EXCLUSIVE_GATEWAY,
-                        BpmnBounds(240.0, 135.0, 50.0, 50.0),
                     ),
-                    BpmnNode("Task_1", "Continue", NodeType.USER_TASK, BpmnBounds(360.0, 118.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Continue", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_4", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
+                    BpmnEdge("Flow_4", "Task_1", "End_1"),
                 ),
         )
 }

@@ -7,12 +7,8 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.core.BpmnDefinition
 
-internal object TopologyGeometry {
-    const val JOIN_GATEWAY_X_OFFSET: Double = 80.0
-    const val GATEWAY_SIZE: Double = 50.0
-    const val GATEWAY_HALF_SIZE: Double = 25.0
-
-    fun freshId(
+internal object TopologyIds {
+    fun fresh(
         prefix: String,
         definition: BpmnDefinition,
     ): String {

@@ -5,11 +5,9 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
@@ -22,32 +20,21 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.UserTask
-import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 import java.io.ByteArrayInputStream
-import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge as DiBpmnEdge
 
 @SecondaryAdapter
 @Component
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     override fun parse(xml: String): BpmnDefinition {
         val model: BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+        rejectIfHasDiagramInterchange(model)
+
         val process =
             model.getModelElementsByType(Process::class.java).firstOrNull()
                 ?: error("BPMN XML contains no <process> element")
-
-        val shapesByElementId =
-            model
-                .getModelElementsByType(BpmnShape::class.java)
-                .filter { it.bpmnElement != null }
-                .associateBy { it.bpmnElement.id }
-
-        val edgesByElementId =
-            model
-                .getModelElementsByType(DiBpmnEdge::class.java)
-                .filter { it.bpmnElement != null }
-                .associateBy { it.bpmnElement.id }
 
         val nodes =
             model.getModelElementsByType(FlowNode::class.java).map { flowNode ->
@@ -55,7 +42,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = flowNode.id,
                     name = flowNode.name,
                     type = flowNode.toNodeType(),
-                    bounds = shapesByElementId[flowNode.id].toBounds(flowNode.id),
                 )
             }
 
@@ -67,7 +53,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     targetRef = flow.target.id,
                     name = flow.name?.takeIf { it.isNotBlank() },
                     conditionExpression = flow.conditionExpression?.textContent?.takeIf { it.isNotBlank() },
-                    waypoints = edgesByElementId[flow.id].toWaypoints(flow.id),
                 )
             }
 
@@ -79,6 +64,17 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         )
     }
 
+    // Layout is computed downstream by the auto-layout stage; accepting BPMNDI on input
+    // would let stale or LLM-supplied coordinates leak through. Reject them at the boundary.
+    private fun rejectIfHasDiagramInterchange(model: BpmnModelInstance) {
+        if (model.getModelElementsByType(BpmnDiagram::class.java).isNotEmpty()) {
+            throw IllegalArgumentException(
+                "BPMNDI input rejected — semantic-only XML required. " +
+                    "Strip <bpmndi:BPMNDiagram> elements before parsing.",
+            )
+        }
+    }
+
     private fun FlowNode.toNodeType(): NodeType =
         when (this) {
             is StartEvent -> NodeType.START_EVENT
@@ -88,15 +84,4 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             is EndEvent -> NodeType.END_EVENT
             else -> error("Unsupported BPMN flow node type for id='$id': ${this::class.simpleName}")
         }
-
-    private fun BpmnShape?.toBounds(elementId: String): BpmnBounds {
-        val shape = this ?: error("Missing BPMNDI shape for element id='$elementId'")
-        val bounds = shape.bounds ?: error("BPMNDI shape for element id='$elementId' has no bounds")
-        return BpmnBounds(x = bounds.x, y = bounds.y, width = bounds.width, height = bounds.height)
-    }
-
-    private fun DiBpmnEdge?.toWaypoints(elementId: String): List<BpmnWaypoint> {
-        val edge = this ?: error("Missing BPMNDI edge for element id='$elementId'")
-        return edge.waypoints.map { BpmnWaypoint(x = it.x, y = it.y) }
-    }
 }

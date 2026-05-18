@@ -5,12 +5,10 @@
 
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
@@ -24,7 +22,6 @@ import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -113,16 +110,16 @@ class BpmnRepairPromptFactoryTest {
             processName = "Sample",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do thing", NodeType.USER_TASK, BpmnBounds(200.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Do other", NodeType.USER_TASK, BpmnBounds(360.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 100.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do thing", NodeType.USER_TASK),
+                    BpmnNode("Task_2", "Do other", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = listOf(BpmnWaypoint(116.0, 118.0))),
-                    BpmnEdge("Flow_2", "Task_1", "Task_2", waypoints = listOf(BpmnWaypoint(300.0, 120.0))),
-                    BpmnEdge("Flow_3", "Task_2", "End_1", waypoints = listOf(BpmnWaypoint(460.0, 120.0))),
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "Task_2"),
+                    BpmnEdge("Flow_3", "Task_2", "End_1"),
                 ),
         )
 
@@ -139,8 +136,6 @@ class BpmnRepairPromptFactoryTest {
                         processId = definition.processId,
                         nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
                         edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-                        shapeIdsByNodeId = definition.nodes.associate { it.id to "${it.id}_di" },
-                        edgeDiagramIdsByEdgeId = definition.sequences.associate { it.id to "${it.id}_di" },
                     ),
             )
         val evaluation =
@@ -186,15 +181,11 @@ class BpmnRepairPromptFactoryTest {
     }
 
     private object NoopLintingPort : BpmnLintingPort {
-        override fun lint(
-            bpmnXml: String,
-            phase: BpmnLintPhase,
-        ): List<LintIssue> = emptyList()
+        override fun lint(bpmnXml: String): List<LintIssue> = emptyList()
 
         override fun autoFix(
             bpmnXml: String,
             issues: List<LintIssue>,
-            phase: BpmnLintPhase,
         ): BpmnAutoFixResult? = null
 
         override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()

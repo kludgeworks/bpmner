@@ -7,13 +7,11 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
@@ -29,7 +27,6 @@ import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
@@ -249,9 +246,9 @@ class DeterministicTopologyRepairStrategyTest {
             processName = "Test Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 100.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
@@ -259,13 +256,11 @@ class DeterministicTopologyRepairStrategyTest {
                         id = "Flow_1",
                         sourceRef = "Start_1",
                         targetRef = "Task_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 118.0), BpmnWaypoint(200.0, 120.0)),
                     ),
                     BpmnEdge(
                         id = "Flow_2",
                         sourceRef = "Task_1",
                         targetRef = "End_1",
-                        waypoints = listOf(BpmnWaypoint(300.0, 120.0), BpmnWaypoint(360.0, 118.0)),
                     ),
                 ),
         )
@@ -281,8 +276,6 @@ class DeterministicTopologyRepairStrategyTest {
                     processId = definition.processId,
                     nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
                     edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-                    shapeIdsByNodeId = definition.nodes.associate { it.id to "${it.id}_di" },
-                    edgeDiagramIdsByEdgeId = definition.sequences.associate { it.id to "${it.id}_di" },
                 ),
         )
 
@@ -322,15 +315,11 @@ class DeterministicTopologyRepairStrategyTest {
         var autoFixCalls = 0
             private set
 
-        override fun lint(
-            bpmnXml: String,
-            phase: BpmnLintPhase,
-        ): List<LintIssue> = emptyList()
+        override fun lint(bpmnXml: String): List<LintIssue> = emptyList()
 
         override fun autoFix(
             bpmnXml: String,
             issues: List<LintIssue>,
-            phase: BpmnLintPhase,
         ): BpmnAutoFixResult? {
             autoFixCalls++
             return autoFixResult

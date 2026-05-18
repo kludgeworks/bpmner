@@ -5,11 +5,9 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
@@ -29,40 +27,26 @@ internal class SplitJoinForkGatewayHandler : BpmnLocalModelFixHandler {
         val outgoingEdges = definition.sequences.filter { it.sourceRef == elementId }
         if (incomingEdges.size < 2 || outgoingEdges.size < 2) return emptyList()
 
-        val joinId = TopologyGeometry.freshId("Gateway_join", definition)
-        val joinEdgeId = TopologyGeometry.freshId("Flow_det", definition)
+        val joinId = TopologyIds.fresh("Gateway_join", definition)
+        val joinEdgeId = TopologyIds.fresh("Flow_det", definition)
         val joinGw =
             BpmnNode(
                 id = joinId,
                 name = null,
                 type = NodeType.EXCLUSIVE_GATEWAY,
-                bounds =
-                    BpmnBounds(
-                        x = gateway.bounds.x - TopologyGeometry.JOIN_GATEWAY_X_OFFSET,
-                        y = gateway.bounds.y,
-                        width = TopologyGeometry.GATEWAY_SIZE,
-                        height = TopologyGeometry.GATEWAY_SIZE,
-                    ),
             )
-        val joinCenter =
-            BpmnWaypoint(
-                joinGw.bounds.x + TopologyGeometry.GATEWAY_HALF_SIZE,
-                joinGw.bounds.y + TopologyGeometry.GATEWAY_HALF_SIZE,
-            )
-        val forkEntry = BpmnWaypoint(gateway.bounds.x, gateway.bounds.y + TopologyGeometry.GATEWAY_HALF_SIZE)
         val joinToFork =
             BpmnEdge(
                 id = joinEdgeId,
                 sourceRef = joinId,
-                targetRef = elementId,
-                waypoints = listOf(joinCenter, forkEntry),
+                targetRef = gateway.id,
             )
 
         val ops = mutableListOf<BpmnPatchOperation>()
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_NODE, node = joinGw)
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_EDGE, edge = joinToFork)
         for (edge in incomingEdges) {
-            val updated = edge.copy(targetRef = joinId, waypoints = listOf(edge.waypoints.first(), joinCenter))
+            val updated = edge.copy(targetRef = joinId)
             ops += BpmnPatchOperation(type = BpmnPatchOperationType.REPLACE_EDGE, edgeId = edge.id, edge = updated)
         }
         return ops

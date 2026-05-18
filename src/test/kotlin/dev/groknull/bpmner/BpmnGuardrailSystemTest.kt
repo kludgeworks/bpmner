@@ -15,11 +15,9 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.NodeType
@@ -190,7 +188,7 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
 
         // 4. Validation passes (XSD + Lint)
         `when`(bpmnXsdValidator.validateDetailed(anyNonNull())).thenReturn(emptyList())
-        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(anyNonNull(), anyNonNull())
+        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(anyNonNull())
 
         // 5. Alignment check fails (LLM detects invented tasks)
         val alignmentPrompt = "Assess whether generated BPMN aligns semantically with process contract"
@@ -267,9 +265,9 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Order",
             nodes =
                 listOf(
-                    BpmnNode("S1", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0)),
-                    BpmnNode("T1", "Review", NodeType.USER_TASK, BpmnBounds(100.0, 0.0, 100.0, 80.0)),
-                    BpmnNode("E1", "End", NodeType.END_EVENT, BpmnBounds(300.0, 0.0, 36.0, 36.0)),
+                    BpmnNode("S1", "Start", NodeType.START_EVENT),
+                    BpmnNode("T1", "Review", NodeType.USER_TASK),
+                    BpmnNode("E1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
@@ -277,13 +275,11 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
                         "F1",
                         "S1",
                         "T1",
-                        waypoints = listOf(BpmnWaypoint(36.0, 18.0), BpmnWaypoint(100.0, 18.0)),
                     ),
                     BpmnEdge(
                         "F2",
                         "T1",
                         "E1",
-                        waypoints = listOf(BpmnWaypoint(200.0, 18.0), BpmnWaypoint(300.0, 18.0)),
                     ),
                 ),
         )

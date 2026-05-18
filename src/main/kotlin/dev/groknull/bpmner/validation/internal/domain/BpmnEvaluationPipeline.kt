@@ -13,7 +13,6 @@ import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnValidator
@@ -136,7 +135,7 @@ internal class BpmnEvaluationPipeline(
         if (diagnostics.any { it.source == BpmnDiagnosticSource.XSD }) {
             return null
         }
-        val lintIssues = bpmnLintingPort.lint(rendered.xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        val lintIssues = bpmnLintingPort.lint(rendered.xml)
         if (lintIssues == null) {
             logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
             return null

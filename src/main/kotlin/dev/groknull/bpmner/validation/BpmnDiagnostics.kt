@@ -19,7 +19,6 @@ enum class BpmnRepairScope {
     OUTLINE,
     PHASE,
     COMPOSITION,
-    LAYOUT,
     FULL_PROCESS,
 }
 

@@ -12,5 +12,4 @@ data class BpmnLintRuleCapability(
     val fixHandler: String?,
     val handlerExists: Boolean,
     val replacementMap: Map<String, String>?,
-    val layoutSensitive: Boolean = false,
 )

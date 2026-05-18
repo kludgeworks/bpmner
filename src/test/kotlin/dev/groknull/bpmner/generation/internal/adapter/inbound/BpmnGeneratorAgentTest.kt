@@ -152,8 +152,6 @@ class BpmnGeneratorAgentTest {
                         processId = definition.processId,
                         nodeObjectRefs = emptyMap(),
                         edgeObjectRefs = emptyMap(),
-                        shapeIdsByNodeId = emptyMap(),
-                        edgeDiagramIdsByEdgeId = emptyMap(),
                     ),
             )
 

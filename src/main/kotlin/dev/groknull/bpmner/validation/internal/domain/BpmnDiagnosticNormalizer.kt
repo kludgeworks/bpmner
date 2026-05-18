@@ -134,15 +134,10 @@ internal class BpmnDiagnosticNormalizer(
     private fun inferRepairScope(
         diagnostic: BpmnDiagnostic,
         ownerRef: String?,
-    ): BpmnRepairScope {
-        if (diagnostic.elementId?.endsWith("_di") == true) return BpmnRepairScope.LAYOUT
-        return when (diagnostic.source) {
+    ): BpmnRepairScope =
+        when (diagnostic.source) {
             BpmnDiagnosticSource.RENDER -> {
-                if (LAYOUT_HINTS.any { diagnostic.message.contains(it, ignoreCase = true) }) {
-                    BpmnRepairScope.LAYOUT
-                } else {
-                    BpmnRepairScope.FULL_PROCESS
-                }
+                BpmnRepairScope.FULL_PROCESS
             }
 
             BpmnDiagnosticSource.GRAPH -> {
@@ -164,10 +159,8 @@ internal class BpmnDiagnosticNormalizer(
                 }
             }
         }
-    }
 
     companion object {
-        private val LAYOUT_HINTS = listOf("waypoint", "bounds", "diagram", "layout")
         private val VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS =
             listOf(
                 "unknown rule",

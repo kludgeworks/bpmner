@@ -9,11 +9,6 @@ import com.fasterxml.jackson.annotation.JsonAnySetter
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
-enum class BpmnLintPhase {
-    SEMANTIC_PRE_LAYOUT,
-    FINAL_POST_LAYOUT,
-}
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class LintIssue(
     val id: String?,

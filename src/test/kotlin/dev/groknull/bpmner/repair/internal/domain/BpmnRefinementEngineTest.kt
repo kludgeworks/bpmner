@@ -17,13 +17,11 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
@@ -39,7 +37,6 @@ import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
@@ -375,10 +372,7 @@ class BpmnRefinementEngineTest {
         private val responses = lintResponses
         private var index = 0
 
-        override fun lint(
-            bpmnXml: String,
-            phase: BpmnLintPhase,
-        ): List<LintIssue>? {
+        override fun lint(bpmnXml: String): List<LintIssue>? {
             xmls += bpmnXml
             return responses[index++]
         }
@@ -386,7 +380,6 @@ class BpmnRefinementEngineTest {
         override fun autoFix(
             bpmnXml: String,
             issues: List<LintIssue>,
-            phase: BpmnLintPhase,
         ): BpmnAutoFixResult? {
             _autoFixCalls++
             return autoFixResponse
@@ -472,12 +465,12 @@ class BpmnRefinementEngineTest {
             processName = "Join fork",
             nodes =
                 listOf(
-                    BpmnNode("StartEvent_1", "A", NodeType.START_EVENT, BpmnBounds(40.0, 80.0, 36.0, 36.0)),
-                    BpmnNode("StartEvent_2", "B", NodeType.START_EVENT, BpmnBounds(40.0, 180.0, 36.0, 36.0)),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(160.0, 130.0, 50.0, 50.0)),
-                    BpmnNode("Task_1", "Do one", NodeType.SERVICE_TASK, BpmnBounds(280.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Do two", NodeType.SERVICE_TASK, BpmnBounds(280.0, 180.0, 100.0, 80.0)),
-                    BpmnNode("EndEvent_1", "Done", NodeType.END_EVENT, BpmnBounds(440.0, 130.0, 36.0, 36.0)),
+                    BpmnNode("StartEvent_1", "A", NodeType.START_EVENT),
+                    BpmnNode("StartEvent_2", "B", NodeType.START_EVENT),
+                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode("Task_1", "Do one", NodeType.SERVICE_TASK),
+                    BpmnNode("Task_2", "Do two", NodeType.SERVICE_TASK),
+                    BpmnNode("EndEvent_1", "Done", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
@@ -485,37 +478,31 @@ class BpmnRefinementEngineTest {
                         "Flow_1",
                         "StartEvent_1",
                         "Gateway_1",
-                        waypoints = listOf(BpmnWaypoint(76.0, 98.0), BpmnWaypoint(160.0, 155.0)),
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "StartEvent_2",
                         "Gateway_1",
-                        waypoints = listOf(BpmnWaypoint(76.0, 198.0), BpmnWaypoint(160.0, 155.0)),
                     ),
                     BpmnEdge(
                         "Flow_3",
                         "Gateway_1",
                         "Task_1",
-                        waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 120.0)),
                     ),
                     BpmnEdge(
                         "Flow_4",
                         "Gateway_1",
                         "Task_2",
-                        waypoints = listOf(BpmnWaypoint(210.0, 155.0), BpmnWaypoint(280.0, 220.0)),
                     ),
                     BpmnEdge(
                         "Flow_5",
                         "Task_1",
                         "EndEvent_1",
-                        waypoints = listOf(BpmnWaypoint(380.0, 120.0), BpmnWaypoint(440.0, 148.0)),
                     ),
                     BpmnEdge(
                         "Flow_6",
                         "Task_2",
                         "EndEvent_1",
-                        waypoints = listOf(BpmnWaypoint(380.0, 220.0), BpmnWaypoint(440.0, 148.0)),
                     ),
                 ),
         )

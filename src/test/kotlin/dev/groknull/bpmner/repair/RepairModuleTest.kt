@@ -15,12 +15,10 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
@@ -29,7 +27,6 @@ import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpm
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.LintIssue
@@ -69,8 +66,8 @@ class RepairModuleTest {
     @Test
     fun `refinement engine publishes BpmnValidationPassedEvent when BPMN is already valid`(events: PublishedEvents) {
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        doReturn(emptyList<Any>()).`when`(bpmnLintService).lint(anyString(), anyPhase())
-        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues(), anyPhase())
+        doReturn(emptyList<Any>()).`when`(bpmnLintService).lint(anyString())
+        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues())
         doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
 
         val request = BpmnRequest(processDescription = "Make toast")
@@ -89,8 +86,8 @@ class RepairModuleTest {
     fun `refinement engine publishes BpmnValidationFailedEvent before failing on invalid BPMN`(events: PublishedEvents) {
         val lintIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        doReturn(listOf(lintIssue)).`when`(bpmnLintService).lint(anyString(), anyPhase())
-        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues(), anyPhase())
+        doReturn(listOf(lintIssue)).`when`(bpmnLintService).lint(anyString())
+        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues())
         doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
 
         val definition = validDefinition()
@@ -131,19 +128,16 @@ class RepairModuleTest {
                         id = "StartEvent_1",
                         name = "Order received",
                         type = NodeType.START_EVENT,
-                        bounds = BpmnBounds(80.0, 120.0, 36.0, 36.0),
                     ),
                     BpmnNode(
                         id = "Task_1",
                         name = "Toast bread",
                         type = NodeType.SERVICE_TASK,
-                        bounds = BpmnBounds(180.0, 98.0, 100.0, 80.0),
                     ),
                     BpmnNode(
                         id = "EndEvent_1",
                         name = "Toast served",
                         type = NodeType.END_EVENT,
-                        bounds = BpmnBounds(320.0, 120.0, 36.0, 36.0),
                     ),
                 ),
             sequences =
@@ -152,28 +146,16 @@ class RepairModuleTest {
                         "Flow_1",
                         "StartEvent_1",
                         "Task_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(116.0, 138.0),
-                                BpmnWaypoint(180.0, 138.0),
-                            ),
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "Task_1",
                         "EndEvent_1",
-                        waypoints =
-                            listOf(
-                                BpmnWaypoint(280.0, 138.0),
-                                BpmnWaypoint(320.0, 138.0),
-                            ),
                     ),
                 ),
         )
 
     private fun anyString(): String = ArgumentMatchers.anyString()
-
-    private fun anyPhase(): BpmnLintPhase = ArgumentMatchers.any(BpmnLintPhase::class.java) ?: BpmnLintPhase.FINAL_POST_LAYOUT
 
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 

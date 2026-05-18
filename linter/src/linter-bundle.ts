@@ -283,7 +283,6 @@ type RuleCapability = {
 	handlerName: string | null
 	handlerExists: boolean
 	replacementMap: Record<string, string> | null
-	layoutSensitive: boolean
 }
 
 type RuleCatalog = { rules: RuleConfig[] }
@@ -324,7 +323,6 @@ export function getRuleCapabilities(): RuleCapability[] {
 			handlerName,
 			handlerExists,
 			replacementMap,
-			layoutSensitive: rule.layoutSensitive ?? false,
 		})
 	}
 

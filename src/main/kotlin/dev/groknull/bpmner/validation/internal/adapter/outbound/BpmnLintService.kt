@@ -8,7 +8,6 @@ package dev.groknull.bpmner.validation.internal.adapter.outbound
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.LintIssue
@@ -77,15 +76,12 @@ internal open class BpmnLintService(
 
     override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = ruleCapabilities
 
-    override fun lint(
-        bpmnXml: String,
-        phase: BpmnLintPhase,
-    ): List<LintIssue>? {
+    override fun lint(bpmnXml: String): List<LintIssue>? {
         val api = engine.linterApi ?: return null
-        logger.debug("Starting in-process bpmn-lint validation. phase={}, xmlLength={}", phase, bpmnXml.length)
+        logger.debug("Starting in-process bpmn-lint validation. xmlLength={}", bpmnXml.length)
         return engine.safePolyglotCall("bpmn-lint execution error: {}") {
             val future = CompletableFuture<String>()
-            val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson(phase))
+            val promise = api.getMember("lintXml").execute(bpmnXml, lintConfigJson())
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
             parseIssues(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
         }
@@ -94,19 +90,17 @@ internal open class BpmnLintService(
     override fun autoFix(
         bpmnXml: String,
         issues: List<LintIssue>,
-        phase: BpmnLintPhase,
     ): BpmnAutoFixResult? {
         val api = engine.linterApi ?: return null
         val fixXml = api.getMember("fixXml") ?: return null
         logger.debug(
-            "Starting in-process BPMN XML auto-fix. phase={}, xmlLength={}, issueCount={}",
-            phase,
+            "Starting in-process BPMN XML auto-fix. xmlLength={}, issueCount={}",
             bpmnXml.length,
             issues.size,
         )
         return engine.safePolyglotCall("BPMN XML auto-fix execution error: {}") {
             val future = CompletableFuture<String>()
-            val promise = fixXml.execute(bpmnXml, objectMapper.writeValueAsString(issues), lintConfigJson(phase))
+            val promise = fixXml.execute(bpmnXml, objectMapper.writeValueAsString(issues), lintConfigJson())
             promise.invokeMember("then", Consumer<String> { result -> future.complete(result) })
             parseAutoFixResult(future.get(LINT_TIMEOUT_SECONDS, TimeUnit.SECONDS))
         }
@@ -134,7 +128,7 @@ internal open class BpmnLintService(
 
     internal fun parseAutoFixResult(json: String): BpmnAutoFixResult = objectMapper.readValue(json)
 
-    internal fun lintConfig(phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT): RuntimeLintConfig {
+    internal fun lintConfig(): RuntimeLintConfig {
         val baseConfig = properties.toLintConfig()
 
         // Merge Pkl catalog defaults for rules that have TS implementation
@@ -146,18 +140,8 @@ internal open class BpmnLintService(
         // Application.yaml (baseConfig.rules) overrides Pkl defaults
         val mergedRules = pklRules + baseConfig.rules
 
-        val finalConfig = baseConfig.copy(rules = mergedRules)
-
-        if (phase == BpmnLintPhase.FINAL_POST_LAYOUT) return finalConfig
-        val layoutSensitiveOff = layoutSensitiveRuleKeys().associateWith { "off" }
-        return finalConfig.copy(rules = finalConfig.rules + layoutSensitiveOff)
+        return baseConfig.copy(rules = mergedRules)
     }
-
-    private fun layoutSensitiveRuleKeys(): Set<String> =
-        ruleCapabilities.entries
-            .filter { it.value.layoutSensitive }
-            .map { it.key }
-            .toSet()
 
     fun destroy() {
         engine.destroy()
@@ -177,8 +161,7 @@ internal open class BpmnLintService(
         }
     }
 
-    private fun lintConfigJson(phase: BpmnLintPhase = BpmnLintPhase.FINAL_POST_LAYOUT): String =
-        objectMapper.writeValueAsString(lintConfig(phase))
+    private fun lintConfigJson(): String = objectMapper.writeValueAsString(lintConfig())
 
     companion object {
         private const val LINT_TIMEOUT_SECONDS = 10L

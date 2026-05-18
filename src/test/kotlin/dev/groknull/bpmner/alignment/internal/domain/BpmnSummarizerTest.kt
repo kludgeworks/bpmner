@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.alignment.internal.domain
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
@@ -25,14 +24,14 @@ class BpmnSummarizerTest {
                 processName = "Linear Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0)),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(200.0, 0.0, 36.0, 36.0)),
-                        BpmnNode("Task_1", "Do Work", NodeType.USER_TASK, BpmnBounds(70.0, -20.0, 100.0, 80.0)),
+                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                        BpmnNode("End_1", "End", NodeType.END_EVENT),
+                        BpmnNode("Task_1", "Do Work", NodeType.USER_TASK),
                     ),
                 sequences =
                     listOf(
-                        BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = emptyList()),
-                        BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = emptyList()),
+                        BpmnEdge("Flow_2", "Task_1", "End_1"),
+                        BpmnEdge("Flow_1", "Start_1", "Task_1"),
                     ),
             )
 
@@ -57,19 +56,19 @@ class BpmnSummarizerTest {
                 processName = "Branching Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0)),
-                        BpmnNode("Gateway_1", "Is Valid?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(100.0, 0.0, 50.0, 50.0)),
-                        BpmnNode("Task_A", "A", NodeType.USER_TASK, BpmnBounds(200.0, -50.0, 100.0, 80.0)),
-                        BpmnNode("Task_B", "B", NodeType.USER_TASK, BpmnBounds(200.0, 50.0, 100.0, 80.0)),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 0.0, 36.0, 36.0)),
+                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                        BpmnNode("Gateway_1", "Is Valid?", NodeType.EXCLUSIVE_GATEWAY),
+                        BpmnNode("Task_A", "A", NodeType.USER_TASK),
+                        BpmnNode("Task_B", "B", NodeType.USER_TASK),
+                        BpmnNode("End_1", "End", NodeType.END_EVENT),
                     ),
                 sequences =
                     listOf(
-                        BpmnEdge("Flow_Start", "Start_1", "Gateway_1", waypoints = emptyList()),
-                        BpmnEdge("Flow_B", "Gateway_1", "Task_B", "No", "valid == false", waypoints = emptyList()),
-                        BpmnEdge("Flow_A", "Gateway_1", "Task_A", "Yes", "valid == true", waypoints = emptyList()),
-                        BpmnEdge("Flow_End_A", "Task_A", "End_1", waypoints = emptyList()),
-                        BpmnEdge("Flow_End_B", "Task_B", "End_1", waypoints = emptyList()),
+                        BpmnEdge("Flow_Start", "Start_1", "Gateway_1"),
+                        BpmnEdge("Flow_B", "Gateway_1", "Task_B", "No", "valid == false"),
+                        BpmnEdge("Flow_A", "Gateway_1", "Task_A", "Yes", "valid == true"),
+                        BpmnEdge("Flow_End_A", "Task_A", "End_1"),
+                        BpmnEdge("Flow_End_B", "Task_B", "End_1"),
                     ),
             )
 
@@ -97,14 +96,14 @@ class BpmnSummarizerTest {
                 processName = "Broken Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0)),
-                        BpmnNode("Task_1", "Reachable", NodeType.USER_TASK, BpmnBounds(100.0, 0.0, 100.0, 80.0)),
-                        BpmnNode("Task_Unreachable", "Unreachable", NodeType.USER_TASK, BpmnBounds(100.0, 200.0, 100.0, 80.0)),
+                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                        BpmnNode("Task_1", "Reachable", NodeType.USER_TASK),
+                        BpmnNode("Task_Unreachable", "Unreachable", NodeType.USER_TASK),
                     ),
                 sequences =
                     listOf(
-                        BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = emptyList()),
-                        BpmnEdge("Flow_Dangling", "Task_Unreachable", "Task_1", waypoints = emptyList()),
+                        BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                        BpmnEdge("Flow_Dangling", "Task_Unreachable", "Task_1"),
                     ),
             )
 

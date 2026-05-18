@@ -11,7 +11,6 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
 import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnAutoFixSkip
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRepairSafety
@@ -56,34 +55,58 @@ class BpmnLayoutAgentTest {
             replacementMap = null,
         )
 
-    private fun layoutSensitiveCapability(id: String) =
-        BpmnLintRuleCapability(
-            id = id,
-            kind = RepairKind.UNFIXABLE,
-            repairSafety = BpmnRepairSafety.LLM_ONLY,
-            fixHandler = null,
-            handlerExists = false,
-            replacementMap = null,
-            layoutSensitive = true,
-        )
+    // ---------------------------------------------------------------
+    // validateFinalBpmnXml: XSD validation only
+    // ---------------------------------------------------------------
 
     @Test
-    fun `final validation runs full post-layout lint and succeeds`() {
+    fun `final validation passes when XSD is clean`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(listOf(emptyList()))
-        val agent = buildLayoutAgent(lintService, xsdValidator)
+        val agent = buildLayoutAgent(RecordingLintService(emptyList()), xsdValidator)
 
         val definition = testBpmnDefinition()
         val result = agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, "<definitions />"))
 
         assertEquals("<definitions />", result.xml)
         assertTrue(result.diagnostics.isEmpty())
-        assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
         assertEquals(1, xsdValidator.xmls.size)
     }
 
     @Test
-    fun `auto-fix runs before layout and final validation`() {
+    fun `final validation throws BpmnLayoutCorruptionException on XSD failure`() {
+        val xsdValidator =
+            RecordingXsdValidator(
+                listOf(listOf(XsdValidationIssue("cvc-complex-type failure", "Task_1"))),
+            )
+        val agent = buildLayoutAgent(RecordingLintService(emptyList()), xsdValidator)
+
+        val definition = testBpmnDefinition()
+        val error =
+            assertFailsWith<BpmnLayoutCorruptionException> {
+                agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, "<definitions />"))
+            }
+        assertTrue(error.message!!.contains("Auto-layout produced structurally invalid BPMN"))
+        assertTrue(error.message!!.contains("cvc-complex-type failure"))
+    }
+
+    @Test
+    fun `final validation does not invoke the linter`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val lintService = RecordingLintService(emptyList())
+        val agent = buildLayoutAgent(lintService, xsdValidator)
+
+        val definition = testBpmnDefinition()
+        agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, "<definitions />"))
+
+        assertTrue(lintService.xmls.isEmpty(), "final validation must not call lint anymore")
+    }
+
+    // ---------------------------------------------------------------
+    // autoFixBpmnXml: lint + filter + autoFix
+    // ---------------------------------------------------------------
+
+    @Test
+    fun `auto-fix runs lint then autoFix and feeds layout the fixed xml`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
         val lintIssue =
             LintIssue(
@@ -93,7 +116,7 @@ class BpmnLayoutAgentTest {
             )
         val lintService =
             RecordingLintService(
-                responses = listOf(listOf(lintIssue), emptyList()),
+                responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
                     listOf(
                         BpmnAutoFixResult(
@@ -109,7 +132,8 @@ class BpmnLayoutAgentTest {
                                 ),
                         ),
                     ),
-                capabilities = mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                capabilities =
+                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val layoutService = RecordingLayoutService(listOf("<definitions fixed=\"true\" layouted=\"true\" />"))
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
@@ -122,24 +146,11 @@ class BpmnLayoutAgentTest {
         assertEquals("<definitions fixed=\"true\" />", autoFixed.xml)
         assertEquals("<definitions fixed=\"true\" />", layoutService.xmls.single())
         assertEquals("<definitions fixed=\"true\" layouted=\"true\" />", result.xml)
-        assertEquals(
-            listOf("<definitions />", "<definitions fixed=\"true\" layouted=\"true\" />"),
-            lintService.xmls,
-        )
+        assertEquals(listOf("<definitions />"), lintService.xmls)
         assertEquals(listOf("<definitions />"), lintService.autoFixXmls)
         assertEquals(
             listOf("bpmner/gtw-converging-gateway-unnamed"),
             lintService.autoFixIssues.single().map { it.rule },
-            "auto-fix should be called with the eligible LOCAL_XML_FIX issue",
-        )
-        assertEquals(
-            listOf("<definitions fixed=\"true\" />", "<definitions fixed=\"true\" layouted=\"true\" />"),
-            xsdValidator.xmls,
-        )
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.autoFixPhases)
-        assertEquals(
-            listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT, BpmnLintPhase.FINAL_POST_LAYOUT),
-            lintService.phases,
         )
     }
 
@@ -169,7 +180,8 @@ class BpmnLayoutAgentTest {
                                 ),
                         ),
                     ),
-                capabilities = mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                capabilities =
+                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
@@ -178,8 +190,6 @@ class BpmnLayoutAgentTest {
 
         assertEquals("<definitions />", result.xml)
         assertEquals(false, result.autoFixResult?.changed)
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.phases)
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.autoFixPhases)
     }
 
     @Test
@@ -276,7 +286,8 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses = listOf(null),
-                capabilities = mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                capabilities =
+                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())), layoutService)
@@ -315,7 +326,8 @@ class BpmnLayoutAgentTest {
                                 ),
                         ),
                     ),
-                capabilities = mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                capabilities =
+                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val xsdValidator =
             RecordingXsdValidator(
@@ -335,7 +347,7 @@ class BpmnLayoutAgentTest {
     }
 
     @Test
-    fun `auto-fix stage ordering is lint then filter then autoFix then xsd then layout then final lint`() {
+    fun `pipeline ordering is lint then filter then autoFix then xsd then layout then xsd`() {
         val lintIssue =
             LintIssue(
                 id = "Gateway_1",
@@ -345,7 +357,7 @@ class BpmnLayoutAgentTest {
         val callLog = mutableListOf<String>()
         val lintService =
             RecordingLintService(
-                responses = listOf(listOf(lintIssue), emptyList()),
+                responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
                     listOf(
                         BpmnAutoFixResult(
@@ -361,7 +373,8 @@ class BpmnLayoutAgentTest {
                                 ),
                         ),
                     ),
-                capabilities = mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                capabilities =
+                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
                 callLog = callLog,
             )
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()), callLog = callLog)
@@ -374,46 +387,9 @@ class BpmnLayoutAgentTest {
         agent.validateFinalBpmnXml(layouted)
 
         assertEquals(
-            listOf(
-                "lint:SEMANTIC_PRE_LAYOUT",
-                "autoFix:SEMANTIC_PRE_LAYOUT",
-                "xsd",
-                "layout",
-                "xsd",
-                "lint:FINAL_POST_LAYOUT",
-            ),
+            listOf("lint", "autoFix", "xsd", "layout", "xsd"),
             callLog,
         )
-    }
-
-    @Test
-    fun `final validation fails clearly when layout diagnostics remain`() {
-        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService =
-            RecordingLintService(
-                listOf(
-                    listOf(
-                        LintIssue(
-                            id = "Task_1",
-                            rule = "no-overlapping-elements",
-                            message = "Element overlaps with Task_2",
-                        ),
-                    ),
-                ),
-                capabilities = mapOf("no-overlapping-elements" to layoutSensitiveCapability("no-overlapping-elements")),
-            )
-        val agent = buildLayoutAgent(lintService, xsdValidator)
-
-        val definition = testBpmnDefinition()
-        val error =
-            assertFailsWith<BpmnFinalValidationException> {
-                agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, "<definitions />"))
-            }
-
-        assertTrue(error.message!!.contains("Final BPMN validation failed after auto-layout"))
-        assertTrue(error.message!!.contains("layout diagnostics remain after auto-layout"))
-        assertTrue(error.message!!.contains("no-overlapping-elements"))
-        assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
     }
 
     @Suppress("TooManyFunctions")
@@ -440,32 +416,24 @@ class BpmnLayoutAgentTest {
         private val callLog: MutableList<String>? = null,
     ) : BpmnLintingPort {
         val xmls = mutableListOf<String>()
-        val phases = mutableListOf<BpmnLintPhase>()
         val autoFixXmls = mutableListOf<String>()
         val autoFixIssues = mutableListOf<List<LintIssue>>()
-        val autoFixPhases = mutableListOf<BpmnLintPhase>()
         private var index = 0
         private var autoFixIndex = 0
 
-        override fun lint(
-            bpmnXml: String,
-            phase: BpmnLintPhase,
-        ): List<LintIssue>? {
+        override fun lint(bpmnXml: String): List<LintIssue>? {
             xmls += bpmnXml
-            phases += phase
-            callLog?.add("lint:${phase.name}")
+            callLog?.add("lint")
             return responses[index++]
         }
 
         override fun autoFix(
             bpmnXml: String,
             issues: List<LintIssue>,
-            phase: BpmnLintPhase,
         ): BpmnAutoFixResult? {
             autoFixXmls += bpmnXml
             autoFixIssues += issues
-            autoFixPhases += phase
-            callLog?.add("autoFix:${phase.name}")
+            callLog?.add("autoFix")
             return if (autoFixIndex < autoFixResponses.size) autoFixResponses[autoFixIndex++] else null
         }
 

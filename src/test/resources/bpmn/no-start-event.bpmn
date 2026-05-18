@@ -1,8 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
-             xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
-             xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
-             xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
              targetNamespace="http://example.com/bpmn"
              exporter="bpmner" exporterVersion="1.0">
 
@@ -15,19 +12,4 @@
       <incoming>flow1</incoming>
     </endEvent>
   </process>
-
-  <bpmndi:BPMNDiagram id="diagram">
-    <bpmndi:BPMNPlane id="plane" bpmnElement="no-start">
-      <bpmndi:BPMNShape id="task-a_di" bpmnElement="task-a">
-        <dc:Bounds x="240" y="60" width="100" height="80"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="end_di" bpmnElement="end">
-        <dc:Bounds x="392" y="82" width="36" height="36"/>
-      </bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="flow1_di" bpmnElement="flow1">
-        <di:waypoint x="340" y="100"/>
-        <di:waypoint x="392" y="100"/>
-      </bpmndi:BPMNEdge>
-    </bpmndi:BPMNPlane>
-  </bpmndi:BPMNDiagram>
 </definitions>
