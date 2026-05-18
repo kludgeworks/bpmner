@@ -23,7 +23,6 @@ facts {
   }
 
   ["NAME-02 carries linter and repair metadata"] {
-    // Disabled by default pending per-diagnostic dispositions; re-enabled once #147 lands.
     Rule.severity == "off"
     Rule.targetElements.contains("bpmn:Task")
     Rule.errorMessages["default"]

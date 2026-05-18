@@ -1,8 +1,3 @@
-# Copyright 2026 The Project Contributors
-# SPDX-License-Identifier: MIT
-
-"""Spring all-open configuration shared across BPMNer Kotlin targets."""
-
 SPRING_OPEN_ANNOTATIONS = [
     "org.springframework.stereotype.Component",
     "org.springframework.transaction.annotation.Transactional",

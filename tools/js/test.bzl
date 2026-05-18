@@ -1,8 +1,6 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-"""Shared TypeScript test macros for BPMNer packages."""
-
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_test")
 
@@ -13,16 +11,7 @@ def bpmner_node_test(
         deps,
         loaders = {},
         **kwargs):
-    """Bundle a TS test file with esbuild and run it with node:test.
-
-    Args:
-      name: name of the resulting js_test target.
-      entry_point: TS file containing the node:test entrypoint.
-      srcs: source files (TS + assets) included in the esbuild bundle.
-      deps: npm/ts_project deps for the bundle.
-      loaders: optional esbuild loader map (e.g. {".bpmn": "text"}).
-      **kwargs: additional arguments forwarded to js_test.
-    """
+    """Bundle a TS test file with esbuild and run it with node:test."""
     bundle_name = name + "_bundle"
     bundle_output = "dist/test/%s.js" % name
 

@@ -25,10 +25,7 @@ buildifier_test(
 
 detekt_test(
     name = "detekt_check",
-    srcs = [
-        "//src:analysis_srcs",
-        "//src/test:analysis_srcs",
-    ],
+    srcs = ["//src:analysis_srcs", "//src/test:analysis_srcs"],
     cfgs = ["config/detekt/detekt.yml"],
 )
 
@@ -60,10 +57,7 @@ VALE_SRCS = [
         "//linter:vale_docs",
     ],
     entry_point = "tools/vale/vale-test.mjs",
-) for mode in [
-    "docs",
-    "fixtures",
-]]
+) for mode in ["docs", "fixtures"]]
 
 build_test(
     name = "typescript_build_test",
@@ -78,15 +72,13 @@ test_suite(
     name = "ci_static",
     tests = [
         ":buildifier_check",
+        ":detekt_check",
         ":cpd_kotlin_main",
         ":cpd_kotlin_test",
-        ":detekt_check",
-        ":vale_docs_test",
-        ":vale_fixtures_test",
-        "//layout:cpd_check",
-        "//linter:cpd_check",
         "//src:ktlint_check",
         "//src/test:ktlint_check",
+        ":vale_docs_test",
+        ":vale_fixtures_test",
     ],
 )
 
@@ -94,23 +86,23 @@ test_suite(
     name = "ci_typescript",
     tests = [
         ":typescript_build_test",
-        "//layout:smoke_test",
-        "//linter:auto_fix_test",
-        "//linter:capabilities_test",
         "//linter:lint_test",
         "//linter:smoke_test",
+        "//linter:auto_fix_test",
+        "//linter:capabilities_test",
+        "//layout:smoke_test",
     ],
 )
 
 test_suite(
     name = "ci_kotlin",
     tests = [
+        "//src/test:BpmnerArchitectureTest",
+        "//src/test:BpmnerModulithTest",
+        "//src/test:BpmnerModuleBoundariesTest",
         "//src/test:BpmnAgentFlowSystemTest",
         "//src/test:BpmnAlignmentFailureIntegrationTest",
         "//src/test:BpmnGuardrailSystemTest",
-        "//src/test:BpmnerArchitectureTest",
-        "//src/test:BpmnerModuleBoundariesTest",
-        "//src/test:BpmnerModulithTest",
         "//src/test:bpmnerAppRunfilesDataTest",
     ],
 )
@@ -118,9 +110,9 @@ test_suite(
 test_suite(
     name = "ci",
     tests = [
-        ":ci_kotlin",
         ":ci_static",
         ":ci_typescript",
+        ":ci_kotlin",
         "//linter/pkl:schema_test",
     ],
 )

@@ -39,12 +39,10 @@ EMBABEL_VERSION = "0.3.5"
 
 KOTLIN_VERSION = "2.1.10"
 
-# Toolchain pinning is staged for a future change; the extension wiring stays
-# commented until we adopt it.
-# rules_kotlin_extensions = use_extension(
-#     "@rules_kotlin//src/main/starlark/core/repositories:bzlmod_setup.bzl",
-#     "rules_kotlin_extensions",
-# )
+rules_kotlin_extensions = use_extension(
+    "@rules_kotlin//src/main/starlark/core/repositories:bzlmod_setup.bzl",
+    "rules_kotlin_extensions",
+)
 # rules_kotlin_extensions.kotlinc_version(
 #     version = KOTLIN_VERSION,
 #     sha256 = "c6e9e2636889828e19c8811d5ab890862538c89dc2a3101956dfee3c2a8ba6b1", # https://github.com/JetBrains/kotlin/releases/download/v2.1.10/kotlin-compiler-2.1.10.zip

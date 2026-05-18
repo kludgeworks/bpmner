@@ -15,10 +15,10 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
-import org.jmolecules.architecture.hexagonal.Application
+import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.ApplicationEventPublisher
 
-@Application
+@PrimaryAdapter
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
     private val config: BpmnConfig,

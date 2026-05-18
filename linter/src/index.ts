@@ -26,7 +26,7 @@ const recommendedPluginRules = Object.fromEntries(
 ) as Record<string, string>
 
 const allPluginRules = Object.fromEntries(
-	tsRules.map((r) => [r.id, r.severity === "off" ? "off" : "error"]),
+	tsRules.map((r) => [r.id, "error"]),
 ) as Record<string, string>
 
 const pluginRulePaths = Object.fromEntries(
