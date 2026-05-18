@@ -12,6 +12,7 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.RepairKind

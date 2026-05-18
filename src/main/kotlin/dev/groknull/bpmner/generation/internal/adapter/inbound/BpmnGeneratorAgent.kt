@@ -66,9 +66,8 @@ internal class BpmnGeneratorAgent(
         }
         val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
-        val definition =
-            promptRunner.createObject(prompt, BpmnDefinition::class.java)
-                ?: error("Outline generator failed to produce a structured outline.")
+        val definition = promptRunner.createObject(prompt, BpmnDefinition::class.java)
+            ?: error("Outline generator failed to produce a structured outline.")
         val outline =
             ProcessOutline(
                 request = request,
