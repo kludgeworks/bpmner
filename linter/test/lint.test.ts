@@ -35,6 +35,7 @@ type RuleCatalog = {
 	rules: Array<{
 		id: string
 		aliases?: string[]
+		severity: string
 		hasTsImplementation: boolean
 		staticConfig?: { cookbookCode?: string }
 	}>
@@ -95,7 +96,7 @@ describe("lint rules", () => {
 		const config = configs["plugin:bpmner/all"]
 		assert.deepEqual(
 			Object.values(config.rules),
-			tsRules.map(() => "error"),
+			tsRules.map((rule) => (rule.severity === "off" ? "off" : "error")),
 		)
 	})
 
@@ -149,7 +150,7 @@ describe("lint rules", () => {
 	})
 
 	it("migrated rule metadata maps Pkl severity to bpmnlint levels", () => {
-		assert.equal(getBpmnlintLevel("bpmner/name-uncommon-abbreviations"), "warn")
+		assert.equal(getBpmnlintLevel("bpmner/name-uncommon-abbreviations"), "off")
 		assert.equal(
 			getBpmnlintLevel("bpmnlint-plugin-bpmner/act-discouraged-business-verbs"),
 			"warn",
@@ -726,14 +727,12 @@ describe("lint rules", () => {
 		)
 	})
 
-	it("name-uncommon-abbreviations — invalid", async () => {
-		const reports = reportsFor(
-			await lint(fixtures.name02Invalid),
-			"name-uncommon-abbreviations",
-		)
-		assert.equal(
-			reports[0]?.message,
-			getRuleMessage("name-uncommon-abbreviations"),
+	it("name-uncommon-abbreviations — disabled pending per-diagnostic dispositions", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.name02Invalid),
+				"name-uncommon-abbreviations",
+			),
 		)
 	})
 
