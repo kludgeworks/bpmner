@@ -212,16 +212,18 @@ class RepairRoutingModuleTest {
 
     @Test
     fun `mixed local and LLM diagnostics route local first then LLM with only unresolved diagnostic`() {
-        val localIssue = LintIssue(
-            "Task_1",
-            "bpmner/name-01",
-            "Element name must not include its BPMN element type",
-        )
-        val llmIssue = LintIssue(
-            "EndEvent_1",
-            "bpmner/name-clarity",
-            "End event name should describe a business outcome",
-        )
+        val localIssue =
+            LintIssue(
+                id = "Task_1",
+                rule = "bpmner/name-01",
+                message = "Element name must not include its BPMN element type",
+            )
+        val llmIssue =
+            LintIssue(
+                id = "EndEvent_1",
+                rule = "bpmner/name-clarity",
+                message = "End event name should describe a business outcome",
+            )
 
         setupMixedCapabilitiesMocks()
         setupMixedLintMocks(localIssue, llmIssue)
@@ -272,7 +274,10 @@ class RepairRoutingModuleTest {
         )
     }
 
-    private fun setupMixedLintMocks(localIssue: LintIssue, llmIssue: LintIssue) {
+    private fun setupMixedLintMocks(
+        localIssue: LintIssue,
+        llmIssue: LintIssue,
+    ) {
         // attempt 1: both → after local fix attempt 2: only LLM → after LLM rewrite: clean
         `when`(bpmnLintService.lint(anyString(), anyPhase()))
             .thenReturn(listOf(localIssue, llmIssue))

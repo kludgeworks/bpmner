@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
+import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
@@ -45,11 +46,13 @@ class BpmnContractGenerationPromptFactoryTest {
         assertTrue(prompt.contains("- a-review: Claims team reviews claim (actor: actor-claims)"))
         assertTrue(prompt.contains("- a-rework: Request corrected claim details"))
         assertTrue(prompt.contains("- d-complete: Is the claim complete?"))
-        assertTrue(prompt.contains("- b-complete"))
-        assertTrue(prompt.contains("- b-rework"))
+        assertTrue(prompt.contains("- b-complete -> \"Complete\" if \"claim is complete\""))
+        assertTrue(prompt.contains("- b-rework -> \"Needs rework\" if \"claim is incomplete\""))
+        assertTrue(prompt.contains("- artifact-claim: Claim file - Submitted claim package"))
         assertTrue(prompt.contains("- end-approved: Claim approved"))
         assertTrue(prompt.contains("- end-rejected: Claim rejected"))
         assertTrue(prompt.contains("- assume-cutoff: Claims after cutoff move to next business day"))
+        assertTrue(prompt.contains("- ev1 -> contract-claim [supported]"))
         assertTrue(prompt.contains("Use sentence case task names."))
         assertTrue(prompt.contains("Do not add unsupported tasks, decisions, branches, actors, or end states."))
         assertTrue(prompt.contains("layout coordinates, waypoints, sequence flows"))
@@ -67,8 +70,17 @@ class BpmnContractGenerationPromptFactoryTest {
             actors = listOf(ContractActor(id = "actor-claims", name = "Claims team")),
             activities = contractActivities(),
             decisions = contractDecisions(),
+            artifacts =
+                listOf(
+                    ContractArtifact(
+                        id = "artifact-claim",
+                        name = "Claim file",
+                        description = "Submitted claim package",
+                    ),
+                ),
             endStates = contractEndStates(),
             assumptions = contractAssumptions(),
+            traceLinks = listOf(trace("contract-claim")),
         )
 
     private fun contractActivities() =

@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer.Style
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
 
@@ -36,7 +37,7 @@ internal class BpmnContractGenerationPromptFactory(
             appendLine("- Leave routing-only converging gateways unnamed.")
             appendLine()
             appendLine("Primary validated ProcessContract:")
-            appendLine(renderer.render(validatedContract.contract).trim())
+            appendLine(renderer.render(validatedContract.contract, Style.ASCII).trim())
             appendLine()
             appendLine("Original input for traceability only:")
             appendLine(request.processDescription)

@@ -10,7 +10,21 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class ProcessContractMarkdownRenderer {
-    fun render(contract: ProcessContract): String =
+    enum class Style(
+        val branchArrow: String,
+        val artifactSeparator: String,
+        val traceArrow: String,
+    ) {
+        CANONICAL(branchArrow = "→", artifactSeparator = " — ", traceArrow = "→"),
+        ASCII(branchArrow = "->", artifactSeparator = " - ", traceArrow = "->"),
+    }
+
+    fun render(contract: ProcessContract): String = render(contract, Style.CANONICAL)
+
+    fun render(
+        contract: ProcessContract,
+        style: Style,
+    ): String =
         buildString {
             appendLine("# ${contract.processName}")
             appendLine("Trigger: ${contract.trigger}")
@@ -20,11 +34,11 @@ internal class ProcessContractMarkdownRenderer {
 
             renderActors(contract)
             renderActivities(contract)
-            renderDecisions(contract)
-            renderArtifacts(contract)
+            renderDecisions(contract, style)
+            renderArtifacts(contract, style)
             renderEndStates(contract)
             renderAssumptions(contract)
-            renderTraceLinks(contract)
+            renderTraceLinks(contract, style)
         }
 
     private fun StringBuilder.renderActors(contract: ProcessContract) {
@@ -49,26 +63,39 @@ internal class ProcessContractMarkdownRenderer {
         }
     }
 
-    private fun StringBuilder.renderDecisions(contract: ProcessContract) {
+    private fun StringBuilder.renderDecisions(
+        contract: ProcessContract,
+        style: Style,
+    ) {
         if (contract.decisions.isNotEmpty()) {
             appendLine()
             appendLine("## Decisions")
             contract.decisions.forEach { decision ->
                 appendLine("- ${decision.id}: ${decision.question}")
-                decision.branches.forEach { branch ->
-                    val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
-                    appendLine("  - ${branch.id} → \"${branch.label}\"$condition")
-                }
+                renderBranches(decision.branches, style)
             }
         }
     }
 
-    private fun StringBuilder.renderArtifacts(contract: ProcessContract) {
+    private fun StringBuilder.renderBranches(
+        branches: List<ContractBranch>,
+        style: Style,
+    ) {
+        branches.forEach { branch ->
+            val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
+            appendLine("  - ${branch.id} ${style.branchArrow} \"${branch.label}\"$condition")
+        }
+    }
+
+    private fun StringBuilder.renderArtifacts(
+        contract: ProcessContract,
+        style: Style,
+    ) {
         if (contract.artifacts.isNotEmpty()) {
             appendLine()
             appendLine("## Artifacts")
             contract.artifacts.forEach { artifact ->
-                val description = artifact.description?.let { " — $it" }.orEmpty()
+                val description = artifact.description?.let { "${style.artifactSeparator}$it" }.orEmpty()
                 appendLine("- ${artifact.id}: ${artifact.name}$description")
             }
         }
@@ -96,12 +123,15 @@ internal class ProcessContractMarkdownRenderer {
         }
     }
 
-    private fun StringBuilder.renderTraceLinks(contract: ProcessContract) {
+    private fun StringBuilder.renderTraceLinks(
+        contract: ProcessContract,
+        style: Style,
+    ) {
         if (contract.traceLinks.isNotEmpty()) {
             appendLine()
             appendLine("## Trace links")
             contract.traceLinks.forEach { link ->
-                appendLine("- ${link.sourceId} → ${link.targetId} [${link.classification.name.lowercase()}]")
+                appendLine("- ${link.sourceId} ${style.traceArrow} ${link.targetId} [${link.classification.name.lowercase()}]")
             }
         }
     }
