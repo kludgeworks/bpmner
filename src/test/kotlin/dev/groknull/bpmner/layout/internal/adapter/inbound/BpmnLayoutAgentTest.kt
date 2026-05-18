@@ -416,8 +416,8 @@ class BpmnLayoutAgentTest {
         assertEquals(listOf(BpmnLintPhase.FINAL_POST_LAYOUT), lintService.phases)
     }
 
-    private @Suppress("TooManyFunctions")
-class RecordingLayoutService(
+    @Suppress("TooManyFunctions")
+    private class RecordingLayoutService(
         private val responses: List<String> = emptyList(),
         private val callLog: MutableList<String>? = null,
     ) : BpmnLayoutService() {
@@ -431,8 +431,8 @@ class RecordingLayoutService(
         }
     }
 
-    private @Suppress("TooManyFunctions")
-class RecordingLintService(
+    @Suppress("TooManyFunctions")
+    private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
         private val autoFixResponses: List<BpmnAutoFixResult?> = emptyList(),
@@ -479,8 +479,8 @@ class RecordingLintService(
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = capabilities
     }
 
-    private @Suppress("TooManyFunctions")
-class RecordingXsdValidator(
+    @Suppress("TooManyFunctions")
+    private class RecordingXsdValidator(
         private val responses: List<List<XsdValidationIssue>>,
         private val callLog: MutableList<String>? = null,
     ) : BpmnXsdValidationPort {
