@@ -14,10 +14,20 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnContractValidator {
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun validate(contract: ProcessContract): ContractValidationReport {
         val issues = mutableListOf<ContractValidationIssue>()
 
+        validateBasicProperties(contract, issues)
+        validateDecisions(contract, issues)
+        validateTraceLinks(contract, issues)
+
+        return ContractValidationReport(issues = issues.toList())
+    }
+
+    private fun validateBasicProperties(
+        contract: ProcessContract,
+        issues: MutableList<ContractValidationIssue>,
+    ) {
         if (contract.processName.isBlank()) {
             issues +=
                 ContractValidationIssue(
@@ -64,7 +74,12 @@ internal class BpmnContractValidator {
                     targetId = contract.id,
                 )
         }
+    }
 
+    private fun validateDecisions(
+        contract: ProcessContract,
+        issues: MutableList<ContractValidationIssue>,
+    ) {
         contract.decisions.forEach { decision ->
             if (decision.branches.size < MIN_DECISION_BRANCHES) {
                 issues +=
@@ -89,7 +104,12 @@ internal class BpmnContractValidator {
                 }
             }
         }
+    }
 
+    private fun validateTraceLinks(
+        contract: ProcessContract,
+        issues: MutableList<ContractValidationIssue>,
+    ) {
         contract.activities.forEach { activity ->
             if (activity.traceLinks.isEmpty()) {
                 issues +=
@@ -134,8 +154,6 @@ internal class BpmnContractValidator {
                     )
             }
         }
-
-        return ContractValidationReport(issues = issues.toList())
     }
 
     companion object {

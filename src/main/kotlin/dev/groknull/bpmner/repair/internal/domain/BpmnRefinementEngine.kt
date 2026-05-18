@@ -46,7 +46,6 @@ internal class BpmnRefinementEngine(
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRefinementEngine::class.java)
 
-    @Suppress("LongMethod") // repair loop; render() may throw any RuntimeException
     fun refine(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
@@ -54,6 +53,27 @@ internal class BpmnRefinementEngine(
         context: ActionContext,
     ): ValidatedBpmnXml {
         val maxEvaluations = config.maxAttempts.coerceAtLeast(1)
+        var state = initializeState(request, graph, rendered)
+
+        if (state.attempt.evaluation.isSuccessful()) {
+            return publishSuccessAndReturn(request, state, context)
+        }
+
+        while (state.history.size < maxEvaluations) {
+            state = performRepairStep(request, state, maxEvaluations, context)
+            if (state.attempt.evaluation.isSuccessful()) {
+                return publishSuccessAndReturn(request, state, context)
+            }
+        }
+
+        failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts", request)
+    }
+
+    private fun initializeState(
+        request: BpmnRequest,
+        graph: LaidOutProcessGraph,
+        rendered: RenderedBpmn,
+    ): RepairState {
         val initialMessages = promptFactory.initialMessages(request, rendered.definition)
         val initialAttempt =
             BpmnRepairAttempt(
@@ -70,32 +90,23 @@ internal class BpmnRefinementEngine(
                 messages = initialMessages,
             )
         val initialRecord = attemptRecordFactory.toRecord(initialAttempt)
-        var state =
-            RepairState(
-                graph = graph,
-                attempt = initialAttempt,
-                record = initialRecord,
-                history = BpmnAttemptHistory().append(initialRecord),
-            )
+        return RepairState(
+            graph = graph,
+            attempt = initialAttempt,
+            record = initialRecord,
+            history = BpmnAttemptHistory().append(initialRecord),
+        )
+    }
 
-        if (state.attempt.evaluation.isSuccessful()) {
-            context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
-            val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-            eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
-            return result
-        }
-
-        while (state.history.size < maxEvaluations) {
-            state = performRepairStep(request, state, maxEvaluations, context)
-            if (state.attempt.evaluation.isSuccessful()) {
-                context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
-                val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
-                eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
-                return result
-            }
-        }
-
-        failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts", request)
+    private fun publishSuccessAndReturn(
+        request: BpmnRequest,
+        state: RepairState,
+        context: ActionContext,
+    ): ValidatedBpmnXml {
+        context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
+        val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
+        eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
+        return result
     }
 
     private data class RepairState(

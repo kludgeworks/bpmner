@@ -20,7 +20,6 @@ internal class BpmnReadinessPostChecker(
     private val clarificationCeiling: Int
         get() = config.readyThreshold - 1
 
-    @Suppress("LongMethod")
     fun apply(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
@@ -30,52 +29,20 @@ internal class BpmnReadinessPostChecker(
         val dimensions = assessment.dimensions.associateBy { it.dimension }.toMutableMap()
         var overallScore = assessment.overallScore.coerceIn(MIN_SCORE, MAX_SCORE)
 
-        ReadinessDimension.entries.forEach { dimension ->
-            dimensions.putIfAbsent(
-                dimension,
-                ReadinessDimensionScore(
-                    dimension = dimension,
-                    score = DEFAULT_DIMENSION_SCORE,
-                    rationale = "No model score was provided for ${dimension.name}.",
-                ),
-            )
-        }
-        dimensions.replaceAll { _, score -> score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE)) }
+        initializeDimensions(dimensions)
 
         val distinctProcessVerbCount = PROCESS_VERBS.count { it.containsMatchIn(text) }
         val hasProcessVerb = distinctProcessVerbCount > 0
-        val hasStartTrigger = START_TRIGGER_MARKERS.any { it.containsMatchIn(text) }
-        val hasEndState = END_STATE_MARKERS.any { it.containsMatchIn(text) }
-        val hasSequence = SEQUENCE_MARKERS.any { it.containsMatchIn(text) }
 
-        if (!hasStartTrigger) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.START_TRIGGER
-            dimensions.lower(ReadinessDimension.START_TRIGGER, MissingProcessArea.START_TRIGGER)
-        }
-        if (!hasEndState) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.END_STATE
-            dimensions.lower(ReadinessDimension.END_STATES, MissingProcessArea.END_STATE)
-        }
-        if (distinctProcessVerbCount < config.minimumActivityCount) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
-            dimensions.lower(ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
-        }
-        if (!hasSequence) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
-            dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
-        }
-        if (!hasProcessVerb) {
-            overallScore = minOf(overallScore, clarificationCeiling)
-            missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
-            dimensions.lower(
-                dimension = ReadinessDimension.BPMN_SUITABILITY,
-                missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
+        overallScore =
+            checkMarkers(
+                text = text,
+                distinctProcessVerbCount = distinctProcessVerbCount,
+                hasProcessVerb = hasProcessVerb,
+                overallScore = overallScore,
+                missingAreas = missingAreas,
+                dimensions = dimensions,
             )
-        }
 
         val verdict = verdictFor(overallScore)
         val questions =
@@ -93,6 +60,64 @@ internal class BpmnReadinessPostChecker(
             missingAreas = missingAreas.toList(),
             clarificationQuestions = questions,
         )
+    }
+
+    private fun initializeDimensions(dimensions: MutableMap<ReadinessDimension, ReadinessDimensionScore>) {
+        ReadinessDimension.entries.forEach { dimension ->
+            dimensions.putIfAbsent(
+                dimension,
+                ReadinessDimensionScore(
+                    dimension = dimension,
+                    score = DEFAULT_DIMENSION_SCORE,
+                    rationale = "No model score was provided for ${dimension.name}.",
+                ),
+            )
+        }
+        dimensions.replaceAll { _, score -> score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE)) }
+    }
+
+    private fun checkMarkers(
+        text: String,
+        distinctProcessVerbCount: Int,
+        hasProcessVerb: Boolean,
+        overallScore: Int,
+        missingAreas: MutableSet<MissingProcessArea>,
+        dimensions: MutableMap<ReadinessDimension, ReadinessDimensionScore>,
+    ): Int {
+        var newScore = overallScore
+        val hasStartTrigger = START_TRIGGER_MARKERS.any { it.containsMatchIn(text) }
+        val hasEndState = END_STATE_MARKERS.any { it.containsMatchIn(text) }
+        val hasSequence = SEQUENCE_MARKERS.any { it.containsMatchIn(text) }
+
+        if (!hasStartTrigger) {
+            newScore = minOf(newScore, clarificationCeiling)
+            missingAreas += MissingProcessArea.START_TRIGGER
+            dimensions.lower(ReadinessDimension.START_TRIGGER, MissingProcessArea.START_TRIGGER)
+        }
+        if (!hasEndState) {
+            newScore = minOf(newScore, clarificationCeiling)
+            missingAreas += MissingProcessArea.END_STATE
+            dimensions.lower(ReadinessDimension.END_STATES, MissingProcessArea.END_STATE)
+        }
+        if (distinctProcessVerbCount < config.minimumActivityCount) {
+            newScore = minOf(newScore, clarificationCeiling)
+            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
+            dimensions.lower(ReadinessDimension.ACTIVITIES, MissingProcessArea.ACTIVITY_SEQUENCE)
+        }
+        if (!hasSequence) {
+            newScore = minOf(newScore, clarificationCeiling)
+            missingAreas += MissingProcessArea.ACTIVITY_SEQUENCE
+            dimensions.lower(ReadinessDimension.SEQUENCE_ORDER, MissingProcessArea.ACTIVITY_SEQUENCE)
+        }
+        if (!hasProcessVerb) {
+            newScore = minOf(newScore, clarificationCeiling)
+            missingAreas += MissingProcessArea.BPMN_PROCESS_SUITABILITY
+            dimensions.lower(
+                dimension = ReadinessDimension.BPMN_SUITABILITY,
+                missingArea = MissingProcessArea.BPMN_PROCESS_SUITABILITY,
+            )
+        }
+        return newScore
     }
 
     private fun MutableMap<ReadinessDimension, ReadinessDimensionScore>.lower(

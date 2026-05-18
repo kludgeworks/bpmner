@@ -211,8 +211,32 @@ class RepairRoutingModuleTest {
     }
 
     @Test
-    @Suppress("LongMethod")
     fun `mixed local and LLM diagnostics route local first then LLM with only unresolved diagnostic`() {
+        val localIssue = LintIssue("Task_1", "bpmner/name-01", "Element name must not include its BPMN element type")
+        val llmIssue = LintIssue("EndEvent_1", "bpmner/name-clarity", "End event name should describe a business outcome")
+
+        setupMixedCapabilitiesMocks()
+        setupMixedLintMocks(localIssue, llmIssue)
+
+        val context =
+            FakeActionContext().also {
+                it.expectResponse(setNodeNamePatch("EndEvent_1", "Toast served to customer"))
+            }
+        val definition = testBpmnDefinition()
+        val graph = testLaidOutGraph(definition, withOwnership = true)
+        val rendered = BpmnDefinitionToXmlConverter().render(graph)
+
+        refinementEngine.refine(
+            request = BpmnRequest(processDescription = "Make toast"),
+            graph = graph,
+            rendered = rendered,
+            context = context,
+        )
+
+        assertMixedLocalAndLlmOutcome(context)
+    }
+
+    private fun setupMixedCapabilitiesMocks() {
         val localCapability =
             BpmnLintRuleCapability(
                 id = "name-01",
@@ -231,18 +255,6 @@ class RepairRoutingModuleTest {
                 handlerExists = false,
                 replacementMap = null,
             )
-        val localIssue =
-            LintIssue(
-                id = "Task_1",
-                rule = "bpmner/name-01",
-                message = "Element name must not include its BPMN element type",
-            )
-        val llmIssue =
-            LintIssue(
-                id = "EndEvent_1",
-                rule = "bpmner/name-clarity",
-                message = "End event name should describe a business outcome",
-            )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(
             mapOf(
@@ -250,6 +262,9 @@ class RepairRoutingModuleTest {
                 "name-clarity" to llmCapability,
             ),
         )
+    }
+
+    private fun setupMixedLintMocks(localIssue: LintIssue, llmIssue: LintIssue) {
         // attempt 1: both → after local fix attempt 2: only LLM → after LLM rewrite: clean
         `when`(bpmnLintService.lint(anyString(), anyPhase()))
             .thenReturn(listOf(localIssue, llmIssue))
@@ -265,22 +280,9 @@ class RepairRoutingModuleTest {
                 ),
             )
         `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
+    }
 
-        val context =
-            FakeActionContext().also {
-                it.expectResponse(setNodeNamePatch("EndEvent_1", "Toast served to customer"))
-            }
-        val definition = testBpmnDefinition()
-        val graph = testLaidOutGraph(definition, withOwnership = true)
-        val rendered = BpmnDefinitionToXmlConverter().render(graph)
-
-        refinementEngine.refine(
-            request = BpmnRequest(processDescription = "Make toast"),
-            graph = graph,
-            rendered = rendered,
-            context = context,
-        )
-
+    private fun assertMixedLocalAndLlmOutcome(context: FakeActionContext) {
         assertEquals(1, context.llmInvocations.size, "expected exactly one LLM call after the local diagnostic was resolved")
         val prompt =
             context.llmInvocations
