@@ -32,7 +32,6 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
@@ -121,10 +120,10 @@ class RepairRoutingModuleTest {
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
         // attempt 1: one local-fix issue → attempt 2 after auto-fix: clean
-        `when`(bpmnLintService.lint(anyString(), anyPhase()))
+        `when`(bpmnLintService.lint(anyString()))
             .thenReturn(listOf(lintIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues(), anyPhase()))
+        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
             .thenReturn(
                 BpmnAutoFixResult(
                     changed = true,
@@ -179,7 +178,7 @@ class RepairRoutingModuleTest {
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-clarity" to llmCapability))
-        `when`(bpmnLintService.lint(anyString(), anyPhase()))
+        `when`(bpmnLintService.lint(anyString()))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
         `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
@@ -200,7 +199,7 @@ class RepairRoutingModuleTest {
         )
 
         assertEquals(1, context.llmInvocations.size, "exactly one LLM call expected for an LLM_MODEL_PATCH rule")
-        verify(bpmnLintService, never()).autoFix(anyString(), anyLintIssues(), anyPhase())
+        verify(bpmnLintService, never()).autoFix(anyString(), anyLintIssues())
         assertRouteSummaryLogged(
             attemptNumber = 1,
             "localAttempted=0",
@@ -251,12 +250,12 @@ class RepairRoutingModuleTest {
             ),
         )
         // attempt 1: both → after local fix attempt 2: only LLM → after LLM rewrite: clean
-        `when`(bpmnLintService.lint(anyString(), anyPhase()))
+        `when`(bpmnLintService.lint(anyString()))
             .thenReturn(listOf(localIssue, llmIssue))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
         val locallyFixed = testBpmnDefinition(processName = "Locally fixed")
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues(), anyPhase()))
+        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
             .thenReturn(
                 BpmnAutoFixResult(
                     changed = true,
@@ -328,10 +327,10 @@ class RepairRoutingModuleTest {
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
-        `when`(bpmnLintService.lint(anyString(), anyPhase()))
+        `when`(bpmnLintService.lint(anyString()))
             .thenReturn(listOf(localIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues(), anyPhase()))
+        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
             .thenReturn(
                 BpmnAutoFixResult(
                     changed = false,
@@ -404,8 +403,6 @@ class RepairRoutingModuleTest {
         BpmnDefinitionToXmlConverter().render(testLaidOutGraph(definition, withOwnership = true)).xml
 
     private fun anyString(): String = ArgumentMatchers.anyString()
-
-    private fun anyPhase(): BpmnLintPhase = ArgumentMatchers.any(BpmnLintPhase::class.java) ?: BpmnLintPhase.FINAL_POST_LAYOUT
 
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 

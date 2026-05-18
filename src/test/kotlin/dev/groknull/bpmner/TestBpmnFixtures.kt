@@ -5,11 +5,9 @@
 
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
@@ -35,24 +33,14 @@ object TestBpmnFixtures {
         processName = processName,
         nodes =
             listOf(
-                BpmnNode("StartEvent_1", startName, NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                BpmnNode("Task_1", taskName, nodeType, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-                BpmnNode("EndEvent_1", endName, NodeType.END_EVENT, BpmnBounds(320.0, 120.0, 36.0, 36.0)),
+                BpmnNode("StartEvent_1", startName, NodeType.START_EVENT),
+                BpmnNode("Task_1", taskName, nodeType),
+                BpmnNode("EndEvent_1", endName, NodeType.END_EVENT),
             ),
         sequences =
             listOf(
-                BpmnEdge(
-                    "Flow_1",
-                    "StartEvent_1",
-                    "Task_1",
-                    waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
-                ),
-                BpmnEdge(
-                    "Flow_2",
-                    "Task_1",
-                    "EndEvent_1",
-                    waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(320.0, 138.0)),
-                ),
+                BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
             ),
     )
 
@@ -81,14 +69,8 @@ object TestBpmnFixtures {
             buildMap {
                 if (owner != null) {
                     put(definition.processId, owner)
-                    definition.nodes.forEach {
-                        put(it.id, owner)
-                        put("${it.id}_di", owner)
-                    }
-                    definition.sequences.forEach {
-                        put(it.id, owner)
-                        put("${it.id}_di", owner)
-                    }
+                    definition.nodes.forEach { put(it.id, owner) }
+                    definition.sequences.forEach { put(it.id, owner) }
                 }
             }
         return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)

@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -35,7 +34,7 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
             """.trimIndent()
 
-        val issues = service.lint(invalidXml, BpmnLintPhase.FINAL_POST_LAYOUT)
+        val issues = service.lint(invalidXml)
 
         assertNotNull(issues, "Issues should not be null when linting is functional")
         issues!!
@@ -79,7 +78,7 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
             """.trimIndent()
 
-        val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT)
+        val issues = service.lint(duplicateDiagramXml)
 
         assertNotNull(issues)
         issues!!
@@ -121,7 +120,7 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
             """.trimIndent()
 
-        val issues = service.lint(duplicateDiagramXml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty()
+        val issues = service.lint(duplicateDiagramXml).orEmpty()
         val docs = service.ruleDocs(listOf("bpmner/gen-02-no-duplicate-diagrams"))
 
         assertTrue(
@@ -173,11 +172,11 @@ class BpmnLintServiceIntegrationTest {
             </bpmn:definitions>
             """.trimIndent()
 
-        val issues = service.lint(xml, BpmnLintPhase.FINAL_POST_LAYOUT)
+        val issues = service.lint(xml)
         assertNotNull(issues)
         issues!!
 
-        val result = service.autoFix(xml, issues, BpmnLintPhase.FINAL_POST_LAYOUT)
+        val result = service.autoFix(xml, issues)
 
         assertNotNull(result)
         result!!
@@ -185,7 +184,7 @@ class BpmnLintServiceIntegrationTest {
         assertEquals("Gateway_1", result.applied.single().elementId)
         assertTrue(!result.xml.contains("name=\"Decision merged\""))
         assertTrue(
-            service.lint(result.xml, BpmnLintPhase.FINAL_POST_LAYOUT).orEmpty().none {
+            service.lint(result.xml).orEmpty().none {
                 it.rule == "bpmner/gtw-converging-gateway-unnamed"
             },
         )

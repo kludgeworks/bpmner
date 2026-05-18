@@ -7,11 +7,9 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.NodeType
@@ -32,7 +30,6 @@ class BpmnOwnershipTest {
     private val splitJoinFork = SplitJoinForkGatewayHandler()
     private val insertConverging = InsertConvergingGatewayHandler()
     private val bypassGateway = BypassGatewayHandler()
-    private val stdWaypoints = listOf(BpmnWaypoint(100.0, 100.0), BpmnWaypoint(200.0, 100.0))
 
     // -------------------------------------------------------------------------
     // Fixtures
@@ -45,14 +42,14 @@ class BpmnOwnershipTest {
                 processName = "Test",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                        BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(340.0, 120.0, 36.0, 36.0)),
+                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                        BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                        BpmnNode("End_1", "End", NodeType.END_EVENT),
                     ),
                 sequences =
                     listOf(
-                        BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-                        BpmnEdge("Flow_2", "Task_1", "End_1", waypoints = stdWaypoints),
+                        BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "End_1"),
                     ),
             )
         val objectOwners =
@@ -99,7 +96,7 @@ class BpmnOwnershipTest {
     @Test
     fun `validateOwnership detects node missing from element owners`() {
         val graph = baseGraph()
-        val extraNode = BpmnNode("Orphan_1", "Orphan", NodeType.SERVICE_TASK, BpmnBounds(0.0, 0.0, 100.0, 80.0))
+        val extraNode = BpmnNode("Orphan_1", "Orphan", NodeType.SERVICE_TASK)
         val newDef = graph.definition.copy(nodes = graph.definition.nodes + extraNode)
         // Manually corrupt: update definition but do NOT reindex ownership
         val corruptGraph = LaidOutProcessGraph(ownedGraph = graph.ownedGraph, definition = newDef)
@@ -110,7 +107,7 @@ class BpmnOwnershipTest {
     @Test
     fun `validateOwnership detects edge missing from element owners`() {
         val graph = baseGraph()
-        val extraEdge = BpmnEdge("Flow_99", "Start_1", "End_1", waypoints = stdWaypoints)
+        val extraEdge = BpmnEdge("Flow_99", "Start_1", "End_1")
         val newDef = graph.definition.copy(sequences = graph.definition.sequences + extraEdge)
         val corruptGraph = LaidOutProcessGraph(ownedGraph = graph.ownedGraph, definition = newDef)
         val errors = corruptGraph.validateOwnership()
@@ -124,7 +121,7 @@ class BpmnOwnershipTest {
     @Test
     fun `withUpdatedDefinition assigns owner to new node`() {
         val graph = baseGraph()
-        val newNode = BpmnNode("Task_2", "Extra task", NodeType.SERVICE_TASK, BpmnBounds(180.0, 240.0, 100.0, 80.0))
+        val newNode = BpmnNode("Task_2", "Extra task", NodeType.SERVICE_TASK)
         val newDef = graph.definition.copy(nodes = graph.definition.nodes + newNode)
         val updated = graph.withUpdatedDefinition(newDef)
         assertNotNull(updated.ownerForElementId("Task_2"), "Task_2 must have an owner after reindex")
@@ -134,7 +131,7 @@ class BpmnOwnershipTest {
     @Test
     fun `withUpdatedDefinition assigns owner to new edge`() {
         val graph = baseGraph()
-        val newEdge = BpmnEdge("Flow_3", "Start_1", "End_1", waypoints = stdWaypoints)
+        val newEdge = BpmnEdge("Flow_3", "Start_1", "End_1")
         val newDef = graph.definition.copy(sequences = graph.definition.sequences + newEdge)
         val updated = graph.withUpdatedDefinition(newDef)
         assertNotNull(updated.ownerForElementId("Flow_3"), "Flow_3 must have an owner after reindex")
@@ -175,8 +172,8 @@ class BpmnOwnershipTest {
     @Test
     fun `withUpdatedDefinition result passes validateOwnership`() {
         val graph = baseGraph()
-        val newNode = BpmnNode("Task_2", "Extra", NodeType.USER_TASK, BpmnBounds(180.0, 240.0, 100.0, 80.0))
-        val newEdge = BpmnEdge("Flow_3", "Task_1", "Task_2", waypoints = stdWaypoints)
+        val newNode = BpmnNode("Task_2", "Extra", NodeType.USER_TASK)
+        val newEdge = BpmnEdge("Flow_3", "Task_1", "Task_2")
         val newDef =
             graph.definition.copy(
                 nodes = graph.definition.nodes + newNode,
@@ -278,21 +275,21 @@ class BpmnOwnershipTest {
             processName = "Join Fork",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 160.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 260.0, 36.0, 36.0)),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(240.0, 155.0, 50.0, 50.0)),
-                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK, BpmnBounds(360.0, 140.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK, BpmnBounds(360.0, 250.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(520.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
+                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK),
+                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_5", "Task_1", "End_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_6", "Task_2", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
+                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
+                    BpmnEdge("Flow_5", "Task_1", "End_1"),
+                    BpmnEdge("Flow_6", "Task_2", "End_1"),
                 ),
         )
 
@@ -302,16 +299,16 @@ class BpmnOwnershipTest {
             processName = "Fake Join",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT, BpmnBounds(80.0, 240.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(240.0, 138.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(400.0, 160.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Start_2", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Task_1"),
+                    BpmnEdge("Flow_3", "Task_1", "End_1"),
                 ),
         )
 
@@ -321,16 +318,16 @@ class BpmnOwnershipTest {
             processName = "Superfluous Gateway",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
-                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(180.0, 135.0, 50.0, 50.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(300.0, 118.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", waypoints = stdWaypoints),
-                    BpmnEdge("Flow_3", "Task_1", "End_1", waypoints = stdWaypoints),
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1"),
+                    BpmnEdge("Flow_3", "Task_1", "End_1"),
                 ),
         )
 }

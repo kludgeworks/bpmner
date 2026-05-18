@@ -18,12 +18,10 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.ReadinessDimension
@@ -32,7 +30,6 @@ import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -64,7 +61,7 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(org.mockito.ArgumentMatchers.anyString(), anyPhase())
+            .lint(org.mockito.ArgumentMatchers.anyString())
 
         whenCreateObject(
             { it.contains("Return only a structured ProcessInputAssessment object.") },
@@ -146,16 +143,14 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             processName = "Dummy",
             nodes =
                 listOf(
-                    BpmnNode("start", "Start", NodeType.START_EVENT, BpmnBounds(100.0, 100.0, 36.0, 36.0)),
-                    BpmnNode("end", "End", NodeType.END_EVENT, BpmnBounds(500.0, 100.0, 36.0, 36.0)),
+                    BpmnNode("start", "Start", NodeType.START_EVENT),
+                    BpmnNode("end", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge("flow1", "start", "end", waypoints = listOf(BpmnWaypoint(136.0, 118.0), BpmnWaypoint(500.0, 118.0))),
+                    BpmnEdge("flow1", "start", "end"),
                 ),
         )
 
     private fun trace(targetId: String) = TraceLink("trace-$targetId", "ev1", targetId)
-
-    private fun anyPhase(): BpmnLintPhase = org.mockito.ArgumentMatchers.any() ?: BpmnLintPhase.SEMANTIC_PRE_LAYOUT
 }

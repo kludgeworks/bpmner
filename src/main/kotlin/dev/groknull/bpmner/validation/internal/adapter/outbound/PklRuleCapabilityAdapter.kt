@@ -44,7 +44,6 @@ internal class PklRuleCapabilityAdapter(
             fixHandler = repair.handler,
             handlerExists = kind.isLocal(),
             replacementMap = repair.replacementMap,
-            layoutSensitive = rule.layoutSensitive,
         )
     }
 }

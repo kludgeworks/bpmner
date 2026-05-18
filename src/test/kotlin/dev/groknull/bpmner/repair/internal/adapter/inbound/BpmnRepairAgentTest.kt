@@ -39,7 +39,6 @@ import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.validation.LintIssue
@@ -122,21 +121,7 @@ class BpmnRepairAgentTest {
         assertEquals(0, result.repairAttempts)
         assertEquals(1, xsdValidator.xmls.size)
         assertEquals(1, lintService.xmls.size)
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.phases)
         assertEquals(1, converter.renderCalls)
-    }
-
-    @Test
-    fun `semantic repair uses pre-layout lint phase`() {
-        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(listOf(emptyList()))
-        val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
-        val definition = testBpmnDefinition()
-
-        agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(definition), converter.render(definition), FakeActionContext())
-
-        assertEquals(listOf(BpmnLintPhase.SEMANTIC_PRE_LAYOUT), lintService.phases)
     }
 
     @Test
@@ -623,15 +608,10 @@ class BpmnRepairAgentTest {
             pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
         ) {
         val xmls = mutableListOf<String>()
-        val phases = mutableListOf<BpmnLintPhase>()
         private var index = 0
 
-        override fun lint(
-            bpmnXml: String,
-            phase: BpmnLintPhase,
-        ): List<LintIssue>? {
+        override fun lint(bpmnXml: String): List<LintIssue>? {
             xmls += bpmnXml
-            phases += phase
             return responses[index++]
         }
 

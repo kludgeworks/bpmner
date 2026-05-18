@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -19,18 +18,10 @@ class BpmnLintServiceTest {
         )
 
     @Test
-    fun `lintConfig returns base properties for final phase`() {
-        val config = service.lintConfig(BpmnLintPhase.FINAL_POST_LAYOUT)
+    fun `lintConfig returns base properties from configuration`() {
+        val config = service.lintConfig()
 
         assertTrue(config.extends.contains("bpmnlint:recommended"))
-    }
-
-    @Test
-    fun `lintConfig disables layout sensitive rules for rough phase`() {
-        val config = service.lintConfig(BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
-
-        assertEquals("off", config.rules["no-overlapping-elements"])
-        assertEquals("off", config.rules["bpmnlint/no-overlapping-elements"])
     }
 
     @Test

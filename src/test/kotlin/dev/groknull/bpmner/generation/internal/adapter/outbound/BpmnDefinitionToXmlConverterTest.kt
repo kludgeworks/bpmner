@@ -5,11 +5,9 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -27,10 +25,10 @@ class BpmnDefinitionToXmlConverterTest {
                 processName = "Prepare toast",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                        BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK, BpmnBounds(180.0, 98.0, 100.0, 80.0)),
-                        BpmnNode("Gateway_1", "Bread toasted?", NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(340.0, 110.0, 50.0, 50.0)),
-                        BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT, BpmnBounds(460.0, 120.0, 36.0, 36.0)),
+                        BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT),
+                        BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK),
+                        BpmnNode("Gateway_1", "Bread toasted?", NodeType.EXCLUSIVE_GATEWAY),
+                        BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT),
                     ),
                 sequences =
                     listOf(
@@ -38,13 +36,11 @@ class BpmnDefinitionToXmlConverterTest {
                             "Flow_1",
                             "StartEvent_1",
                             "Task_1",
-                            waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 138.0)),
                         ),
                         BpmnEdge(
                             "Flow_2",
                             "Task_1",
                             "Gateway_1",
-                            waypoints = listOf(BpmnWaypoint(280.0, 138.0), BpmnWaypoint(340.0, 138.0)),
                         ),
                         BpmnEdge(
                             "Flow_3",
@@ -52,7 +48,6 @@ class BpmnDefinitionToXmlConverterTest {
                             "EndEvent_1",
                             name = "Yes",
                             conditionExpression = "toastReady",
-                            waypoints = listOf(BpmnWaypoint(390.0, 138.0), BpmnWaypoint(460.0, 138.0)),
                         ),
                     ),
             )
@@ -68,32 +63,29 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "<sequenceFlow id=\"Flow_3\" name=\"Yes\"")
         assertContains(xml, "<conditionExpression")
         assertContains(xml, "toastReady")
-        assertContains(xml, "<bpmndi:BPMNDiagram")
-        assertContains(xml, "<dc:Bounds")
-        assertContains(xml, "<di:waypoint")
         assertEquals("Process_42", rendered.elementIndex.processId)
         assertEquals("nodes[id=Gateway_1]", rendered.elementIndex.objectRefForElementId("Gateway_1"))
-        assertEquals("nodes[id=Gateway_1]", rendered.elementIndex.objectRefForElementId("Gateway_1_di"))
         assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3"))
-        assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3_di"))
     }
 
     @Test
-    fun `generated xml contains exactly one BPMNDiagram element`() {
+    fun `generated xml emits no BPMNDI elements or namespaces`() {
         val definition =
             BpmnDefinition(
                 processId = "test_process",
                 processName = "Test Process",
                 nodes =
                     listOf(
-                        BpmnNode("start", "Start", NodeType.START_EVENT, BpmnBounds(0.0, 0.0, 36.0, 36.0)),
+                        BpmnNode("start", "Start", NodeType.START_EVENT),
                     ),
                 sequences = emptyList(),
             )
 
         val xml = converter.toXml(definition)
-        val diagramTagCount = xml.split("<bpmndi:BPMNDiagram").size - 1
-        assertEquals(1, diagramTagCount, "XML should contain exactly one <bpmndi:BPMNDiagram> tag")
+        assertFalse(xml.contains("bpmndi:"), "output must not contain bpmndi: elements or namespace")
+        assertFalse(xml.contains("BPMNDiagram"), "output must not contain BPMNDiagram element")
+        assertFalse(xml.contains("dc:Bounds"), "output must not contain dc:Bounds element")
+        assertFalse(xml.contains("di:waypoint"), "output must not contain di:waypoint element")
     }
 
     @Test
@@ -104,11 +96,11 @@ class BpmnDefinitionToXmlConverterTest {
                 processName = "Merge decisions",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT, BpmnBounds(80.0, 120.0, 36.0, 36.0)),
-                        BpmnNode("Task_1", "Approve request", NodeType.USER_TASK, BpmnBounds(180.0, 80.0, 100.0, 80.0)),
-                        BpmnNode("Task_2", "Reject request", NodeType.USER_TASK, BpmnBounds(180.0, 200.0, 100.0, 80.0)),
-                        BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY, BpmnBounds(340.0, 140.0, 50.0, 50.0)),
-                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT, BpmnBounds(460.0, 147.0, 36.0, 36.0)),
+                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
+                        BpmnNode("Task_1", "Approve request", NodeType.USER_TASK),
+                        BpmnNode("Task_2", "Reject request", NodeType.USER_TASK),
+                        BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
+                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
                     ),
                 sequences =
                     listOf(
@@ -116,31 +108,26 @@ class BpmnDefinitionToXmlConverterTest {
                             "Flow_1",
                             "StartEvent_1",
                             "Task_1",
-                            waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 120.0)),
                         ),
                         BpmnEdge(
                             "Flow_2",
                             "StartEvent_1",
                             "Task_2",
-                            waypoints = listOf(BpmnWaypoint(116.0, 138.0), BpmnWaypoint(180.0, 240.0)),
                         ),
                         BpmnEdge(
                             "Flow_3",
                             "Task_1",
                             "Gateway_1",
-                            waypoints = listOf(BpmnWaypoint(280.0, 120.0), BpmnWaypoint(340.0, 165.0)),
                         ),
                         BpmnEdge(
                             "Flow_4",
                             "Task_2",
                             "Gateway_1",
-                            waypoints = listOf(BpmnWaypoint(280.0, 240.0), BpmnWaypoint(340.0, 165.0)),
                         ),
                         BpmnEdge(
                             "Flow_5",
                             "Gateway_1",
                             "EndEvent_1",
-                            waypoints = listOf(BpmnWaypoint(390.0, 165.0), BpmnWaypoint(460.0, 165.0)),
                         ),
                     ),
             )

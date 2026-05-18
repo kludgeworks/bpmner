@@ -13,7 +13,6 @@ import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRepairSafety
@@ -46,15 +45,11 @@ class BpmnDiagnosticNormalizerTest {
 
     private val stubPort =
         object : BpmnLintingPort {
-            override fun lint(
-                bpmnXml: String,
-                phase: BpmnLintPhase,
-            ): List<LintIssue>? = emptyList()
+            override fun lint(bpmnXml: String): List<LintIssue>? = emptyList()
 
             override fun autoFix(
                 bpmnXml: String,
                 issues: List<LintIssue>,
-                phase: BpmnLintPhase,
             ): BpmnAutoFixResult? = null
 
             override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
@@ -73,8 +68,6 @@ class BpmnDiagnosticNormalizerTest {
             processId = "Process_1",
             nodeObjectRefs = emptyMap(),
             edgeObjectRefs = emptyMap(),
-            shapeIdsByNodeId = emptyMap(),
-            edgeDiagramIdsByEdgeId = emptyMap(),
         )
 
     private val emptyDefinition =

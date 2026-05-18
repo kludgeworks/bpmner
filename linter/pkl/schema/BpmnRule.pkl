@@ -36,8 +36,6 @@ repair: Repair = new {}
 
 hasTsImplementation: Boolean = true
 
-layoutSensitive: Boolean = false
-
 aliases: List<NonEmptyString> = List()
 deprecated: Boolean = false
 replacedBy: List<String> = List()

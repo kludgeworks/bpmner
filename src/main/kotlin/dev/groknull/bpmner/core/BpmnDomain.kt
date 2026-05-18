@@ -11,9 +11,6 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
-import jakarta.validation.constraints.Positive
-import jakarta.validation.constraints.PositiveOrZero
-import jakarta.validation.constraints.Size
 
 enum class GenerationMode {
     SINGLE_SHOT,
@@ -48,10 +45,7 @@ data class BpmnRequest(
                 - Use clear, descriptive names on tasks and events that faithfully reflect the source workflow.
                 - Name diverging gateways as decision questions; leave converging gateways unnamed.
                 - Keep process topology coherent with no dangling references or self-loop sequence flows.
-                - Every node must include explicit bounds with x, y, width, and height.
-                - Every sequence must include at least two waypoints that define its diagram path.
                 - Use conditionExpression on conditional gateway branches when needed.
-                - The layout should be coherent and readable because it will be emitted directly into BPMNDI.
 
                 If you receive validation errors, fix them and return the full corrected object.
                 """.trimIndent(),
@@ -67,7 +61,7 @@ data class BpmnRequest(
         }
 }
 
-@JsonClassDescription("Typed BPMN process definition including topology and diagram layout")
+@JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 data class BpmnDefinition(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable BPMN process id, e.g. Process_1")
@@ -85,7 +79,7 @@ data class BpmnDefinition(
     val sequences: List<BpmnEdge>,
 )
 
-@JsonClassDescription("BPMN node with semantic type and fixed diagram bounds")
+@JsonClassDescription("BPMN node with semantic type")
 data class BpmnNode(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
@@ -96,12 +90,9 @@ data class BpmnNode(
     val name: String? = null,
     @get:JsonPropertyDescription("Node type from the supported enum")
     val type: NodeType,
-    @field:Valid
-    @get:JsonPropertyDescription("Diagram bounds for this node in BPMNDI coordinates")
-    val bounds: BpmnBounds,
 )
 
-@JsonClassDescription("Directed BPMN sequence flow with optional label, condition, and diagram waypoints")
+@JsonClassDescription("Directed BPMN sequence flow with optional label and condition")
 data class BpmnEdge(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique sequence-flow id, e.g. Flow_1")
@@ -116,36 +107,6 @@ data class BpmnEdge(
     val name: String? = null,
     @get:JsonPropertyDescription("Optional sequence-flow condition expression, typically used on gateway branches")
     val conditionExpression: String? = null,
-    @field:Size(min = 2)
-    @field:Valid
-    @get:JsonPropertyDescription("Ordered BPMNDI waypoints describing the edge path")
-    val waypoints: List<BpmnWaypoint>,
-)
-
-@JsonClassDescription("Diagram bounds for a BPMN node")
-data class BpmnBounds(
-    @field:PositiveOrZero
-    @get:JsonPropertyDescription("Left X coordinate of the node")
-    val x: Double,
-    @field:PositiveOrZero
-    @get:JsonPropertyDescription("Top Y coordinate of the node")
-    val y: Double,
-    @field:Positive
-    @get:JsonPropertyDescription("Node width")
-    val width: Double,
-    @field:Positive
-    @get:JsonPropertyDescription("Node height")
-    val height: Double,
-)
-
-@JsonClassDescription("Diagram waypoint for a BPMN edge")
-data class BpmnWaypoint(
-    @field:PositiveOrZero
-    @get:JsonPropertyDescription("Waypoint X coordinate")
-    val x: Double,
-    @field:PositiveOrZero
-    @get:JsonPropertyDescription("Waypoint Y coordinate")
-    val y: Double,
 )
 
 enum class NodeType {

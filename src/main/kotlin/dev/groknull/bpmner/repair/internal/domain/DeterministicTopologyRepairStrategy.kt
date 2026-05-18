@@ -13,7 +13,6 @@ import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
@@ -109,7 +108,7 @@ internal class DeterministicTopologyRepairStrategy(
         attempt: BpmnRepairAttempt,
     ): BpmnRepairResult {
         val result =
-            lintingPort.autoFix(xml, issues, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+            lintingPort.autoFix(xml, issues)
                 ?: return BpmnRepairResult.NotApplicable
         if (result.errors.isNotEmpty()) {
             logger.warn(

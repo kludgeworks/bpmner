@@ -5,18 +5,52 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
+import kotlin.test.assertTrue
 
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
+
+    @Test
+    fun `parse rejects xml containing bpmndi elements`() {
+        val xmlWithDi =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                         xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                         xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                         targetNamespace="http://example.com/bpmn">
+              <process id="p1" name="Has DI">
+                <startEvent id="s"/>
+                <sequenceFlow id="f" sourceRef="s" targetRef="e"/>
+                <endEvent id="e"/>
+              </process>
+              <bpmndi:BPMNDiagram id="d">
+                <bpmndi:BPMNPlane id="plane" bpmnElement="p1">
+                  <bpmndi:BPMNShape id="s_di" bpmnElement="s">
+                    <dc:Bounds x="0" y="0" width="36" height="36"/>
+                  </bpmndi:BPMNShape>
+                </bpmndi:BPMNPlane>
+              </bpmndi:BPMNDiagram>
+            </definitions>
+            """.trimIndent()
+
+        val err =
+            assertFailsWith<IllegalArgumentException> {
+                reverse.parse(xmlWithDi)
+            }
+        assertTrue(
+            err.message!!.contains("BPMNDI input rejected"),
+            "rejection message should explain the strict-parse rule",
+        )
+    }
 
     @Test
     fun `round-trip a simple linear process preserves nodes and sequences`() {
@@ -61,9 +95,9 @@ class BpmnXmlToDefinitionConverterTest {
             processName = "Linear Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 100.0, 36.0, 36.0)),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK, BpmnBounds(200.0, 80.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(360.0, 100.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
+                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
@@ -71,13 +105,11 @@ class BpmnXmlToDefinitionConverterTest {
                         "Flow_1",
                         "Start_1",
                         "Task_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 118.0), BpmnWaypoint(200.0, 120.0)),
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "Task_1",
                         "End_1",
-                        waypoints = listOf(BpmnWaypoint(300.0, 120.0), BpmnWaypoint(360.0, 118.0)),
                     ),
                 ),
         )
@@ -88,16 +120,15 @@ class BpmnXmlToDefinitionConverterTest {
             processName = "Branching Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT, BpmnBounds(80.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
                     BpmnNode(
                         "Gateway_1",
                         "Is valid?",
                         NodeType.EXCLUSIVE_GATEWAY,
-                        BpmnBounds(180.0, 135.0, 50.0, 50.0),
                     ),
-                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK, BpmnBounds(300.0, 100.0, 100.0, 80.0)),
-                    BpmnNode("Task_2", "Reject", NodeType.SERVICE_TASK, BpmnBounds(300.0, 200.0, 100.0, 80.0)),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT, BpmnBounds(460.0, 140.0, 36.0, 36.0)),
+                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK),
+                    BpmnNode("Task_2", "Reject", NodeType.SERVICE_TASK),
+                    BpmnNode("End_1", "End", NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
@@ -105,14 +136,12 @@ class BpmnXmlToDefinitionConverterTest {
                         "Flow_1",
                         "Start_1",
                         "Gateway_1",
-                        waypoints = listOf(BpmnWaypoint(116.0, 158.0), BpmnWaypoint(180.0, 160.0)),
                     ),
                     BpmnEdge(
                         "Flow_2",
                         "Gateway_1",
                         "Task_1",
                         name = "Yes",
-                        waypoints = listOf(BpmnWaypoint(205.0, 135.0), BpmnWaypoint(350.0, 140.0)),
                     ),
                     BpmnEdge(
                         "Flow_3",
@@ -120,19 +149,16 @@ class BpmnXmlToDefinitionConverterTest {
                         "Task_2",
                         name = "No",
                         conditionExpression = "\${value < 0}",
-                        waypoints = listOf(BpmnWaypoint(205.0, 185.0), BpmnWaypoint(350.0, 240.0)),
                     ),
                     BpmnEdge(
                         "Flow_4",
                         "Task_1",
                         "End_1",
-                        waypoints = listOf(BpmnWaypoint(400.0, 140.0), BpmnWaypoint(460.0, 158.0)),
                     ),
                     BpmnEdge(
                         "Flow_5",
                         "Task_2",
                         "End_1",
-                        waypoints = listOf(BpmnWaypoint(400.0, 240.0), BpmnWaypoint(460.0, 158.0)),
                     ),
                 ),
         )

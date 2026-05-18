@@ -15,17 +15,14 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnBounds
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnWaypoint
 import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
@@ -62,6 +59,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnLintService: BpmnLintService
 
     @Test
+    @Suppress("LongMethod")
     fun `planner resolves request through definition render validation and write`(
         @TempDir tempDir: Path,
     ) {
@@ -116,10 +114,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(anyString(), eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT))
+            .lint(anyString())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintService)
-            .lint(anyString(), eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT))
+            .lint(anyString())
 
         val result =
             AgentPlatformTypedOps(agentPlatform)
@@ -136,17 +134,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertTrue(result.xml!!.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(anyString())
-        verify(bpmnLintService, times(2)).lint(
-            anyString(),
-            eqPhase(BpmnLintPhase.SEMANTIC_PRE_LAYOUT),
-        )
-        verify(bpmnLintService).lint(
-            anyString(),
-            eqPhase(BpmnLintPhase.FINAL_POST_LAYOUT),
-        )
+        verify(bpmnLintService, times(2)).lint(anyString())
     }
-
-    private fun eqPhase(phase: BpmnLintPhase): BpmnLintPhase = org.mockito.ArgumentMatchers.eq(phase) ?: phase
 
     private fun validDefinition() =
         BpmnDefinition(
@@ -154,24 +143,14 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Make Toast",
             nodes =
                 listOf(
-                    BpmnNode(id = "start", name = "Start", type = NodeType.START_EVENT, bounds = BpmnBounds(0.0, 0.0, 36.0, 36.0)),
-                    BpmnNode(id = "task1", name = "Toast bread", type = NodeType.USER_TASK, bounds = BpmnBounds(100.0, 0.0, 100.0, 80.0)),
-                    BpmnNode(id = "end", name = "End", type = NodeType.END_EVENT, bounds = BpmnBounds(300.0, 0.0, 36.0, 36.0)),
+                    BpmnNode(id = "start", name = "Start", type = NodeType.START_EVENT),
+                    BpmnNode(id = "task1", name = "Toast bread", type = NodeType.USER_TASK),
+                    BpmnNode(id = "end", name = "End", type = NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge(
-                        id = "f1",
-                        sourceRef = "start",
-                        targetRef = "task1",
-                        waypoints = listOf(BpmnWaypoint(36.0, 18.0), BpmnWaypoint(100.0, 40.0)),
-                    ),
-                    BpmnEdge(
-                        id = "f2",
-                        sourceRef = "task1",
-                        targetRef = "end",
-                        waypoints = listOf(BpmnWaypoint(200.0, 40.0), BpmnWaypoint(300.0, 18.0)),
-                    ),
+                    BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
+                    BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
                 ),
         )
 

@@ -52,7 +52,6 @@ facts {
         "name-business-meaningful-label",
         "name-no-element-type-words",
         "name-uncommon-abbreviations",
-        "no-overlapping-elements",
         "pool-black-box-pool-named-by-external-entity-or-process",
         "pool-child-diagrams-keep-pool-process-name",
         "pool-white-box-pool-named-by-process",
@@ -196,17 +195,5 @@ facts {
       .repair
       .replacementMap
       .containsKey("REQ")
-  }
-
-  ["layoutSensitive defaults to false and is overridden for no-overlapping-elements"] {
-    Catalog.rules.find((rule) -> rule.id == "no-overlapping-elements").layoutSensitive == true
-    Catalog.rules
-      .find((rule) -> rule.id == "no-overlapping-elements")
-      .aliases
-      .contains("bpmnlint/no-overlapping-elements")
-    Catalog.rules.find((rule) -> rule.id == "no-overlapping-elements").hasTsImplementation
-      == false
-    Catalog.rules.find((rule) -> rule.id == "name-uncommon-abbreviations").layoutSensitive == false
-    Catalog.rules.filter((rule) -> rule.layoutSensitive).length == 1
   }
 }

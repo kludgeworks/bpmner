@@ -21,11 +21,7 @@ internal class BypassGatewayHandler : BpmnLocalModelFixHandler {
     ): List<BpmnPatchOperation> {
         val incomingEdge = definition.sequences.singleOrNull { it.targetRef == elementId } ?: return emptyList()
         val outgoingEdge = definition.sequences.singleOrNull { it.sourceRef == elementId } ?: return emptyList()
-        val updatedIncoming =
-            incomingEdge.copy(
-                targetRef = outgoingEdge.targetRef,
-                waypoints = listOf(incomingEdge.waypoints.first(), outgoingEdge.waypoints.last()),
-            )
+        val updatedIncoming = incomingEdge.copy(targetRef = outgoingEdge.targetRef)
         return listOf(
             BpmnPatchOperation(
                 type = BpmnPatchOperationType.REPLACE_EDGE,

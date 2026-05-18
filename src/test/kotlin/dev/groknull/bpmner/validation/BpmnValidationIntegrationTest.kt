@@ -60,8 +60,6 @@ class BpmnValidationIntegrationTest {
                         processId = definition.processId,
                         nodeObjectRefs = emptyMap(),
                         edgeObjectRefs = emptyMap(),
-                        shapeIdsByNodeId = emptyMap(),
-                        edgeDiagramIdsByEdgeId = emptyMap(),
                     ),
                 sourceGraph = graph,
             )

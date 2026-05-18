@@ -16,12 +16,8 @@ import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnAutoFixSkip
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnDiagnosticSource
-import dev.groknull.bpmner.validation.BpmnLintPhase
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import dev.groknull.bpmner.validation.LintIssue
@@ -32,12 +28,17 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 
 /**
- * Owns the post-repair pipeline: bounded pre-layout XML cleanup, auto-layout, and final validation.
+ * Owns the post-repair pipeline: bounded pre-layout XML cleanup, auto-layout, and final XSD validation.
  *
  * The `autoFixBpmnXml` action is intentionally narrow. It is **not** the main semantic repair loop
  * — that is `DeterministicTopologyRepairStrategy` plus the LLM strategies, which all run before this agent ever
  * sees the XML. This stage exists only to apply XML-local cleanup whose `RepairKind` is
  * `LOCAL_XML_FIX`, and it falls back to the input XML on any failure.
+ *
+ * The `validateFinalBpmnXml` action runs XSD validation only against the layouted XML.
+ * Semantic lint rules already ran pre-layout; re-running them post-layout would only repeat work,
+ * and there are no layout-sensitive lint rules left in the catalog after auto-layout took over
+ * coordinate generation.
  */
 @PrimaryAdapter
 @Agent(description = "Apply auto-layout and final validation to validated BPMN XML")
@@ -71,14 +72,14 @@ internal class BpmnLayoutAgent(
     }
 
     private fun tryAutoFix(xml: String): BpmnAutoFixResult? {
-        val rawIssues = bpmnLintingPort.lint(xml, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        val rawIssues = bpmnLintingPort.lint(xml)
         if (rawIssues == null) {
             logger.warn("BPMN XML auto-fix skipped because bpmn-lint validation was unavailable")
             return null
         }
         val eligible = selectEligible(rawIssues)
         if (eligible.isEmpty()) return null
-        val result = bpmnLintingPort.autoFix(xml, eligible, BpmnLintPhase.SEMANTIC_PRE_LAYOUT)
+        val result = bpmnLintingPort.autoFix(xml, eligible)
         if (result == null) {
             logger.warn("BPMN XML auto-fix was unavailable; keeping validated XML")
             return null
@@ -146,74 +147,18 @@ internal class BpmnLayoutAgent(
         description = "Apply auto-layout and final validation to validated BPMN XML",
         export = Export(name = "finalizeLayout", remote = true, startingInputTypes = [LayoutedBpmnXml::class]),
     )
-    @Action(description = "Validate the final layouted BPMN XML without semantic repair")
+    @Action(description = "XSD-validate the final layouted BPMN XML")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
-        val diagnostics = mutableListOf<BpmnDiagnostic>()
-        diagnostics +=
-            bpmnXsdValidationPort.validateDetailed(bpmn.xml).map { issue ->
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.XSD,
-                    message = issue.message,
-                    elementId = issue.elementId,
-                    repairScope = BpmnRepairScope.FULL_PROCESS,
-                )
-            }
-
-        if (diagnostics.none { it.source == BpmnDiagnosticSource.XSD }) {
-            val lintIssues = bpmnLintingPort.lint(bpmn.xml, BpmnLintPhase.FINAL_POST_LAYOUT)
-            if (lintIssues == null) {
-                logger.warn("Final bpmn-lint validation was unavailable; continuing without lint feedback")
-            } else {
-                val capabilities = bpmnLintingPort.lintRuleCapabilities()
-                diagnostics +=
-                    lintIssues.map { issue ->
-                        val isLayoutDiagnostic =
-                            capabilities[BpmnLintRuleIds.bareRuleId(issue.rule)]?.layoutSensitive == true
-                        BpmnDiagnostic(
-                            source = BpmnDiagnosticSource.LINT,
-                            message = issue.message,
-                            rule = issue.rule,
-                            category = issue.category,
-                            elementId = issue.id,
-                            repairScope =
-                                if (isLayoutDiagnostic) BpmnRepairScope.LAYOUT else BpmnRepairScope.FULL_PROCESS,
-                        )
-                    }
-            }
+        val xsdIssues = bpmnXsdValidationPort.validateDetailed(bpmn.xml)
+        if (xsdIssues.isNotEmpty()) {
+            throw BpmnLayoutCorruptionException(
+                "Auto-layout produced structurally invalid BPMN: " +
+                    xsdIssues.joinToString("; ") { it.summary() },
+            )
         }
-
-        if (diagnostics.isNotEmpty()) {
-            throw BpmnFinalValidationException(finalValidationMessage(diagnostics))
-        }
-
-        logger.info("Final BPMN validation passed after auto-layout")
+        logger.info("Final BPMN XSD validation passed after auto-layout")
         return FinalValidatedBpmnXml(definition = bpmn.definition, xml = bpmn.xml)
     }
-
-    private fun finalValidationMessage(diagnostics: List<BpmnDiagnostic>): String =
-        buildString {
-            append("Final BPMN validation failed after auto-layout")
-            val layoutDiagnostics = diagnostics.filter { it.repairScope == BpmnRepairScope.LAYOUT }
-            if (layoutDiagnostics.isNotEmpty()) {
-                append("; layout diagnostics remain after auto-layout")
-            }
-            append(": ")
-            append(
-                diagnostics
-                    .groupingBy { it.source }
-                    .eachCount()
-                    .entries
-                    .joinToString(",") { "${it.key.name.lowercase()}=${it.value}" },
-            )
-            appendLine()
-            diagnostics.forEach { diagnostic ->
-                append("- source=${diagnostic.source.name.lowercase()}")
-                diagnostic.rule?.let { append(", rule=$it") }
-                diagnostic.elementId?.let { append(", elementId=$it") }
-                diagnostic.repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
-                appendLine(": ${diagnostic.message}")
-            }
-        }.trim()
 }
 
 private fun BpmnAutoFixChange.summary(): String = listOfNotNull(rule, elementId, message).joinToString("|")
@@ -224,6 +169,6 @@ private fun BpmnAutoFixError.summary(): String = listOfNotNull(rule, elementId, 
 
 private fun XsdValidationIssue.summary(): String = listOfNotNull(elementId, message).joinToString("|")
 
-class BpmnFinalValidationException(
+class BpmnLayoutCorruptionException(
     message: String,
 ) : IllegalStateException(message)
