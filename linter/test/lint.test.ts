@@ -95,7 +95,7 @@ describe("lint rules", () => {
 		const config = configs["plugin:bpmner/all"]
 		assert.deepEqual(
 			Object.values(config.rules),
-			tsRules.map(() => "error"),
+				tsRules.map((r) => (r.severity === "off" ? "off" : "error")),
 		)
 	})
 
@@ -149,7 +149,7 @@ describe("lint rules", () => {
 	})
 
 	it("migrated rule metadata maps Pkl severity to bpmnlint levels", () => {
-		assert.equal(getBpmnlintLevel("bpmner/name-uncommon-abbreviations"), "warn")
+		assert.equal(getBpmnlintLevel("bpmner/name-uncommon-abbreviations"), "off")
 		assert.equal(
 			getBpmnlintLevel("bpmnlint-plugin-bpmner/act-discouraged-business-verbs"),
 			"warn",
@@ -728,7 +728,7 @@ describe("lint rules", () => {
 
 	it("name-uncommon-abbreviations — invalid", async () => {
 		const reports = reportsFor(
-			await lint(fixtures.name02Invalid),
+			await lintWithConfig(fixtures.name02Invalid, { rules: { "bpmnlint-plugin-bpmner/name-uncommon-abbreviations": "error" } }),
 			"name-uncommon-abbreviations",
 		)
 		assert.equal(
