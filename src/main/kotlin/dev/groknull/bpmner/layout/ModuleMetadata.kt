@@ -12,6 +12,5 @@ import org.springframework.modulith.PackageInfo
 @ApplicationModule(
     displayName = "BPMN Layout",
     allowedDependencies = ["core", "repair", "validation"],
-    type = ApplicationModule.Type.OPEN,
 )
 internal class ModuleMetadata
