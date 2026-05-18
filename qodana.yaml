@@ -6,7 +6,7 @@
 ####################################################################################################################
 
 version: "1.0"
-image: jetbrains/qodana-jvm-community:2026.1
+linter: jetbrains/qodana-jvm-community:2026.1
 
 # Kotlin toolchain compiles to JVM 21 (tools/kotlin/BUILD.bazel: jvm_target = "21").
 projectJDK: "21"

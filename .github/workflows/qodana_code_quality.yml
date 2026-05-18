@@ -51,11 +51,12 @@ jobs:
         uses: JetBrains/qodana-action@d7b5ec2fbec32197ef447c450e00589ed5f34fd5 #v2026.1.0
         with:
           # pr-mode defaults to true: changed-files-only on PRs, full scan on push.
+          pr-mode: false
           post-pr-comment: true
           upload-result: true
           # Fail the workflow when Qodana reports any "failure" severity issues.
           # Tune via qodana.yaml `failureConditions` once a baseline is established.
-          args: --fail-threshold 0
+          args: --fail-threshold 0 --log-level debug --print-problems
         env:
           QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_146944665 }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
