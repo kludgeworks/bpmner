@@ -95,7 +95,9 @@ describe("lint rules", () => {
 		const config = configs["plugin:bpmner/all"]
 		assert.deepEqual(
 			Object.values(config.rules),
-			tsRules.map((rule: any) => (rule.severity === "off" ? "off" : "error")),
+			tsRules.map((rule: { severity?: string }) =>
+				rule.severity === "off" ? "off" : "error",
+			),
 		)
 	})
 
