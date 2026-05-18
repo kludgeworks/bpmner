@@ -15,7 +15,7 @@ import dev.groknull.bpmner.validation.LintIssue
 import jakarta.annotation.PostConstruct
 import org.graalvm.polyglot.TypeLiteral
 import org.graalvm.polyglot.Value
-import org.jmolecules.architecture.hexagonal.Adapter
+import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -42,7 +42,7 @@ class BpmnLintConfigurationException(
     cause: Throwable? = null,
 ) : IllegalStateException(message, cause)
 
-@Adapter
+@SecondaryAdapter
 @Service
 @EnableConfigurationProperties(BpmnLintProperties::class)
 internal open class BpmnLintService(
