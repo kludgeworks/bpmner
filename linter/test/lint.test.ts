@@ -96,7 +96,7 @@ describe("lint rules", () => {
 		const config = configs["plugin:bpmner/all"]
 		assert.deepEqual(
 			Object.values(config.rules),
-			tsRules.map((rule: any) => (rule.severity === "off" ? "off" : "error")),
+			tsRules.map((rule) => (rule.severity === "off" ? "off" : "error")),
 		)
 	})
 
@@ -727,7 +727,16 @@ describe("lint rules", () => {
 		)
 	})
 
-	it("name-uncommon-abbreviations — invalid", async () => {
+	it("name-uncommon-abbreviations — disabled pending per-diagnostic dispositions", async () => {
+		assert.ok(
+			!hasRule(
+				await lint(fixtures.name02Invalid),
+				"name-uncommon-abbreviations",
+			),
+		)
+	})
+
+	it("name-uncommon-abbreviations — invalid when explicitly enabled", async () => {
 		const reports = reportsFor(
 			await lintWithConfig(fixtures.name02Invalid, {
 				rules: {
