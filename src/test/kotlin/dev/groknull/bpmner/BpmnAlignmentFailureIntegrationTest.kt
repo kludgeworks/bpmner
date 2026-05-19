@@ -8,11 +8,10 @@ package dev.groknull.bpmner
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.alignment.AlignedElement
+import dev.groknull.bpmner.alignment.AlignmentFindings
+import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
-import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
@@ -73,20 +72,17 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(validDefinition())
 
         // Mock alignment failure
-        whenCreateObject({ true }, BpmnAlignmentReport::class.java)
+        whenCreateObject({ true }, AlignmentFindings::class.java)
             .thenReturn(
-                BpmnAlignmentReport(
-                    verdict = AlignmentVerdict.FAILED,
-                    bpmnSummary = BpmnDefinitionSummary("Process_1", "Dummy", emptyList()),
-                    rationale = "Generated process is completely unrelated to the contract.",
-                    alignedElements =
+                AlignmentFindings(
+                    issues =
                         listOf(
-                            AlignedElement(
-                                id = "unsupported_task",
+                            AlignmentIssue(
+                                elementId = "unsupported_task",
                                 classification = AlignmentClassification.UNSUPPORTED,
-                                rationale = "Not in contract",
                             ),
                         ),
+                    rationale = "Generated process is completely unrelated to the contract.",
                 ),
             )
 

@@ -52,9 +52,9 @@ class BpmnPipelineObserver(
 
     @EventListener
     fun onAlignmentChecked(event: BpmnAlignmentCheckedEvent) {
-        val unsupportedCount = event.report.alignedElements.count { it.classification == AlignmentClassification.UNSUPPORTED }
-        val missingCount = event.report.alignedElements.count { it.classification == AlignmentClassification.MISSING }
-        val assumptionCount = event.report.alignedElements.count { it.classification == AlignmentClassification.ASSUMED }
+        val unsupportedCount = event.report.issues.count { it.classification == AlignmentClassification.UNSUPPORTED }
+        val missingCount = event.report.issues.count { it.classification == AlignmentClassification.MISSING }
+        val assumptionCount = event.report.issues.count { it.classification == AlignmentClassification.ASSUMED }
 
         logger.info(
             "Alignment checked: verdict={}, unsupported={}, missing={}, assumptions={}",

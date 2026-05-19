@@ -312,8 +312,9 @@ class BpmnGenerationServiceTest {
                 report =
                     BpmnAlignmentReport(
                         verdict = AlignmentVerdict.FAILED,
-                        rationale = "Hallucinated tasks found.",
                         bpmnSummary = BpmnDefinitionSummary("P1", "Order", emptyList()),
+                        issues = emptyList(),
+                        rationale = "Hallucinated tasks found.",
                     ),
             )
 

@@ -11,10 +11,10 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
+import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
-import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -59,17 +59,16 @@ internal class BpmnAlignmentAgent(
                 .promptRunner(context)
                 .withPromptContributor(request)
 
-        val modelReport =
+        val findings =
             promptRunner.createObject(
                 promptFactory.prompt(request, contract.contract, summary),
-                BpmnAlignmentReport::class.java,
-            ) ?: BpmnAlignmentReport(
-                verdict = AlignmentVerdict.FAILED,
+                AlignmentFindings::class.java,
+            ) ?: AlignmentFindings(
+                issues = emptyList(),
                 rationale = "Alignment model failed to produce a structured report.",
-                bpmnSummary = summary,
             )
 
-        val report = postChecker.apply(modelReport.copy(bpmnSummary = summary))
+        val report = postChecker.apply(findings, summary)
         eventPublisher.publishEvent(BpmnAlignmentCheckedEvent(request, report))
 
         if (report.verdict == AlignmentVerdict.FAILED) {

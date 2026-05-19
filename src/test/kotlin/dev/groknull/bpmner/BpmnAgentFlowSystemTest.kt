@@ -8,8 +8,7 @@ package dev.groknull.bpmner
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.alignment.AlignmentVerdict
-import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
@@ -94,17 +93,11 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
         // 4. Mock Alignment
         whenCreateObject(
-            { it.contains("Assess whether generated BPMN aligns semantically") },
-            BpmnAlignmentReport::class.java,
+            { it.contains("You are a BPMN alignment validator") },
+            AlignmentFindings::class.java,
         ).thenReturn(
-            BpmnAlignmentReport(
-                verdict = AlignmentVerdict.ALIGNED,
-                bpmnSummary =
-                    dev.groknull.bpmner.alignment.BpmnDefinitionSummary(
-                        definition.processId,
-                        definition.processName,
-                        emptyList(),
-                    ),
+            AlignmentFindings(
+                issues = emptyList(),
                 rationale = "Aligned",
             ),
         )

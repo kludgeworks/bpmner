@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.alignment.internal.domain
 
+import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnAlignmentConfig
 import org.slf4j.LoggerFactory
@@ -18,28 +20,27 @@ internal class BpmnAlignmentPostChecker(
 ) {
     private val logger = LoggerFactory.getLogger(BpmnAlignmentPostChecker::class.java)
 
-    fun apply(report: BpmnAlignmentReport): BpmnAlignmentReport {
-        val assumptions = report.alignedElements.count { it.classification == AlignmentClassification.ASSUMED }
-        val unsupported = report.alignedElements.count { it.classification == AlignmentClassification.UNSUPPORTED }
-        val missing = report.alignedElements.count { it.classification == AlignmentClassification.MISSING }
-        val partiallyCovered = report.alignedElements.count { it.classification == AlignmentClassification.PARTIALLY_COVERED }
+    fun apply(
+        findings: AlignmentFindings,
+        summary: BpmnDefinitionSummary,
+    ): BpmnAlignmentReport {
+        val assumptions = findings.issues.count { it.classification == AlignmentClassification.ASSUMED }
+        val unsupported = findings.issues.count { it.classification == AlignmentClassification.UNSUPPORTED }
+        val missing = findings.issues.count { it.classification == AlignmentClassification.MISSING }
+        val partiallyCovered = findings.issues.count { it.classification == AlignmentClassification.PARTIALLY_COVERED }
 
-        val policyVerdict =
+        val verdict =
             when {
                 unsupported > 0 && config.blockOnUnsupportedElements -> AlignmentVerdict.FAILED
                 missing > 0 && config.blockOnMissingContractItems -> AlignmentVerdict.FAILED
                 assumptions > config.maxAssumptions -> AlignmentVerdict.FAILED
-                unsupported > 0 || missing > 0 || partiallyCovered > 0 || assumptions > 0 -> AlignmentVerdict.PARTIALLY_ALIGNED
+                findings.issues.isNotEmpty() -> AlignmentVerdict.PARTIALLY_ALIGNED
                 else -> AlignmentVerdict.ALIGNED
             }
 
-        // Worst-of: policy may downgrade an LLM ALIGNED verdict, and an LLM FAILED verdict is never upgraded by counts.
-        val verdict = worstOf(report.verdict, policyVerdict)
-
         if (verdict == AlignmentVerdict.FAILED) {
             logger.warn(
-                "Alignment failed: llmVerdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={} (threshold={})",
-                report.verdict,
+                "Alignment failed: unsupported={}, missing={}, partiallyCovered={}, assumptions={} (threshold={})",
                 unsupported,
                 missing,
                 partiallyCovered,
@@ -48,9 +49,8 @@ internal class BpmnAlignmentPostChecker(
             )
         } else {
             logger.info(
-                "Alignment passed: verdict={}, llmVerdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={}",
+                "Alignment passed: verdict={}, unsupported={}, missing={}, partiallyCovered={}, assumptions={}",
                 verdict,
-                report.verdict,
                 unsupported,
                 missing,
                 partiallyCovered,
@@ -58,18 +58,11 @@ internal class BpmnAlignmentPostChecker(
             )
         }
 
-        return report.copy(verdict = verdict)
+        return BpmnAlignmentReport(
+            verdict = verdict,
+            bpmnSummary = summary,
+            issues = findings.issues,
+            rationale = findings.rationale,
+        )
     }
-
-    private fun worstOf(
-        a: AlignmentVerdict,
-        b: AlignmentVerdict,
-    ): AlignmentVerdict = if (severity(a) >= severity(b)) a else b
-
-    private fun severity(verdict: AlignmentVerdict): Int =
-        when (verdict) {
-            AlignmentVerdict.ALIGNED -> 0
-            AlignmentVerdict.PARTIALLY_ALIGNED -> 1
-            AlignmentVerdict.FAILED -> 2
-        }
 }

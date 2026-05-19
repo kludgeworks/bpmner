@@ -6,10 +6,8 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.alignment.AlignedElement
-import dev.groknull.bpmner.alignment.AlignmentVerdict
-import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.alignment.AlignmentFindings
+import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
@@ -191,24 +189,20 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
         doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(anyNonNull())
 
         // 5. Alignment check fails (LLM detects invented tasks)
-        val alignmentPrompt = "Assess whether generated BPMN aligns semantically with process contract"
+        val alignmentPrompt = "You are a BPMN alignment validator"
         whenCreateObject(
             { it.contains(alignmentPrompt) },
-            BpmnAlignmentReport::class.java,
+            AlignmentFindings::class.java,
         ).thenReturn(
-            BpmnAlignmentReport(
-                verdict = AlignmentVerdict.FAILED,
-                rationale = "BPMN contains invented tasks not in contract.",
-                alignedElements =
+            AlignmentFindings(
+                issues =
                     listOf(
-                        AlignedElement(
-                            id = "ae1",
-                            bpmnElementId = "Task_Invented",
+                        AlignmentIssue(
+                            elementId = "Task_Invented",
                             classification = AlignmentClassification.UNSUPPORTED,
-                            rationale = "Task not in contract",
                         ),
                     ),
-                bpmnSummary = BpmnDefinitionSummary("P1", "Invented", emptyList()),
+                rationale = "BPMN contains invented tasks not in contract.",
             ),
         )
 

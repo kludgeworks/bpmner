@@ -7,7 +7,6 @@ package dev.groknull.bpmner.core
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.groknull.bpmner.alignment.AlignedElement
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
@@ -276,24 +275,7 @@ class BpmnGuardrailTypesTest {
                             ),
                         ),
                 ),
-            alignedElements =
-                listOf(
-                    AlignedElement(
-                        id = "aligned-1",
-                        contractElementId = "activity-pack",
-                        bpmnElementId = "Task_Pack",
-                        classification = AlignmentClassification.SUPPORTED,
-                        rationale = "The BPMN task implements the contract activity.",
-                    ),
-                ),
-            traceLinks =
-                listOf(
-                    TraceLink(
-                        id = "trace-align-1",
-                        sourceId = "activity-pack",
-                        targetId = "Task_Pack",
-                    ),
-                ),
+            issues = emptyList(),
             rationale = "All required contract activities are represented.",
         )
 }

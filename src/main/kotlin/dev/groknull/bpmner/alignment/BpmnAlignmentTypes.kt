@@ -7,11 +7,11 @@ package dev.groknull.bpmner.alignment
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Size
 
 enum class AlignmentVerdict {
     ALIGNED,
@@ -67,41 +67,47 @@ data class BpmnSummaryFlow(
     val conditionExpression: String? = null,
 )
 
-@JsonClassDescription("Alignment report comparing the process contract with generated BPMN")
-data class BpmnAlignmentReport(
-    @get:JsonPropertyDescription("Overall alignment verdict")
-    val verdict: AlignmentVerdict,
+@JsonClassDescription(
+    "Alignment findings. List ONLY misalignments in `issues` — empty list means the BPMN " +
+        "is fully aligned with the contract. Provide a 1-2 sentence `rationale` summarising the outcome.",
+)
+data class AlignmentFindings(
     @field:Valid
-    @get:JsonPropertyDescription("Generated BPMN summary used for alignment")
-    val bpmnSummary: BpmnDefinitionSummary,
-    @field:Valid
-    @get:JsonPropertyDescription("Aligned BPMN and contract elements")
-    val alignedElements: List<AlignedElement> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Trace links supporting the alignment report")
-    val traceLinks: List<TraceLink> = emptyList(),
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Misalignments between contract and generated BPMN. Empty list means fully aligned. " +
+            "Maximum 200 entries.",
+    )
+    val issues: List<AlignmentIssue> = emptyList(),
     @field:NotBlank
-    @get:JsonPropertyDescription("Short explanation for the alignment verdict")
+    @field:Size(max = 1000)
+    @get:JsonPropertyDescription("Short (1-2 sentence) summary of the alignment outcome.")
     val rationale: String,
 )
 
-@JsonClassDescription("Alignment result for a generated BPMN element or missing contract element")
-data class AlignedElement(
+@JsonClassDescription(
+    "A single alignment issue: either a generated BPMN element not justified by the contract, " +
+        "or a contract item not fully covered by the generated BPMN.",
+)
+data class AlignmentIssue(
     @field:NotBlank
-    @get:JsonPropertyDescription("Stable aligned-element id")
-    val id: String,
-    @get:JsonPropertyDescription("Optional contract element id")
-    val contractElementId: String? = null,
-    @get:JsonPropertyDescription("Optional BPMN element id")
-    val bpmnElementId: String? = null,
-    @get:JsonPropertyDescription("Alignment classification for this element")
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "ID of the BPMN element OR contract item this issue refers to. Use an existing id from the inputs.",
+    )
+    val elementId: String,
+    @get:JsonPropertyDescription(
+        "Issue classification. Use ASSUMED or UNSUPPORTED for unjustified generated elements; " +
+            "PARTIALLY_COVERED or MISSING for under-covered contract items.",
+    )
     val classification: AlignmentClassification,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Explanation of this element's alignment")
+)
+
+data class BpmnAlignmentReport(
+    val verdict: AlignmentVerdict,
+    val bpmnSummary: BpmnDefinitionSummary,
+    val issues: List<AlignmentIssue>,
     val rationale: String,
-    @field:Valid
-    @get:JsonPropertyDescription("Trace links supporting this element alignment")
-    val traceLinks: List<TraceLink> = emptyList(),
 )
 
 class BpmnAlignmentException(
