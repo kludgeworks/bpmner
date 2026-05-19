@@ -14,8 +14,6 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.contract.TraceLink
-import dev.groknull.bpmner.core.AlignmentClassification
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -54,10 +52,7 @@ class ProcessContractMarkdownRendererTest {
             - end-shipped: Order shipped
 
             ## Assumptions
-            - assume-payment: Payment is authorised upstream (trace: ev1)
-
-            ## Trace links
-            - ev1 → contract-1 [supported]
+            - assume-payment: Payment is authorised upstream (sources: ev1)
             """.trimIndent()
 
         assertEquals(expected, markdown)
@@ -65,6 +60,7 @@ class ProcessContractMarkdownRendererTest {
 
     @Test
     fun `omits empty sections in a minimal contract`() {
+        val sources = listOf("ev1")
         val minimal =
             ProcessContract(
                 id = "min",
@@ -73,10 +69,10 @@ class ProcessContractMarkdownRendererTest {
                 trigger = "Request arrives",
                 activities =
                     listOf(
-                        ContractActivity(id = "a", name = "Review", traceLinks = listOf(trace())),
-                        ContractActivity(id = "b", name = "Decide", traceLinks = listOf(trace())),
+                        ContractActivity(id = "a", name = "Review", sourceIds = sources),
+                        ContractActivity(id = "b", name = "Decide", sourceIds = sources),
                     ),
-                endStates = listOf(ContractEndState(id = "e", name = "Done", traceLinks = listOf(trace()))),
+                endStates = listOf(ContractEndState(id = "e", name = "Done", sourceIds = sources)),
             )
 
         val markdown = renderer.render(minimal)
@@ -91,22 +87,15 @@ class ProcessContractMarkdownRendererTest {
         assertTrue(!markdown.contains("## Trace links"))
     }
 
-    private fun trace(target: String = "self") =
-        TraceLink(
-            id = "trace-$target",
-            sourceId = "ev1",
-            targetId = target,
-            classification = AlignmentClassification.SUPPORTED,
-        )
-
     @Suppress("LongMethod")
-    private fun fullContract() =
-        ProcessContract(
+    private fun fullContract(): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
             trigger = "An order is submitted",
-            triggerTraceLinks = listOf(trace("trigger")),
+            triggerSourceIds = sources,
             actors =
                 listOf(
                     ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),
@@ -117,13 +106,13 @@ class ProcessContractMarkdownRendererTest {
                         id = "a-pack",
                         name = "Pack order",
                         actorId = "actor-warehouse",
-                        traceLinks = listOf(trace("a-pack")),
+                        sourceIds = sources,
                     ),
                     ContractActivity(
                         id = "a-ship",
                         name = "Ship order",
                         actorId = "actor-warehouse",
-                        traceLinks = listOf(trace("a-ship")),
+                        sourceIds = sources,
                     ),
                 ),
             decisions =
@@ -136,7 +125,7 @@ class ProcessContractMarkdownRendererTest {
                                 ContractBranch(id = "b-yes", label = "In stock", condition = "stock > 0"),
                                 ContractBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
                             ),
-                        traceLinks = listOf(trace("d-stock")),
+                        sourceIds = sources,
                     ),
                 ),
             artifacts =
@@ -152,7 +141,7 @@ class ProcessContractMarkdownRendererTest {
                     ContractEndState(
                         id = "end-shipped",
                         name = "Order shipped",
-                        traceLinks = listOf(trace("end-shipped")),
+                        sourceIds = sources,
                     ),
                 ),
             assumptions =
@@ -160,24 +149,9 @@ class ProcessContractMarkdownRendererTest {
                     ContractAssumption(
                         id = "assume-payment",
                         text = "Payment is authorised upstream",
-                        traceLinks =
-                            listOf(
-                                TraceLink(
-                                    id = "trace-assume-payment",
-                                    sourceId = "ev1",
-                                    targetId = "assume-payment",
-                                ),
-                            ),
-                    ),
-                ),
-            traceLinks =
-                listOf(
-                    TraceLink(
-                        id = "trace-overall",
-                        sourceId = "ev1",
-                        targetId = "contract-1",
-                        classification = AlignmentClassification.SUPPORTED,
+                        sourceIds = sources,
                     ),
                 ),
         )
+    }
 }

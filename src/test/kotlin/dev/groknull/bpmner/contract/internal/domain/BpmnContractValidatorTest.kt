@@ -13,8 +13,6 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
-import dev.groknull.bpmner.core.AlignmentClassification
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -96,7 +94,7 @@ class BpmnContractValidatorTest {
                         ContractAssumption(
                             id = "assumption-untracked",
                             text = "Customer is human",
-                            traceLinks = emptyList(),
+                            sourceIds = emptyList(),
                         ),
                     ),
             )
@@ -134,7 +132,7 @@ class BpmnContractValidatorTest {
 
     @Test
     fun `trigger without trace links produces an error`() {
-        val contract = linearContract().copy(triggerTraceLinks = emptyList())
+        val contract = linearContract().copy(triggerSourceIds = emptyList())
         val report = validator.validate(contract)
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == ContractValidationCode.TRIGGER_WITHOUT_TRACE })
@@ -145,7 +143,7 @@ class BpmnContractValidatorTest {
         val original = linearContract()
         val activitiesWithoutTrace =
             original.activities.mapIndexed { index, activity ->
-                if (index == 0) activity.copy(traceLinks = emptyList()) else activity
+                if (index == 0) activity.copy(sourceIds = emptyList()) else activity
             }
         val contract = original.copy(activities = activitiesWithoutTrace)
         val report = validator.validate(contract)
@@ -156,13 +154,7 @@ class BpmnContractValidatorTest {
         )
     }
 
-    private fun activityTrace(id: String) =
-        TraceLink(
-            id = "trace-$id",
-            sourceId = "ev-source",
-            targetId = id,
-            classification = AlignmentClassification.SUPPORTED,
-        )
+    private val sources = listOf("ev-source")
 
     private fun linearContract(): ProcessContract =
         ProcessContract(
@@ -170,18 +162,18 @@ class BpmnContractValidatorTest {
             processName = "Submit application",
             summary = "Application is submitted and reviewed.",
             trigger = "Applicant submits an application",
-            triggerTraceLinks = listOf(activityTrace("trigger")),
+            triggerSourceIds = sources,
             activities =
                 listOf(
                     ContractActivity(
                         id = "activity-receive",
                         name = "Receive application",
-                        traceLinks = listOf(activityTrace("activity-receive")),
+                        sourceIds = sources,
                     ),
                     ContractActivity(
                         id = "activity-review",
                         name = "Review application",
-                        traceLinks = listOf(activityTrace("activity-review")),
+                        sourceIds = sources,
                     ),
                 ),
             endStates =
@@ -189,7 +181,7 @@ class BpmnContractValidatorTest {
                     ContractEndState(
                         id = "end-approved",
                         name = "Application approved",
-                        traceLinks = listOf(activityTrace("end-approved")),
+                        sourceIds = sources,
                     ),
                 ),
         )
@@ -215,7 +207,7 @@ class BpmnContractValidatorTest {
                                     condition = "criteria not met",
                                 ),
                             ),
-                        traceLinks = listOf(activityTrace("decision-eligible")),
+                        sourceIds = sources,
                     ),
                 ),
         )
@@ -229,7 +221,7 @@ class BpmnContractValidatorTest {
                     ContractEndState(
                         id = "end-rejected",
                         name = "Application rejected",
-                        traceLinks = listOf(activityTrace("end-rejected")),
+                        sourceIds = sources,
                     ),
         )
     }

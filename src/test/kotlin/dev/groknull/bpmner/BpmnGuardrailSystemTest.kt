@@ -11,7 +11,6 @@ import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -241,15 +240,15 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Order",
             summary = "Handle order.",
             trigger = "Order submitted",
-            triggerTraceLinks = listOf(TraceLink("t1", "ev1", "trigger")),
+            triggerSourceIds = listOf("ev1"),
             activities =
                 listOf(
-                    ContractActivity("a1", "Review", traceLinks = listOf(TraceLink("t1", "ev1", "a1"))),
-                    ContractActivity("a2", "Ship", traceLinks = listOf(TraceLink("t1", "ev1", "a2"))),
+                    ContractActivity("a1", "Review", sourceIds = listOf("ev1")),
+                    ContractActivity("a2", "Ship", sourceIds = listOf("ev1")),
                 ),
             endStates =
                 listOf(
-                    ContractEndState("e1", "Shipped", traceLinks = listOf(TraceLink("t1", "ev1", "e1"))),
+                    ContractEndState("e1", "Shipped", sourceIds = listOf("ev1")),
                 ),
         )
 

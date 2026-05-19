@@ -20,7 +20,6 @@ import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ClarificationQuestion
@@ -166,21 +165,13 @@ class BpmnGuardrailTypesTest {
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
             trigger = "An approved order is received",
-            triggerTraceLinks =
-                listOf(
-                    TraceLink(
-                        id = "trace-trigger",
-                        sourceId = "ev1",
-                        targetId = "trigger",
-                    ),
-                ),
+            triggerSourceIds = listOf("ev1"),
             activities = validContractActivities(),
             decisions = validContractDecisions(),
             actors = validContractActors(),
             artifacts = validContractArtifacts(),
             endStates = validContractEndStates(),
             assumptions = validContractAssumptions(),
-            traceLinks = validContractTraceLinks(),
         )
 
     private fun validContractActivities() =
@@ -189,7 +180,7 @@ class BpmnGuardrailTypesTest {
                 id = "activity-pack",
                 name = "Pack order",
                 actorId = "actor-warehouse",
-                outputArtifactIds = listOf("artifact-package"),
+                sourceIds = listOf("ev1"),
             ),
         )
 
@@ -206,6 +197,7 @@ class BpmnGuardrailTypesTest {
                             condition = "Stock is available",
                         ),
                     ),
+                sourceIds = listOf("ev1"),
             ),
         )
 
@@ -231,6 +223,7 @@ class BpmnGuardrailTypesTest {
             ContractEndState(
                 id = "end-shipped",
                 name = "Order shipped",
+                sourceIds = listOf("ev1"),
             ),
         )
 
@@ -239,15 +232,7 @@ class BpmnGuardrailTypesTest {
             ContractAssumption(
                 id = "assumption-1",
                 text = "Approved means payment has cleared.",
-            ),
-        )
-
-    private fun validContractTraceLinks() =
-        listOf(
-            TraceLink(
-                id = "trace-1",
-                sourceId = "ev1",
-                targetId = "activity-pack",
+                sourceIds = listOf("ev1"),
             ),
         )
 

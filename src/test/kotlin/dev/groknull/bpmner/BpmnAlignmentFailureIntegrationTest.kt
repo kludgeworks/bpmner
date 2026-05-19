@@ -15,7 +15,6 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -121,15 +120,15 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             processName = "Dummy",
             summary = "Summary",
             trigger = "Trigger",
-            triggerTraceLinks = listOf(trace("trigger")),
+            triggerSourceIds = listOf("ev1"),
             activities =
                 listOf(
-                    ContractActivity("a1", "A1", traceLinks = listOf(trace("a1"))),
-                    ContractActivity("a2", "A2", traceLinks = listOf(trace("a2"))),
+                    ContractActivity("a1", "A1", sourceIds = listOf("ev1")),
+                    ContractActivity("a2", "A2", sourceIds = listOf("ev1")),
                 ),
             endStates =
                 listOf(
-                    ContractEndState("e1", "E1", traceLinks = listOf(trace("e1"))),
+                    ContractEndState("e1", "E1", sourceIds = listOf("ev1")),
                 ),
         )
 
@@ -147,6 +146,4 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
                     BpmnEdge("flow1", "start", "end"),
                 ),
         )
-
-    private fun trace(targetId: String) = TraceLink("trace-$targetId", "ev1", targetId)
 }

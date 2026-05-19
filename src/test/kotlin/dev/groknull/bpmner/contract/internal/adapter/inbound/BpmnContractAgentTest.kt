@@ -10,9 +10,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
@@ -42,7 +40,7 @@ class BpmnContractAgentTest {
     @Test
     fun `extractProcessContract surfaces validation errors instead of swallowing them`() {
         val context = FakeOperationContext()
-        val invalid = sampleContract().copy(triggerTraceLinks = emptyList())
+        val invalid = sampleContract().copy(triggerSourceIds = emptyList())
         context.expectResponse(invalid)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
@@ -113,27 +111,21 @@ class BpmnContractAgentTest {
         )
 
     private fun sampleContract(): ProcessContract {
-        val trace =
-            TraceLink(
-                id = "trace-ev1",
-                sourceId = "ev1",
-                targetId = "self",
-                classification = AlignmentClassification.SUPPORTED,
-            )
+        val sources = listOf("ev1")
         return ProcessContract(
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
             trigger = "An order is submitted",
-            triggerTraceLinks = listOf(trace),
+            triggerSourceIds = sources,
             activities =
                 listOf(
-                    ContractActivity(id = "a-pack", name = "Pack order", traceLinks = listOf(trace)),
-                    ContractActivity(id = "a-ship", name = "Ship order", traceLinks = listOf(trace)),
+                    ContractActivity(id = "a-pack", name = "Pack order", sourceIds = sources),
+                    ContractActivity(id = "a-ship", name = "Ship order", sourceIds = sources),
                 ),
             endStates =
                 listOf(
-                    ContractEndState(id = "end-shipped", name = "Order shipped", traceLinks = listOf(trace)),
+                    ContractEndState(id = "end-shipped", name = "Order shipped", sourceIds = sources),
                 ),
         )
     }

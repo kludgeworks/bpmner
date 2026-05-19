@@ -105,17 +105,9 @@ internal class BpmnContractGenerationPromptFactory {
                 appendLine()
                 appendLine("## Assumptions")
                 contract.assumptions.forEach { assumption ->
-                    val traces = assumption.traceLinks.joinToString(",") { it.sourceId }
-                    val traceSuffix = if (traces.isNotEmpty()) " (trace: $traces)" else ""
+                    val traces = assumption.sourceIds.joinToString(",")
+                    val traceSuffix = if (traces.isNotEmpty()) " (sources: $traces)" else ""
                     appendLine("- ${assumption.id}: ${assumption.text}$traceSuffix")
-                }
-            }
-
-            if (contract.traceLinks.isNotEmpty()) {
-                appendLine()
-                appendLine("## Trace links")
-                contract.traceLinks.forEach { link ->
-                    appendLine("- ${link.sourceId} -> ${link.targetId} [${link.classification.name.lowercase()}]")
                 }
             }
         }
