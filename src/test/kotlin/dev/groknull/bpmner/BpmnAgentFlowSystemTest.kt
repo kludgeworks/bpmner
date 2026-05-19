@@ -12,8 +12,6 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
@@ -145,27 +143,21 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         )
 
     private fun sampleContract(): ProcessContract {
-        val trace =
-            TraceLink(
-                id = "trace-1",
-                sourceId = "s1",
-                targetId = "t1",
-                classification = AlignmentClassification.SUPPORTED,
-            )
+        val sources = listOf("s1")
         return ProcessContract(
             id = "contract-1",
             processName = "Make Toast",
             summary = "Toast making process",
             trigger = "Hunger",
-            triggerTraceLinks = listOf(trace),
+            triggerSourceIds = sources,
             activities =
                 listOf(
-                    ContractActivity(id = "a1", name = "Get bread", traceLinks = listOf(trace)),
-                    ContractActivity(id = "a2", name = "Toast bread", traceLinks = listOf(trace)),
+                    ContractActivity(id = "a1", name = "Get bread", sourceIds = sources),
+                    ContractActivity(id = "a2", name = "Toast bread", sourceIds = sources),
                 ),
             endStates =
                 listOf(
-                    ContractEndState(id = "e1", name = "Toast ready", traceLinks = listOf(trace)),
+                    ContractEndState(id = "e1", name = "Toast ready", sourceIds = sources),
                 ),
         )
     }

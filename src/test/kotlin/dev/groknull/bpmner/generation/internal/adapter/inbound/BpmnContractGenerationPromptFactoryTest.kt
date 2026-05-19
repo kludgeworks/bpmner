@@ -13,9 +13,7 @@ import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnRequest
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -57,13 +55,14 @@ class BpmnContractGenerationPromptFactoryTest {
     }
 
     @Suppress("LongMethod") // exhaustive contract fixture — splitting it obscures the assertions
-    private fun contract(): ProcessContract =
-        ProcessContract(
+    private fun contract(): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
             id = "contract-claim",
             processName = "Handle claim",
             summary = "Claims are reviewed, routed for rework when incomplete, and closed.",
             trigger = "Claim is submitted",
-            triggerTraceLinks = listOf(trace("trigger")),
+            triggerSourceIds = sources,
             actors = listOf(ContractActor(id = "actor-claims", name = "Claims team")),
             activities =
                 listOf(
@@ -71,13 +70,13 @@ class BpmnContractGenerationPromptFactoryTest {
                         id = "a-review",
                         name = "Claims team reviews claim",
                         actorId = "actor-claims",
-                        traceLinks = listOf(trace("a-review")),
+                        sourceIds = sources,
                     ),
                     ContractActivity(
                         id = "a-rework",
                         name = "Request corrected claim details",
                         actorId = "actor-claims",
-                        traceLinks = listOf(trace("a-rework")),
+                        sourceIds = sources,
                     ),
                 ),
             decisions =
@@ -94,7 +93,7 @@ class BpmnContractGenerationPromptFactoryTest {
                                     condition = "claim is incomplete",
                                 ),
                             ),
-                        traceLinks = listOf(trace("d-complete")),
+                        sourceIds = sources,
                     ),
                 ),
             endStates =
@@ -102,12 +101,12 @@ class BpmnContractGenerationPromptFactoryTest {
                     ContractEndState(
                         id = "end-approved",
                         name = "Claim approved",
-                        traceLinks = listOf(trace("end-approved")),
+                        sourceIds = sources,
                     ),
                     ContractEndState(
                         id = "end-rejected",
                         name = "Claim rejected",
-                        traceLinks = listOf(trace("end-rejected")),
+                        sourceIds = sources,
                     ),
                 ),
             assumptions =
@@ -115,16 +114,9 @@ class BpmnContractGenerationPromptFactoryTest {
                     ContractAssumption(
                         id = "assume-cutoff",
                         text = "Claims after cutoff move to next business day",
-                        traceLinks = listOf(trace("assume-cutoff")),
+                        sourceIds = sources,
                     ),
                 ),
         )
-
-    private fun trace(target: String) =
-        TraceLink(
-            id = "trace-$target",
-            sourceId = "ev1",
-            targetId = target,
-            classification = AlignmentClassification.SUPPORTED,
-        )
+    }
 }

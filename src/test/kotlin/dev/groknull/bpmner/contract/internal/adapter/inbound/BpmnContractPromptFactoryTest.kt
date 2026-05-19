@@ -25,7 +25,7 @@ class BpmnContractPromptFactoryTest {
 
         assertTrue(prompt.contains("Return only a structured ProcessContract object."))
         assertTrue(prompt.contains("Do not invent actors"))
-        assertTrue(prompt.contains("must carry at least one TraceLink"))
+        assertTrue(prompt.contains("must list at least one entry in its `sourceIds` field"))
         assertTrue(prompt.contains("ContractAssumption"))
     }
 

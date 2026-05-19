@@ -22,30 +22,24 @@ internal class BpmnContractPromptFactory(
         buildString {
             appendLine("Return only a structured ${ProcessContract::class.simpleName} object.")
             appendLine()
-            appendLine(
-                "JSON formatting: when any string field (TraceLink text, assumption rationale, branch" +
-                    " label, etc.) needs to mention a quoted term from the source, escape every inner" +
-                    " double quote as \\\" or use single quotes or backticks. Never let an unescaped \"" +
-                    " appear inside a JSON string value.",
-            )
-            appendLine()
             appendLine("Extract a source-grounded process contract from the supplied inputs.")
             appendLine("Do not invent actors, triggers, end states, decisions, branches, or artifacts.")
             appendLine(
                 "If a fact required for a complete contract is not present in the source text or" +
-                    " clarification answers, record it as a ContractAssumption with at least one TraceLink.",
+                    " clarification answers, record it as a ContractAssumption with at least one sourceId.",
             )
             appendLine("Cap assumptions at ${config.maxAssumptions}.")
             appendLine()
-            appendLine("Traceability rules:")
+            appendLine("Source grounding (provenance):")
             appendLine(
                 "- Every ContractActivity, ContractDecision, ContractEndState, and ContractAssumption" +
-                    " must carry at least one TraceLink.",
+                    " must list at least one entry in its `sourceIds` field.",
             )
             appendLine(
-                "- TraceLink.sourceId must reference an assessment evidence id, a clarification" +
-                    " questionId, or a literal input-text marker.",
+                "- A source id is an assessment evidence id, a clarification questionId, or a literal" +
+                    " input-text marker.",
             )
+            appendLine("- The process trigger must list at least one entry in `triggerSourceIds`.")
             appendLine("- ContractBranch must have a non-blank label and a condition when applicable.")
             appendLine()
             appendLine("Readiness assessment rationale:")
@@ -57,12 +51,12 @@ internal class BpmnContractPromptFactory(
             }
             if (assessment.evidence.isNotEmpty()) {
                 appendLine()
-                appendLine("Assessment evidence ids available for TraceLink.sourceId:")
+                appendLine("Assessment evidence ids available for use in `sourceIds`:")
                 assessment.evidence.forEach { appendLine("- ${it.id}: ${it.text}") }
             }
             if (clarificationHistory.isNotEmpty()) {
                 appendLine()
-                appendLine("Clarification answers (in order). Use questionId as TraceLink.sourceId when relevant:")
+                appendLine("Clarification answers (in order). Use questionId in `sourceIds` when relevant:")
                 clarificationHistory.forEach {
                     appendLine("- [${it.questionId}] Q: ${it.questionText}")
                     appendLine("  A: ${it.answerText}")

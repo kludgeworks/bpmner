@@ -35,12 +35,12 @@ internal class BpmnContractValidator {
                     message = "process trigger must not be blank",
                     targetId = contract.id,
                 )
-        } else if (contract.triggerTraceLinks.isEmpty()) {
+        } else if (contract.triggerSourceIds.isEmpty()) {
             issues +=
                 ContractValidationIssue(
                     code = ContractValidationCode.TRIGGER_WITHOUT_TRACE,
                     severity = ContractIssueSeverity.ERROR,
-                    message = "process trigger must carry at least one trace link",
+                    message = "process trigger must carry at least one source id",
                     targetId = contract.id,
                 )
         }
@@ -91,45 +91,45 @@ internal class BpmnContractValidator {
         }
 
         contract.activities.forEach { activity ->
-            if (activity.traceLinks.isEmpty()) {
+            if (activity.sourceIds.isEmpty()) {
                 issues +=
                     ContractValidationIssue(
                         code = ContractValidationCode.CONTRACT_ITEM_WITHOUT_TRACE,
                         severity = ContractIssueSeverity.ERROR,
-                        message = "activity '${activity.name}' must carry at least one trace link",
+                        message = "activity '${activity.name}' must carry at least one source id",
                         targetId = activity.id,
                     )
             }
         }
         contract.decisions.forEach { decision ->
-            if (decision.traceLinks.isEmpty()) {
+            if (decision.sourceIds.isEmpty()) {
                 issues +=
                     ContractValidationIssue(
                         code = ContractValidationCode.CONTRACT_ITEM_WITHOUT_TRACE,
                         severity = ContractIssueSeverity.ERROR,
-                        message = "decision '${decision.question}' must carry at least one trace link",
+                        message = "decision '${decision.question}' must carry at least one source id",
                         targetId = decision.id,
                     )
             }
         }
         contract.endStates.forEach { endState ->
-            if (endState.traceLinks.isEmpty()) {
+            if (endState.sourceIds.isEmpty()) {
                 issues +=
                     ContractValidationIssue(
                         code = ContractValidationCode.CONTRACT_ITEM_WITHOUT_TRACE,
                         severity = ContractIssueSeverity.ERROR,
-                        message = "end state '${endState.name}' must carry at least one trace link",
+                        message = "end state '${endState.name}' must carry at least one source id",
                         targetId = endState.id,
                     )
             }
         }
         contract.assumptions.forEach { assumption ->
-            if (assumption.traceLinks.isEmpty()) {
+            if (assumption.sourceIds.isEmpty()) {
                 issues +=
                     ContractValidationIssue(
                         code = ContractValidationCode.ASSUMPTION_WITHOUT_TRACE,
                         severity = ContractIssueSeverity.ERROR,
-                        message = "assumption '${assumption.text}' must carry at least one trace link",
+                        message = "assumption '${assumption.text}' must carry at least one source id",
                         targetId = assumption.id,
                     )
             }

@@ -14,9 +14,7 @@ import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.contract.TraceLink
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnElementIndex
@@ -100,26 +98,27 @@ class BpmnGeneratorAgentTest {
             eventPublisher = ApplicationEventPublisher {},
         )
 
-    private fun validContract() =
-        ValidatedProcessContract(
+    private fun validContract(): ValidatedProcessContract {
+        val sources = listOf("ev1")
+        return ValidatedProcessContract(
             contract =
                 ProcessContract(
                     id = "contract-claim",
                     processName = "Handle claim",
                     summary = "Claims are reviewed and closed.",
                     trigger = "Claim is submitted",
-                    triggerTraceLinks = listOf(trace("trigger")),
+                    triggerSourceIds = sources,
                     activities =
                         listOf(
                             ContractActivity(
                                 id = "a-review",
                                 name = "Review claim",
-                                traceLinks = listOf(trace("a-review")),
+                                sourceIds = sources,
                             ),
                             ContractActivity(
                                 id = "a-close",
                                 name = "Close claim",
-                                traceLinks = listOf(trace("a-close")),
+                                sourceIds = sources,
                             ),
                         ),
                     endStates =
@@ -127,20 +126,13 @@ class BpmnGeneratorAgentTest {
                             ContractEndState(
                                 id = "end-done",
                                 name = "Claim closed",
-                                traceLinks = listOf(trace("end-done")),
+                                sourceIds = sources,
                             ),
                         ),
                 ),
             report = ContractValidationReport(emptyList()),
         )
-
-    private fun trace(target: String) =
-        TraceLink(
-            id = "trace-$target",
-            sourceId = "ev1",
-            targetId = target,
-            classification = AlignmentClassification.SUPPORTED,
-        )
+    }
 
     private object NoopRenderer : BpmnRenderer {
         override fun render(definition: BpmnDefinition): RenderedBpmn =
