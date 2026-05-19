@@ -214,4 +214,37 @@ class BpmnLintServiceIntegrationTest {
             "Error message should contain the unknown rule id",
         )
     }
+
+    @Test
+    fun `recommended-error preset excludes layout-dependent built-in rules`() {
+        val engine = BpmnLintJsEngine().apply { init() }
+        val service =
+            BpmnLintService(
+                catalogService = RuleCatalogService(),
+                engine = engine,
+                pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+                properties =
+                    BpmnLintProperties(
+                        extends = listOf("plugin:bpmner/recommended-error"),
+                    ),
+            )
+        service.init()
+
+        val activeRules = service.resolvedRules()
+
+        // The bpmner pipeline produces semantic-only XML pre-layout. Upstream bpmnlint rules
+        // `no-bpmndi` and `no-overlapping-elements` require BPMNDI to be present and would fire
+        // on every element pre-layout. They must be excluded from any bpmner-owned preset.
+        assertTrue(
+            activeRules["no-bpmndi"] == null || activeRules["no-bpmndi"] == "off",
+            "no-bpmndi must not be active under plugin:bpmner/recommended-error " +
+                "(was: ${activeRules["no-bpmndi"]})",
+        )
+        assertTrue(
+            activeRules["no-overlapping-elements"] == null ||
+                activeRules["no-overlapping-elements"] == "off",
+            "no-overlapping-elements must not be active under plugin:bpmner/recommended-error " +
+                "(was: ${activeRules["no-overlapping-elements"]})",
+        )
+    }
 }

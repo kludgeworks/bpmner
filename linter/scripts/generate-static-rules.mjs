@@ -101,6 +101,20 @@ const builtinRules = Object.entries(recommendedConfig.rules)
 	.map(([id, level]) => ({ id, level }))
 	.sort((a, b) => a.id.localeCompare(b.id))
 
+// Upstream bpmnlint rules that require BPMNDI elements (shapes/edges/bounds) to
+// be present in the linted XML. The bpmner pipeline produces semantic-only XML
+// pre-layout — yet-another-bpmn-auto-layout adds BPMNDI downstream — so these
+// rules legitimately flag every element pre-layout and have nowhere meaningful
+// to run in this plugin's contract. Exclude them from every bpmner-owned preset
+// so consumers don't have to add per-rule overrides.
+const LAYOUT_DEPENDENT_BUILTIN_RULES = new Set([
+	"no-bpmndi",
+	"no-overlapping-elements",
+])
+const semanticBuiltinRules = builtinRules.filter(
+	(r) => !LAYOUT_DEPENDENT_BUILTIN_RULES.has(r.id),
+)
+
 const toIdentifier = (value) =>
 	value
 		.replace(/(^|[-_/])([a-z])/g, (_, __, ch) => ch.toUpperCase())
@@ -135,7 +149,9 @@ const customRuleEntries = tsRules
 const coreRecommendedConfigEntries = builtinRules
 	.map(({ id, level }) => `    '${id}': '${level}',`)
 	.join("\n")
-const coreRecommendedErrorConfigEntries = builtinRules
+// The derived `*-error` presets (which we own and which production extends)
+// drop layout-dependent built-in rules. See LAYOUT_DEPENDENT_BUILTIN_RULES.
+const coreRecommendedErrorConfigEntries = semanticBuiltinRules
 	.map(({ id }) => `    '${id}': 'error',`)
 	.join("\n")
 
