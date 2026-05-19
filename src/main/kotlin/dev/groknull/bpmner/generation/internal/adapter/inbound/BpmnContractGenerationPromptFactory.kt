@@ -10,6 +10,7 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
 
 internal class BpmnContractGenerationPromptFactory {
+    @Suppress("LongMethod") // prompt assembly is a single linear narrative; splitting hurts readability
     fun prompt(
         request: BpmnRequest,
         validatedContract: ValidatedProcessContract,
@@ -31,6 +32,23 @@ internal class BpmnContractGenerationPromptFactory {
                 "- You may infer sequence flows and routing-only converging gateways needed for valid BPMN.",
             )
             appendLine("- Leave routing-only converging gateways unnamed.")
+            appendLine()
+            appendLine("Identity rules:")
+            appendLine(
+                "- When a BPMN node realizes a ContractActivity / ContractDecision / ContractEndState," +
+                    " use the contract element's id verbatim as the BPMN node id." +
+                    " e.g. `act-extract-contract`, `dec-readiness`, `end-aborted-repair`.",
+            )
+            appendLine(
+                "- The BPMN element kind goes in the `type` field (USER_TASK / SERVICE_TASK /" +
+                    " EXCLUSIVE_GATEWAY / END_EVENT / …). Do not re-encode element type as a `Task_` /" +
+                    " `Gateway_` / `EndEvent_` prefix in the id.",
+            )
+            appendLine(
+                "- Synthesized routing nodes (the process start event, converging join gateways, etc.)" +
+                    " have no contract id. Use stable unique ids of your choosing (e.g. `StartEvent_1`," +
+                    " `Gateway_join_1`).",
+            )
             appendLine()
             appendLine("Loop and back-edge rules:")
             appendLine(
@@ -55,11 +73,12 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine("    - {id: br-no-progress, label: \"No progress\", nextRef: \"end-no-progress\"}")
             appendLine("    - {id: br-retry, label: \"Continue\", nextRef: \"act-strategy-1\"}  // back-edge")
             appendLine("  BPMN topology:")
-            appendLine("    - ONE exclusive gateway after the loop body (e.g. id `Gateway_dec-validate`).")
+            appendLine("    - The decision is realized as ONE EXCLUSIVE_GATEWAY node:")
+            appendLine("        BpmnNode(id=\"dec-validate\", type=EXCLUSIVE_GATEWAY, name=\"Did validation pass?\")")
             appendLine("    - Three outbound sequence flows from that gateway:")
-            appendLine("        * one to `EndEvent_success`, condition \"validation passed\"")
-            appendLine("        * one to `EndEvent_no_progress`, condition \"no progress\"")
-            appendLine("        * one to `Task_strategy-1`, condition \"continue\"  ← back-edge")
+            appendLine("        * to `end-success`, condition \"validation passed\"")
+            appendLine("        * to `end-no-progress`, condition \"no progress\"")
+            appendLine("        * to `act-strategy-1`, condition \"continue\"  ← back-edge")
             appendLine()
             appendLine("Primary validated ProcessContract:")
             appendLine(renderContract(validatedContract.contract).trim())
