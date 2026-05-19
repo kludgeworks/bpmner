@@ -155,11 +155,11 @@ internal class BpmnGenerationService(
         if (alignmentEx != null) {
             val report = alignmentEx.report
             val unsupportedCount =
-                report.alignedElements.count { it.classification == AlignmentClassification.UNSUPPORTED }
+                report.issues.count { it.classification == AlignmentClassification.UNSUPPORTED }
             val missingCount =
-                report.alignedElements.count { it.classification == AlignmentClassification.MISSING }
+                report.issues.count { it.classification == AlignmentClassification.MISSING }
             val assumptionCount =
-                report.alignedElements.count { it.classification == AlignmentClassification.ASSUMED }
+                report.issues.count { it.classification == AlignmentClassification.ASSUMED }
 
             logger.warn(
                 "BPMN generation blocked by semantic alignment guard. " +
