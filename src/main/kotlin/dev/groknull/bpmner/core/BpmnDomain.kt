@@ -44,7 +44,10 @@ data class BpmnRequest(
                 - Include at least one START_EVENT and one END_EVENT.
                 - Use clear, descriptive names on tasks and events that faithfully reflect the source workflow.
                 - Name diverging gateways as decision questions; leave converging gateways unnamed.
-                - Keep process topology coherent with no dangling references or self-loop sequence flows.
+                - Keep process topology coherent with no dangling references.
+                - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier
+                  elements (different sourceRef and targetRef where the target has already been visited)
+                  are valid and required to encode iterative loops.
                 - Use conditionExpression on conditional gateway branches when needed.
 
                 If you receive validation errors, fix them and return the full corrected object.

@@ -116,6 +116,13 @@ data class ContractBranch(
     @field:Size(max = 500)
     @get:JsonPropertyDescription("Optional condition expression that selects this branch")
     val condition: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Optional id of the next activity, decision, or end state this branch leads to. " +
+            "When omitted, the branch is assumed to lead to the next sequential element. " +
+            "Use this to express loop back-edges (target an earlier activity) and multi-exit topologies.",
+    )
+    val nextRef: String? = null,
 )
 
 @JsonClassDescription("Actor referenced by the extracted process contract")

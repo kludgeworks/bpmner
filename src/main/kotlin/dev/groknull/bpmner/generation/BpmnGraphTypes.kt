@@ -30,6 +30,7 @@ data class OutlineMetrics(
 data class ValidatedOutline(
     val outline: ProcessOutline,
     val diagnostics: List<BpmnDiagnostic> = emptyList(),
+    val fidelityReport: BpmnFidelityReport = BpmnFidelityReport.VALID,
 ) {
     val definition: BpmnDefinition
         get() = outline.definition

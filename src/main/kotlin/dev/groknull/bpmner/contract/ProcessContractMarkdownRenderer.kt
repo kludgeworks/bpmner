@@ -44,7 +44,8 @@ internal class ProcessContractMarkdownRenderer {
                     appendLine("- ${decision.id}: ${decision.question}")
                     decision.branches.forEach { branch ->
                         val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
-                        appendLine("  - ${branch.id} → \"${branch.label}\"$condition")
+                        val next = branch.nextRef?.let { " → $it" }.orEmpty()
+                        appendLine("  - ${branch.id} → \"${branch.label}\"$condition$next")
                     }
                 }
             }

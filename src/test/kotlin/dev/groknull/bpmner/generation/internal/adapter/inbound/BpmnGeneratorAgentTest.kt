@@ -22,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
+import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -95,6 +96,7 @@ class BpmnGeneratorAgentTest {
             config = BpmnConfig(),
             bpmnConverter = NoopRenderer,
             metricsCalculator = BpmnGeneratorMetrics(),
+            fidelityChecker = BpmnContractFidelityChecker(),
             eventPublisher = ApplicationEventPublisher {},
         )
 
