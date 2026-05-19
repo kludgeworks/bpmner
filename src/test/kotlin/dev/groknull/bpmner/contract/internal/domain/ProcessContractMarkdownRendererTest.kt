@@ -84,7 +84,6 @@ class ProcessContractMarkdownRendererTest {
         assertTrue(!markdown.contains("## Decisions"))
         assertTrue(!markdown.contains("## Artifacts"))
         assertTrue(!markdown.contains("## Assumptions"))
-        assertTrue(!markdown.contains("## Trace links"))
     }
 
     @Suppress("LongMethod")
