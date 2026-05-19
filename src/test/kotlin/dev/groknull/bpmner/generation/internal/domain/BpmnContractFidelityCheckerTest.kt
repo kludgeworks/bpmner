@@ -20,6 +20,11 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
+/**
+ * Convention exercised by every fixture below: contract element ids (`act-…`, `dec-…`, `end-…`)
+ * are used verbatim as BPMN node ids. Element kind is carried by `BpmnNode.type`. See `BpmnDomain.kt`
+ * and `BpmnContractGenerationPromptFactory.kt` for the canonical generator instructions.
+ */
 class BpmnContractFidelityCheckerTest {
     private val checker = BpmnContractFidelityChecker()
 
@@ -36,7 +41,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `missing back-edge flagged as LOOP_BACK_EDGE_MISSING`() {
         val contract = repairLoopContract()
-        // Definition lacks the back-edge from Gateway_dec-validate to Task_strategy-1
+        // Definition lacks the back-edge from dec-validate to act-strategy-1
         val definition = repairLoopDefinitionFlattened()
 
         val report = checker.check(contract, definition)
@@ -68,26 +73,26 @@ class BpmnContractFidelityCheckerTest {
                 triggerSourceIds = listOf("ev1"),
                 activities =
                     listOf(
-                        ContractActivity(id = "Task_a", name = "A", sourceIds = listOf("ev1")),
+                        ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1")),
                     ),
                 decisions =
                     listOf(
                         ContractDecision(
-                            id = "dec",
+                            id = "dec-choose",
                             question = "Choose?",
                             branches =
                                 listOf(
                                     ContractBranch(
                                         id = "br-1",
                                         label = "Option 1",
-                                        nextRef = "Task_nonexistent",
+                                        nextRef = "act-nonexistent",
                                     ),
                                     ContractBranch(id = "br-2", label = "Option 2"),
                                 ),
                             sourceIds = listOf("ev1"),
                         ),
                     ),
-                endStates = listOf(ContractEndState(id = "end", name = "End", sourceIds = listOf("ev1"))),
+                endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
             )
         val definition =
             BpmnDefinition(
@@ -96,13 +101,13 @@ class BpmnContractFidelityCheckerTest {
                 nodes =
                     listOf(
                         BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                        BpmnNode(id = "Task_a", name = "A", type = NodeType.USER_TASK),
-                        BpmnNode(id = "EndEvent_1", name = "End", type = NodeType.END_EVENT),
+                        BpmnNode(id = "act-a", name = "A", type = NodeType.USER_TASK),
+                        BpmnNode(id = "end-done", name = "Done", type = NodeType.END_EVENT),
                     ),
                 sequences =
                     listOf(
-                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "Task_a"),
-                        BpmnEdge(id = "F2", sourceRef = "Task_a", targetRef = "EndEvent_1"),
+                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
+                        BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
                     ),
             )
 
@@ -123,10 +128,10 @@ class BpmnContractFidelityCheckerTest {
                 triggerSourceIds = listOf("ev1"),
                 activities =
                     listOf(
-                        ContractActivity(id = "Task_a", name = "A", sourceIds = listOf("ev1")),
-                        ContractActivity(id = "Task_b", name = "B", sourceIds = listOf("ev1")),
+                        ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1")),
+                        ContractActivity(id = "act-b", name = "B", sourceIds = listOf("ev1")),
                     ),
-                endStates = listOf(ContractEndState(id = "end", name = "End", sourceIds = listOf("ev1"))),
+                endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
             )
         val definition =
             BpmnDefinition(
@@ -135,9 +140,9 @@ class BpmnContractFidelityCheckerTest {
                 nodes =
                     listOf(
                         BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                        BpmnNode(id = "EndEvent_1", name = "End", type = NodeType.END_EVENT),
+                        BpmnNode(id = "end-done", name = "End", type = NodeType.END_EVENT),
                     ),
-                sequences = listOf(BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "EndEvent_1")),
+                sequences = listOf(BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "end-done")),
             )
 
         val report = checker.check(contract, definition)
@@ -156,9 +161,9 @@ class BpmnContractFidelityCheckerTest {
             triggerSourceIds = sources,
             activities =
                 listOf(
-                    ContractActivity(id = "Task_strategy-1", name = "Strategy 1", sourceIds = sources),
-                    ContractActivity(id = "Task_strategy-2", name = "Strategy 2", sourceIds = sources),
-                    ContractActivity(id = "Task_strategy-3", name = "Strategy 3", sourceIds = sources),
+                    ContractActivity(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
+                    ContractActivity(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
+                    ContractActivity(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
                 ),
             decisions =
                 listOf(
@@ -167,17 +172,17 @@ class BpmnContractFidelityCheckerTest {
                         question = "Did validation pass?",
                         branches =
                             listOf(
-                                ContractBranch(id = "br-pass", label = "Pass", nextRef = "EndEvent_success"),
-                                ContractBranch(id = "br-fail", label = "Fail", nextRef = "EndEvent_failed"),
-                                ContractBranch(id = "br-retry", label = "Retry", nextRef = "Task_strategy-1"),
+                                ContractBranch(id = "br-pass", label = "Pass", nextRef = "end-success"),
+                                ContractBranch(id = "br-fail", label = "Fail", nextRef = "end-failed"),
+                                ContractBranch(id = "br-retry", label = "Retry", nextRef = "act-strategy-1"),
                             ),
                         sourceIds = sources,
                     ),
                 ),
             endStates =
                 listOf(
-                    ContractEndState(id = "EndEvent_success", name = "Success", sourceIds = sources),
-                    ContractEndState(id = "EndEvent_failed", name = "Failed", sourceIds = sources),
+                    ContractEndState(id = "end-success", name = "Success", sourceIds = sources),
+                    ContractEndState(id = "end-failed", name = "Failed", sourceIds = sources),
                 ),
         )
     }
@@ -189,22 +194,22 @@ class BpmnContractFidelityCheckerTest {
             nodes =
                 listOf(
                     BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                    BpmnNode(id = "Task_strategy-1", name = "Strategy 1", type = NodeType.USER_TASK),
-                    BpmnNode(id = "Task_strategy-2", name = "Strategy 2", type = NodeType.USER_TASK),
-                    BpmnNode(id = "Task_strategy-3", name = "Strategy 3", type = NodeType.USER_TASK),
-                    BpmnNode(id = "Gateway_dec-validate", name = "Did validation pass?", type = NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode(id = "EndEvent_success", name = "Success", type = NodeType.END_EVENT),
-                    BpmnNode(id = "EndEvent_failed", name = "Failed", type = NodeType.END_EVENT),
+                    BpmnNode(id = "act-strategy-1", name = "Strategy 1", type = NodeType.USER_TASK),
+                    BpmnNode(id = "act-strategy-2", name = "Strategy 2", type = NodeType.USER_TASK),
+                    BpmnNode(id = "act-strategy-3", name = "Strategy 3", type = NodeType.USER_TASK),
+                    BpmnNode(id = "dec-validate", name = "Did validation pass?", type = NodeType.EXCLUSIVE_GATEWAY),
+                    BpmnNode(id = "end-success", name = "Success", type = NodeType.END_EVENT),
+                    BpmnNode(id = "end-failed", name = "Failed", type = NodeType.END_EVENT),
                 ),
             sequences =
                 listOf(
-                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "Task_strategy-1"),
-                    BpmnEdge(id = "F2", sourceRef = "Task_strategy-1", targetRef = "Task_strategy-2"),
-                    BpmnEdge(id = "F3", sourceRef = "Task_strategy-2", targetRef = "Task_strategy-3"),
-                    BpmnEdge(id = "F4", sourceRef = "Task_strategy-3", targetRef = "Gateway_dec-validate"),
-                    BpmnEdge(id = "F5", sourceRef = "Gateway_dec-validate", targetRef = "EndEvent_success"),
-                    BpmnEdge(id = "F6", sourceRef = "Gateway_dec-validate", targetRef = "EndEvent_failed"),
-                    BpmnEdge(id = "F7", sourceRef = "Gateway_dec-validate", targetRef = "Task_strategy-1"),
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-strategy-1"),
+                    BpmnEdge(id = "F2", sourceRef = "act-strategy-1", targetRef = "act-strategy-2"),
+                    BpmnEdge(id = "F3", sourceRef = "act-strategy-2", targetRef = "act-strategy-3"),
+                    BpmnEdge(id = "F4", sourceRef = "act-strategy-3", targetRef = "dec-validate"),
+                    BpmnEdge(id = "F5", sourceRef = "dec-validate", targetRef = "end-success"),
+                    BpmnEdge(id = "F6", sourceRef = "dec-validate", targetRef = "end-failed"),
+                    BpmnEdge(id = "F7", sourceRef = "dec-validate", targetRef = "act-strategy-1"),
                 ),
         )
 

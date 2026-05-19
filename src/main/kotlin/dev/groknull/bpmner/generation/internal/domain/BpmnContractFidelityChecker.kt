@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation.internal.domain
 
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
 import dev.groknull.bpmner.generation.BpmnFidelityReport
@@ -28,6 +29,12 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnContractFidelityChecker {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
+
+    private companion object {
+        // BPMN node types that represent gateways. We currently support EXCLUSIVE_GATEWAY only
+        // (per the NodeType enum); extend as the enum grows (inclusive, parallel, event-based).
+        private val GATEWAY_TYPES = setOf(NodeType.EXCLUSIVE_GATEWAY)
+    }
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun check(
@@ -57,10 +64,12 @@ internal class BpmnContractFidelityChecker {
             }
 
             // 2. There must be a gateway with outbound degree >= the decision's branch count.
+            //    Gateways are identified by `BpmnNode.type`, not by id prefix — element kind is
+            //    carried structurally, not via naming convention.
             val branchCount = decision.branches.size
             val maxOutboundDegree =
                 definition.nodes
-                    .filter { it.id.startsWith("Gateway") || it.id.contains("gateway", ignoreCase = true) }
+                    .filter { it.type in GATEWAY_TYPES }
                     .maxOfOrNull { gw -> definition.sequences.count { it.sourceRef == gw.id } }
                     ?: 0
             if (maxOutboundDegree < branchCount) {

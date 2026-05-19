@@ -102,8 +102,8 @@ internal class BpmnAlignmentPromptFactory(
             ```
             {
               "issues": [
-                { "elementId": "validate-payment", "classification": "MISSING" },
-                { "elementId": "Task_SendMarketingEmail", "classification": "UNSUPPORTED" }
+                { "elementId": "act-validate-payment", "classification": "MISSING" },
+                { "elementId": "act-send-marketing-email", "classification": "UNSUPPORTED" }
               ],
               "rationale": "Payment validation is missing from the BPMN; an unsourced marketing email task was added."
             }

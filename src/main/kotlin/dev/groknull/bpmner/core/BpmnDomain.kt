@@ -44,6 +44,14 @@ data class BpmnRequest(
                 - Include at least one START_EVENT and one END_EVENT.
                 - Use clear, descriptive names on tasks and events that faithfully reflect the source workflow.
                 - Name diverging gateways as decision questions; leave converging gateways unnamed.
+                - **Identity rule:** when a BPMN node realizes a ContractActivity / ContractDecision /
+                  ContractEndState from the source ProcessContract, use the contract element's id verbatim
+                  as the BPMN node id (e.g. `act-extract-contract`, `dec-readiness`, `end-aborted-repair`).
+                  Synthesized nodes that do not realize a contract element (routing-only converging joins,
+                  the process start event, intermediate routing nodes) use stable unique ids of your choosing
+                  (e.g. `StartEvent_1`, `Gateway_join_1`).
+                - The BPMN node type is carried by the `type` field (USER_TASK / SERVICE_TASK /
+                  EXCLUSIVE_GATEWAY / END_EVENT / …). Do not re-encode element type as a prefix in the id.
                 - Keep process topology coherent with no dangling references.
                 - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier
                   elements (different sourceRef and targetRef where the target has already been visited)
@@ -85,7 +93,12 @@ data class BpmnDefinition(
 @JsonClassDescription("BPMN node with semantic type")
 data class BpmnNode(
     @field:NotBlank
-    @get:JsonPropertyDescription("Unique node id, e.g. StartEvent_1")
+    @get:JsonPropertyDescription(
+        "Unique node id. For contract-realized nodes, use the corresponding `act-…` / `dec-…` / `end-…` " +
+            "id from the ProcessContract verbatim. For synthesized routing nodes (process start event, " +
+            "converging joins, intermediate routing), use a stable unique id of your choosing (e.g. " +
+            "`StartEvent_1`, `Gateway_join_1`). The element kind is carried by `type`, not the id prefix.",
+    )
     val id: String,
     @get:JsonPropertyDescription(
         "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways.",
