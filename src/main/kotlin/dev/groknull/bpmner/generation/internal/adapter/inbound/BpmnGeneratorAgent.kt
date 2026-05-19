@@ -20,6 +20,7 @@ import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.generation.BpmnFidelitySeverity
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -30,6 +31,7 @@ import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
+import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -44,6 +46,7 @@ internal class BpmnGeneratorAgent(
     private val config: BpmnConfig,
     private val bpmnConverter: BpmnRenderer,
     private val metricsCalculator: BpmnGeneratorMetrics,
+    private val fidelityChecker: BpmnContractFidelityChecker,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
@@ -87,7 +90,10 @@ internal class BpmnGeneratorAgent(
     }
 
     @Action(description = "Validate the generated process outline before phase-level processing")
-    fun validateOutline(outline: ProcessOutline): ValidatedOutline {
+    fun validateOutline(
+        outline: ProcessOutline,
+        validatedContract: ValidatedProcessContract,
+    ): ValidatedOutline {
         val diagnostics = mutableListOf<BpmnDiagnostic>()
         if (outline.definition.processId.isBlank()) {
             diagnostics +=
@@ -110,7 +116,20 @@ internal class BpmnGeneratorAgent(
         if (diagnostics.isNotEmpty()) {
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
-        return ValidatedOutline(outline = outline, diagnostics = diagnostics)
+
+        val fidelityReport = fidelityChecker.check(validatedContract.contract, outline.definition)
+        if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
+            val violations =
+                fidelityReport.issues
+                    .filter { it.severity == BpmnFidelitySeverity.ERROR }
+                    .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
+            error(
+                "Generated BPMN does not faithfully encode the source contract topology " +
+                    "(${fidelityReport.issues.size} fidelity issue(s)):${System.lineSeparator()}$violations",
+            )
+        }
+
+        return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
     }
 
     @Action(description = "Generate local phase plans from the validated process outline")

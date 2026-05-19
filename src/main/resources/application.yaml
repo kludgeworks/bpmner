@@ -36,7 +36,7 @@ bpmner:
   max-attempts: 5
   logging:
     dir: ${BPMNER_LOG_DIR:${LOG_DIR:${BUILD_WORKING_DIRECTORY:${user.dir}}/logs}}
-    dump-artifacts: false
+    dump-artifacts: true
   repair:
     abbreviations:
       ITBL: ineligible-to-board list

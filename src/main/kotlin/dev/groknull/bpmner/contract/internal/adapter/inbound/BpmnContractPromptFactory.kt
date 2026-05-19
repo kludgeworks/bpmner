@@ -14,6 +14,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 internal class BpmnContractPromptFactory(
     private val config: BpmnContractConfig,
 ) {
+    @Suppress("LongMethod") // prompt assembly is a single linear narrative; splitting hurts readability
     fun prompt(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
@@ -41,6 +42,25 @@ internal class BpmnContractPromptFactory(
             )
             appendLine("- The process trigger must list at least one entry in `triggerSourceIds`.")
             appendLine("- ContractBranch must have a non-blank label and a condition when applicable.")
+            appendLine()
+            appendLine("Loop and topology rules:")
+            appendLine(
+                "- When the source describes an iterative process (retry / repair / poll / until / while)," +
+                    " set `ContractBranch.nextRef` to the id of the activity that the iteration loops back to.",
+            )
+            appendLine(
+                "- When a decision has multiple exit conditions (e.g. pass, no-progress, exhausted)," +
+                    " declare each as a separate ContractBranch with its own condition. Set `nextRef`" +
+                    " on the looping branch; leave it null on the exiting branches.",
+            )
+            appendLine(
+                "- Branch ids referenced via `nextRef` must exist elsewhere in `activities`," +
+                    " `decisions`, or `endStates`.",
+            )
+            appendLine(
+                "- For sequential (non-looping) flow, leave `nextRef` null; the branch is assumed to" +
+                    " lead to the next sequential element.",
+            )
             appendLine()
             appendLine("Readiness assessment rationale:")
             appendLine(assessment.rationale)

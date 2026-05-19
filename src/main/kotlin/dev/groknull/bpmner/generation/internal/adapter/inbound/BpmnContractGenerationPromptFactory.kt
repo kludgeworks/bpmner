@@ -32,6 +32,35 @@ internal class BpmnContractGenerationPromptFactory {
             )
             appendLine("- Leave routing-only converging gateways unnamed.")
             appendLine()
+            appendLine("Loop and back-edge rules:")
+            appendLine(
+                "- A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier" +
+                    " elements (a different `targetRef` that the process has already visited) are valid" +
+                    " and required when the contract describes an iterative process.",
+            )
+            appendLine(
+                "- When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's" +
+                    " gateway to the node with that id. If `nextRef` points to an earlier activity, this" +
+                    " is the loop back-edge.",
+            )
+            appendLine(
+                "- For multi-exit loops (e.g. pass / no-progress / exhausted), emit ONE XOR gateway" +
+                    " after the loop body with one outbound flow per branch — including the back-edge —" +
+                    " not separate gateways per exit.",
+            )
+            appendLine()
+            appendLine("Worked example — iterative repair loop with three exit conditions:")
+            appendLine("  Contract decision `dec-validate` has three branches:")
+            appendLine("    - {id: br-pass, label: \"Validation passed\", nextRef: \"end-success\"}")
+            appendLine("    - {id: br-no-progress, label: \"No progress\", nextRef: \"end-no-progress\"}")
+            appendLine("    - {id: br-retry, label: \"Continue\", nextRef: \"act-strategy-1\"}  // back-edge")
+            appendLine("  BPMN topology:")
+            appendLine("    - ONE exclusive gateway after the loop body (e.g. id `Gateway_dec-validate`).")
+            appendLine("    - Three outbound sequence flows from that gateway:")
+            appendLine("        * one to `EndEvent_success`, condition \"validation passed\"")
+            appendLine("        * one to `EndEvent_no_progress`, condition \"no progress\"")
+            appendLine("        * one to `Task_strategy-1`, condition \"continue\"  ← back-edge")
+            appendLine()
             appendLine("Primary validated ProcessContract:")
             appendLine(renderContract(validatedContract.contract).trim())
             appendLine()
@@ -79,7 +108,8 @@ internal class BpmnContractGenerationPromptFactory {
                     appendLine("- ${decision.id}: ${decision.question}")
                     decision.branches.forEach { branch ->
                         val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
-                        appendLine("  - ${branch.id} -> \"${branch.label}\"$condition")
+                        val next = branch.nextRef?.let { " -> $it" }.orEmpty()
+                        appendLine("  - ${branch.id} -> \"${branch.label}\"$condition$next")
                     }
                 }
             }

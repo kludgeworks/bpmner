@@ -1,0 +1,64 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.generation
+
+import com.fasterxml.jackson.annotation.JsonClassDescription
+
+/**
+ * Categories of fidelity violations raised when a generated BpmnDefinition does not
+ * faithfully encode the topology declared by its source ProcessContract.
+ *
+ * These complement [dev.groknull.bpmner.contract.ContractValidationCode] (which validates
+ * the contract itself) and the bpmnlint rules (which validate the rendered XML). Fidelity
+ * checks compare contract → BPMN topology.
+ */
+enum class BpmnFidelityCode {
+    /** A `ContractBranch.nextRef` points at an id that does not exist in the generated BPMN. */
+    BRANCH_NEXT_REF_UNRESOLVED,
+
+    /**
+     * The generated BPMN has no gateway with outbound degree >= the contract decision's
+     * branch count. Either the gateway is missing, or branches are conflated into fewer
+     * outbound flows.
+     */
+    GATEWAY_BRANCH_COUNT_INSUFFICIENT,
+
+    /**
+     * A contract branch has `nextRef` pointing to an earlier activity (a loop back-edge),
+     * but the generated topology contains no sequence flow encoding that back-edge.
+     */
+    LOOP_BACK_EDGE_MISSING,
+}
+
+/**
+ * Severity for fidelity issues. ERROR blocks the pipeline; WARNING is logged but
+ * does not gate downstream stages.
+ */
+enum class BpmnFidelitySeverity {
+    ERROR,
+    WARNING,
+}
+
+@JsonClassDescription("Fidelity issue raised when generated BPMN topology diverges from the source contract")
+data class BpmnFidelityIssue(
+    val code: BpmnFidelityCode,
+    val severity: BpmnFidelitySeverity,
+    val message: String,
+    val contractElementId: String? = null,
+    val bpmnElementId: String? = null,
+)
+
+@JsonClassDescription("Structured report bundling fidelity issues found by BpmnContractFidelityChecker")
+data class BpmnFidelityReport(
+    val issues: List<BpmnFidelityIssue> = emptyList(),
+) {
+    val isValid: Boolean
+        get() = issues.none { it.severity == BpmnFidelitySeverity.ERROR }
+
+    companion object {
+        val VALID = BpmnFidelityReport(emptyList())
+    }
+}
