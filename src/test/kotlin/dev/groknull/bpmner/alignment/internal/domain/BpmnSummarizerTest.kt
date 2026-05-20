@@ -7,8 +7,10 @@ package dev.groknull.bpmner.alignment.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -24,9 +26,9 @@ class BpmnSummarizerTest {
                 processName = "Linear Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT),
-                        BpmnNode("Task_1", "Do Work", NodeType.USER_TASK),
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnEndEvent("End_1", "End"),
+                        BpmnUserTask("Task_1", "Do Work"),
                     ),
                 sequences =
                     listOf(
@@ -56,11 +58,11 @@ class BpmnSummarizerTest {
                 processName = "Branching Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                        BpmnNode("Gateway_1", "Is Valid?", NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode("Task_A", "A", NodeType.USER_TASK),
-                        BpmnNode("Task_B", "B", NodeType.USER_TASK),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT),
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnExclusiveGateway("Gateway_1", "Is Valid?"),
+                        BpmnUserTask("Task_A", "A"),
+                        BpmnUserTask("Task_B", "B"),
+                        BpmnEndEvent("End_1", "End"),
                     ),
                 sequences =
                     listOf(
@@ -96,9 +98,9 @@ class BpmnSummarizerTest {
                 processName = "Broken Process",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Reachable", NodeType.USER_TASK),
-                        BpmnNode("Task_Unreachable", "Unreachable", NodeType.USER_TASK),
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnUserTask("Task_1", "Reachable"),
+                        BpmnUserTask("Task_Unreachable", "Unreachable"),
                     ),
                 sequences =
                     listOf(

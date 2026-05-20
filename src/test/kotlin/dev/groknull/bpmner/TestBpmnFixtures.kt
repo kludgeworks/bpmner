@@ -7,10 +7,12 @@ package dev.groknull.bpmner
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OwnedElementGraph
 
 /**
@@ -18,29 +20,29 @@ import dev.groknull.bpmner.core.OwnedElementGraph
  */
 object TestBpmnFixtures {
     /**
-     * Creates a standard three-node BPMN definition (Start -> Task -> End).
+     * Creates a standard three-node BPMN definition (Start -> Task -> End). The middle
+     * task is configurable so tests can vary between user and service tasks; callers
+     * pass the constructed [BpmnNode] directly rather than discriminating by enum.
      */
-    @Suppress("LongParameterList")
     fun testBpmnDefinition(
         processId: String = "Process_MakeToast",
         processName: String = "Make toast",
-        nodeType: NodeType = NodeType.SERVICE_TASK,
+        task: BpmnNode = BpmnServiceTask("Task_1", "Toast bread"),
         startName: String = "Order received",
-        taskName: String = "Toast bread",
         endName: String = "Toast served",
     ) = BpmnDefinition(
         processId = processId,
         processName = processName,
         nodes =
             listOf(
-                BpmnNode("StartEvent_1", startName, NodeType.START_EVENT),
-                BpmnNode("Task_1", taskName, nodeType),
-                BpmnNode("EndEvent_1", endName, NodeType.END_EVENT),
+                BpmnStartEvent("StartEvent_1", startName),
+                task,
+                BpmnEndEvent("EndEvent_1", endName),
             ),
         sequences =
             listOf(
-                BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                BpmnEdge("Flow_1", "StartEvent_1", task.id),
+                BpmnEdge("Flow_2", task.id, "EndEvent_1"),
             ),
     )
 

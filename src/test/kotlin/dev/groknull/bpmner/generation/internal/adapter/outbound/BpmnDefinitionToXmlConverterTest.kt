@@ -7,8 +7,11 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -25,10 +28,10 @@ class BpmnDefinitionToXmlConverterTest {
                 processName = "Prepare toast",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Order received", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Toast bread", NodeType.SERVICE_TASK),
-                        BpmnNode("Gateway_1", "Bread toasted?", NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode("EndEvent_1", "Toast served", NodeType.END_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Order received"),
+                        BpmnServiceTask("Task_1", "Toast bread"),
+                        BpmnExclusiveGateway("Gateway_1", "Bread toasted?"),
+                        BpmnEndEvent("EndEvent_1", "Toast served"),
                     ),
                 sequences =
                     listOf(
@@ -76,7 +79,7 @@ class BpmnDefinitionToXmlConverterTest {
                 processName = "Test Process",
                 nodes =
                     listOf(
-                        BpmnNode("start", "Start", NodeType.START_EVENT),
+                        BpmnStartEvent("start", "Start"),
                     ),
                 sequences = emptyList(),
             )
@@ -96,11 +99,11 @@ class BpmnDefinitionToXmlConverterTest {
                 processName = "Merge decisions",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Approve request", NodeType.USER_TASK),
-                        BpmnNode("Task_2", "Reject request", NodeType.USER_TASK),
-                        BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Approve request"),
+                        BpmnUserTask("Task_2", "Reject request"),
+                        BpmnExclusiveGateway("Gateway_1", null),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
                     ),
                 sequences =
                     listOf(

@@ -7,7 +7,9 @@ package dev.groknull.bpmner.generation.internal.domain
 
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.typeName
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
 import dev.groknull.bpmner.generation.BpmnFidelityReport
@@ -21,8 +23,9 @@ import org.springframework.stereotype.Component
  * (which validates the contract on its own) and bpmnlint (which validates the rendered XML).
  *
  * Operates under the unified-id convention established in PR #180: a contract decision's id
- * IS the BPMN gateway node's id, verbatim. Element kind is carried by [BpmnNode.type], not
- * by an id prefix. Resolution is exact-match; no string-shape heuristics.
+ * IS the BPMN gateway node's id, verbatim. Element kind is carried by the [BpmnNode] subtype
+ * (see the sealed hierarchy in [dev.groknull.bpmner.core.BpmnDomain]), not by an id prefix.
+ * Resolution is exact-match; no string-shape heuristics.
  *
  * Per-decision checks (each fires independently):
  * 1. [BpmnFidelityCode.DECISION_GATEWAY_MISSING] — the decision id resolves to no BPMN
@@ -39,13 +42,7 @@ import org.springframework.stereotype.Component
 internal class BpmnContractFidelityChecker {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
-    private companion object {
-        /**
-         * BPMN node types that represent gateways. Currently EXCLUSIVE_GATEWAY only,
-         * matching the [NodeType] enum's gateway entries; extend as the enum grows.
-         */
-        private val GATEWAY_TYPES = setOf(NodeType.EXCLUSIVE_GATEWAY)
-    }
+    private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway
 
     fun check(
         contract: ProcessContract,
@@ -80,7 +77,7 @@ internal class BpmnContractFidelityChecker {
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         val gateway = nodeById[decision.id]
-        val gatewayIsValid = gateway != null && gateway.type in GATEWAY_TYPES
+        val gatewayIsValid = gateway != null && gateway.isGateway()
 
         // 1. The decision must resolve to a gateway-typed node.
         if (gateway == null) {
@@ -93,14 +90,14 @@ internal class BpmnContractFidelityChecker {
                             "Under the unified-id convention the gateway must share the decision's id.",
                     contractElementId = decision.id,
                 )
-        } else if (gateway.type !in GATEWAY_TYPES) {
+        } else if (!gateway.isGateway()) {
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
                     severity = BpmnFidelitySeverity.ERROR,
                     message =
-                        "Decision '${decision.id}' is realized as a ${gateway.type} node — expected " +
-                            "a gateway type (${GATEWAY_TYPES.joinToString { it.name }}).",
+                        "Decision '${decision.id}' is realized as a ${gateway.typeName} node — " +
+                            "expected a gateway type.",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )

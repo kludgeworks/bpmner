@@ -18,10 +18,10 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnResult
@@ -138,8 +138,8 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             processName = "Dummy",
             nodes =
                 listOf(
-                    BpmnNode("start", "Start", NodeType.START_EVENT),
-                    BpmnNode("end", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("start", "Start"),
+                    BpmnEndEvent("end", "End"),
                 ),
             sequences =
                 listOf(

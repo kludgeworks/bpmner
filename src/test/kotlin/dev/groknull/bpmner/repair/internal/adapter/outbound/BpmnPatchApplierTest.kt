@@ -9,8 +9,11 @@ package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
@@ -30,9 +33,9 @@ class BpmnPatchApplierTest {
             processName = "Test Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -172,7 +175,7 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `ADD_NODE appends a new node`() {
-        val newNode = BpmnNode("Task_2", "New task", NodeType.SERVICE_TASK)
+        val newNode = BpmnServiceTask("Task_2", "New task")
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.ADD_NODE, node = newNode))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
         assertTrue(result.definition.nodes.any { it.id == "Task_2" })
@@ -181,7 +184,7 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `ADD_NODE with duplicate id is invalid`() {
-        val dup = BpmnNode("Task_1", "Duplicate", NodeType.SERVICE_TASK)
+        val dup = BpmnServiceTask("Task_1", "Duplicate")
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.ADD_NODE, node = dup))
         val result = assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
         assertTrue(result.reason.contains("Task_1"))
@@ -201,7 +204,7 @@ class BpmnPatchApplierTest {
     fun `REMOVE_NODE removes a node with no edges`() {
         val isolated =
             baseDefinition.copy(
-                nodes = baseDefinition.nodes + BpmnNode("Isolated_1", "Isolated", NodeType.SERVICE_TASK),
+                nodes = baseDefinition.nodes + BpmnServiceTask("Isolated_1", "Isolated"),
             )
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.REMOVE_NODE, nodeId = "Isolated_1"))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(isolated, patch))
@@ -227,7 +230,7 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `REPLACE_NODE swaps in replacement`() {
-        val replacement = BpmnNode("Task_1", "Replaced task", NodeType.SERVICE_TASK)
+        val replacement = BpmnServiceTask("Task_1", "Replaced task")
         val patch =
             patch(
                 BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement),
@@ -243,7 +246,7 @@ class BpmnPatchApplierTest {
 
     @Test
     fun `REPLACE_NODE with id mismatch is invalid`() {
-        val replacement = BpmnNode("Task_2", "Wrong id", NodeType.SERVICE_TASK)
+        val replacement = BpmnServiceTask("Task_2", "Wrong id")
         val patch =
             patch(
                 BpmnPatchOperation(BpmnPatchOperationType.REPLACE_NODE, nodeId = "Task_1", node = replacement),
@@ -420,11 +423,11 @@ class BpmnPatchApplierTest {
             processName = "Merge decisions",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Do other work", NodeType.USER_TASK),
-                    BpmnNode("Gateway_1", gatewayName, NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnUserTask("Task_2", "Do other work"),
+                    BpmnExclusiveGateway("Gateway_1", gatewayName),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -442,11 +445,11 @@ class BpmnPatchApplierTest {
             processName = "Route decision",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", "Is request valid?", NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Approve request", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Reject request", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway("Gateway_1", "Is request valid?"),
+                    BpmnUserTask("Task_1", "Approve request"),
+                    BpmnUserTask("Task_2", "Reject request"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(

@@ -11,11 +11,12 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.repair.BpmnLocalFixFailure
@@ -355,10 +356,10 @@ class BpmnRepairStrategiesTest {
             processName = "Sample",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do thing", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Do other", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Do thing"),
+                    BpmnUserTask("Task_2", "Do other"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(

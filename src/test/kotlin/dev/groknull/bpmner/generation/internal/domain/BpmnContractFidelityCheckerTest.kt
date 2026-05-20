@@ -12,8 +12,10 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -90,7 +92,7 @@ class BpmnContractFidelityCheckerTest {
                 nodes =
                     original.nodes.map { node ->
                         if (node.id == "dec-validate") {
-                            node.copy(type = NodeType.USER_TASK)
+                            BpmnUserTask(id = node.id, name = node.name)
                         } else {
                             node
                         }
@@ -146,12 +148,12 @@ class BpmnContractFidelityCheckerTest {
                 processName = "Forward skip",
                 nodes =
                     listOf(
-                        BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                        BpmnNode(id = "act-pre-check", name = "Pre-check", type = NodeType.USER_TASK),
-                        BpmnNode(id = "dec-pre", name = "Skip detailed path?", type = NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode(id = "act-skip-target", name = "Process", type = NodeType.USER_TASK),
-                        BpmnNode(id = "act-detailed-path", name = "Detailed path", type = NodeType.USER_TASK),
-                        BpmnNode(id = "end-done", name = "Done", type = NodeType.END_EVENT),
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnUserTask(id = "act-pre-check", name = "Pre-check"),
+                        BpmnExclusiveGateway(id = "dec-pre", name = "Skip detailed path?"),
+                        BpmnUserTask(id = "act-skip-target", name = "Process"),
+                        BpmnUserTask(id = "act-detailed-path", name = "Detailed path"),
+                        BpmnEndEvent(id = "end-done", name = "Done"),
                     ),
                 sequences =
                     listOf(
@@ -221,13 +223,13 @@ class BpmnContractFidelityCheckerTest {
                 processName = "Two decisions",
                 nodes =
                     listOf(
-                        BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                        BpmnNode(id = "act-a", name = "A", type = NodeType.USER_TASK),
-                        BpmnNode(id = "dec-1", name = "Q1?", type = NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode(id = "dec-2", name = "Q2?", type = NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode(id = "end-1", name = "End 1", type = NodeType.END_EVENT),
-                        BpmnNode(id = "end-2", name = "End 2", type = NodeType.END_EVENT),
-                        BpmnNode(id = "end-3", name = "End 3", type = NodeType.END_EVENT),
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnUserTask(id = "act-a", name = "A"),
+                        BpmnExclusiveGateway(id = "dec-1", name = "Q1?"),
+                        BpmnExclusiveGateway(id = "dec-2", name = "Q2?"),
+                        BpmnEndEvent(id = "end-1", name = "End 1"),
+                        BpmnEndEvent(id = "end-2", name = "End 2"),
+                        BpmnEndEvent(id = "end-3", name = "End 3"),
                     ),
                 sequences =
                     listOf(
@@ -279,8 +281,8 @@ class BpmnContractFidelityCheckerTest {
                 processName = "Linear",
                 nodes =
                     listOf(
-                        BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                        BpmnNode(id = "end-done", name = "End", type = NodeType.END_EVENT),
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnEndEvent(id = "end-done", name = "End"),
                     ),
                 sequences = listOf(BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "end-done")),
             )
@@ -336,13 +338,13 @@ private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition =
         processName = "Repair loop",
         nodes =
             listOf(
-                BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                BpmnNode(id = "act-strategy-1", name = "Strategy 1", type = NodeType.USER_TASK),
-                BpmnNode(id = "act-strategy-2", name = "Strategy 2", type = NodeType.USER_TASK),
-                BpmnNode(id = "act-strategy-3", name = "Strategy 3", type = NodeType.USER_TASK),
-                BpmnNode(id = "dec-validate", name = "Did validation pass?", type = NodeType.EXCLUSIVE_GATEWAY),
-                BpmnNode(id = "end-success", name = "Success", type = NodeType.END_EVENT),
-                BpmnNode(id = "end-failed", name = "Failed", type = NodeType.END_EVENT),
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnUserTask(id = "act-strategy-1", name = "Strategy 1"),
+                BpmnUserTask(id = "act-strategy-2", name = "Strategy 2"),
+                BpmnUserTask(id = "act-strategy-3", name = "Strategy 3"),
+                BpmnExclusiveGateway(id = "dec-validate", name = "Did validation pass?"),
+                BpmnEndEvent(id = "end-success", name = "Success"),
+                BpmnEndEvent(id = "end-failed", name = "Failed"),
             ),
         sequences =
             listOf(
@@ -396,9 +398,9 @@ private fun unresolvedRefDefinition() =
         processName = "Test",
         nodes =
             listOf(
-                BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                BpmnNode(id = "act-a", name = "A", type = NodeType.USER_TASK),
-                BpmnNode(id = "end-done", name = "Done", type = NodeType.END_EVENT),
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnUserTask(id = "act-a", name = "A"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
             ),
         sequences =
             listOf(
