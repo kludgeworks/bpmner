@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.validation.internal.domain
 
+import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -211,6 +212,37 @@ class BpmnDefinitionValidatorTest {
         assertContains(
             validator.validate(throwDefinition).joinToString("\n"),
             "intermediate throw event Throw_1 must declare an event definition",
+        )
+    }
+
+    @Test
+    fun `validator rejects none event definitions on boundary events`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Validate request"),
+                        BpmnBoundaryEvent(
+                            id = "Boundary_1",
+                            name = "Timeout",
+                            attachedToRef = "Task_1",
+                            eventDefinition = BpmnNoneEventDefinition,
+                        ),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                    ),
+            )
+
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "boundary event Boundary_1 must declare an event definition",
         )
     }
 

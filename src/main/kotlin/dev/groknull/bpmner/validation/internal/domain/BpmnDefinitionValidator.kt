@@ -168,6 +168,9 @@ internal class BpmnDefinitionValidator {
                 }
 
                 is BpmnBoundaryEvent -> {
+                    if (node.eventDefinition is BpmnNoneEventDefinition) {
+                        errors.add("boundary event ${node.id} must declare an event definition")
+                    }
                     val attachedTo = nodesById[node.attachedToRef]
                     if (attachedTo == null) {
                         errors.add("boundary event ${node.id} attachedToRef '${node.attachedToRef}' does not match any node id")
