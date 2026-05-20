@@ -12,13 +12,18 @@ import { env, argv, exitCode } from 'node:process';
  * Usage: node test_wrapper.mjs <test_file1.js> <test_file2.js> ...
  */
 
-const testFiles = argv.slice(2);
+const allArgs = argv.slice(2);
+// Filter out .map files as Node.js test runner tries to execute them as tests
+const testFiles = allArgs.filter(arg => !arg.endsWith('.map'));
 const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
 
 if (testFiles.length === 0) {
     console.error('Error: No test files provided to test_wrapper.mjs');
+    console.error('Arguments received:', allArgs);
     process.exit(1);
 }
+
+console.log('Executing test files:', testFiles);
 
 // Start the test runner
 const stream = run({
