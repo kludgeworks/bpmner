@@ -15,26 +15,21 @@ npm_link_all_packages(name = "node_modules")
 
 exports_files(["toast-process.txt"])
 
-sq_project(
-    name = "backend_project",
-    project_key = "kludgeworks_bpmner_backend",
-    project_name = "bpmner Backend",
-    srcs = ["//src:analysis_srcs"],
+filegroup(
+    name = "git_info",
+    srcs = [".git"],
 )
 
 sonarqube(
     name = "sonar",
+    project_key = "kludgeworks_bpmner",
+    project_name = "bpmner Monorepo",
     modules = {
-        ":backend_project": "",
         "//linter:sq_project": "linter",
         "//web:sq_project": "web",
     },
-    project_key = "kludgeworks_bpmner",
-    project_name = "bpmner Monorepo",
-    sq_properties = {
-        "sonar.organization": "kludgeworks",
-        "sonar.host.url": "https://sonarcloud.io",
-    },
+    srcs = ["//src:analysis_srcs"],
+    scm_info = [":git_info"],
 )
 
 buildifier_test(

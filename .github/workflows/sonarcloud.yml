@@ -73,5 +73,8 @@ jobs:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           # Use the idiomatic Bazel sonarqube runner.
-          # This target aggregates all sq_project modules defined in the BUILD files.
-          bazel run //:sonar
+          # We pass the organization and host URL via the command line to ensure
+          # they are correctly propagated to SonarCloud.
+          bazel run //:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io
