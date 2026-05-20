@@ -26,7 +26,7 @@ jobs:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
       - name: Setup mise
-        uses: jdx/mise-action@5083123d9a0421256334f593845b736b4129759c # v2.1.11
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
         with:
           install: true
           cache: true
@@ -72,7 +72,7 @@ jobs:
           awk '/^SF:web\// {p=1} p {line=$0; if (line ~ /^SF:web\//) sub(/^SF:web\//, "SF:", line); print line} /^end_of_record/ {p=0}' bazel-out/_coverage/_coverage_report.dat > web_coverage.lcov
 
       - name: SonarCloud Scan (Backend)
-        uses: SonarSource/sonarcloud-github-action@cb2da3322a36b3b552f754763156942c759368d0 # v3.1.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -84,7 +84,7 @@ jobs:
             -Dsonar.coverage.jacoco.xmlReportPaths=jacoco.xml
 
       - name: SonarCloud Scan (Linter)
-        uses: SonarSource/sonarcloud-github-action@cb2da3322a36b3b552f754763156942c759368d0 # v3.1.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -96,7 +96,7 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=../linter_coverage.lcov
 
       - name: SonarCloud Scan (Web)
-        uses: SonarSource/sonarcloud-github-action@cb2da3322a36b3b552f754763156942c759368d0 # v3.1.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
