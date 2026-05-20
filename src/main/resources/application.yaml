@@ -36,7 +36,9 @@ bpmner:
   max-attempts: 5
   logging:
     dir: ${BPMNER_LOG_DIR:${LOG_DIR:${BUILD_WORKING_DIRECTORY:${user.dir}}/logs}}
-    dump-artifacts: true
+    # Default off. Override via env (`BPMNER_LOGGING_DUMP_ARTIFACTS=true`) or a dev/diagnostic
+    # profile when investigating a failing run — intermediate XML is verbose at production scale.
+    dump-artifacts: ${BPMNER_LOGGING_DUMP_ARTIFACTS:false}
   repair:
     abbreviations:
       ITBL: ineligible-to-board list

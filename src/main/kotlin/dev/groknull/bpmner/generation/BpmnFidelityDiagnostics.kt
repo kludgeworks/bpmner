@@ -16,21 +16,29 @@ import com.fasterxml.jackson.annotation.JsonClassDescription
  * checks compare contract → BPMN topology.
  */
 enum class BpmnFidelityCode {
+    /**
+     * A ContractDecision has no corresponding gateway node in the BPMN, or the matching
+     * node is not a gateway type. Under the unified-id convention, the contract decision
+     * id must equal the BPMN gateway node id.
+     */
+    DECISION_GATEWAY_MISSING,
+
     /** A `ContractBranch.nextRef` points at an id that does not exist in the generated BPMN. */
     BRANCH_NEXT_REF_UNRESOLVED,
 
     /**
-     * The generated BPMN has no gateway with outbound degree >= the contract decision's
-     * branch count. Either the gateway is missing, or branches are conflated into fewer
-     * outbound flows.
+     * The decision's gateway exists but has fewer outbound sequence flows than the
+     * decision has branches. The LLM has likely conflated branches into fewer outbound
+     * flows.
      */
     GATEWAY_BRANCH_COUNT_INSUFFICIENT,
 
     /**
-     * A contract branch has `nextRef` pointing to an earlier activity (a loop back-edge),
-     * but the generated topology contains no sequence flow encoding that back-edge.
+     * A branch's `nextRef` resolves to a real node, but no sequence flow connects the
+     * decision's gateway to that target. Catches both missing loop back-edges and
+     * missing forward-skip edges in a single check.
      */
-    LOOP_BACK_EDGE_MISSING,
+    BRANCH_FLOW_MISSING,
 }
 
 /**
