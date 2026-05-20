@@ -1,46 +1,52 @@
-import { run } from 'node:test';
-import { spec, lcov } from 'node:test/reporters';
-import { createWriteStream } from 'node:fs';
-import { env, argv, exitCode } from 'node:process';
+import { spawnSync } from 'node:child_process';
+import { env, argv, exit, execPath } from 'node:process';
 
 /**
- * Idiomatic wrapper for Node.js tests in Bazel.
+ * Wrapper for Node.js tests in Bazel.
  *
- * This script uses the programmatic node:test API to run tests and
- * pipes coverage data to the path requested by Bazel (COVERAGE_OUTPUT_FILE).
+ * This version uses spawnSync to run the built-in Node.js test runner
+ * while filtering out non-JS files (like source maps) that would cause
+ * SyntaxErrors.
  *
- * Usage: node test_wrapper.mjs <test_file1.js> <test_file2.js> ...
+ * Usage: node test_wrapper.mjs <file1> <file2> ...
  */
 
 const allArgs = argv.slice(2);
-// Filter out .map files as Node.js test runner tries to execute them as tests
-const testFiles = allArgs.filter(arg => !arg.endsWith('.map'));
-const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
+// Filter out .map files and other non-test arguments for the runner
+const testFiles = allArgs.filter(arg => arg.endsWith('.js') || arg.endsWith('.mjs') || arg.endsWith('.cjs'));
 
 if (testFiles.length === 0) {
     console.error('Error: No test files provided to test_wrapper.mjs');
     console.error('Arguments received:', allArgs);
-    process.exit(1);
+    exit(1);
 }
 
-console.log('Executing test files:', testFiles);
+const args = ['--test'];
 
-// Start the test runner
-const stream = run({
-    files: testFiles,
-    coverage: !!coverageOutputFile,
-});
+// Add reporters
+args.push('--test-reporter=spec');
 
-// 1. Pipe human-readable results to stdout for Bazel logs
-stream.compose(new spec()).pipe(process.stdout);
-
-// 2. Pipe LCOV data to the path Bazel expects
+// If Bazel is requesting coverage collection
+const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
 if (coverageOutputFile) {
-    console.log(`Coverage collection enabled. Writing to: ${coverageOutputFile}`);
-    stream.compose(new lcov()).pipe(createWriteStream(coverageOutputFile));
+    args.push('--experimental-test-coverage');
+    args.push('--test-reporter=lcov');
+    args.push(`--test-reporter-destination=${coverageOutputFile}`);
+    // Spec reporter destination must be explicit if using multiple reporters
+    args.push('--test-reporter-destination=stdout');
 }
 
-// 3. Ensure failures result in a non-zero exit code
-stream.on('test:fail', () => {
-    process.exitCode = 1;
+// Add the filtered test files
+args.push(...testFiles);
+
+console.log(`Running test runner: ${execPath} ${args.join(' ')}`);
+
+const result = spawnSync(execPath, args, {
+    stdio: 'inherit',
+    env: {
+        ...env,
+        BAZEL_TEST: '1',
+    }
 });
+
+exit(result.status ?? 1);
