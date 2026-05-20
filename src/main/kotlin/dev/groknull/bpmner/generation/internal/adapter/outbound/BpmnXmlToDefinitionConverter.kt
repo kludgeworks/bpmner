@@ -52,6 +52,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Element
 import java.io.ByteArrayInputStream
 import java.io.StringReader
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
 @SecondaryAdapter
@@ -59,6 +60,9 @@ import javax.xml.parsers.DocumentBuilderFactory
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     companion object {
         private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
+        private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
+        private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
     }
 
     override fun parse(xml: String): BpmnDefinition {
@@ -99,8 +103,16 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     private fun parseDocument(xml: String): Document =
         DocumentBuilderFactory
             .newInstance()
-            .also { it.isNamespaceAware = true }
-            .newDocumentBuilder()
+            .also {
+                it.isNamespaceAware = true
+                it.setFeature(DISALLOW_DOCTYPE_DECL, true)
+                it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
+                it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+                it.isXIncludeAware = false
+                it.isExpandEntityReferences = false
+            }.newDocumentBuilder()
             .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun rejectIfHasDiagramInterchange(model: BpmnModelInstance) {
@@ -238,7 +250,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                             code = it.getAttribute("errorCode"),
                             name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
                         )
-                    }.filter { it.id.isNotBlank() }
+                    }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
                     .toList(),
             escalations =
                 document
@@ -249,7 +261,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                             code = it.getAttribute("escalationCode"),
                             name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
                         )
-                    }.filter { it.id.isNotBlank() }
+                    }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
                     .toList(),
         )
     }
@@ -269,7 +281,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             childElements().firstOrNull { it.localName?.endsWith("EventDefinition") == true }
                 ?: return BpmnNoneEventDefinition
         return when (child.localName) {
-            "timerEventDefinition" -> child.timerEventDefinition()
+            "timerEventDefinition" -> child.timerEventDefinition(getAttribute("id"))
             "messageEventDefinition" -> BpmnMessageEventDefinition(child.getAttribute("messageRef"))
             "signalEventDefinition" -> BpmnSignalEventDefinition(child.getAttribute("signalRef"))
             "errorEventDefinition" -> BpmnErrorEventDefinition(child.getAttribute("errorRef"))
@@ -279,11 +291,14 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         }
     }
 
-    private fun Element.timerEventDefinition(): BpmnTimerEventDefinition {
+    private fun Element.timerEventDefinition(eventId: String): BpmnTimerEventDefinition {
         val timerElement =
             childElements().firstOrNull {
                 it.localName == "timeDate" || it.localName == "timeDuration" || it.localName == "timeCycle"
-            } ?: return BpmnTimerEventDefinition(BpmnTimerKind.DATE, "")
+            } ?: throw IllegalArgumentException(
+                "Malformed timerEventDefinition for event '${eventId.ifBlank { "<unknown>" }}': " +
+                    "expected timeDate, timeDuration, or timeCycle child",
+            )
         val kind =
             when (timerElement.localName) {
                 "timeDate" -> BpmnTimerKind.DATE

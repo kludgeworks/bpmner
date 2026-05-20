@@ -39,6 +39,7 @@ import org.w3c.dom.Element
 import java.io.ByteArrayOutputStream
 import java.io.StringReader
 import java.io.StringWriter
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import javax.xml.transform.OutputKeys
 import javax.xml.transform.TransformerFactory
@@ -54,6 +55,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
         private const val EXPORTER = "bpmner"
         private const val EXPORTER_VERSION = "0.0.1"
+        private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
+        private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
+        private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
         private val UNUSED_DI_NAMESPACES_REGEX = Regex("\\s+xmlns:(?:bpmndi|omgdi|di|dc)=\"[^\"]*\"")
     }
 
@@ -182,6 +186,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         val document = parseDocument(xml)
         val root = document.documentElement
         val process = root.getElementsByTagNameNS(BPMN_NS, "process").item(0) as Element
+        val eventElementsById = document.eventElementsById()
 
         definition.escalations.asReversed().forEach { escalation ->
             root.insertBefore(
@@ -225,7 +230,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> {
-                    val element = document.flowElement("startEvent", node.id)
+                    val element = eventElementsById.eventElement(node.id)
                     if (!node.isInterrupting) {
                         element.setAttribute("isInterrupting", node.isInterrupting.toString())
                     }
@@ -233,28 +238,22 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 }
 
                 is BpmnIntermediateCatchEvent -> {
-                    document
-                        .flowElement("intermediateCatchEvent", node.id)
-                        .appendEventDefinition(document, node.eventDefinition)
+                    eventElementsById.eventElement(node.id).appendEventDefinition(document, node.eventDefinition)
                 }
 
                 is BpmnIntermediateThrowEvent -> {
-                    document
-                        .flowElement("intermediateThrowEvent", node.id)
-                        .appendEventDefinition(document, node.eventDefinition)
+                    eventElementsById.eventElement(node.id).appendEventDefinition(document, node.eventDefinition)
                 }
 
                 is BpmnBoundaryEvent -> {
-                    val element = document.flowElement("boundaryEvent", node.id)
+                    val element = eventElementsById.eventElement(node.id)
                     element.setAttribute("attachedToRef", node.attachedToRef)
                     element.setAttribute("cancelActivity", node.cancelActivity.toString())
                     element.appendEventDefinition(document, node.eventDefinition)
                 }
 
                 is BpmnEndEvent -> {
-                    document
-                        .flowElement("endEvent", node.id)
-                        .appendEventDefinition(document, node.eventDefinition)
+                    eventElementsById.eventElement(node.id).appendEventDefinition(document, node.eventDefinition)
                 }
 
                 else -> {
@@ -269,15 +268,26 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     private fun parseDocument(xml: String): Document =
         DocumentBuilderFactory
             .newInstance()
-            .also { it.isNamespaceAware = true }
-            .newDocumentBuilder()
+            .also {
+                it.isNamespaceAware = true
+                it.setFeature(DISALLOW_DOCTYPE_DECL, true)
+                it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
+                it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+                it.isXIncludeAware = false
+                it.isExpandEntityReferences = false
+            }.newDocumentBuilder()
             .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun writeDocument(document: Document): String {
         val writer = StringWriter()
         TransformerFactory
             .newInstance()
-            .newTransformer()
+            .also {
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_STYLESHEET, "")
+            }.newTransformer()
             .also {
                 it.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no")
                 it.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
@@ -287,14 +297,14 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
     private fun Document.bpmnElement(localName: String): Element = createElementNS(BPMN_NS, "bpmn:$localName")
 
-    private fun Document.flowElement(
-        localName: String,
-        id: String,
-    ): Element =
-        getElementsByTagNameNS(BPMN_NS, localName)
-            .elements()
-            .firstOrNull { it.getAttribute("id") == id }
-            ?: error("Unable to locate <$localName id=\"$id\"> in generated BPMN XML")
+    private fun Document.eventElementsById(): Map<String, Element> =
+        listOf("startEvent", "intermediateCatchEvent", "intermediateThrowEvent", "boundaryEvent", "endEvent")
+            .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
+            .associateBy { it.getAttribute("id") }
+            .filterKeys { it.isNotBlank() }
+
+    private fun Map<String, Element>.eventElement(id: String): Element =
+        this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
 
     private fun org.w3c.dom.NodeList.elements(): Sequence<Element> =
         sequence {

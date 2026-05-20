@@ -9,8 +9,11 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerKind
@@ -182,6 +185,35 @@ class BpmnDefinitionValidatorTest {
         )
     }
 
+    @Test
+    fun `validator rejects none event definitions on intermediate events`() {
+        val catchDefinition =
+            intermediateDefinition(
+                BpmnIntermediateCatchEvent(
+                    id = "Catch_1",
+                    name = "Wait",
+                    eventDefinition = BpmnNoneEventDefinition,
+                ),
+            )
+        val throwDefinition =
+            intermediateDefinition(
+                BpmnIntermediateThrowEvent(
+                    id = "Throw_1",
+                    name = "Notify",
+                    eventDefinition = BpmnNoneEventDefinition,
+                ),
+            )
+
+        assertContains(
+            validator.validate(catchDefinition).joinToString("\n"),
+            "intermediate catch event Catch_1 must declare an event definition",
+        )
+        assertContains(
+            validator.validate(throwDefinition).joinToString("\n"),
+            "intermediate throw event Throw_1 must declare an event definition",
+        )
+    }
+
     private fun minimalDefinition(
         start: BpmnNode = BpmnStartEvent("StartEvent_1", "Request received"),
         task: BpmnNode = BpmnUserTask("Task_1", "Validate request"),
@@ -196,4 +228,21 @@ class BpmnDefinitionValidatorTest {
                 BpmnEdge("Flow_2", task.id, end.id),
             ),
     )
+
+    private fun intermediateDefinition(intermediate: BpmnNode) =
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Handle request",
+            nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    intermediate,
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", intermediate.id),
+                    BpmnEdge("Flow_2", intermediate.id, "EndEvent_1"),
+                ),
+        )
 }

@@ -138,6 +138,9 @@ internal class BpmnDefinitionValidator {
                 }
 
                 is BpmnIntermediateCatchEvent -> {
+                    if (node.eventDefinition is BpmnNoneEventDefinition) {
+                        errors.add("intermediate catch event ${node.id} must declare an event definition")
+                    }
                     validateEventDefinition(
                         node.id,
                         node.eventDefinition,
@@ -150,6 +153,9 @@ internal class BpmnDefinitionValidator {
                 }
 
                 is BpmnIntermediateThrowEvent -> {
+                    if (node.eventDefinition is BpmnNoneEventDefinition) {
+                        errors.add("intermediate throw event ${node.id} must declare an event definition")
+                    }
                     validateEventDefinition(
                         node.id,
                         node.eventDefinition,
