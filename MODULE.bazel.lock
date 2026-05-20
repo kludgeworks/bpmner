@@ -85,7 +85,10 @@
     "https://bcr.bazel.build/modules/bazel_skylib/1.7.1/MODULE.bazel": "3120d80c5861aa616222ec015332e5f8d3171e062e3e804a2a0253e1be26e59b",
     "https://bcr.bazel.build/modules/bazel_skylib/1.8.1/MODULE.bazel": "88ade7293becda963e0e3ea33e7d54d3425127e0a326e0d17da085a5f1f03ff6",
     "https://bcr.bazel.build/modules/bazel_skylib/1.8.2/MODULE.bazel": "69ad6927098316848b34a9142bcc975e018ba27f08c4ff403f50c1b6e646ca67",
-    "https://bcr.bazel.build/modules/bazel_skylib/1.8.2/source.json": "34a3c8bcf233b835eb74be9d628899bb32999d3e0eadef1947a0a562a2b16ffb",
+    "https://bcr.bazel.build/modules/bazel_skylib/1.9.0/MODULE.bazel": "72997b29dfd95c3fa0d0c48322d05590418edef451f8db8db5509c57875fb4b7",
+    "https://bcr.bazel.build/modules/bazel_skylib/1.9.0/source.json": "7ad77c1e8c1b84222d9b3f3cae016a76639435744c19330b0b37c0a3c9da7dc0",
+    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.5/MODULE.bazel": "534e5e6429e997136332ec89c007b66edb266447fbf6d2564cb3f8436a715181",
+    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.5/source.json": "263615f8cf9bdf43b5288a8a91a3eab3f196dc9ef6c797da0d91f4f274a45c9a",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.1/MODULE.bazel": "02a13b77321773b2042e70ee5e4c5e099c8ddee4cf2da9cd420442c36938d4bd",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.10/MODULE.bazel": "a426df551b40c3997c351d05f00f0d1f86b618ddb646012f1e9c72efce8ed939",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.10/source.json": "7f220d3edfeba5d1f61535fd8400338df74f8bdeb241ebe660534c6926a5a645",
@@ -646,6 +649,50 @@
             "aspect_tools_telemetry+",
             "bazel_skylib",
             "bazel_skylib+"
+          ]
+        ]
+      }
+    },
+    "@@bazel_sonarqube+//:extensions.bzl%non_module_dependencies": {
+      "general": {
+        "bzlTransitiveDigest": "2p/v/6Mj4jpQeJC/tGTcTqQLzJBvgHFUxKt0Su2egb8=",
+        "usagesDigest": "pVvSjrChfxug/etSiMKipZfd5mPTfuVV5e4Kbh0gME0=",
+        "recordedFileInputs": {},
+        "recordedDirentsInputs": {},
+        "envVariables": {},
+        "generatedRepoSpecs": {
+          "org_sonarsource_scanner_cli_sonar_scanner_cli": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "build_file": "@@bazel_sonarqube+//:BUILD.sonar_scanner",
+              "sha256": "2f10fe6ac36213958201a67383c712a587e3843e32ae1edf06f01062d6fd1407",
+              "strip_prefix": "sonar-scanner-5.0.2.4997",
+              "urls": [
+                "https://repo1.maven.org/maven2/org/sonarsource/scanner/cli/sonar-scanner-cli/5.0.2.4997/sonar-scanner-cli-5.0.2.4997.zip",
+                "https://jcenter.bintray.com/org/sonarsource/scanner/cli/sonar-scanner-cli/5.0.2.4997/sonar-scanner-cli-5.0.2.4997.zip"
+              ]
+            }
+          },
+          "bazel_skylib": {
+            "repoRuleId": "@@bazel_tools//tools/build_defs/repo:http.bzl%http_archive",
+            "attributes": {
+              "urls": [
+                "https://mirror.bazel.build/github.com/bazelbuild/bazel-skylib/releases/download/1.8.1/bazel-skylib-1.8.1.tar.gz",
+                "https://github.com/bazelbuild/bazel-skylib/releases/download/1.8.1/bazel-skylib-1.8.1.tar.gz"
+              ],
+              "sha256": "51b5105a760b353773f904d2bbc5e664d0987fbaf22265164de65d43e910d8ac"
+            }
+          },
+          "bazel_version": {
+            "repoRuleId": "@@bazel_sonarqube+//:repositories.bzl%bazel_version_repository",
+            "attributes": {}
+          }
+        },
+        "recordedRepoMappingEntries": [
+          [
+            "bazel_sonarqube+",
+            "bazel_tools",
+            "bazel_tools"
           ]
         ]
       }
