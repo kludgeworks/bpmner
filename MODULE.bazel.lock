@@ -87,8 +87,8 @@
     "https://bcr.bazel.build/modules/bazel_skylib/1.8.2/MODULE.bazel": "69ad6927098316848b34a9142bcc975e018ba27f08c4ff403f50c1b6e646ca67",
     "https://bcr.bazel.build/modules/bazel_skylib/1.9.0/MODULE.bazel": "72997b29dfd95c3fa0d0c48322d05590418edef451f8db8db5509c57875fb4b7",
     "https://bcr.bazel.build/modules/bazel_skylib/1.9.0/source.json": "7ad77c1e8c1b84222d9b3f3cae016a76639435744c19330b0b37c0a3c9da7dc0",
-    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.5/MODULE.bazel": "534e5e6429e997136332ec89c007b66edb266447fbf6d2564cb3f8436a715181",
-    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.5/source.json": "263615f8cf9bdf43b5288a8a91a3eab3f196dc9ef6c797da0d91f4f274a45c9a",
+    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.6/MODULE.bazel": "76828c10e1489a02fcdea4f96d94e2db38aab29914ff60d879fcb05a525e542a",
+    "https://bcr.bazel.build/modules/bazel_sonarqube/1.0.6/source.json": "ce3bbf56681f92149f5ff24555f9b04f6e6565caa720e58270e5829a95f9c5f6",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.1/MODULE.bazel": "02a13b77321773b2042e70ee5e4c5e099c8ddee4cf2da9cd420442c36938d4bd",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.10/MODULE.bazel": "a426df551b40c3997c351d05f00f0d1f86b618ddb646012f1e9c72efce8ed939",
     "https://bcr.bazel.build/modules/bazel_worker_api/0.0.10/source.json": "7f220d3edfeba5d1f61535fd8400338df74f8bdeb241ebe660534c6926a5a645",
@@ -656,7 +656,7 @@
     "@@bazel_sonarqube+//:extensions.bzl%non_module_dependencies": {
       "general": {
         "bzlTransitiveDigest": "2p/v/6Mj4jpQeJC/tGTcTqQLzJBvgHFUxKt0Su2egb8=",
-        "usagesDigest": "pVvSjrChfxug/etSiMKipZfd5mPTfuVV5e4Kbh0gME0=",
+        "usagesDigest": "SXMmQPT5pbokOlchea3Ike25k+d6CChz5fKoUZrGJI0=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
