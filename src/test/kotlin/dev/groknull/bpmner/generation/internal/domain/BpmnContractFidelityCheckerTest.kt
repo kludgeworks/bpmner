@@ -147,6 +147,59 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
+    fun `activity realized as wrong task subtype flagged as ACTIVITY_TASK_KIND_MISMATCH`() {
+        // Contract declares a SEND activity but the BPMN realises it as a plain UserTask —
+        // the discriminator has been flattened away.
+        val sources = listOf("ev1")
+        val contract =
+            ProcessContract(
+                id = "c-send",
+                processName = "Notification process",
+                summary = "send a notification then end",
+                trigger = "start",
+                triggerSourceIds = sources,
+                activities =
+                    listOf(
+                        ContractActivity.Send(
+                            id = "act-notify",
+                            name = "Send decline notification",
+                            messageName = "decline notification",
+                            sourceIds = sources,
+                        ),
+                    ),
+                endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+            )
+        val definition =
+            BpmnDefinition(
+                processId = "P",
+                processName = "Notification process",
+                nodes =
+                    listOf(
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnUserTask(id = "act-notify", name = "Send decline notification"),
+                        BpmnEndEvent(id = "end-done", name = "Done"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-notify"),
+                        BpmnEdge(id = "F2", sourceRef = "act-notify", targetRef = "end-done"),
+                    ),
+            )
+
+        val report = checker.check(contract, definition)
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH &&
+                    it.message.contains("kind=SEND") &&
+                    it.message.contains("USER_TASK")
+            },
+            "expected ACTIVITY_TASK_KIND_MISMATCH citing SEND vs USER_TASK; got: ${report.issues}",
+        )
+    }
+
+    @Test
     fun `decision realized as a non-gateway node type flagged as DECISION_GATEWAY_MISSING`() {
         val contract = repairLoopContract()
         val original = repairLoopDefinitionWithBackEdge()
@@ -187,9 +240,9 @@ class BpmnContractFidelityCheckerTest {
                 triggerSourceIds = sources,
                 activities =
                     listOf(
-                        ContractActivity(id = "act-pre-check", name = "Pre-check", sourceIds = sources),
-                        ContractActivity(id = "act-skip-target", name = "Process", sourceIds = sources),
-                        ContractActivity(id = "act-detailed-path", name = "Detailed path", sourceIds = sources),
+                        ContractActivity.User(id = "act-pre-check", name = "Pre-check", sourceIds = sources),
+                        ContractActivity.User(id = "act-skip-target", name = "Process", sourceIds = sources),
+                        ContractActivity.User(id = "act-detailed-path", name = "Detailed path", sourceIds = sources),
                     ),
                 decisions =
                     listOf(
@@ -259,7 +312,7 @@ class BpmnContractFidelityCheckerTest {
                 summary = "multi-decision contract",
                 trigger = "start",
                 triggerSourceIds = sources,
-                activities = listOf(ContractActivity(id = "act-a", name = "A", sourceIds = sources)),
+                activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = sources)),
                 decisions =
                     listOf(
                         ContractDecision(
@@ -399,8 +452,8 @@ class BpmnContractFidelityCheckerTest {
                 triggerSourceIds = listOf("ev1"),
                 activities =
                     listOf(
-                        ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1")),
-                        ContractActivity(id = "act-b", name = "B", sourceIds = listOf("ev1")),
+                        ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1")),
+                        ContractActivity.User(id = "act-b", name = "B", sourceIds = listOf("ev1")),
                     ),
                 endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
             )
@@ -435,9 +488,9 @@ private fun repairLoopContract(): ProcessContract {
         triggerSourceIds = sources,
         activities =
             listOf(
-                ContractActivity(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
-                ContractActivity(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
-                ContractActivity(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
+                ContractActivity.User(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
+                ContractActivity.User(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
+                ContractActivity.User(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
             ),
         decisions =
             listOf(
@@ -507,9 +560,9 @@ private fun parallelForkContract(): ProcessContract {
         triggerSourceIds = sources,
         activities =
             listOf(
-                ContractActivity(id = "act-prep-it", name = "IT prep", sourceIds = sources),
-                ContractActivity(id = "act-prep-facilities", name = "Facilities prep", sourceIds = sources),
-                ContractActivity(id = "act-prep-manager", name = "Manager prep", sourceIds = sources),
+                ContractActivity.User(id = "act-prep-it", name = "IT prep", sourceIds = sources),
+                ContractActivity.User(id = "act-prep-facilities", name = "Facilities prep", sourceIds = sources),
+                ContractActivity.User(id = "act-prep-manager", name = "Manager prep", sourceIds = sources),
             ),
         decisions =
             listOf(
@@ -571,7 +624,7 @@ private fun unresolvedRefContract() =
         summary = "test",
         trigger = "start",
         triggerSourceIds = listOf("ev1"),
-        activities = listOf(ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
+        activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
         decisions =
             listOf(
                 ContractDecision(
@@ -622,8 +675,8 @@ private fun skipForwardContract(): ProcessContract {
         triggerSourceIds = sources,
         activities =
             listOf(
-                ContractActivity(id = "act-fast-target", name = "Fast", sourceIds = sources),
-                ContractActivity(id = "act-converge-target", name = "Converge", sourceIds = sources),
+                ContractActivity.User(id = "act-fast-target", name = "Fast", sourceIds = sources),
+                ContractActivity.User(id = "act-converge-target", name = "Converge", sourceIds = sources),
             ),
         decisions =
             listOf(

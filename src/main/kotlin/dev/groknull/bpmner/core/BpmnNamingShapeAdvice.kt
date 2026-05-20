@@ -41,12 +41,18 @@ internal object BpmnNamingShapeAdvice {
      * Returns the [Advice] for this [node]'s kind, or null when the kind has no naming-shape
      * opinion today (e.g. converging gateways, which are unnamed by policy).
      */
+    @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
     fun adviceFor(node: BpmnNode): Advice? =
         when (node) {
             is BpmnStartEvent -> START_EVENT_ADVICE
             is BpmnEndEvent -> END_EVENT_ADVICE
             is BpmnUserTask -> USER_TASK_ADVICE
             is BpmnServiceTask -> SERVICE_TASK_ADVICE
+            is BpmnScriptTask -> SCRIPT_TASK_ADVICE
+            is BpmnBusinessRuleTask -> BUSINESS_RULE_TASK_ADVICE
+            is BpmnSendTask -> SEND_TASK_ADVICE
+            is BpmnReceiveTask -> RECEIVE_TASK_ADVICE
+            is BpmnManualTask -> MANUAL_TASK_ADVICE
             is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
             is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
             is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
@@ -67,6 +73,11 @@ internal object BpmnNamingShapeAdvice {
             END_EVENT_ADVICE,
             USER_TASK_ADVICE,
             SERVICE_TASK_ADVICE,
+            SCRIPT_TASK_ADVICE,
+            BUSINESS_RULE_TASK_ADVICE,
+            SEND_TASK_ADVICE,
+            RECEIVE_TASK_ADVICE,
+            MANUAL_TASK_ADVICE,
             EXCLUSIVE_GATEWAY_ADVICE,
             PARALLEL_GATEWAY_ADVICE,
         )
@@ -176,6 +187,67 @@ internal object BpmnNamingShapeAdvice {
                     " separately and is not duplicated here.",
             examples = listOf("Timer fired", "Error caught", "Escalation received"),
             antiExamples = listOf("Cancel approval", "Handle error", "Catch escalation"),
+        )
+
+    private val SCRIPT_TASK_ADVICE =
+        Advice(
+            kind = "SCRIPT_TASK",
+            shape =
+                "Imperative verb-object naming the computation or transformation the engine" +
+                    " evaluates inline. Reads like a service task but with no external service.",
+            examples = listOf("Normalise address", "Compute loan-to-value ratio", "Convert currencies"),
+            antiExamples = listOf("Script", "Run script", "Data normalisation"),
+        )
+
+    private val BUSINESS_RULE_TASK_ADVICE =
+        Advice(
+            kind = "BUSINESS_RULE_TASK",
+            shape =
+                "Imperative verb-object describing the decision being evaluated, typically" +
+                    " starting with `Evaluate`, `Determine`, or `Apply` to signal the rule-set" +
+                    " call. The decision id lives on `decisionRef`.",
+            examples = listOf("Evaluate credit policy", "Determine premium tier", "Apply pricing rules"),
+            antiExamples = listOf("Decision", "Credit policy", "Rules engine"),
+        )
+
+    private val SEND_TASK_ADVICE =
+        Advice(
+            kind = "SEND_TASK",
+            shape =
+                "Imperative messaging verb-object describing the outbound message. Reads as" +
+                    " a fire-and-forget send: no acknowledgement is awaited.",
+            examples = listOf("Send decline notification", "Notify customer of approval", "Publish settlement"),
+            antiExamples = listOf("Notification", "Send", "Message customer"),
+        )
+
+    private val RECEIVE_TASK_ADVICE =
+        Advice(
+            kind = "RECEIVE_TASK",
+            shape =
+                "Past-participle wait shape — names what arrived, not the act of waiting." +
+                    " Shares the past-tense event convention because the task IS a wait-point.",
+            examples =
+                listOf(
+                    "Customer acknowledgement received",
+                    "Payment confirmation received",
+                    "Counter-signature received",
+                ),
+            antiExamples =
+                listOf(
+                    "Wait for acknowledgement",
+                    "Receive payment confirmation",
+                    "Await counter-signature",
+                ),
+        )
+
+    private val MANUAL_TASK_ADVICE =
+        Advice(
+            kind = "MANUAL_TASK",
+            shape =
+                "Imperative verb-object naming the off-system work the human performs. Same" +
+                    " shape as a user task; the distinction is that no system UI mediates the work.",
+            examples = listOf("Inspect property condition", "File paper documents", "Walk the trading floor"),
+            antiExamples = listOf("Inspection", "Manual review", "Off-system work"),
         )
 
     // Synthetic advice values for rules whose semantics span multiple node kinds. The shape

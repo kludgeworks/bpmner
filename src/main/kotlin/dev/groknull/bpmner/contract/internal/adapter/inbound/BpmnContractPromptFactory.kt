@@ -56,6 +56,50 @@ internal class BpmnContractPromptFactory(
             )
             appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
             appendLine()
+            appendLine("Activity kind (sealed type with a `kind` discriminator):")
+            appendLine(
+                "- SERVICE (default) — external/system automation: a backend service call, a job run by" +
+                    " the system. Example: `{kind: \"SERVICE\", id: \"act-charge-card\", name: \"Charge card\"}`.",
+            )
+            appendLine(
+                "- USER — human work performed through a system UI (a form, a queue, a review screen)." +
+                    " Example: `{kind: \"USER\", id: \"act-approve\", name: \"Approve loan\"}`.",
+            )
+            appendLine(
+                "- SCRIPT — engine-evaluated computation or transformation, no external service call." +
+                    " Recognise from phrases like \"the system computes\", \"normalises\", \"transforms\"," +
+                    " \"calculates\", \"runs a script\". Example:" +
+                    " `{kind: \"SCRIPT\", id: \"act-normalise\", name: \"Normalise address\"}`.",
+            )
+            appendLine(
+                "- BUSINESS_RULE — a call to a decision model / rule set / decision table. Recognise" +
+                    " from phrases like \"evaluates the rule set\", \"applies the credit policy\"," +
+                    " \"decision table\", \"DMN decision\", \"rules engine\". Carries `decisionName`" +
+                    " (human-readable name of the rule set the LLM identified). Example:" +
+                    " `{kind: \"BUSINESS_RULE\", id: \"act-credit\", name: \"Evaluate credit policy\"," +
+                    " decisionName: \"credit policy\"}`.",
+            )
+            appendLine(
+                "- SEND — fire-and-forget outbound message. The workflow does NOT wait for an" +
+                    " acknowledgement. Recognise from phrases like \"sends a notification\", \"notifies\"," +
+                    " \"publishes\", \"emits\". Carries `messageName` (human-readable name of the message)." +
+                    " Example: `{kind: \"SEND\", id: \"act-decline\", name: \"Send decline notification\"," +
+                    " messageName: \"decline notification\"}`.",
+            )
+            appendLine(
+                "- RECEIVE — wait for an inbound message; the flow BLOCKS until it arrives. Recognise" +
+                    " from phrases like \"waits for X message\", \"blocks until X is received\", \"the" +
+                    " customer must confirm\". Name with past-participle (\"X received\"). Carries" +
+                    " `messageName`. Example: `{kind: \"RECEIVE\", id: \"act-await-ack\"," +
+                    " name: \"Customer acknowledgement received\", messageName: \"customer acknowledgement\"}`.",
+            )
+            appendLine(
+                "- MANUAL — human work performed WITHOUT system support (paper, in-person, off-system)." +
+                    " Recognise from phrases like \"manually visits\", \"works with paper notes\"," +
+                    " \"off-system\". Example: `{kind: \"MANUAL\", id: \"act-inspect\", name: \"Inspect" +
+                    " property condition\"}`.",
+            )
+            appendLine()
             appendLine("Branch kind (sealed type with a `kind` discriminator):")
             appendLine(
                 "- CONDITIONAL — the default kind for branches of an EXCLUSIVE decision. Carries a" +

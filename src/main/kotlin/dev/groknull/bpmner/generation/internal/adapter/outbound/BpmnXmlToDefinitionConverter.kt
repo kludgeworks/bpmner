@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -17,11 +18,15 @@ import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnScriptTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
@@ -34,13 +39,18 @@ import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent
 import org.camunda.bpm.model.bpmn.instance.IntermediateThrowEvent
+import org.camunda.bpm.model.bpmn.instance.ManualTask
 import org.camunda.bpm.model.bpmn.instance.ParallelGateway
 import org.camunda.bpm.model.bpmn.instance.Process
+import org.camunda.bpm.model.bpmn.instance.ReceiveTask
+import org.camunda.bpm.model.bpmn.instance.ScriptTask
+import org.camunda.bpm.model.bpmn.instance.SendTask
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
@@ -60,6 +70,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     companion object {
         private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        private const val BPMNER_EXT_NS = "https://groknull.dev/bpmner/ext"
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
@@ -75,7 +86,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 ?: error("BPMN XML contains no <process> element")
 
         val eventMetadata = eventMetadataFrom(document)
-        val nodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata) }
+        val taskMetadata = taskMetadataFrom(document)
+        val nodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
 
         val sequences =
             model.getModelElementsByType(SequenceFlow::class.java).map { flow ->
@@ -125,8 +137,11 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         }
     }
 
-    @Suppress("CyclomaticComplexMethod")
-    private fun FlowNode.toBpmnNode(eventMetadata: EventMetadata): BpmnNode {
+    @Suppress("CyclomaticComplexMethod", "LongMethod")
+    private fun FlowNode.toBpmnNode(
+        eventMetadata: EventMetadata,
+        taskMetadata: TaskMetadata,
+    ): BpmnNode {
         val normalisedName = name?.takeIf { it.isNotBlank() }
         return when (this) {
             is StartEvent -> {
@@ -144,6 +159,38 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             is ServiceTask -> {
                 BpmnServiceTask(id = id, name = normalisedName)
+            }
+
+            is ScriptTask -> {
+                BpmnScriptTask(id = id, name = normalisedName)
+            }
+
+            is BusinessRuleTask -> {
+                BpmnBusinessRuleTask(
+                    id = id,
+                    name = normalisedName,
+                    decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
+                )
+            }
+
+            is SendTask -> {
+                BpmnSendTask(
+                    id = id,
+                    name = normalisedName,
+                    messageRef = taskMetadata.messageRefs[id].orEmpty(),
+                )
+            }
+
+            is ReceiveTask -> {
+                BpmnReceiveTask(
+                    id = id,
+                    name = normalisedName,
+                    messageRef = taskMetadata.messageRefs[id].orEmpty(),
+                )
+            }
+
+            is ManualTask -> {
+                BpmnManualTask(id = id, name = normalisedName)
             }
 
             is ExclusiveGateway -> {
@@ -192,6 +239,27 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 error("Unsupported BPMN flow node type for id='$id': ${this::class.simpleName}")
             }
         }
+    }
+
+    private data class TaskMetadata(
+        // `messageRef` on send / receive tasks — BPMN spec attribute on the task element.
+        val messageRefs: Map<String, String>,
+        // `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
+        // spec defines no decisionRef on tBusinessRuleTask. See [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS].
+        val decisionRefs: Map<String, String>,
+    )
+
+    private fun taskMetadataFrom(document: Document): TaskMetadata {
+        val sendReceive =
+            (document.bpmnElements("sendTask").toList() + document.bpmnElements("receiveTask").toList())
+                .associate { it.getAttribute("id") to it.getAttribute("messageRef") }
+                .filter { (id, ref) -> id.isNotBlank() && ref.isNotBlank() }
+        val businessRule =
+            document
+                .bpmnElements("businessRuleTask")
+                .associate { it.getAttribute("id") to it.getAttributeNS(BPMNER_EXT_NS, "decisionRef") }
+                .filter { (id, ref) -> id.isNotBlank() && ref.isNotBlank() }
+        return TaskMetadata(messageRefs = sendReceive, decisionRefs = businessRule)
     }
 
     private data class EventMetadata(

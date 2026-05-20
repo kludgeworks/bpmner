@@ -33,7 +33,8 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine("## Activities")
                 contract.activities.forEach { activity ->
                     val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
-                    appendLine("- ${activity.id}: ${activity.name}$actor")
+                    val kindSuffix = activitySuffix(activity)
+                    appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
                 }
             }
 
@@ -82,5 +83,20 @@ internal class ProcessContractMarkdownRenderer {
                     appendLine("- ${assumption.id}: ${assumption.text}$traceSuffix")
                 }
             }
+        }
+
+    // Activity-kind suffix for the markdown line. Service is the default kind so we omit
+    // its label to keep the rendering quiet; Send / Receive / BusinessRule carry their
+    // payload reference to keep the rendered contract self-contained for the BPMN-generation
+    // LLM (otherwise it would have to walk back to the source prose for the messageName).
+    private fun activitySuffix(activity: ContractActivity): String =
+        when (activity) {
+            is ContractActivity.Service -> ""
+            is ContractActivity.User -> " [USER]"
+            is ContractActivity.Script -> " [SCRIPT]"
+            is ContractActivity.BusinessRule -> " [BUSINESS_RULE decisionName=\"${activity.decisionName}\"]"
+            is ContractActivity.Send -> " [SEND messageName=\"${activity.messageName}\"]"
+            is ContractActivity.Receive -> " [RECEIVE messageName=\"${activity.messageName}\"]"
+            is ContractActivity.Manual -> " [MANUAL]"
         }
 }

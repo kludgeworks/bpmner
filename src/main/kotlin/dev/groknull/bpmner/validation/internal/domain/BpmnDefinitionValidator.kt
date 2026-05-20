@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
@@ -17,12 +18,13 @@ import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
-import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.isTask
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
@@ -37,6 +39,7 @@ internal class BpmnDefinitionValidator {
         validateEdges(definition, errors)
         validateRequiredEvents(definition, errors)
         validateEventDefinitions(definition, errors)
+        validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
 
         return errors
@@ -182,7 +185,7 @@ internal class BpmnDefinitionValidator {
                                 "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
                                     "does not match any node id",
                             )
-                        } else if (attachedTo !is BpmnUserTask && attachedTo !is BpmnServiceTask) {
+                        } else if (!attachedTo.isTask()) {
                             errors.add(
                                 "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
                                     "must reference an attachable activity",
@@ -288,6 +291,58 @@ internal class BpmnDefinitionValidator {
             is BpmnTerminateEventDefinition -> {
                 Unit
             }
+        }
+    }
+
+    private fun validateTaskPayloads(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val messageIds = definition.messages.map { it.id }.toSet()
+        definition.nodes.forEach { node ->
+            when (node) {
+                is BpmnSendTask -> {
+                    validateMessageRef(node.id, "sendTask", node.messageRef, messageIds, errors)
+                }
+
+                is BpmnReceiveTask -> {
+                    validateMessageRef(node.id, "receiveTask", node.messageRef, messageIds, errors)
+                }
+
+                is BpmnBusinessRuleTask -> {
+                    if (node.decisionRef.isBlank()) {
+                        errors.add(
+                            "businessRuleTask ${node.id} is missing the required decisionRef attribute",
+                        )
+                    }
+                    // No decisionRef catalogue exists today (cf. issue #196 cross-cutting), so we
+                    // only require non-blank. When a typed decision catalogue lands, add a
+                    // catalogue-resolution check here matching the messageRef pattern.
+                }
+
+                else -> {
+                    Unit
+                }
+            }
+        }
+    }
+
+    private fun validateMessageRef(
+        nodeId: String,
+        elementName: String,
+        messageRef: String,
+        messageIds: Set<String>,
+        errors: MutableList<String>,
+    ) {
+        if (messageRef.isBlank()) {
+            errors.add(
+                "$elementName $nodeId is missing the required messageRef attribute",
+            )
+        } else if (messageRef !in messageIds) {
+            errors.add(
+                "$elementName $nodeId messageRef '$messageRef' " +
+                    "does not match any message catalog id",
+            )
         }
     }
 

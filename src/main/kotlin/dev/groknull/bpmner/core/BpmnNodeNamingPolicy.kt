@@ -14,8 +14,6 @@ object BpmnNodeNamingPolicy {
     ): Boolean =
         when (node) {
             is BpmnStartEvent,
-            is BpmnUserTask,
-            is BpmnServiceTask,
             is BpmnIntermediateCatchEvent,
             is BpmnIntermediateThrowEvent,
             is BpmnBoundaryEvent,
@@ -27,6 +25,18 @@ object BpmnNodeNamingPolicy {
             // Parallel gateways have no question to ask: fork is unconditional,
             // join is a barrier. Labels would be noise; keep them optional.
             is BpmnParallelGateway -> false
+
+            // Every task subtype requires a name. Delegating to isTask() means each new
+            // task kind added via the vocabulary epic (#196) automatically participates
+            // without forcing this `when` to enumerate them individually.
+            is BpmnUserTask,
+            is BpmnServiceTask,
+            is BpmnScriptTask,
+            is BpmnBusinessRuleTask,
+            is BpmnSendTask,
+            is BpmnReceiveTask,
+            is BpmnManualTask,
+            -> true
         }
 
     fun missingNameMessage(node: BpmnNode): String {

@@ -5,16 +5,21 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnScriptTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
@@ -34,6 +39,63 @@ import kotlin.test.assertTrue
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
+
+    @Test
+    @Suppress("LongMethod") // fixture builds + round-trip assertions stay cohesive
+    fun `new task subtypes round-trip with payload fields preserved`() {
+        // Single fixture exercises all 5 new task kinds + their payload fields end-to-end.
+        val original =
+            BpmnDefinition(
+                processId = "Process_mortgage_rt",
+                processName = "Mortgage processing",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Application submitted"),
+                        BpmnScriptTask("act-normalise", "Normalise address"),
+                        BpmnBusinessRuleTask("act-credit", "Evaluate credit policy", decisionRef = "credit-policy"),
+                        BpmnSendTask("act-decline", "Send decline notification", messageRef = "Message_Decline"),
+                        BpmnReceiveTask(
+                            "act-await-ack",
+                            "Customer acknowledgement received",
+                            messageRef = "Message_Ack",
+                        ),
+                        BpmnManualTask("act-inspect", "Inspect property"),
+                        BpmnEndEvent("EndEvent_1", "Application completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("F1", "StartEvent_1", "act-normalise"),
+                        BpmnEdge("F2", "act-normalise", "act-credit"),
+                        BpmnEdge("F3", "act-credit", "act-decline"),
+                        BpmnEdge("F4", "act-decline", "act-await-ack"),
+                        BpmnEdge("F5", "act-await-ack", "act-inspect"),
+                        BpmnEdge("F6", "act-inspect", "EndEvent_1"),
+                    ),
+                messages =
+                    listOf(
+                        BpmnMessageRef("Message_Decline", "Decline notification"),
+                        BpmnMessageRef("Message_Ack", "Customer acknowledgement"),
+                    ),
+            )
+
+        val xml = forward.toXml(original)
+        val parsed = reverse.parse(xml)
+
+        val script = parsed.nodes.single { it.id == "act-normalise" }
+        assertIs<BpmnScriptTask>(script)
+        val rule = parsed.nodes.single { it.id == "act-credit" }
+        assertIs<BpmnBusinessRuleTask>(rule)
+        assertEquals("credit-policy", rule.decisionRef)
+        val send = parsed.nodes.single { it.id == "act-decline" }
+        assertIs<BpmnSendTask>(send)
+        assertEquals("Message_Decline", send.messageRef)
+        val receive = parsed.nodes.single { it.id == "act-await-ack" }
+        assertIs<BpmnReceiveTask>(receive)
+        assertEquals("Message_Ack", receive.messageRef)
+        val manual = parsed.nodes.single { it.id == "act-inspect" }
+        assertIs<BpmnManualTask>(manual)
+        assertEquals(2, parsed.messages.size)
+    }
 
     @Test
     fun `parallelGateway xml round-trips through both directions`() {

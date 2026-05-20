@@ -45,6 +45,15 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
             false
         }
 
+        // All task subtypes (#193) are opaque: each carries the business semantic of the work
+        // being performed. Collapsing them through the fidelity walk would erase a contract-
+        // realising step entirely.
+        is BpmnScriptTask, is BpmnBusinessRuleTask, is BpmnSendTask,
+        is BpmnReceiveTask, is BpmnManualTask,
+        -> {
+            false
+        }
+
         // Typed event-position nodes (PR #199) all carry an event definition that gives them
         // independent semantic content (a timer trigger, an inbound message, a thrown signal,
         // a boundary recovery path). Treating any of them as transparent would let the fidelity

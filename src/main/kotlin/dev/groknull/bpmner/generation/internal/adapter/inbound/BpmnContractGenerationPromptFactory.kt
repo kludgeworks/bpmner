@@ -54,13 +54,37 @@ internal class BpmnContractGenerationPromptFactory(
             )
             appendLine(
                 "- The BPMN element kind goes in the `type` field (USER_TASK / SERVICE_TASK /" +
-                    " EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode element" +
-                    " type as a `Task_` / `Gateway_` / `EndEvent_` prefix in the id.",
+                    " SCRIPT_TASK / BUSINESS_RULE_TASK / SEND_TASK / RECEIVE_TASK / MANUAL_TASK /" +
+                    " EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode" +
+                    " element type as a `Task_` / `Gateway_` / `EndEvent_` prefix in the id.",
             )
             appendLine(
                 "- Synthesized routing nodes (the process start event, converging join gateways, etc.)" +
                     " have no contract id. Use stable unique ids of your choosing (e.g. `StartEvent_1`," +
                     " `Gateway_join_1`).",
+            )
+            appendLine()
+            appendLine("Activity-kind → BPMN task-type mapping (each ContractActivity carries a `kind` discriminator):")
+            appendLine("- ContractActivity.Service       → BpmnServiceTask        (type=SERVICE_TASK)")
+            appendLine("- ContractActivity.User          → BpmnUserTask           (type=USER_TASK)")
+            appendLine("- ContractActivity.Script        → BpmnScriptTask         (type=SCRIPT_TASK)")
+            appendLine(
+                "- ContractActivity.BusinessRule  → BpmnBusinessRuleTask   (type=BUSINESS_RULE_TASK)" +
+                    " — copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.",
+            )
+            appendLine(
+                "- ContractActivity.Send          → BpmnSendTask           (type=SEND_TASK) — declare" +
+                    " one BpmnMessageRef in `definition.messages` whose `name` matches the contract's" +
+                    " `messageName`; set `messageRef` on the task to that catalogue entry's id.",
+            )
+            appendLine(
+                "- ContractActivity.Receive       → BpmnReceiveTask        (type=RECEIVE_TASK) — same" +
+                    " catalogue convention as SendTask.",
+            )
+            appendLine("- ContractActivity.Manual        → BpmnManualTask         (type=MANUAL_TASK)")
+            appendLine(
+                "- Catalogue convention: one BpmnMessageRef per distinct messageName the contract" +
+                    " mentions. Pick stable ids like `Message_DeclineNotification` from the messageName.",
             )
             appendLine()
             appendLine("Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discriminator):")

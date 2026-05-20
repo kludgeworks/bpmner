@@ -148,26 +148,231 @@ data class ProcessContract(
     )
 }
 
+/**
+ * Activity required by the extracted process contract.
+ *
+ * Mirrors the sealed-subtype pattern used by [ContractTrigger] and [ContractBranch]:
+ * the `kind` discriminator in the LLM-facing JSON dispatches to one of seven subtypes,
+ * each carrying exactly the fields its task kind needs. Kind / payload coupling is
+ * enforced by the type system — `Send`/`Receive` carry `messageName`, `BusinessRule`
+ * carries `decisionName`, others carry nothing kind-specific.
+ *
+ * Subtypes map 1:1 to BPMN task kinds in `dev.groknull.bpmner.core`:
+ *
+ *  - [Service] — external/system automation → `BpmnServiceTask`
+ *  - [User] — human work through a system UI → `BpmnUserTask`
+ *  - [Script] — engine-evaluated computation, no external service → `BpmnScriptTask`
+ *  - [BusinessRule] — rule-set / decision-table evaluation → `BpmnBusinessRuleTask`
+ *  - [Send] — fire-and-forget outbound message → `BpmnSendTask`
+ *  - [Receive] — wait for an inbound message → `BpmnReceiveTask`
+ *  - [Manual] — human work without system support → `BpmnManualTask`
+ *
+ * The companion object's `invoke` keeps the old flat-constructor call sites working
+ * (`ContractActivity("id", "name")`) by defaulting to [Service] — the most common kind.
+ */
 @JsonClassDescription("Activity required by the extracted process contract")
-data class ContractActivity(
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Stable activity id")
-    val id: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Activity name from the workflow")
-    val name: String,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Optional actor id responsible for the activity")
-    val actorId: String? = null,
-    @field:Size(max = 10)
-    @get:JsonPropertyDescription(
-        "Source ids grounding this activity in evidence. Each is an assessment evidence id, " +
-            "a clarification questionId, or a literal input-text marker.",
-    )
-    val sourceIds: List<String> = emptyList(),
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractActivity.Service::class, name = "SERVICE"),
+    JsonSubTypes.Type(value = ContractActivity.User::class, name = "USER"),
+    JsonSubTypes.Type(value = ContractActivity.Script::class, name = "SCRIPT"),
+    JsonSubTypes.Type(value = ContractActivity.BusinessRule::class, name = "BUSINESS_RULE"),
+    JsonSubTypes.Type(value = ContractActivity.Send::class, name = "SEND"),
+    JsonSubTypes.Type(value = ContractActivity.Receive::class, name = "RECEIVE"),
+    JsonSubTypes.Type(value = ContractActivity.Manual::class, name = "MANUAL"),
 )
+sealed interface ContractActivity {
+    val id: String
+    val name: String
+    val actorId: String?
+    val sourceIds: List<String>
+
+    @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
+    data class Service(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Stable activity id")
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Activity name from the workflow")
+        override val name: String,
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Optional actor id responsible for the activity")
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
+    data class User(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Stable activity id")
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Activity name from the workflow")
+        override val name: String,
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Optional actor id responsible for the activity")
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
+    data class Script(
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val name: String,
+        @field:Size(max = 200)
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription(
+        "Business-rule activity — rule-set or decision-table evaluation. Maps to BpmnBusinessRuleTask.",
+    )
+    data class BusinessRule(
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Human-readable name of the decision / rule set the LLM identified in the prose " +
+                "(e.g. \"credit policy\", \"premium tier\"). The downstream BPMN generator maps " +
+                "this to a stable BpmnBusinessRuleTask.decisionRef id.",
+        )
+        val decisionName: String,
+        @field:Size(max = 200)
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
+    data class Send(
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Human-readable name of the message being sent (e.g. \"decline notification\"). " +
+                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
+        )
+        val messageName: String,
+        @field:Size(max = 200)
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription(
+        "Receive activity — blocks the flow until an inbound message arrives. Maps to BpmnReceiveTask.",
+    )
+    data class Receive(
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Human-readable name of the awaited message (e.g. \"customer acknowledgement\"). " +
+                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
+        )
+        val messageName: String,
+        @field:Size(max = 200)
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
+    data class Manual(
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        override val name: String,
+        @field:Size(max = 200)
+        override val actorId: String? = null,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractActivity
+
+    companion object {
+        // Convenience factory: lets existing call sites that don't specify a kind keep working
+        // (`ContractActivity("id", "name")` → Service). Most contract activities are SERVICE in
+        // practice, so this is a useful default rather than a backward-compat hack.
+        operator fun invoke(
+            id: String,
+            name: String,
+            actorId: String? = null,
+            sourceIds: List<String> = emptyList(),
+        ): ContractActivity = Service(id = id, name = name, actorId = actorId, sourceIds = sourceIds)
+    }
+}
+
+private const val ACTIVITY_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this activity in evidence. Each is an assessment evidence id, " +
+        "a clarification questionId, or a literal input-text marker."
+
+/**
+ * The discriminator string for [activity], matching the `kind` field in the LLM JSON output
+ * and the names declared in `@JsonSubTypes` on [ContractActivity].
+ */
+val ContractActivity.kindName: String
+    get() =
+        when (this) {
+            is ContractActivity.Service -> "SERVICE"
+            is ContractActivity.User -> "USER"
+            is ContractActivity.Script -> "SCRIPT"
+            is ContractActivity.BusinessRule -> "BUSINESS_RULE"
+            is ContractActivity.Send -> "SEND"
+            is ContractActivity.Receive -> "RECEIVE"
+            is ContractActivity.Manual -> "MANUAL"
+        }
+
+/**
+ * Returns a new [ContractActivity] of the same concrete subtype with [sourceIds] replaced.
+ * Sealed interfaces have no synthetic `copy`, so this helper dispatches across the subtypes
+ * exhaustively. Used by callers that need to mutate provenance without committing to a
+ * specific subtype (e.g. validation tests).
+ */
+fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity =
+    when (this) {
+        is ContractActivity.Service -> copy(sourceIds = sourceIds)
+        is ContractActivity.User -> copy(sourceIds = sourceIds)
+        is ContractActivity.Script -> copy(sourceIds = sourceIds)
+        is ContractActivity.BusinessRule -> copy(sourceIds = sourceIds)
+        is ContractActivity.Send -> copy(sourceIds = sourceIds)
+        is ContractActivity.Receive -> copy(sourceIds = sourceIds)
+        is ContractActivity.Manual -> copy(sourceIds = sourceIds)
+    }
 
 /**
  * How the branches of a [ContractDecision] are selected at runtime.
