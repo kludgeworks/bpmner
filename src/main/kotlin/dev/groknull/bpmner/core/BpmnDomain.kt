@@ -8,6 +8,8 @@ package dev.groknull.bpmner.core
 import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -90,23 +92,107 @@ data class BpmnDefinition(
     val sequences: List<BpmnEdge>,
 )
 
+/**
+ * Sealed BPMN node hierarchy. Each subtype corresponds to one BPMN element kind.
+ *
+ * The Jackson polymorphism annotations keep the LLM-facing JSON shape flat with an
+ * explicit `type` discriminator string — identical to the shape produced before the
+ * sealed refactor. On deserialize, Jackson dispatches `type` to the matching subtype;
+ * on serialize, Jackson writes `type` as the discriminator. Kotlin code dispatches via
+ * exhaustive `when (node)` blocks over the sealed subtypes, so the compiler catches any
+ * site that forgets to handle a kind when a new subtype is introduced.
+ */
 @JsonClassDescription("BPMN node with semantic type")
-data class BpmnNode(
-    @field:NotBlank
-    @get:JsonPropertyDescription(
-        "Unique node id. For contract-realized nodes, use the corresponding `act-…` / `dec-…` / `end-…` " +
-            "id from the ProcessContract verbatim. For synthesized routing nodes (process start event, " +
-            "converging joins, intermediate routing), use a stable unique id of your choosing (e.g. " +
-            "`StartEvent_1`, `Gateway_join_1`). The element kind is carried by `type`, not the id prefix.",
-    )
-    val id: String,
-    @get:JsonPropertyDescription(
-        "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways.",
-    )
-    val name: String? = null,
-    @get:JsonPropertyDescription("Node type from the supported enum")
-    val type: NodeType,
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = BpmnStartEvent::class, name = "START_EVENT"),
+    JsonSubTypes.Type(value = BpmnUserTask::class, name = "USER_TASK"),
+    JsonSubTypes.Type(value = BpmnServiceTask::class, name = "SERVICE_TASK"),
+    JsonSubTypes.Type(value = BpmnExclusiveGateway::class, name = "EXCLUSIVE_GATEWAY"),
+    JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
 )
+sealed interface BpmnNode {
+    val id: String
+    val name: String?
+}
+
+/**
+ * The discriminator string for [node], matching the `type` field in the LLM JSON output
+ * and the names declared in `@JsonSubTypes` above. Single source of truth; exhaustive `when`
+ * guarantees the compiler catches missing arms when a new subtype is added.
+ */
+val BpmnNode.typeName: String
+    get() =
+        when (this) {
+            is BpmnStartEvent -> "START_EVENT"
+            is BpmnUserTask -> "USER_TASK"
+            is BpmnServiceTask -> "SERVICE_TASK"
+            is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
+            is BpmnEndEvent -> "END_EVENT"
+        }
+
+/**
+ * Returns a new [BpmnNode] of the same concrete subtype with [name] replaced. Sealed
+ * interfaces have no synthetic `copy`, so this helper dispatches across the subtypes
+ * exhaustively. Used by repair operations that rename a node while preserving its kind.
+ */
+fun BpmnNode.withName(name: String?): BpmnNode =
+    when (this) {
+        is BpmnStartEvent -> copy(name = name)
+        is BpmnUserTask -> copy(name = name)
+        is BpmnServiceTask -> copy(name = name)
+        is BpmnExclusiveGateway -> copy(name = name)
+        is BpmnEndEvent -> copy(name = name)
+    }
+
+private const val NODE_ID_DESCRIPTION: String =
+    "Unique node id. For contract-realized nodes, use the corresponding `act-…` / `dec-…` / `end-…` " +
+        "id from the ProcessContract verbatim. For synthesized routing nodes (process start event, " +
+        "converging joins, intermediate routing), use a stable unique id of your choosing (e.g. " +
+        "`StartEvent_1`, `Gateway_join_1`). The element kind is carried by `type`, not the id prefix."
+
+private const val NODE_NAME_DESCRIPTION: String =
+    "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways."
+
+data class BpmnStartEvent(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnUserTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnServiceTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnExclusiveGateway(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnEndEvent(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
 
 @JsonClassDescription("Directed BPMN sequence flow with optional label and condition")
 data class BpmnEdge(
@@ -124,11 +210,3 @@ data class BpmnEdge(
     @get:JsonPropertyDescription("Optional sequence-flow condition expression, typically used on gateway branches")
     val conditionExpression: String? = null,
 )
-
-enum class NodeType {
-    START_EVENT,
-    USER_TASK,
-    SERVICE_TASK,
-    EXCLUSIVE_GATEWAY,
-    END_EVENT,
-}

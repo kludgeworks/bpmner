@@ -20,9 +20,12 @@ import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
@@ -453,9 +456,8 @@ class BpmnRefinementEngineTest {
         testBpmnDefinition(
             processId = "Process_Test",
             processName = "Test",
-            nodeType = NodeType.USER_TASK,
+            task = BpmnUserTask("Task_1", "Do work"),
             startName = "Started",
-            taskName = "Do work",
             endName = "Done",
         )
 
@@ -465,12 +467,12 @@ class BpmnRefinementEngineTest {
             processName = "Join fork",
             nodes =
                 listOf(
-                    BpmnNode("StartEvent_1", "A", NodeType.START_EVENT),
-                    BpmnNode("StartEvent_2", "B", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Do one", NodeType.SERVICE_TASK),
-                    BpmnNode("Task_2", "Do two", NodeType.SERVICE_TASK),
-                    BpmnNode("EndEvent_1", "Done", NodeType.END_EVENT),
+                    BpmnStartEvent("StartEvent_1", "A"),
+                    BpmnStartEvent("StartEvent_2", "B"),
+                    BpmnExclusiveGateway("Gateway_1", "Route?"),
+                    BpmnServiceTask("Task_1", "Do one"),
+                    BpmnServiceTask("Task_2", "Do two"),
+                    BpmnEndEvent("EndEvent_1", "Done"),
                 ),
             sequences =
                 listOf(

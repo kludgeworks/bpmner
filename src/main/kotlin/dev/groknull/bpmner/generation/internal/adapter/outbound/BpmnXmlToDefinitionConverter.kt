@@ -7,8 +7,12 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -36,14 +40,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             model.getModelElementsByType(Process::class.java).firstOrNull()
                 ?: error("BPMN XML contains no <process> element")
 
-        val nodes =
-            model.getModelElementsByType(FlowNode::class.java).map { flowNode ->
-                BpmnNode(
-                    id = flowNode.id,
-                    name = flowNode.name,
-                    type = flowNode.toNodeType(),
-                )
-            }
+        val nodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode() }
 
         val sequences =
             model.getModelElementsByType(SequenceFlow::class.java).map { flow ->
@@ -75,13 +72,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         }
     }
 
-    private fun FlowNode.toNodeType(): NodeType =
-        when (this) {
-            is StartEvent -> NodeType.START_EVENT
-            is UserTask -> NodeType.USER_TASK
-            is ServiceTask -> NodeType.SERVICE_TASK
-            is ExclusiveGateway -> NodeType.EXCLUSIVE_GATEWAY
-            is EndEvent -> NodeType.END_EVENT
+    private fun FlowNode.toBpmnNode(): BpmnNode {
+        val normalisedName = name?.takeIf { it.isNotBlank() }
+        return when (this) {
+            is StartEvent -> BpmnStartEvent(id = id, name = normalisedName)
+            is UserTask -> BpmnUserTask(id = id, name = normalisedName)
+            is ServiceTask -> BpmnServiceTask(id = id, name = normalisedName)
+            is ExclusiveGateway -> BpmnExclusiveGateway(id = id, name = normalisedName)
+            is EndEvent -> BpmnEndEvent(id = id, name = normalisedName)
             else -> error("Unsupported BPMN flow node type for id='$id': ${this::class.simpleName}")
         }
+    }
 }

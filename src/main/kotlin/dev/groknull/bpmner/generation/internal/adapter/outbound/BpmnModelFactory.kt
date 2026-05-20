@@ -5,9 +5,13 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
@@ -22,12 +26,12 @@ internal object BpmnModelFactory {
         node: BpmnNode,
     ): FlowNode {
         val flowNode =
-            when (node.type) {
-                NodeType.START_EVENT -> modelInstance.newInstance(StartEvent::class.java)
-                NodeType.USER_TASK -> modelInstance.newInstance(UserTask::class.java)
-                NodeType.SERVICE_TASK -> modelInstance.newInstance(ServiceTask::class.java)
-                NodeType.EXCLUSIVE_GATEWAY -> modelInstance.newInstance(ExclusiveGateway::class.java)
-                NodeType.END_EVENT -> modelInstance.newInstance(EndEvent::class.java)
+            when (node) {
+                is BpmnStartEvent -> modelInstance.newInstance(StartEvent::class.java)
+                is BpmnUserTask -> modelInstance.newInstance(UserTask::class.java)
+                is BpmnServiceTask -> modelInstance.newInstance(ServiceTask::class.java)
+                is BpmnExclusiveGateway -> modelInstance.newInstance(ExclusiveGateway::class.java)
+                is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
             }
         flowNode.id = node.id
         BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }

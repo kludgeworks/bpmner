@@ -14,10 +14,11 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationInput
@@ -258,9 +259,9 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Order",
             nodes =
                 listOf(
-                    BpmnNode("S1", "Start", NodeType.START_EVENT),
-                    BpmnNode("T1", "Review", NodeType.USER_TASK),
-                    BpmnNode("E1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("S1", "Start"),
+                    BpmnUserTask("T1", "Review"),
+                    BpmnEndEvent("E1", "End"),
                 ),
             sequences =
                 listOf(

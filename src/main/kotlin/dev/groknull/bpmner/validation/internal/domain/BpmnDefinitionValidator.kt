@@ -6,8 +6,9 @@
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnStartEvent
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
@@ -89,10 +90,10 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        if (definition.nodes.none { it.type == NodeType.START_EVENT }) {
+        if (definition.nodes.none { it is BpmnStartEvent }) {
             errors.add("definition must contain at least one START_EVENT")
         }
-        if (definition.nodes.none { it.type == NodeType.END_EVENT }) {
+        if (definition.nodes.none { it is BpmnEndEvent }) {
             errors.add("definition must contain at least one END_EVENT")
         }
     }

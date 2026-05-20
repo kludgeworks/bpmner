@@ -9,10 +9,13 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
@@ -42,9 +45,9 @@ class BpmnOwnershipTest {
                 processName = "Test",
                 nodes =
                     listOf(
-                        BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                        BpmnNode("End_1", "End", NodeType.END_EVENT),
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnUserTask("Task_1", "Do work"),
+                        BpmnEndEvent("End_1", "End"),
                     ),
                 sequences =
                     listOf(
@@ -96,7 +99,7 @@ class BpmnOwnershipTest {
     @Test
     fun `validateOwnership detects node missing from element owners`() {
         val graph = baseGraph()
-        val extraNode = BpmnNode("Orphan_1", "Orphan", NodeType.SERVICE_TASK)
+        val extraNode = BpmnServiceTask("Orphan_1", "Orphan")
         val newDef = graph.definition.copy(nodes = graph.definition.nodes + extraNode)
         // Manually corrupt: update definition but do NOT reindex ownership
         val corruptGraph = LaidOutProcessGraph(ownedGraph = graph.ownedGraph, definition = newDef)
@@ -121,7 +124,7 @@ class BpmnOwnershipTest {
     @Test
     fun `withUpdatedDefinition assigns owner to new node`() {
         val graph = baseGraph()
-        val newNode = BpmnNode("Task_2", "Extra task", NodeType.SERVICE_TASK)
+        val newNode = BpmnServiceTask("Task_2", "Extra task")
         val newDef = graph.definition.copy(nodes = graph.definition.nodes + newNode)
         val updated = graph.withUpdatedDefinition(newDef)
         assertNotNull(updated.ownerForElementId("Task_2"), "Task_2 must have an owner after reindex")
@@ -172,7 +175,7 @@ class BpmnOwnershipTest {
     @Test
     fun `withUpdatedDefinition result passes validateOwnership`() {
         val graph = baseGraph()
-        val newNode = BpmnNode("Task_2", "Extra", NodeType.USER_TASK)
+        val newNode = BpmnUserTask("Task_2", "Extra")
         val newEdge = BpmnEdge("Flow_3", "Task_1", "Task_2")
         val newDef =
             graph.definition.copy(
@@ -275,12 +278,12 @@ class BpmnOwnershipTest {
             processName = "Join Fork",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnExclusiveGateway("Gateway_1", "Route?"),
+                    BpmnUserTask("Task_1", "Handle A"),
+                    BpmnUserTask("Task_2", "Handle B"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -299,10 +302,10 @@ class BpmnOwnershipTest {
             processName = "Fake Join",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -318,10 +321,10 @@ class BpmnOwnershipTest {
             processName = "Superfluous Gateway",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway("Gateway_1", null),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(

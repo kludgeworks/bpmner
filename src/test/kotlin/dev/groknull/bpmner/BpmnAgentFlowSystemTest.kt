@@ -14,9 +14,10 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -131,9 +132,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             processName = "Make Toast",
             nodes =
                 listOf(
-                    BpmnNode(id = "start", name = "Start", type = NodeType.START_EVENT),
-                    BpmnNode(id = "task1", name = "Toast bread", type = NodeType.USER_TASK),
-                    BpmnNode(id = "end", name = "End", type = NodeType.END_EVENT),
+                    BpmnStartEvent(id = "start", name = "Start"),
+                    BpmnUserTask(id = "task1", name = "Toast bread"),
+                    BpmnEndEvent(id = "end", name = "End"),
                 ),
             sequences =
                 listOf(

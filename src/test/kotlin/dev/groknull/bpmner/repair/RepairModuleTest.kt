@@ -17,11 +17,12 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.NodeType
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
@@ -124,20 +125,17 @@ class RepairModuleTest {
             processName = "Make toast",
             nodes =
                 listOf(
-                    BpmnNode(
+                    BpmnStartEvent(
                         id = "StartEvent_1",
                         name = "Order received",
-                        type = NodeType.START_EVENT,
                     ),
-                    BpmnNode(
+                    BpmnServiceTask(
                         id = "Task_1",
                         name = "Toast bread",
-                        type = NodeType.SERVICE_TASK,
                     ),
-                    BpmnNode(
+                    BpmnEndEvent(
                         id = "EndEvent_1",
                         name = "Toast served",
-                        type = NodeType.END_EVENT,
                     ),
                 ),
             sequences =

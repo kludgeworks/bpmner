@@ -7,8 +7,9 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
@@ -23,18 +24,13 @@ internal class InsertConvergingGatewayHandler : BpmnLocalModelFixHandler {
         elementId: String,
     ): List<BpmnPatchOperation> {
         val task = definition.nodes.firstOrNull { it.id == elementId } ?: return emptyList()
-        if (task.type !in setOf(NodeType.USER_TASK, NodeType.SERVICE_TASK)) return emptyList()
+        if (task !is BpmnUserTask && task !is BpmnServiceTask) return emptyList()
         val incomingEdges = definition.sequences.filter { it.targetRef == elementId }
         if (incomingEdges.size < 2) return emptyList()
 
         val joinId = TopologyIds.fresh("Gateway_join", definition)
         val joinEdgeId = TopologyIds.fresh("Flow_det", definition)
-        val joinGw =
-            BpmnNode(
-                id = joinId,
-                name = null,
-                type = NodeType.EXCLUSIVE_GATEWAY,
-            )
+        val joinGw = BpmnExclusiveGateway(id = joinId, name = null)
         val joinToTask =
             BpmnEdge(
                 id = joinEdgeId,

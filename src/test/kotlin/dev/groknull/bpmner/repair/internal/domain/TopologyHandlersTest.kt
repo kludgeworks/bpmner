@@ -9,8 +9,10 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
@@ -45,7 +47,7 @@ class TopologyHandlersTest {
         val addEdge = ops.single { it.type == BpmnPatchOperationType.ADD_EDGE }
         val replaceEdges = ops.filter { it.type == BpmnPatchOperationType.REPLACE_EDGE }
 
-        assertEquals(NodeType.EXCLUSIVE_GATEWAY, addNode.node!!.type)
+        assertIs<BpmnExclusiveGateway>(addNode.node, "expected synthesized join to be exclusive gateway")
         assertNull(addNode.node!!.name, "Inserted converging gateway must have no name")
         assertEquals(addNode.node!!.id, addEdge.edge!!.sourceRef)
         assertEquals("Gateway_1", addEdge.edge!!.targetRef)
@@ -105,7 +107,7 @@ class TopologyHandlersTest {
         val addEdge = ops.single { it.type == BpmnPatchOperationType.ADD_EDGE }
         val replaceEdges = ops.filter { it.type == BpmnPatchOperationType.REPLACE_EDGE }
 
-        assertEquals(NodeType.EXCLUSIVE_GATEWAY, addNode.node!!.type)
+        assertIs<BpmnExclusiveGateway>(addNode.node, "expected synthesized join to be exclusive gateway")
         assertNull(addNode.node!!.name, "Inserted converging gateway must have no name")
         assertEquals(addNode.node!!.id, addEdge.edge!!.sourceRef)
         assertEquals("Task_1", addEdge.edge!!.targetRef)
@@ -272,12 +274,12 @@ class TopologyHandlersTest {
             processName = "Join Fork Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", "Route?", NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Handle A", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Handle B", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnExclusiveGateway("Gateway_1", "Route?"),
+                    BpmnUserTask("Task_1", "Handle A"),
+                    BpmnUserTask("Task_2", "Handle B"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -296,10 +298,10 @@ class TopologyHandlersTest {
             processName = "Fake Join Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -315,9 +317,9 @@ class TopologyHandlersTest {
             processName = "Single Incoming",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -332,9 +334,9 @@ class TopologyHandlersTest {
             processName = "Multi Incoming End Event",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Trigger", NodeType.START_EVENT),
-                    BpmnNode("End_1", "Done", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnEndEvent("End_1", "Done"),
                 ),
             sequences =
                 listOf(
@@ -349,10 +351,10 @@ class TopologyHandlersTest {
             processName = "Superfluous Gateway Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway("Gateway_1", null),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -368,15 +370,14 @@ class TopologyHandlersTest {
             processName = "Diverging Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway(
                         "Gateway_1",
                         "Is valid?",
-                        NodeType.EXCLUSIVE_GATEWAY,
                     ),
-                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Reject", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnUserTask("Task_1", "Approve"),
+                    BpmnUserTask("Task_2", "Reject"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -394,15 +395,14 @@ class TopologyHandlersTest {
             processName = "Converging Named Gateway Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Path A", NodeType.START_EVENT),
-                    BpmnNode("Start_2", "Path B", NodeType.START_EVENT),
-                    BpmnNode(
+                    BpmnStartEvent("Start_1", "Path A"),
+                    BpmnStartEvent("Start_2", "Path B"),
+                    BpmnExclusiveGateway(
                         "Gateway_1",
                         gatewayName,
-                        NodeType.EXCLUSIVE_GATEWAY,
                     ),
-                    BpmnNode("Task_1", "Continue", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnUserTask("Task_1", "Continue"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(

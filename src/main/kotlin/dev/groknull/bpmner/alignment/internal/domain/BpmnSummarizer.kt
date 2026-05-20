@@ -11,7 +11,8 @@ import dev.groknull.bpmner.alignment.BpmnSummaryFlow
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.typeName
 import org.springframework.stereotype.Component
 import java.util.LinkedList
 import java.util.Queue
@@ -48,7 +49,7 @@ class BpmnSummarizer {
     ) {
         val queue: Queue<String> = LinkedList()
         definition.nodes
-            .filter { it.type == NodeType.START_EVENT }
+            .filter { it is BpmnStartEvent }
             .sortedBy { it.id }
             .forEach { node -> enqueue(node, queue, visited) }
 
@@ -90,7 +91,7 @@ class BpmnSummarizer {
         val orderedFlows = mutableListOf<BpmnEdge>()
     }
 
-    private fun BpmnNode.toSummary() = BpmnSummaryElement(id = id, type = type.name, name = name)
+    private fun BpmnNode.toSummary() = BpmnSummaryElement(id = id, type = typeName, name = name)
 
     private fun BpmnEdge.toSummary() =
         BpmnSummaryFlow(

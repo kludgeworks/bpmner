@@ -8,6 +8,8 @@ package dev.groknull.bpmner.repair.internal.adapter.outbound
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
+import dev.groknull.bpmner.core.typeName
+import dev.groknull.bpmner.core.withName
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 
@@ -49,11 +51,11 @@ internal object BpmnPatchOperationApplier {
                 ?: return OperationResult.Invalid("SET_NODE_NAME: unknown nodeId '$nodeId'")
         val name = BpmnNodeNamingPolicy.normalize(op.name)
         if (name == null && node.requiresName(definition)) {
-            return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.type}")
+            return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.typeName}")
         }
         if (BpmnNodeNamingPolicy.normalize(node.name) == name) return OperationResult.Unchanged
         val updated =
-            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.copy(name = name) else it })
+            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.withName(name) else it })
         return OperationResult.Changed(updated)
     }
 

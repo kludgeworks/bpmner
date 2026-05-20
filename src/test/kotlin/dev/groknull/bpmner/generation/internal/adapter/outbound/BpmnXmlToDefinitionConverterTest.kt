@@ -7,8 +7,12 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -95,9 +99,9 @@ class BpmnXmlToDefinitionConverterTest {
             processName = "Linear Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode("Task_1", "Do work", NodeType.USER_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Do work"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(
@@ -120,15 +124,14 @@ class BpmnXmlToDefinitionConverterTest {
             processName = "Branching Process",
             nodes =
                 listOf(
-                    BpmnNode("Start_1", "Start", NodeType.START_EVENT),
-                    BpmnNode(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway(
                         "Gateway_1",
                         "Is valid?",
-                        NodeType.EXCLUSIVE_GATEWAY,
                     ),
-                    BpmnNode("Task_1", "Approve", NodeType.USER_TASK),
-                    BpmnNode("Task_2", "Reject", NodeType.SERVICE_TASK),
-                    BpmnNode("End_1", "End", NodeType.END_EVENT),
+                    BpmnUserTask("Task_1", "Approve"),
+                    BpmnServiceTask("Task_2", "Reject"),
+                    BpmnEndEvent("End_1", "End"),
                 ),
             sequences =
                 listOf(

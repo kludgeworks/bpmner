@@ -7,8 +7,11 @@ package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.NodeType
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
@@ -24,9 +27,9 @@ class BpmnDefinitionValidatorTest {
                 processName = "Handle request",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Validate request", NodeType.USER_TASK),
-                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Validate request"),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
                     ),
                 sequences =
                     listOf(
@@ -47,7 +50,7 @@ class BpmnDefinitionValidatorTest {
                 processName = "Handle request",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Request received"),
                     ),
                 sequences =
                     listOf(
@@ -65,7 +68,7 @@ class BpmnDefinitionValidatorTest {
     fun `validator rejects blank task name`() {
         val definition =
             minimalDefinition(
-                task = BpmnNode("Task_1", "", NodeType.USER_TASK),
+                task = BpmnUserTask("Task_1", ""),
             )
 
         val errors = validator.validate(definition)
@@ -77,8 +80,8 @@ class BpmnDefinitionValidatorTest {
     fun `validator rejects blank event names`() {
         val definition =
             minimalDefinition(
-                start = BpmnNode("StartEvent_1", null, NodeType.START_EVENT),
-                end = BpmnNode("EndEvent_1", " ", NodeType.END_EVENT),
+                start = BpmnStartEvent("StartEvent_1", null),
+                end = BpmnEndEvent("EndEvent_1", " "),
             )
 
         val errors = validator.validate(definition).joinToString("\n")
@@ -95,11 +98,11 @@ class BpmnDefinitionValidatorTest {
                 processName = "Handle request",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
-                        BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode("Task_1", "Approve request", NodeType.USER_TASK),
-                        BpmnNode("Task_2", "Reject request", NodeType.USER_TASK),
-                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnExclusiveGateway("Gateway_1", null),
+                        BpmnUserTask("Task_1", "Approve request"),
+                        BpmnUserTask("Task_2", "Reject request"),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
                     ),
                 sequences =
                     listOf(
@@ -124,11 +127,11 @@ class BpmnDefinitionValidatorTest {
                 processName = "Handle request",
                 nodes =
                     listOf(
-                        BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
-                        BpmnNode("Task_1", "Approve request", NodeType.USER_TASK),
-                        BpmnNode("Task_2", "Reject request", NodeType.USER_TASK),
-                        BpmnNode("Gateway_1", null, NodeType.EXCLUSIVE_GATEWAY),
-                        BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Approve request"),
+                        BpmnUserTask("Task_2", "Reject request"),
+                        BpmnExclusiveGateway("Gateway_1", null),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
                     ),
                 sequences =
                     listOf(
@@ -146,9 +149,9 @@ class BpmnDefinitionValidatorTest {
     }
 
     private fun minimalDefinition(
-        start: BpmnNode = BpmnNode("StartEvent_1", "Request received", NodeType.START_EVENT),
-        task: BpmnNode = BpmnNode("Task_1", "Validate request", NodeType.USER_TASK),
-        end: BpmnNode = BpmnNode("EndEvent_1", "Request completed", NodeType.END_EVENT),
+        start: BpmnNode = BpmnStartEvent("StartEvent_1", "Request received"),
+        task: BpmnNode = BpmnUserTask("Task_1", "Validate request"),
+        end: BpmnNode = BpmnEndEvent("EndEvent_1", "Request completed"),
     ) = BpmnDefinition(
         processId = "Process_1",
         processName = "Handle request",
