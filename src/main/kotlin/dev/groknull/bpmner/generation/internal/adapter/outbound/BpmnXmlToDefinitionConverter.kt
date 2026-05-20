@@ -10,6 +10,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -19,6 +20,7 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.ParallelGateway
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
@@ -79,6 +81,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             is UserTask -> BpmnUserTask(id = id, name = normalisedName)
             is ServiceTask -> BpmnServiceTask(id = id, name = normalisedName)
             is ExclusiveGateway -> BpmnExclusiveGateway(id = id, name = normalisedName)
+            is ParallelGateway -> BpmnParallelGateway(id = id, name = normalisedName)
             is EndEvent -> BpmnEndEvent(id = id, name = normalisedName)
             else -> error("Unsupported BPMN flow node type for id='$id': ${this::class.simpleName}")
         }

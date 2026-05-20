@@ -5,10 +5,12 @@
 
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.typeName
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
@@ -30,11 +32,13 @@ import org.springframework.stereotype.Component
  * Per-decision checks (each fires independently):
  * 1. [BpmnFidelityCode.DECISION_GATEWAY_MISSING] — the decision id resolves to no BPMN
  *    node, or the matching node is not a gateway type.
- * 2. [BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT] — the gateway exists but emits
+ * 2. [BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH] — the gateway exists but its kind
+ *    (exclusive vs parallel) does not match the decision's declared [ContractGatewayKind].
+ * 3. [BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT] — the gateway exists but emits
  *    fewer outbound flows than the decision has branches.
- * 3. [BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED] — a branch's `nextRef` points at an id
+ * 4. [BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED] — a branch's `nextRef` points at an id
  *    that doesn't exist anywhere in the BPMN.
- * 4. [BpmnFidelityCode.BRANCH_FLOW_MISSING] — a branch's `nextRef` resolves but no sequence
+ * 5. [BpmnFidelityCode.BRANCH_FLOW_MISSING] — a branch's `nextRef` resolves but no sequence
  *    flow connects this decision's gateway to that target. Catches both missing loop
  *    back-edges and missing forward-skip edges via the same direct lookup.
  */
@@ -42,7 +46,13 @@ import org.springframework.stereotype.Component
 internal class BpmnContractFidelityChecker {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
-    private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway
+    private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
+
+    private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean =
+        when (this) {
+            ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
+            ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
+        }
 
     fun check(
         contract: ProcessContract,
@@ -101,6 +111,19 @@ internal class BpmnContractFidelityChecker {
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
+        } else if (!decision.kind.matchesGatewayType(gateway)) {
+            // 1b. Gateway exists but its kind doesn't match the contract's declared kind.
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                        "Decision '${decision.id}' declares kind=${decision.kind} but is realized as a " +
+                            "${gateway.typeName} node — semantically wrong " +
+                            "(${decision.kind} means \"${kindDescription(decision.kind)}\").",
+                    contractElementId = decision.id,
+                    bpmnElementId = gateway.id,
+                )
         }
 
         // 2. Outbound-flow count check — only meaningful when the gateway is valid.
@@ -150,4 +173,10 @@ internal class BpmnContractFidelityChecker {
             }
         }
     }
+
+    private fun kindDescription(kind: ContractGatewayKind): String =
+        when (kind) {
+            ContractGatewayKind.EXCLUSIVE -> "pick one branch"
+            ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+        }
 }

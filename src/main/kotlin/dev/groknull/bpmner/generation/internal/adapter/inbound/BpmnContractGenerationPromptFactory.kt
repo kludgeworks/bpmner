@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
@@ -41,8 +42,8 @@ internal class BpmnContractGenerationPromptFactory {
             )
             appendLine(
                 "- The BPMN element kind goes in the `type` field (USER_TASK / SERVICE_TASK /" +
-                    " EXCLUSIVE_GATEWAY / END_EVENT / …). Do not re-encode element type as a `Task_` /" +
-                    " `Gateway_` / `EndEvent_` prefix in the id.",
+                    " EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode element" +
+                    " type as a `Task_` / `Gateway_` / `EndEvent_` prefix in the id.",
             )
             appendLine(
                 "- Synthesized routing nodes (the process start event, converging join gateways, etc.)" +
@@ -68,7 +69,7 @@ internal class BpmnContractGenerationPromptFactory {
             )
             appendLine()
             appendLine("Worked example — iterative repair loop with three exit conditions:")
-            appendLine("  Contract decision `dec-validate` has three branches:")
+            appendLine("  Contract decision `dec-validate` (kind=EXCLUSIVE) has three branches:")
             appendLine("    - {id: br-pass, label: \"Validation passed\", nextRef: \"end-success\"}")
             appendLine("    - {id: br-no-progress, label: \"No progress\", nextRef: \"end-no-progress\"}")
             appendLine("    - {id: br-retry, label: \"Continue\", nextRef: \"act-strategy-1\"}  // back-edge")
@@ -79,6 +80,40 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine("        * to `end-success`, condition \"validation passed\"")
             appendLine("        * to `end-no-progress`, condition \"no progress\"")
             appendLine("        * to `act-strategy-1`, condition \"continue\"  ← back-edge")
+            appendLine()
+            appendLine("Parallel-gateway rules:")
+            appendLine(
+                "- When a ContractDecision has `kind = PARALLEL`, realize the fork as ONE" +
+                    " PARALLEL_GATEWAY node whose id equals the decision id verbatim. Each branch" +
+                    " becomes one unconditional outbound flow — DO NOT add a conditionExpression.",
+            )
+            appendLine(
+                "- Every PARALLEL fork MUST have a matching synchronising join: a second" +
+                    " PARALLEL_GATEWAY node where every branch reconverges before downstream work" +
+                    " proceeds. The join is a synthesised node with a stable unique id of your" +
+                    " choosing (e.g. `Gateway_join_<descriptor>`) — it has no contract counterpart." +
+                    " The join has no `name` (parallel joins do not ask a question).",
+            )
+            appendLine(
+                "- After the join, emit a single outbound sequence flow to whatever comes next in" +
+                    " the process (an activity, another decision, or an end event).",
+            )
+            appendLine()
+            appendLine("Worked example — three concurrent preparation tracks rejoining:")
+            appendLine("  Contract decision `dec-prep-tracks` (kind=PARALLEL) has three branches:")
+            appendLine("    - {id: br-it,         label: \"IT prep\",         nextRef: \"act-prep-it\"}")
+            appendLine("    - {id: br-facilities, label: \"Facilities prep\", nextRef: \"act-prep-facilities\"}")
+            appendLine("    - {id: br-manager,    label: \"Manager prep\",    nextRef: \"act-prep-manager\"}")
+            appendLine("  After all three complete, the process continues to `act-orientation`.")
+            appendLine("  BPMN topology:")
+            appendLine("    - Fork: BpmnNode(id=\"dec-prep-tracks\", type=PARALLEL_GATEWAY, name=\"Run preparation tracks\")")
+            appendLine("    - Three unconditional outbound flows from the fork:")
+            appendLine("        * to `act-prep-it`        (no condition)")
+            appendLine("        * to `act-prep-facilities` (no condition)")
+            appendLine("        * to `act-prep-manager`    (no condition)")
+            appendLine("    - Synthesised join: BpmnNode(id=\"Gateway_join_prep\", type=PARALLEL_GATEWAY, name=null)")
+            appendLine("    - Three inbound flows to the join (one from each track's last activity).")
+            appendLine("    - One outbound flow from the join to `act-orientation`.")
             appendLine()
             appendLine("Primary validated ProcessContract:")
             appendLine(renderContract(validatedContract.contract).trim())
@@ -124,7 +159,8 @@ internal class BpmnContractGenerationPromptFactory {
                 appendLine()
                 appendLine("## Decisions")
                 contract.decisions.forEach { decision ->
-                    appendLine("- ${decision.id}: ${decision.question}")
+                    val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
+                    appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
                     decision.branches.forEach { branch ->
                         val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
                         val next = branch.nextRef?.let { " -> $it" }.orEmpty()

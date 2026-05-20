@@ -23,6 +23,14 @@ enum class BpmnFidelityCode {
      */
     DECISION_GATEWAY_MISSING,
 
+    /**
+     * The decision id resolves to a gateway node, but the gateway's kind does not match
+     * the contract decision's `kind`. For example, a `ContractDecision(kind=PARALLEL)`
+     * realised as `BpmnExclusiveGateway` — semantically wrong, because XOR means "pick
+     * one branch" while parallel means "take all branches".
+     */
+    DECISION_GATEWAY_KIND_MISMATCH,
+
     /** A `ContractBranch.nextRef` points at an id that does not exist in the generated BPMN. */
     BRANCH_NEXT_REF_UNRESOLVED,
 

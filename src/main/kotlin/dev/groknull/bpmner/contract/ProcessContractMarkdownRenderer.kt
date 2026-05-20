@@ -41,7 +41,8 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine()
                 appendLine("## Decisions")
                 contract.decisions.forEach { decision ->
-                    appendLine("- ${decision.id}: ${decision.question}")
+                    val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
+                    appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
                     decision.branches.forEach { branch ->
                         val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
                         val next = branch.nextRef?.let { " → $it" }.orEmpty()

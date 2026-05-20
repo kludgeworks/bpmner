@@ -62,6 +62,24 @@ internal class BpmnContractPromptFactory(
                     " lead to the next sequential element.",
             )
             appendLine()
+            appendLine("Decision kind (exclusive vs parallel):")
+            appendLine(
+                "- `ContractDecision.kind` defaults to EXCLUSIVE — exactly one branch is taken based" +
+                    " on its `condition`. Use this for any branching where the source describes a choice," +
+                    " a check, or alternative paths.",
+            )
+            appendLine(
+                "- Set `kind = PARALLEL` when the source describes concurrent / independent tracks," +
+                    " 'in parallel', 'simultaneously', 'all of the following must complete', or any" +
+                    " split where every branch must execute, not just one. PARALLEL branches have no" +
+                    " `condition`; leave it null. The matching join (synchronisation) is implicit and" +
+                    " materialised in the downstream BPMN — declare the fork only.",
+            )
+            appendLine(
+                "- Do NOT use PARALLEL for sequential steps that happen to share an actor or context;" +
+                    " parallel means truly concurrent, with no fixed ordering between the tracks.",
+            )
+            appendLine()
             appendLine("Readiness assessment rationale:")
             appendLine(assessment.rationale)
             if (assessment.missingAreas.isNotEmpty()) {

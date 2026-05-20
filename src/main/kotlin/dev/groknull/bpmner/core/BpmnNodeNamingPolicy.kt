@@ -20,6 +20,10 @@ object BpmnNodeNamingPolicy {
             -> true
 
             is BpmnExclusiveGateway -> outgoingCount > 1
+
+            // Parallel gateways have no question to ask: fork is unconditional,
+            // join is a barrier. Labels would be noise; keep them optional.
+            is BpmnParallelGateway -> false
         }
 
     fun missingNameMessage(node: BpmnNode): String {

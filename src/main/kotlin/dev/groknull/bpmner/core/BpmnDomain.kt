@@ -53,7 +53,8 @@ data class BpmnRequest(
                   the process start event, intermediate routing nodes) use stable unique ids of your choosing
                   (e.g. `StartEvent_1`, `Gateway_join_1`).
                 - The BPMN node type is carried by the `type` field (USER_TASK / SERVICE_TASK /
-                  EXCLUSIVE_GATEWAY / END_EVENT / …). Do not re-encode element type as a prefix in the id.
+                  EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode element
+                  type as a prefix in the id.
                 - Keep process topology coherent with no dangling references.
                 - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier
                   elements (different sourceRef and targetRef where the target has already been visited)
@@ -109,6 +110,7 @@ data class BpmnDefinition(
     JsonSubTypes.Type(value = BpmnUserTask::class, name = "USER_TASK"),
     JsonSubTypes.Type(value = BpmnServiceTask::class, name = "SERVICE_TASK"),
     JsonSubTypes.Type(value = BpmnExclusiveGateway::class, name = "EXCLUSIVE_GATEWAY"),
+    JsonSubTypes.Type(value = BpmnParallelGateway::class, name = "PARALLEL_GATEWAY"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
 )
 sealed interface BpmnNode {
@@ -128,6 +130,7 @@ val BpmnNode.typeName: String
             is BpmnUserTask -> "USER_TASK"
             is BpmnServiceTask -> "SERVICE_TASK"
             is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
+            is BpmnParallelGateway -> "PARALLEL_GATEWAY"
             is BpmnEndEvent -> "END_EVENT"
         }
 
@@ -142,6 +145,7 @@ fun BpmnNode.withName(name: String?): BpmnNode =
         is BpmnUserTask -> copy(name = name)
         is BpmnServiceTask -> copy(name = name)
         is BpmnExclusiveGateway -> copy(name = name)
+        is BpmnParallelGateway -> copy(name = name)
         is BpmnEndEvent -> copy(name = name)
     }
 
@@ -179,6 +183,14 @@ data class BpmnServiceTask(
 ) : BpmnNode
 
 data class BpmnExclusiveGateway(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnParallelGateway(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
     override val id: String,

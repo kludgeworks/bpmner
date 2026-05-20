@@ -9,11 +9,13 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnFidelityCode
@@ -260,6 +262,61 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
+    fun `PARALLEL decision realized as BpmnParallelGateway passes`() {
+        val report = checker.check(parallelForkContract(), parallelForkDefinition(useParallelFork = true))
+
+        assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
+    }
+
+    @Test
+    fun `PARALLEL decision realized as BpmnExclusiveGateway flagged as DECISION_GATEWAY_KIND_MISMATCH`() {
+        // Generator emitted EXCLUSIVE for the fork — the bug employee-onboarding hit. The
+        // alignment LLM caught it semantically; the fidelity checker must catch it structurally.
+        val report = checker.check(parallelForkContract(), parallelForkDefinition(useParallelFork = false))
+
+        assertFalse(report.isValid)
+        val mismatches = report.issues.filter { it.code == BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH }
+        assertTrue(
+            mismatches.any {
+                it.contractElementId == "dec-prep-tracks" &&
+                    it.message.contains("PARALLEL") &&
+                    it.message.contains("EXCLUSIVE_GATEWAY")
+            },
+            "expected DECISION_GATEWAY_KIND_MISMATCH for dec-prep-tracks citing PARALLEL vs EXCLUSIVE_GATEWAY; got: $mismatches",
+        )
+    }
+
+    @Test
+    fun `EXCLUSIVE decision realized as BpmnParallelGateway also flagged as DECISION_GATEWAY_KIND_MISMATCH`() {
+        // The symmetric error: contract was a choice but the BPMN expressed it as a parallel split.
+        val contract = repairLoopContract()
+        val original = repairLoopDefinitionWithBackEdge()
+        val withParallelGateway =
+            original.copy(
+                nodes =
+                    original.nodes.map { node ->
+                        if (node.id == "dec-validate") {
+                            BpmnParallelGateway(id = node.id, name = node.name)
+                        } else {
+                            node
+                        }
+                    },
+            )
+
+        val report = checker.check(contract, withParallelGateway)
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH &&
+                    it.message.contains("EXCLUSIVE") &&
+                    it.message.contains("PARALLEL_GATEWAY")
+            },
+            "expected DECISION_GATEWAY_KIND_MISMATCH citing EXCLUSIVE vs PARALLEL_GATEWAY; got: ${report.issues}",
+        )
+    }
+
+    @Test
     fun `contract without decisions returns empty report`() {
         val contract =
             ProcessContract(
@@ -366,6 +423,73 @@ private fun repairLoopDefinitionFlattened(): BpmnDefinition {
 private fun repairLoopDefinitionWithCollapsedBranches(): BpmnDefinition {
     val withBack = repairLoopDefinitionWithBackEdge()
     return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F6" || it.id == "F7" })
+}
+
+private fun parallelForkContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-parallel",
+        processName = "Three concurrent tracks",
+        summary = "Fork into three independent preparation tracks then rejoin.",
+        trigger = "Hire confirmed",
+        triggerSourceIds = sources,
+        activities =
+            listOf(
+                ContractActivity(id = "act-prep-it", name = "IT prep", sourceIds = sources),
+                ContractActivity(id = "act-prep-facilities", name = "Facilities prep", sourceIds = sources),
+                ContractActivity(id = "act-prep-manager", name = "Manager prep", sourceIds = sources),
+            ),
+        decisions =
+            listOf(
+                ContractDecision(
+                    id = "dec-prep-tracks",
+                    question = "Run all preparation tracks",
+                    branches =
+                        listOf(
+                            ContractBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
+                            ContractBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
+                            ContractBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
+                        ),
+                    kind = ContractGatewayKind.PARALLEL,
+                    sourceIds = sources,
+                ),
+            ),
+        endStates = listOf(ContractEndState(id = "end-onboarded", name = "Onboarded", sourceIds = sources)),
+    )
+}
+
+private fun parallelForkDefinition(useParallelFork: Boolean): BpmnDefinition {
+    val fork =
+        if (useParallelFork) {
+            BpmnParallelGateway(id = "dec-prep-tracks", name = "Run all preparation tracks")
+        } else {
+            BpmnExclusiveGateway(id = "dec-prep-tracks", name = "Run all preparation tracks")
+        }
+    return BpmnDefinition(
+        processId = "P",
+        processName = "Three concurrent tracks",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Hire confirmed"),
+                fork,
+                BpmnUserTask(id = "act-prep-it", name = "IT prep"),
+                BpmnUserTask(id = "act-prep-facilities", name = "Facilities prep"),
+                BpmnUserTask(id = "act-prep-manager", name = "Manager prep"),
+                BpmnParallelGateway(id = "Gateway_join_prep", name = null),
+                BpmnEndEvent(id = "end-onboarded", name = "Onboarded"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-prep-tracks"),
+                BpmnEdge(id = "F2", sourceRef = "dec-prep-tracks", targetRef = "act-prep-it"),
+                BpmnEdge(id = "F3", sourceRef = "dec-prep-tracks", targetRef = "act-prep-facilities"),
+                BpmnEdge(id = "F4", sourceRef = "dec-prep-tracks", targetRef = "act-prep-manager"),
+                BpmnEdge(id = "F5", sourceRef = "act-prep-it", targetRef = "Gateway_join_prep"),
+                BpmnEdge(id = "F6", sourceRef = "act-prep-facilities", targetRef = "Gateway_join_prep"),
+                BpmnEdge(id = "F7", sourceRef = "act-prep-manager", targetRef = "Gateway_join_prep"),
+                BpmnEdge(id = "F8", sourceRef = "Gateway_join_prep", targetRef = "end-onboarded"),
+            ),
+    )
 }
 
 private fun unresolvedRefContract() =

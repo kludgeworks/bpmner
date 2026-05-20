@@ -9,6 +9,7 @@ import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -16,6 +17,7 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.ParallelGateway
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.UserTask
@@ -31,6 +33,7 @@ internal object BpmnModelFactory {
                 is BpmnUserTask -> modelInstance.newInstance(UserTask::class.java)
                 is BpmnServiceTask -> modelInstance.newInstance(ServiceTask::class.java)
                 is BpmnExclusiveGateway -> modelInstance.newInstance(ExclusiveGateway::class.java)
+                is BpmnParallelGateway -> modelInstance.newInstance(ParallelGateway::class.java)
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
             }
         flowNode.id = node.id
