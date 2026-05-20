@@ -8,6 +8,8 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorRef
+import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -21,8 +23,10 @@ import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
@@ -98,6 +102,91 @@ class BpmnXmlToDefinitionConverterTest {
             err.message!!.contains("BPMNDI input rejected"),
             "rejection message should explain the strict-parse rule",
         )
+    }
+
+    @Test
+    fun `parse rejects xml containing doctype declarations`() {
+        val xmlWithDoctype =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <!DOCTYPE definitions [
+              <!ENTITY injected SYSTEM "file:///etc/passwd">
+            ]>
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                         targetNamespace="http://example.com/bpmn">
+              <process id="p1" name="Doctype">
+                <startEvent id="s" name="Start"/>
+                <sequenceFlow id="f" sourceRef="s" targetRef="e"/>
+                <endEvent id="e" name="End"/>
+              </process>
+            </definitions>
+            """.trimIndent()
+
+        val err =
+            assertFailsWith<Exception> {
+                reverse.parse(xmlWithDoctype)
+            }
+        assertContains(err.message.orEmpty(), "DOCTYPE")
+    }
+
+    @Test
+    fun `parse rejects timer event definition without timer child`() {
+        val malformedTimer =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                         targetNamespace="http://example.com/bpmn">
+              <process id="p1" name="Malformed timer">
+                <startEvent id="Start_timer" name="Start">
+                  <timerEventDefinition/>
+                </startEvent>
+                <sequenceFlow id="f" sourceRef="Start_timer" targetRef="End_1"/>
+                <endEvent id="End_1" name="End"/>
+              </process>
+            </definitions>
+            """.trimIndent()
+
+        val err =
+            assertFailsWith<IllegalArgumentException> {
+                reverse.parse(malformedTimer)
+            }
+        assertContains(err.message.orEmpty(), "Malformed timerEventDefinition for event 'Start_timer'")
+        assertContains(err.message.orEmpty(), "expected timeDate, timeDuration, or timeCycle child")
+    }
+
+    @Test
+    fun `parse ignores error and escalation catalog entries with blank codes`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_catalogs",
+                processName = "Catalogs",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnEndEvent("End_1", "End"),
+                    ),
+                sequences = listOf(BpmnEdge("Flow_1", "Start_1", "End_1")),
+                errors =
+                    listOf(
+                        BpmnErrorRef("Error_good", "ORDER_FAILED", "Order failed"),
+                        BpmnErrorRef("Error_blank", "", "Blank"),
+                    ),
+                escalations =
+                    listOf(
+                        BpmnEscalationRef("Escalation_good", "ORDER_DELAYED", "Order delayed"),
+                        BpmnEscalationRef("Escalation_blank", " ", "Blank"),
+                    ),
+            )
+
+        val parsed = reverse.parse(forward.toXml(definition))
+
+        assertEquals(listOf(BpmnErrorRef("Error_good", "ORDER_FAILED", "Order failed")), parsed.errors)
+        assertEquals(
+            listOf(BpmnEscalationRef("Escalation_good", "ORDER_DELAYED", "Order delayed")),
+            parsed.escalations,
+        )
+        assertFalse(parsed.errors.any { it.id == "Error_blank" })
+        assertFalse(parsed.escalations.any { it.id == "Escalation_blank" })
     }
 
     @Test
