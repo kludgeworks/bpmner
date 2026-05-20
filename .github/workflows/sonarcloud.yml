@@ -60,54 +60,18 @@ jobs:
 
       - name: Run Bazel coverage
         run: |
-          # Generate coverage reports in a format compatible with SonarQube/SonarCloud
-          # using the Salesforce bazel-sonarqube coverage generator.
+          # Generate coverage reports using the idiomatic Salesforce coverage generator.
+          # This ensures coverage data is collected and made available to the sonarqube rule.
           bazel coverage //... \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
             --instrumentation_filter="^//src,^//linter,^//web"
 
-      - name: Prepare Coverage Reports
+      - name: SonarCloud Scan
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # 1. Extract project-specific LCOV data using awk
-          # For linter: Extract blocks where SF starts with linter/ and strip the prefix
-          awk '/^SF:linter\// {p=1} p {line=$0; if (line ~ /^SF:linter\//) sub(/^SF:linter\//, "SF:", line); print line} /^end_of_record/ {p=0}' bazel-out/_coverage/_coverage_report.dat > linter_coverage.lcov
-          
-          # For web: Extract blocks where SF starts with web/ and strip the prefix
-          awk '/^SF:web\// {p=1} p {line=$0; if (line ~ /^SF:web\//) sub(/^SF:web\//, "SF:", line); print line} /^end_of_record/ {p=0}' bazel-out/_coverage/_coverage_report.dat > web_coverage.lcov
-
-      - name: SonarCloud Scan (Backend)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          args: >
-            -Dsonar.projectKey=kludgeworks_bpmner_backend
-            -Dsonar.organization=kludgeworks
-            -Dsonar.sources=src
-            -Dsonar.coverageReportPaths=bazel-out/_coverage/_coverage_report.dat
-
-      - name: SonarCloud Scan (Linter)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: linter
-          args: >
-            -Dsonar.projectKey=kludgeworks_bpmner_linter
-            -Dsonar.organization=kludgeworks
-            -Dsonar.javascript.lcov.reportPaths=../linter_coverage.lcov
-
-      - name: SonarCloud Scan (Web)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          projectBaseDir: web
-          args: >
-            -Dsonar.projectKey=kludgeworks_bpmner_web
-            -Dsonar.organization=kludgeworks
-            -Dsonar.javascript.lcov.reportPaths=../web_coverage.lcov
+          # Use the idiomatic Bazel sonarqube runner.
+          # This target aggregates all sq_project modules defined in the BUILD files.
+          bazel run //:sonar

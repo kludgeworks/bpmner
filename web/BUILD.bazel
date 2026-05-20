@@ -2,13 +2,18 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
+load("@bazel_sonarqube//:defs.bzl", "sq_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
-package(default_visibility = [
-    "//:__pkg__",
-    "//src:__subpackages__",
-])
+package(default_visibility = ["//visibility:public"])
+
+sq_project(
+    name = "sq_project",
+    project_key = "kludgeworks_bpmner_web",
+    project_name = "bpmner Web",
+    srcs = glob(["src/**/*.ts"]),
+)
 
 # Link the standalone web package's node_modules
 npm_link_all_packages(name = "node_modules")
