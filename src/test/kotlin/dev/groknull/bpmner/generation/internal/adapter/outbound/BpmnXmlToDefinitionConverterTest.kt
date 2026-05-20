@@ -155,6 +155,41 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
+    fun `parse surfaces blank messageRef faithfully and validator flags the missing attribute`() {
+        // A messageEventDefinition without messageRef is malformed XML. The parser captures it
+        // exactly (BpmnMessageEventDefinition("")) so the validator can surface the *actual*
+        // problem ("missing required attribute") rather than a misleading referential-integrity
+        // diagnostic (the previous "messageRef '' does not match any message catalog id").
+        val xml =
+            """
+            <?xml version="1.0" encoding="UTF-8"?>
+            <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                         targetNamespace="http://example.com/bpmn">
+              <process id="p1" name="Blank messageRef">
+                <startEvent id="Start_msg" name="Start">
+                  <messageEventDefinition/>
+                </startEvent>
+                <sequenceFlow id="f" sourceRef="Start_msg" targetRef="End_1"/>
+                <endEvent id="End_1" name="End"/>
+              </process>
+            </definitions>
+            """.trimIndent()
+
+        val parsed = reverse.parse(xml)
+        val startEvent = parsed.nodes.first { it.id == "Start_msg" } as BpmnStartEvent
+        assertEquals(BpmnMessageEventDefinition(""), startEvent.eventDefinition)
+
+        val errors =
+            dev.groknull.bpmner.validation.internal.domain
+                .BpmnDefinitionValidator()
+                .validate(parsed)
+        assertContains(
+            errors.joinToString("\n"),
+            "event Start_msg messageEventDefinition is missing the required messageRef attribute",
+        )
+    }
+
+    @Test
     fun `parse ignores error and escalation catalog entries with blank codes`() {
         val definition =
             BpmnDefinition(

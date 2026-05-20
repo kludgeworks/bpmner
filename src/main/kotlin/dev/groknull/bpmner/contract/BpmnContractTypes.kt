@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.contract
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
@@ -108,9 +109,16 @@ data class ProcessContract(
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
 ) {
+    // Backward-compat read-only views over `start` for existing Kotlin callers that still use
+    // the flat `trigger: String` / `triggerSourceIds: List<String>` shape via the secondary
+    // constructor below. JsonIgnore keeps them out of the JSON wire format — without this,
+    // Jackson serialises `trigger` as a duplicate top-level property and round-trip
+    // deserialisation fails with "Unrecognized field 'trigger'".
+    @get:JsonIgnore
     val trigger: String
         get() = start.trigger.description
 
+    @get:JsonIgnore
     val triggerSourceIds: List<String>
         get() = start.sourceIds
 

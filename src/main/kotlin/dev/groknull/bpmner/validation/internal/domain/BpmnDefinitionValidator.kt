@@ -112,7 +112,7 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    @Suppress("LongMethod")
+    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
     private fun validateEventDefinitions(
         definition: BpmnDefinition,
         errors: MutableList<String>,
@@ -171,14 +171,21 @@ internal class BpmnDefinitionValidator {
                     if (node.eventDefinition is BpmnNoneEventDefinition) {
                         errors.add("boundary event ${node.id} must declare an event definition")
                     }
-                    val attachedTo = nodesById[node.attachedToRef]
-                    if (attachedTo == null) {
-                        errors.add("boundary event ${node.id} attachedToRef '${node.attachedToRef}' does not match any node id")
-                    } else if (attachedTo !is BpmnUserTask && attachedTo !is BpmnServiceTask) {
-                        errors.add(
-                            "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
-                                "must reference an attachable activity",
-                        )
+                    if (node.attachedToRef.isBlank()) {
+                        errors.add("boundary event ${node.id} is missing the required attachedToRef attribute")
+                    } else {
+                        val attachedTo = nodesById[node.attachedToRef]
+                        if (attachedTo == null) {
+                            errors.add(
+                                "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                                    "does not match any node id",
+                            )
+                        } else if (attachedTo !is BpmnUserTask && attachedTo !is BpmnServiceTask) {
+                            errors.add(
+                                "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                                    "must reference an attachable activity",
+                            )
+                        }
                     }
                     validateEventDefinition(
                         node.id,
@@ -210,7 +217,7 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    @Suppress("LongParameterList")
+    @Suppress("LongParameterList", "CyclomaticComplexMethod")
     private fun validateEventDefinition(
         nodeId: String,
         eventDefinition: BpmnEventDefinition,
@@ -232,7 +239,11 @@ internal class BpmnDefinitionValidator {
             }
 
             is BpmnMessageEventDefinition -> {
-                if (eventDefinition.messageRef !in messageIds) {
+                if (eventDefinition.messageRef.isBlank()) {
+                    errors.add(
+                        "event $nodeId messageEventDefinition is missing the required messageRef attribute",
+                    )
+                } else if (eventDefinition.messageRef !in messageIds) {
                     errors.add(
                         "event $nodeId messageRef '${eventDefinition.messageRef}' " +
                             "does not match any message catalog id",
@@ -241,19 +252,31 @@ internal class BpmnDefinitionValidator {
             }
 
             is BpmnSignalEventDefinition -> {
-                if (eventDefinition.signalRef !in signalIds) {
+                if (eventDefinition.signalRef.isBlank()) {
+                    errors.add(
+                        "event $nodeId signalEventDefinition is missing the required signalRef attribute",
+                    )
+                } else if (eventDefinition.signalRef !in signalIds) {
                     errors.add("event $nodeId signalRef '${eventDefinition.signalRef}' does not match any signal catalog id")
                 }
             }
 
             is BpmnErrorEventDefinition -> {
-                if (eventDefinition.errorRef !in errorIds) {
+                if (eventDefinition.errorRef.isBlank()) {
+                    errors.add(
+                        "event $nodeId errorEventDefinition is missing the required errorRef attribute",
+                    )
+                } else if (eventDefinition.errorRef !in errorIds) {
                     errors.add("event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id")
                 }
             }
 
             is BpmnEscalationEventDefinition -> {
-                if (eventDefinition.escalationRef !in escalationIds) {
+                if (eventDefinition.escalationRef.isBlank()) {
+                    errors.add(
+                        "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
+                    )
+                } else if (eventDefinition.escalationRef !in escalationIds) {
                     errors.add(
                         "event $nodeId escalationRef '${eventDefinition.escalationRef}' does not match any escalation catalog id",
                     )
