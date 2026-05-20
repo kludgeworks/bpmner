@@ -179,6 +179,72 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
+    fun `converter writes gateway default attribute when edge isDefault is true`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_credit",
+                processName = "Credit-tier routing",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Score received"),
+                        BpmnExclusiveGateway("Gateway_1", "Which credit tier?"),
+                        BpmnUserTask("Task_fast", "Fast-track underwriting"),
+                        BpmnUserTask("Task_manual", "Manual review"),
+                        BpmnEndEvent("EndEvent_1", "Offer generated"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                        BpmnEdge(
+                            "Flow_fast",
+                            "Gateway_1",
+                            "Task_fast",
+                            conditionExpression = "score >= 750",
+                        ),
+                        BpmnEdge("Flow_manual", "Gateway_1", "Task_manual", isDefault = true),
+                        BpmnEdge("Flow_3", "Task_fast", "EndEvent_1"),
+                        BpmnEdge("Flow_4", "Task_manual", "EndEvent_1"),
+                    ),
+            )
+
+        val xml = converter.toXml(definition)
+
+        // Camunda emits attributes alphabetically — `default` precedes `id` on the gateway.
+        assertContains(xml, "<exclusiveGateway default=\"Flow_manual\" id=\"Gateway_1\"")
+        assertFalse(
+            xml.contains("<sequenceFlow id=\"Flow_manual\"[^>]*>\\s*<conditionExpression".toRegex()),
+            "Default flow must not have an inline condition expression",
+        )
+    }
+
+    @Test
+    fun `converter rejects isDefault on non-gateway source`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_bad",
+                processName = "Bad default",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Start"),
+                        BpmnUserTask("Task_1", "Do thing"),
+                        BpmnEndEvent("EndEvent_1", "End"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1", isDefault = true),
+                    ),
+            )
+
+        val ex = kotlin.runCatching { converter.toXml(definition) }.exceptionOrNull()
+        require(ex != null) { "expected render to fail for isDefault on non-gateway source" }
+        assertContains(
+            ex.message ?: "",
+            "isDefault is only supported on exclusive-gateway sources",
+        )
+    }
+
+    @Test
     fun `converter omits name attribute for unnamed converging gateway`() {
         val definition =
             BpmnDefinition(

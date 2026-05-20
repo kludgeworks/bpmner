@@ -26,6 +26,7 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnFingerprintService
@@ -272,7 +273,7 @@ class BpmnRepairStrategiesTest {
         source = BpmnDiagnosticSource.LINT,
         message = "violation of $rule",
         rule = rule,
-        category = "error",
+        severity = BpmnDiagnosticSeverity.ERROR,
         elementId = elementId,
         kind = kind,
         repairScope = scope,

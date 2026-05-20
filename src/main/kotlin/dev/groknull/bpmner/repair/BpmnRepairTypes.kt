@@ -46,6 +46,10 @@ data class BpmnAttemptRecord(
     val xsdDiagnostics: Int,
     val lintDiagnostics: Int,
     val diagnosticFingerprint: String,
+    // Fingerprint over only the blocking (ERROR) diagnostics. Used by the refinement engine's
+    // "stuck blocking" guard so that advisory-warning oscillation between iterations doesn't
+    // mask a permanently-stuck blocking error.
+    val blockingDiagnosticFingerprint: String,
     val definitionFingerprint: String,
     val repairPromptFingerprint: String?,
     val topDiagnostics: List<String> = emptyList(),

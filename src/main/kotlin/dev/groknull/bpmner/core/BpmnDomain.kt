@@ -372,4 +372,16 @@ data class BpmnEdge(
     val name: String? = null,
     @get:JsonPropertyDescription("Optional sequence-flow condition expression, typically used on gateway branches")
     val conditionExpression: String? = null,
-)
+    @get:JsonPropertyDescription(
+        "Mark this edge as the BPMN default flow for an exclusive gateway. Default flows " +
+            "are taken when no other branch's condition matches and must not carry a " +
+            "condition expression themselves. At most one default flow per gateway.",
+    )
+    val isDefault: Boolean = false,
+) {
+    init {
+        require(!(isDefault && !conditionExpression.isNullOrBlank())) {
+            "BpmnEdge $id: default edge must not carry a condition expression"
+        }
+    }
+}

@@ -18,7 +18,21 @@ data class BpmnEvaluation(
     val renderFailureMessage: String? = null,
     val rawLintIssues: List<LintIssue>? = null,
 ) {
-    fun isSuccessful(): Boolean = validatedXml != null && diagnostics.isEmpty()
+    /**
+     * The evaluation is successful when the document was validated AND no *blocking* (ERROR)
+     * diagnostics remain. Advisory diagnostics (WARNING / INFO) are surfaced through the
+     * `diagnostics` list and may persist in a successful outcome — matching bpmnlint's
+     * native severity model.
+     */
+    fun isSuccessful(): Boolean = validatedXml != null && blockingDiagnostics.isEmpty()
+
+    /** ERROR-severity diagnostics — the ones the refinement engine must drive to zero. */
+    val blockingDiagnostics: List<BpmnDiagnostic>
+        get() = diagnostics.filter { it.isBlocking }
+
+    /** WARNING / INFO diagnostics — surfaced in the final report but not blocking. */
+    val advisoryDiagnostics: List<BpmnDiagnostic>
+        get() = diagnostics.filterNot { it.isBlocking }
 
     fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml =
         ValidatedBpmnXml(

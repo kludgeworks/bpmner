@@ -26,6 +26,7 @@ import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnValidator
 import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
+import dev.groknull.bpmner.validation.format
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
@@ -79,6 +80,7 @@ internal class BpmnRefinementEngine(
             )
 
         if (state.attempt.evaluation.isSuccessful()) {
+            logAdvisoryDiagnostics(state.attempt.evaluation.advisoryDiagnostics, state.attempt.repairAttempts)
             context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
             val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
             eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
@@ -88,6 +90,7 @@ internal class BpmnRefinementEngine(
         while (state.history.size < maxEvaluations) {
             state = performRepairStep(request, state, maxEvaluations, context)
             if (state.attempt.evaluation.isSuccessful()) {
+                logAdvisoryDiagnostics(state.attempt.evaluation.advisoryDiagnostics, state.attempt.repairAttempts)
                 context.updateProgress("Validation passed after ${state.attempt.repairAttempts} repair attempt(s)")
                 val result = state.attempt.evaluation.toValidatedBpmnXml(state.attempt.repairAttempts)
                 eventPublisher.publishEvent(BpmnValidationPassedEvent(request, result.xml, state.attempt.repairAttempts))
@@ -96,6 +99,23 @@ internal class BpmnRefinementEngine(
         }
 
         failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts", request)
+    }
+
+    /**
+     * Surface advisory diagnostics on a successful run. These are warning- or info-level
+     * findings the pipeline accepted as documentation-grade — visible to the user but never
+     * blocking. Matches bpmnlint convention (errors block, warnings advise).
+     */
+    private fun logAdvisoryDiagnostics(
+        advisory: List<BpmnDiagnostic>,
+        repairAttempts: Int,
+    ) {
+        if (advisory.isEmpty()) return
+        logger.info(
+            "Pipeline succeeded after $repairAttempts repair attempt(s) with {} advisory diagnostic(s) remaining:",
+            advisory.size,
+        )
+        advisory.forEach { logger.info("  - {}", it.format()) }
     }
 
     private data class RepairState(
@@ -134,13 +154,24 @@ internal class BpmnRefinementEngine(
 
         history = history.append(nextRecord)
 
-        if (!nextAttempt.evaluation.isSuccessful() &&
-            nextRecord.diagnosticFingerprint == currentRecord.diagnosticFingerprint
-        ) {
+        // Abort only when blocking (ERROR) diagnostics persist unchanged. Warning-only
+        // sequences are allowed to repeat — they're advisory and never block success.
+        // (Without this split, a single un-fixable warn-level lint rule trips the same guard
+        // as a real error, which is the failure mode that motivated this redesign.)
+        //
+        // Compare the *blocking-only* fingerprint here. The full diagnostic fingerprint would
+        // include advisory warnings, so if a blocking error is stuck but advisory warnings
+        // oscillate between iterations, the full fingerprint would change every round and the
+        // guard would never trip — wasting every remaining maxEvaluations attempt instead of
+        // failing fast on the second detection of the stuck blocking error.
+        val blockingPersistsUnchanged =
+            nextAttempt.evaluation.blockingDiagnostics.isNotEmpty() &&
+                nextRecord.blockingDiagnosticFingerprint == currentRecord.blockingDiagnosticFingerprint
+        if (blockingPersistsUnchanged) {
             failRefinement(
                 maxEvaluations = maxEvaluations,
                 history = history,
-                reason = "unchanged diagnostics after repair attempt ${nextAttempt.repairAttempts}",
+                reason = "unchanged blocking diagnostics after repair attempt ${nextAttempt.repairAttempts}",
                 _request = request,
             )
         }

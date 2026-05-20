@@ -85,6 +85,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     targetRef = flow.target.id,
                     name = flow.name?.takeIf { it.isNotBlank() },
                     conditionExpression = flow.conditionExpression?.textContent?.takeIf { it.isNotBlank() },
+                    isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id,
                 )
             }
 

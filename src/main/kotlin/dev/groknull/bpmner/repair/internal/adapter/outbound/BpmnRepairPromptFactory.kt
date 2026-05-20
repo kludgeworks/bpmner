@@ -10,6 +10,7 @@ import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.generationPrompt
 import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
@@ -62,8 +63,7 @@ internal class BpmnRepairPromptFactory(
             appendLine("Current canonical BpmnDefinition JSON:")
             appendLine(fingerprints.serializeDefinition(definition))
             appendLine()
-            appendLine("Diagnostics to fix:")
-            diagnostics.forEach { d -> appendLine(formatDiagnosticWithLocalContext(d, localOutcome)) }
+            appendDiagnosticBlock(diagnostics, localOutcome)
         }
 
     override fun fullRepairFeedback(
@@ -143,17 +143,55 @@ internal class BpmnRepairPromptFactory(
                 }
                 appendLine()
             }
-            appendLine("Diagnostics:")
-            diagnostics.forEach { d -> appendLine(formatDiagnosticWithLocalContext(d, localOutcome)) }
+            appendDiagnosticBlock(diagnostics, localOutcome)
         }
+
+    /**
+     * Render the diagnostic list grouped by severity (errors first), with a single sentence
+     * teaching the LLM the contract: ERRORs must be fixed; WARNINGs are advisory. Without
+     * this guidance the repair LLM treats warnings as forcing functions and may invent
+     * structural changes to satisfy them — which is exactly the failure mode that produced
+     * the credit-tier run's conditional-flow regressions.
+     */
+    private fun StringBuilder.appendDiagnosticBlock(
+        diagnostics: List<BpmnDiagnostic>,
+        localOutcome: BpmnLocalRepairOutcome,
+    ) {
+        val errors = diagnostics.filter { it.isBlocking }
+        val advisories = diagnostics.filterNot { it.isBlocking }
+        if (errors.isNotEmpty()) {
+            appendLine("ERRORs — MUST be fixed; the pipeline cannot succeed while any remain:")
+            errors.forEach { d -> appendLine(formatDiagnosticWithLocalContext(d, localOutcome)) }
+        }
+        if (advisories.isNotEmpty()) {
+            if (errors.isNotEmpty()) appendLine()
+            appendLine(
+                "WARNINGs / INFO — advisory only. Fix if the change is a clear, local rename" +
+                    " or label tweak; NEVER invent or restructure flows to satisfy a warning.",
+            )
+            advisories.forEach { d -> appendLine(formatDiagnosticWithLocalContext(d, localOutcome)) }
+        }
+    }
 
     private fun formatDiagnosticWithLocalContext(
         diagnostic: BpmnDiagnostic,
         localOutcome: BpmnLocalRepairOutcome,
     ): String {
         val base = "- ${diagnostic.format()}"
-        val failure = localOutcome.matches(diagnostic) ?: return base
-        return base + " [local-fix-failed: ${failure.reason}]"
+        val localFailureSuffix =
+            localOutcome.matches(diagnostic)?.let { " [local-fix-failed: ${it.reason}]" }.orEmpty()
+        // For known naming-rule violations, append a kind-specific shape recommendation so
+        // the LLM has concrete examples of compliant names — addresses the failure mode where
+        // the repair LLM produces a rename that still violates the rule's wink-NLP detector.
+        val shapeHintSuffix =
+            diagnostic.rule
+                ?.let { BpmnNamingShapeAdvice.adviceForRule(it) }
+                ?.let { advice ->
+                    "\n      hint (${advice.kind}): ${advice.shape}" +
+                        " examples=${advice.examples.joinToString(", ") { "\"$it\"" }}" +
+                        " avoid=${advice.antiExamples.joinToString(", ") { "\"$it\"" }}"
+                }.orEmpty()
+        return base + localFailureSuffix + shapeHintSuffix
     }
 
     private fun renderFailureContext(evaluation: BpmnEvaluation): String =

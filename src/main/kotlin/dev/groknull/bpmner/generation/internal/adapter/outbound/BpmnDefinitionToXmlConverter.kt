@@ -28,6 +28,7 @@ import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.ConditionExpression
 import org.camunda.bpm.model.bpmn.instance.Definitions
+import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
@@ -162,6 +163,15 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             process.addChildElement(sequenceFlow)
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
+            if (edge.isDefault) {
+                val gateway =
+                    source as? ExclusiveGateway
+                        ?: error(
+                            "edge ${edge.id}: isDefault is only supported on exclusive-gateway sources, " +
+                                "got ${source::class.simpleName}",
+                        )
+                gateway.default = sequenceFlow
+            }
         }
     }
 

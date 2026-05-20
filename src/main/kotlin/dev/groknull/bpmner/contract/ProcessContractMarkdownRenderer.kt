@@ -44,9 +44,14 @@ internal class ProcessContractMarkdownRenderer {
                     val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
                     appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
                     decision.branches.forEach { branch ->
-                        val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
+                        val suffix =
+                            when (branch) {
+                                is ConditionalBranch -> " if \"${branch.condition}\""
+                                is DefaultBranch -> " [default]"
+                                is UnconditionalBranch -> ""
+                            }
                         val next = branch.nextRef?.let { " → $it" }.orEmpty()
-                        appendLine("  - ${branch.id} → \"${branch.label}\"$condition$next")
+                        appendLine("  - ${branch.id} → \"${branch.label}\"$suffix$next")
                     }
                 }
             }

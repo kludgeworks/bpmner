@@ -5,16 +5,19 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractAssumption
-import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationCode
+import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.UnconditionalBranch
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -120,16 +123,98 @@ class BpmnContractValidatorTest {
         assertTrue(report.issues.any { it.code == ContractValidationCode.DECISION_BRANCH_TOO_FEW })
     }
 
+    // The "blank label or condition" path is now enforced by Jakarta @NotBlank on the
+    // sealed-subtype constructors, not by an explicit validator rule. A branch with a blank
+    // label can no longer be constructed at all — the type system catches it earlier than the
+    // old runtime check. This test therefore exercises the no-conditional-with-default rule
+    // instead, which is the closest semantic successor.
     @Test
-    fun `branch missing both condition and label produces an error`() {
+    fun `decision with only a default branch and no conditional alongside flags error`() {
         val branchingContract = branchingContract()
         val originalDecision = branchingContract.decisions.first()
-        val blankBranch = ContractBranch(id = "branch-blank", label = " ", condition = null)
         val brokenDecision =
-            originalDecision.copy(branches = originalDecision.branches + blankBranch)
+            originalDecision.copy(
+                branches =
+                    listOf(
+                        DefaultBranch(id = "branch-default-only-a", label = "A"),
+                        DefaultBranch(id = "branch-default-only-b", label = "B"),
+                    ),
+            )
         val contract = branchingContract.copy(decisions = listOf(brokenDecision))
         val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.BRANCH_WITHOUT_CONDITION_OR_LABEL))
+        // Two defaults trips both rules: multi-default AND no-conditional-alongside.
+        assertTrue(codes.contains(ContractValidationCode.DECISION_MULTIPLE_DEFAULTS))
+        assertTrue(codes.contains(ContractValidationCode.DECISION_DEFAULT_WITHOUT_CONDITIONAL))
+    }
+
+    @Test
+    fun `decision with a single default branch alongside conditional is valid`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val decision =
+            originalDecision.copy(
+                branches =
+                    listOf(
+                        ConditionalBranch(id = "br-yes", label = "Eligible", condition = "score >= 750"),
+                        DefaultBranch(id = "br-fallback", label = "Manual review"),
+                    ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(decision))
+        val report = validator.validate(contract)
+        assertTrue(report.isValid, "expected single-default decision to be valid, got ${report.issues}")
+    }
+
+    @Test
+    fun `default branch on parallel decision flags DEFAULT_BRANCH_ON_PARALLEL`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val parallelDecisionWithDefault =
+            originalDecision.copy(
+                kind = ContractGatewayKind.PARALLEL,
+                branches =
+                    listOf(
+                        UnconditionalBranch(id = "br-a", label = "Track A"),
+                        DefaultBranch(id = "br-default", label = "Default"),
+                    ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(parallelDecisionWithDefault))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL))
+    }
+
+    @Test
+    fun `conditional branch on parallel decision flags CONDITIONAL_BRANCH_ON_PARALLEL`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val parallelDecision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.PARALLEL,
+                branches =
+                    listOf(
+                        UnconditionalBranch(id = "br-a", label = "Track A"),
+                        ConditionalBranch(id = "br-misplaced", label = "B", condition = "x"),
+                    ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(parallelDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.CONDITIONAL_BRANCH_ON_PARALLEL))
+    }
+
+    @Test
+    fun `unconditional branch on exclusive decision flags UNCONDITIONAL_BRANCH_ON_EXCLUSIVE`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                branches =
+                    listOf(
+                        ConditionalBranch(id = "br-yes", label = "Yes", condition = "x"),
+                        UnconditionalBranch(id = "br-misplaced", label = "B"),
+                    ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.UNCONDITIONAL_BRANCH_ON_EXCLUSIVE))
     }
 
     @Test
@@ -198,12 +283,12 @@ class BpmnContractValidatorTest {
                         question = "Is the applicant eligible?",
                         branches =
                             listOf(
-                                ContractBranch(
+                                ConditionalBranch(
                                     id = "branch-yes",
                                     label = "Eligible",
                                     condition = "criteria met",
                                 ),
-                                ContractBranch(
+                                ConditionalBranch(
                                     id = "branch-no",
                                     label = "Not eligible",
                                     condition = "criteria not met",

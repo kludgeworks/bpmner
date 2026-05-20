@@ -8,9 +8,11 @@ package dev.groknull.bpmner.generation.internal.domain
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.isSemanticallyTransparent
 import dev.groknull.bpmner.core.typeName
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
@@ -39,8 +41,10 @@ import org.springframework.stereotype.Component
  * 4. [BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED] — a branch's `nextRef` points at an id
  *    that doesn't exist anywhere in the BPMN.
  * 5. [BpmnFidelityCode.BRANCH_FLOW_MISSING] — a branch's `nextRef` resolves but no sequence
- *    flow connects this decision's gateway to that target. Catches both missing loop
- *    back-edges and missing forward-skip edges via the same direct lookup.
+ *    flow path connects this decision's gateway to that target — directly OR via one or more
+ *    *semantically transparent* nodes (see [isSemanticallyTransparent]). The transparent-node
+ *    walk accepts the legitimate generator pattern where flows pass through unnamed converging
+ *    joins; missing-edge bugs are still caught.
  */
 @Component
 internal class BpmnContractFidelityChecker {
@@ -159,19 +163,67 @@ internal class BpmnContractFidelityChecker {
                     )
                 return@forEach
             }
-            if (gatewayIsValid && outbound.none { it.targetRef == ref }) {
+            if (gatewayIsValid &&
+                !targetReachableSemantically(
+                    from = gateway!!,
+                    targetId = ref,
+                    outgoingBySource = outgoingBySource,
+                    nodeById = nodeById,
+                )
+            ) {
                 issues +=
                     BpmnFidelityIssue(
                         code = BpmnFidelityCode.BRANCH_FLOW_MISSING,
                         severity = BpmnFidelitySeverity.ERROR,
                         message =
                             "Branch '${branch.id}' of decision '${decision.id}' specifies nextRef='$ref' " +
-                                "but no sequence flow connects gateway '${gateway!!.id}' to '$ref'.",
+                                "but no sequence flow connects gateway '${gateway.id}' to '$ref' " +
+                                "(directly or via transparent routing nodes).",
                         contractElementId = branch.id,
                         bpmnElementId = ref,
                     )
             }
         }
+    }
+
+    /**
+     * Returns true if [targetId] is reachable from [from] either directly or by walking forward
+     * through one or more [isSemanticallyTransparent] nodes. Bounded by [MAX_REACHABILITY_HOPS]
+     * to keep the check finite on pathological topologies.
+     */
+    private fun targetReachableSemantically(
+        from: BpmnNode,
+        targetId: String,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
+        nodeById: Map<String, BpmnNode>,
+    ): Boolean {
+        val direct = outgoingBySource[from.id].orEmpty()
+        if (direct.any { it.targetRef == targetId }) return true
+        val seen = mutableSetOf(from.id)
+        var frontier = direct.map { it.targetRef }.toSet() - from.id
+        repeat(MAX_REACHABILITY_HOPS) {
+            if (frontier.isEmpty()) return false
+            if (targetId in frontier) return true
+            // Step the BFS one hop: keep only unseen, semantically-transparent nodes; collect
+            // their outbound edge targets as the next frontier. Chained pipeline keeps the loop
+            // body free of multi-branch jumps (detekt LoopWithTooManyJumpStatements).
+            frontier =
+                frontier
+                    .asSequence()
+                    .filter { seen.add(it) }
+                    .mapNotNull { nodeById[it] }
+                    .filter { it.isSemanticallyTransparent(outgoingBySource) }
+                    .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
+                    .map { it.targetRef }
+                    .toSet()
+        }
+        return false
+    }
+
+    private companion object {
+        // Bound the transparent-join walk. Six hops handles real-world process topologies
+        // comfortably and prevents pathological loops from making the check non-terminating.
+        const val MAX_REACHABILITY_HOPS = 6
     }
 
     private fun kindDescription(kind: ContractGatewayKind): String =

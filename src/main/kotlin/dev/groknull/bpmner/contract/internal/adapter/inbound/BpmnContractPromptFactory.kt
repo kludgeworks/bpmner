@@ -55,7 +55,31 @@ internal class BpmnContractPromptFactory(
                     " `ContractTrigger.Signal(signalName, description)`.",
             )
             appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
-            appendLine("- ContractBranch must have a non-blank label and a condition when applicable.")
+            appendLine()
+            appendLine("Branch kind (sealed type with a `kind` discriminator):")
+            appendLine(
+                "- CONDITIONAL — the default kind for branches of an EXCLUSIVE decision. Carries a" +
+                    " non-blank `condition` expression that selects it. Example:" +
+                    " `{kind: \"CONDITIONAL\", id: \"br-yes\", label: \"Eligible\", condition: \"score >= 750\"}`.",
+            )
+            appendLine(
+                "- DEFAULT — the catch-all branch of an EXCLUSIVE decision, taken when no other" +
+                    " branch's condition matched. Set this when the source prose uses catch-all" +
+                    " phrasing — \"otherwise\", \"for every other case\", \"the catch-all\", \"anything else\"," +
+                    " \"for all remaining cases\". A DEFAULT branch carries NO condition; the label" +
+                    " still describes the destination (e.g. \"Manual review\"). Example:" +
+                    " `{kind: \"DEFAULT\", id: \"br-fallback\", label: \"Manual review\"}`. At most one" +
+                    " DEFAULT branch per decision.",
+            )
+            appendLine(
+                "- UNCONDITIONAL — the kind for branches of a PARALLEL decision. Every branch fires" +
+                    " concurrently; no condition. Example:" +
+                    " `{kind: \"UNCONDITIONAL\", id: \"br-track-a\", label: \"IT prep\"}`.",
+            )
+            appendLine(
+                "- Kind/decision matching is strict: CONDITIONAL and DEFAULT only on EXCLUSIVE decisions;" +
+                    " UNCONDITIONAL only on PARALLEL decisions.",
+            )
             appendLine()
             appendLine("Loop and topology rules:")
             appendLine(

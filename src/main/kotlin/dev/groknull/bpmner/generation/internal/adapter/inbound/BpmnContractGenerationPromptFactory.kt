@@ -5,13 +5,15 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
-import dev.groknull.bpmner.contract.ContractGatewayKind
-import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 
-internal class BpmnContractGenerationPromptFactory {
-    @Suppress("LongMethod") // prompt assembly is a single linear narrative; splitting hurts readability
+internal class BpmnContractGenerationPromptFactory(
+    private val contractRenderer: ProcessContractMarkdownRenderer,
+) {
+    @Suppress("LongMethod", "MaxLineLength") // prompt narrative + worked-example lines stay literal
     fun prompt(
         request: BpmnRequest,
         validatedContract: ValidatedProcessContract,
@@ -61,6 +63,30 @@ internal class BpmnContractGenerationPromptFactory {
                     " `Gateway_join_1`).",
             )
             appendLine()
+            appendLine("Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discriminator):")
+            appendLine(
+                "- CONDITIONAL (ConditionalBranch) → BpmnEdge with `conditionExpression = branch.condition`." +
+                    " The default kind for EXCLUSIVE decisions.",
+            )
+            appendLine(
+                "- DEFAULT (DefaultBranch) → emit an outbound BpmnEdge with `conditionExpression = null`" +
+                    " (no condition). You may leave `isDefault = false`; the downstream DefaultFlowAssigner" +
+                    " sets `isDefault = true` from the contract and the renderer writes the gateway's" +
+                    " `default=\"Flow_X\"` attribute. Valid only on EXCLUSIVE decisions. NEVER invent" +
+                    " placeholder conditions like \"otherwise\" or \"all other cases\".",
+            )
+            appendLine(
+                "- UNCONDITIONAL (UnconditionalBranch) → BpmnEdge with neither condition nor isDefault." +
+                    " The kind for PARALLEL fork branches.",
+            )
+            appendLine()
+            appendLine("Naming shape rules — follow these on your first emission to avoid lint repair rounds:")
+            BpmnNamingShapeAdvice.allAdvice().forEach { advice ->
+                appendLine("- ${advice.kind}: ${advice.shape}")
+                appendLine("    examples: ${advice.examples.joinToString(", ") { "\"$it\"" }}")
+                appendLine("    avoid:    ${advice.antiExamples.joinToString(", ") { "\"$it\"" }}")
+            }
+            appendLine()
             appendLine("Loop and back-edge rules:")
             appendLine(
                 "- A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier" +
@@ -80,16 +106,32 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine()
             appendLine("Worked example — iterative repair loop with three exit conditions:")
             appendLine("  Contract decision `dec-validate` (kind=EXCLUSIVE) has three branches:")
-            appendLine("    - {id: br-pass, label: \"Validation passed\", nextRef: \"end-success\"}")
-            appendLine("    - {id: br-no-progress, label: \"No progress\", nextRef: \"end-no-progress\"}")
-            appendLine("    - {id: br-retry, label: \"Continue\", nextRef: \"act-strategy-1\"}  // back-edge")
+            appendLine(
+                "    - {kind: CONDITIONAL, id: br-pass, label: \"Validation passed\", condition: \"validation passed\", nextRef: \"end-success\"}",
+            )
+            appendLine(
+                "    - {kind: CONDITIONAL, id: br-no-progress, label: \"No progress\", condition: \"no progress\", nextRef: \"end-no-progress\"}",
+            )
+            appendLine(
+                "    - {kind: CONDITIONAL, id: br-retry, label: \"Continue\", condition: \"continue\", nextRef: \"act-strategy-1\"}  // back-edge",
+            )
             appendLine("  BPMN topology:")
             appendLine("    - The decision is realized as ONE EXCLUSIVE_GATEWAY node:")
             appendLine("        BpmnNode(id=\"dec-validate\", type=EXCLUSIVE_GATEWAY, name=\"Did validation pass?\")")
-            appendLine("    - Three outbound sequence flows from that gateway:")
-            appendLine("        * to `end-success`, condition \"validation passed\"")
-            appendLine("        * to `end-no-progress`, condition \"no progress\"")
-            appendLine("        * to `act-strategy-1`, condition \"continue\"  ← back-edge")
+            appendLine("    - Three outbound sequence flows from that gateway with the conditions above.")
+            appendLine()
+            appendLine("Worked example — exclusive decision with a default branch:")
+            appendLine("  Contract decision `dec-tier` (kind=EXCLUSIVE) has three branches:")
+            appendLine("    - {kind: CONDITIONAL, id: br-fast, label: \"Fast-track\", condition: \"score >= 750\", nextRef: \"act-fast\"}")
+            appendLine(
+                "    - {kind: CONDITIONAL, id: br-standard, label: \"Standard\", condition: \"score in 600..749\", nextRef: \"act-standard\"}",
+            )
+            appendLine("    - {kind: DEFAULT, id: br-manual, label: \"Manual review\", nextRef: \"act-manual\"}")
+            appendLine("  BPMN topology:")
+            appendLine("    - One EXCLUSIVE_GATEWAY node `dec-tier`.")
+            appendLine("    - Three outbound flows from `dec-tier`. The flow targeting `act-manual` has")
+            appendLine("      `isDefault = true` and no conditionExpression; the renderer writes the")
+            appendLine("      gateway's `default=\"Flow_manual\"` attribute.")
             appendLine()
             appendLine("Parallel-gateway rules:")
             appendLine(
@@ -111,9 +153,9 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine()
             appendLine("Worked example — three concurrent preparation tracks rejoining:")
             appendLine("  Contract decision `dec-prep-tracks` (kind=PARALLEL) has three branches:")
-            appendLine("    - {id: br-it,         label: \"IT prep\",         nextRef: \"act-prep-it\"}")
-            appendLine("    - {id: br-facilities, label: \"Facilities prep\", nextRef: \"act-prep-facilities\"}")
-            appendLine("    - {id: br-manager,    label: \"Manager prep\",    nextRef: \"act-prep-manager\"}")
+            appendLine("    - {kind: UNCONDITIONAL, id: br-it,         label: \"IT prep\",         nextRef: \"act-prep-it\"}")
+            appendLine("    - {kind: UNCONDITIONAL, id: br-facilities, label: \"Facilities prep\", nextRef: \"act-prep-facilities\"}")
+            appendLine("    - {kind: UNCONDITIONAL, id: br-manager,    label: \"Manager prep\",    nextRef: \"act-prep-manager\"}")
             appendLine("  After all three complete, the process continues to `act-orientation`.")
             appendLine("  BPMN topology:")
             appendLine("    - Fork: BpmnNode(id=\"dec-prep-tracks\", type=PARALLEL_GATEWAY, name=\"Run preparation tracks\")")
@@ -126,7 +168,7 @@ internal class BpmnContractGenerationPromptFactory {
             appendLine("    - One outbound flow from the join to `act-orientation`.")
             appendLine()
             appendLine("Primary validated ProcessContract:")
-            appendLine(renderContract(validatedContract.contract).trim())
+            appendLine(contractRenderer.render(validatedContract.contract).trim())
             appendLine()
             appendLine("Original input for traceability only:")
             appendLine(request.processDescription)
@@ -134,76 +176,6 @@ internal class BpmnContractGenerationPromptFactory {
                 appendLine()
                 appendLine("Style guide:")
                 appendLine(request.styleGuide)
-            }
-        }
-
-    // markdown rendering of the contract; one branch per contract section keeps output cohesive
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
-    private fun renderContract(contract: ProcessContract): String =
-        buildString {
-            appendLine("# ${contract.processName}")
-            appendLine("Trigger: ${contract.trigger}")
-            appendLine()
-            appendLine("## Summary")
-            appendLine(contract.summary)
-
-            if (contract.actors.isNotEmpty()) {
-                appendLine()
-                appendLine("## Actors")
-                contract.actors.forEach { actor ->
-                    val role = actor.role?.let { " ($it)" }.orEmpty()
-                    appendLine("- ${actor.id}: ${actor.name}$role")
-                }
-            }
-
-            if (contract.activities.isNotEmpty()) {
-                appendLine()
-                appendLine("## Activities")
-                contract.activities.forEach { activity ->
-                    val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
-                    appendLine("- ${activity.id}: ${activity.name}$actor")
-                }
-            }
-
-            if (contract.decisions.isNotEmpty()) {
-                appendLine()
-                appendLine("## Decisions")
-                contract.decisions.forEach { decision ->
-                    val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
-                    appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
-                    decision.branches.forEach { branch ->
-                        val condition = branch.condition?.let { " if \"$it\"" }.orEmpty()
-                        val next = branch.nextRef?.let { " -> $it" }.orEmpty()
-                        appendLine("  - ${branch.id} -> \"${branch.label}\"$condition$next")
-                    }
-                }
-            }
-
-            if (contract.artifacts.isNotEmpty()) {
-                appendLine()
-                appendLine("## Artifacts")
-                contract.artifacts.forEach { artifact ->
-                    val description = artifact.description?.let { " - $it" }.orEmpty()
-                    appendLine("- ${artifact.id}: ${artifact.name}$description")
-                }
-            }
-
-            if (contract.endStates.isNotEmpty()) {
-                appendLine()
-                appendLine("## End states")
-                contract.endStates.forEach { endState ->
-                    appendLine("- ${endState.id}: ${endState.name}")
-                }
-            }
-
-            if (contract.assumptions.isNotEmpty()) {
-                appendLine()
-                appendLine("## Assumptions")
-                contract.assumptions.forEach { assumption ->
-                    val traces = assumption.sourceIds.joinToString(",")
-                    val traceSuffix = if (traces.isNotEmpty()) " (sources: $traces)" else ""
-                    appendLine("- ${assumption.id}: ${assumption.text}$traceSuffix")
-                }
             }
         }
 }

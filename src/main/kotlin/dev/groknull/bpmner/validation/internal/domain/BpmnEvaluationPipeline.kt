@@ -159,11 +159,11 @@ internal class BpmnEvaluationPipeline(
         )
         diagnostics.forEach { diagnostic ->
             logger.warn(
-                "Diagnostic detail: source={}, rule={}, category={}, elementId={}, " +
+                "Diagnostic detail: source={}, rule={}, severity={}, elementId={}, " +
                     "objectRef={}, repairScope={}, owner={}, message={}",
                 diagnostic.source.name.lowercase(),
                 diagnostic.rule ?: "-",
-                diagnostic.category ?: "-",
+                diagnostic.severity.name.lowercase(),
                 diagnostic.elementId ?: "-",
                 diagnostic.objectRef ?: "-",
                 diagnostic.repairScope?.name?.lowercase() ?: "-",

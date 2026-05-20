@@ -30,7 +30,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
@@ -312,6 +312,50 @@ class BpmnXmlToDefinitionConverterTest {
         assertEventStartRoundTrip(message)
         assertEventStartRoundTrip(signal)
     }
+
+    @Test
+    fun `round-trip preserves isDefault on exclusive-gateway default flow`() {
+        val original = creditTierDefinition()
+
+        val parsed = reverse.parse(forward.toXml(original))
+
+        val defaultEdge = parsed.sequences.first { it.id == "Flow_manual" }
+        assertTrue(defaultEdge.isDefault, "default flow must survive round-trip")
+        assertEquals(null, defaultEdge.conditionExpression)
+
+        val conditionalEdge = parsed.sequences.first { it.id == "Flow_fast" }
+        assertEquals(false, conditionalEdge.isDefault, "non-default flow must remain non-default")
+        assertEquals("score >= 750", conditionalEdge.conditionExpression)
+
+        assertEquals(original.sequences.byId(), parsed.sequences.byId())
+    }
+
+    private fun creditTierDefinition() =
+        BpmnDefinition(
+            processId = "Process_credit",
+            processName = "Credit-tier routing",
+            nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Score received"),
+                    BpmnExclusiveGateway("Gateway_1", "Which credit tier?"),
+                    BpmnUserTask("Task_fast", "Fast-track underwriting"),
+                    BpmnUserTask("Task_manual", "Manual review"),
+                    BpmnEndEvent("EndEvent_1", "Offer generated"),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                    BpmnEdge(
+                        "Flow_fast",
+                        "Gateway_1",
+                        "Task_fast",
+                        conditionExpression = "score >= 750",
+                    ),
+                    BpmnEdge("Flow_manual", "Gateway_1", "Task_manual", isDefault = true),
+                    BpmnEdge("Flow_3", "Task_fast", "EndEvent_1"),
+                    BpmnEdge("Flow_4", "Task_manual", "EndEvent_1"),
+                ),
+        )
 
     private fun assertProcessShellEqual(
         a: BpmnDefinition,

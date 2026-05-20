@@ -20,6 +20,7 @@ import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnFingerprintService
@@ -99,7 +100,7 @@ class BpmnRepairPromptFactoryTest {
         source = BpmnDiagnosticSource.LINT,
         message = message,
         rule = rule,
-        category = "error",
+        severity = BpmnDiagnosticSeverity.ERROR,
         elementId = elementId,
         kind = kind,
         repairScope = BpmnRepairScope.PHASE,
