@@ -169,6 +169,7 @@ class BpmnContractFidelityCheckerTest {
         assertTrue(report.isValid, "forward-skip must not flag any fidelity issue; got: ${report.issues}")
     }
 
+    @Suppress("LongMethod") // explicit fixture; splitting hides the multi-decision shape
     @Test
     fun `per-decision gateway lookup catches insufficient outbound for THIS decision even when another gateway has enough`() {
         // Regression test for the pre-rewrite global-max bug: D1 has 2 branches mapped to a
@@ -289,119 +290,119 @@ class BpmnContractFidelityCheckerTest {
         assertEquals(0, report.issues.size)
         assertTrue(report.isValid)
     }
-
-    // ----- Fixtures -----
-
-    private fun repairLoopContract(): ProcessContract {
-        val sources = listOf("ev1")
-        return ProcessContract(
-            id = "c-repair",
-            processName = "Repair loop",
-            summary = "Iterative repair with three exit conditions.",
-            trigger = "request",
-            triggerSourceIds = sources,
-            activities =
-                listOf(
-                    ContractActivity(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
-                    ContractActivity(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
-                    ContractActivity(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
-                ),
-            decisions =
-                listOf(
-                    ContractDecision(
-                        id = "dec-validate",
-                        question = "Did validation pass?",
-                        branches =
-                            listOf(
-                                ContractBranch(id = "br-pass", label = "Pass", nextRef = "end-success"),
-                                ContractBranch(id = "br-fail", label = "Fail", nextRef = "end-failed"),
-                                ContractBranch(id = "br-retry", label = "Retry", nextRef = "act-strategy-1"),
-                            ),
-                        sourceIds = sources,
-                    ),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState(id = "end-success", name = "Success", sourceIds = sources),
-                    ContractEndState(id = "end-failed", name = "Failed", sourceIds = sources),
-                ),
-        )
-    }
-
-    private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition =
-        BpmnDefinition(
-            processId = "P",
-            processName = "Repair loop",
-            nodes =
-                listOf(
-                    BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                    BpmnNode(id = "act-strategy-1", name = "Strategy 1", type = NodeType.USER_TASK),
-                    BpmnNode(id = "act-strategy-2", name = "Strategy 2", type = NodeType.USER_TASK),
-                    BpmnNode(id = "act-strategy-3", name = "Strategy 3", type = NodeType.USER_TASK),
-                    BpmnNode(id = "dec-validate", name = "Did validation pass?", type = NodeType.EXCLUSIVE_GATEWAY),
-                    BpmnNode(id = "end-success", name = "Success", type = NodeType.END_EVENT),
-                    BpmnNode(id = "end-failed", name = "Failed", type = NodeType.END_EVENT),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-strategy-1"),
-                    BpmnEdge(id = "F2", sourceRef = "act-strategy-1", targetRef = "act-strategy-2"),
-                    BpmnEdge(id = "F3", sourceRef = "act-strategy-2", targetRef = "act-strategy-3"),
-                    BpmnEdge(id = "F4", sourceRef = "act-strategy-3", targetRef = "dec-validate"),
-                    BpmnEdge(id = "F5", sourceRef = "dec-validate", targetRef = "end-success"),
-                    BpmnEdge(id = "F6", sourceRef = "dec-validate", targetRef = "end-failed"),
-                    BpmnEdge(id = "F7", sourceRef = "dec-validate", targetRef = "act-strategy-1"),
-                ),
-        )
-
-    private fun repairLoopDefinitionFlattened(): BpmnDefinition {
-        val withBack = repairLoopDefinitionWithBackEdge()
-        return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F7" })
-    }
-
-    private fun repairLoopDefinitionWithCollapsedBranches(): BpmnDefinition {
-        val withBack = repairLoopDefinitionWithBackEdge()
-        return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F6" || it.id == "F7" })
-    }
-
-    private fun unresolvedRefContract() =
-        ProcessContract(
-            id = "c",
-            processName = "Test",
-            summary = "test",
-            trigger = "start",
-            triggerSourceIds = listOf("ev1"),
-            activities = listOf(ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
-            decisions =
-                listOf(
-                    ContractDecision(
-                        id = "dec-choose",
-                        question = "Choose?",
-                        branches =
-                            listOf(
-                                ContractBranch(id = "br-1", label = "Option 1", nextRef = "act-nonexistent"),
-                                ContractBranch(id = "br-2", label = "Option 2"),
-                            ),
-                        sourceIds = listOf("ev1"),
-                    ),
-                ),
-            endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
-        )
-
-    private fun unresolvedRefDefinition() =
-        BpmnDefinition(
-            processId = "P",
-            processName = "Test",
-            nodes =
-                listOf(
-                    BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
-                    BpmnNode(id = "act-a", name = "A", type = NodeType.USER_TASK),
-                    BpmnNode(id = "end-done", name = "Done", type = NodeType.END_EVENT),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
-                    BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
-                ),
-        )
 }
+
+// ----- Fixtures -----
+
+private fun repairLoopContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-repair",
+        processName = "Repair loop",
+        summary = "Iterative repair with three exit conditions.",
+        trigger = "request",
+        triggerSourceIds = sources,
+        activities =
+            listOf(
+                ContractActivity(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
+                ContractActivity(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
+                ContractActivity(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
+            ),
+        decisions =
+            listOf(
+                ContractDecision(
+                    id = "dec-validate",
+                    question = "Did validation pass?",
+                    branches =
+                        listOf(
+                            ContractBranch(id = "br-pass", label = "Pass", nextRef = "end-success"),
+                            ContractBranch(id = "br-fail", label = "Fail", nextRef = "end-failed"),
+                            ContractBranch(id = "br-retry", label = "Retry", nextRef = "act-strategy-1"),
+                        ),
+                    sourceIds = sources,
+                ),
+            ),
+        endStates =
+            listOf(
+                ContractEndState(id = "end-success", name = "Success", sourceIds = sources),
+                ContractEndState(id = "end-failed", name = "Failed", sourceIds = sources),
+            ),
+    )
+}
+
+private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Repair loop",
+        nodes =
+            listOf(
+                BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
+                BpmnNode(id = "act-strategy-1", name = "Strategy 1", type = NodeType.USER_TASK),
+                BpmnNode(id = "act-strategy-2", name = "Strategy 2", type = NodeType.USER_TASK),
+                BpmnNode(id = "act-strategy-3", name = "Strategy 3", type = NodeType.USER_TASK),
+                BpmnNode(id = "dec-validate", name = "Did validation pass?", type = NodeType.EXCLUSIVE_GATEWAY),
+                BpmnNode(id = "end-success", name = "Success", type = NodeType.END_EVENT),
+                BpmnNode(id = "end-failed", name = "Failed", type = NodeType.END_EVENT),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-strategy-1"),
+                BpmnEdge(id = "F2", sourceRef = "act-strategy-1", targetRef = "act-strategy-2"),
+                BpmnEdge(id = "F3", sourceRef = "act-strategy-2", targetRef = "act-strategy-3"),
+                BpmnEdge(id = "F4", sourceRef = "act-strategy-3", targetRef = "dec-validate"),
+                BpmnEdge(id = "F5", sourceRef = "dec-validate", targetRef = "end-success"),
+                BpmnEdge(id = "F6", sourceRef = "dec-validate", targetRef = "end-failed"),
+                BpmnEdge(id = "F7", sourceRef = "dec-validate", targetRef = "act-strategy-1"),
+            ),
+    )
+
+private fun repairLoopDefinitionFlattened(): BpmnDefinition {
+    val withBack = repairLoopDefinitionWithBackEdge()
+    return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F7" })
+}
+
+private fun repairLoopDefinitionWithCollapsedBranches(): BpmnDefinition {
+    val withBack = repairLoopDefinitionWithBackEdge()
+    return withBack.copy(sequences = withBack.sequences.filterNot { it.id == "F6" || it.id == "F7" })
+}
+
+private fun unresolvedRefContract() =
+    ProcessContract(
+        id = "c",
+        processName = "Test",
+        summary = "test",
+        trigger = "start",
+        triggerSourceIds = listOf("ev1"),
+        activities = listOf(ContractActivity(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
+        decisions =
+            listOf(
+                ContractDecision(
+                    id = "dec-choose",
+                    question = "Choose?",
+                    branches =
+                        listOf(
+                            ContractBranch(id = "br-1", label = "Option 1", nextRef = "act-nonexistent"),
+                            ContractBranch(id = "br-2", label = "Option 2"),
+                        ),
+                    sourceIds = listOf("ev1"),
+                ),
+            ),
+        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
+    )
+
+private fun unresolvedRefDefinition() =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Test",
+        nodes =
+            listOf(
+                BpmnNode(id = "StartEvent_1", name = "Start", type = NodeType.START_EVENT),
+                BpmnNode(id = "act-a", name = "A", type = NodeType.USER_TASK),
+                BpmnNode(id = "end-done", name = "Done", type = NodeType.END_EVENT),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
+                BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
+            ),
+    )
