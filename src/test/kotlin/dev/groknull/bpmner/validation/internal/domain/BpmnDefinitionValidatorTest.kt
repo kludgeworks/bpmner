@@ -26,6 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class BpmnDefinitionValidatorTest {
     private val validator = BpmnDefinitionValidator()
 
