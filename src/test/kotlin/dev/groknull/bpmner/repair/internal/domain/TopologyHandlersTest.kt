@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
@@ -266,7 +267,100 @@ class TopologyHandlersTest {
         assertTrue(ops.isNotEmpty())
     }
 
+    // ---- Kind-aware join synthesis (PR #184 follow-up) --------------------
+
+    @Test
+    fun `splitJoinFork preserves PARALLEL kind when splitting a parallel join-fork node`() {
+        val definition = parallelJoinForkDefinition()
+        val ops = splitJoinFork.buildPatch(definition, "Gateway_1")
+
+        val addNode = ops.single { it.type == BpmnPatchOperationType.ADD_NODE }
+        assertIs<BpmnParallelGateway>(
+            addNode.node,
+            "splitting a parallel join-fork must synthesize a parallel join, not exclusive",
+        )
+    }
+
+    @Test
+    fun `insertConverging synthesizes parallel join when incoming flows trace back to a parallel fork`() {
+        val definition = parallelForkMissingJoinDefinition()
+        val ops = insertConverging.buildPatch(definition, "act-finalise")
+
+        val addNode = ops.single { it.type == BpmnPatchOperationType.ADD_NODE }
+        assertIs<BpmnParallelGateway>(
+            addNode.node,
+            "missing join after a parallel fork must be synthesized as parallel, not exclusive",
+        )
+    }
+
+    @Test
+    fun `insertConverging still synthesizes exclusive join when incoming flows do not share a parallel fork`() {
+        // No parallel fork upstream — the historical exclusive merge is correct.
+        val definition = fakeJoinDefinition()
+        val ops = insertConverging.buildPatch(definition, "Task_1")
+
+        val addNode = ops.single { it.type == BpmnPatchOperationType.ADD_NODE }
+        assertIs<BpmnExclusiveGateway>(
+            addNode.node,
+            "non-parallel converging context must still synthesize an exclusive join (regression)",
+        )
+    }
+
     // ---- Fixtures ----------------------------------------------------------
+
+    private fun parallelJoinForkDefinition() =
+        BpmnDefinition(
+            processId = "Process_PJF",
+            processName = "Parallel join-fork misencoded as one node",
+            nodes =
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnStartEvent("Start_2", "Trigger"),
+                    BpmnParallelGateway("Gateway_1", null),
+                    BpmnUserTask("Task_1", "Handle A"),
+                    BpmnUserTask("Task_2", "Handle B"),
+                    BpmnEndEvent("End_1", "End"),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
+                    BpmnEdge("Flow_4", "Gateway_1", "Task_2"),
+                    BpmnEdge("Flow_5", "Task_1", "End_1"),
+                    BpmnEdge("Flow_6", "Task_2", "End_1"),
+                ),
+        )
+
+    private fun parallelForkMissingJoinDefinition() =
+        // Parallel fork into three tracks, all converging directly into act-finalise
+        // with no join gateway in between. This is the malformed shape the repair handler
+        // must detect — and must synthesize a *parallel* join, not exclusive.
+        BpmnDefinition(
+            processId = "Process_PFMissingJoin",
+            processName = "Parallel fork missing its join",
+            nodes =
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnParallelGateway("dec-fork", "Fork"),
+                    BpmnUserTask("act-a", "Track A"),
+                    BpmnUserTask("act-b", "Track B"),
+                    BpmnUserTask("act-c", "Track C"),
+                    BpmnUserTask("act-finalise", "Finalise"),
+                    BpmnEndEvent("End_1", "End"),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge("F1", "Start_1", "dec-fork"),
+                    BpmnEdge("F2", "dec-fork", "act-a"),
+                    BpmnEdge("F3", "dec-fork", "act-b"),
+                    BpmnEdge("F4", "dec-fork", "act-c"),
+                    BpmnEdge("F5", "act-a", "act-finalise"),
+                    BpmnEdge("F6", "act-b", "act-finalise"),
+                    BpmnEdge("F7", "act-c", "act-finalise"),
+                    BpmnEdge("F8", "act-finalise", "End_1"),
+                ),
+        )
 
     private fun joinForkDefinition() =
         BpmnDefinition(

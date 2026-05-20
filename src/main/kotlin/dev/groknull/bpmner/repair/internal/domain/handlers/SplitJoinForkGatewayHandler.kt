@@ -8,6 +8,7 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
@@ -28,7 +29,14 @@ internal class SplitJoinForkGatewayHandler : BpmnLocalModelFixHandler {
 
         val joinId = TopologyIds.fresh("Gateway_join", definition)
         val joinEdgeId = TopologyIds.fresh("Flow_det", definition)
-        val joinGw = BpmnExclusiveGateway(id = joinId, name = null)
+        // Mixed gateways being split typically share their kind with the desired join: an
+        // exclusive fork+join was misencoded as one node, and likewise for parallel. Preserve
+        // the original kind so the synthesized join doesn't silently change the semantics.
+        val joinGw =
+            when (gateway) {
+                is BpmnParallelGateway -> BpmnParallelGateway(id = joinId, name = null)
+                else -> BpmnExclusiveGateway(id = joinId, name = null)
+            }
         val joinToFork =
             BpmnEdge(
                 id = joinEdgeId,
