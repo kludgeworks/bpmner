@@ -1,5 +1,4 @@
 import fs from 'node:fs';
-import path from 'node:path';
 import readline from 'node:readline';
 
 /**
@@ -16,6 +15,19 @@ if (!inputFile || !outputFile) {
     process.exit(1);
 }
 
+function escapeXml(unsafe) {
+    return unsafe.replace(/[<>&"']/g, (c) => {
+        switch (c) {
+            case '<': return '&lt;';
+            case '>': return '&gt;';
+            case '&': return '&amp;';
+            case '"': return '&quot;';
+            case "'": return '&apos;';
+            default: return c;
+        }
+    });
+}
+
 async function convert() {
     const fileStream = fs.createReadStream(inputFile);
     const rl = readline.createInterface({
@@ -25,15 +37,14 @@ async function convert() {
 
     let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
     xml += '<report name="LCOV to JaCoCo">\n';
-
-    // We'll group everything in a single virtual package to keep it simple,
-    // as SonarCloud identifies files by their relative path from the project root.
     xml += '  <package name="src">\n';
 
     let currentFile = null;
     let lines = [];
     let coveredLines = 0;
     let missedLines = 0;
+    let totalCovered = 0;
+    let totalMissed = 0;
 
     for await (const line of rl) {
         if (line.startsWith('SF:')) {
@@ -49,25 +60,25 @@ async function convert() {
             if (count > 0) coveredLines++; else missedLines++;
         } else if (line === 'end_of_record') {
             if (currentFile) {
-                // Determine source file name and internal path
-                const sourceFileName = path.basename(currentFile);
-                xml += `    <sourcefile name="${currentFile}">\n`;
+                xml += `    <sourcefile name="${escapeXml(currentFile)}">\n`;
                 for (const l of lines) {
                     xml += `      <line nr="${l.nr}" mi="${l.mi}" ci="${l.ci}"/>\n`;
                 }
                 xml += `      <counter type="LINE" missed="${missedLines}" covered="${coveredLines}"/>\n`;
                 xml += '    </sourcefile>\n';
+                totalCovered += coveredLines;
+                totalMissed += missedLines;
             }
             currentFile = null;
         }
     }
 
     xml += '  </package>\n';
-    xml += '  <counter type="LINE" missed="0" covered="0"/>\n'; // Global counter (optional)
+    xml += `  <counter type="LINE" missed="${totalMissed}" covered="${totalCovered}"/>\n`;
     xml += '</report>';
 
     fs.writeFileSync(outputFile, xml);
-    console.log(`Successfully converted ${inputFile} to ${outputFile}`);
+    console.log(`Successfully converted ${inputFile} to ${outputFile} (Covered: ${totalCovered}, Missed: ${totalMissed})`);
 }
 
 convert().catch(err => {
