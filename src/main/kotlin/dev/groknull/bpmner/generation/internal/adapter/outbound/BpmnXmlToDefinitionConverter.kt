@@ -233,13 +233,13 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 document
                     .bpmnElements("message")
                     .map { BpmnMessageRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                    .filter { it.id.isNotBlank() }
+                    .filter { it.id.isNotBlank() && it.name.isNotBlank() }
                     .toList(),
             signals =
                 document
                     .bpmnElements("signal")
                     .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                    .filter { it.id.isNotBlank() }
+                    .filter { it.id.isNotBlank() && it.name.isNotBlank() }
                     .toList(),
             errors =
                 document

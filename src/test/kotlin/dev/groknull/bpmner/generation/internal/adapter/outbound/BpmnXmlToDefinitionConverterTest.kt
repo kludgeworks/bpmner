@@ -190,6 +190,38 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
+    fun `parse ignores message and signal catalog entries with blank names`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_catalogs",
+                processName = "Catalogs",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("Start_1", "Start"),
+                        BpmnEndEvent("End_1", "End"),
+                    ),
+                sequences = listOf(BpmnEdge("Flow_1", "Start_1", "End_1")),
+                messages =
+                    listOf(
+                        BpmnMessageRef("Message_good", "Order received"),
+                        BpmnMessageRef("Message_blank", ""),
+                    ),
+                signals =
+                    listOf(
+                        BpmnSignalRef("Signal_good", "Incident broadcast"),
+                        BpmnSignalRef("Signal_blank", " "),
+                    ),
+            )
+
+        val parsed = reverse.parse(forward.toXml(definition))
+
+        assertEquals(listOf(BpmnMessageRef("Message_good", "Order received")), parsed.messages)
+        assertEquals(listOf(BpmnSignalRef("Signal_good", "Incident broadcast")), parsed.signals)
+        assertFalse(parsed.messages.any { it.id == "Message_blank" })
+        assertFalse(parsed.signals.any { it.id == "Signal_blank" })
+    }
+
+    @Test
     fun `round-trip a simple linear process preserves nodes and sequences`() {
         val original = linearDefinition()
 
