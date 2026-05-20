@@ -1,46 +1,41 @@
-import { spawnSync } from 'node:child_process';
-import { env, argv, exit, execPath } from 'node:process';
+import { run } from 'node:test';
+import { spec, lcov } from 'node:test/reporters';
+import { createWriteStream } from 'node:fs';
+import { env, argv, exitCode } from 'node:process';
 
 /**
- * Wrapper for Node.js tests to enable coverage collection in Bazel.
+ * Idiomatic wrapper for Node.js tests in Bazel.
  *
- * Usage: node test_wrapper.mjs <file1> <file2> ...
+ * This script uses the programmatic node:test API to run tests and
+ * pipes coverage data to the path requested by Bazel (COVERAGE_OUTPUT_FILE).
+ *
+ * Usage: node test_wrapper.mjs <test_file1.js> <test_file2.js> ...
  */
 
-// Find the .js file among arguments
-const testFile = argv.slice(2).find(arg => arg.endsWith('.js'));
+const testFiles = argv.slice(2);
+const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
 
-if (!testFile) {
-    console.error('Error: No .js test file provided to test_wrapper.mjs');
-    console.error('Arguments received:', argv.slice(2));
-    exit(1);
+if (testFiles.length === 0) {
+    console.error('Error: No test files provided to test_wrapper.mjs');
+    process.exit(1);
 }
 
-const args = [];
-
-// If Bazel is requesting coverage collection
-if (env.COVERAGE_OUTPUT_FILE) {
-    args.push('--experimental-test-coverage');
-    args.push('--test-reporter=spec');
-    args.push('--test-reporter-destination=stdout');
-    args.push('--test-reporter=lcov');
-    args.push(`--test-reporter-destination=${env.COVERAGE_OUTPUT_FILE}`);
-} else {
-    // Default reporter for non-coverage runs
-    args.push('--test-reporter=spec');
-}
-
-args.push('--test');
-args.push(testFile);
-
-console.log(`Running test: ${execPath} ${args.join(' ')}`);
-
-const result = spawnSync(execPath, args, {
-    stdio: 'inherit',
-    env: {
-        ...env,
-        BAZEL_TEST: '1',
-    }
+// Start the test runner
+const stream = run({
+    files: testFiles,
+    coverage: !!coverageOutputFile,
 });
 
-exit(result.status ?? 1);
+// 1. Pipe human-readable results to stdout for Bazel logs
+stream.compose(new spec()).pipe(process.stdout);
+
+// 2. Pipe LCOV data to the path Bazel expects
+if (coverageOutputFile) {
+    console.log(`Coverage collection enabled. Writing to: ${coverageOutputFile}`);
+    stream.compose(new lcov()).pipe(createWriteStream(coverageOutputFile));
+}
+
+// 3. Ensure failures result in a non-zero exit code
+stream.on('test:fail', () => {
+    process.exitCode = 1;
+});
