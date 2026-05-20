@@ -7,7 +7,10 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
-package(default_visibility = ["//src:__subpackages__", "//:__pkg__"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
 LIB_SRCS = glob([
     "src/**/*.ts",
@@ -67,7 +70,7 @@ esbuild(
 
 bpmner_node_test(
     name = "smoke_test",
-    entry_point = "test/smoke.test.ts",
     srcs = LIB_SRCS + TEST_SRCS + [":copy_polyfills"],
+    entry_point = "test/smoke.test.ts",
     deps = LAYOUT_TS_DEPS,
 )

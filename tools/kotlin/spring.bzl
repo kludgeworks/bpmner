@@ -1,3 +1,8 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+"""Spring allopen plugin labels and the annotations they target."""
+
 SPRING_OPEN_ANNOTATIONS = [
     "org.springframework.stereotype.Component",
     "org.springframework.transaction.annotation.Transactional",

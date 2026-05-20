@@ -5,12 +5,16 @@ load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
-package(default_visibility = ["//src:__subpackages__", "//:__pkg__"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
 # Link the standalone web package's node_modules
 npm_link_all_packages(name = "node_modules")
 
 WEB_SRCS = glob(["src/**/*.ts"])
+
 WEB_STATIC_ASSETS = glob(["src/static/**/*"])
 
 WEB_TS_DEPS = [
@@ -24,8 +28,8 @@ bpmner_ts_project(
     name = "ts",
     srcs = WEB_SRCS,
     out_dir = "tsc",
-    tsconfig = ":tsconfig_bazel",
     resolve_json_module = True,
+    tsconfig = ":tsconfig_bazel",
     deps = WEB_TS_DEPS,
 )
 

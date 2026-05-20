@@ -95,7 +95,7 @@ describe("lint rules", () => {
 		const config = configs["plugin:bpmner/all"]
 		assert.deepEqual(
 			Object.values(config.rules),
-			tsRules.map((rule: any) => (rule.severity === "off" ? "off" : "error")),
+			tsRules.map((rule) => (rule.severity === "off" ? "off" : "error")),
 		)
 	})
 
@@ -732,8 +732,8 @@ describe("lint rules", () => {
 				rules: {
 					"name-uncommon-abbreviations": "error",
 					"bpmner/name-uncommon-abbreviations": "error",
-					"bpmnlint-plugin-bpmner/name-uncommon-abbreviations": "error"
-				}
+					"bpmnlint-plugin-bpmner/name-uncommon-abbreviations": "error",
+				},
 			}),
 			"name-uncommon-abbreviations",
 		)
