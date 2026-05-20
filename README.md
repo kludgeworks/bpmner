@@ -24,14 +24,14 @@ When validation fails, `bpmner` doesn't just "try again." It uses a **local-firs
 
 Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation (XSD, bpmn-lint) and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin/TypeScript and remain that way by design.
 
-| Role             | Persona                          |
-|------------------|----------------------------------|
-| `generator`      | BPMN Designer                    |
-| `repair-label`   | BPMN Label Copy Editor           |
-| `repair-patch`   | BPMN Patch Repair Specialist     |
-| `repair-rewrite` | BPMN Full Rewrite Specialist     |
+| Role             | Persona                          | Requirement                      |
+|------------------|----------------------------------|----------------------------------|
+| `generator`      | BPMN Designer                    | Large context, complex reasoning |
+| `repair-label`   | BPMN Label Copy Editor           | Small, fast, detail-oriented     |
+| `repair-patch`   | BPMN Patch Repair Specialist     | Intermediate, structural logic   |
+| `repair-rewrite` | BPMN Full Rewrite Specialist     | Large context, holistic design   |
 
-Roles are also defined for `readiness-assessor`, `contract-extractor`, and `alignment-validator`; see `src/main/resources/application*.yaml` for the full list.
+Roles are also defined for `readiness-assessor` (balanced), `contract-extractor` (high precision), and `alignment-validator` (critical); see `src/main/resources/application*.yaml` for the full list.
 
 **Where to change it.** Persona definitions and role names live in [`BpmnConfig.kt`](src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt). Concrete model assignments live in `src/main/resources/application*.yaml`. Adding a provider is a YAML-only change; adding a new role requires a `BpmnConfig` entry and an entry in every active profile.
 
