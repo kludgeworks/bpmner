@@ -3,7 +3,7 @@
 
 load("@aspect_rules_js//js:defs.bzl", "js_test")
 load("@bazel_skylib//rules:build_test.bzl", "build_test")
-load("@bazel_sonarqube//:defs.bzl", "sonarqube", "sq_project")
+load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_detekt//detekt:defs.bzl", "detekt_test")
@@ -22,13 +22,13 @@ filegroup(
 
 sonarqube(
     name = "sonar",
-    project_key = "kludgeworks_bpmner",
-    project_name = "bpmner Monorepo",
+    srcs = ["//src:analysis_srcs"],
     modules = {
         "//linter:sq_project": "linter",
         "//web:sq_project": "web",
     },
-    srcs = ["//src:analysis_srcs"],
+    project_key = "kludgeworks_bpmner",
+    project_name = "bpmner Monorepo",
     scm_info = [":git_info"],
 )
 

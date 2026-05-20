@@ -2,7 +2,6 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
@@ -93,10 +92,10 @@ esbuild(
 
 bpmner_node_test(
     name = "smoke_test",
-    entry_point = "test/smoke.test.ts",
     srcs = LIB_SRCS + TEST_SRCS + [
         ":copy_polyfills",
         ":write_polyfills",
     ],
+    entry_point = "test/smoke.test.ts",
     deps = LAYOUT_TS_DEPS,
 )

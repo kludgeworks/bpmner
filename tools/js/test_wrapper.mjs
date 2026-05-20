@@ -1,3 +1,8 @@
+/**
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
 import { spawnSync } from 'node:child_process';
 import { env, argv, exit, execPath } from 'node:process';
 
@@ -23,17 +28,22 @@ if (testFiles.length === 0) {
 
 const args = ['--test'];
 
-// Add reporters
-args.push('--test-reporter=spec');
-
 // If Bazel is requesting coverage collection
 const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
 if (coverageOutputFile) {
     args.push('--experimental-test-coverage');
+
+    // Node.js pairs reporters and destinations positionally:
+    // 1. spec -> stdout
+    args.push('--test-reporter=spec');
+    args.push('--test-reporter-destination=stdout');
+
+    // 2. lcov -> coverage file
     args.push('--test-reporter=lcov');
     args.push(`--test-reporter-destination=${coverageOutputFile}`);
-    // Spec reporter destination must be explicit if using multiple reporters
-    args.push('--test-reporter-destination=stdout');
+} else {
+    // Default reporter for non-coverage runs
+    args.push('--test-reporter=spec');
 }
 
 // Add the filtered test files
