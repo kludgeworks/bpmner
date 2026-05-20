@@ -60,15 +60,16 @@ jobs:
 
       - name: Run Bazel coverage
         run: |
-          # Generate combined LCOV coverage report
-          bazel coverage //... --combined_report=lcov --instrumentation_filter="^//src,^//linter,^//web"
+          # Generate coverage reports in a format compatible with SonarQube/SonarCloud
+          # using the Salesforce bazel-sonarqube coverage generator.
+          bazel coverage //... \
+            --combined_report=lcov \
+            --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
+            --instrumentation_filter="^//src,^//linter,^//web"
 
       - name: Prepare Coverage Reports
         run: |
-          # 1. Convert LCOV to JaCoCo XML for the backend (root src/)
-          node tools/coverage/lcov_to_jacoco.mjs bazel-out/_coverage/_coverage_report.dat jacoco.xml
-          
-          # 2. Correctly extract project-specific LCOV data using awk
+          # 1. Extract project-specific LCOV data using awk
           # For linter: Extract blocks where SF starts with linter/ and strip the prefix
           awk '/^SF:linter\// {p=1} p {line=$0; if (line ~ /^SF:linter\//) sub(/^SF:linter\//, "SF:", line); print line} /^end_of_record/ {p=0}' bazel-out/_coverage/_coverage_report.dat > linter_coverage.lcov
           
@@ -85,7 +86,7 @@ jobs:
             -Dsonar.projectKey=kludgeworks_bpmner_backend
             -Dsonar.organization=kludgeworks
             -Dsonar.sources=src
-            -Dsonar.coverage.jacoco.xmlReportPaths=jacoco.xml
+            -Dsonar.coverageReportPaths=bazel-out/_coverage/_coverage_report.dat
 
       - name: SonarCloud Scan (Linter)
         uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0

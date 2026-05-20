@@ -7,6 +7,7 @@ module(
 )
 
 # Bazel Rules
+bazel_dep(name = "bazel_sonarqube", version = "1.0.6")
 bazel_dep(name = "rules_kotlin", version = "2.3.20")
 bazel_dep(name = "rules_java", version = "9.6.1")
 bazel_dep(name = "rules_jvm_external", version = "7.0")
