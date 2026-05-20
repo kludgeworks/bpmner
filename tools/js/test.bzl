@@ -45,8 +45,11 @@ def bpmner_node_test(
 
     js_test(
         name = name,
-        data = [":" + bundle_name],
-        entry_point = bundle_output,
-        node_options = ["--test-reporter=spec", "--experimental-test-coverage"],
+        args = ["$(rootpaths :%s)" % bundle_name],
+        data = [
+            ":" + bundle_name,
+            "//tools/js:test_wrapper",
+        ],
+        entry_point = "//tools/js:test_wrapper",
         **kwargs
     )
