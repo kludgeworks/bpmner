@@ -24,16 +24,16 @@ When validation fails, `bpmner` doesn't just "try again." It uses a **local-firs
 
 Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation (XSD, bpmn-lint) and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin/TypeScript and remain that way by design.
 
-| Role             | Persona                          | Default (OpenAI) | GitHub profile         | Anthropic profile    |
-|------------------|----------------------------------|------------------|------------------------|----------------------|
-| `generator`      | BPMN Designer                    | `gpt-4.1`        | `openai/gpt-4.1`       | `claude-sonnet-4-6`  |
-| `repair-label`   | BPMN Label Copy Editor           | `gpt-4.1-nano`   | `openai/gpt-4.1-nano`  | `claude-haiku-4-5`   |
-| `repair-patch`   | BPMN Patch Repair Specialist     | `gpt-4.1-mini`   | `openai/gpt-4.1-mini`  | `claude-haiku-4-5`   |
-| `repair-rewrite` | BPMN Full Rewrite Specialist     | `gpt-4.1`        | `openai/gpt-4.1`       | `claude-sonnet-4-6`  |
+| Role             | Persona                          |
+|------------------|----------------------------------|
+| `generator`      | BPMN Designer                    |
+| `repair-label`   | BPMN Label Copy Editor           |
+| `repair-patch`   | BPMN Patch Repair Specialist     |
+| `repair-rewrite` | BPMN Full Rewrite Specialist     |
 
 Roles are also defined for `readiness-assessor`, `contract-extractor`, and `alignment-validator`; see `src/main/resources/application*.yaml` for the full list.
 
-**Where to change it.** Persona definitions and role names live in [`BpmnConfig.kt`](src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt). Concrete model assignments per profile live in `src/main/resources/application.yaml` (default OpenAI), `application-github.yaml`, and `application-anthropic.yaml`. Adding a provider is a YAML-only change; adding a new role requires a `BpmnConfig` entry and an entry in every active profile.
+**Where to change it.** Persona definitions and role names live in [`BpmnConfig.kt`](src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt). Concrete model assignments live in `src/main/resources/application*.yaml`. Adding a provider is a YAML-only change; adding a new role requires a `BpmnConfig` entry and an entry in every active profile.
 
 **When to promote a task to a larger model.** If a small-tier role starts producing bad fixes — for example `repair-label` mangling capitalization — bump that role to the next tier in the relevant `application-*.yaml`. No code change is needed; the routing key is the role name.
 
