@@ -45,5 +45,5 @@ linter/docs/rules/*.md
 .serena/
 
 # Coverage
-*.xml
+/jacoco.xml
 *.lcov

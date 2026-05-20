@@ -82,7 +82,7 @@ bazel run //src:bpmner_app -- --spring.profiles.active=anth \
 ## Static Analysis
 Kotlin code is checked by three complementary tools:
 - **detekt** and **ktlint** run on every PR via `bazel test //:ci` — fast, style/complexity-focused, configured in `config/detekt/detekt.yml`.
-- **SonarCloud** runs on every PR as a required check. It performs deep code analysis for the backend, linter, and web subprojects, and pushes results into the [SonarCloud dashboard](https://sonarcloud.io/).
+- **SonarCloud** runs on every PR as a required check. It performs deep code analysis for the backend, linter, and web sub-projects, and pushes results into the [SonarCloud dashboard](https://sonarcloud.io/).
 
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
