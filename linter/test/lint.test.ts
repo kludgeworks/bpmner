@@ -35,6 +35,7 @@ type RuleCatalog = {
 	rules: Array<{
 		id: string
 		aliases?: string[]
+		severity: string
 		hasTsImplementation: boolean
 		staticConfig?: { cookbookCode?: string }
 	}>
