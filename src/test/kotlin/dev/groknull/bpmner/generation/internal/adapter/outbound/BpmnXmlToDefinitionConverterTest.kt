@@ -30,6 +30,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
