@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions")
+
 package dev.groknull.bpmner.generation.internal.domain
 
 import dev.groknull.bpmner.contract.ContractActivity

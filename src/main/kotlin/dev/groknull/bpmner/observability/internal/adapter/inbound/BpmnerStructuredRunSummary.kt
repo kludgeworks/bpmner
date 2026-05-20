@@ -75,7 +75,8 @@ data class BpmnerOutlineSummary(
     val nodeCount: Int,
     val edgeCount: Int,
     val phaseCount: Int,
-    val branchCount: Int,
+    val exclusiveBranchCount: Int,
+    val parallelBranchCount: Int,
     val loopCount: Int,
     val subprocessCount: Int,
 )
@@ -206,7 +207,8 @@ private fun ProcessOutline.toSummary(): BpmnerOutlineSummary =
         nodeCount = definition.nodes.size,
         edgeCount = definition.sequences.size,
         phaseCount = metrics.phaseCount,
-        branchCount = metrics.branchCount,
+        exclusiveBranchCount = metrics.exclusiveBranchCount,
+        parallelBranchCount = metrics.parallelBranchCount,
         loopCount = metrics.loopCount,
         subprocessCount = metrics.subprocessCount,
     )

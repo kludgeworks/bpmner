@@ -7,7 +7,6 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
@@ -30,7 +29,11 @@ internal class InsertConvergingGatewayHandler : BpmnLocalModelFixHandler {
 
         val joinId = TopologyIds.fresh("Gateway_join", definition)
         val joinEdgeId = TopologyIds.fresh("Flow_det", definition)
-        val joinGw = BpmnExclusiveGateway(id = joinId, name = null)
+        // The kind of synthesized join depends on the upstream topology: if every incoming
+        // flow traces back to the same parallel fork, we need a parallel join to preserve
+        // "wait for all branches" semantics. Otherwise the historical exclusive merge is
+        // correct.
+        val joinGw = JoinGatewayKindSelector.newJoinGateway(definition, joinId, incomingEdges)
         val joinToTask =
             BpmnEdge(
                 id = joinEdgeId,

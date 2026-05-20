@@ -120,8 +120,13 @@ sealed interface BpmnNode {
 
 /**
  * The discriminator string for [node], matching the `type` field in the LLM JSON output
- * and the names declared in `@JsonSubTypes` above. Single source of truth; exhaustive `when`
- * guarantees the compiler catches missing arms when a new subtype is added.
+ * and the names declared in `@JsonSubTypes` above.
+ *
+ * NOTE: the string literals below must stay in sync with the `name` values in the
+ * `@JsonSubTypes` annotation on [BpmnNode]. The exhaustive `when` guarantees the compiler
+ * catches a *missing arm* when a new subtype is added, but it cannot catch a typo or
+ * divergence between these literals and the Jackson annotation values. If you add or
+ * rename a subtype, update both lists together.
  */
 val BpmnNode.typeName: String
     get() =
