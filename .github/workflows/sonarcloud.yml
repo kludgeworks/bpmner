@@ -72,9 +72,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Use the idiomatic Bazel sonarqube runner.
-          # We pass the organization and host URL via the command line to ensure
-          # they are correctly propagated to SonarCloud.
+          # Use the idiomatic Bazel sonarqube runner for each project key.
+          # This ensures that analysis is pushed to the 3 separate projects
+          # defined in the SonarCloud dashboard.
+          
+          echo "Scanning Backend..."
           bazel run //:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io
+          
+          echo "Scanning Linter..."
+          bazel run //linter:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io
+
+          echo "Scanning Web..."
+          bazel run //web:sonar -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io

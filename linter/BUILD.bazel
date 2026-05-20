@@ -4,7 +4,7 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@bazel_sonarqube//:defs.bzl", "sq_project")
+load("@bazel_sonarqube//:defs.bzl", "sonarqube", "sq_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
@@ -20,6 +20,16 @@ sq_project(
     project_key = "kludgeworks_bpmner_linter",
     project_name = "bpmner Linter",
     visibility = ["//visibility:public"],
+)
+
+sonarqube(
+    name = "sonar",
+    modules = {
+        ":sq_project": "linter",
+    },
+    project_key = "kludgeworks_bpmner_linter",
+    project_name = "bpmner Linter",
+    scm_info = ["//:git_info"],
 )
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
