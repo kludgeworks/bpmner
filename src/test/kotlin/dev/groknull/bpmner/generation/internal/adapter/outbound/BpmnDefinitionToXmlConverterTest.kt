@@ -9,6 +9,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -19,6 +20,46 @@ import kotlin.test.assertFalse
 
 class BpmnDefinitionToXmlConverterTest {
     private val converter = BpmnDefinitionToXmlConverter()
+
+    @Test
+    fun `converter emits parallelGateway for BpmnParallelGateway nodes`() {
+        // Three-track parallel fork mirroring the employee-onboarding sample.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Parallel",
+                processName = "Parallel preparation",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Hire confirmed"),
+                        BpmnParallelGateway("dec-prep-tracks", "Run preparation tracks"),
+                        BpmnUserTask("act-prep-it", "Provision IT"),
+                        BpmnUserTask("act-prep-facilities", "Prepare workspace"),
+                        BpmnUserTask("act-prep-manager", "Manager briefing"),
+                        BpmnParallelGateway("Gateway_join_prep", null),
+                        BpmnUserTask("act-orientation", "Orientation"),
+                        BpmnEndEvent("EndEvent_1", "Onboarding complete"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("F1", "StartEvent_1", "dec-prep-tracks"),
+                        BpmnEdge("F2", "dec-prep-tracks", "act-prep-it"),
+                        BpmnEdge("F3", "dec-prep-tracks", "act-prep-facilities"),
+                        BpmnEdge("F4", "dec-prep-tracks", "act-prep-manager"),
+                        BpmnEdge("F5", "act-prep-it", "Gateway_join_prep"),
+                        BpmnEdge("F6", "act-prep-facilities", "Gateway_join_prep"),
+                        BpmnEdge("F7", "act-prep-manager", "Gateway_join_prep"),
+                        BpmnEdge("F8", "Gateway_join_prep", "act-orientation"),
+                        BpmnEdge("F9", "act-orientation", "EndEvent_1"),
+                    ),
+            )
+
+        val xml = converter.render(definition).xml
+
+        assertContains(xml, "<parallelGateway id=\"dec-prep-tracks\"")
+        assertContains(xml, "<parallelGateway id=\"Gateway_join_prep\"")
+        // No condition expressions on any of the parallel-branch flows
+        assertFalse(xml.contains("<conditionExpression"), "Parallel branches must not carry conditions")
+    }
 
     @Test
     fun `converter maps nodes sequence flows and bpmndi to bpmn xml`() {

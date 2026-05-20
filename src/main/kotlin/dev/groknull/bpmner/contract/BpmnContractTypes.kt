@@ -83,6 +83,28 @@ data class ContractActivity(
     val sourceIds: List<String> = emptyList(),
 )
 
+/**
+ * How the branches of a [ContractDecision] are selected at runtime.
+ *
+ * Defaults to [EXCLUSIVE] so existing contracts (exclusive choice — exactly one branch
+ * taken) need no schema change.
+ */
+enum class ContractGatewayKind {
+    /**
+     * Exactly one branch is taken based on its condition. Maps to `<bpmn:exclusiveGateway>`.
+     * Branches under EXCLUSIVE decisions normally carry a `condition` expression.
+     */
+    EXCLUSIVE,
+
+    /**
+     * All branches activate concurrently — a fork. Branches under PARALLEL decisions have
+     * no `condition`; the gateway emits one outbound flow per branch unconditionally, and
+     * a matching parallel join gateway synchronises the branches before downstream work
+     * proceeds. Maps to `<bpmn:parallelGateway>`.
+     */
+    PARALLEL,
+}
+
 @JsonClassDescription("Decision required by the extracted process contract")
 data class ContractDecision(
     @field:NotBlank
@@ -91,13 +113,23 @@ data class ContractDecision(
     val id: String,
     @field:NotBlank
     @field:Size(max = 500)
-    @get:JsonPropertyDescription("Decision question from the workflow")
+    @get:JsonPropertyDescription(
+        "Decision question from the workflow. For PARALLEL decisions this still names the " +
+            "split (e.g. 'Run all preparation tracks') even though there is no conditional choice.",
+    )
     val question: String,
     @field:NotEmpty
     @field:Valid
     @field:Size(max = 20)
     @get:JsonPropertyDescription("Branches that can be taken from this decision")
     val branches: List<ContractBranch>,
+    @get:JsonPropertyDescription(
+        "How the branches relate. EXCLUSIVE (default) = exactly one branch taken based on its " +
+            "condition. PARALLEL = all branches activate concurrently and reconverge at a join. " +
+            "Use PARALLEL when the source describes concurrent / independent tracks, 'in parallel', " +
+            "'all of the following must complete', etc.",
+    )
+    val kind: ContractGatewayKind = ContractGatewayKind.EXCLUSIVE,
     @field:Size(max = 10)
     @get:JsonPropertyDescription("Source ids grounding this decision in evidence.")
     val sourceIds: List<String> = emptyList(),
@@ -114,7 +146,10 @@ data class ContractBranch(
     @get:JsonPropertyDescription("Branch label")
     val label: String,
     @field:Size(max = 500)
-    @get:JsonPropertyDescription("Optional condition expression that selects this branch")
+    @get:JsonPropertyDescription(
+        "Optional condition expression that selects this branch. Required for EXCLUSIVE " +
+            "decisions; unused for PARALLEL decisions (all branches activate unconditionally).",
+    )
     val condition: String? = null,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(

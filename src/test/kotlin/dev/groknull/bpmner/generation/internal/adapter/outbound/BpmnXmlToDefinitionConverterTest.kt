@@ -10,17 +10,55 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
+
+    @Test
+    fun `parallelGateway xml round-trips through both directions`() {
+        // Fork and join both end up as BpmnParallelGateway after a full round-trip.
+        val original =
+            BpmnDefinition(
+                processId = "Process_RT",
+                processName = "Round-trip parallel",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Start"),
+                        BpmnParallelGateway("dec-fork", "Fork"),
+                        BpmnUserTask("act-a", "Track A"),
+                        BpmnUserTask("act-b", "Track B"),
+                        BpmnParallelGateway("Gateway_join", null),
+                        BpmnEndEvent("EndEvent_1", "Done"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("F1", "StartEvent_1", "dec-fork"),
+                        BpmnEdge("F2", "dec-fork", "act-a"),
+                        BpmnEdge("F3", "dec-fork", "act-b"),
+                        BpmnEdge("F4", "act-a", "Gateway_join"),
+                        BpmnEdge("F5", "act-b", "Gateway_join"),
+                        BpmnEdge("F6", "Gateway_join", "EndEvent_1"),
+                    ),
+            )
+
+        val xml = forward.render(original).xml
+        val parsed = reverse.parse(xml)
+
+        val fork = parsed.nodes.first { it.id == "dec-fork" }
+        val join = parsed.nodes.first { it.id == "Gateway_join" }
+        assertIs<BpmnParallelGateway>(fork, "fork should round-trip as BpmnParallelGateway")
+        assertIs<BpmnParallelGateway>(join, "join should round-trip as BpmnParallelGateway")
+    }
 
     @Test
     fun `parse rejects xml containing bpmndi elements`() {
