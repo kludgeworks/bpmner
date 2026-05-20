@@ -21,6 +21,8 @@ const args = [];
 // If Bazel is requesting coverage collection
 if (env.COVERAGE_OUTPUT_FILE) {
     args.push('--experimental-test-coverage');
+    args.push('--test-reporter=spec');
+    args.push('--test-reporter-destination=stdout');
     args.push('--test-reporter=lcov');
     args.push(`--test-reporter-destination=${env.COVERAGE_OUTPUT_FILE}`);
 } else {

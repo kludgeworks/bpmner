@@ -19,6 +19,10 @@ jobs:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
     if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
     steps:
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -72,7 +76,7 @@ jobs:
           awk '/^SF:web\// {p=1} p {line=$0; if (line ~ /^SF:web\//) sub(/^SF:web\//, "SF:", line); print line} /^end_of_record/ {p=0}' bazel-out/_coverage/_coverage_report.dat > web_coverage.lcov
 
       - name: SonarCloud Scan (Backend)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -84,7 +88,7 @@ jobs:
             -Dsonar.coverage.jacoco.xmlReportPaths=jacoco.xml
 
       - name: SonarCloud Scan (Linter)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
@@ -96,7 +100,7 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=../linter_coverage.lcov
 
       - name: SonarCloud Scan (Web)
-        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v5.0.0
+        uses: sonarsource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}

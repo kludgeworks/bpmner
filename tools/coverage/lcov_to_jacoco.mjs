@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import readline from 'node:readline';
 
 /**
@@ -28,6 +29,22 @@ function escapeXml(unsafe) {
     });
 }
 
+function getPackageAndName(filePath) {
+    // Try to identify Kotlin/Java source roots
+    const roots = ['src/main/kotlin/', 'src/test/kotlin/', 'src/main/java/', 'src/test/java/'];
+    for (const root of roots) {
+        if (filePath.startsWith(root)) {
+            const relativePath = filePath.substring(root.length);
+            const fileName = path.basename(relativePath);
+            const packagePath = path.dirname(relativePath);
+            const packageName = packagePath === '.' ? '' : packagePath.replace(/\//g, '.');
+            return { packageName, fileName };
+        }
+    }
+    // Fallback: use a generic package and the full path as the name
+    return { packageName: 'default', fileName: filePath };
+}
+
 async function convert() {
     const fileStream = fs.createReadStream(inputFile);
     const rl = readline.createInterface({
@@ -35,16 +52,12 @@ async function convert() {
         crlfDelay: Infinity
     });
 
-    let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
-    xml += '<report name="LCOV to JaCoCo">\n';
-    xml += '  <package name="src">\n';
+    const packages = new Map();
 
     let currentFile = null;
     let lines = [];
     let coveredLines = 0;
     let missedLines = 0;
-    let totalCovered = 0;
-    let totalMissed = 0;
 
     for await (const line of rl) {
         if (line.startsWith('SF:')) {
@@ -60,20 +73,45 @@ async function convert() {
             if (count > 0) coveredLines++; else missedLines++;
         } else if (line === 'end_of_record') {
             if (currentFile) {
-                xml += `    <sourcefile name="${escapeXml(currentFile)}">\n`;
-                for (const l of lines) {
-                    xml += `      <line nr="${l.nr}" mi="${l.mi}" ci="${l.ci}"/>\n`;
+                const { packageName, fileName } = getPackageAndName(currentFile);
+                if (!packages.has(packageName)) {
+                    packages.set(packageName, []);
                 }
-                xml += `      <counter type="LINE" missed="${missedLines}" covered="${coveredLines}"/>\n`;
-                xml += '    </sourcefile>\n';
-                totalCovered += coveredLines;
-                totalMissed += missedLines;
+                packages.get(packageName).push({
+                    name: currentFile, // Use full path for SonarCloud resolution
+                    fileName,
+                    lines,
+                    coveredLines,
+                    missedLines
+                });
             }
             currentFile = null;
         }
     }
 
-    xml += '  </package>\n';
+    let totalCovered = 0;
+    let totalMissed = 0;
+
+    let xml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n';
+    xml += '<report name="LCOV to JaCoCo">\n';
+
+    for (const [packageName, files] of packages.entries()) {
+        xml += `  <package name="${escapeXml(packageName)}">\n`;
+        for (const f of files) {
+            // SonarCloud prefers the full path relative to project root in 'name' attribute
+            // if it's used for resolution.
+            xml += `    <sourcefile name="${escapeXml(f.name)}">\n`;
+            for (const l of f.lines) {
+                xml += `      <line nr="${l.nr}" mi="${l.mi}" ci="${l.ci}"/>\n`;
+            }
+            xml += `      <counter type="LINE" missed="${f.missedLines}" covered="${f.coveredLines}"/>\n`;
+            xml += '    </sourcefile>\n';
+            totalCovered += f.coveredLines;
+            totalMissed += f.missedLines;
+        }
+        xml += '  </package>\n';
+    }
+
     xml += `  <counter type="LINE" missed="${totalMissed}" covered="${totalCovered}"/>\n`;
     xml += '</report>';
 
