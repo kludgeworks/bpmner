@@ -49,6 +49,8 @@ rules_kotlin_extensions = use_extension(
 # )
 # use_repo(rules_kotlin_extensions, "com_github_jetbrains_kotlin")
 
+use_repo(rules_kotlin_extensions, "com_github_google_ksp", "com_github_jetbrains_kotlin", "com_github_jetbrains_kotlin_git", "com_github_pinterest_ktlint", "kotlin_build_tools_impl", "kotlinx_coroutines_core_jvm", "kotlinx_serialization_core_jvm", "kotlinx_serialization_json", "kotlinx_serialization_json_jvm")
+
 JUNIT_PLATFORM_VERSION = "1.12.2"
 
 JUNIT_JUPITER_VERSION = "5.12.2"

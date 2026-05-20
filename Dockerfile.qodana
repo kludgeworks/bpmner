@@ -1,0 +1,8 @@
+FROM jetbrains/qodana-jvm-community:2026.1
+USER root
+RUN apt-get update && apt-get install -y gcc g++ curl wget
+# Install Bazelisk
+RUN wget https://github.com/bazelbuild/bazelisk/releases/download/v1.19.0/bazelisk-linux-amd64 -O /usr/local/bin/bazel \
+    && echo "d28b588ac0916abd6bf02defb5433f6eddf7cba35ffa808eabb65a44aab226f7  /usr/local/bin/bazel" | sha256sum -c - \
+    && chmod +x /usr/local/bin/bazel
+USER qodana

@@ -36,6 +36,7 @@ local linters = new Mapping<String, Step> {
   ["addlicense"] = new Step {
     required = List("LICENSE_HOLDER", "LICENSE_TYPE")
     glob = List("**/*")
+    exclude = List("pnpm-lock.yaml")
     batch = true
     check = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" -check {{files}}"
     fix = "addlicense -s=only -c \"$LICENSE_HOLDER\" -l \"$LICENSE_TYPE\" {{files}}"
@@ -51,7 +52,7 @@ local linters = new Mapping<String, Step> {
     fix =
       "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path . --auto-correct"
   }
-  }
+}
 
 hooks {
   ["pre-commit"] {

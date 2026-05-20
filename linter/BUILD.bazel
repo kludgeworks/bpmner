@@ -8,7 +8,10 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
-package(default_visibility = ["//src:__subpackages__", "//:__pkg__"])
+package(default_visibility = [
+    "//:__pkg__",
+    "//src:__subpackages__",
+])
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
 
@@ -24,6 +27,11 @@ TEST_SRCS = glob([
 BPMN_FIXTURES = glob([
     "test/fixtures/**/*.bpmn",
 ])
+
+alias(
+    name = "cpd_srcs",
+    actual = ":analysis_srcs",
+)
 
 copy_file(
     name = "copy_polyfills",
@@ -83,16 +91,16 @@ bpmner_ts_project(
     srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS,
     assets = BPMN_FIXTURES,
     out_dir = "tsc",
-    tsconfig = ":tsconfig_bazel",
     resolve_json_module = True,
+    tsconfig = ":tsconfig_bazel",
     deps = LINTER_TS_DEPS,
 )
 
 js_binary(
     name = "generate_rule_registry_bin",
     data = [
-        "//:node_modules/bpmnlint",
         "src/generated/linter-rules.json",
+        "//:node_modules/bpmnlint",
         "//linter/pkl:generated_docs",
     ] + glob([
         "src/rules/**/*.ts",
@@ -136,8 +144,13 @@ esbuild(
 
 [bpmner_node_test(
     name = t,
-    entry_point = "test/%s.test.ts" % t.replace("_test", "").replace("_", "-"),
     srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS + BPMN_FIXTURES,
-    deps = LINTER_TS_DEPS,
+    entry_point = "test/%s.test.ts" % t.replace("_test", "").replace("_", "-"),
     loaders = {".bpmn": "text"},
-) for t in ["lint_test", "smoke_test", "auto_fix_test", "capabilities_test"]]
+    deps = LINTER_TS_DEPS,
+) for t in [
+    "lint_test",
+    "smoke_test",
+    "auto_fix_test",
+    "capabilities_test",
+]]
