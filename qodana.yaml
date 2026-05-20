@@ -6,7 +6,11 @@
 ####################################################################################################################
 
 version: "1.0"
-image: jetbrains/qodana-jvm-community:2026.1
+# Community linter — see https://www.jetbrains.com/help/qodana/linters.html.
+# Coverage, CheckDependencyLicenses, taint/vulnerability analysis, and qodana-js
+# require Ultimate; if we ever upgrade, switch back to qodana-jvm and re-add the
+# `Generate JVM coverage` step + `--coverage-dir .qodana/code-coverage` arg.
+linter: qodana-jvm-community
 
 # Kotlin toolchain compiles to JVM 21 (tools/kotlin/BUILD.bazel: jvm_target = "21").
 projectJDK: "21"
@@ -14,22 +18,15 @@ projectJDK: "21"
 profile:
   name: qodana.recommended
 
-# NOTE: no `bootstrap:` block here. Running `bazel build` inside the
-# qodana-jvm-community container is blocked by three combined constraints
-# we hit while iterating on this config:
-#   * the container runs as a non-root user;
-#   * apt is non-functional in the image (no package lists);
-#   * rules_kotlin's `ksp2` transitively requires a C toolchain that
-#     the JVM-only image doesn't ship.
-# Without a built classpath, Qodana runs source-only Kotlin AST analysis
-# (style, naming, complexity, common smells, basic null-safety) — still
-# useful, and detekt + ktlint in `bazel test //:ci` already cover most of
-# what's lost. Full-resolution analysis would need a custom image (FROM
-# jetbrains/qodana-jvm-community + apt-get install gcc, published to GHCR)
-# or a bazel-bsp generated IntelliJ project model. See repo issues.
+bootstrap: bazel build //...
 
-include:
-  - name: CheckDependencyLicenses
+# Severity-based quality gate. Start conservative: fail only on critical/high
+# until the baseline noise is triaged, then tighten. Once `qodana.sarif.json` is
+# checked in as a baseline, switch the action to pr-mode and tighten thresholds.
+failureConditions:
+  severityThresholds:
+    critical: 0
+    high: 0
 
 exclude:
   - name: All
@@ -41,7 +38,7 @@ exclude:
       - bazel-bpmner
       - bazel-qodana-setup
       # TypeScript / JS subprojects — JVM linter can't analyze them.
-      # If you ever want JS analysis, add a separate qodana-js job.
+      # If you ever want JS analysis, add a separate qodana-js job (Ultimate-only).
       - linter
       - layout
       - web
@@ -50,6 +47,8 @@ exclude:
       # Node and build artefacts (defence in depth vs .bazelignore not being read)
       - node_modules
       - dist
+      # Test sources — recommended-tier inspections produce a lot of noise here.
+      - src/test
       # Non-source content
       - docs
       - styles
