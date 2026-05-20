@@ -3,6 +3,7 @@
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
@@ -12,10 +13,13 @@ package(default_visibility = [
     "//src:__subpackages__",
 ])
 
-LIB_SRCS = glob([
-    "src/**/*.ts",
-    "types/**/*.d.ts",
-])
+LIB_SRCS = glob(
+    [
+        "src/**/*.ts",
+        "types/**/*.d.ts",
+    ],
+    exclude = ["src/polyfills.ts"],
+)
 
 TEST_SRCS = glob([
     "test/**/*.ts",
@@ -23,16 +27,29 @@ TEST_SRCS = glob([
 
 filegroup(
     name = "analysis_srcs",
-    srcs = glob([
-        "src/**/*.ts",
-        "test/**/*.ts",
-    ]),
+    srcs = glob(
+        [
+            "src/**/*.ts",
+            "test/**/*.ts",
+        ],
+        exclude = ["src/polyfills.ts"],
+    ),
 )
 
-copy_file(
+genrule(
     name = "copy_polyfills",
-    src = "//tools/js:polyfills.ts",
-    out = "src/polyfills-shared.ts",
+    srcs = ["//tools/js:polyfills.ts"],
+    outs = ["src/polyfills-shared.ts"],
+    cmd = "cp $< $@",
+)
+
+write_file(
+    name = "write_polyfills",
+    out = "src/polyfills.ts",
+    content = [
+        "import { installPolyfills } from './polyfills-shared';",
+        "installPolyfills();",
+    ],
 )
 
 # Link the standalone layout package's node_modules
@@ -47,7 +64,10 @@ bpmner_ts_configs()
 
 bpmner_ts_project(
     name = "ts",
-    srcs = LIB_SRCS + TEST_SRCS + [":copy_polyfills"],
+    srcs = LIB_SRCS + TEST_SRCS + [
+        ":copy_polyfills",
+        ":write_polyfills",
+    ],
     out_dir = "tsc",
     tsconfig = ":tsconfig_bazel",
     deps = LAYOUT_TS_DEPS,
@@ -55,7 +75,10 @@ bpmner_ts_project(
 
 esbuild(
     name = "bundle",
-    srcs = LIB_SRCS + [":copy_polyfills"],
+    srcs = LIB_SRCS + [
+        ":copy_polyfills",
+        ":write_polyfills",
+    ],
     config = {
         "inject": ["layout/src/polyfills.ts"],
         "sourcemap": False,
@@ -70,7 +93,10 @@ esbuild(
 
 bpmner_node_test(
     name = "smoke_test",
-    srcs = LIB_SRCS + TEST_SRCS + [":copy_polyfills"],
     entry_point = "test/smoke.test.ts",
+    srcs = LIB_SRCS + TEST_SRCS + [
+        ":copy_polyfills",
+        ":write_polyfills",
+    ],
     deps = LAYOUT_TS_DEPS,
 )

@@ -4,6 +4,7 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
 load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@bazel_sonarqube//:defs.bzl", "sq_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
@@ -15,15 +16,20 @@ sq_project(
     name = "sq_project",
     project_key = "kludgeworks_bpmner_linter",
     project_name = "bpmner Linter",
-    srcs = glob(["src/**/*.ts"]),
+    srcs = glob(["src/**/*.ts"], exclude = ["src/polyfills.ts"]),
 )
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
 
-LIB_SRCS = glob([
-    "src/**/*.ts",
-    "types/**/*.d.ts",
-])
+LIB_SRCS = glob(
+    [
+        "src/**/*.ts",
+        "types/**/*.d.ts",
+    ],
+    exclude = [
+        "src/polyfills.ts",
+    ],
+)
 
 TEST_SRCS = glob([
     "test/**/*.ts",
@@ -38,22 +44,34 @@ alias(
     actual = ":analysis_srcs",
 )
 
-copy_file(
+genrule(
     name = "copy_polyfills",
-    src = "//tools/js:polyfills.ts",
-    out = "src/polyfills-shared.ts",
+    srcs = ["//tools/js:polyfills.ts"],
+    outs = ["src/polyfills-shared.ts"],
+    cmd = "cp $< $@",
 )
 
-copy_file(
+write_file(
+    name = "write_polyfills",
+    out = "src/polyfills.ts",
+    content = [
+        "import { installPolyfills } from './polyfills-shared';",
+        "installPolyfills();",
+    ],
+)
+
+genrule(
     name = "linter_rules_json",
-    src = "//linter/pkl:catalog_json",
-    out = "src/generated/linter-rules.json",
+    srcs = ["//linter/pkl:catalog_json"],
+    outs = ["src/generated/linter-rules.json"],
+    cmd = "cp $< $@",
 )
 
 GENERATED_SRCS = [
     ":generated_rule_registry_ts",
     ":linter_rules_json",
     ":copy_polyfills",
+    ":write_polyfills",
 ]
 
 js_library(
