@@ -302,9 +302,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val kind =
             when (timerElement.localName) {
                 "timeDate" -> BpmnTimerKind.DATE
+
                 "timeDuration" -> BpmnTimerKind.DURATION
+
                 "timeCycle" -> BpmnTimerKind.CYCLE
-                else -> BpmnTimerKind.DATE
+
+                // The filter above only admits timeDate/timeDuration/timeCycle and throws if none
+                // match — this branch cannot fire today. The explicit error makes the invariant
+                // load-bearing so a future filter loosening can't silently default to DATE.
+                else -> error("unreachable: timerElement.localName='${timerElement.localName}'")
             }
         return BpmnTimerEventDefinition(kind, timerElement.textContent.orEmpty())
     }

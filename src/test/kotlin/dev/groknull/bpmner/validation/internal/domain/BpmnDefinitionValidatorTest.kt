@@ -9,12 +9,15 @@ import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorEventDefinition
+import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerKind
@@ -243,6 +246,112 @@ class BpmnDefinitionValidatorTest {
         assertContains(
             validator.validate(definition).joinToString("\n"),
             "boundary event Boundary_1 must declare an event definition",
+        )
+    }
+
+    // Blank-ref pre-checks: when a `<bpmn:messageEventDefinition/>` (etc.) has no `messageRef`
+    // attribute, the parser produces `BpmnMessageEventDefinition("")` so the malformed XML is
+    // captured faithfully. The validator must then surface the *missing attribute* — not a
+    // referential-integrity error that misleads about the real bug.
+
+    @Test
+    fun `validator flags missing messageRef attribute on messageEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_1",
+                        "Request received",
+                        eventDefinition = BpmnMessageEventDefinition(""),
+                    ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event StartEvent_1 messageEventDefinition is missing the required messageRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags missing signalRef attribute on signalEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_1",
+                        "Broadcast caught",
+                        eventDefinition = BpmnSignalEventDefinition(""),
+                    ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event StartEvent_1 signalEventDefinition is missing the required signalRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags missing errorRef attribute on errorEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                end =
+                    BpmnEndEvent(
+                        "EndEvent_1",
+                        "Errored out",
+                        eventDefinition = BpmnErrorEventDefinition(""),
+                    ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event EndEvent_1 errorEventDefinition is missing the required errorRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags missing escalationRef attribute on escalationEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                end =
+                    BpmnEndEvent(
+                        "EndEvent_1",
+                        "Escalated",
+                        eventDefinition = BpmnEscalationEventDefinition(""),
+                    ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event EndEvent_1 escalationEventDefinition is missing the required escalationRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags missing attachedToRef on boundary event`() {
+        // Same trap: BoundaryEvent(attachedToRef = "") used to surface as
+        // "attachedToRef '' does not match any node id" — a referential-integrity message that
+        // confuses with a node-graph bug. Now it correctly reports the missing attribute.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Validate request"),
+                        BpmnBoundaryEvent(
+                            id = "Boundary_1",
+                            name = "Timeout",
+                            attachedToRef = "",
+                            eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
+                        ),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                    ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "boundary event Boundary_1 is missing the required attachedToRef attribute",
         )
     }
 
