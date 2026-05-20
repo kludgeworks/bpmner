@@ -3,7 +3,6 @@
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
-load("@bazel_skylib//rules:copy_file.bzl", "copy_file")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@bazel_sonarqube//:defs.bzl", "sq_project")
 load("@npm//:defs.bzl", "npm_link_all_packages")
@@ -14,9 +13,12 @@ package(default_visibility = ["//visibility:public"])
 
 sq_project(
     name = "sq_project",
+    srcs = glob(
+        ["src/**/*.ts"],
+        exclude = ["src/polyfills.ts"],
+    ),
     project_key = "kludgeworks_bpmner_linter",
     project_name = "bpmner Linter",
-    srcs = glob(["src/**/*.ts"], exclude = ["src/polyfills.ts"]),
     visibility = ["//visibility:public"],
 )
 

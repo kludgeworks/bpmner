@@ -10,9 +10,9 @@ package(default_visibility = ["//visibility:public"])
 
 sq_project(
     name = "sq_project",
+    srcs = glob(["src/**/*.ts"]),
     project_key = "kludgeworks_bpmner_web",
     project_name = "bpmner Web",
-    srcs = glob(["src/**/*.ts"]),
     visibility = ["//visibility:public"],
 )
 
