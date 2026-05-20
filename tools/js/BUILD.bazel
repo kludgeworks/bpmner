@@ -1,8 +1,17 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
+load("@aspect_rules_js//js:defs.bzl", "js_library")
+
+js_library(
+    name = "test_wrapper",
+    srcs = ["test_wrapper.mjs"],
+    visibility = ["//visibility:public"],
+)
+
 exports_files([
     "polyfills.ts",
     "ts.bzl",
     "test.bzl",
+    "test_wrapper.mjs",
 ])
