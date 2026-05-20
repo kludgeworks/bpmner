@@ -17,6 +17,7 @@ sq_project(
     project_key = "kludgeworks_bpmner_linter",
     project_name = "bpmner Linter",
     srcs = glob(["src/**/*.ts"], exclude = ["src/polyfills.ts"]),
+    visibility = ["//visibility:public"],
 )
 
 STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"

@@ -13,6 +13,7 @@ sq_project(
     project_key = "kludgeworks_bpmner_web",
     project_name = "bpmner Web",
     srcs = glob(["src/**/*.ts"]),
+    visibility = ["//visibility:public"],
 )
 
 # Link the standalone web package's node_modules
