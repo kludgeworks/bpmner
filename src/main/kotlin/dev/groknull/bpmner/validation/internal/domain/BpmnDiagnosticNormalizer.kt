@@ -8,6 +8,7 @@ package dev.groknull.bpmner.validation.internal.domain
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
@@ -40,6 +41,8 @@ internal class BpmnDiagnosticNormalizer(
                     BpmnDiagnostic(
                         source = BpmnDiagnosticSource.XSD,
                         message = issue.message,
+                        // XSD violations are always blocking — they mean the document is invalid.
+                        severity = BpmnDiagnosticSeverity.ERROR,
                         elementId = elementId,
                         objectRef = rendered.elementIndex.objectRefForElementId(elementId),
                     ),
@@ -62,8 +65,8 @@ internal class BpmnDiagnosticNormalizer(
                     BpmnDiagnostic(
                         source = BpmnDiagnosticSource.LINT,
                         message = issue.message,
+                        severity = BpmnDiagnosticSeverity.fromLintCategory(issue.category),
                         rule = issue.rule,
-                        category = issue.category,
                         elementId = elementId,
                         objectRef = elementIndex.objectRefForElementId(elementId),
                         kind = cap?.kind ?: RepairKind.LLM_MODEL_PATCH,
@@ -84,6 +87,8 @@ internal class BpmnDiagnosticNormalizer(
                 BpmnDiagnostic(
                     source = BpmnDiagnosticSource.GRAPH,
                     message = message,
+                    // Graph-shape failures are structural — always blocking.
+                    severity = BpmnDiagnosticSeverity.ERROR,
                 ),
         )
 

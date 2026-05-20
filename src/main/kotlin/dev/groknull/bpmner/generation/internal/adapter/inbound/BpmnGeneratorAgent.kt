@@ -11,6 +11,7 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.core.BpmnConfig
@@ -32,6 +33,7 @@ import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
 import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -47,10 +49,12 @@ internal class BpmnGeneratorAgent(
     private val bpmnConverter: BpmnRenderer,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityChecker,
+    private val defaultFlowAssigner: DefaultFlowAssigner,
     private val eventPublisher: ApplicationEventPublisher,
+    contractRenderer: ProcessContractMarkdownRenderer,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
-    private val contractPromptFactory = BpmnContractGenerationPromptFactory()
+    private val contractPromptFactory = BpmnContractGenerationPromptFactory(contractRenderer)
 
     @Action(
         description =
@@ -69,9 +73,12 @@ internal class BpmnGeneratorAgent(
         }
         val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
-        val definition =
+        val rawDefinition =
             promptRunner.createObject(prompt, BpmnDefinition::class.java)
                 ?: error("Outline generator failed to produce a structured outline.")
+        // Deterministically propagate contract-side DefaultBranch semantics to the BPMN edge.
+        // The LLM is unreliable on this discriminator; the contract is the source of truth.
+        val definition = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
         val outline =
             ProcessOutline(
                 request = request,

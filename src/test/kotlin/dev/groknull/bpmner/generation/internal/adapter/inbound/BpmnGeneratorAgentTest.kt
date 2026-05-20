@@ -14,6 +14,7 @@ import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -23,6 +24,7 @@ import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -97,7 +99,9 @@ class BpmnGeneratorAgentTest {
             bpmnConverter = NoopRenderer,
             metricsCalculator = BpmnGeneratorMetrics(),
             fidelityChecker = BpmnContractFidelityChecker(),
+            defaultFlowAssigner = DefaultFlowAssigner(),
             eventPublisher = ApplicationEventPublisher {},
+            contractRenderer = ProcessContractMarkdownRenderer(),
         )
 
     private fun validContract(): ValidatedProcessContract {

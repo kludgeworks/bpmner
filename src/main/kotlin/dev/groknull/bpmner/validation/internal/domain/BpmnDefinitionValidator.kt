@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEventDefinition
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
@@ -36,6 +37,7 @@ internal class BpmnDefinitionValidator {
         validateEdges(definition, errors)
         validateRequiredEvents(definition, errors)
         validateEventDefinitions(definition, errors)
+        validateDefaultFlows(definition, errors)
 
         return errors
     }
@@ -285,6 +287,37 @@ internal class BpmnDefinitionValidator {
 
             is BpmnTerminateEventDefinition -> {
                 Unit
+            }
+        }
+    }
+
+    private fun validateDefaultFlows(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val nodesById = definition.nodes.associateBy { it.id }
+        val defaultsBySource =
+            definition.sequences
+                .filter { it.isDefault }
+                .groupBy { it.sourceRef }
+        defaultsBySource.forEach { (sourceId, defaults) ->
+            val source = nodesById[sourceId]
+            // An orphan isDefault edge (sourceRef points to no node) is also invalid here.
+            // The separate validateEdges pass surfaces the missing-sourceRef issue too, but
+            // this rule still owns the "isDefault is only valid on EXCLUSIVE_GATEWAY" guarantee
+            // and must fire on the orphan case to be complete.
+            if (source == null || source !is BpmnExclusiveGateway) {
+                defaults.forEach { edge ->
+                    errors.add(
+                        "edge ${edge.id} isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY",
+                    )
+                }
+            }
+            if (defaults.size > 1) {
+                val ids = defaults.joinToString(", ") { it.id }
+                errors.add(
+                    "node $sourceId has ${defaults.size} default flows ($ids); at most one is allowed",
+                )
             }
         }
     }

@@ -5,11 +5,15 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.contract.ConditionalBranch
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
+import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.UnconditionalBranch
 import org.springframework.stereotype.Component
 
 @Component
@@ -77,15 +81,72 @@ internal class BpmnContractValidator {
                         targetId = decision.id,
                     )
             }
-            decision.branches.forEach { branch ->
-                if (branch.label.isBlank() && branch.condition.isNullOrBlank()) {
-                    issues +=
-                        ContractValidationIssue(
-                            code = ContractValidationCode.BRANCH_WITHOUT_CONDITION_OR_LABEL,
-                            severity = ContractIssueSeverity.ERROR,
-                            message = "branch must have a non-blank label or condition",
-                            targetId = branch.id,
-                        )
+            // Cross-cutting branch-kind invariants over the sealed ContractBranch hierarchy.
+            // Per-branch field constraints (non-blank label, non-blank condition on ConditionalBranch)
+            // are enforced by Jakarta validation on the subtype constructors, not here.
+            val defaults = decision.branches.filterIsInstance<DefaultBranch>()
+            if (defaults.size > 1) {
+                issues +=
+                    ContractValidationIssue(
+                        code = ContractValidationCode.DECISION_MULTIPLE_DEFAULTS,
+                        severity = ContractIssueSeverity.ERROR,
+                        message =
+                            "decision must declare at most one default branch" +
+                                " (found ${defaults.size})",
+                        targetId = decision.id,
+                    )
+            }
+            when (decision.kind) {
+                ContractGatewayKind.EXCLUSIVE -> {
+                    val unconditional = decision.branches.filterIsInstance<UnconditionalBranch>()
+                    unconditional.forEach { branch ->
+                        issues +=
+                            ContractValidationIssue(
+                                code = ContractValidationCode.UNCONDITIONAL_BRANCH_ON_EXCLUSIVE,
+                                severity = ContractIssueSeverity.ERROR,
+                                message =
+                                    "branch '${branch.id}' is UNCONDITIONAL but decision" +
+                                        " '${decision.id}' is EXCLUSIVE — use a ConditionalBranch with a condition",
+                                targetId = branch.id,
+                            )
+                    }
+                    if (defaults.isNotEmpty() && decision.branches.none { it is ConditionalBranch }) {
+                        issues +=
+                            ContractValidationIssue(
+                                code = ContractValidationCode.DECISION_DEFAULT_WITHOUT_CONDITIONAL,
+                                severity = ContractIssueSeverity.ERROR,
+                                message =
+                                    "decision '${decision.id}' has a default branch but no conditional" +
+                                        " branch — a decision cannot be 100% default",
+                                targetId = decision.id,
+                            )
+                    }
+                }
+
+                ContractGatewayKind.PARALLEL -> {
+                    defaults.forEach { branch ->
+                        issues +=
+                            ContractValidationIssue(
+                                code = ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL,
+                                severity = ContractIssueSeverity.ERROR,
+                                message =
+                                    "branch '${branch.id}' is DEFAULT but decision '${decision.id}'" +
+                                        " is PARALLEL — default branches are valid only on EXCLUSIVE decisions",
+                                targetId = branch.id,
+                            )
+                    }
+                    val conditional = decision.branches.filterIsInstance<ConditionalBranch>()
+                    conditional.forEach { branch ->
+                        issues +=
+                            ContractValidationIssue(
+                                code = ContractValidationCode.CONDITIONAL_BRANCH_ON_PARALLEL,
+                                severity = ContractIssueSeverity.ERROR,
+                                message =
+                                    "branch '${branch.id}' is CONDITIONAL but decision" +
+                                        " '${decision.id}' is PARALLEL — all parallel branches fire unconditionally",
+                                targetId = branch.id,
+                            )
+                    }
                 }
             }
         }

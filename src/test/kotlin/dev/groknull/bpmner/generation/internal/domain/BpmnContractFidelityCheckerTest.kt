@@ -7,12 +7,14 @@
 
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -51,6 +53,63 @@ class BpmnContractFidelityCheckerTest {
             report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
             "expected BRANCH_FLOW_MISSING; got: ${report.issues.map { it.code }}",
         )
+    }
+
+    @Test
+    fun `branch flow through unnamed converging exclusive join passes`() {
+        val report =
+            checker.check(
+                skipForwardContract(),
+                skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_join", name = null)),
+            )
+        assertTrue(
+            report.isValid,
+            "transparent exclusive join should not trip BRANCH_FLOW_MISSING; got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `branch flow through unnamed converging parallel join passes`() {
+        val report =
+            checker.check(
+                skipForwardContract(),
+                skipForwardViaJoinDefinition(join = BpmnParallelGateway("Gateway_join", name = null)),
+            )
+        assertTrue(
+            report.isValid,
+            "transparent parallel join should not trip BRANCH_FLOW_MISSING; got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `branch flow through named gateway still flagged as BRANCH_FLOW_MISSING`() {
+        // A named gateway carries semantic content — it's not transparent. The walk must stop there.
+        val report =
+            checker.check(
+                skipForwardContract(),
+                skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_named", name = "Re-check?")),
+            )
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING },
+            "expected BRANCH_FLOW_MISSING for named intermediate gateway; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `branch flow through gateway with multiple outbounds still flagged as BRANCH_FLOW_MISSING`() {
+        // A converging gateway that fans out again is a fork, not a transparent merge.
+        val report = checker.check(skipForwardContract(), skipForwardViaMultiOutboundJoinDefinition())
+        assertFalse(report.isValid)
+        assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
+    }
+
+    @Test
+    fun `branch flow through user task still flagged as BRANCH_FLOW_MISSING`() {
+        // Only gateways qualify as transparent today; tasks must never be skipped over.
+        val report = checker.check(skipForwardContract(), skipForwardViaTaskDefinition())
+        assertFalse(report.isValid)
+        assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
     }
 
     @Test
@@ -114,6 +173,7 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
+    @Suppress("LongMethod") // inline definition fixture stays cohesive; splitting hides assertions
     fun `forward-skip branch with a real edge does NOT trigger a false back-edge flag`() {
         // Regression test for the pre-rewrite fragile heuristic: a forward-skip branch whose
         // target is realised by a real sequence flow must NOT be flagged.
@@ -138,8 +198,18 @@ class BpmnContractFidelityCheckerTest {
                             question = "Skip detailed path?",
                             branches =
                                 listOf(
-                                    ContractBranch(id = "br-skip", label = "Yes", nextRef = "act-skip-target"),
-                                    ContractBranch(id = "br-detailed", label = "No", nextRef = "act-detailed-path"),
+                                    ConditionalBranch(
+                                        id = "br-skip",
+                                        label = "Yes",
+                                        condition = "skip",
+                                        nextRef = "act-skip-target",
+                                    ),
+                                    ConditionalBranch(
+                                        id = "br-detailed",
+                                        label = "No",
+                                        condition = "detailed",
+                                        nextRef = "act-detailed-path",
+                                    ),
                                 ),
                             sourceIds = sources,
                         ),
@@ -197,8 +267,8 @@ class BpmnContractFidelityCheckerTest {
                             question = "Q1?",
                             branches =
                                 listOf(
-                                    ContractBranch(id = "br-1a", label = "1a"),
-                                    ContractBranch(id = "br-1b", label = "1b"),
+                                    ConditionalBranch(id = "br-1a", label = "1a", condition = "1a"),
+                                    ConditionalBranch(id = "br-1b", label = "1b", condition = "1b"),
                                 ),
                             sourceIds = sources,
                         ),
@@ -207,9 +277,9 @@ class BpmnContractFidelityCheckerTest {
                             question = "Q2?",
                             branches =
                                 listOf(
-                                    ContractBranch(id = "br-2a", label = "2a"),
-                                    ContractBranch(id = "br-2b", label = "2b"),
-                                    ContractBranch(id = "br-2c", label = "2c"),
+                                    ConditionalBranch(id = "br-2a", label = "2a", condition = "2a"),
+                                    ConditionalBranch(id = "br-2b", label = "2b", condition = "2b"),
+                                    ConditionalBranch(id = "br-2c", label = "2c", condition = "2c"),
                                 ),
                             sourceIds = sources,
                         ),
@@ -376,9 +446,9 @@ private fun repairLoopContract(): ProcessContract {
                     question = "Did validation pass?",
                     branches =
                         listOf(
-                            ContractBranch(id = "br-pass", label = "Pass", nextRef = "end-success"),
-                            ContractBranch(id = "br-fail", label = "Fail", nextRef = "end-failed"),
-                            ContractBranch(id = "br-retry", label = "Retry", nextRef = "act-strategy-1"),
+                            ConditionalBranch(id = "br-pass", label = "Pass", condition = "pass", nextRef = "end-success"),
+                            ConditionalBranch(id = "br-fail", label = "Fail", condition = "fail", nextRef = "end-failed"),
+                            ConditionalBranch(id = "br-retry", label = "Retry", condition = "retry", nextRef = "act-strategy-1"),
                         ),
                     sourceIds = sources,
                 ),
@@ -448,9 +518,9 @@ private fun parallelForkContract(): ProcessContract {
                     question = "Run all preparation tracks",
                     branches =
                         listOf(
-                            ContractBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
-                            ContractBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
-                            ContractBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
+                            UnconditionalBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
+                            UnconditionalBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
+                            UnconditionalBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
                         ),
                     kind = ContractGatewayKind.PARALLEL,
                     sourceIds = sources,
@@ -509,8 +579,8 @@ private fun unresolvedRefContract() =
                     question = "Choose?",
                     branches =
                         listOf(
-                            ContractBranch(id = "br-1", label = "Option 1", nextRef = "act-nonexistent"),
-                            ContractBranch(id = "br-2", label = "Option 2"),
+                            ConditionalBranch(id = "br-1", label = "Option 1", condition = "1", nextRef = "act-nonexistent"),
+                            DefaultBranch(id = "br-2", label = "Option 2"),
                         ),
                     sourceIds = listOf("ev1"),
                 ),
@@ -532,5 +602,130 @@ private fun unresolvedRefDefinition() =
             listOf(
                 BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
                 BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
+            ),
+    )
+
+/**
+ * Contract for the transparent-join reachability tests.
+ *
+ * `dec-route` has two CONDITIONAL branches; `br-fast` resolves directly, `br-converge` goes
+ * through an intermediate node before reaching its `nextRef`. Each `skipForwardVia*` fixture
+ * varies the intermediate node's kind to exercise the transparency rule.
+ */
+private fun skipForwardContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-skip",
+        processName = "Skip via join",
+        summary = "Two branches converge to the same downstream activity.",
+        trigger = "Request received",
+        triggerSourceIds = sources,
+        activities =
+            listOf(
+                ContractActivity(id = "act-fast-target", name = "Fast", sourceIds = sources),
+                ContractActivity(id = "act-converge-target", name = "Converge", sourceIds = sources),
+            ),
+        decisions =
+            listOf(
+                ContractDecision(
+                    id = "dec-route",
+                    question = "Which route?",
+                    branches =
+                        listOf(
+                            ConditionalBranch(
+                                id = "br-fast",
+                                label = "Fast",
+                                condition = "fast",
+                                nextRef = "act-fast-target",
+                            ),
+                            ConditionalBranch(
+                                id = "br-converge",
+                                label = "Converge",
+                                condition = "converge",
+                                nextRef = "act-converge-target",
+                            ),
+                        ),
+                    sourceIds = sources,
+                ),
+            ),
+        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+    )
+}
+
+/** `dec-route → [intermediate] → act-converge-target`; the intermediate node is supplied by the caller. */
+private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.core.BpmnNode): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Skip via join",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+                BpmnUserTask(id = "act-fast-target", name = "Fast"),
+                join,
+                BpmnUserTask(id = "act-converge-target", name = "Converge"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = join.id, conditionExpression = "converge"),
+                BpmnEdge(id = "F4", sourceRef = join.id, targetRef = "act-converge-target"),
+                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+            ),
+    )
+
+/** Variant: the intermediate is a gateway with multiple outbounds — a fork, not a transparent merge. */
+private fun skipForwardViaMultiOutboundJoinDefinition(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Skip via multi-outbound join",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+                BpmnUserTask(id = "act-fast-target", name = "Fast"),
+                BpmnExclusiveGateway(id = "Gateway_fork", name = null),
+                BpmnUserTask(id = "act-converge-target", name = "Converge"),
+                BpmnUserTask(id = "act-extra", name = "Extra"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Gateway_fork", conditionExpression = "converge"),
+                BpmnEdge(id = "F4", sourceRef = "Gateway_fork", targetRef = "act-converge-target"),
+                BpmnEdge(id = "F4b", sourceRef = "Gateway_fork", targetRef = "act-extra"),
+                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+                BpmnEdge(id = "F7", sourceRef = "act-extra", targetRef = "end-done"),
+            ),
+    )
+
+/** Variant: the intermediate is a UserTask — never transparent. */
+private fun skipForwardViaTaskDefinition(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Skip via task",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+                BpmnUserTask(id = "act-fast-target", name = "Fast"),
+                BpmnUserTask(id = "Task_intermediate", name = "Intermediate work"),
+                BpmnUserTask(id = "act-converge-target", name = "Converge"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Task_intermediate", conditionExpression = "converge"),
+                BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
+                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
             ),
     )

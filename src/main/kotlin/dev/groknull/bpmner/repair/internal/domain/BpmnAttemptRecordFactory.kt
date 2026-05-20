@@ -29,6 +29,7 @@ internal class BpmnAttemptRecordFactory(
             xsdDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.XSD),
             lintDiagnostics = globalDiagnostics.countFor(BpmnDiagnosticSource.LINT),
             diagnosticFingerprint = fingerprints.diagnosticFingerprint(attempt.diagnostics),
+            blockingDiagnosticFingerprint = fingerprints.blockingDiagnosticFingerprint(attempt.diagnostics),
             definitionFingerprint = fingerprints.definitionFingerprint(attempt.definition),
             repairPromptFingerprint = repairPromptFingerprint,
             topDiagnostics = attempt.diagnostics.take(TOP_DIAGNOSTICS_LIMIT).map { formatTopDiagnostic(it) },

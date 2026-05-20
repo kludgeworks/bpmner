@@ -26,6 +26,7 @@ import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
@@ -233,7 +234,7 @@ class DeterministicTopologyRepairStrategyTest {
         source = BpmnDiagnosticSource.LINT,
         message = "violation",
         rule = rule,
-        category = "error",
+        severity = BpmnDiagnosticSeverity.ERROR,
         elementId = elementId,
         kind = kind,
         fixHandler = fixHandler,

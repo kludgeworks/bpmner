@@ -221,30 +221,107 @@ data class ContractDecision(
     val sourceIds: List<String> = emptyList(),
 )
 
-@JsonClassDescription("Branch from a contract decision")
-data class ContractBranch(
+/**
+ * A branch out of a [ContractDecision].
+ *
+ * Mirrors the sealed-subtype pattern established by PR #184 for [dev.groknull.bpmner.core.BpmnNode]:
+ * the `kind` discriminator in the LLM-facing JSON dispatches to one of three subtypes, each
+ * carrying exactly the fields it needs. Mutual exclusion between `condition` and "default" is a
+ * type-system guarantee — there is no shape where both could coexist.
+ *
+ * - [ConditionalBranch] — taken when its `condition` evaluates true. The default kind for
+ *   EXCLUSIVE decisions; never appears on PARALLEL decisions.
+ * - [DefaultBranch] — the catch-all on an EXCLUSIVE (or, later, INCLUSIVE) decision. Taken when
+ *   no other branch's condition matched. Carries no condition; renders as `default="Flow_X"` on
+ *   the gateway.
+ * - [UnconditionalBranch] — a branch of a PARALLEL decision. Activates unconditionally; the
+ *   matching parallel join synchronises the tracks downstream.
+ */
+@JsonClassDescription("Branch out of a contract decision")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ConditionalBranch::class, name = "CONDITIONAL"),
+    JsonSubTypes.Type(value = DefaultBranch::class, name = "DEFAULT"),
+    JsonSubTypes.Type(value = UnconditionalBranch::class, name = "UNCONDITIONAL"),
+)
+sealed interface ContractBranch {
+    val id: String
+    val label: String
+    val nextRef: String?
+}
+
+/**
+ * The discriminator string for [branch], matching the `kind` field in the LLM JSON output
+ * and the names declared in `@JsonSubTypes` on [ContractBranch].
+ */
+val ContractBranch.kindName: String
+    get() =
+        when (this) {
+            is ConditionalBranch -> "CONDITIONAL"
+            is DefaultBranch -> "DEFAULT"
+            is UnconditionalBranch -> "UNCONDITIONAL"
+        }
+
+@JsonClassDescription("Conditional branch — taken when `condition` evaluates true")
+data class ConditionalBranch(
     @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Stable branch id")
-    val id: String,
+    override val id: String,
     @field:NotBlank
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Branch label")
-    val label: String,
+    override val label: String,
+    @field:NotBlank
     @field:Size(max = 500)
-    @get:JsonPropertyDescription(
-        "Optional condition expression that selects this branch. Required for EXCLUSIVE " +
-            "decisions; unused for PARALLEL decisions (all branches activate unconditionally).",
-    )
-    val condition: String? = null,
+    @get:JsonPropertyDescription("Condition expression that selects this branch. Required.")
+    val condition: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional id of the next activity, decision, or end state this branch leads to. " +
-            "When omitted, the branch is assumed to lead to the next sequential element. " +
-            "Use this to express loop back-edges (target an earlier activity) and multi-exit topologies.",
+            "Omit for sequential continuation. Use to express loop back-edges and multi-exit topologies.",
     )
-    val nextRef: String? = null,
+    override val nextRef: String? = null,
+) : ContractBranch
+
+@JsonClassDescription(
+    "Default (catch-all) branch — taken when no other branch's condition matched. " +
+        "Valid on EXCLUSIVE decisions only. At most one per decision.",
 )
+data class DefaultBranch(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable branch id")
+    override val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Branch label — describes the destination, e.g. \"Manual review\". The catch-all " +
+            "intent is expressed by the DEFAULT kind, not by inventing a placeholder condition.",
+    )
+    override val label: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
+    override val nextRef: String? = null,
+) : ContractBranch
+
+@JsonClassDescription(
+    "Unconditional branch of a PARALLEL decision — fires concurrently with its siblings; " +
+        "the matching parallel join synchronises the tracks downstream.",
+)
+data class UnconditionalBranch(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable branch id")
+    override val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Branch label naming this parallel track, e.g. \"IT prep\".")
+    override val label: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
+    override val nextRef: String? = null,
+) : ContractBranch
 
 @JsonClassDescription("Actor referenced by the extracted process contract")
 data class ContractActor(

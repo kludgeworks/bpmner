@@ -74,7 +74,7 @@ class BpmnValidationIntegrationTest {
 
         assertNotNull(result)
         assertTrue(
-            result.diagnostics.none { it.category == "error" },
+            result.diagnostics.none { it.isBlocking },
             "Sample toast process should be valid. Diagnostics: ${result.diagnostics}",
         )
     }

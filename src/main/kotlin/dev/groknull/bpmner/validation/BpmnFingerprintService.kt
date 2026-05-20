@@ -20,25 +20,36 @@ class BpmnFingerprintService {
 
     fun definitionFingerprint(definition: BpmnDefinition): String = textFingerprint(serializeDefinition(definition))
 
-    fun diagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String =
-        textFingerprint(
-            diagnostics
-                .map { diagnostic ->
-                    listOf(
-                        diagnostic.source.name,
-                        diagnostic.rule.orEmpty(),
-                        diagnostic.category.orEmpty(),
-                        diagnostic.elementId.orEmpty(),
-                        diagnostic.objectRef.orEmpty(),
-                        diagnostic.repairScope?.name.orEmpty(),
-                        diagnostic.ownerRef.orEmpty(),
-                        diagnostic.message,
-                    ).joinToString("")
-                }.sorted()
-                .joinToString(""),
-        )
+    fun diagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String = textFingerprint(diagnostics.fingerprintInput())
+
+    /**
+     * Fingerprint computed over **only the blocking (ERROR-severity)** diagnostics.
+     *
+     * Used by [dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine]'s "stuck
+     * blocking" guard. If we compared the full fingerprint there, advisory warnings
+     * oscillating between iterations would make the fingerprint change every round, masking
+     * a permanently-stuck blocking error — the engine would burn through every remaining
+     * `maxEvaluations` attempt instead of failing fast.
+     */
+    fun blockingDiagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String =
+        textFingerprint(diagnostics.filter { it.isBlocking }.fingerprintInput())
 
     fun promptFingerprint(prompt: String): String = textFingerprint(prompt)
+
+    private fun List<BpmnDiagnostic>.fingerprintInput(): String =
+        map { diagnostic ->
+            listOf(
+                diagnostic.source.name,
+                diagnostic.rule.orEmpty(),
+                diagnostic.severity.name,
+                diagnostic.elementId.orEmpty(),
+                diagnostic.objectRef.orEmpty(),
+                diagnostic.repairScope?.name.orEmpty(),
+                diagnostic.ownerRef.orEmpty(),
+                diagnostic.message,
+            ).joinToString("")
+        }.sorted()
+            .joinToString("")
 
     companion object {
         private const val FINGERPRINT_LENGTH = 12

@@ -346,7 +346,7 @@ class BpmnRepairAgentTest {
                 )
             }
 
-        assertTrue(error.message!!.contains("unchanged diagnostics"))
+        assertTrue(error.message!!.contains("unchanged blocking diagnostics"))
         assertTrue(error.message!!.contains("history=#1"))
         assertEquals(1, context.llmInvocations.size)
         assertEquals(2, xsdValidator.xmls.size)

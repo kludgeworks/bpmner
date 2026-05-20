@@ -26,7 +26,7 @@ import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
 
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnDefinitionValidatorTest {
     private val validator = BpmnDefinitionValidator()
 
@@ -128,6 +128,136 @@ class BpmnDefinitionValidatorTest {
         val errors = validator.validate(definition)
 
         assertContains(errors.joinToString("\n"), "node Gateway_1 name must not be blank for EXCLUSIVE_GATEWAY")
+    }
+
+    @Test
+    fun `validator accepts single default flow on exclusive gateway`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Credit-tier routing",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Score received"),
+                        BpmnExclusiveGateway("Gateway_1", "What credit tier?"),
+                        BpmnUserTask("Task_fast", "Fast-track underwriting"),
+                        BpmnUserTask("Task_standard", "Standard underwriting"),
+                        BpmnUserTask("Task_manual", "Manual review"),
+                        BpmnEndEvent("EndEvent_1", "Offer generated"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                        BpmnEdge("Flow_2", "Gateway_1", "Task_fast", conditionExpression = "score >= 750"),
+                        BpmnEdge("Flow_3", "Gateway_1", "Task_standard", conditionExpression = "score in 600..749"),
+                        BpmnEdge("Flow_4", "Gateway_1", "Task_manual", isDefault = true),
+                        BpmnEdge("Flow_5", "Task_fast", "EndEvent_1"),
+                        BpmnEdge("Flow_6", "Task_standard", "EndEvent_1"),
+                        BpmnEdge("Flow_7", "Task_manual", "EndEvent_1"),
+                    ),
+            )
+
+        val errors = validator.validate(definition)
+        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
+    }
+
+    @Test
+    fun `validator rejects multiple default flows on the same gateway`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnExclusiveGateway("Gateway_1", "Which path?"),
+                        BpmnUserTask("Task_1", "Approve request"),
+                        BpmnUserTask("Task_2", "Reject request"),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                        BpmnEdge("Flow_2", "Gateway_1", "Task_1", isDefault = true),
+                        BpmnEdge("Flow_3", "Gateway_1", "Task_2", isDefault = true),
+                        BpmnEdge("Flow_4", "Task_1", "EndEvent_1"),
+                        BpmnEdge("Flow_5", "Task_2", "EndEvent_1"),
+                    ),
+            )
+
+        val errors = validator.validate(definition)
+
+        assertContains(
+            errors.joinToString("\n"),
+            "node Gateway_1 has 2 default flows (Flow_2, Flow_3); at most one is allowed",
+        )
+    }
+
+    @Test
+    fun `validator rejects default flow whose source is not an exclusive gateway`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Validate request"),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1", isDefault = true),
+                    ),
+            )
+
+        val errors = validator.validate(definition)
+
+        assertContains(
+            errors.joinToString("\n"),
+            "edge Flow_2 isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY",
+        )
+    }
+
+    @Test
+    fun `validator rejects orphan default flow whose source resolves to no node`() {
+        // An isDefault edge with an unresolved sourceRef must still trigger the
+        // "EXCLUSIVE_GATEWAY required" rule. validateEdges separately catches the missing
+        // sourceRef, but validateDefaultFlows owns the source-type guarantee and must fire
+        // on the orphan case to be complete.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Request received"),
+                        BpmnUserTask("Task_1", "Validate request"),
+                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                        // sourceRef "Gateway_orphan" doesn't resolve to any node.
+                        BpmnEdge("Flow_orphan", "Gateway_orphan", "EndEvent_1", isDefault = true),
+                    ),
+            )
+
+        val errors = validator.validate(definition)
+        val joined = errors.joinToString("\n")
+
+        // The dedicated source-type rule fires on the orphan ...
+        assertContains(
+            joined,
+            "edge Flow_orphan isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY",
+        )
+        // ... alongside the existing missing-sourceRef rule from validateEdges.
+        assertContains(
+            joined,
+            "edge Flow_orphan sourceRef 'Gateway_orphan' does not match any node id",
+        )
     }
 
     @Test
