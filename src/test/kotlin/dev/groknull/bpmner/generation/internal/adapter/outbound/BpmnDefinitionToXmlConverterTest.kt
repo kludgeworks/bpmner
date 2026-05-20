@@ -9,9 +9,15 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
+import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -133,6 +139,46 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
+    fun `converter renders timer message and signal start event definitions`() {
+        val timerDefinition =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_timer",
+                        "Every morning",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.CYCLE, "R/PT24H"),
+                    ),
+            )
+        val messageDefinition =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_message",
+                        "Order received",
+                        eventDefinition = BpmnMessageEventDefinition("Message_OrderReceived"),
+                    ),
+                messages = listOf(BpmnMessageRef("Message_OrderReceived", "Order received")),
+            )
+        val signalDefinition =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_signal",
+                        "Incident broadcast",
+                        eventDefinition = BpmnSignalEventDefinition("Signal_Incident"),
+                    ),
+                signals = listOf(BpmnSignalRef("Signal_Incident", "Incident broadcast")),
+            )
+
+        assertContains(converter.toXml(timerDefinition), "timerEventDefinition")
+        assertContains(converter.toXml(timerDefinition), "<bpmn:timeCycle>R/PT24H</bpmn:timeCycle>")
+        assertContains(converter.toXml(messageDefinition), "<bpmn:message id=\"Message_OrderReceived\" name=\"Order received\"")
+        assertContains(converter.toXml(messageDefinition), "messageEventDefinition messageRef=\"Message_OrderReceived\"")
+        assertContains(converter.toXml(signalDefinition), "<bpmn:signal id=\"Signal_Incident\" name=\"Incident broadcast\"")
+        assertContains(converter.toXml(signalDefinition), "signalEventDefinition signalRef=\"Signal_Incident\"")
+    }
+
+    @Test
     fun `converter omits name attribute for unnamed converging gateway`() {
         val definition =
             BpmnDefinition(
@@ -182,4 +228,21 @@ class BpmnDefinitionToXmlConverterTest {
         assertFalse(xml.contains("<exclusiveGateway id=\"Gateway_1\" name="))
         assertContains(xml, "<userTask id=\"Task_1\" name=\"Approve request\"")
     }
+
+    private fun minimalDefinition(
+        start: BpmnStartEvent,
+        messages: List<BpmnMessageRef> = emptyList(),
+        signals: List<BpmnSignalRef> = emptyList(),
+    ) = BpmnDefinition(
+        processId = "Process_events",
+        processName = "Event starts",
+        nodes =
+            listOf(
+                start,
+                BpmnEndEvent("EndEvent_1", "Done"),
+            ),
+        sequences = listOf(BpmnEdge("Flow_1", start.id, "EndEvent_1")),
+        messages = messages,
+        signals = signals,
+    )
 }

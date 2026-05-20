@@ -9,8 +9,11 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
@@ -146,6 +149,37 @@ class BpmnDefinitionValidatorTest {
         val errors = validator.validate(definition)
 
         assertTrue(errors.isEmpty(), "Expected unnamed converging gateway to pass, got: $errors")
+    }
+
+    @Test
+    fun `validator rejects invalid event definition references and timer expressions`() {
+        val danglingMessage =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_1",
+                        "Request received",
+                        eventDefinition = BpmnMessageEventDefinition("Message_missing"),
+                    ),
+            )
+        val blankTimer =
+            minimalDefinition(
+                start =
+                    BpmnStartEvent(
+                        "StartEvent_1",
+                        "Scheduled start",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DATE, " "),
+                    ),
+            )
+
+        assertContains(
+            validator.validate(danglingMessage).joinToString("\n"),
+            "messageRef 'Message_missing' does not match any message catalog id",
+        )
+        assertContains(
+            validator.validate(blankTimer).joinToString("\n"),
+            "timer definition expression must not be blank",
+        )
     }
 
     private fun minimalDefinition(

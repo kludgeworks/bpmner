@@ -11,6 +11,8 @@ import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIssueSeverity
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ProcessContract
 import kotlin.test.Test
@@ -47,7 +49,7 @@ class BpmnContractValidatorTest {
     fun `weak contract surfaces missing trigger, end state, and insufficient activities`() {
         val contract =
             linearContract().copy(
-                trigger = "",
+                start = ContractStart(ContractTrigger.None(""), sources),
                 activities = listOf(linearContract().activities.first()),
                 endStates = emptyList(),
             )
@@ -132,7 +134,7 @@ class BpmnContractValidatorTest {
 
     @Test
     fun `trigger without trace links produces an error`() {
-        val contract = linearContract().copy(triggerSourceIds = emptyList())
+        val contract = linearContract().copy(start = ContractStart(ContractTrigger.None("Applicant submits an application")))
         val report = validator.validate(contract)
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == ContractValidationCode.TRIGGER_WITHOUT_TRACE })

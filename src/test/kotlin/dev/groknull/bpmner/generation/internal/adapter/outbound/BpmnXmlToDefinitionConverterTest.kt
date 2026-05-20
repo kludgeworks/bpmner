@@ -9,10 +9,16 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
+import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -116,6 +122,40 @@ class BpmnXmlToDefinitionConverterTest {
         assertEquals(original.sequences.byId(), parsed.sequences.byId())
     }
 
+    @Test
+    fun `round-trip preserves timer message and signal start event definitions`() {
+        val timer =
+            eventStartDefinition(
+                BpmnStartEvent(
+                    "Start_timer",
+                    "Every morning",
+                    eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.CYCLE, "R/PT24H"),
+                ),
+            )
+        val message =
+            eventStartDefinition(
+                BpmnStartEvent(
+                    "Start_message",
+                    "Order received",
+                    eventDefinition = BpmnMessageEventDefinition("Message_OrderReceived"),
+                ),
+                messages = listOf(BpmnMessageRef("Message_OrderReceived", "Order received")),
+            )
+        val signal =
+            eventStartDefinition(
+                BpmnStartEvent(
+                    "Start_signal",
+                    "Incident broadcast",
+                    eventDefinition = BpmnSignalEventDefinition("Signal_Incident"),
+                ),
+                signals = listOf(BpmnSignalRef("Signal_Incident", "Incident broadcast")),
+            )
+
+        assertEventStartRoundTrip(timer)
+        assertEventStartRoundTrip(message)
+        assertEventStartRoundTrip(signal)
+    }
+
     private fun assertProcessShellEqual(
         a: BpmnDefinition,
         b: BpmnDefinition,
@@ -203,4 +243,30 @@ class BpmnXmlToDefinitionConverterTest {
                     ),
                 ),
         )
+
+    private fun assertEventStartRoundTrip(original: BpmnDefinition) {
+        val parsed = reverse.parse(forward.toXml(original))
+        assertProcessShellEqual(original, parsed)
+        assertEquals(original.nodes.byId(), parsed.nodes.byId())
+        assertEquals(original.sequences.byId(), parsed.sequences.byId())
+        assertEquals(original.messages, parsed.messages)
+        assertEquals(original.signals, parsed.signals)
+    }
+
+    private fun eventStartDefinition(
+        start: BpmnStartEvent,
+        messages: List<BpmnMessageRef> = emptyList(),
+        signals: List<BpmnSignalRef> = emptyList(),
+    ) = BpmnDefinition(
+        processId = "Process_events",
+        processName = "Event starts",
+        nodes =
+            listOf(
+                start,
+                BpmnEndEvent("End_1", "Done"),
+            ),
+        sequences = listOf(BpmnEdge("Flow_1", start.id, "End_1")),
+        messages = messages,
+        signals = signals,
+    )
 }
