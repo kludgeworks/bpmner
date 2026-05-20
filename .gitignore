@@ -43,3 +43,7 @@ linter/docs/rules/*.md
 
 # Serena MCP server local metadata
 .serena/
+
+# Coverage
+*.xml
+*.lcov
