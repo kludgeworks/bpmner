@@ -27,6 +27,16 @@ internal class BpmnContractGenerationPromptFactory {
                 "- Include the contract trigger, ordered activities, decisions, branches," +
                     " exception or rework paths, and end states.",
             )
+            appendLine(
+                "- Generate exactly one START_EVENT node for `contract.start`. Put trigger semantics" +
+                    " in that node's `eventDefinition`, not in a specialized start-event subtype.",
+            )
+            appendLine(
+                "- `ContractTrigger.Timer` maps to `BpmnTimerEventDefinition`; `Message` maps to" +
+                    " `BpmnMessageEventDefinition` plus a process-level `BpmnMessageRef`; `Signal`" +
+                    " maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`.",
+            )
+            appendLine("- `ContractTrigger.None` maps to `BpmnNoneEventDefinition`.")
             appendLine("- Represent actors only where current BPMN DTOs allow, usually in task names.")
             appendLine("- Do not add unsupported tasks, decisions, branches, actors, or end states.")
             appendLine(

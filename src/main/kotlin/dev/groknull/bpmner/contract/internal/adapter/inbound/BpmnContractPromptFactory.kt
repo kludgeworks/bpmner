@@ -40,7 +40,21 @@ internal class BpmnContractPromptFactory(
                 "- A source id is an assessment evidence id, a clarification questionId, or a literal" +
                     " input-text marker.",
             )
-            appendLine("- The process trigger must list at least one entry in `triggerSourceIds`.")
+            appendLine("- The process start must be returned in `start` as `ContractStart(trigger, sourceIds)`.")
+            appendLine("- `start.sourceIds` must list at least one source id grounding the trigger.")
+            appendLine(
+                "- Extract schedule language (dates, delays, cycles, cron-like intervals) as" +
+                    " `ContractTrigger.Timer(timerKind, expression, description)`.",
+            )
+            appendLine(
+                "- Extract webhook/API/event-bus triggers intended for one process/listener as" +
+                    " `ContractTrigger.Message(messageName, description)`.",
+            )
+            appendLine(
+                "- Extract broadcast or multi-listener triggers as" +
+                    " `ContractTrigger.Signal(signalName, description)`.",
+            )
+            appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
             appendLine("- ContractBranch must have a non-blank label and a condition when applicable.")
             appendLine()
             appendLine("Loop and topology rules:")

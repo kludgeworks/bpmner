@@ -8,6 +8,8 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
@@ -40,7 +42,7 @@ class BpmnContractAgentTest {
     @Test
     fun `extractProcessContract surfaces validation errors instead of swallowing them`() {
         val context = FakeOperationContext()
-        val invalid = sampleContract().copy(triggerSourceIds = emptyList())
+        val invalid = sampleContract().copy(start = ContractStart(ContractTrigger.None("An order is submitted")))
         context.expectResponse(invalid)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 

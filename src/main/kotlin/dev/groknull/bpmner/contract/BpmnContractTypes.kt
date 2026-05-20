@@ -7,10 +7,62 @@ package dev.groknull.bpmner.contract
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import com.fasterxml.jackson.annotation.JsonSubTypes
+import com.fasterxml.jackson.annotation.JsonTypeInfo
+import dev.groknull.bpmner.core.BpmnTimerKind
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Size
+
+@JsonClassDescription("Source-grounded process start declaration")
+data class ContractStart(
+    @field:Valid
+    @get:JsonPropertyDescription("Typed start trigger semantics")
+    val trigger: ContractTrigger,
+    @field:Size(max = 20)
+    @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
+    val sourceIds: List<String> = emptyList(),
+)
+
+@JsonClassDescription("Typed process trigger")
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractTrigger.None::class, name = "NONE"),
+    JsonSubTypes.Type(value = ContractTrigger.Timer::class, name = "TIMER"),
+    JsonSubTypes.Type(value = ContractTrigger.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractTrigger.Signal::class, name = "SIGNAL"),
+)
+sealed interface ContractTrigger {
+    val description: String
+
+    data class None(
+        @field:NotBlank
+        override val description: String,
+    ) : ContractTrigger
+
+    data class Timer(
+        val timerKind: BpmnTimerKind,
+        @field:NotBlank
+        val expression: String,
+        @field:NotBlank
+        override val description: String,
+    ) : ContractTrigger
+
+    data class Message(
+        @field:NotBlank
+        val messageName: String,
+        @field:NotBlank
+        override val description: String,
+    ) : ContractTrigger
+
+    data class Signal(
+        @field:NotBlank
+        val signalName: String,
+        @field:NotBlank
+        override val description: String,
+    ) : ContractTrigger
+}
 
 @JsonClassDescription("Source-grounded process contract extracted before BPMN generation")
 data class ProcessContract(
@@ -26,14 +78,9 @@ data class ProcessContract(
     @field:Size(max = 1000)
     @get:JsonPropertyDescription("Concise process summary")
     val summary: String,
-    @field:NotBlank
-    @field:Size(max = 500)
-    @get:JsonPropertyDescription("Process start trigger derived from the source input")
-    val trigger: String,
     @field:Valid
-    @field:Size(max = 20)
-    @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
-    val triggerSourceIds: List<String> = emptyList(),
+    @get:JsonPropertyDescription("Typed process start derived from the source input")
+    val start: ContractStart,
     @field:NotEmpty
     @field:Valid
     @field:Size(max = 200)
@@ -60,7 +107,38 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
-)
+) {
+    val trigger: String
+        get() = start.trigger.description
+
+    val triggerSourceIds: List<String>
+        get() = start.sourceIds
+
+    constructor(
+        id: String,
+        processName: String,
+        summary: String,
+        trigger: String,
+        triggerSourceIds: List<String> = emptyList(),
+        activities: List<ContractActivity>,
+        decisions: List<ContractDecision> = emptyList(),
+        actors: List<ContractActor> = emptyList(),
+        artifacts: List<ContractArtifact> = emptyList(),
+        endStates: List<ContractEndState>,
+        assumptions: List<ContractAssumption> = emptyList(),
+    ) : this(
+        id = id,
+        processName = processName,
+        summary = summary,
+        start = ContractStart(ContractTrigger.None(trigger), triggerSourceIds),
+        activities = activities,
+        decisions = decisions,
+        actors = actors,
+        artifacts = artifacts,
+        endStates = endStates,
+        assumptions = assumptions,
+    )
+}
 
 @JsonClassDescription("Activity required by the extracted process contract")
 data class ContractActivity(

@@ -5,8 +5,22 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
+import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnElementIndex
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorEventDefinition
+import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventDefinition
+import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
+import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnTimerKind
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -20,13 +34,24 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
+import org.w3c.dom.Document
+import org.w3c.dom.Element
 import java.io.ByteArrayOutputStream
+import java.io.StringReader
+import java.io.StringWriter
+import javax.xml.parsers.DocumentBuilderFactory
+import javax.xml.transform.OutputKeys
+import javax.xml.transform.TransformerFactory
+import javax.xml.transform.dom.DOMSource
+import javax.xml.transform.stream.StreamResult
 
 @SecondaryAdapter
 @Component
+@Suppress("TooManyFunctions")
 internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
+        private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
         private const val EXPORTER = "bpmner"
         private const val EXPORTER_VERSION = "0.0.1"
         private val UNUSED_DI_NAMESPACES_REGEX = Regex("\\s+xmlns:(?:bpmndi|omgdi|di|dc)=\"[^\"]*\"")
@@ -43,9 +68,10 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         val modelInstance = toModelInstance(definition)
         val output = ByteArrayOutputStream()
         Bpmn.writeModelToStream(output, modelInstance)
+        val xml = addCatalogsAndEventDefinitions(output.toString(Charsets.UTF_8), definition)
         return RenderedBpmn(
             definition = definition,
-            xml = stripUnusedDiNamespaces(output.toString(Charsets.UTF_8)),
+            xml = stripUnusedDiNamespaces(xml),
             elementIndex = buildElementIndex(definition),
         )
     }
@@ -147,4 +173,192 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
             edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
         )
+
+    @Suppress("LongMethod", "CyclomaticComplexMethod")
+    private fun addCatalogsAndEventDefinitions(
+        xml: String,
+        definition: BpmnDefinition,
+    ): String {
+        val document = parseDocument(xml)
+        val root = document.documentElement
+        val process = root.getElementsByTagNameNS(BPMN_NS, "process").item(0) as Element
+
+        definition.escalations.asReversed().forEach { escalation ->
+            root.insertBefore(
+                document.bpmnElement("escalation").also {
+                    it.setAttribute("id", escalation.id)
+                    it.setAttribute("escalationCode", escalation.code)
+                    escalation.name?.takeIf { name -> name.isNotBlank() }?.let { name -> it.setAttribute("name", name) }
+                },
+                process,
+            )
+        }
+        definition.errors.asReversed().forEach { error ->
+            root.insertBefore(
+                document.bpmnElement("error").also {
+                    it.setAttribute("id", error.id)
+                    it.setAttribute("errorCode", error.code)
+                    error.name?.takeIf { name -> name.isNotBlank() }?.let { name -> it.setAttribute("name", name) }
+                },
+                process,
+            )
+        }
+        definition.signals.asReversed().forEach { signal ->
+            root.insertBefore(
+                document.bpmnElement("signal").also {
+                    it.setAttribute("id", signal.id)
+                    it.setAttribute("name", signal.name)
+                },
+                process,
+            )
+        }
+        definition.messages.asReversed().forEach { message ->
+            root.insertBefore(
+                document.bpmnElement("message").also {
+                    it.setAttribute("id", message.id)
+                    it.setAttribute("name", message.name)
+                },
+                process,
+            )
+        }
+
+        definition.nodes.forEach { node ->
+            when (node) {
+                is BpmnStartEvent -> {
+                    val element = document.flowElement("startEvent", node.id)
+                    if (!node.isInterrupting) {
+                        element.setAttribute("isInterrupting", node.isInterrupting.toString())
+                    }
+                    element.appendEventDefinition(document, node.eventDefinition)
+                }
+
+                is BpmnIntermediateCatchEvent -> {
+                    document
+                        .flowElement("intermediateCatchEvent", node.id)
+                        .appendEventDefinition(document, node.eventDefinition)
+                }
+
+                is BpmnIntermediateThrowEvent -> {
+                    document
+                        .flowElement("intermediateThrowEvent", node.id)
+                        .appendEventDefinition(document, node.eventDefinition)
+                }
+
+                is BpmnBoundaryEvent -> {
+                    val element = document.flowElement("boundaryEvent", node.id)
+                    element.setAttribute("attachedToRef", node.attachedToRef)
+                    element.setAttribute("cancelActivity", node.cancelActivity.toString())
+                    element.appendEventDefinition(document, node.eventDefinition)
+                }
+
+                is BpmnEndEvent -> {
+                    document
+                        .flowElement("endEvent", node.id)
+                        .appendEventDefinition(document, node.eventDefinition)
+                }
+
+                else -> {
+                    Unit
+                }
+            }
+        }
+
+        return writeDocument(document)
+    }
+
+    private fun parseDocument(xml: String): Document =
+        DocumentBuilderFactory
+            .newInstance()
+            .also { it.isNamespaceAware = true }
+            .newDocumentBuilder()
+            .parse(org.xml.sax.InputSource(StringReader(xml)))
+
+    private fun writeDocument(document: Document): String {
+        val writer = StringWriter()
+        TransformerFactory
+            .newInstance()
+            .newTransformer()
+            .also {
+                it.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no")
+                it.setOutputProperty(OutputKeys.ENCODING, "UTF-8")
+            }.transform(DOMSource(document), StreamResult(writer))
+        return writer.toString()
+    }
+
+    private fun Document.bpmnElement(localName: String): Element = createElementNS(BPMN_NS, "bpmn:$localName")
+
+    private fun Document.flowElement(
+        localName: String,
+        id: String,
+    ): Element =
+        getElementsByTagNameNS(BPMN_NS, localName)
+            .elements()
+            .firstOrNull { it.getAttribute("id") == id }
+            ?: error("Unable to locate <$localName id=\"$id\"> in generated BPMN XML")
+
+    private fun org.w3c.dom.NodeList.elements(): Sequence<Element> =
+        sequence {
+            for (index in 0 until length) {
+                (item(index) as? Element)?.let { yield(it) }
+            }
+        }
+
+    @Suppress("CyclomaticComplexMethod")
+    private fun Element.appendEventDefinition(
+        document: Document,
+        definition: BpmnEventDefinition,
+    ) {
+        if (definition is BpmnNoneEventDefinition) return
+        appendChild(
+            when (definition) {
+                is BpmnTimerEventDefinition -> {
+                    document.bpmnElement("timerEventDefinition").also { event ->
+                        val childName =
+                            when (definition.timerKind) {
+                                BpmnTimerKind.DATE -> "timeDate"
+                                BpmnTimerKind.DURATION -> "timeDuration"
+                                BpmnTimerKind.CYCLE -> "timeCycle"
+                            }
+                        event.appendChild(
+                            document.bpmnElement(childName).also {
+                                it.textContent = definition.expression
+                            },
+                        )
+                    }
+                }
+
+                is BpmnMessageEventDefinition -> {
+                    document.bpmnElement("messageEventDefinition").also {
+                        it.setAttribute("messageRef", definition.messageRef)
+                    }
+                }
+
+                is BpmnSignalEventDefinition -> {
+                    document.bpmnElement("signalEventDefinition").also {
+                        it.setAttribute("signalRef", definition.signalRef)
+                    }
+                }
+
+                is BpmnErrorEventDefinition -> {
+                    document.bpmnElement("errorEventDefinition").also {
+                        it.setAttribute("errorRef", definition.errorRef)
+                    }
+                }
+
+                is BpmnEscalationEventDefinition -> {
+                    document.bpmnElement("escalationEventDefinition").also {
+                        it.setAttribute("escalationRef", definition.escalationRef)
+                    }
+                }
+
+                is BpmnTerminateEventDefinition -> {
+                    document.bpmnElement("terminateEventDefinition")
+                }
+
+                is BpmnNoneEventDefinition -> {
+                    error("none event definition must not render XML")
+                }
+            },
+        )
+    }
 }

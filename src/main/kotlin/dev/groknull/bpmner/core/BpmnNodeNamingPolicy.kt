@@ -16,6 +16,9 @@ object BpmnNodeNamingPolicy {
             is BpmnStartEvent,
             is BpmnUserTask,
             is BpmnServiceTask,
+            is BpmnIntermediateCatchEvent,
+            is BpmnIntermediateThrowEvent,
+            is BpmnBoundaryEvent,
             is BpmnEndEvent,
             -> true
 
