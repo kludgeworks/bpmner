@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation.internal.domain
 
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
+import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
@@ -14,14 +15,22 @@ import dev.groknull.bpmner.contract.kindName
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorEventDefinition
+import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnManualTask
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
+import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.isSemanticallyTransparent
 import dev.groknull.bpmner.core.typeName
@@ -58,6 +67,7 @@ import org.springframework.stereotype.Component
  *    joins; missing-edge bugs are still caught.
  */
 @Component
+@Suppress("TooManyFunctions") // per-contract-element private helpers (Activity / EndState / Decision)
 internal class BpmnContractFidelityChecker {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
@@ -71,6 +81,10 @@ internal class BpmnContractFidelityChecker {
 
         contract.activities.forEach { activity ->
             checkActivityKind(activity, nodeById, issues)
+        }
+
+        contract.endStates.forEach { endState ->
+            checkEndStateKind(endState, nodeById, issues)
         }
 
         contract.decisions.forEach { decision ->
@@ -308,6 +322,65 @@ internal class BpmnContractFidelityChecker {
                 bpmnElementId = node.id,
             )
     }
+
+    /**
+     * Verifies the BPMN node that realises [endState] is a [BpmnEndEvent] whose
+     * `eventDefinition` shape matches the contract's end-state kind. Silent when no
+     * matching node is present in the BPMN — that's a separate fidelity concern
+     * (end-state-not-realised) which the existing checks don't cover and isn't in
+     * scope here.
+     */
+    private fun checkEndStateKind(
+        endState: ContractEndState,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val node = nodeById[endState.id] ?: return
+        if (node !is BpmnEndEvent) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.END_EVENT_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                        "End state '${endState.id}' declares kind=${endState.kindName} but is realised as a " +
+                            "${node.typeName} node — expected END_EVENT.",
+                    contractElementId = endState.id,
+                    bpmnElementId = node.id,
+                )
+            return
+        }
+        if (endState.matchesEventDefinition(node.eventDefinition)) return
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.END_EVENT_KIND_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message =
+                    "End state '${endState.id}' declares kind=${endState.kindName} but its end event uses " +
+                        "${node.eventDefinition::class.simpleName} — expected ${endState.expectedEventDefinitionName()}.",
+                contractElementId = endState.id,
+                bpmnElementId = node.id,
+            )
+    }
+
+    private fun ContractEndState.matchesEventDefinition(eventDefinition: BpmnEventDefinition): Boolean =
+        when (this) {
+            is ContractEndState.Normal -> eventDefinition is BpmnNoneEventDefinition
+            is ContractEndState.Terminate -> eventDefinition is BpmnTerminateEventDefinition
+            is ContractEndState.Error -> eventDefinition is BpmnErrorEventDefinition
+            is ContractEndState.Message -> eventDefinition is BpmnMessageEventDefinition
+            is ContractEndState.Signal -> eventDefinition is BpmnSignalEventDefinition
+            is ContractEndState.Escalation -> eventDefinition is BpmnEscalationEventDefinition
+        }
+
+    private fun ContractEndState.expectedEventDefinitionName(): String =
+        when (this) {
+            is ContractEndState.Normal -> BpmnNoneEventDefinition::class.simpleName!!
+            is ContractEndState.Terminate -> BpmnTerminateEventDefinition::class.simpleName!!
+            is ContractEndState.Error -> BpmnErrorEventDefinition::class.simpleName!!
+            is ContractEndState.Message -> BpmnMessageEventDefinition::class.simpleName!!
+            is ContractEndState.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+            is ContractEndState.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
+        }
 }
 
 private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
