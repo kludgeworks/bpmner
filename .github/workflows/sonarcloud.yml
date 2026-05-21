@@ -9,6 +9,14 @@ on:
       - 'releases/*'
   pull_request:
     types: [opened, synchronize, reopened]
+  # Manual dispatch lets us validate the multi-project setup on a feature branch
+  # before merging — pull_request runs use the BASE branch's workflow file, so
+  # the new multi-project version can only be tested via push-to-main or this trigger.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why this manual dispatch (free-text, optional)'
+        required: false
 
 concurrency:
   group: sonar-${{ github.workflow }}-${{ github.ref }}
@@ -75,12 +83,12 @@ jobs:
           # Use the idiomatic Bazel sonarqube runner for each project key.
           # This ensures that analysis is pushed to the 3 separate projects
           # defined in the SonarCloud dashboard.
-          
+
           echo "Scanning Backend..."
           bazel run //:sonar -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io
-          
+
           echo "Scanning Linter..."
           bazel run //linter:sonar -- \
             -Dsonar.organization=kludgeworks \
