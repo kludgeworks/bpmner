@@ -5,38 +5,99 @@
 
 package dev.groknull.bpmner.core
 
+import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
 
+/**
+ * Readiness dimensions used by the readiness LLM to score the input prose.
+ *
+ * The `@JsonAlias` entries below absorb the parallel naming used by [MissingProcessArea]:
+ * the readiness LLM regularly emits a [MissingProcessArea]-style name (e.g.
+ * `"ACTIVITY_SEQUENCE"`) where a [ReadinessDimension] is expected (typically inside
+ * `ClarificationQuestion.relatedDimensions`). Without these aliases Jackson rejects the
+ * response with `InvalidFormatException`, the LLM call retries, and a more conservative
+ * verdict often comes back — silently downgrading READY responses. The canonical
+ * cross-mapping is documented in
+ * `dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker.dimensionFor`.
+ *
+ * Aliases are read-only — canonical names still serialise out.
+ */
 enum class ReadinessDimension {
     PROCESS_BOUNDARY,
     START_TRIGGER,
+
+    @JsonAlias("END_STATE")
     END_STATES,
     ACTIVITIES,
+
+    @JsonAlias("ACTIVITY_SEQUENCE")
     SEQUENCE_ORDER,
+
+    @JsonAlias("ACTOR_RESPONSIBILITY")
     ACTORS_ROLES,
+
+    @JsonAlias("DECISION_CRITERIA")
     DECISIONS_BRANCHES,
+
+    @JsonAlias("EXCEPTION_HANDLING")
     EXCEPTIONS_REWORK,
+
+    @JsonAlias("INPUT_ARTIFACT", "OUTPUT_ARTIFACT")
     INPUTS_OUTPUTS_ARTIFACTS,
     SCOPE_CLARITY,
+
+    @JsonAlias("BPMN_PROCESS_SUITABILITY")
     BPMN_SUITABILITY,
+
+    @JsonAlias("SOURCE_TRACE")
     TRACEABILITY_TO_SOURCE,
 }
 
+/**
+ * Missing process areas surfaced by the readiness assessor. Mirror of [ReadinessDimension]
+ * with finer-grained gap categories. The `@JsonAlias` entries below absorb the parallel
+ * naming used by [ReadinessDimension] so an LLM that emits a [ReadinessDimension] name
+ * where a [MissingProcessArea] is expected still deserialises cleanly. Aliases are
+ * read-only — canonical names still serialise out. See [ReadinessDimension] for the
+ * full rationale.
+ */
 enum class MissingProcessArea {
     PROCESS_BOUNDARY,
     START_TRIGGER,
+
+    @JsonAlias("END_STATES")
     END_STATE,
+
+    // ACTIVITIES (a ReadinessDimension) maps onto ACTIVITY_SEQUENCE per the post-checker
+    // (BpmnReadinessPostChecker.dimensionFor returns ACTIVITIES for ACTIVITY_SEQUENCE).
+    // SEQUENCE_ORDER is the dimension that pairs with this area, so it's the natural alias.
+    @JsonAlias("SEQUENCE_ORDER", "ACTIVITIES")
     ACTIVITY_SEQUENCE,
+
+    @JsonAlias("ACTORS_ROLES")
     ACTOR_RESPONSIBILITY,
+
+    @JsonAlias("DECISIONS_BRANCHES")
     DECISION_CRITERIA,
+
+    @JsonAlias("EXCEPTIONS_REWORK")
     EXCEPTION_HANDLING,
+
+    // No alias on INPUT_ARTIFACT: INPUTS_OUTPUTS_ARTIFACTS could legitimately mean either
+    // input or output, so we attach it to OUTPUT_ARTIFACT (the more common gap in practice).
     INPUT_ARTIFACT,
+
+    @JsonAlias("INPUTS_OUTPUTS_ARTIFACTS")
     OUTPUT_ARTIFACT,
+
+    @JsonAlias("BPMN_SUITABILITY")
     BPMN_PROCESS_SUITABILITY,
+
+    @JsonAlias("TRACEABILITY_TO_SOURCE")
     SOURCE_TRACE,
 }
 
