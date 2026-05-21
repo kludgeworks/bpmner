@@ -4,29 +4,23 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@bazel_sonarqube//:defs.bzl", "sonarqube", "sq_project")
+load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
 package(default_visibility = ["//visibility:public"])
 
-sq_project(
-    name = "sq_project",
+# Single sonarqube rule (no sq_project wrapper) — each package IS its own SonarCloud
+# project, so the multi-module aggregation that sq_project enables is unused here.
+# Having both rules in one package fails to load because each generates the same
+# `sonar-project.properties` output file.
+sonarqube(
+    name = "sonar",
     srcs = glob(
         ["src/**/*.ts"],
         exclude = ["src/polyfills.ts"],
     ),
-    project_key = "kludgeworks_bpmner_linter",
-    project_name = "bpmner Linter",
-    visibility = ["//visibility:public"],
-)
-
-sonarqube(
-    name = "sonar",
-    modules = {
-        ":sq_project": "linter",
-    },
     project_key = "kludgeworks_bpmner_linter",
     project_name = "bpmner Linter",
     scm_info = ["//:git_info"],

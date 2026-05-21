@@ -2,25 +2,19 @@
 # SPDX-License-Identifier: MIT
 
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@bazel_sonarqube//:defs.bzl", "sonarqube", "sq_project")
+load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
 package(default_visibility = ["//visibility:public"])
 
-sq_project(
-    name = "sq_project",
-    srcs = glob(["src/**/*.ts"]),
-    project_key = "kludgeworks_bpmner_web",
-    project_name = "bpmner Web",
-    visibility = ["//visibility:public"],
-)
-
+# Single sonarqube rule (no sq_project wrapper) — each package IS its own SonarCloud
+# project, so the multi-module aggregation that sq_project enables is unused here.
+# Having both rules in one package fails to load because each generates the same
+# `sonar-project.properties` output file.
 sonarqube(
     name = "sonar",
-    modules = {
-        ":sq_project": "web",
-    },
+    srcs = glob(["src/**/*.ts"]),
     project_key = "kludgeworks_bpmner_web",
     project_name = "bpmner Web",
     scm_info = ["//:git_info"],
