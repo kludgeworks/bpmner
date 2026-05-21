@@ -7,6 +7,7 @@ load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@buildifier_prebuilt//:rules.bzl", "buildifier_test")
 load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_detekt//detekt:defs.bzl", "detekt_test")
+load("@rules_kotlin//kotlin:lint.bzl", "ktlint_config")
 load("//tools/pmd:cpd.bzl", "cpd_test")
 
 package(default_visibility = ["//visibility:public"])
@@ -22,9 +23,9 @@ filegroup(
 
 sonarqube(
     name = "sonar",
+    srcs = ["//src:analysis_srcs"],
     project_key = "kludgeworks_bpmner_backend",
     project_name = "bpmner Backend",
-    srcs = ["//src:analysis_srcs"],
     scm_info = [":git_info"],
 )
 
@@ -37,13 +38,18 @@ buildifier_test(
     ],
 )
 
+ktlint_config(
+    name = "ktlint_config",
+    editorconfig = ".editorconfig",
+)
+
 detekt_test(
     name = "detekt_check",
     srcs = [
         "//src:analysis_srcs",
         "//src/test:analysis_srcs",
     ],
-    cfgs = ["config/detekt/detekt.yml"],
+    cfgs = ["detekt.yml"],
 )
 
 cpd_test(

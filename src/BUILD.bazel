@@ -112,4 +112,5 @@ springboot(
 ktlint_test(
     name = "ktlint_check",
     srcs = glob(["main/kotlin/**/*.kt"]),
+    config = "//:ktlint_config",
 )
