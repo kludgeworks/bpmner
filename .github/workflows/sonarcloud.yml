@@ -9,6 +9,14 @@ on:
       - 'releases/*'
   pull_request:
     types: [opened, synchronize, reopened]
+  # Manual dispatch lets us validate the multi-project setup on a feature branch
+  # before merging — pull_request runs use the BASE branch's workflow file, so
+  # the new multi-project version can only be tested via push-to-main or this trigger.
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why this manual dispatch (free-text, optional)'
+        required: false
 
 concurrency:
   group: sonar-${{ github.workflow }}-${{ github.ref }}
@@ -59,22 +67,58 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run Bazel coverage
+        id: coverage
         run: |
-          # Generate coverage reports using the idiomatic Salesforce coverage generator.
-          # This ensures coverage data is collected and made available to the sonarqube rule.
+          # Generate coverage reports using the bazel-sonarqube coverage generator
+          # (converts Kotlin JaCoCo + JS LCOV into the SonarQube generic-coverage XML
+          # format expected by sonar.coverageReportPaths).
           bazel coverage //... \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
             --instrumentation_filter="^//src,^//linter,^//web"
+          # Stage the combined report at a stable absolute path so the sonar-scanner
+          # (which runs from the bazel runfiles tree as its CWD) can resolve it.
+          cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
 
-      - name: SonarCloud Scan
+      # Each scan runs in its own step so the GitHub Actions UI reports per-project
+      # status. A single shell block with `set -eo pipefail` (the GH Actions default)
+      # would terminate at the first failure and silently skip the remaining scans,
+      # leaving downstream dashboards dark with no clear signal.
+      #
+      # The three steps share `if: always() && needs-previous-step-was-attempted`
+      # behaviour via `if: always()` so a backend failure doesn't suppress the linter
+      # and web scans. The overall job still fails because each step's failure
+      # propagates; we just collect ALL signals before failing.
+
+      - name: SonarCloud Scan — Backend
+        if: always() && steps.coverage.outcome != 'skipped'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Use the idiomatic Bazel sonarqube runner.
-          # We pass the organization and host URL via the command line to ensure
-          # they are correctly propagated to SonarCloud.
           bazel run //:sonar -- \
             -Dsonar.organization=kludgeworks \
-            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Linter
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //linter:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Web
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //web:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"

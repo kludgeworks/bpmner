@@ -47,3 +47,4 @@ linter/docs/rules/*.md
 # Coverage
 /jacoco.xml
 *.lcov
+/coverage_report.dat

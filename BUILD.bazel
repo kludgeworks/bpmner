@@ -22,13 +22,9 @@ filegroup(
 
 sonarqube(
     name = "sonar",
+    project_key = "kludgeworks_bpmner_backend",
+    project_name = "bpmner Backend",
     srcs = ["//src:analysis_srcs"],
-    modules = {
-        "//linter:sq_project": "linter",
-        "//web:sq_project": "web",
-    },
-    project_key = "kludgeworks_bpmner",
-    project_name = "bpmner Monorepo",
     scm_info = [":git_info"],
 )
 
