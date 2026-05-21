@@ -100,6 +100,45 @@ internal class BpmnContractPromptFactory(
                     " property condition\"}`.",
             )
             appendLine()
+            appendLine("End-state kind (sealed type with a `kind` discriminator):")
+            appendLine(
+                "- NORMAL (default) — vanilla path completion; nothing special happens at the end.",
+            )
+            appendLine(
+                "- TERMINATE — recognise prose like \"process terminates immediately\", \"every" +
+                    " in-flight track stops\", \"abandons all work\", \"the entire workflow ends\"." +
+                    " Use when one path's completion must KILL every other parallel path. Example:" +
+                    " `{kind: \"TERMINATE\", id: \"end-cancelled\", name: \"Booking cancelled\"}`.",
+            )
+            appendLine(
+                "- ERROR — recognise prose like \"raises an error\", \"throws X error\"," +
+                    " \"propagates failure up\", \"bubbles up to a catcher\". `errorCode` is the" +
+                    " stable BUSINESS error code that catchers match (e.g. \"CREDIT_REJECTED\")," +
+                    " NOT a user-facing message. Example: `{kind: \"ERROR\", id: \"end-rejected\"," +
+                    " name: \"Credit rejected\", errorCode: \"CREDIT_REJECTED\"}`.",
+            )
+            appendLine(
+                "- MESSAGE — recognise prose like \"sends X on completion\", \"wraps up by sending\"," +
+                    " \"fires X webhook at the end\". Point-to-point send to one recipient." +
+                    " `messageName` is the human-readable message name from the prose. Example:" +
+                    " `{kind: \"MESSAGE\", id: \"end-confirmed\", name: \"Shipment confirmation sent\"," +
+                    " messageName: \"shipment confirmation\"}`.",
+            )
+            appendLine(
+                "- SIGNAL — recognise prose like \"broadcasts X\", \"notifies all subscribers\"," +
+                    " \"one-to-many notification\". Differs from MESSAGE by being broadcast." +
+                    " `signalName` is the broadcast name from the prose. Example:" +
+                    " `{kind: \"SIGNAL\", id: \"end-settled\", name: \"Settlement complete signal\"," +
+                    " signalName: \"settlement complete\"}`.",
+            )
+            appendLine(
+                "- ESCALATION — recognise prose like \"escalates\", \"notifies the manager\"," +
+                    " \"flagged for follow-up\". Distinct from ERROR: work isn't broken, it just" +
+                    " needs intervention. `escalationCode` is the stable business code. Example:" +
+                    " `{kind: \"ESCALATION\", id: \"end-overdue\", name: \"Approval overdue escalation\"," +
+                    " escalationCode: \"APPROVAL_OVERDUE\"}`.",
+            )
+            appendLine()
             appendLine("Branch kind (sealed type with a `kind` discriminator):")
             appendLine(
                 "- CONDITIONAL — the default kind for branches of an EXCLUSIVE decision. Carries a" +

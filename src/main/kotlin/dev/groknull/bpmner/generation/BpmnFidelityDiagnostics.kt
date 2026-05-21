@@ -72,6 +72,15 @@ enum class BpmnFidelityCode {
      * (e.g. the gateway is missing entirely — caught first by [DECISION_GATEWAY_MISSING]).
      */
     DEFAULT_FLOW_MISSING,
+
+    /**
+     * A ContractEndState is realised by a BPMN end event whose `eventDefinition` shape
+     * doesn't match the declared end-state kind. For example, `ContractEndState.Terminate`
+     * realised as `BpmnEndEvent` with `BpmnNoneEventDefinition` — semantically wrong
+     * because the terminate-scope behaviour is lost. Catches the failure mode where the
+     * generator LLM flattens the end-state kind discriminator away in the BPMN pass.
+     */
+    END_EVENT_KIND_MISMATCH,
 }
 
 /**
