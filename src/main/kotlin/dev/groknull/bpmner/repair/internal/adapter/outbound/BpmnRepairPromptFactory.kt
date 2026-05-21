@@ -125,6 +125,12 @@ internal class BpmnRepairPromptFactory(
                 "Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.",
             )
             appendLine()
+            appendLine(
+                "Preserve `isDefault = true` on sequence flows that carry the default branch marker. " +
+                    "Do not add a conditionExpression to a default flow. The `default` attribute on an " +
+                    "exclusive gateway is set by exactly one outbound flow with isDefault=true.",
+            )
+            appendLine()
             appendLine("Current canonical BpmnDefinition JSON:")
             appendLine(fingerprints.serializeDefinition(definition))
             appendLine()

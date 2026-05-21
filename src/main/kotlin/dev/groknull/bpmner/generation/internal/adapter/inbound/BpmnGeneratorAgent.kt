@@ -33,7 +33,6 @@ import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
 import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
-import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -49,7 +48,6 @@ internal class BpmnGeneratorAgent(
     private val bpmnConverter: BpmnRenderer,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityChecker,
-    private val defaultFlowAssigner: DefaultFlowAssigner,
     private val eventPublisher: ApplicationEventPublisher,
     contractRenderer: ProcessContractMarkdownRenderer,
 ) {
@@ -76,14 +74,11 @@ internal class BpmnGeneratorAgent(
         val rawDefinition =
             promptRunner.createObject(prompt, BpmnDefinition::class.java)
                 ?: error("Outline generator failed to produce a structured outline.")
-        // Deterministically propagate contract-side DefaultBranch semantics to the BPMN edge.
-        // The LLM is unreliable on this discriminator; the contract is the source of truth.
-        val definition = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
         val outline =
             ProcessOutline(
                 request = request,
-                definition = definition,
-                metrics = metricsCalculator.calculate(definition),
+                definition = rawDefinition,
+                metrics = metricsCalculator.calculate(rawDefinition),
             )
         logger.info(
             "Outline summary: phases={}, xorBranches={}, parallelBranches={}, loops={}, subprocesses={}",

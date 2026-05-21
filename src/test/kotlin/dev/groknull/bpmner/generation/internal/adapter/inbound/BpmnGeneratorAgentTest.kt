@@ -24,7 +24,6 @@ import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
-import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -99,7 +98,6 @@ class BpmnGeneratorAgentTest {
             bpmnConverter = NoopRenderer,
             metricsCalculator = BpmnGeneratorMetrics(),
             fidelityChecker = BpmnContractFidelityChecker(),
-            defaultFlowAssigner = DefaultFlowAssigner(),
             eventPublisher = ApplicationEventPublisher {},
             contractRenderer = ProcessContractMarkdownRenderer(),
         )

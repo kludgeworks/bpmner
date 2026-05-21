@@ -20,12 +20,17 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnXmlToDefinitionConverter
+import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
@@ -100,6 +105,8 @@ class BpmnRepairAgentTest {
                 fingerprints = fingerprints,
                 strategies = strategies,
                 eventPublisher = NoOpEventPublisher,
+                defaultFlowAssigner = DefaultFlowAssigner(),
+                fidelityChecker = BpmnContractFidelityChecker(),
             )
         return BpmnRepairAgent(refinementEngine)
     }
@@ -114,7 +121,14 @@ class BpmnRepairAgentTest {
         val rendered = converter.render(definition)
         val context = FakeActionContext()
 
-        val result = agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(definition), rendered, context)
+        val result =
+            agent.repair(
+                BpmnRequest("Make toast"),
+                testLaidOutGraph(definition),
+                rendered,
+                testProcessContract(),
+                context,
+            )
 
         assertEquals(rendered.xml, result.xml)
         assertTrue(result.diagnostics.isEmpty())
@@ -148,6 +162,7 @@ class BpmnRepairAgentTest {
                 BpmnRequest("Make toast"),
                 testLaidOutGraph(invalid, withOwnership = false),
                 initialRendered,
+                testProcessContract(),
                 context,
             )
 
@@ -190,7 +205,13 @@ class BpmnRepairAgentTest {
 
         val error =
             assertFailsWith<BpmnValidatorInfrastructureException> {
-                agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(definition), initialRendered, context)
+                agent.repair(
+                    BpmnRequest("Make toast"),
+                    testLaidOutGraph(definition),
+                    initialRendered,
+                    testProcessContract(),
+                    context,
+                )
             }
 
         assertTrue(error.message!!.contains("BPMN validator infrastructure failure"))
@@ -230,7 +251,13 @@ class BpmnRepairAgentTest {
         context.expectResponse(corrected)
         val initialRendered = converter.render(invalid)
 
-        agent.repair(BpmnRequest("Make toast"), testLaidOutGraph(invalid, withOwnership = false), initialRendered, context)
+        agent.repair(
+            BpmnRequest("Make toast"),
+            testLaidOutGraph(invalid, withOwnership = false),
+            initialRendered,
+            testProcessContract(),
+            context,
+        )
 
         val promptContributions =
             context.llmInvocations.single().interaction.promptContributors.joinToString("\n") {
@@ -267,6 +294,7 @@ class BpmnRepairAgentTest {
                 BpmnRequest("Make toast"),
                 testLaidOutGraph(initial, withOwnership = false),
                 initialRendered,
+                testProcessContract(),
                 context,
             )
 
@@ -314,6 +342,7 @@ class BpmnRepairAgentTest {
                     BpmnRequest("Make toast"),
                     testLaidOutGraph(initial, withOwnership = false),
                     initialRendered,
+                    testProcessContract(),
                     context,
                 )
             }
@@ -342,6 +371,7 @@ class BpmnRepairAgentTest {
                     BpmnRequest("Make toast"),
                     testLaidOutGraph(initial, withOwnership = false),
                     initialRendered,
+                    testProcessContract(),
                     context,
                 )
             }
@@ -381,6 +411,7 @@ class BpmnRepairAgentTest {
                     BpmnRequest("Make toast"),
                     testLaidOutGraph(initial, withOwnership = false),
                     initialRendered,
+                    testProcessContract(),
                     context,
                 )
             }
@@ -417,6 +448,7 @@ class BpmnRepairAgentTest {
                     BpmnRequest("Make toast"),
                     testLaidOutGraph(initial, withOwnership = false),
                     initialRendered,
+                    testProcessContract(),
                     context,
                 )
             }
@@ -470,6 +502,7 @@ class BpmnRepairAgentTest {
                 BpmnRequest("Make toast"),
                 testLaidOutGraph(definition, withOwnership = true),
                 converter.render(definition),
+                testProcessContract(),
                 context,
             )
 
@@ -529,6 +562,7 @@ class BpmnRepairAgentTest {
                     BpmnRequest("Make toast"),
                     testLaidOutGraph(definition, withOwnership = true),
                     converter.render(definition),
+                    testProcessContract(),
                     context,
                 )
             }
@@ -578,6 +612,7 @@ class BpmnRepairAgentTest {
                 BpmnRequest("Make toast"),
                 testLaidOutGraph(definition, withOwnership = true),
                 converter.render(definition),
+                testProcessContract(),
                 context,
             )
         assertTrue(result.xml.contains("Make toast correctly"))
@@ -598,6 +633,16 @@ class BpmnRepairAgentTest {
     private object NoOpEventPublisher : ApplicationEventPublisher {
         override fun publishEvent(event: Any) = Unit
     }
+
+    private fun testProcessContract(): ProcessContract =
+        ProcessContract(
+            id = "c-test",
+            processName = "Make toast",
+            summary = "test",
+            trigger = "start",
+            activities = listOf(ContractActivity.Service(id = "Task_1", name = "Toast bread")),
+            endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Toast served")),
+        )
 
     private class RecordingLintService(
         private val responses: List<List<LintIssue>?>,

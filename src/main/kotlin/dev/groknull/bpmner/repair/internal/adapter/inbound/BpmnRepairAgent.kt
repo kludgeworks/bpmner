@@ -11,6 +11,7 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.core.ActionRetryPolicy
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
@@ -37,6 +38,7 @@ internal class BpmnRepairAgent(
                     BpmnRequest::class,
                     LaidOutProcessGraph::class,
                     RenderedBpmn::class,
+                    ProcessContract::class,
                 ],
             ),
     )
@@ -50,6 +52,7 @@ internal class BpmnRepairAgent(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
+        contract: ProcessContract,
         context: ActionContext,
-    ): ValidatedBpmnXml = refinementEngine.refine(request, graph, rendered, context)
+    ): ValidatedBpmnXml = refinementEngine.refine(request, graph, rendered, contract, context)
 }
