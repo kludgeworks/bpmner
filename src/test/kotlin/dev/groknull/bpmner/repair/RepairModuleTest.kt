@@ -15,6 +15,9 @@ import com.embabel.agent.core.ToolGroupRequirement
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -77,7 +80,7 @@ class RepairModuleTest {
         val rendered = BpmnDefinitionToXmlConverter().render(graph)
         val context = FakeActionContext()
 
-        refinementEngine.refine(request, graph, rendered, context)
+        refinementEngine.refine(request, graph, rendered, testProcessContract(), context)
 
         val passedEvents = events.ofType(BpmnValidationPassedEvent::class.java).toList()
         assertTrue(passedEvents.isNotEmpty(), "Expected at least one BpmnValidationPassedEvent to be published")
@@ -102,6 +105,7 @@ class RepairModuleTest {
                 request = BpmnRequest(processDescription = "Make toast"),
                 graph = graph,
                 rendered = rendered,
+                contract = testProcessContract(),
                 context = context,
             )
         }
@@ -118,6 +122,16 @@ class RepairModuleTest {
             )
         return LaidOutProcessGraph(OwnedElementGraph(composed, emptyMap(), emptyMap()), definition)
     }
+
+    private fun testProcessContract(): ProcessContract =
+        ProcessContract(
+            id = "c-test",
+            processName = "Make toast",
+            summary = "test",
+            trigger = "start",
+            activities = listOf(ContractActivity("Task_1", "Toast bread")),
+            endStates = listOf(ContractEndState("EndEvent_1", "Toast served")),
+        )
 
     private fun validDefinition() =
         BpmnDefinition(

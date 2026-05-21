@@ -474,6 +474,41 @@ class BpmnContractFidelityCheckerTest {
         assertEquals(0, report.issues.size)
         assertTrue(report.isValid)
     }
+
+    @Test
+    fun `DefaultBranch without isDefault edge flagged as DEFAULT_FLOW_MISSING`() {
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoIsDefault())
+
+        assertFalse(report.isValid)
+        val dfm = report.issues.filter { it.code == BpmnFidelityCode.DEFAULT_FLOW_MISSING }
+        assertEquals(1, dfm.size, "expected exactly one DEFAULT_FLOW_MISSING; got: ${report.issues}")
+        assertTrue(dfm.single().message.contains("br-fallback"), "message should mention the DefaultBranch id")
+        assertTrue(dfm.single().message.contains("dec-approve"), "message should mention the gateway id")
+    }
+
+    @Test
+    fun `DefaultBranch with isDefault edge passes`() {
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionWithIsDefault())
+
+        assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
+    }
+
+    @Test
+    fun `DefaultBranch with gateway missing entirely does NOT fire DEFAULT_FLOW_MISSING`() {
+        // The gateway is absent → DECISION_GATEWAY_MISSING catches this first.
+        // DEFAULT_FLOW_MISSING must not fire because `gatewayIsValid` is false.
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoGateway())
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.DECISION_GATEWAY_MISSING },
+            "expected DECISION_GATEWAY_MISSING; got: ${report.issues.map { it.code }}",
+        )
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.DEFAULT_FLOW_MISSING },
+            "DEFAULT_FLOW_MISSING must not fire when gateway is missing; got: ${report.issues.map { it.code }}",
+        )
+    }
 }
 
 // ----- Fixtures -----
@@ -780,5 +815,113 @@ private fun skipForwardViaTaskDefinition(): BpmnDefinition =
                 BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
                 BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
                 BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+            ),
+    )
+
+// ----- DEFAULT_FLOW_MISSING fixtures -----
+
+/** Contract with one EXCLUSIVE decision that has a DefaultBranch. */
+private fun defaultBranchContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-dfm",
+        processName = "Approval with fallback",
+        summary = "Approve or fall back to manual review",
+        trigger = "start",
+        triggerSourceIds = sources,
+        activities =
+            listOf(
+                ContractActivity.User(id = "act-review", name = "Review", sourceIds = sources),
+                ContractActivity.User(id = "act-manual", name = "Manual review", sourceIds = sources),
+            ),
+        decisions =
+            listOf(
+                ContractDecision(
+                    id = "dec-approve",
+                    question = "Approved?",
+                    branches =
+                        listOf(
+                            ConditionalBranch(
+                                id = "br-approve",
+                                label = "Approved",
+                                condition = "approved",
+                                nextRef = "end-done",
+                            ),
+                            DefaultBranch(
+                                id = "br-fallback",
+                                label = "Manual review",
+                                nextRef = "act-manual",
+                            ),
+                        ),
+                    sourceIds = sources,
+                ),
+            ),
+        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+    )
+}
+
+/** Gateway present, two outbound edges, but neither has isDefault=true. */
+private fun defaultBranchDefinitionNoIsDefault(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Approval with fallback",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnUserTask(id = "act-review", name = "Review"),
+                BpmnExclusiveGateway(id = "dec-approve", name = "Approved?"),
+                BpmnUserTask(id = "act-manual", name = "Manual review"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+                BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "dec-approve"),
+                BpmnEdge(id = "F3", sourceRef = "dec-approve", targetRef = "end-done", conditionExpression = "approved"),
+                BpmnEdge(id = "F4", sourceRef = "dec-approve", targetRef = "act-manual"),
+                BpmnEdge(id = "F5", sourceRef = "act-manual", targetRef = "end-done"),
+            ),
+    )
+
+/** Same as above but with isDefault=true on the fallback edge. */
+private fun defaultBranchDefinitionWithIsDefault(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Approval with fallback",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnUserTask(id = "act-review", name = "Review"),
+                BpmnExclusiveGateway(id = "dec-approve", name = "Approved?"),
+                BpmnUserTask(id = "act-manual", name = "Manual review"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+                BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "dec-approve"),
+                BpmnEdge(id = "F3", sourceRef = "dec-approve", targetRef = "end-done", conditionExpression = "approved"),
+                BpmnEdge(id = "F4", sourceRef = "dec-approve", targetRef = "act-manual", isDefault = true),
+                BpmnEdge(id = "F5", sourceRef = "act-manual", targetRef = "end-done"),
+            ),
+    )
+
+/** Gateway missing entirely — DECISION_GATEWAY_MISSING should fire, not DEFAULT_FLOW_MISSING. */
+private fun defaultBranchDefinitionNoGateway(): BpmnDefinition =
+    BpmnDefinition(
+        processId = "P",
+        processName = "Approval with fallback",
+        nodes =
+            listOf(
+                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                BpmnUserTask(id = "act-review", name = "Review"),
+                BpmnUserTask(id = "act-manual", name = "Manual review"),
+                BpmnEndEvent(id = "end-done", name = "Done"),
+            ),
+        sequences =
+            listOf(
+                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+                BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "act-manual"),
+                BpmnEdge(id = "F3", sourceRef = "act-manual", targetRef = "end-done"),
             ),
     )

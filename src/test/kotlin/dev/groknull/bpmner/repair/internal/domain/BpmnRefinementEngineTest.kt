@@ -17,6 +17,9 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -28,6 +31,8 @@ import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
@@ -60,6 +65,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnRefinementEngineTest {
     @Test
     fun `strategy annotations order deterministic repairs before LLM repairs`() {
@@ -144,6 +150,7 @@ class BpmnRefinementEngineTest {
                 BpmnRequest("Generate a process"),
                 testLaidOutGraph(initial, withOwnership = true),
                 RecordingConverter().render(initial),
+                testProcessContract(),
                 context,
             )
 
@@ -175,6 +182,7 @@ class BpmnRefinementEngineTest {
             BpmnRequest("Generate a process"),
             testLaidOutGraph(initial, withOwnership = true),
             RecordingConverter().render(initial),
+            testProcessContract(),
             context,
         )
 
@@ -262,6 +270,7 @@ class BpmnRefinementEngineTest {
                 BpmnRequest("Route an order"),
                 testLaidOutGraph(invalid, withOwnership = true),
                 converter.render(invalid),
+                joinForkContract(),
                 context,
             )
 
@@ -353,6 +362,8 @@ class BpmnRefinementEngineTest {
                     FullLlmRewriteRepairStrategy(config, promptFactory),
                 ),
             eventPublisher = NoOpEventPublisher,
+            defaultFlowAssigner = DefaultFlowAssigner(),
+            fidelityChecker = BpmnContractFidelityChecker(),
         )
     }
 
@@ -459,6 +470,30 @@ class BpmnRefinementEngineTest {
             task = BpmnUserTask("Task_1", "Do work"),
             startName = "Started",
             endName = "Done",
+        )
+
+    private fun testProcessContract(): ProcessContract =
+        ProcessContract(
+            id = "c-test",
+            processName = "Test",
+            summary = "test",
+            trigger = "start",
+            activities = listOf(ContractActivity.User(id = "Task_1", name = "Do work")),
+            endStates = listOf(ContractEndState(id = "end-done", name = "Done")),
+        )
+
+    private fun joinForkContract(): ProcessContract =
+        ProcessContract(
+            id = "c-jf",
+            processName = "Join fork",
+            summary = "Join-fork test",
+            trigger = "start",
+            activities =
+                listOf(
+                    ContractActivity.Service(id = "Task_1", name = "Do one"),
+                    ContractActivity.Service(id = "Task_2", name = "Do two"),
+                ),
+            endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Done")),
         )
 
     private fun joinForkDefinition(): BpmnDefinition =

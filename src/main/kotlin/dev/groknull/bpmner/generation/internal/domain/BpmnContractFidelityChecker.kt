@@ -6,7 +6,9 @@
 package dev.groknull.bpmner.generation.internal.domain
 
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.kindName
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
@@ -59,14 +61,6 @@ import org.springframework.stereotype.Component
 internal class BpmnContractFidelityChecker {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
-    private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
-
-    private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean =
-        when (this) {
-            ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
-            ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
-        }
-
     fun check(
         contract: ProcessContract,
         definition: BpmnDefinition,
@@ -96,17 +90,31 @@ internal class BpmnContractFidelityChecker {
         return report
     }
 
-    @Suppress("LongMethod") // single decision's full check stays cohesive
     private fun checkDecision(
-        decision: dev.groknull.bpmner.contract.ContractDecision,
-        nodeById: Map<String, dev.groknull.bpmner.core.BpmnNode>,
-        outgoingBySource: Map<String, List<dev.groknull.bpmner.core.BpmnEdge>>,
+        decision: ContractDecision,
+        nodeById: Map<String, BpmnNode>,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         val gateway = nodeById[decision.id]
         val gatewayIsValid = gateway != null && gateway.isGateway()
 
-        // 1. The decision must resolve to a gateway-typed node.
+        verifyGatewayTypeAndPresence(decision, gateway, issues)
+
+        if (gatewayIsValid) {
+            val outbound = outgoingBySource[gateway!!.id].orEmpty()
+            verifyOutboundBranchCount(decision, gateway!!, outbound, issues)
+            verifyDefaultFlow(decision, gateway, outbound, issues)
+        }
+
+        verifyBranchTargetsAndFlows(decision, gateway, nodeById, outgoingBySource, issues)
+    }
+
+    private fun verifyGatewayTypeAndPresence(
+        decision: ContractDecision,
+        gateway: BpmnNode?,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
         if (gateway == null) {
             issues +=
                 BpmnFidelityIssue(
@@ -129,7 +137,6 @@ internal class BpmnContractFidelityChecker {
                     bpmnElementId = gateway.id,
                 )
         } else if (!decision.kind.matchesGatewayType(gateway)) {
-            // 1b. Gateway exists but its kind doesn't match the contract's declared kind.
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH,
@@ -142,10 +149,15 @@ internal class BpmnContractFidelityChecker {
                     bpmnElementId = gateway.id,
                 )
         }
+    }
 
-        // 2. Outbound-flow count check — only meaningful when the gateway is valid.
-        val outbound = if (gatewayIsValid) outgoingBySource[gateway!!.id].orEmpty() else emptyList()
-        if (gatewayIsValid && outbound.size < decision.branches.size) {
+    private fun verifyOutboundBranchCount(
+        decision: ContractDecision,
+        gateway: BpmnNode,
+        outbound: List<BpmnEdge>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        if (outbound.size < decision.branches.size) {
             issues +=
                 BpmnFidelityIssue(
                     code = BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT,
@@ -158,8 +170,47 @@ internal class BpmnContractFidelityChecker {
                     bpmnElementId = gateway.id,
                 )
         }
+    }
 
-        // 3 + 4. Per-branch checks: nextRef resolution (always), then flow wiring (when gateway exists).
+    private fun verifyDefaultFlow(
+        decision: ContractDecision,
+        gateway: BpmnNode,
+        outbound: List<BpmnEdge>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        // firstOrNull (rather than singleOrNull) keeps this check running even when a
+        // contract erroneously declares multiple DefaultBranch entries on the same decision.
+        // The multi-default case is caught separately by BpmnContractValidator upstream;
+        // here we want to verify the most prominent default against the rendered BPMN
+        // rather than silently skipping the entire fidelity check.
+        val defaultBranch = decision.branches.filterIsInstance<DefaultBranch>().firstOrNull()
+        if (defaultBranch != null) {
+            val hasDefaultEdge = outbound.any { it.isDefault }
+            if (!hasDefaultEdge) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.DEFAULT_FLOW_MISSING,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                            "Decision '${decision.id}' has a DefaultBranch ('${defaultBranch.id}') " +
+                                "but no outbound edge from gateway '${gateway.id}' has isDefault=true. " +
+                                "The gateway's BPMN `default` attribute will be absent, leaving the engine " +
+                                "with no catch-all flow if no condition matches.",
+                        contractElementId = defaultBranch.id,
+                        bpmnElementId = gateway.id,
+                    )
+            }
+        }
+    }
+
+    private fun verifyBranchTargetsAndFlows(
+        decision: ContractDecision,
+        gateway: BpmnNode?,
+        nodeById: Map<String, BpmnNode>,
+        outgoingBySource: Map<String, List<BpmnEdge>>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val gatewayIsValid = gateway != null && gateway.isGateway()
         decision.branches.forEach { branch ->
             val ref = branch.nextRef ?: return@forEach
             val targetExists = ref in nodeById
@@ -177,12 +228,7 @@ internal class BpmnContractFidelityChecker {
                 return@forEach
             }
             if (gatewayIsValid &&
-                !targetReachableSemantically(
-                    from = gateway!!,
-                    targetId = ref,
-                    outgoingBySource = outgoingBySource,
-                    nodeById = nodeById,
-                )
+                !targetReachableSemantically(gateway!!, ref, outgoingBySource, nodeById)
             ) {
                 issues +=
                     BpmnFidelityIssue(
@@ -239,12 +285,6 @@ internal class BpmnContractFidelityChecker {
         const val MAX_REACHABILITY_HOPS = 6
     }
 
-    private fun kindDescription(kind: ContractGatewayKind): String =
-        when (kind) {
-            ContractGatewayKind.EXCLUSIVE -> "pick one branch"
-            ContractGatewayKind.PARALLEL -> "take all branches concurrently"
-        }
-
     /**
      * Verifies the BPMN node that realises [activity] has the matching task subtype.
      * Skips silently when no node by the activity id is present in the BPMN — the
@@ -268,26 +308,40 @@ internal class BpmnContractFidelityChecker {
                 bpmnElementId = node.id,
             )
     }
-
-    private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean =
-        when (this) {
-            is ContractActivity.Service -> node is BpmnServiceTask
-            is ContractActivity.User -> node is BpmnUserTask
-            is ContractActivity.Script -> node is BpmnScriptTask
-            is ContractActivity.BusinessRule -> node is BpmnBusinessRuleTask
-            is ContractActivity.Send -> node is BpmnSendTask
-            is ContractActivity.Receive -> node is BpmnReceiveTask
-            is ContractActivity.Manual -> node is BpmnManualTask
-        }
-
-    private fun ContractActivity.expectedTaskTypeName(): String =
-        when (this) {
-            is ContractActivity.Service -> "SERVICE_TASK"
-            is ContractActivity.User -> "USER_TASK"
-            is ContractActivity.Script -> "SCRIPT_TASK"
-            is ContractActivity.BusinessRule -> "BUSINESS_RULE_TASK"
-            is ContractActivity.Send -> "SEND_TASK"
-            is ContractActivity.Receive -> "RECEIVE_TASK"
-            is ContractActivity.Manual -> "MANUAL_TASK"
-        }
 }
+
+private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
+
+private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean =
+    when (this) {
+        ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
+        ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
+    }
+
+private fun kindDescription(kind: ContractGatewayKind): String =
+    when (kind) {
+        ContractGatewayKind.EXCLUSIVE -> "pick one branch"
+        ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+    }
+
+private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean =
+    when (this) {
+        is ContractActivity.Service -> node is BpmnServiceTask
+        is ContractActivity.User -> node is BpmnUserTask
+        is ContractActivity.Script -> node is BpmnScriptTask
+        is ContractActivity.BusinessRule -> node is BpmnBusinessRuleTask
+        is ContractActivity.Send -> node is BpmnSendTask
+        is ContractActivity.Receive -> node is BpmnReceiveTask
+        is ContractActivity.Manual -> node is BpmnManualTask
+    }
+
+private fun ContractActivity.expectedTaskTypeName(): String =
+    when (this) {
+        is ContractActivity.Service -> "SERVICE_TASK"
+        is ContractActivity.User -> "USER_TASK"
+        is ContractActivity.Script -> "SCRIPT_TASK"
+        is ContractActivity.BusinessRule -> "BUSINESS_RULE_TASK"
+        is ContractActivity.Send -> "SEND_TASK"
+        is ContractActivity.Receive -> "RECEIVE_TASK"
+        is ContractActivity.Manual -> "MANUAL_TASK"
+    }

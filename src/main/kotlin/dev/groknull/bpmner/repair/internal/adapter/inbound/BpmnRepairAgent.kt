@@ -11,6 +11,7 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.core.ActionRetryPolicy
+import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
@@ -37,6 +38,7 @@ internal class BpmnRepairAgent(
                     BpmnRequest::class,
                     LaidOutProcessGraph::class,
                     RenderedBpmn::class,
+                    ValidatedProcessContract::class,
                 ],
             ),
     )
@@ -50,6 +52,13 @@ internal class BpmnRepairAgent(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
+        validatedContract: ValidatedProcessContract,
         context: ActionContext,
-    ): ValidatedBpmnXml = refinementEngine.refine(request, graph, rendered, context)
+    ): ValidatedBpmnXml =
+        // Take ValidatedProcessContract (the wrapper produced by BpmnContractAgent) rather
+        // than the bare ProcessContract. The planner can satisfy this input via the existing
+        // contract-extraction action; requiring a bare ProcessContract would leave the
+        // planner stuck because no action in the agent graph produces one. Unwrap to the
+        // bare ProcessContract before passing into the engine (engine signature unchanged).
+        refinementEngine.refine(request, graph, rendered, validatedContract.contract, context)
 }
