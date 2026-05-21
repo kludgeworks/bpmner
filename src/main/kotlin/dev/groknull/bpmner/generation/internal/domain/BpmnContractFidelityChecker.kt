@@ -178,7 +178,12 @@ internal class BpmnContractFidelityChecker {
         outbound: List<BpmnEdge>,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
-        val defaultBranch = decision.branches.filterIsInstance<DefaultBranch>().singleOrNull()
+        // firstOrNull (rather than singleOrNull) keeps this check running even when a
+        // contract erroneously declares multiple DefaultBranch entries on the same decision.
+        // The multi-default case is caught separately by BpmnContractValidator upstream;
+        // here we want to verify the most prominent default against the rendered BPMN
+        // rather than silently skipping the entire fidelity check.
+        val defaultBranch = decision.branches.filterIsInstance<DefaultBranch>().firstOrNull()
         if (defaultBranch != null) {
             val hasDefaultEdge = outbound.any { it.isDefault }
             if (!hasDefaultEdge) {

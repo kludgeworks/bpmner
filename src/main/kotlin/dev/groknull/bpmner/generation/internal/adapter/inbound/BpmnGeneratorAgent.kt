@@ -33,6 +33,7 @@ import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.ValidatedPhasePlan
 import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
 import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -48,6 +49,7 @@ internal class BpmnGeneratorAgent(
     private val bpmnConverter: BpmnRenderer,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityChecker,
+    private val defaultFlowAssigner: DefaultFlowAssigner,
     private val eventPublisher: ApplicationEventPublisher,
     contractRenderer: ProcessContractMarkdownRenderer,
 ) {
@@ -74,11 +76,18 @@ internal class BpmnGeneratorAgent(
         val rawDefinition =
             promptRunner.createObject(prompt, BpmnDefinition::class.java)
                 ?: error("Outline generator failed to produce a structured outline.")
+        // Stamp isDefault on outbound flows from EXCLUSIVE_GATEWAY nodes that the contract
+        // marks as DefaultBranch. The LLM is unreliable on this attribute, so we
+        // deterministically apply it here BEFORE validateOutline runs the contract-fidelity
+        // check (which fires DEFAULT_FLOW_MISSING as ERROR and would abort the pipeline).
+        // The repair engine also re-runs DefaultFlowAssigner on every repair candidate as a
+        // second line of defence against LLM drift during refinement iterations.
+        val definitionWithDefaults = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
         val outline =
             ProcessOutline(
                 request = request,
-                definition = rawDefinition,
-                metrics = metricsCalculator.calculate(rawDefinition),
+                definition = definitionWithDefaults,
+                metrics = metricsCalculator.calculate(definitionWithDefaults),
             )
         logger.info(
             "Outline summary: phases={}, xorBranches={}, parallelBranches={}, loops={}, subprocesses={}",

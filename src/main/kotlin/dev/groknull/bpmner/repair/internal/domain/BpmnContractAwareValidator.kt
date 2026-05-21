@@ -27,9 +27,10 @@ import dev.groknull.bpmner.validation.GlobalDiagnostics
  * The [BpmnValidator] interface and [dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline]
  * are not modified.
  *
- * Fidelity issues are projected as [BpmnDiagnostic] entries with `source = GRAPH` and
- * `severity = ERROR`, making them first-class repair feedback that the LLM sees in
- * repair prompts — identical treatment to lint and XSD issues.
+ * Fidelity issues are projected as [BpmnDiagnostic] entries with `source = GRAPH`,
+ * preserving their severity so they reach the repair LLM as first-class feedback —
+ * identical treatment to lint and XSD issues. The repair prompt already groups by
+ * severity and tells the LLM to fix ERRORs and treat WARNINGs as advisory.
  *
  * Fidelity checks are only run when the base evaluation has no blocking diagnostics —
  * there is no value checking contract fidelity when the BPMN is structurally invalid.
@@ -51,18 +52,25 @@ internal class BpmnContractAwareValidator(
         // If structural validation already failed, fidelity is not meaningful yet.
         if (base.blockingDiagnostics.isNotEmpty()) return base
         val fidelity = fidelityChecker.check(contract, definition)
+        // Surface BOTH severities. ERROR fidelity issues drive the repair LLM to fix them;
+        // WARNING fidelity issues become advisory feedback the LLM sees but doesn't have to
+        // act on (matching the existing lint-warning convention in BpmnRepairPromptFactory's
+        // appendDiagnosticBlock). Discarding WARNINGs would lose useful signal.
         val fidelityDiagnostics =
-            fidelity.issues
-                .filter { it.severity == BpmnFidelitySeverity.ERROR }
-                .map { issue ->
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.GRAPH,
-                        message = "[${issue.code}] ${issue.message}",
-                        elementId = issue.bpmnElementId,
-                        repairScope = BpmnRepairScope.FULL_PROCESS,
-                        severity = BpmnDiagnosticSeverity.ERROR,
-                    )
-                }
+            fidelity.issues.map { issue ->
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.GRAPH,
+                    message = "[${issue.code}] ${issue.message}",
+                    elementId = issue.bpmnElementId,
+                    repairScope = BpmnRepairScope.FULL_PROCESS,
+                    severity =
+                        if (issue.severity == BpmnFidelitySeverity.ERROR) {
+                            BpmnDiagnosticSeverity.ERROR
+                        } else {
+                            BpmnDiagnosticSeverity.WARNING
+                        },
+                )
+            }
         if (fidelityDiagnostics.isEmpty()) return base
         val allDiagnostics = base.diagnostics + fidelityDiagnostics
         return base.copy(

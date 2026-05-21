@@ -22,7 +22,9 @@ import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
@@ -634,14 +636,22 @@ class BpmnRepairAgentTest {
         override fun publishEvent(event: Any) = Unit
     }
 
-    private fun testProcessContract(): ProcessContract =
-        ProcessContract(
-            id = "c-test",
-            processName = "Make toast",
-            summary = "test",
-            trigger = "start",
-            activities = listOf(ContractActivity.Service(id = "Task_1", name = "Toast bread")),
-            endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Toast served")),
+    // Returns a ValidatedProcessContract because BpmnRepairAgent.repair takes the validated
+    // wrapper (the planner can produce it via BpmnContractAgent; a bare ProcessContract has
+    // no producer in the agent graph). The helper name stays for historical readability —
+    // every call site already uses it as the "contract input" parameter for `repair(...)`.
+    private fun testProcessContract(): ValidatedProcessContract =
+        ValidatedProcessContract(
+            contract =
+                ProcessContract(
+                    id = "c-test",
+                    processName = "Make toast",
+                    summary = "test",
+                    trigger = "start",
+                    activities = listOf(ContractActivity.Service(id = "Task_1", name = "Toast bread")),
+                    endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Toast served")),
+                ),
+            report = ContractValidationReport(issues = emptyList()),
         )
 
     private class RecordingLintService(

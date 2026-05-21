@@ -65,6 +65,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnRefinementEngineTest {
     @Test
     fun `strategy annotations order deterministic repairs before LLM repairs`() {
