@@ -77,13 +77,13 @@ class BpmnContractAgentTest {
         agent.extractProcessContract(
             sampleRequest().copy(
                 clarificationHistory =
-                    listOf(
-                        ClarificationExchange(
-                            questionId = "q1",
-                            questionText = "What starts the process?",
-                            answerText = "The customer submits an order.",
-                        ),
+                listOf(
+                    ClarificationExchange(
+                        questionId = "q1",
+                        questionText = "What starts the process?",
+                        answerText = "The customer submits an order.",
                     ),
+                ),
             ),
             sampleAssessment(),
             context,
@@ -96,21 +96,20 @@ class BpmnContractAgentTest {
 
     private fun sampleRequest() = BpmnRequest(processDescription = "When a customer submits an order, ship it.")
 
-    private fun sampleAssessment() =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
-            overallScore = 60,
-            dimensions = emptyList(),
-            evidence =
-                listOf(
-                    SourceEvidence(
-                        id = "ev1",
-                        text = "Ship approved order",
-                        sourceType = EvidenceSourceType.ORIGINAL_INPUT,
-                    ),
-                ),
-            rationale = "One actor responsibility is underspecified.",
-        )
+    private fun sampleAssessment() = ProcessInputAssessment(
+        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+        overallScore = 60,
+        dimensions = emptyList(),
+        evidence =
+        listOf(
+            SourceEvidence(
+                id = "ev1",
+                text = "Ship approved order",
+                sourceType = EvidenceSourceType.ORIGINAL_INPUT,
+            ),
+        ),
+        rationale = "One actor responsibility is underspecified.",
+    )
 
     private fun sampleContract(): ProcessContract {
         val sources = listOf("ev1")
@@ -121,14 +120,14 @@ class BpmnContractAgentTest {
             trigger = "An order is submitted",
             triggerSourceIds = sources,
             activities =
-                listOf(
-                    ContractActivity(id = "a-pack", name = "Pack order", sourceIds = sources),
-                    ContractActivity(id = "a-ship", name = "Ship order", sourceIds = sources),
-                ),
+            listOf(
+                ContractActivity(id = "a-pack", name = "Pack order", sourceIds = sources),
+                ContractActivity(id = "a-ship", name = "Ship order", sourceIds = sources),
+            ),
             endStates =
-                listOf(
-                    ContractEndState(id = "end-shipped", name = "Order shipped", sourceIds = sources),
-                ),
+            listOf(
+                ContractEndState(id = "end-shipped", name = "Order shipped", sourceIds = sources),
+            ),
         )
     }
 }

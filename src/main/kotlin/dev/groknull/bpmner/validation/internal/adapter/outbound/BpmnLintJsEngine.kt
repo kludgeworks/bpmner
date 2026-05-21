@@ -55,31 +55,30 @@ internal class BpmnLintJsEngine {
     fun <T> safePolyglotCall(
         warningMessage: String,
         block: () -> T?,
-    ): T? =
-        try {
-            block()
-        } catch (e: org.graalvm.polyglot.PolyglotException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.ExecutionException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.TimeoutException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: InterruptedException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: java.util.concurrent.CancellationException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: IllegalStateException) {
-            logger.warn(warningMessage, e.message)
-            null
-        } catch (e: IllegalArgumentException) {
-            logger.warn(warningMessage, e.message)
-            null
-        }
+    ): T? = try {
+        block()
+    } catch (e: org.graalvm.polyglot.PolyglotException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: java.util.concurrent.ExecutionException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: java.util.concurrent.TimeoutException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: InterruptedException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: java.util.concurrent.CancellationException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: IllegalStateException) {
+        logger.warn(warningMessage, e.message)
+        null
+    } catch (e: IllegalArgumentException) {
+        logger.warn(warningMessage, e.message)
+        null
+    }
 
     fun destroy() {
         jsContext?.close()

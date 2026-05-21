@@ -93,12 +93,11 @@ class BpmnSummarizer {
 
     private fun BpmnNode.toSummary() = BpmnSummaryElement(id = id, type = typeName, name = name)
 
-    private fun BpmnEdge.toSummary() =
-        BpmnSummaryFlow(
-            id = id,
-            sourceRef = sourceRef,
-            targetRef = targetRef,
-            name = name,
-            conditionExpression = conditionExpression,
-        )
+    private fun BpmnEdge.toSummary() = BpmnSummaryFlow(
+        id = id,
+        sourceRef = sourceRef,
+        targetRef = targetRef,
+        name = name,
+        conditionExpression = conditionExpression,
+    )
 }

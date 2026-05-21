@@ -37,10 +37,9 @@ data class BpmnRequest(
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
     val clarificationHistory: List<ClarificationExchange> = emptyList(),
 ) : PromptContributor {
-    override fun contribution(): String =
-        buildString {
-            appendLine(
-                """
+    override fun contribution(): String = buildString {
+        appendLine(
+            """
                 You are a BPMN process design expert. Given a workflow description — business, automated,
                 technical, scientific, or personal — generate a typed BPMN process definition object that
                 can be converted to valid BPMN 2.0 XML.
@@ -68,17 +67,17 @@ data class BpmnRequest(
                 - Use conditionExpression on conditional gateway branches when needed.
 
                 If you receive validation errors, fix them and return the full corrected object.
-                """.trimIndent(),
-            )
-            if (styleGuide != null) {
-                appendLine()
-                appendLine("---")
-                appendLine()
-                appendLine("## Style guide")
-                appendLine()
-                appendLine(styleGuide)
-            }
+            """.trimIndent(),
+        )
+        if (styleGuide != null) {
+            appendLine()
+            appendLine("---")
+            appendLine()
+            appendLine("## Style guide")
+            appendLine()
+            appendLine(styleGuide)
         }
+    }
 }
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
@@ -252,23 +251,22 @@ val BpmnNode.typeName: String
  * exhaustively. Used by repair operations that rename a node while preserving its kind.
  */
 @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
-fun BpmnNode.withName(name: String?): BpmnNode =
-    when (this) {
-        is BpmnStartEvent -> copy(name = name)
-        is BpmnUserTask -> copy(name = name)
-        is BpmnServiceTask -> copy(name = name)
-        is BpmnScriptTask -> copy(name = name)
-        is BpmnBusinessRuleTask -> copy(name = name)
-        is BpmnSendTask -> copy(name = name)
-        is BpmnReceiveTask -> copy(name = name)
-        is BpmnManualTask -> copy(name = name)
-        is BpmnExclusiveGateway -> copy(name = name)
-        is BpmnParallelGateway -> copy(name = name)
-        is BpmnIntermediateCatchEvent -> copy(name = name)
-        is BpmnIntermediateThrowEvent -> copy(name = name)
-        is BpmnBoundaryEvent -> copy(name = name)
-        is BpmnEndEvent -> copy(name = name)
-    }
+fun BpmnNode.withName(name: String?): BpmnNode = when (this) {
+    is BpmnStartEvent -> copy(name = name)
+    is BpmnUserTask -> copy(name = name)
+    is BpmnServiceTask -> copy(name = name)
+    is BpmnScriptTask -> copy(name = name)
+    is BpmnBusinessRuleTask -> copy(name = name)
+    is BpmnSendTask -> copy(name = name)
+    is BpmnReceiveTask -> copy(name = name)
+    is BpmnManualTask -> copy(name = name)
+    is BpmnExclusiveGateway -> copy(name = name)
+    is BpmnParallelGateway -> copy(name = name)
+    is BpmnIntermediateCatchEvent -> copy(name = name)
+    is BpmnIntermediateThrowEvent -> copy(name = name)
+    is BpmnBoundaryEvent -> copy(name = name)
+    is BpmnEndEvent -> copy(name = name)
+}
 
 /**
  * True when [node] is one of the BPMN task subtypes. Used by callers that need to
@@ -277,26 +275,25 @@ fun BpmnNode.withName(name: String?): BpmnNode =
  * handlers that operate on tasks but not events or gateways). The exhaustive `when`
  * forces every new task subtype to declare its membership when added.
  */
-fun BpmnNode.isTask(): Boolean =
-    when (this) {
-        is BpmnUserTask,
-        is BpmnServiceTask,
-        is BpmnScriptTask,
-        is BpmnBusinessRuleTask,
-        is BpmnSendTask,
-        is BpmnReceiveTask,
-        is BpmnManualTask,
-        -> true
+fun BpmnNode.isTask(): Boolean = when (this) {
+    is BpmnUserTask,
+    is BpmnServiceTask,
+    is BpmnScriptTask,
+    is BpmnBusinessRuleTask,
+    is BpmnSendTask,
+    is BpmnReceiveTask,
+    is BpmnManualTask,
+    -> true
 
-        is BpmnStartEvent,
-        is BpmnExclusiveGateway,
-        is BpmnParallelGateway,
-        is BpmnIntermediateCatchEvent,
-        is BpmnIntermediateThrowEvent,
-        is BpmnBoundaryEvent,
-        is BpmnEndEvent,
-        -> false
-    }
+    is BpmnStartEvent,
+    is BpmnExclusiveGateway,
+    is BpmnParallelGateway,
+    is BpmnIntermediateCatchEvent,
+    is BpmnIntermediateThrowEvent,
+    is BpmnBoundaryEvent,
+    is BpmnEndEvent,
+    -> false
+}
 
 private const val NODE_ID_DESCRIPTION: String =
     "Unique node id. For contract-realized nodes, use the corresponding `act-…` / `dec-…` / `end-…` " +

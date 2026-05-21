@@ -19,11 +19,10 @@ import org.springframework.stereotype.Component
 internal class AgentPlatformBpmnReadinessInvoker(
     private val agentPlatform: AgentPlatform,
 ) : BpmnReadinessInvoker {
-    override fun assess(request: BpmnRequest): ProcessInputAssessment =
-        AgentPlatformTypedOps(agentPlatform)
-            .transform<BpmnRequest, ProcessInputAssessment>(
-                request,
-                ProcessInputAssessment::class.java,
-                ProcessOptions(),
-            )
+    override fun assess(request: BpmnRequest): ProcessInputAssessment = AgentPlatformTypedOps(agentPlatform)
+        .transform<BpmnRequest, ProcessInputAssessment>(
+            request,
+            ProcessInputAssessment::class.java,
+            ProcessOptions(),
+        )
 }

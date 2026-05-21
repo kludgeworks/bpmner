@@ -61,11 +61,10 @@ internal class BpmnContractFidelityChecker {
 
     private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
 
-    private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean =
-        when (this) {
-            ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
-            ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
-        }
+    private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean = when (this) {
+        ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
+        ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
+    }
 
     fun check(
         contract: ProcessContract,
@@ -113,8 +112,8 @@ internal class BpmnContractFidelityChecker {
                     code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
                     severity = BpmnFidelitySeverity.ERROR,
                     message =
-                        "Decision '${decision.id}' has no corresponding node in the generated BPMN. " +
-                            "Under the unified-id convention the gateway must share the decision's id.",
+                    "Decision '${decision.id}' has no corresponding node in the generated BPMN. " +
+                        "Under the unified-id convention the gateway must share the decision's id.",
                     contractElementId = decision.id,
                 )
         } else if (!gateway.isGateway()) {
@@ -123,8 +122,8 @@ internal class BpmnContractFidelityChecker {
                     code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
                     severity = BpmnFidelitySeverity.ERROR,
                     message =
-                        "Decision '${decision.id}' is realized as a ${gateway.typeName} node — " +
-                            "expected a gateway type.",
+                    "Decision '${decision.id}' is realized as a ${gateway.typeName} node — " +
+                        "expected a gateway type.",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
@@ -135,9 +134,9 @@ internal class BpmnContractFidelityChecker {
                     code = BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH,
                     severity = BpmnFidelitySeverity.ERROR,
                     message =
-                        "Decision '${decision.id}' declares kind=${decision.kind} but is realized as a " +
-                            "${gateway.typeName} node — semantically wrong " +
-                            "(${decision.kind} means \"${kindDescription(decision.kind)}\").",
+                    "Decision '${decision.id}' declares kind=${decision.kind} but is realized as a " +
+                        "${gateway.typeName} node — semantically wrong " +
+                        "(${decision.kind} means \"${kindDescription(decision.kind)}\").",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
@@ -151,9 +150,9 @@ internal class BpmnContractFidelityChecker {
                     code = BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT,
                     severity = BpmnFidelitySeverity.ERROR,
                     message =
-                        "Decision '${decision.id}' declares ${decision.branches.size} branches but its " +
-                            "gateway has only ${outbound.size} outbound sequence flow(s). The LLM has " +
-                            "likely conflated branches into fewer outbound flows.",
+                    "Decision '${decision.id}' declares ${decision.branches.size} branches but its " +
+                        "gateway has only ${outbound.size} outbound sequence flow(s). The LLM has " +
+                        "likely conflated branches into fewer outbound flows.",
                     contractElementId = decision.id,
                     bpmnElementId = gateway.id,
                 )
@@ -169,8 +168,8 @@ internal class BpmnContractFidelityChecker {
                         code = BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED,
                         severity = BpmnFidelitySeverity.ERROR,
                         message =
-                            "Branch '${branch.id}' of decision '${decision.id}' has nextRef='$ref' " +
-                                "which does not match any node id in the generated BPMN.",
+                        "Branch '${branch.id}' of decision '${decision.id}' has nextRef='$ref' " +
+                            "which does not match any node id in the generated BPMN.",
                         contractElementId = branch.id,
                         bpmnElementId = ref,
                     )
@@ -189,9 +188,9 @@ internal class BpmnContractFidelityChecker {
                         code = BpmnFidelityCode.BRANCH_FLOW_MISSING,
                         severity = BpmnFidelitySeverity.ERROR,
                         message =
-                            "Branch '${branch.id}' of decision '${decision.id}' specifies nextRef='$ref' " +
-                                "but no sequence flow connects gateway '${gateway.id}' to '$ref' " +
-                                "(directly or via transparent routing nodes).",
+                        "Branch '${branch.id}' of decision '${decision.id}' specifies nextRef='$ref' " +
+                            "but no sequence flow connects gateway '${gateway.id}' to '$ref' " +
+                            "(directly or via transparent routing nodes).",
                         contractElementId = branch.id,
                         bpmnElementId = ref,
                     )
@@ -239,11 +238,10 @@ internal class BpmnContractFidelityChecker {
         const val MAX_REACHABILITY_HOPS = 6
     }
 
-    private fun kindDescription(kind: ContractGatewayKind): String =
-        when (kind) {
-            ContractGatewayKind.EXCLUSIVE -> "pick one branch"
-            ContractGatewayKind.PARALLEL -> "take all branches concurrently"
-        }
+    private fun kindDescription(kind: ContractGatewayKind): String = when (kind) {
+        ContractGatewayKind.EXCLUSIVE -> "pick one branch"
+        ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+    }
 
     /**
      * Verifies the BPMN node that realises [activity] has the matching task subtype.
@@ -262,32 +260,30 @@ internal class BpmnContractFidelityChecker {
                 code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
                 severity = BpmnFidelitySeverity.ERROR,
                 message =
-                    "Activity '${activity.id}' declares kind=${activity.kindName} but is realised as a " +
-                        "${node.typeName} node — expected ${activity.expectedTaskTypeName()}.",
+                "Activity '${activity.id}' declares kind=${activity.kindName} but is realised as a " +
+                    "${node.typeName} node — expected ${activity.expectedTaskTypeName()}.",
                 contractElementId = activity.id,
                 bpmnElementId = node.id,
             )
     }
 
-    private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean =
-        when (this) {
-            is ContractActivity.Service -> node is BpmnServiceTask
-            is ContractActivity.User -> node is BpmnUserTask
-            is ContractActivity.Script -> node is BpmnScriptTask
-            is ContractActivity.BusinessRule -> node is BpmnBusinessRuleTask
-            is ContractActivity.Send -> node is BpmnSendTask
-            is ContractActivity.Receive -> node is BpmnReceiveTask
-            is ContractActivity.Manual -> node is BpmnManualTask
-        }
+    private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (this) {
+        is ContractActivity.Service -> node is BpmnServiceTask
+        is ContractActivity.User -> node is BpmnUserTask
+        is ContractActivity.Script -> node is BpmnScriptTask
+        is ContractActivity.BusinessRule -> node is BpmnBusinessRuleTask
+        is ContractActivity.Send -> node is BpmnSendTask
+        is ContractActivity.Receive -> node is BpmnReceiveTask
+        is ContractActivity.Manual -> node is BpmnManualTask
+    }
 
-    private fun ContractActivity.expectedTaskTypeName(): String =
-        when (this) {
-            is ContractActivity.Service -> "SERVICE_TASK"
-            is ContractActivity.User -> "USER_TASK"
-            is ContractActivity.Script -> "SCRIPT_TASK"
-            is ContractActivity.BusinessRule -> "BUSINESS_RULE_TASK"
-            is ContractActivity.Send -> "SEND_TASK"
-            is ContractActivity.Receive -> "RECEIVE_TASK"
-            is ContractActivity.Manual -> "MANUAL_TASK"
-        }
+    private fun ContractActivity.expectedTaskTypeName(): String = when (this) {
+        is ContractActivity.Service -> "SERVICE_TASK"
+        is ContractActivity.User -> "USER_TASK"
+        is ContractActivity.Script -> "SCRIPT_TASK"
+        is ContractActivity.BusinessRule -> "BUSINESS_RULE_TASK"
+        is ContractActivity.Send -> "SEND_TASK"
+        is ContractActivity.Receive -> "RECEIVE_TASK"
+        is ContractActivity.Manual -> "MANUAL_TASK"
+    }
 }

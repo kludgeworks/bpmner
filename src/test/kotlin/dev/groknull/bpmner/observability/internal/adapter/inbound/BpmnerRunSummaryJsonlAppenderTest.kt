@@ -62,13 +62,13 @@ class BpmnerRunSummaryJsonlAppenderTest {
                 request = request,
                 xml = "<definitions />",
                 diagnostics =
-                    listOf(
-                        BpmnDiagnostic(
-                            source = BpmnDiagnosticSource.LINT,
-                            message = "Task name must use verb object",
-                            rule = "bpmner/act-verb-object-name",
-                        ),
+                listOf(
+                    BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.LINT,
+                        message = "Task name must use verb object",
+                        rule = "bpmner/act-verb-object-name",
                     ),
+                ),
                 attemptNumber = 1,
                 repairAttempts = 0,
                 processId = "run-1",
@@ -139,76 +139,74 @@ class BpmnerRunSummaryJsonlAppenderTest {
         request: BpmnRequest,
         processId: String?,
         message: String,
-    ): BpmnValidationFailedEvent =
-        BpmnValidationFailedEvent(
-            request = request,
-            xml = "<definitions />",
-            diagnostics =
-                listOf(
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.LINT,
-                        message = message,
-                        rule = "bpmner/act-verb-object-name",
-                    ),
-                ),
-            attemptNumber = 1,
-            repairAttempts = 0,
-            processId = processId,
-        )
+    ): BpmnValidationFailedEvent = BpmnValidationFailedEvent(
+        request = request,
+        xml = "<definitions />",
+        diagnostics =
+        listOf(
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.LINT,
+                message = message,
+                rule = "bpmner/act-verb-object-name",
+            ),
+        ),
+        attemptNumber = 1,
+        repairAttempts = 0,
+        processId = processId,
+    )
 
-    private fun sampleSummary(runId: String): BpmnerStructuredRunSummary =
-        BpmnerStructuredRunSummary(
-            runId = runId,
-            timestamp = Instant.parse("2026-05-15T08:00:00Z"),
-            status = "COMPLETED",
-            eventType = "AgentProcessCompletedEvent",
-            durationMs = 125,
-            actions =
-                listOf(
-                    BpmnerActionSummary(
-                        name = "dev.groknull.bpmner.Agent.writeBpmn",
-                        shortName = "writeBpmn",
-                        timestamp = Instant.parse("2026-05-15T08:00:01Z"),
-                        durationMs = 25,
-                    ),
-                ),
-            models = listOf("gpt-4.1"),
-            cost = 0.0123,
-            usage = BpmnerUsageSummary(promptTokens = 10, completionTokens = 5, totalTokens = 15),
-            request =
-                BpmnerRequestSummary(
-                    processDescription = "Approve order",
-                    styleGuidePresent = false,
-                    outputFile = "order.bpmn",
-                    mode = "SINGLE_SHOT",
-                    clarificationCount = 0,
-                ),
-            artifacts =
-                BpmnerArtifactSummary(
-                    processId = "Process_Order",
-                    processName = "Order approval",
-                    outline =
-                        BpmnerOutlineSummary(
-                            nodeCount = 3,
-                            edgeCount = 2,
-                            phaseCount = 1,
-                            exclusiveBranchCount = 0,
-                            parallelBranchCount = 0,
-                            loopCount = 0,
-                            subprocessCount = 0,
-                        ),
-                    renderedXmlLength = 100,
-                    validatedXmlLength = 100,
-                    finalXmlLength = 120,
-                    outputFile = "order.bpmn",
-                    generationStatus = "GENERATED",
-                    autoFix = null,
-                ),
-            validation =
-                BpmnerValidationRunSummary(
-                    failedAttempts = emptyList(),
-                    passed = BpmnerValidationPassedSummary(repairAttempts = 0, xmlLength = 120),
-                ),
-            failure = null,
-        )
+    private fun sampleSummary(runId: String): BpmnerStructuredRunSummary = BpmnerStructuredRunSummary(
+        runId = runId,
+        timestamp = Instant.parse("2026-05-15T08:00:00Z"),
+        status = "COMPLETED",
+        eventType = "AgentProcessCompletedEvent",
+        durationMs = 125,
+        actions =
+        listOf(
+            BpmnerActionSummary(
+                name = "dev.groknull.bpmner.Agent.writeBpmn",
+                shortName = "writeBpmn",
+                timestamp = Instant.parse("2026-05-15T08:00:01Z"),
+                durationMs = 25,
+            ),
+        ),
+        models = listOf("gpt-4.1"),
+        cost = 0.0123,
+        usage = BpmnerUsageSummary(promptTokens = 10, completionTokens = 5, totalTokens = 15),
+        request =
+        BpmnerRequestSummary(
+            processDescription = "Approve order",
+            styleGuidePresent = false,
+            outputFile = "order.bpmn",
+            mode = "SINGLE_SHOT",
+            clarificationCount = 0,
+        ),
+        artifacts =
+        BpmnerArtifactSummary(
+            processId = "Process_Order",
+            processName = "Order approval",
+            outline =
+            BpmnerOutlineSummary(
+                nodeCount = 3,
+                edgeCount = 2,
+                phaseCount = 1,
+                exclusiveBranchCount = 0,
+                parallelBranchCount = 0,
+                loopCount = 0,
+                subprocessCount = 0,
+            ),
+            renderedXmlLength = 100,
+            validatedXmlLength = 100,
+            finalXmlLength = 120,
+            outputFile = "order.bpmn",
+            generationStatus = "GENERATED",
+            autoFix = null,
+        ),
+        validation =
+        BpmnerValidationRunSummary(
+            failedAttempts = emptyList(),
+            passed = BpmnerValidationPassedSummary(repairAttempts = 0, xmlLength = 120),
+        ),
+        failure = null,
+    )
 }

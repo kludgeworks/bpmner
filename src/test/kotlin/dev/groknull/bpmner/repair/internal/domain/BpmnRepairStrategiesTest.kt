@@ -52,14 +52,14 @@ class BpmnRepairStrategiesTest {
         val ctx =
             contextOf(
                 diagnostics =
-                    listOf(
-                        diag(
-                            rule = "label-rule",
-                            elementId = "Task_1",
-                            kind = RepairKind.LLM_MODEL_PATCH,
-                            scope = BpmnRepairScope.LABEL,
-                        ),
+                listOf(
+                    diag(
+                        rule = "label-rule",
+                        elementId = "Task_1",
+                        kind = RepairKind.LLM_MODEL_PATCH,
+                        scope = BpmnRepairScope.LABEL,
                     ),
+                ),
                 operationContext = operationContext,
             )
 
@@ -77,14 +77,14 @@ class BpmnRepairStrategiesTest {
         val ctx =
             contextOf(
                 diagnostics =
-                    listOf(
-                        diag(
-                            rule = "patch-rule",
-                            elementId = "Task_1",
-                            kind = RepairKind.LLM_MODEL_PATCH,
-                            scope = BpmnRepairScope.OUTLINE,
-                        ),
+                listOf(
+                    diag(
+                        rule = "patch-rule",
+                        elementId = "Task_1",
+                        kind = RepairKind.LLM_MODEL_PATCH,
+                        scope = BpmnRepairScope.OUTLINE,
                     ),
+                ),
                 operationContext = operationContext,
             )
 
@@ -102,14 +102,14 @@ class BpmnRepairStrategiesTest {
         val ctx =
             contextOf(
                 diagnostics =
-                    listOf(
-                        diag(
-                            rule = "rewrite-rule",
-                            elementId = "Task_1",
-                            kind = RepairKind.LLM_XML_REWRITE,
-                            scope = BpmnRepairScope.FULL_PROCESS,
-                        ),
+                listOf(
+                    diag(
+                        rule = "rewrite-rule",
+                        elementId = "Task_1",
+                        kind = RepairKind.LLM_XML_REWRITE,
+                        scope = BpmnRepairScope.FULL_PROCESS,
                     ),
+                ),
                 operationContext = operationContext,
             )
 
@@ -139,10 +139,10 @@ class BpmnRepairStrategiesTest {
         val ctx =
             contextOf(
                 diagnostics =
-                    listOf(
-                        diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
-                        diag(rule = "bpmner/name-01", elementId = "Task_2", kind = RepairKind.LOCAL_XML_FIX),
-                    ),
+                listOf(
+                    diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
+                    diag(rule = "bpmner/name-01", elementId = "Task_2", kind = RepairKind.LOCAL_XML_FIX),
+                ),
                 operationContext = operationContext,
             )
 
@@ -165,14 +165,14 @@ class BpmnRepairStrategiesTest {
         val ctx =
             contextOf(
                 diagnostics =
-                    listOf(
-                        diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
-                        localFailedDiag,
-                    ),
+                listOf(
+                    diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH),
+                    localFailedDiag,
+                ),
                 outcome =
-                    BpmnLocalRepairOutcome(
-                        listOf(BpmnLocalFixFailure(rule = "bpmner/name-01", elementId = "Task_2", reason = "boom")),
-                    ),
+                BpmnLocalRepairOutcome(
+                    listOf(BpmnLocalFixFailure(rule = "bpmner/name-01", elementId = "Task_2", reason = "boom")),
+                ),
                 operationContext = operationContext,
             )
 
@@ -311,17 +311,16 @@ class BpmnRepairStrategiesTest {
         )
     }
 
-    private fun renderedFrom(definition: BpmnDefinition): RenderedBpmn =
-        RenderedBpmn(
-            definition = definition,
-            xml = "<bpmn/>",
-            elementIndex =
-                BpmnElementIndex(
-                    processId = definition.processId,
-                    nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
-                    edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-                ),
-        )
+    private fun renderedFrom(definition: BpmnDefinition): RenderedBpmn = RenderedBpmn(
+        definition = definition,
+        xml = "<bpmn/>",
+        elementIndex =
+        BpmnElementIndex(
+            processId = definition.processId,
+            nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
+            edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
+        ),
+    )
 
     private fun laidOutGraph(definition: BpmnDefinition): LaidOutProcessGraph {
         val owner = "phase:main"
@@ -351,24 +350,23 @@ class BpmnRepairStrategiesTest {
         return LaidOutProcessGraph(OwnedElementGraph(composed, elementOwners, objectOwners), definition)
     }
 
-    private fun sampleDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Sample",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do thing"),
-                    BpmnUserTask("Task_2", "Do other"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Task_1", "Task_2"),
-                    BpmnEdge("Flow_3", "Task_2", "End_1"),
-                ),
-        )
+    private fun sampleDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Sample",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do thing"),
+            BpmnUserTask("Task_2", "Do other"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1"),
+            BpmnEdge("Flow_2", "Task_1", "Task_2"),
+            BpmnEdge("Flow_3", "Task_2", "End_1"),
+        ),
+    )
 
     private object NoopLintingPort : BpmnLintingPort {
         override fun lint(bpmnXml: String): List<LintIssue> = emptyList()

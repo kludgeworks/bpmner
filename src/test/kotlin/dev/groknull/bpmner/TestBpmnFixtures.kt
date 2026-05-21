@@ -34,16 +34,16 @@ object TestBpmnFixtures {
         processId = processId,
         processName = processName,
         nodes =
-            listOf(
-                BpmnStartEvent("StartEvent_1", startName),
-                task,
-                BpmnEndEvent("EndEvent_1", endName),
-            ),
+        listOf(
+            BpmnStartEvent("StartEvent_1", startName),
+            task,
+            BpmnEndEvent("EndEvent_1", endName),
+        ),
         sequences =
-            listOf(
-                BpmnEdge("Flow_1", "StartEvent_1", task.id),
-                BpmnEdge("Flow_2", task.id, "EndEvent_1"),
-            ),
+        listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", task.id),
+            BpmnEdge("Flow_2", task.id, "EndEvent_1"),
+        ),
     )
 
     /**

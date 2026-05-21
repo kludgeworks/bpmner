@@ -110,19 +110,17 @@ internal class InputPathResolver private constructor(
         private fun currentWorkingDirectory(
             environment: Map<String, String>,
             userDir: String,
-        ): Path =
-            environment[BUILD_WORKING_DIRECTORY]
-                ?.takeIf { it.isNotBlank() }
-                ?.let { Path.of(it).toAbsolutePath().normalize() }
-                ?: Path.of(userDir).toAbsolutePath().normalize()
+        ): Path = environment[BUILD_WORKING_DIRECTORY]
+            ?.takeIf { it.isNotBlank() }
+            ?.let { Path.of(it).toAbsolutePath().normalize() }
+            ?: Path.of(userDir).toAbsolutePath().normalize()
 
-        private fun defaultRunfilesLoader(): () -> Runfiles? =
-            {
-                try {
-                    Runfiles.preload().withSourceRepository("")
-                } catch (_: IOException) {
-                    null
-                }
+        private fun defaultRunfilesLoader(): () -> Runfiles? = {
+            try {
+                Runfiles.preload().withSourceRepository("")
+            } catch (_: IOException) {
+                null
             }
+        }
     }
 }

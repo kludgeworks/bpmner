@@ -58,7 +58,7 @@ internal class BpmnGeneratorAgent(
 
     @Action(
         description =
-            "Create a high-level process outline and initial typed BPMN artifact from a validated process contract",
+        "Create a high-level process outline and initial typed BPMN artifact from a validated process contract",
     )
     fun createProcessOutline(
         request: BpmnRequest,
@@ -218,11 +218,10 @@ internal class BpmnGeneratorAgent(
     }
 
     @Action(description = "Assign deterministic layout to the process graph")
-    fun assignLayout(graph: OwnedElementGraph): LaidOutProcessGraph =
-        LaidOutProcessGraph(
-            ownedGraph = graph,
-            definition = graph.definition,
-        )
+    fun assignLayout(graph: OwnedElementGraph): LaidOutProcessGraph = LaidOutProcessGraph(
+        ownedGraph = graph,
+        definition = graph.definition,
+    )
 
     @Action(description = "Render a laid out BPMN process graph into BPMN 2.0 XML with stable element linkage")
     fun renderBpmnXml(
@@ -238,11 +237,11 @@ internal class BpmnGeneratorAgent(
     @AchievesGoal(
         description = "Return validated BPMN 2.0 XML and optionally write it to the requested output file",
         export =
-            Export(
-                name = "generateBpmn",
-                remote = true,
-                startingInputTypes = [BpmnRequest::class],
-            ),
+        Export(
+            name = "generateBpmn",
+            remote = true,
+            startingInputTypes = [BpmnRequest::class],
+        ),
     )
     @Action(description = "Return the layouted BPMN XML and write to disk if requested")
     fun finalizeBpmn(

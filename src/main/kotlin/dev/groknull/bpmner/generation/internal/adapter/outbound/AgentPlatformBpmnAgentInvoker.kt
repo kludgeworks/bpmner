@@ -53,19 +53,18 @@ internal class AgentPlatformBpmnAgentInvoker(
 
     // Mirrors AgentPlatformTypedOps.transform: spin up a synthetic goal agent over the platform
     // scope so the planner can draw on every deployed action when planning toward BpmnResult.
-    private fun synthesizeResultAgent(resultClass: Class<*>): Agent =
-        agentPlatform
-            .createAgent(
-                name = "goal-${resultClass.simpleName}",
-                provider = Constants.EMBABEL_PROVIDER,
-                description = "Goal agent for ${resultClass.simpleName}",
-            ).withSingleGoal(
-                Goal(
-                    name = "create-${resultClass.simpleName}",
-                    description = "Create ${resultClass.simpleName}",
-                    satisfiedBy = resultClass,
-                ),
-            )
+    private fun synthesizeResultAgent(resultClass: Class<*>): Agent = agentPlatform
+        .createAgent(
+            name = "goal-${resultClass.simpleName}",
+            provider = Constants.EMBABEL_PROVIDER,
+            description = "Goal agent for ${resultClass.simpleName}",
+        ).withSingleGoal(
+            Goal(
+                name = "create-${resultClass.simpleName}",
+                description = "Create ${resultClass.simpleName}",
+                satisfiedBy = resultClass,
+            ),
+        )
 
     companion object {
         private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"

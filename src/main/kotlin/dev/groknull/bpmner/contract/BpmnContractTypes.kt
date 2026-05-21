@@ -384,16 +384,15 @@ val ContractActivity.kindName: String
  * exhaustively. Used by callers that need to mutate provenance without committing to a
  * specific subtype (e.g. validation tests).
  */
-fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity =
-    when (this) {
-        is ContractActivity.Service -> copy(sourceIds = sourceIds)
-        is ContractActivity.User -> copy(sourceIds = sourceIds)
-        is ContractActivity.Script -> copy(sourceIds = sourceIds)
-        is ContractActivity.BusinessRule -> copy(sourceIds = sourceIds)
-        is ContractActivity.Send -> copy(sourceIds = sourceIds)
-        is ContractActivity.Receive -> copy(sourceIds = sourceIds)
-        is ContractActivity.Manual -> copy(sourceIds = sourceIds)
-    }
+fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity = when (this) {
+    is ContractActivity.Service -> copy(sourceIds = sourceIds)
+    is ContractActivity.User -> copy(sourceIds = sourceIds)
+    is ContractActivity.Script -> copy(sourceIds = sourceIds)
+    is ContractActivity.BusinessRule -> copy(sourceIds = sourceIds)
+    is ContractActivity.Send -> copy(sourceIds = sourceIds)
+    is ContractActivity.Receive -> copy(sourceIds = sourceIds)
+    is ContractActivity.Manual -> copy(sourceIds = sourceIds)
+}
 
 /**
  * How the branches of a [ContractDecision] are selected at runtime.

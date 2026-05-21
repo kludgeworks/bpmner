@@ -38,15 +38,15 @@ internal class BpmnAlignmentAgent(
     @AchievesGoal(
         description = "Verify semantic alignment between process contract and generated BPMN",
         export =
-            Export(
-                name = "checkAlignment",
-                remote = true,
-                startingInputTypes = [
-                    BpmnRequest::class,
-                    ValidatedProcessContract::class,
-                    FinalValidatedBpmnXml::class,
-                ],
-            ),
+        Export(
+            name = "checkAlignment",
+            remote = true,
+            startingInputTypes = [
+                BpmnRequest::class,
+                ValidatedProcessContract::class,
+                FinalValidatedBpmnXml::class,
+            ],
+        ),
     )
     @Action(description = "Verify semantic alignment between process contract and generated BPMN")
     fun checkAlignment(
@@ -71,12 +71,12 @@ internal class BpmnAlignmentAgent(
                 AlignmentFindings::class.java,
             ) ?: AlignmentFindings(
                 issues =
-                    listOf(
-                        AlignmentIssue(
-                            elementId = MODEL_FAILURE_ELEMENT_ID,
-                            classification = AlignmentClassification.UNSUPPORTED,
-                        ),
+                listOf(
+                    AlignmentIssue(
+                        elementId = MODEL_FAILURE_ELEMENT_ID,
+                        classification = AlignmentClassification.UNSUPPORTED,
                     ),
+                ),
                 rationale = "Alignment model failed to produce a structured report.",
             )
 

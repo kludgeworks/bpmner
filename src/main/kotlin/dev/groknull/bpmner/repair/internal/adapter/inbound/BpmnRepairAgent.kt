@@ -21,29 +21,29 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 @PrimaryAdapter
 @Agent(
     description =
-        "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+    "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
 )
 internal class BpmnRepairAgent(
     private val refinementEngine: BpmnRefinementEngine,
 ) {
     @AchievesGoal(
         description =
-            "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+        "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
         export =
-            Export(
-                name = "repairBpmn",
-                remote = true,
-                startingInputTypes = [
-                    BpmnRequest::class,
-                    LaidOutProcessGraph::class,
-                    RenderedBpmn::class,
-                ],
-            ),
+        Export(
+            name = "repairBpmn",
+            remote = true,
+            startingInputTypes = [
+                BpmnRequest::class,
+                LaidOutProcessGraph::class,
+                RenderedBpmn::class,
+            ],
+        ),
     )
     @Action(
         description =
-            "Iteratively validate and repair a generated BPMN process graph" +
-                " until it passes all XSD and lint rules",
+        "Iteratively validate and repair a generated BPMN process graph" +
+            " until it passes all XSD and lint rules",
         actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
     )
     fun repair(

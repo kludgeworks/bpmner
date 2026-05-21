@@ -159,14 +159,14 @@ class BpmnContractFidelityCheckerTest {
                 trigger = "start",
                 triggerSourceIds = sources,
                 activities =
-                    listOf(
-                        ContractActivity.Send(
-                            id = "act-notify",
-                            name = "Send decline notification",
-                            messageName = "decline notification",
-                            sourceIds = sources,
-                        ),
+                listOf(
+                    ContractActivity.Send(
+                        id = "act-notify",
+                        name = "Send decline notification",
+                        messageName = "decline notification",
+                        sourceIds = sources,
                     ),
+                ),
                 endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
             )
         val definition =
@@ -174,16 +174,16 @@ class BpmnContractFidelityCheckerTest {
                 processId = "P",
                 processName = "Notification process",
                 nodes =
-                    listOf(
-                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                        BpmnUserTask(id = "act-notify", name = "Send decline notification"),
-                        BpmnEndEvent(id = "end-done", name = "Done"),
-                    ),
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnUserTask(id = "act-notify", name = "Send decline notification"),
+                    BpmnEndEvent(id = "end-done", name = "Done"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-notify"),
-                        BpmnEdge(id = "F2", sourceRef = "act-notify", targetRef = "end-done"),
-                    ),
+                listOf(
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-notify"),
+                    BpmnEdge(id = "F2", sourceRef = "act-notify", targetRef = "end-done"),
+                ),
             )
 
         val report = checker.check(contract, definition)
@@ -206,13 +206,13 @@ class BpmnContractFidelityCheckerTest {
         val withDecisionAsTask =
             original.copy(
                 nodes =
-                    original.nodes.map { node ->
-                        if (node.id == "dec-validate") {
-                            BpmnUserTask(id = node.id, name = node.name)
-                        } else {
-                            node
-                        }
-                    },
+                original.nodes.map { node ->
+                    if (node.id == "dec-validate") {
+                        BpmnUserTask(id = node.id, name = node.name)
+                    } else {
+                        node
+                    }
+                },
             )
 
         val report = checker.check(contract, withDecisionAsTask)
@@ -239,34 +239,34 @@ class BpmnContractFidelityCheckerTest {
                 trigger = "start",
                 triggerSourceIds = sources,
                 activities =
-                    listOf(
-                        ContractActivity.User(id = "act-pre-check", name = "Pre-check", sourceIds = sources),
-                        ContractActivity.User(id = "act-skip-target", name = "Process", sourceIds = sources),
-                        ContractActivity.User(id = "act-detailed-path", name = "Detailed path", sourceIds = sources),
-                    ),
+                listOf(
+                    ContractActivity.User(id = "act-pre-check", name = "Pre-check", sourceIds = sources),
+                    ContractActivity.User(id = "act-skip-target", name = "Process", sourceIds = sources),
+                    ContractActivity.User(id = "act-detailed-path", name = "Detailed path", sourceIds = sources),
+                ),
                 decisions =
-                    listOf(
-                        ContractDecision(
-                            id = "dec-pre",
-                            question = "Skip detailed path?",
-                            branches =
-                                listOf(
-                                    ConditionalBranch(
-                                        id = "br-skip",
-                                        label = "Yes",
-                                        condition = "skip",
-                                        nextRef = "act-skip-target",
-                                    ),
-                                    ConditionalBranch(
-                                        id = "br-detailed",
-                                        label = "No",
-                                        condition = "detailed",
-                                        nextRef = "act-detailed-path",
-                                    ),
-                                ),
-                            sourceIds = sources,
+                listOf(
+                    ContractDecision(
+                        id = "dec-pre",
+                        question = "Skip detailed path?",
+                        branches =
+                        listOf(
+                            ConditionalBranch(
+                                id = "br-skip",
+                                label = "Yes",
+                                condition = "skip",
+                                nextRef = "act-skip-target",
+                            ),
+                            ConditionalBranch(
+                                id = "br-detailed",
+                                label = "No",
+                                condition = "detailed",
+                                nextRef = "act-detailed-path",
+                            ),
                         ),
+                        sourceIds = sources,
                     ),
+                ),
                 endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
             )
         val definition =
@@ -274,23 +274,23 @@ class BpmnContractFidelityCheckerTest {
                 processId = "P",
                 processName = "Forward skip",
                 nodes =
-                    listOf(
-                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                        BpmnUserTask(id = "act-pre-check", name = "Pre-check"),
-                        BpmnExclusiveGateway(id = "dec-pre", name = "Skip detailed path?"),
-                        BpmnUserTask(id = "act-skip-target", name = "Process"),
-                        BpmnUserTask(id = "act-detailed-path", name = "Detailed path"),
-                        BpmnEndEvent(id = "end-done", name = "Done"),
-                    ),
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnUserTask(id = "act-pre-check", name = "Pre-check"),
+                    BpmnExclusiveGateway(id = "dec-pre", name = "Skip detailed path?"),
+                    BpmnUserTask(id = "act-skip-target", name = "Process"),
+                    BpmnUserTask(id = "act-detailed-path", name = "Detailed path"),
+                    BpmnEndEvent(id = "end-done", name = "Done"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-pre-check"),
-                        BpmnEdge(id = "F2", sourceRef = "act-pre-check", targetRef = "dec-pre"),
-                        BpmnEdge(id = "F3", sourceRef = "dec-pre", targetRef = "act-skip-target"),
-                        BpmnEdge(id = "F4", sourceRef = "dec-pre", targetRef = "act-detailed-path"),
-                        BpmnEdge(id = "F5", sourceRef = "act-detailed-path", targetRef = "act-skip-target"),
-                        BpmnEdge(id = "F6", sourceRef = "act-skip-target", targetRef = "end-done"),
-                    ),
+                listOf(
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-pre-check"),
+                    BpmnEdge(id = "F2", sourceRef = "act-pre-check", targetRef = "dec-pre"),
+                    BpmnEdge(id = "F3", sourceRef = "dec-pre", targetRef = "act-skip-target"),
+                    BpmnEdge(id = "F4", sourceRef = "dec-pre", targetRef = "act-detailed-path"),
+                    BpmnEdge(id = "F5", sourceRef = "act-detailed-path", targetRef = "act-skip-target"),
+                    BpmnEdge(id = "F6", sourceRef = "act-skip-target", targetRef = "end-done"),
+                ),
             )
 
         val report = checker.check(contract, definition)
@@ -314,61 +314,61 @@ class BpmnContractFidelityCheckerTest {
                 triggerSourceIds = sources,
                 activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = sources)),
                 decisions =
-                    listOf(
-                        ContractDecision(
-                            id = "dec-1",
-                            question = "Q1?",
-                            branches =
-                                listOf(
-                                    ConditionalBranch(id = "br-1a", label = "1a", condition = "1a"),
-                                    ConditionalBranch(id = "br-1b", label = "1b", condition = "1b"),
-                                ),
-                            sourceIds = sources,
+                listOf(
+                    ContractDecision(
+                        id = "dec-1",
+                        question = "Q1?",
+                        branches =
+                        listOf(
+                            ConditionalBranch(id = "br-1a", label = "1a", condition = "1a"),
+                            ConditionalBranch(id = "br-1b", label = "1b", condition = "1b"),
                         ),
-                        ContractDecision(
-                            id = "dec-2",
-                            question = "Q2?",
-                            branches =
-                                listOf(
-                                    ConditionalBranch(id = "br-2a", label = "2a", condition = "2a"),
-                                    ConditionalBranch(id = "br-2b", label = "2b", condition = "2b"),
-                                    ConditionalBranch(id = "br-2c", label = "2c", condition = "2c"),
-                                ),
-                            sourceIds = sources,
-                        ),
+                        sourceIds = sources,
                     ),
+                    ContractDecision(
+                        id = "dec-2",
+                        question = "Q2?",
+                        branches =
+                        listOf(
+                            ConditionalBranch(id = "br-2a", label = "2a", condition = "2a"),
+                            ConditionalBranch(id = "br-2b", label = "2b", condition = "2b"),
+                            ConditionalBranch(id = "br-2c", label = "2c", condition = "2c"),
+                        ),
+                        sourceIds = sources,
+                    ),
+                ),
                 endStates =
-                    listOf(
-                        ContractEndState(id = "end-1", name = "End 1", sourceIds = sources),
-                        ContractEndState(id = "end-2", name = "End 2", sourceIds = sources),
-                        ContractEndState(id = "end-3", name = "End 3", sourceIds = sources),
-                    ),
+                listOf(
+                    ContractEndState(id = "end-1", name = "End 1", sourceIds = sources),
+                    ContractEndState(id = "end-2", name = "End 2", sourceIds = sources),
+                    ContractEndState(id = "end-3", name = "End 3", sourceIds = sources),
+                ),
             )
         val definition =
             BpmnDefinition(
                 processId = "P",
                 processName = "Two decisions",
                 nodes =
-                    listOf(
-                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                        BpmnUserTask(id = "act-a", name = "A"),
-                        BpmnExclusiveGateway(id = "dec-1", name = "Q1?"),
-                        BpmnExclusiveGateway(id = "dec-2", name = "Q2?"),
-                        BpmnEndEvent(id = "end-1", name = "End 1"),
-                        BpmnEndEvent(id = "end-2", name = "End 2"),
-                        BpmnEndEvent(id = "end-3", name = "End 3"),
-                    ),
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnUserTask(id = "act-a", name = "A"),
+                    BpmnExclusiveGateway(id = "dec-1", name = "Q1?"),
+                    BpmnExclusiveGateway(id = "dec-2", name = "Q2?"),
+                    BpmnEndEvent(id = "end-1", name = "End 1"),
+                    BpmnEndEvent(id = "end-2", name = "End 2"),
+                    BpmnEndEvent(id = "end-3", name = "End 3"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
-                        BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "dec-1"),
-                        // dec-1 has only ONE outbound (the bug case)
-                        BpmnEdge(id = "F3", sourceRef = "dec-1", targetRef = "dec-2"),
-                        // dec-2 has THREE outbound (the global-max distractor)
-                        BpmnEdge(id = "F4", sourceRef = "dec-2", targetRef = "end-1"),
-                        BpmnEdge(id = "F5", sourceRef = "dec-2", targetRef = "end-2"),
-                        BpmnEdge(id = "F6", sourceRef = "dec-2", targetRef = "end-3"),
-                    ),
+                listOf(
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
+                    BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "dec-1"),
+                    // dec-1 has only ONE outbound (the bug case)
+                    BpmnEdge(id = "F3", sourceRef = "dec-1", targetRef = "dec-2"),
+                    // dec-2 has THREE outbound (the global-max distractor)
+                    BpmnEdge(id = "F4", sourceRef = "dec-2", targetRef = "end-1"),
+                    BpmnEdge(id = "F5", sourceRef = "dec-2", targetRef = "end-2"),
+                    BpmnEdge(id = "F6", sourceRef = "dec-2", targetRef = "end-3"),
+                ),
             )
 
         val report = checker.check(contract, definition)
@@ -419,13 +419,13 @@ class BpmnContractFidelityCheckerTest {
         val withParallelGateway =
             original.copy(
                 nodes =
-                    original.nodes.map { node ->
-                        if (node.id == "dec-validate") {
-                            BpmnParallelGateway(id = node.id, name = node.name)
-                        } else {
-                            node
-                        }
-                    },
+                original.nodes.map { node ->
+                    if (node.id == "dec-validate") {
+                        BpmnParallelGateway(id = node.id, name = node.name)
+                    } else {
+                        node
+                    }
+                },
             )
 
         val report = checker.check(contract, withParallelGateway)
@@ -451,10 +451,10 @@ class BpmnContractFidelityCheckerTest {
                 trigger = "start",
                 triggerSourceIds = listOf("ev1"),
                 activities =
-                    listOf(
-                        ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1")),
-                        ContractActivity.User(id = "act-b", name = "B", sourceIds = listOf("ev1")),
-                    ),
+                listOf(
+                    ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1")),
+                    ContractActivity.User(id = "act-b", name = "B", sourceIds = listOf("ev1")),
+                ),
                 endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
             )
         val definition =
@@ -462,10 +462,10 @@ class BpmnContractFidelityCheckerTest {
                 processId = "P",
                 processName = "Linear",
                 nodes =
-                    listOf(
-                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                        BpmnEndEvent(id = "end-done", name = "End"),
-                    ),
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnEndEvent(id = "end-done", name = "End"),
+                ),
                 sequences = listOf(BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "end-done")),
             )
 
@@ -487,58 +487,57 @@ private fun repairLoopContract(): ProcessContract {
         trigger = "request",
         triggerSourceIds = sources,
         activities =
-            listOf(
-                ContractActivity.User(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
-                ContractActivity.User(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
-                ContractActivity.User(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
-            ),
+        listOf(
+            ContractActivity.User(id = "act-strategy-1", name = "Strategy 1", sourceIds = sources),
+            ContractActivity.User(id = "act-strategy-2", name = "Strategy 2", sourceIds = sources),
+            ContractActivity.User(id = "act-strategy-3", name = "Strategy 3", sourceIds = sources),
+        ),
         decisions =
-            listOf(
-                ContractDecision(
-                    id = "dec-validate",
-                    question = "Did validation pass?",
-                    branches =
-                        listOf(
-                            ConditionalBranch(id = "br-pass", label = "Pass", condition = "pass", nextRef = "end-success"),
-                            ConditionalBranch(id = "br-fail", label = "Fail", condition = "fail", nextRef = "end-failed"),
-                            ConditionalBranch(id = "br-retry", label = "Retry", condition = "retry", nextRef = "act-strategy-1"),
-                        ),
-                    sourceIds = sources,
+        listOf(
+            ContractDecision(
+                id = "dec-validate",
+                question = "Did validation pass?",
+                branches =
+                listOf(
+                    ConditionalBranch(id = "br-pass", label = "Pass", condition = "pass", nextRef = "end-success"),
+                    ConditionalBranch(id = "br-fail", label = "Fail", condition = "fail", nextRef = "end-failed"),
+                    ConditionalBranch(id = "br-retry", label = "Retry", condition = "retry", nextRef = "act-strategy-1"),
                 ),
+                sourceIds = sources,
             ),
+        ),
         endStates =
-            listOf(
-                ContractEndState(id = "end-success", name = "Success", sourceIds = sources),
-                ContractEndState(id = "end-failed", name = "Failed", sourceIds = sources),
-            ),
+        listOf(
+            ContractEndState(id = "end-success", name = "Success", sourceIds = sources),
+            ContractEndState(id = "end-failed", name = "Failed", sourceIds = sources),
+        ),
     )
 }
 
-private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition =
-    BpmnDefinition(
-        processId = "P",
-        processName = "Repair loop",
-        nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                BpmnUserTask(id = "act-strategy-1", name = "Strategy 1"),
-                BpmnUserTask(id = "act-strategy-2", name = "Strategy 2"),
-                BpmnUserTask(id = "act-strategy-3", name = "Strategy 3"),
-                BpmnExclusiveGateway(id = "dec-validate", name = "Did validation pass?"),
-                BpmnEndEvent(id = "end-success", name = "Success"),
-                BpmnEndEvent(id = "end-failed", name = "Failed"),
-            ),
-        sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-strategy-1"),
-                BpmnEdge(id = "F2", sourceRef = "act-strategy-1", targetRef = "act-strategy-2"),
-                BpmnEdge(id = "F3", sourceRef = "act-strategy-2", targetRef = "act-strategy-3"),
-                BpmnEdge(id = "F4", sourceRef = "act-strategy-3", targetRef = "dec-validate"),
-                BpmnEdge(id = "F5", sourceRef = "dec-validate", targetRef = "end-success"),
-                BpmnEdge(id = "F6", sourceRef = "dec-validate", targetRef = "end-failed"),
-                BpmnEdge(id = "F7", sourceRef = "dec-validate", targetRef = "act-strategy-1"),
-            ),
-    )
+private fun repairLoopDefinitionWithBackEdge(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Repair loop",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-strategy-1", name = "Strategy 1"),
+        BpmnUserTask(id = "act-strategy-2", name = "Strategy 2"),
+        BpmnUserTask(id = "act-strategy-3", name = "Strategy 3"),
+        BpmnExclusiveGateway(id = "dec-validate", name = "Did validation pass?"),
+        BpmnEndEvent(id = "end-success", name = "Success"),
+        BpmnEndEvent(id = "end-failed", name = "Failed"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-strategy-1"),
+        BpmnEdge(id = "F2", sourceRef = "act-strategy-1", targetRef = "act-strategy-2"),
+        BpmnEdge(id = "F3", sourceRef = "act-strategy-2", targetRef = "act-strategy-3"),
+        BpmnEdge(id = "F4", sourceRef = "act-strategy-3", targetRef = "dec-validate"),
+        BpmnEdge(id = "F5", sourceRef = "dec-validate", targetRef = "end-success"),
+        BpmnEdge(id = "F6", sourceRef = "dec-validate", targetRef = "end-failed"),
+        BpmnEdge(id = "F7", sourceRef = "dec-validate", targetRef = "act-strategy-1"),
+    ),
+)
 
 private fun repairLoopDefinitionFlattened(): BpmnDefinition {
     val withBack = repairLoopDefinitionWithBackEdge()
@@ -559,26 +558,26 @@ private fun parallelForkContract(): ProcessContract {
         trigger = "Hire confirmed",
         triggerSourceIds = sources,
         activities =
-            listOf(
-                ContractActivity.User(id = "act-prep-it", name = "IT prep", sourceIds = sources),
-                ContractActivity.User(id = "act-prep-facilities", name = "Facilities prep", sourceIds = sources),
-                ContractActivity.User(id = "act-prep-manager", name = "Manager prep", sourceIds = sources),
-            ),
+        listOf(
+            ContractActivity.User(id = "act-prep-it", name = "IT prep", sourceIds = sources),
+            ContractActivity.User(id = "act-prep-facilities", name = "Facilities prep", sourceIds = sources),
+            ContractActivity.User(id = "act-prep-manager", name = "Manager prep", sourceIds = sources),
+        ),
         decisions =
-            listOf(
-                ContractDecision(
-                    id = "dec-prep-tracks",
-                    question = "Run all preparation tracks",
-                    branches =
-                        listOf(
-                            UnconditionalBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
-                            UnconditionalBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
-                            UnconditionalBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
-                        ),
-                    kind = ContractGatewayKind.PARALLEL,
-                    sourceIds = sources,
+        listOf(
+            ContractDecision(
+                id = "dec-prep-tracks",
+                question = "Run all preparation tracks",
+                branches =
+                listOf(
+                    UnconditionalBranch(id = "br-it", label = "IT", nextRef = "act-prep-it"),
+                    UnconditionalBranch(id = "br-fac", label = "Facilities", nextRef = "act-prep-facilities"),
+                    UnconditionalBranch(id = "br-mgr", label = "Manager", nextRef = "act-prep-manager"),
                 ),
+                kind = ContractGatewayKind.PARALLEL,
+                sourceIds = sources,
             ),
+        ),
         endStates = listOf(ContractEndState(id = "end-onboarded", name = "Onboarded", sourceIds = sources)),
     )
 }
@@ -594,69 +593,67 @@ private fun parallelForkDefinition(useParallelFork: Boolean): BpmnDefinition {
         processId = "P",
         processName = "Three concurrent tracks",
         nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Hire confirmed"),
-                fork,
-                BpmnUserTask(id = "act-prep-it", name = "IT prep"),
-                BpmnUserTask(id = "act-prep-facilities", name = "Facilities prep"),
-                BpmnUserTask(id = "act-prep-manager", name = "Manager prep"),
-                BpmnParallelGateway(id = "Gateway_join_prep", name = null),
-                BpmnEndEvent(id = "end-onboarded", name = "Onboarded"),
-            ),
+        listOf(
+            BpmnStartEvent(id = "StartEvent_1", name = "Hire confirmed"),
+            fork,
+            BpmnUserTask(id = "act-prep-it", name = "IT prep"),
+            BpmnUserTask(id = "act-prep-facilities", name = "Facilities prep"),
+            BpmnUserTask(id = "act-prep-manager", name = "Manager prep"),
+            BpmnParallelGateway(id = "Gateway_join_prep", name = null),
+            BpmnEndEvent(id = "end-onboarded", name = "Onboarded"),
+        ),
         sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-prep-tracks"),
-                BpmnEdge(id = "F2", sourceRef = "dec-prep-tracks", targetRef = "act-prep-it"),
-                BpmnEdge(id = "F3", sourceRef = "dec-prep-tracks", targetRef = "act-prep-facilities"),
-                BpmnEdge(id = "F4", sourceRef = "dec-prep-tracks", targetRef = "act-prep-manager"),
-                BpmnEdge(id = "F5", sourceRef = "act-prep-it", targetRef = "Gateway_join_prep"),
-                BpmnEdge(id = "F6", sourceRef = "act-prep-facilities", targetRef = "Gateway_join_prep"),
-                BpmnEdge(id = "F7", sourceRef = "act-prep-manager", targetRef = "Gateway_join_prep"),
-                BpmnEdge(id = "F8", sourceRef = "Gateway_join_prep", targetRef = "end-onboarded"),
-            ),
+        listOf(
+            BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-prep-tracks"),
+            BpmnEdge(id = "F2", sourceRef = "dec-prep-tracks", targetRef = "act-prep-it"),
+            BpmnEdge(id = "F3", sourceRef = "dec-prep-tracks", targetRef = "act-prep-facilities"),
+            BpmnEdge(id = "F4", sourceRef = "dec-prep-tracks", targetRef = "act-prep-manager"),
+            BpmnEdge(id = "F5", sourceRef = "act-prep-it", targetRef = "Gateway_join_prep"),
+            BpmnEdge(id = "F6", sourceRef = "act-prep-facilities", targetRef = "Gateway_join_prep"),
+            BpmnEdge(id = "F7", sourceRef = "act-prep-manager", targetRef = "Gateway_join_prep"),
+            BpmnEdge(id = "F8", sourceRef = "Gateway_join_prep", targetRef = "end-onboarded"),
+        ),
     )
 }
 
-private fun unresolvedRefContract() =
-    ProcessContract(
-        id = "c",
-        processName = "Test",
-        summary = "test",
-        trigger = "start",
-        triggerSourceIds = listOf("ev1"),
-        activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
-        decisions =
+private fun unresolvedRefContract() = ProcessContract(
+    id = "c",
+    processName = "Test",
+    summary = "test",
+    trigger = "start",
+    triggerSourceIds = listOf("ev1"),
+    activities = listOf(ContractActivity.User(id = "act-a", name = "A", sourceIds = listOf("ev1"))),
+    decisions =
+    listOf(
+        ContractDecision(
+            id = "dec-choose",
+            question = "Choose?",
+            branches =
             listOf(
-                ContractDecision(
-                    id = "dec-choose",
-                    question = "Choose?",
-                    branches =
-                        listOf(
-                            ConditionalBranch(id = "br-1", label = "Option 1", condition = "1", nextRef = "act-nonexistent"),
-                            DefaultBranch(id = "br-2", label = "Option 2"),
-                        ),
-                    sourceIds = listOf("ev1"),
-                ),
+                ConditionalBranch(id = "br-1", label = "Option 1", condition = "1", nextRef = "act-nonexistent"),
+                DefaultBranch(id = "br-2", label = "Option 2"),
             ),
-        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
-    )
+            sourceIds = listOf("ev1"),
+        ),
+    ),
+    endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = listOf("ev1"))),
+)
 
-private fun unresolvedRefDefinition() =
-    BpmnDefinition(
-        processId = "P",
-        processName = "Test",
-        nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                BpmnUserTask(id = "act-a", name = "A"),
-                BpmnEndEvent(id = "end-done", name = "Done"),
-            ),
-        sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
-                BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
-            ),
-    )
+private fun unresolvedRefDefinition() = BpmnDefinition(
+    processId = "P",
+    processName = "Test",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-a", name = "A"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-a"),
+        BpmnEdge(id = "F2", sourceRef = "act-a", targetRef = "end-done"),
+    ),
+)
 
 /**
  * Contract for the transparent-join reachability tests.
@@ -674,111 +671,108 @@ private fun skipForwardContract(): ProcessContract {
         trigger = "Request received",
         triggerSourceIds = sources,
         activities =
-            listOf(
-                ContractActivity.User(id = "act-fast-target", name = "Fast", sourceIds = sources),
-                ContractActivity.User(id = "act-converge-target", name = "Converge", sourceIds = sources),
-            ),
+        listOf(
+            ContractActivity.User(id = "act-fast-target", name = "Fast", sourceIds = sources),
+            ContractActivity.User(id = "act-converge-target", name = "Converge", sourceIds = sources),
+        ),
         decisions =
-            listOf(
-                ContractDecision(
-                    id = "dec-route",
-                    question = "Which route?",
-                    branches =
-                        listOf(
-                            ConditionalBranch(
-                                id = "br-fast",
-                                label = "Fast",
-                                condition = "fast",
-                                nextRef = "act-fast-target",
-                            ),
-                            ConditionalBranch(
-                                id = "br-converge",
-                                label = "Converge",
-                                condition = "converge",
-                                nextRef = "act-converge-target",
-                            ),
-                        ),
-                    sourceIds = sources,
+        listOf(
+            ContractDecision(
+                id = "dec-route",
+                question = "Which route?",
+                branches =
+                listOf(
+                    ConditionalBranch(
+                        id = "br-fast",
+                        label = "Fast",
+                        condition = "fast",
+                        nextRef = "act-fast-target",
+                    ),
+                    ConditionalBranch(
+                        id = "br-converge",
+                        label = "Converge",
+                        condition = "converge",
+                        nextRef = "act-converge-target",
+                    ),
                 ),
+                sourceIds = sources,
             ),
+        ),
         endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
     )
 }
 
 /** `dec-route → [intermediate] → act-converge-target`; the intermediate node is supplied by the caller. */
-private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.core.BpmnNode): BpmnDefinition =
-    BpmnDefinition(
-        processId = "P",
-        processName = "Skip via join",
-        nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-                BpmnUserTask(id = "act-fast-target", name = "Fast"),
-                join,
-                BpmnUserTask(id = "act-converge-target", name = "Converge"),
-                BpmnEndEvent(id = "end-done", name = "Done"),
-            ),
-        sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = join.id, conditionExpression = "converge"),
-                BpmnEdge(id = "F4", sourceRef = join.id, targetRef = "act-converge-target"),
-                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
-            ),
-    )
+private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.core.BpmnNode): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Skip via join",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+        BpmnUserTask(id = "act-fast-target", name = "Fast"),
+        join,
+        BpmnUserTask(id = "act-converge-target", name = "Converge"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = join.id, conditionExpression = "converge"),
+        BpmnEdge(id = "F4", sourceRef = join.id, targetRef = "act-converge-target"),
+        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+    ),
+)
 
 /** Variant: the intermediate is a gateway with multiple outbounds — a fork, not a transparent merge. */
-private fun skipForwardViaMultiOutboundJoinDefinition(): BpmnDefinition =
-    BpmnDefinition(
-        processId = "P",
-        processName = "Skip via multi-outbound join",
-        nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-                BpmnUserTask(id = "act-fast-target", name = "Fast"),
-                BpmnExclusiveGateway(id = "Gateway_fork", name = null),
-                BpmnUserTask(id = "act-converge-target", name = "Converge"),
-                BpmnUserTask(id = "act-extra", name = "Extra"),
-                BpmnEndEvent(id = "end-done", name = "Done"),
-            ),
-        sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Gateway_fork", conditionExpression = "converge"),
-                BpmnEdge(id = "F4", sourceRef = "Gateway_fork", targetRef = "act-converge-target"),
-                BpmnEdge(id = "F4b", sourceRef = "Gateway_fork", targetRef = "act-extra"),
-                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
-                BpmnEdge(id = "F7", sourceRef = "act-extra", targetRef = "end-done"),
-            ),
-    )
+private fun skipForwardViaMultiOutboundJoinDefinition(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Skip via multi-outbound join",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+        BpmnUserTask(id = "act-fast-target", name = "Fast"),
+        BpmnExclusiveGateway(id = "Gateway_fork", name = null),
+        BpmnUserTask(id = "act-converge-target", name = "Converge"),
+        BpmnUserTask(id = "act-extra", name = "Extra"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Gateway_fork", conditionExpression = "converge"),
+        BpmnEdge(id = "F4", sourceRef = "Gateway_fork", targetRef = "act-converge-target"),
+        BpmnEdge(id = "F4b", sourceRef = "Gateway_fork", targetRef = "act-extra"),
+        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+        BpmnEdge(id = "F7", sourceRef = "act-extra", targetRef = "end-done"),
+    ),
+)
 
 /** Variant: the intermediate is a UserTask — never transparent. */
-private fun skipForwardViaTaskDefinition(): BpmnDefinition =
-    BpmnDefinition(
-        processId = "P",
-        processName = "Skip via task",
-        nodes =
-            listOf(
-                BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-                BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
-                BpmnUserTask(id = "act-fast-target", name = "Fast"),
-                BpmnUserTask(id = "Task_intermediate", name = "Intermediate work"),
-                BpmnUserTask(id = "act-converge-target", name = "Converge"),
-                BpmnEndEvent(id = "end-done", name = "Done"),
-            ),
-        sequences =
-            listOf(
-                BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
-                BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
-                BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Task_intermediate", conditionExpression = "converge"),
-                BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
-                BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
-                BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
-            ),
-    )
+private fun skipForwardViaTaskDefinition(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Skip via task",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnExclusiveGateway(id = "dec-route", name = "Which route?"),
+        BpmnUserTask(id = "act-fast-target", name = "Fast"),
+        BpmnUserTask(id = "Task_intermediate", name = "Intermediate work"),
+        BpmnUserTask(id = "act-converge-target", name = "Converge"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "dec-route"),
+        BpmnEdge(id = "F2", sourceRef = "dec-route", targetRef = "act-fast-target", conditionExpression = "fast"),
+        BpmnEdge(id = "F3", sourceRef = "dec-route", targetRef = "Task_intermediate", conditionExpression = "converge"),
+        BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
+        BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
+        BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+    ),
+)

@@ -19,42 +19,41 @@ internal class BpmnAlignmentPromptFactory(
         request: BpmnRequest,
         contract: ProcessContract,
         bpmnSummary: BpmnDefinitionSummary,
-    ): String =
-        buildString {
-            appendLine(SYSTEM_INSTRUCTIONS)
-            appendLine()
-            appendLine("## Process Contract")
-            appendLine(contractRenderer.render(contract))
-            appendLine()
-            appendLine("## Generated BPMN Summary")
-            appendLine("Process ID: ${bpmnSummary.processId}")
-            appendLine("Process Name: ${bpmnSummary.processName}")
-            appendLine()
-            appendLine("### Semantic Elements")
-            bpmnSummary.elements.forEach { element ->
-                appendLine("- [${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}")
-            }
-            appendLine()
-            appendLine("### Sequence Flows")
-            bpmnSummary.flows.forEach { flow ->
-                val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
-                appendLine("- [${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition${flow.name?.let { " ($it)" } ?: ""}")
-            }
-
-            if (bpmnSummary.unreachableElementIds.isNotEmpty()) {
-                appendLine()
-                appendLine("### Unreachable Elements")
-                bpmnSummary.unreachableElementIds.forEach { id ->
-                    appendLine("- $id")
-                }
-            }
-
-            appendLine()
-            appendLine(TASK_INSTRUCTIONS)
-            appendLine()
-            appendLine("## Original BPMN request text")
-            appendLine(request.processDescription)
+    ): String = buildString {
+        appendLine(SYSTEM_INSTRUCTIONS)
+        appendLine()
+        appendLine("## Process Contract")
+        appendLine(contractRenderer.render(contract))
+        appendLine()
+        appendLine("## Generated BPMN Summary")
+        appendLine("Process ID: ${bpmnSummary.processId}")
+        appendLine("Process Name: ${bpmnSummary.processName}")
+        appendLine()
+        appendLine("### Semantic Elements")
+        bpmnSummary.elements.forEach { element ->
+            appendLine("- [${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}")
         }
+        appendLine()
+        appendLine("### Sequence Flows")
+        bpmnSummary.flows.forEach { flow ->
+            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
+            appendLine("- [${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition${flow.name?.let { " ($it)" } ?: ""}")
+        }
+
+        if (bpmnSummary.unreachableElementIds.isNotEmpty()) {
+            appendLine()
+            appendLine("### Unreachable Elements")
+            bpmnSummary.unreachableElementIds.forEach { id ->
+                appendLine("- $id")
+            }
+        }
+
+        appendLine()
+        appendLine(TASK_INSTRUCTIONS)
+        appendLine()
+        appendLine("## Original BPMN request text")
+        appendLine(request.processDescription)
+    }
 
     companion object {
         private val SYSTEM_INSTRUCTIONS =

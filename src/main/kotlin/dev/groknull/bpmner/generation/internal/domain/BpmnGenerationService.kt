@@ -134,18 +134,17 @@ internal class BpmnGenerationService(
     private fun performGeneration(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
-    ): BpmnResult =
-        try {
-            val result = agentInvoker.generate(request, assessment)
-            logger.info(
-                "BPMN generation completed. outputFile={}, xmlLength={}",
-                result.outputFile,
-                result.xml?.length ?: 0,
-            )
-            result
-        } catch (e: Exception) {
-            handleGenerationException(e, request)
-        }
+    ): BpmnResult = try {
+        val result = agentInvoker.generate(request, assessment)
+        logger.info(
+            "BPMN generation completed. outputFile={}, xmlLength={}",
+            result.outputFile,
+            result.xml?.length ?: 0,
+        )
+        result
+    } catch (e: Exception) {
+        handleGenerationException(e, request)
+    }
 
     private fun handleGenerationException(
         e: Exception,

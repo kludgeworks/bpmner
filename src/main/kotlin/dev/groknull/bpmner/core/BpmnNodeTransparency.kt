@@ -35,30 +35,29 @@ package dev.groknull.bpmner.core
  * @param outgoingBySource sequence edges grouped by `sourceRef`, used to check the single-
  *   outbound criterion. Callers typically build this once and pass it through.
  */
-internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, List<BpmnEdge>>): Boolean =
-    when (this) {
-        is BpmnExclusiveGateway, is BpmnParallelGateway -> {
-            name.isNullOrBlank() && outgoingBySource[id].orEmpty().size == 1
-        }
-
-        is BpmnStartEvent, is BpmnEndEvent, is BpmnUserTask, is BpmnServiceTask -> {
-            false
-        }
-
-        // All task subtypes (#193) are opaque: each carries the business semantic of the work
-        // being performed. Collapsing them through the fidelity walk would erase a contract-
-        // realising step entirely.
-        is BpmnScriptTask, is BpmnBusinessRuleTask, is BpmnSendTask,
-        is BpmnReceiveTask, is BpmnManualTask,
-        -> {
-            false
-        }
-
-        // Typed event-position nodes (PR #199) all carry an event definition that gives them
-        // independent semantic content (a timer trigger, an inbound message, a thrown signal,
-        // a boundary recovery path). Treating any of them as transparent would let the fidelity
-        // walk skip past a meaningful node — never correct.
-        is BpmnIntermediateCatchEvent, is BpmnIntermediateThrowEvent, is BpmnBoundaryEvent -> {
-            false
-        }
+internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, List<BpmnEdge>>): Boolean = when (this) {
+    is BpmnExclusiveGateway, is BpmnParallelGateway -> {
+        name.isNullOrBlank() && outgoingBySource[id].orEmpty().size == 1
     }
+
+    is BpmnStartEvent, is BpmnEndEvent, is BpmnUserTask, is BpmnServiceTask -> {
+        false
+    }
+
+    // All task subtypes (#193) are opaque: each carries the business semantic of the work
+    // being performed. Collapsing them through the fidelity walk would erase a contract-
+    // realising step entirely.
+    is BpmnScriptTask, is BpmnBusinessRuleTask, is BpmnSendTask,
+    is BpmnReceiveTask, is BpmnManualTask,
+    -> {
+        false
+    }
+
+    // Typed event-position nodes (PR #199) all carry an event definition that gives them
+    // independent semantic content (a timer trigger, an inbound message, a thrown signal,
+    // a boundary recovery path). Treating any of them as transparent would let the fidelity
+    // walk skip past a meaningful node — never correct.
+    is BpmnIntermediateCatchEvent, is BpmnIntermediateThrowEvent, is BpmnBoundaryEvent -> {
+        false
+    }
+}

@@ -35,14 +35,14 @@ internal class BpmnContractAgent(
     @AchievesGoal(
         description = "Extract a source-grounded process contract from natural-language input",
         export =
-            Export(
-                name = "extractProcessContract",
-                remote = true,
-                startingInputTypes = [
-                    BpmnRequest::class,
-                    ProcessInputAssessment::class,
-                ],
-            ),
+        Export(
+            name = "extractProcessContract",
+            remote = true,
+            startingInputTypes = [
+                BpmnRequest::class,
+                ProcessInputAssessment::class,
+            ],
+        ),
     )
     @Action(
         description = "Extract a source-grounded process contract from a BPMN request and readiness assessment",

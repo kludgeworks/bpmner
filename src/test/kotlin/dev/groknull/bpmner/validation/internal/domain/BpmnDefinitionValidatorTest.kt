@@ -43,16 +43,16 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Validate request"),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -66,13 +66,13 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "MissingNode"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "MissingNode"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -114,21 +114,21 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnExclusiveGateway("Gateway_1", null),
-                        BpmnUserTask("Task_1", "Approve request"),
-                        BpmnUserTask("Task_2", "Reject request"),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnExclusiveGateway("Gateway_1", null),
+                    BpmnUserTask("Task_1", "Approve request"),
+                    BpmnUserTask("Task_2", "Reject request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-                        BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Approved"),
-                        BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Rejected"),
-                        BpmnEdge("Flow_4", "Task_1", "EndEvent_1"),
-                        BpmnEdge("Flow_5", "Task_2", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Approved"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Rejected"),
+                    BpmnEdge("Flow_4", "Task_1", "EndEvent_1"),
+                    BpmnEdge("Flow_5", "Task_2", "EndEvent_1"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -143,24 +143,24 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Credit-tier routing",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Score received"),
-                        BpmnExclusiveGateway("Gateway_1", "What credit tier?"),
-                        BpmnUserTask("Task_fast", "Fast-track underwriting"),
-                        BpmnUserTask("Task_standard", "Standard underwriting"),
-                        BpmnUserTask("Task_manual", "Manual review"),
-                        BpmnEndEvent("EndEvent_1", "Offer generated"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Score received"),
+                    BpmnExclusiveGateway("Gateway_1", "What credit tier?"),
+                    BpmnUserTask("Task_fast", "Fast-track underwriting"),
+                    BpmnUserTask("Task_standard", "Standard underwriting"),
+                    BpmnUserTask("Task_manual", "Manual review"),
+                    BpmnEndEvent("EndEvent_1", "Offer generated"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-                        BpmnEdge("Flow_2", "Gateway_1", "Task_fast", conditionExpression = "score >= 750"),
-                        BpmnEdge("Flow_3", "Gateway_1", "Task_standard", conditionExpression = "score in 600..749"),
-                        BpmnEdge("Flow_4", "Gateway_1", "Task_manual", isDefault = true),
-                        BpmnEdge("Flow_5", "Task_fast", "EndEvent_1"),
-                        BpmnEdge("Flow_6", "Task_standard", "EndEvent_1"),
-                        BpmnEdge("Flow_7", "Task_manual", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_fast", conditionExpression = "score >= 750"),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_standard", conditionExpression = "score in 600..749"),
+                    BpmnEdge("Flow_4", "Gateway_1", "Task_manual", isDefault = true),
+                    BpmnEdge("Flow_5", "Task_fast", "EndEvent_1"),
+                    BpmnEdge("Flow_6", "Task_standard", "EndEvent_1"),
+                    BpmnEdge("Flow_7", "Task_manual", "EndEvent_1"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -174,21 +174,21 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnExclusiveGateway("Gateway_1", "Which path?"),
-                        BpmnUserTask("Task_1", "Approve request"),
-                        BpmnUserTask("Task_2", "Reject request"),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnExclusiveGateway("Gateway_1", "Which path?"),
+                    BpmnUserTask("Task_1", "Approve request"),
+                    BpmnUserTask("Task_2", "Reject request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-                        BpmnEdge("Flow_2", "Gateway_1", "Task_1", isDefault = true),
-                        BpmnEdge("Flow_3", "Gateway_1", "Task_2", isDefault = true),
-                        BpmnEdge("Flow_4", "Task_1", "EndEvent_1"),
-                        BpmnEdge("Flow_5", "Task_2", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", isDefault = true),
+                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", isDefault = true),
+                    BpmnEdge("Flow_4", "Task_1", "EndEvent_1"),
+                    BpmnEdge("Flow_5", "Task_2", "EndEvent_1"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -206,16 +206,16 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Validate request"),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1", isDefault = true),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1", isDefault = true),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -237,18 +237,18 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Validate request"),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
-                        // sourceRef "Gateway_orphan" doesn't resolve to any node.
-                        BpmnEdge("Flow_orphan", "Gateway_orphan", "EndEvent_1", isDefault = true),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                    // sourceRef "Gateway_orphan" doesn't resolve to any node.
+                    BpmnEdge("Flow_orphan", "Gateway_orphan", "EndEvent_1", isDefault = true),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -273,21 +273,21 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Approve request"),
-                        BpmnUserTask("Task_2", "Reject request"),
-                        BpmnExclusiveGateway("Gateway_1", null),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Approve request"),
+                    BpmnUserTask("Task_2", "Reject request"),
+                    BpmnExclusiveGateway("Gateway_1", null),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "StartEvent_1", "Task_2"),
-                        BpmnEdge("Flow_3", "Task_1", "Gateway_1"),
-                        BpmnEdge("Flow_4", "Task_2", "Gateway_1"),
-                        BpmnEdge("Flow_5", "Gateway_1", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "StartEvent_1", "Task_2"),
+                    BpmnEdge("Flow_3", "Task_1", "Gateway_1"),
+                    BpmnEdge("Flow_4", "Task_2", "Gateway_1"),
+                    BpmnEdge("Flow_5", "Gateway_1", "EndEvent_1"),
+                ),
             )
 
         val errors = validator.validate(definition)
@@ -300,20 +300,20 @@ class BpmnDefinitionValidatorTest {
         val danglingMessage =
             minimalDefinition(
                 start =
-                    BpmnStartEvent(
-                        "StartEvent_1",
-                        "Request received",
-                        eventDefinition = BpmnMessageEventDefinition("Message_missing"),
-                    ),
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Request received",
+                    eventDefinition = BpmnMessageEventDefinition("Message_missing"),
+                ),
             )
         val blankTimer =
             minimalDefinition(
                 start =
-                    BpmnStartEvent(
-                        "StartEvent_1",
-                        "Scheduled start",
-                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DATE, " "),
-                    ),
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Scheduled start",
+                    eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DATE, " "),
+                ),
             )
 
         assertContains(
@@ -362,22 +362,22 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Validate request"),
-                        BpmnBoundaryEvent(
-                            id = "Boundary_1",
-                            name = "Timeout",
-                            attachedToRef = "Task_1",
-                            eventDefinition = BpmnNoneEventDefinition,
-                        ),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnBoundaryEvent(
+                        id = "Boundary_1",
+                        name = "Timeout",
+                        attachedToRef = "Task_1",
+                        eventDefinition = BpmnNoneEventDefinition,
                     ),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                ),
             )
 
         assertContains(
@@ -396,11 +396,11 @@ class BpmnDefinitionValidatorTest {
         val definition =
             minimalDefinition(
                 start =
-                    BpmnStartEvent(
-                        "StartEvent_1",
-                        "Request received",
-                        eventDefinition = BpmnMessageEventDefinition(""),
-                    ),
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Request received",
+                    eventDefinition = BpmnMessageEventDefinition(""),
+                ),
             )
         assertContains(
             validator.validate(definition).joinToString("\n"),
@@ -413,11 +413,11 @@ class BpmnDefinitionValidatorTest {
         val definition =
             minimalDefinition(
                 start =
-                    BpmnStartEvent(
-                        "StartEvent_1",
-                        "Broadcast caught",
-                        eventDefinition = BpmnSignalEventDefinition(""),
-                    ),
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Broadcast caught",
+                    eventDefinition = BpmnSignalEventDefinition(""),
+                ),
             )
         assertContains(
             validator.validate(definition).joinToString("\n"),
@@ -430,11 +430,11 @@ class BpmnDefinitionValidatorTest {
         val definition =
             minimalDefinition(
                 end =
-                    BpmnEndEvent(
-                        "EndEvent_1",
-                        "Errored out",
-                        eventDefinition = BpmnErrorEventDefinition(""),
-                    ),
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Errored out",
+                    eventDefinition = BpmnErrorEventDefinition(""),
+                ),
             )
         assertContains(
             validator.validate(definition).joinToString("\n"),
@@ -447,11 +447,11 @@ class BpmnDefinitionValidatorTest {
         val definition =
             minimalDefinition(
                 end =
-                    BpmnEndEvent(
-                        "EndEvent_1",
-                        "Escalated",
-                        eventDefinition = BpmnEscalationEventDefinition(""),
-                    ),
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Escalated",
+                    eventDefinition = BpmnEscalationEventDefinition(""),
+                ),
             )
         assertContains(
             validator.validate(definition).joinToString("\n"),
@@ -469,22 +469,22 @@ class BpmnDefinitionValidatorTest {
                 processId = "Process_1",
                 processName = "Handle request",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Request received"),
-                        BpmnUserTask("Task_1", "Validate request"),
-                        BpmnBoundaryEvent(
-                            id = "Boundary_1",
-                            name = "Timeout",
-                            attachedToRef = "",
-                            eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
-                        ),
-                        BpmnEndEvent("EndEvent_1", "Request completed"),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnBoundaryEvent(
+                        id = "Boundary_1",
+                        name = "Timeout",
+                        attachedToRef = "",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
                     ),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
-                        BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                ),
             )
         assertContains(
             validator.validate(definition).joinToString("\n"),
@@ -502,10 +502,10 @@ class BpmnDefinitionValidatorTest {
         processName = "Handle request",
         nodes = listOf(start, task, end),
         sequences =
-            listOf(
-                BpmnEdge("Flow_1", start.id, task.id),
-                BpmnEdge("Flow_2", task.id, end.id),
-            ),
+        listOf(
+            BpmnEdge("Flow_1", start.id, task.id),
+            BpmnEdge("Flow_2", task.id, end.id),
+        ),
         messages = messages,
     )
 
@@ -583,20 +583,19 @@ class BpmnDefinitionValidatorTest {
         )
     }
 
-    private fun intermediateDefinition(intermediate: BpmnNode) =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Handle request",
-            nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Request received"),
-                    intermediate,
-                    BpmnEndEvent("EndEvent_1", "Request completed"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "StartEvent_1", intermediate.id),
-                    BpmnEdge("Flow_2", intermediate.id, "EndEvent_1"),
-                ),
-        )
+    private fun intermediateDefinition(intermediate: BpmnNode) = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Handle request",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Request received"),
+            intermediate,
+            BpmnEndEvent("EndEvent_1", "Request completed"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", intermediate.id),
+            BpmnEdge("Flow_2", intermediate.id, "EndEvent_1"),
+        ),
+    )
 }

@@ -62,12 +62,12 @@ internal class BpmnRefinementEngine(
                 repairAttempts = 0,
                 graph = graph,
                 evaluation =
-                    validator.evaluate(
-                        graph = graph,
-                        definition = rendered.definition,
-                        rendered = rendered,
-                        repairAttempts = 0,
-                    ),
+                validator.evaluate(
+                    graph = graph,
+                    definition = rendered.definition,
+                    rendered = rendered,
+                    repairAttempts = 0,
+                ),
                 messages = initialMessages,
             )
         val initialRecord = attemptRecordFactory.toRecord(initialAttempt)

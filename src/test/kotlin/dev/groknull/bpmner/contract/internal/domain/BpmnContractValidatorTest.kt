@@ -96,13 +96,13 @@ class BpmnContractValidatorTest {
         val contract =
             linearContract().copy(
                 assumptions =
-                    listOf(
-                        ContractAssumption(
-                            id = "assumption-untracked",
-                            text = "Customer is human",
-                            sourceIds = emptyList(),
-                        ),
+                listOf(
+                    ContractAssumption(
+                        id = "assumption-untracked",
+                        text = "Customer is human",
+                        sourceIds = emptyList(),
                     ),
+                ),
             )
         val report = validator.validate(contract)
         assertFalse(report.isValid)
@@ -136,10 +136,10 @@ class BpmnContractValidatorTest {
         val brokenDecision =
             originalDecision.copy(
                 branches =
-                    listOf(
-                        DefaultBranch(id = "branch-default-only-a", label = "A"),
-                        DefaultBranch(id = "branch-default-only-b", label = "B"),
-                    ),
+                listOf(
+                    DefaultBranch(id = "branch-default-only-a", label = "A"),
+                    DefaultBranch(id = "branch-default-only-b", label = "B"),
+                ),
             )
         val contract = branchingContract.copy(decisions = listOf(brokenDecision))
         val codes = validator.validate(contract).issues.map { it.code }
@@ -155,10 +155,10 @@ class BpmnContractValidatorTest {
         val decision =
             originalDecision.copy(
                 branches =
-                    listOf(
-                        ConditionalBranch(id = "br-yes", label = "Eligible", condition = "score >= 750"),
-                        DefaultBranch(id = "br-fallback", label = "Manual review"),
-                    ),
+                listOf(
+                    ConditionalBranch(id = "br-yes", label = "Eligible", condition = "score >= 750"),
+                    DefaultBranch(id = "br-fallback", label = "Manual review"),
+                ),
             )
         val contract = branchingContract.copy(decisions = listOf(decision))
         val report = validator.validate(contract)
@@ -173,10 +173,10 @@ class BpmnContractValidatorTest {
             originalDecision.copy(
                 kind = ContractGatewayKind.PARALLEL,
                 branches =
-                    listOf(
-                        UnconditionalBranch(id = "br-a", label = "Track A"),
-                        DefaultBranch(id = "br-default", label = "Default"),
-                    ),
+                listOf(
+                    UnconditionalBranch(id = "br-a", label = "Track A"),
+                    DefaultBranch(id = "br-default", label = "Default"),
+                ),
             )
         val contract = branchingContract.copy(decisions = listOf(parallelDecisionWithDefault))
         val codes = validator.validate(contract).issues.map { it.code }
@@ -191,10 +191,10 @@ class BpmnContractValidatorTest {
             originalDecision.copy(
                 kind = ContractGatewayKind.PARALLEL,
                 branches =
-                    listOf(
-                        UnconditionalBranch(id = "br-a", label = "Track A"),
-                        ConditionalBranch(id = "br-misplaced", label = "B", condition = "x"),
-                    ),
+                listOf(
+                    UnconditionalBranch(id = "br-a", label = "Track A"),
+                    ConditionalBranch(id = "br-misplaced", label = "B", condition = "x"),
+                ),
             )
         val contract = branchingContract.copy(decisions = listOf(parallelDecision))
         val codes = validator.validate(contract).issues.map { it.code }
@@ -208,10 +208,10 @@ class BpmnContractValidatorTest {
         val brokenDecision =
             originalDecision.copy(
                 branches =
-                    listOf(
-                        ConditionalBranch(id = "br-yes", label = "Yes", condition = "x"),
-                        UnconditionalBranch(id = "br-misplaced", label = "B"),
-                    ),
+                listOf(
+                    ConditionalBranch(id = "br-yes", label = "Yes", condition = "x"),
+                    UnconditionalBranch(id = "br-misplaced", label = "B"),
+                ),
             )
         val contract = branchingContract.copy(decisions = listOf(brokenDecision))
         val codes = validator.validate(contract).issues.map { it.code }
@@ -244,60 +244,59 @@ class BpmnContractValidatorTest {
 
     private val sources = listOf("ev-source")
 
-    private fun linearContract(): ProcessContract =
-        ProcessContract(
-            id = "contract-linear",
-            processName = "Submit application",
-            summary = "Application is submitted and reviewed.",
-            trigger = "Applicant submits an application",
-            triggerSourceIds = sources,
-            activities =
-                listOf(
-                    ContractActivity(
-                        id = "activity-receive",
-                        name = "Receive application",
-                        sourceIds = sources,
-                    ),
-                    ContractActivity(
-                        id = "activity-review",
-                        name = "Review application",
-                        sourceIds = sources,
-                    ),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState(
-                        id = "end-approved",
-                        name = "Application approved",
-                        sourceIds = sources,
-                    ),
-                ),
-        )
+    private fun linearContract(): ProcessContract = ProcessContract(
+        id = "contract-linear",
+        processName = "Submit application",
+        summary = "Application is submitted and reviewed.",
+        trigger = "Applicant submits an application",
+        triggerSourceIds = sources,
+        activities =
+        listOf(
+            ContractActivity(
+                id = "activity-receive",
+                name = "Receive application",
+                sourceIds = sources,
+            ),
+            ContractActivity(
+                id = "activity-review",
+                name = "Review application",
+                sourceIds = sources,
+            ),
+        ),
+        endStates =
+        listOf(
+            ContractEndState(
+                id = "end-approved",
+                name = "Application approved",
+                sourceIds = sources,
+            ),
+        ),
+    )
 
     private fun branchingContract(): ProcessContract {
         val linear = linearContract()
         return linear.copy(
             decisions =
-                listOf(
-                    ContractDecision(
-                        id = "decision-eligible",
-                        question = "Is the applicant eligible?",
-                        branches =
-                            listOf(
-                                ConditionalBranch(
-                                    id = "branch-yes",
-                                    label = "Eligible",
-                                    condition = "criteria met",
-                                ),
-                                ConditionalBranch(
-                                    id = "branch-no",
-                                    label = "Not eligible",
-                                    condition = "criteria not met",
-                                ),
-                            ),
-                        sourceIds = sources,
+            listOf(
+                ContractDecision(
+                    id = "decision-eligible",
+                    question = "Is the applicant eligible?",
+                    branches =
+                    listOf(
+                        ConditionalBranch(
+                            id = "branch-yes",
+                            label = "Eligible",
+                            condition = "criteria met",
+                        ),
+                        ConditionalBranch(
+                            id = "branch-no",
+                            label = "Not eligible",
+                            condition = "criteria not met",
+                        ),
                     ),
+                    sourceIds = sources,
                 ),
+            ),
         )
     }
 
@@ -305,12 +304,12 @@ class BpmnContractValidatorTest {
         val branching = branchingContract()
         return branching.copy(
             endStates =
-                branching.endStates +
-                    ContractEndState(
-                        id = "end-rejected",
-                        name = "Application rejected",
-                        sourceIds = sources,
-                    ),
+            branching.endStates +
+                ContractEndState(
+                    id = "end-rejected",
+                    name = "Application rejected",
+                    sourceIds = sources,
+                ),
         )
     }
 }

@@ -63,28 +63,27 @@ class BpmnProgressProjectionObserver(
         }
     }
 
-    private fun mapActionToLabel(actionName: String): String? =
-        when (actionName) {
-            "createProcessOutline" -> "Generating BPMN structure"
+    private fun mapActionToLabel(actionName: String): String? = when (actionName) {
+        "createProcessOutline" -> "Generating BPMN structure"
 
-            "validateOutline" -> "Validating outline"
+        "validateOutline" -> "Validating outline"
 
-            "generatePhasePlans" -> "Planning phase details"
+        "generatePhasePlans" -> "Planning phase details"
 
-            // not explicitly in ticket list but makes sense
-            "composeProcessGraph" -> "Composing process graph"
+        // not explicitly in ticket list but makes sense
+        "composeProcessGraph" -> "Composing process graph"
 
-            "assignOwnership" -> "Applying XML fixes"
+        "assignOwnership" -> "Applying XML fixes"
 
-            // approximation based on what it does
-            "assignLayout" -> "Laying out diagram"
+        // approximation based on what it does
+        "assignLayout" -> "Laying out diagram"
 
-            "renderBpmnXml" -> "Rendering BPMN XML"
+        "renderBpmnXml" -> "Rendering BPMN XML"
 
-            "refine" -> "Validating and repairing"
+        "refine" -> "Validating and repairing"
 
-            "finalizeBpmn" -> "Finalizing BPMN output"
+        "finalizeBpmn" -> "Finalizing BPMN output"
 
-            else -> null // Unknown events do not create noisy entries
-        }
+        else -> null // Unknown events do not create noisy entries
+    }
 }

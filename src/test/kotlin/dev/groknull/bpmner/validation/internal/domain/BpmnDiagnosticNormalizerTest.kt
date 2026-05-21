@@ -54,11 +54,10 @@ class BpmnDiagnosticNormalizerTest {
 
             override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
 
-            override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> =
-                mapOf(
-                    localXmlCapability.id to localXmlCapability,
-                    llmCapability.id to llmCapability,
-                )
+            override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = mapOf(
+                localXmlCapability.id to localXmlCapability,
+                llmCapability.id to llmCapability,
+            )
         }
 
     private val normalizer = BpmnDiagnosticNormalizer(stubPort)
@@ -81,15 +80,15 @@ class BpmnDiagnosticNormalizerTest {
     private val emptyGraph =
         LaidOutProcessGraph(
             ownedGraph =
-                OwnedElementGraph(
-                    composedGraph =
-                        ComposedProcessGraph(
-                            definition = emptyDefinition,
-                            objectOwnersByObjectRef = emptyMap(),
-                        ),
-                    elementOwnersByElementId = emptyMap(),
+            OwnedElementGraph(
+                composedGraph =
+                ComposedProcessGraph(
+                    definition = emptyDefinition,
                     objectOwnersByObjectRef = emptyMap(),
                 ),
+                elementOwnersByElementId = emptyMap(),
+                objectOwnersByObjectRef = emptyMap(),
+            ),
             definition = emptyDefinition,
         )
 
@@ -159,10 +158,9 @@ class BpmnDiagnosticNormalizerTest {
         assertEquals(RepairKind.LOCAL_XML_FIX, diagnostics[0].kind)
     }
 
-    private fun mockRendered(): RenderedBpmn =
-        RenderedBpmn(
-            definition = emptyDefinition,
-            xml = "<empty/>",
-            elementIndex = emptyIndex,
-        )
+    private fun mockRendered(): RenderedBpmn = RenderedBpmn(
+        definition = emptyDefinition,
+        xml = "<empty/>",
+        elementIndex = emptyIndex,
+    )
 }

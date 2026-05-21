@@ -32,22 +32,21 @@ internal class BpmnDiagnosticNormalizer(
         issues: List<XsdValidationIssue>,
         rendered: RenderedBpmn,
         graph: LaidOutProcessGraph,
-    ): List<BpmnDiagnostic> =
-        issues.map { issue ->
-            val elementId = issue.elementId?.takeIf { rendered.elementIndex.knownElementIds().contains(it) }
-            scopedDiagnostic(
-                graph = graph,
-                diagnostic =
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.XSD,
-                        message = issue.message,
-                        // XSD violations are always blocking — they mean the document is invalid.
-                        severity = BpmnDiagnosticSeverity.ERROR,
-                        elementId = elementId,
-                        objectRef = rendered.elementIndex.objectRefForElementId(elementId),
-                    ),
-            )
-        }
+    ): List<BpmnDiagnostic> = issues.map { issue ->
+        val elementId = issue.elementId?.takeIf { rendered.elementIndex.knownElementIds().contains(it) }
+        scopedDiagnostic(
+            graph = graph,
+            diagnostic =
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.XSD,
+                message = issue.message,
+                // XSD violations are always blocking — they mean the document is invalid.
+                severity = BpmnDiagnosticSeverity.ERROR,
+                elementId = elementId,
+                objectRef = rendered.elementIndex.objectRefForElementId(elementId),
+            ),
+        )
+    }
 
     fun normalizeLintDiagnostics(
         lintIssues: List<LintIssue>,
@@ -62,17 +61,17 @@ internal class BpmnDiagnosticNormalizer(
             scopedDiagnostic(
                 graph = graph,
                 diagnostic =
-                    BpmnDiagnostic(
-                        source = BpmnDiagnosticSource.LINT,
-                        message = issue.message,
-                        severity = BpmnDiagnosticSeverity.fromLintCategory(issue.category),
-                        rule = issue.rule,
-                        elementId = elementId,
-                        objectRef = elementIndex.objectRefForElementId(elementId),
-                        kind = cap?.kind ?: RepairKind.LLM_MODEL_PATCH,
-                        repairSafety = cap?.repairSafety,
-                        fixHandler = cap?.fixHandler,
-                    ),
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.LINT,
+                    message = issue.message,
+                    severity = BpmnDiagnosticSeverity.fromLintCategory(issue.category),
+                    rule = issue.rule,
+                    elementId = elementId,
+                    objectRef = elementIndex.objectRefForElementId(elementId),
+                    kind = cap?.kind ?: RepairKind.LLM_MODEL_PATCH,
+                    repairSafety = cap?.repairSafety,
+                    fixHandler = cap?.fixHandler,
+                ),
             )
         }
     }
@@ -80,17 +79,16 @@ internal class BpmnDiagnosticNormalizer(
     fun graphDiagnostic(
         graph: LaidOutProcessGraph,
         message: String,
-    ): BpmnDiagnostic =
-        scopedDiagnostic(
-            graph = graph,
-            diagnostic =
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.GRAPH,
-                    message = message,
-                    // Graph-shape failures are structural — always blocking.
-                    severity = BpmnDiagnosticSeverity.ERROR,
-                ),
-        )
+    ): BpmnDiagnostic = scopedDiagnostic(
+        graph = graph,
+        diagnostic =
+        BpmnDiagnostic(
+            source = BpmnDiagnosticSource.GRAPH,
+            message = message,
+            // Graph-shape failures are structural — always blocking.
+            severity = BpmnDiagnosticSeverity.ERROR,
+        ),
+    )
 
     fun scopedDiagnostic(
         graph: LaidOutProcessGraph,
@@ -113,21 +111,21 @@ internal class BpmnDiagnosticNormalizer(
         return diagnostic.copy(repairScope = repairScope, ownerRef = ownerRef)
     }
 
-    fun infrastructureDiagnostics(diagnostics: List<BpmnDiagnostic>): List<BpmnDiagnostic> =
-        diagnostics.filter { it.isValidatorInfrastructureFailure() }
+    fun infrastructureDiagnostics(diagnostics: List<BpmnDiagnostic>): List<BpmnDiagnostic> {
+        return diagnostics.filter { it.isValidatorInfrastructureFailure() }
+    }
 
-    fun validatorInfrastructureMessage(diagnostics: List<BpmnDiagnostic>): String =
-        buildString {
-            append("BPMN validator infrastructure failure")
-            diagnostics
-                .firstOrNull()
-                ?.message
-                ?.takeIf { it.isNotBlank() }
-                ?.let { append(": $it") }
-            appendLine()
-            appendLine("Non-repairable bpmn-lint diagnostic(s):")
-            diagnostics.forEach { diagnostic -> appendLine("- ${formatDiagnostic(diagnostic)}") }
-        }.trim()
+    fun validatorInfrastructureMessage(diagnostics: List<BpmnDiagnostic>): String = buildString {
+        append("BPMN validator infrastructure failure")
+        diagnostics
+            .firstOrNull()
+            ?.message
+            ?.takeIf { it.isNotBlank() }
+            ?.let { append(": $it") }
+        appendLine()
+        appendLine("Non-repairable bpmn-lint diagnostic(s):")
+        diagnostics.forEach { diagnostic -> appendLine("- ${formatDiagnostic(diagnostic)}") }
+    }.trim()
 
     fun formatDiagnostic(diagnostic: BpmnDiagnostic): String = diagnostic.format()
 
@@ -139,31 +137,30 @@ internal class BpmnDiagnosticNormalizer(
     private fun inferRepairScope(
         diagnostic: BpmnDiagnostic,
         ownerRef: String?,
-    ): BpmnRepairScope =
-        when (diagnostic.source) {
-            BpmnDiagnosticSource.RENDER -> {
-                BpmnRepairScope.FULL_PROCESS
-            }
+    ): BpmnRepairScope = when (diagnostic.source) {
+        BpmnDiagnosticSource.RENDER -> {
+            BpmnRepairScope.FULL_PROCESS
+        }
 
-            BpmnDiagnosticSource.GRAPH -> {
-                if (ownerRef != null || diagnostic.objectRef != null) {
-                    BpmnRepairScope.PHASE
-                } else {
-                    BpmnRepairScope.COMPOSITION
-                }
-            }
-
-            BpmnDiagnosticSource.XSD,
-            BpmnDiagnosticSource.LINT,
-            -> {
-                when {
-                    ownerRef != null -> BpmnRepairScope.PHASE
-                    diagnostic.objectRef == "process" -> BpmnRepairScope.COMPOSITION
-                    diagnostic.elementId != null -> BpmnRepairScope.COMPOSITION
-                    else -> BpmnRepairScope.FULL_PROCESS
-                }
+        BpmnDiagnosticSource.GRAPH -> {
+            if (ownerRef != null || diagnostic.objectRef != null) {
+                BpmnRepairScope.PHASE
+            } else {
+                BpmnRepairScope.COMPOSITION
             }
         }
+
+        BpmnDiagnosticSource.XSD,
+        BpmnDiagnosticSource.LINT,
+        -> {
+            when {
+                ownerRef != null -> BpmnRepairScope.PHASE
+                diagnostic.objectRef == "process" -> BpmnRepairScope.COMPOSITION
+                diagnostic.elementId != null -> BpmnRepairScope.COMPOSITION
+                else -> BpmnRepairScope.FULL_PROCESS
+            }
+        }
+    }
 
     companion object {
         private val VALIDATOR_INFRASTRUCTURE_MESSAGE_HINTS =

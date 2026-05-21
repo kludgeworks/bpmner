@@ -19,21 +19,20 @@ enum class BpmnGenerationStatus {
     VALIDATION_FAILED,
 }
 
-fun BpmnRequest.generationPrompt(): String =
-    buildString {
-        appendLine("Generate a BPMN definition object for this workflow.")
+fun BpmnRequest.generationPrompt(): String = buildString {
+    appendLine("Generate a BPMN definition object for this workflow.")
+    appendLine()
+    appendLine("Workflow description:")
+    appendLine(processDescription)
+    if (clarificationHistory.isNotEmpty()) {
         appendLine()
-        appendLine("Workflow description:")
-        appendLine(processDescription)
-        if (clarificationHistory.isNotEmpty()) {
-            appendLine()
-            appendLine("Clarification answers:")
-            clarificationHistory.forEach {
-                appendLine("- [${it.questionId}] ${it.questionText}")
-                appendLine("  Answer: ${it.answerText}")
-            }
+        appendLine("Clarification answers:")
+        clarificationHistory.forEach {
+            appendLine("- [${it.questionId}] ${it.questionText}")
+            appendLine("  Answer: ${it.answerText}")
         }
     }
+}
 
 @JsonClassDescription("Result of a BPMN generation request")
 data class BpmnResult(

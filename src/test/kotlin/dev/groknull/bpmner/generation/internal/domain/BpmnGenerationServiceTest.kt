@@ -255,20 +255,19 @@ class BpmnGenerationServiceTest {
     private fun assessment(
         verdict: ReadinessVerdict,
         score: Int,
-    ): ProcessInputAssessment =
-        ProcessInputAssessment(
-            verdict = verdict,
-            overallScore = score,
-            dimensions =
-                ReadinessDimension.entries.map {
-                    ReadinessDimensionScore(
-                        dimension = it,
-                        score = score,
-                        rationale = "Stubbed dimension score.",
-                    )
-                },
-            rationale = "Stubbed rationale.",
-        )
+    ): ProcessInputAssessment = ProcessInputAssessment(
+        verdict = verdict,
+        overallScore = score,
+        dimensions =
+        ReadinessDimension.entries.map {
+            ReadinessDimensionScore(
+                dimension = it,
+                score = score,
+                rationale = "Stubbed dimension score.",
+            )
+        },
+        rationale = "Stubbed rationale.",
+    )
 
     @Suppress("TooManyFunctions")
     private class CapturingBpmnAgentInvoker(
@@ -306,17 +305,16 @@ class BpmnGenerationServiceTest {
         override fun generate(
             request: BpmnRequest,
             assessment: ProcessInputAssessment,
-        ): BpmnResult =
-            throw BpmnAlignmentException(
-                message = "Alignment failed.",
-                report =
-                    BpmnAlignmentReport(
-                        verdict = AlignmentVerdict.FAILED,
-                        bpmnSummary = BpmnDefinitionSummary("P1", "Order", emptyList()),
-                        issues = emptyList(),
-                        rationale = "Hallucinated tasks found.",
-                    ),
-            )
+        ): BpmnResult = throw BpmnAlignmentException(
+            message = "Alignment failed.",
+            report =
+            BpmnAlignmentReport(
+                verdict = AlignmentVerdict.FAILED,
+                bpmnSummary = BpmnDefinitionSummary("P1", "Order", emptyList()),
+                issues = emptyList(),
+                rationale = "Hallucinated tasks found.",
+            ),
+        )
 
         override fun startAsync(
             request: BpmnRequest,

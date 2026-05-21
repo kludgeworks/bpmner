@@ -45,15 +45,14 @@ class BpmnLayoutAgentTest {
         replacementMap = null,
     )
 
-    private fun llmCapability(id: String) =
-        BpmnLintRuleCapability(
-            id = id,
-            kind = RepairKind.LLM_MODEL_PATCH,
-            repairSafety = BpmnRepairSafety.LLM_ONLY,
-            fixHandler = null,
-            handlerExists = false,
-            replacementMap = null,
-        )
+    private fun llmCapability(id: String) = BpmnLintRuleCapability(
+        id = id,
+        kind = RepairKind.LLM_MODEL_PATCH,
+        repairSafety = BpmnRepairSafety.LLM_ONLY,
+        fixHandler = null,
+        handlerExists = false,
+        replacementMap = null,
+    )
 
     // ---------------------------------------------------------------
     // validateFinalBpmnXml: XSD validation only
@@ -118,22 +117,22 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
-                    listOf(
-                        BpmnAutoFixResult(
-                            changed = true,
-                            xml = "<definitions fixed=\"true\" />",
-                            applied =
-                                listOf(
-                                    BpmnAutoFixChange(
-                                        rule = "bpmner/gtw-converging-gateway-unnamed",
-                                        elementId = "Gateway_1",
-                                        message = "Cleared gateway name",
-                                    ),
-                                ),
+                listOf(
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<definitions fixed=\"true\" />",
+                        applied =
+                        listOf(
+                            BpmnAutoFixChange(
+                                rule = "bpmner/gtw-converging-gateway-unnamed",
+                                elementId = "Gateway_1",
+                                message = "Cleared gateway name",
+                            ),
                         ),
                     ),
+                ),
                 capabilities =
-                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val layoutService = RecordingLayoutService(listOf("<definitions fixed=\"true\" layouted=\"true\" />"))
         val agent = buildLayoutAgent(lintService, xsdValidator, layoutService)
@@ -166,22 +165,22 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
-                    listOf(
-                        BpmnAutoFixResult(
-                            changed = false,
-                            xml = "<definitions changed=\"ignored\" />",
-                            skipped =
-                                listOf(
-                                    BpmnAutoFixSkip(
-                                        rule = "bpmner/gtw-converging-gateway-unnamed",
-                                        elementId = "Gateway_1",
-                                        message = "No-op",
-                                    ),
-                                ),
+                listOf(
+                    BpmnAutoFixResult(
+                        changed = false,
+                        xml = "<definitions changed=\"ignored\" />",
+                        skipped =
+                        listOf(
+                            BpmnAutoFixSkip(
+                                rule = "bpmner/gtw-converging-gateway-unnamed",
+                                elementId = "Gateway_1",
+                                message = "No-op",
+                            ),
                         ),
                     ),
+                ),
                 capabilities =
-                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
@@ -224,25 +223,25 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(localIssue, llmIssue)),
                 autoFixResponses =
-                    listOf(
-                        BpmnAutoFixResult(
-                            changed = true,
-                            xml = "<definitions fixed=\"true\" />",
-                            applied =
-                                listOf(
-                                    BpmnAutoFixChange(
-                                        rule = "bpmner/gtw-converging-gateway-unnamed",
-                                        elementId = "Gateway_1",
-                                        message = "Cleared gateway name",
-                                    ),
-                                ),
+                listOf(
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<definitions fixed=\"true\" />",
+                        applied =
+                        listOf(
+                            BpmnAutoFixChange(
+                                rule = "bpmner/gtw-converging-gateway-unnamed",
+                                elementId = "Gateway_1",
+                                message = "Cleared gateway name",
+                            ),
                         ),
                     ),
+                ),
                 capabilities =
-                    mapOf(
-                        "gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed"),
-                        "some-llm-rule" to llmCapability("some-llm-rule"),
-                    ),
+                mapOf(
+                    "gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed"),
+                    "some-llm-rule" to llmCapability("some-llm-rule"),
+                ),
             )
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())))
 
@@ -287,7 +286,7 @@ class BpmnLayoutAgentTest {
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses = listOf(null),
                 capabilities =
-                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val layoutService = RecordingLayoutService()
         val agent = buildLayoutAgent(lintService, RecordingXsdValidator(listOf(emptyList())), layoutService)
@@ -312,22 +311,22 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
-                    listOf(
-                        BpmnAutoFixResult(
-                            changed = true,
-                            xml = "<definitions><broken /></definitions>",
-                            applied =
-                                listOf(
-                                    BpmnAutoFixChange(
-                                        rule = "bpmner/gtw-converging-gateway-unnamed",
-                                        elementId = "Gateway_1",
-                                        message = "Cleared gateway name",
-                                    ),
-                                ),
+                listOf(
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<definitions><broken /></definitions>",
+                        applied =
+                        listOf(
+                            BpmnAutoFixChange(
+                                rule = "bpmner/gtw-converging-gateway-unnamed",
+                                elementId = "Gateway_1",
+                                message = "Cleared gateway name",
+                            ),
                         ),
                     ),
+                ),
                 capabilities =
-                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
             )
         val xsdValidator =
             RecordingXsdValidator(
@@ -359,22 +358,22 @@ class BpmnLayoutAgentTest {
             RecordingLintService(
                 responses = listOf(listOf(lintIssue)),
                 autoFixResponses =
-                    listOf(
-                        BpmnAutoFixResult(
-                            changed = true,
-                            xml = "<definitions fixed=\"true\" />",
-                            applied =
-                                listOf(
-                                    BpmnAutoFixChange(
-                                        rule = "bpmner/gtw-converging-gateway-unnamed",
-                                        elementId = "Gateway_1",
-                                        message = "Cleared gateway name",
-                                    ),
-                                ),
+                listOf(
+                    BpmnAutoFixResult(
+                        changed = true,
+                        xml = "<definitions fixed=\"true\" />",
+                        applied =
+                        listOf(
+                            BpmnAutoFixChange(
+                                rule = "bpmner/gtw-converging-gateway-unnamed",
+                                elementId = "Gateway_1",
+                                message = "Cleared gateway name",
+                            ),
                         ),
                     ),
+                ),
                 capabilities =
-                    mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
+                mapOf("gtw-converging-gateway-unnamed" to localXmlCapability("gtw-converging-gateway-unnamed")),
                 callLog = callLog,
             )
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()), callLog = callLog)
@@ -437,12 +436,11 @@ class BpmnLayoutAgentTest {
             return if (autoFixIndex < autoFixResponses.size) autoFixResponses[autoFixIndex++] else null
         }
 
-        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> =
-            buildMap {
-                ruleNames.distinct().forEach { ruleName ->
-                    docs[ruleName]?.let { put(ruleName, it) }
-                }
+        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = buildMap {
+            ruleNames.distinct().forEach { ruleName ->
+                docs[ruleName]?.let { put(ruleName, it) }
             }
+        }
 
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = capabilities
     }

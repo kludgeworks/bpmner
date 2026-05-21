@@ -374,10 +374,9 @@ class RepairRoutingModuleTest {
     private fun setNodeNamePatch(
         nodeId: String,
         name: String,
-    ): BpmnRepairPatch =
-        BpmnRepairPatch(
-            operations = listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
-        )
+    ): BpmnRepairPatch = BpmnRepairPatch(
+        operations = listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
+    )
 
     private fun assertRouteSummaryLogged(
         attemptNumber: Int,
@@ -399,8 +398,9 @@ class RepairRoutingModuleTest {
         )
     }
 
-    private fun renderedXmlOf(definition: BpmnDefinition): String =
-        BpmnDefinitionToXmlConverter().render(testLaidOutGraph(definition, withOwnership = true)).xml
+    private fun renderedXmlOf(definition: BpmnDefinition): String {
+        return BpmnDefinitionToXmlConverter().render(testLaidOutGraph(definition, withOwnership = true)).xml
+    }
 
     private fun anyString(): String = ArgumentMatchers.anyString()
 
@@ -429,14 +429,13 @@ class RepairRoutingModuleTest {
             promptContributors: List<PromptContributor>,
             contextualPromptContributors: List<ContextualPromptElement>,
             generateExamples: Boolean,
-        ): PromptRunner =
-            delegate.promptRunner(
-                llm = llm,
-                toolGroups = toolGroups,
-                toolObjects = toolObjects,
-                promptContributors = promptContributors,
-                contextualPromptContributors = contextualPromptContributors,
-                generateExamples = generateExamples,
-            )
+        ): PromptRunner = delegate.promptRunner(
+            llm = llm,
+            toolGroups = toolGroups,
+            toolObjects = toolObjects,
+            promptContributors = promptContributors,
+            contextualPromptContributors = contextualPromptContributors,
+            generateExamples = generateExamples,
+        )
     }
 }

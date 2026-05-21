@@ -59,12 +59,11 @@ internal class BpmnLocalRepairCapabilityValidator(
         cap: BpmnLintRuleCapability,
         kotlinHandlerNames: Set<String>,
         tsHandlerNames: Set<String>,
-    ): String? =
-        when (cap.kind) {
-            RepairKind.LOCAL_MODEL_FIX -> describeUnboundLocal(cap, "LOCAL_MODEL_FIX", "Kotlin", kotlinHandlerNames)
-            RepairKind.LOCAL_XML_FIX -> describeUnboundLocal(cap, "LOCAL_XML_FIX", "TS", tsHandlerNames)
-            else -> null
-        }
+    ): String? = when (cap.kind) {
+        RepairKind.LOCAL_MODEL_FIX -> describeUnboundLocal(cap, "LOCAL_MODEL_FIX", "Kotlin", kotlinHandlerNames)
+        RepairKind.LOCAL_XML_FIX -> describeUnboundLocal(cap, "LOCAL_XML_FIX", "TS", tsHandlerNames)
+        else -> null
+    }
 
     private fun describeUnboundLocal(
         cap: BpmnLintRuleCapability,

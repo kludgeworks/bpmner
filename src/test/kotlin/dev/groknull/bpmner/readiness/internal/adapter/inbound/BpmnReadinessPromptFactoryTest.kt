@@ -61,13 +61,13 @@ class BpmnReadinessPromptFactoryTest {
                     BpmnRequest(
                         processDescription = "Ship order",
                         clarificationHistory =
-                            listOf(
-                                ClarificationExchange(
-                                    questionId = "q1",
-                                    questionText = "What starts the process?",
-                                    answerText = "The customer submits an order.",
-                                ),
+                        listOf(
+                            ClarificationExchange(
+                                questionId = "q1",
+                                questionText = "What starts the process?",
+                                answerText = "The customer submits an order.",
                             ),
+                        ),
                     ),
                 )
 

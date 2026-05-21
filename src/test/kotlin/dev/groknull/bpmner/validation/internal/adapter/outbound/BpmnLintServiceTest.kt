@@ -72,9 +72,9 @@ class BpmnLintServiceTest {
                 engine = BpmnLintJsEngine(),
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        rules = mapOf("bpmner/act-verb-object-name" to "error"),
-                    ),
+                BpmnLintProperties(
+                    rules = mapOf("bpmner/act-verb-object-name" to "error"),
+                ),
             )
 
         val config = service.lintConfig()

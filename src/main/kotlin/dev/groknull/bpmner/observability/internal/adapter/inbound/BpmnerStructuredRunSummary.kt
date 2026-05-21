@@ -126,37 +126,37 @@ internal class BpmnerStructuredRunSummaryFactory {
             eventType = eventType,
             durationMs = process.runningTime.toMillis(),
             actions =
-                process.history.map { action ->
-                    BpmnerActionSummary(
-                        name = action.actionName,
-                        shortName = action.actionName.substringAfterLast("."),
-                        timestamp = action.timestamp,
-                        durationMs = action.runningTime.toMillis(),
-                    )
-                },
+            process.history.map { action ->
+                BpmnerActionSummary(
+                    name = action.actionName,
+                    shortName = action.actionName.substringAfterLast("."),
+                    timestamp = action.timestamp,
+                    durationMs = action.runningTime.toMillis(),
+                )
+            },
             models = process.modelsUsed().map { it.name },
             cost = process.cost(),
             usage =
-                BpmnerUsageSummary(
-                    promptTokens = usage.promptTokens ?: 0,
-                    completionTokens = usage.completionTokens ?: 0,
-                    totalTokens = usage.totalTokens ?: 0,
-                ),
+            BpmnerUsageSummary(
+                promptTokens = usage.promptTokens ?: 0,
+                completionTokens = usage.completionTokens ?: 0,
+                totalTokens = usage.totalTokens ?: 0,
+            ),
             request = artifacts.request?.toSummary(),
             artifacts =
-                BpmnerArtifactSummary(
-                    processId = definition?.processId,
-                    processName = definition?.processName,
-                    outline = artifacts.outline?.toSummary(),
-                    renderedXmlLength = artifacts.rendered?.xml?.length,
-                    validatedXmlLength = artifacts.validated?.xml?.length,
-                    finalXmlLength = artifacts.final?.xml?.length ?: artifacts.result?.xml?.length,
-                    outputFile = artifacts.result?.outputFile ?: artifacts.request?.outputFile,
-                    generationStatus =
-                        artifacts.result?.status?.name
-                            ?: BpmnGenerationStatus.GENERATED.name.takeIf { artifacts.final != null },
-                    autoFix = autoFix?.toSummary(),
-                ),
+            BpmnerArtifactSummary(
+                processId = definition?.processId,
+                processName = definition?.processName,
+                outline = artifacts.outline?.toSummary(),
+                renderedXmlLength = artifacts.rendered?.xml?.length,
+                validatedXmlLength = artifacts.validated?.xml?.length,
+                finalXmlLength = artifacts.final?.xml?.length ?: artifacts.result?.xml?.length,
+                outputFile = artifacts.result?.outputFile ?: artifacts.request?.outputFile,
+                generationStatus =
+                artifacts.result?.status?.name
+                    ?: BpmnGenerationStatus.GENERATED.name.takeIf { artifacts.final != null },
+                autoFix = autoFix?.toSummary(),
+            ),
             validation = validationEvents.toSummary(),
             failure = process.failureInfo?.toString(),
         )
@@ -193,56 +193,52 @@ private fun List<Any>.toArtifacts(): BlackboardArtifacts {
     return artifacts
 }
 
-private fun BpmnRequest.toSummary(): BpmnerRequestSummary =
-    BpmnerRequestSummary(
-        processDescription = processDescription,
-        styleGuidePresent = styleGuide != null,
-        outputFile = outputFile,
-        mode = mode.name,
-        clarificationCount = clarificationHistory.size,
-    )
+private fun BpmnRequest.toSummary(): BpmnerRequestSummary = BpmnerRequestSummary(
+    processDescription = processDescription,
+    styleGuidePresent = styleGuide != null,
+    outputFile = outputFile,
+    mode = mode.name,
+    clarificationCount = clarificationHistory.size,
+)
 
-private fun ProcessOutline.toSummary(): BpmnerOutlineSummary =
-    BpmnerOutlineSummary(
-        nodeCount = definition.nodes.size,
-        edgeCount = definition.sequences.size,
-        phaseCount = metrics.phaseCount,
-        exclusiveBranchCount = metrics.exclusiveBranchCount,
-        parallelBranchCount = metrics.parallelBranchCount,
-        loopCount = metrics.loopCount,
-        subprocessCount = metrics.subprocessCount,
-    )
+private fun ProcessOutline.toSummary(): BpmnerOutlineSummary = BpmnerOutlineSummary(
+    nodeCount = definition.nodes.size,
+    edgeCount = definition.sequences.size,
+    phaseCount = metrics.phaseCount,
+    exclusiveBranchCount = metrics.exclusiveBranchCount,
+    parallelBranchCount = metrics.parallelBranchCount,
+    loopCount = metrics.loopCount,
+    subprocessCount = metrics.subprocessCount,
+)
 
-private fun BpmnAutoFixResult.toSummary(): BpmnerAutoFixSummary =
-    BpmnerAutoFixSummary(
-        changed = changed,
-        applied = applied.size,
-        skipped = skipped.size,
-        errors = errors.size,
-    )
+private fun BpmnAutoFixResult.toSummary(): BpmnerAutoFixSummary = BpmnerAutoFixSummary(
+    changed = changed,
+    applied = applied.size,
+    skipped = skipped.size,
+    errors = errors.size,
+)
 
-private fun BpmnerCollectedValidationEvents.toSummary(): BpmnerValidationRunSummary =
-    BpmnerValidationRunSummary(
-        failedAttempts =
-            failed.map { event ->
-                val global = GlobalDiagnostics(event.diagnostics)
-                BpmnerValidationAttemptSummary(
-                    attemptNumber = event.attemptNumber,
-                    repairAttempts = event.repairAttempts,
-                    graphDiagnostics = global.countFor(BpmnDiagnosticSource.GRAPH),
-                    renderDiagnostics = global.countFor(BpmnDiagnosticSource.RENDER),
-                    xsdDiagnostics = global.countFor(BpmnDiagnosticSource.XSD),
-                    lintDiagnostics = global.countFor(BpmnDiagnosticSource.LINT),
-                    topDiagnostics = event.diagnostics.take(MAX_TOP_DIAGNOSTICS).map(BpmnDiagnostic::format),
-                )
-            },
-        passed =
-            passed?.let { event ->
-                BpmnerValidationPassedSummary(
-                    repairAttempts = event.repairAttempts,
-                    xmlLength = event.xml.length,
-                )
-            },
-    )
+private fun BpmnerCollectedValidationEvents.toSummary(): BpmnerValidationRunSummary = BpmnerValidationRunSummary(
+    failedAttempts =
+    failed.map { event ->
+        val global = GlobalDiagnostics(event.diagnostics)
+        BpmnerValidationAttemptSummary(
+            attemptNumber = event.attemptNumber,
+            repairAttempts = event.repairAttempts,
+            graphDiagnostics = global.countFor(BpmnDiagnosticSource.GRAPH),
+            renderDiagnostics = global.countFor(BpmnDiagnosticSource.RENDER),
+            xsdDiagnostics = global.countFor(BpmnDiagnosticSource.XSD),
+            lintDiagnostics = global.countFor(BpmnDiagnosticSource.LINT),
+            topDiagnostics = event.diagnostics.take(MAX_TOP_DIAGNOSTICS).map(BpmnDiagnostic::format),
+        )
+    },
+    passed =
+    passed?.let { event ->
+        BpmnerValidationPassedSummary(
+            repairAttempts = event.repairAttempts,
+            xmlLength = event.xml.length,
+        )
+    },
+)
 
 private const val MAX_TOP_DIAGNOSTICS = 5

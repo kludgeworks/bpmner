@@ -17,17 +17,16 @@ class ClasspathResourceResolver : LSResourceResolver {
         publicId: String?,
         systemId: String?,
         baseURI: String?,
-    ): LSInput? =
-        systemId
-            ?.substringAfterLast('/')
-            ?.takeIf { it.isNotBlank() }
-            ?.let { resourceName ->
-                javaClass
-                    .getResourceAsStream("/xsd/$resourceName")
-                    ?.let { stream ->
-                        ClasspathLSInput(publicId, systemId, stream)
-                    }
-            }
+    ): LSInput? = systemId
+        ?.substringAfterLast('/')
+        ?.takeIf { it.isNotBlank() }
+        ?.let { resourceName ->
+            javaClass
+                .getResourceAsStream("/xsd/$resourceName")
+                ?.let { stream ->
+                    ClasspathLSInput(publicId, systemId, stream)
+                }
+        }
 }
 
 private class ClasspathLSInput(

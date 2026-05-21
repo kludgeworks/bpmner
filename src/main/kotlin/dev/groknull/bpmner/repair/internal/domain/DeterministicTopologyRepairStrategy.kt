@@ -128,12 +128,11 @@ internal class DeterministicTopologyRepairStrategy(
         }
     }
 
-    private fun collectLocalXmlRules(diagnostics: List<BpmnDiagnostic>): Set<String> =
-        diagnostics
-            .asSequence()
-            .filter { it.source == BpmnDiagnosticSource.LINT && it.kind == RepairKind.LOCAL_XML_FIX }
-            .mapNotNull { it.bareRuleId() }
-            .toSet()
+    private fun collectLocalXmlRules(diagnostics: List<BpmnDiagnostic>): Set<String> = diagnostics
+        .asSequence()
+        .filter { it.source == BpmnDiagnosticSource.LINT && it.kind == RepairKind.LOCAL_XML_FIX }
+        .mapNotNull { it.bareRuleId() }
+        .toSet()
 
     private fun isAutoFixUsable(result: BpmnAutoFixResult): Boolean = result.changed && result.applied.isNotEmpty()
 
@@ -164,11 +163,11 @@ internal class DeterministicTopologyRepairStrategy(
             promptText = "Local lint auto-fix (" + result.applied.joinToString { it.rule } + ")",
             messages = attempt.messages,
             localFixSummary =
-                BpmnLocalFixSummary(
-                    modelApplied = 0,
-                    xmlApplied = result.applied.size,
-                    xmlErrors = result.errors.size,
-                ),
+            BpmnLocalFixSummary(
+                modelApplied = 0,
+                xmlApplied = result.applied.size,
+                xmlErrors = result.errors.size,
+            ),
         )
     }
 

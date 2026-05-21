@@ -13,12 +13,11 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnGeneratorMetrics {
-    fun calculate(definition: BpmnDefinition): OutlineMetrics =
-        OutlineMetrics(
-            phaseCount = 1,
-            exclusiveBranchCount = definition.nodes.count { it is BpmnExclusiveGateway },
-            parallelBranchCount = definition.nodes.count { it is BpmnParallelGateway },
-            loopCount = definition.sequences.count { it.sourceRef == it.targetRef },
-            subprocessCount = 0,
-        )
+    fun calculate(definition: BpmnDefinition): OutlineMetrics = OutlineMetrics(
+        phaseCount = 1,
+        exclusiveBranchCount = definition.nodes.count { it is BpmnExclusiveGateway },
+        parallelBranchCount = definition.nodes.count { it is BpmnParallelGateway },
+        loopCount = definition.sequences.count { it.sourceRef == it.targetRef },
+        subprocessCount = 0,
+    )
 }

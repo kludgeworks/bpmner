@@ -53,29 +53,28 @@ class BpmnGeneratorRunner(
         applicationShutdown.exit()
     }
 
-    private fun messageFor(result: BpmnResult): String =
-        when (result.status) {
-            BpmnGenerationStatus.GENERATED -> {
-                AnsiOutput.toString(
-                    AnsiColor.BRIGHT_GREEN,
-                    "✨ Done! BPMN written to: ${result.outputFile ?: "(none)"}",
-                )
-            }
-
-            BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
-                AnsiOutput.toString(
-                    AnsiColor.BRIGHT_YELLOW,
-                    "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile ?: "(not written)"}",
-                )
-            }
-
-            BpmnGenerationStatus.ALIGNMENT_FAILED,
-            BpmnGenerationStatus.VALIDATION_FAILED,
-            -> {
-                AnsiOutput.toString(
-                    AnsiColor.BRIGHT_RED,
-                    "⚠ Generation finished with status ${result.status}.",
-                )
-            }
+    private fun messageFor(result: BpmnResult): String = when (result.status) {
+        BpmnGenerationStatus.GENERATED -> {
+            AnsiOutput.toString(
+                AnsiColor.BRIGHT_GREEN,
+                "✨ Done! BPMN written to: ${result.outputFile ?: "(none)"}",
+            )
         }
+
+        BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
+            AnsiOutput.toString(
+                AnsiColor.BRIGHT_YELLOW,
+                "⚠ Generation blocked: input needs clarification. Readiness report: ${result.reportFile ?: "(not written)"}",
+            )
+        }
+
+        BpmnGenerationStatus.ALIGNMENT_FAILED,
+        BpmnGenerationStatus.VALIDATION_FAILED,
+        -> {
+            AnsiOutput.toString(
+                AnsiColor.BRIGHT_RED,
+                "⚠ Generation finished with status ${result.status}.",
+            )
+        }
+    }
 }

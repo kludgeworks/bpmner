@@ -82,16 +82,16 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            firstResult,
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.GENERATED,
-                                xml = "<definitions />",
-                            ),
+                ArrayDeque(
+                    listOf(
+                        firstResult,
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.GENERATED,
+                            xml = "<definitions />",
                         ),
                     ),
+                ),
             )
         val prompter = CapturingPrompter(mapOf("q-trigger" to "The customer submits an order."))
         val commands = BpmnShellCommands(generationUseCase, prompter)
@@ -123,15 +123,15 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.ALIGNMENT_FAILED,
-                                reportFile = "ship.alignment.md",
-                            ),
+                ArrayDeque(
+                    listOf(
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.ALIGNMENT_FAILED,
+                            reportFile = "ship.alignment.md",
                         ),
                     ),
+                ),
             )
         val commands = BpmnShellCommands(generationUseCase, CapturingPrompter())
 
@@ -152,15 +152,15 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.VALIDATION_FAILED,
-                                reportFile = "ship.validation.md",
-                            ),
+                ArrayDeque(
+                    listOf(
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.VALIDATION_FAILED,
+                            reportFile = "ship.validation.md",
                         ),
                     ),
+                ),
             )
         val commands = BpmnShellCommands(generationUseCase, CapturingPrompter())
 
@@ -184,25 +184,25 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                                readinessReport = weakAssessment(questionId = "q-round-1"),
-                            ),
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                                readinessReport = weakAssessment(questionId = "q-round-2"),
-                            ),
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.GENERATED,
-                                xml = "<definitions />",
-                            ),
+                ArrayDeque(
+                    listOf(
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                            readinessReport = weakAssessment(questionId = "q-round-1"),
+                        ),
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                            readinessReport = weakAssessment(questionId = "q-round-2"),
+                        ),
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.GENERATED,
+                            xml = "<definitions />",
                         ),
                     ),
+                ),
             )
         val prompter =
             CapturingPrompter(
@@ -273,20 +273,20 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                                readinessReport = weakAssessment(questionId = "q-trigger"),
-                            ),
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                                readinessReport = weakAssessment(questionId = "q-trigger"),
-                            ),
+                ArrayDeque(
+                    listOf(
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                            readinessReport = weakAssessment(questionId = "q-trigger"),
+                        ),
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                            readinessReport = weakAssessment(questionId = "q-trigger"),
                         ),
                     ),
+                ),
             )
         val prompter = CapturingPrompter(mapOf("q-trigger" to "An order arrives."))
         val commands = BpmnShellCommands(generationUseCase, prompter)
@@ -308,16 +308,16 @@ class BpmnShellCommandsTest {
         val generationUseCase =
             CapturingGenerationUseCase(
                 results =
-                    ArrayDeque(
-                        listOf(
-                            BpmnResult(
-                                outputFile = "ship.bpmn",
-                                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                                readinessReport = weakAssessment(),
-                                reportFile = "ship.guardrails.md",
-                            ),
+                ArrayDeque(
+                    listOf(
+                        BpmnResult(
+                            outputFile = "ship.bpmn",
+                            status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+                            readinessReport = weakAssessment(),
+                            reportFile = "ship.guardrails.md",
                         ),
                     ),
+                ),
             )
         val commands = BpmnShellCommands(generationUseCase, CapturingPrompter(mapOf("q-trigger" to "   ")))
 
@@ -375,29 +375,28 @@ class BpmnShellCommandsTest {
         }
     }
 
-    private fun weakAssessment(questionId: String = "q-trigger") =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
-            overallScore = 60,
-            dimensions =
-                listOf(
-                    ReadinessDimensionScore(
-                        dimension = ReadinessDimension.START_TRIGGER,
-                        score = 0,
-                        rationale = "Start trigger missing.",
-                        missingAreas = listOf(MissingProcessArea.START_TRIGGER),
-                    ),
-                ),
-            missingAreas = listOf(MissingProcessArea.START_TRIGGER),
-            clarificationQuestions =
-                listOf(
-                    ClarificationQuestion(
-                        id = questionId,
-                        questionText = "What starts the process?",
-                        relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
-                        relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
-                    ),
-                ),
-            rationale = "The start trigger is missing.",
-        )
+    private fun weakAssessment(questionId: String = "q-trigger") = ProcessInputAssessment(
+        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+        overallScore = 60,
+        dimensions =
+        listOf(
+            ReadinessDimensionScore(
+                dimension = ReadinessDimension.START_TRIGGER,
+                score = 0,
+                rationale = "Start trigger missing.",
+                missingAreas = listOf(MissingProcessArea.START_TRIGGER),
+            ),
+        ),
+        missingAreas = listOf(MissingProcessArea.START_TRIGGER),
+        clarificationQuestions =
+        listOf(
+            ClarificationQuestion(
+                id = questionId,
+                questionText = "What starts the process?",
+                relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
+            ),
+        ),
+        rationale = "The start trigger is missing.",
+    )
 }

@@ -75,12 +75,12 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             .thenReturn(
                 AlignmentFindings(
                     issues =
-                        listOf(
-                            AlignmentIssue(
-                                elementId = "unsupported_task",
-                                classification = AlignmentClassification.UNSUPPORTED,
-                            ),
+                    listOf(
+                        AlignmentIssue(
+                            elementId = "unsupported_task",
+                            classification = AlignmentClassification.UNSUPPORTED,
                         ),
+                    ),
                     rationale = "Generated process is completely unrelated to the contract.",
                 ),
             )
@@ -102,48 +102,45 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
         assertEquals(AlignmentVerdict.FAILED, error.report.verdict)
     }
 
-    private fun validAssessment() =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.READY,
-            overallScore = 90,
-            dimensions =
-                listOf(
-                    ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "OK"),
-                ),
-            evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
-            rationale = "Ready",
-        )
+    private fun validAssessment() = ProcessInputAssessment(
+        verdict = ReadinessVerdict.READY,
+        overallScore = 90,
+        dimensions =
+        listOf(
+            ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "OK"),
+        ),
+        evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
+        rationale = "Ready",
+    )
 
-    private fun validContract() =
-        ProcessContract(
-            id = "contract-1",
-            processName = "Dummy",
-            summary = "Summary",
-            trigger = "Trigger",
-            triggerSourceIds = listOf("ev1"),
-            activities =
-                listOf(
-                    ContractActivity("a1", "A1", sourceIds = listOf("ev1")),
-                    ContractActivity("a2", "A2", sourceIds = listOf("ev1")),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState("e1", "E1", sourceIds = listOf("ev1")),
-                ),
-        )
+    private fun validContract() = ProcessContract(
+        id = "contract-1",
+        processName = "Dummy",
+        summary = "Summary",
+        trigger = "Trigger",
+        triggerSourceIds = listOf("ev1"),
+        activities =
+        listOf(
+            ContractActivity("a1", "A1", sourceIds = listOf("ev1")),
+            ContractActivity("a2", "A2", sourceIds = listOf("ev1")),
+        ),
+        endStates =
+        listOf(
+            ContractEndState("e1", "E1", sourceIds = listOf("ev1")),
+        ),
+    )
 
-    private fun validDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Dummy",
-            nodes =
-                listOf(
-                    BpmnStartEvent("start", "Start"),
-                    BpmnEndEvent("end", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("flow1", "start", "end"),
-                ),
-        )
+    private fun validDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Dummy",
+        nodes =
+        listOf(
+            BpmnStartEvent("start", "Start"),
+            BpmnEndEvent("end", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("flow1", "start", "end"),
+        ),
+    )
 }

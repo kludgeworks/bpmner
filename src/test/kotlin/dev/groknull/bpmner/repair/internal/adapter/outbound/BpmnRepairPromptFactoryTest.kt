@@ -106,24 +106,23 @@ class BpmnRepairPromptFactoryTest {
         repairScope = BpmnRepairScope.PHASE,
     )
 
-    private fun sampleDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Sample",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do thing"),
-                    BpmnUserTask("Task_2", "Do other"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Task_1", "Task_2"),
-                    BpmnEdge("Flow_3", "Task_2", "End_1"),
-                ),
-        )
+    private fun sampleDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Sample",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do thing"),
+            BpmnUserTask("Task_2", "Do other"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1"),
+            BpmnEdge("Flow_2", "Task_1", "Task_2"),
+            BpmnEdge("Flow_3", "Task_2", "End_1"),
+        ),
+    )
 
     private fun attempt(
         definition: BpmnDefinition,
@@ -134,11 +133,11 @@ class BpmnRepairPromptFactoryTest {
                 definition = definition,
                 xml = "<bpmn/>",
                 elementIndex =
-                    BpmnElementIndex(
-                        processId = definition.processId,
-                        nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
-                        edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-                    ),
+                BpmnElementIndex(
+                    processId = definition.processId,
+                    nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
+                    edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
+                ),
             )
         val evaluation =
             BpmnEvaluation(

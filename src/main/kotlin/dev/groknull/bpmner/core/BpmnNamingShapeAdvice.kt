@@ -42,45 +42,43 @@ internal object BpmnNamingShapeAdvice {
      * opinion today (e.g. converging gateways, which are unnamed by policy).
      */
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
-    fun adviceFor(node: BpmnNode): Advice? =
-        when (node) {
-            is BpmnStartEvent -> START_EVENT_ADVICE
-            is BpmnEndEvent -> END_EVENT_ADVICE
-            is BpmnUserTask -> USER_TASK_ADVICE
-            is BpmnServiceTask -> SERVICE_TASK_ADVICE
-            is BpmnScriptTask -> SCRIPT_TASK_ADVICE
-            is BpmnBusinessRuleTask -> BUSINESS_RULE_TASK_ADVICE
-            is BpmnSendTask -> SEND_TASK_ADVICE
-            is BpmnReceiveTask -> RECEIVE_TASK_ADVICE
-            is BpmnManualTask -> MANUAL_TASK_ADVICE
-            is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
-            is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
-            is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
-            is BpmnIntermediateThrowEvent -> INTERMEDIATE_THROW_EVENT_ADVICE
-            is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
-        }
+    fun adviceFor(node: BpmnNode): Advice? = when (node) {
+        is BpmnStartEvent -> START_EVENT_ADVICE
+        is BpmnEndEvent -> END_EVENT_ADVICE
+        is BpmnUserTask -> USER_TASK_ADVICE
+        is BpmnServiceTask -> SERVICE_TASK_ADVICE
+        is BpmnScriptTask -> SCRIPT_TASK_ADVICE
+        is BpmnBusinessRuleTask -> BUSINESS_RULE_TASK_ADVICE
+        is BpmnSendTask -> SEND_TASK_ADVICE
+        is BpmnReceiveTask -> RECEIVE_TASK_ADVICE
+        is BpmnManualTask -> MANUAL_TASK_ADVICE
+        is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
+        is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
+        is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
+        is BpmnIntermediateThrowEvent -> INTERMEDIATE_THROW_EVENT_ADVICE
+        is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
+    }
 
     /**
      * All advice entries by kind discriminator name, in a stable display order suitable for
      * appending to a generator prompt.
      */
-    fun allAdvice(): List<Advice> =
-        listOf(
-            START_EVENT_ADVICE,
-            INTERMEDIATE_CATCH_EVENT_ADVICE,
-            INTERMEDIATE_THROW_EVENT_ADVICE,
-            BOUNDARY_EVENT_ADVICE,
-            END_EVENT_ADVICE,
-            USER_TASK_ADVICE,
-            SERVICE_TASK_ADVICE,
-            SCRIPT_TASK_ADVICE,
-            BUSINESS_RULE_TASK_ADVICE,
-            SEND_TASK_ADVICE,
-            RECEIVE_TASK_ADVICE,
-            MANUAL_TASK_ADVICE,
-            EXCLUSIVE_GATEWAY_ADVICE,
-            PARALLEL_GATEWAY_ADVICE,
-        )
+    fun allAdvice(): List<Advice> = listOf(
+        START_EVENT_ADVICE,
+        INTERMEDIATE_CATCH_EVENT_ADVICE,
+        INTERMEDIATE_THROW_EVENT_ADVICE,
+        BOUNDARY_EVENT_ADVICE,
+        END_EVENT_ADVICE,
+        USER_TASK_ADVICE,
+        SERVICE_TASK_ADVICE,
+        SCRIPT_TASK_ADVICE,
+        BUSINESS_RULE_TASK_ADVICE,
+        SEND_TASK_ADVICE,
+        RECEIVE_TASK_ADVICE,
+        MANUAL_TASK_ADVICE,
+        EXCLUSIVE_GATEWAY_ADVICE,
+        PARALLEL_GATEWAY_ADVICE,
+    )
 
     /**
      * Returns the [Advice] keyed by lint-rule id. Used by the repair prompt to surface a
@@ -94,13 +92,12 @@ internal object BpmnNamingShapeAdvice {
      * `"EVENT (start / intermediate / end)"`) and whose `shape`/examples are still accurate
      * because the rule has uniform semantics across the kinds it targets.
      */
-    fun adviceForRule(ruleId: String): Advice? =
-        when (ruleId) {
-            "bpmner/evt-event-state-name", "bpmner/evt-event-state-pattern" -> EVENT_STATE_ADVICE
-            "bpmner/act-verb-object-name" -> TASK_VERB_OBJECT_ADVICE
-            "bpmner/gtw-diverging-gateway-question" -> EXCLUSIVE_GATEWAY_ADVICE
-            else -> null
-        }
+    fun adviceForRule(ruleId: String): Advice? = when (ruleId) {
+        "bpmner/evt-event-state-name", "bpmner/evt-event-state-pattern" -> EVENT_STATE_ADVICE
+        "bpmner/act-verb-object-name" -> TASK_VERB_OBJECT_ADVICE
+        "bpmner/gtw-diverging-gateway-question" -> EXCLUSIVE_GATEWAY_ADVICE
+        else -> null
+    }
 
     private val START_EVENT_ADVICE =
         Advice(
@@ -114,8 +111,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "END_EVENT",
             shape =
-                "Past-tense state describing the terminal state the process reached." +
-                    " Object + past-participle verb. Never start with an imperative verb.",
+            "Past-tense state describing the terminal state the process reached." +
+                " Object + past-participle verb. Never start with an imperative verb.",
             examples = listOf("Offer issued", "Application declined", "Decline letter written"),
             antiExamples = listOf("Issue offer", "Decline application", "Write decline letter"),
         )
@@ -140,8 +137,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "EXCLUSIVE_GATEWAY (diverging)",
             shape =
-                "Question form ending in '?'. Names the decision being made," +
-                    " not the routing mechanism. Converging joins are unnamed (policy).",
+            "Question form ending in '?'. Names the decision being made," +
+                " not the routing mechanism. Converging joins are unnamed (policy).",
             examples = listOf("Is the score above 750?", "Which credit tier?", "Did validation pass?"),
             antiExamples = listOf("Routing", "Decision", "Branch on score"),
         )
@@ -150,8 +147,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "PARALLEL_GATEWAY (diverging)",
             shape =
-                "Imperative describing the concurrent action the fork triggers." +
-                    " Converging joins are unnamed (policy).",
+            "Imperative describing the concurrent action the fork triggers." +
+                " Converging joins are unnamed (policy).",
             examples = listOf("Run preparation tracks", "Send notifications in parallel"),
             antiExamples = listOf("Parallel split", "Fork", "AND-split"),
         )
@@ -160,9 +157,9 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "INTERMEDIATE_CATCH_EVENT",
             shape =
-                "Past-tense state form describing what was caught (same shape as start/end" +
-                    " events). The event-definition kind (timer / message / signal / error /" +
-                    " escalation) determines what's caught; the name describes the observed state.",
+            "Past-tense state form describing what was caught (same shape as start/end" +
+                " events). The event-definition kind (timer / message / signal / error /" +
+                " escalation) determines what's caught; the name describes the observed state.",
             examples = listOf("Approval received", "Timer fired", "Confirmation arrived"),
             antiExamples = listOf("Receive approval", "Trigger timer", "Wait for confirmation"),
         )
@@ -171,9 +168,9 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "INTERMEDIATE_THROW_EVENT",
             shape =
-                "Past-tense form describing the event the process emits (state of having" +
-                    " thrown). The event-definition kind (message / signal / escalation) determines" +
-                    " what's thrown; the name describes the emission's effect.",
+            "Past-tense form describing the event the process emits (state of having" +
+                " thrown). The event-definition kind (message / signal / escalation) determines" +
+                " what's thrown; the name describes the emission's effect.",
             examples = listOf("Notification sent", "Escalation raised", "Signal broadcast"),
             antiExamples = listOf("Send notification", "Raise escalation", "Broadcast signal"),
         )
@@ -182,9 +179,9 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "BOUNDARY_EVENT",
             shape =
-                "Short event-shaped name describing what the boundary catches on the host" +
-                    " activity. Past-tense state or noun phrase. The host activity is named" +
-                    " separately and is not duplicated here.",
+            "Short event-shaped name describing what the boundary catches on the host" +
+                " activity. Past-tense state or noun phrase. The host activity is named" +
+                " separately and is not duplicated here.",
             examples = listOf("Timer fired", "Error caught", "Escalation received"),
             antiExamples = listOf("Cancel approval", "Handle error", "Catch escalation"),
         )
@@ -193,8 +190,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "SCRIPT_TASK",
             shape =
-                "Imperative verb-object naming the computation or transformation the engine" +
-                    " evaluates inline. Reads like a service task but with no external service.",
+            "Imperative verb-object naming the computation or transformation the engine" +
+                " evaluates inline. Reads like a service task but with no external service.",
             examples = listOf("Normalise address", "Compute loan-to-value ratio", "Convert currencies"),
             antiExamples = listOf("Script", "Run script", "Data normalisation"),
         )
@@ -203,9 +200,9 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "BUSINESS_RULE_TASK",
             shape =
-                "Imperative verb-object describing the decision being evaluated, typically" +
-                    " starting with `Evaluate`, `Determine`, or `Apply` to signal the rule-set" +
-                    " call. The decision id lives on `decisionRef`.",
+            "Imperative verb-object describing the decision being evaluated, typically" +
+                " starting with `Evaluate`, `Determine`, or `Apply` to signal the rule-set" +
+                " call. The decision id lives on `decisionRef`.",
             examples = listOf("Evaluate credit policy", "Determine premium tier", "Apply pricing rules"),
             antiExamples = listOf("Decision", "Credit policy", "Rules engine"),
         )
@@ -214,8 +211,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "SEND_TASK",
             shape =
-                "Imperative messaging verb-object describing the outbound message. Reads as" +
-                    " a fire-and-forget send: no acknowledgement is awaited.",
+            "Imperative messaging verb-object describing the outbound message. Reads as" +
+                " a fire-and-forget send: no acknowledgement is awaited.",
             examples = listOf("Send decline notification", "Notify customer of approval", "Publish settlement"),
             antiExamples = listOf("Notification", "Send", "Message customer"),
         )
@@ -224,28 +221,28 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "RECEIVE_TASK",
             shape =
-                "Past-participle wait shape — names what arrived, not the act of waiting." +
-                    " Shares the past-tense event convention because the task IS a wait-point.",
+            "Past-participle wait shape — names what arrived, not the act of waiting." +
+                " Shares the past-tense event convention because the task IS a wait-point.",
             examples =
-                listOf(
-                    "Customer acknowledgement received",
-                    "Payment confirmation received",
-                    "Counter-signature received",
-                ),
+            listOf(
+                "Customer acknowledgement received",
+                "Payment confirmation received",
+                "Counter-signature received",
+            ),
             antiExamples =
-                listOf(
-                    "Wait for acknowledgement",
-                    "Receive payment confirmation",
-                    "Await counter-signature",
-                ),
+            listOf(
+                "Wait for acknowledgement",
+                "Receive payment confirmation",
+                "Await counter-signature",
+            ),
         )
 
     private val MANUAL_TASK_ADVICE =
         Advice(
             kind = "MANUAL_TASK",
             shape =
-                "Imperative verb-object naming the off-system work the human performs. Same" +
-                    " shape as a user task; the distinction is that no system UI mediates the work.",
+            "Imperative verb-object naming the off-system work the human performs. Same" +
+                " shape as a user task; the distinction is that no system UI mediates the work.",
             examples = listOf("Inspect property condition", "File paper documents", "Walk the trading floor"),
             antiExamples = listOf("Inspection", "Manual review", "Off-system work"),
         )
@@ -258,47 +255,47 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "EVENT (start / intermediate / end)",
             shape =
-                "Object + past-participle verb (state form). Never start with an imperative" +
-                    " verb. Applies to start, intermediate-catch, intermediate-throw, and end events.",
+            "Object + past-participle verb (state form). Never start with an imperative" +
+                " verb. Applies to start, intermediate-catch, intermediate-throw, and end events.",
             examples =
-                listOf(
-                    "Order received",
-                    "Timer fired",
-                    "Offer issued",
-                    "Application declined",
-                    "Decline letter written",
-                ),
+            listOf(
+                "Order received",
+                "Timer fired",
+                "Offer issued",
+                "Application declined",
+                "Decline letter written",
+            ),
             antiExamples =
-                listOf(
-                    "Receive order",
-                    "Trigger timer",
-                    "Issue offer",
-                    "Decline application",
-                    "Write decline letter",
-                ),
+            listOf(
+                "Receive order",
+                "Trigger timer",
+                "Issue offer",
+                "Decline application",
+                "Write decline letter",
+            ),
         )
 
     private val TASK_VERB_OBJECT_ADVICE =
         Advice(
             kind = "TASK (user / service)",
             shape =
-                "Imperative verb-object naming the work performed. Applies equally to user" +
-                    " tasks (human work) and service tasks (system work).",
+            "Imperative verb-object naming the work performed. Applies equally to user" +
+                " tasks (human work) and service tasks (system work).",
             examples =
-                listOf(
-                    "Validate request",
-                    "Approve loan",
-                    "Send notification",
-                    "Charge card",
-                    "Generate offer letter",
-                ),
+            listOf(
+                "Validate request",
+                "Approve loan",
+                "Send notification",
+                "Charge card",
+                "Generate offer letter",
+            ),
             antiExamples =
-                listOf(
-                    "Validation",
-                    "Loan approval",
-                    "Notification",
-                    "Card charge",
-                    "Letter generation",
-                ),
+            listOf(
+                "Validation",
+                "Loan approval",
+                "Notification",
+                "Card charge",
+                "Letter generation",
+            ),
         )
 }

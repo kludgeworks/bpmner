@@ -126,22 +126,21 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         verify(bpmnLintService, times(2)).lint(anyString())
     }
 
-    private fun validDefinition() =
-        BpmnDefinition(
-            processId = "Process_MakeToast",
-            processName = "Make Toast",
-            nodes =
-                listOf(
-                    BpmnStartEvent(id = "start", name = "Start"),
-                    BpmnUserTask(id = "task1", name = "Toast bread"),
-                    BpmnEndEvent(id = "end", name = "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
-                    BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
-                ),
-        )
+    private fun validDefinition() = BpmnDefinition(
+        processId = "Process_MakeToast",
+        processName = "Make Toast",
+        nodes =
+        listOf(
+            BpmnStartEvent(id = "start", name = "Start"),
+            BpmnUserTask(id = "task1", name = "Toast bread"),
+            BpmnEndEvent(id = "end", name = "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
+            BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
+        ),
+    )
 
     private fun sampleContract(): ProcessContract {
         val sources = listOf("s1")
@@ -152,14 +151,14 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             trigger = "Hunger",
             triggerSourceIds = sources,
             activities =
-                listOf(
-                    ContractActivity(id = "a1", name = "Get bread", sourceIds = sources),
-                    ContractActivity(id = "a2", name = "Toast bread", sourceIds = sources),
-                ),
+            listOf(
+                ContractActivity(id = "a1", name = "Get bread", sourceIds = sources),
+                ContractActivity(id = "a2", name = "Toast bread", sourceIds = sources),
+            ),
             endStates =
-                listOf(
-                    ContractEndState(id = "e1", name = "Toast ready", sourceIds = sources),
-                ),
+            listOf(
+                ContractEndState(id = "e1", name = "Toast ready", sourceIds = sources),
+            ),
         )
     }
 }

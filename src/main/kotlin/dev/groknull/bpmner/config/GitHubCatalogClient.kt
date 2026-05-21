@@ -21,27 +21,25 @@ object GitHubCatalogClient {
     private val logger = LoggerFactory.getLogger(GitHubCatalogClient::class.java)
     private val mapper = ObjectMapper().registerKotlinModule()
 
-    fun fetchTextModels(catalogUrl: String = "https://models.github.ai/catalog/models"): List<GitHubCatalogEntry> =
-        try {
-            parseTextModels(URI.create(catalogUrl).toURL().readText(Charsets.UTF_8))
-        } catch (e: IOException) {
-            logger.warn("Could not fetch GitHub Models catalog from {}: {}", catalogUrl, e.message)
-            emptyList()
-        }
+    fun fetchTextModels(catalogUrl: String = "https://models.github.ai/catalog/models"): List<GitHubCatalogEntry> = try {
+        parseTextModels(URI.create(catalogUrl).toURL().readText(Charsets.UTF_8))
+    } catch (e: IOException) {
+        logger.warn("Could not fetch GitHub Models catalog from {}: {}", catalogUrl, e.message)
+        emptyList()
+    }
 
-    internal fun parseTextModels(json: String): List<GitHubCatalogEntry> =
-        try {
-            mapper
-                .readTree(json)
-                .filter { node -> node.path("supported_output_modalities").any { it.asText() == "text" } }
-                .map { node ->
-                    GitHubCatalogEntry(
-                        id = node.path("id").asText(),
-                        publisher = node.path("publisher").asText(),
-                    )
-                }
-        } catch (e: JsonProcessingException) {
-            logger.warn("Could not parse GitHub Models catalog response: {}", e.message)
-            emptyList()
-        }
+    internal fun parseTextModels(json: String): List<GitHubCatalogEntry> = try {
+        mapper
+            .readTree(json)
+            .filter { node -> node.path("supported_output_modalities").any { it.asText() == "text" } }
+            .map { node ->
+                GitHubCatalogEntry(
+                    id = node.path("id").asText(),
+                    publisher = node.path("publisher").asText(),
+                )
+            }
+    } catch (e: JsonProcessingException) {
+        logger.warn("Could not parse GitHub Models catalog response: {}", e.message)
+        emptyList()
+    }
 }

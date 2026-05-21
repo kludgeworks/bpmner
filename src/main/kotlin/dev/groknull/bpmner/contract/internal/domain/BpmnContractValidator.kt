@@ -63,8 +63,8 @@ internal class BpmnContractValidator {
                     code = ContractValidationCode.INSUFFICIENT_ACTIVITIES,
                     severity = ContractIssueSeverity.ERROR,
                     message =
-                        "process contract must declare at least $MIN_ACTIVITIES activities" +
-                            " (found ${contract.activities.size})",
+                    "process contract must declare at least $MIN_ACTIVITIES activities" +
+                        " (found ${contract.activities.size})",
                     targetId = contract.id,
                 )
         }
@@ -76,8 +76,8 @@ internal class BpmnContractValidator {
                         code = ContractValidationCode.DECISION_BRANCH_TOO_FEW,
                         severity = ContractIssueSeverity.ERROR,
                         message =
-                            "decision must declare at least $MIN_DECISION_BRANCHES branches" +
-                                " (found ${decision.branches.size})",
+                        "decision must declare at least $MIN_DECISION_BRANCHES branches" +
+                            " (found ${decision.branches.size})",
                         targetId = decision.id,
                     )
             }
@@ -91,8 +91,8 @@ internal class BpmnContractValidator {
                         code = ContractValidationCode.DECISION_MULTIPLE_DEFAULTS,
                         severity = ContractIssueSeverity.ERROR,
                         message =
-                            "decision must declare at most one default branch" +
-                                " (found ${defaults.size})",
+                        "decision must declare at most one default branch" +
+                            " (found ${defaults.size})",
                         targetId = decision.id,
                     )
             }
@@ -105,8 +105,8 @@ internal class BpmnContractValidator {
                                 code = ContractValidationCode.UNCONDITIONAL_BRANCH_ON_EXCLUSIVE,
                                 severity = ContractIssueSeverity.ERROR,
                                 message =
-                                    "branch '${branch.id}' is UNCONDITIONAL but decision" +
-                                        " '${decision.id}' is EXCLUSIVE — use a ConditionalBranch with a condition",
+                                "branch '${branch.id}' is UNCONDITIONAL but decision" +
+                                    " '${decision.id}' is EXCLUSIVE — use a ConditionalBranch with a condition",
                                 targetId = branch.id,
                             )
                     }
@@ -116,8 +116,8 @@ internal class BpmnContractValidator {
                                 code = ContractValidationCode.DECISION_DEFAULT_WITHOUT_CONDITIONAL,
                                 severity = ContractIssueSeverity.ERROR,
                                 message =
-                                    "decision '${decision.id}' has a default branch but no conditional" +
-                                        " branch — a decision cannot be 100% default",
+                                "decision '${decision.id}' has a default branch but no conditional" +
+                                    " branch — a decision cannot be 100% default",
                                 targetId = decision.id,
                             )
                     }
@@ -130,8 +130,8 @@ internal class BpmnContractValidator {
                                 code = ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL,
                                 severity = ContractIssueSeverity.ERROR,
                                 message =
-                                    "branch '${branch.id}' is DEFAULT but decision '${decision.id}'" +
-                                        " is PARALLEL — default branches are valid only on EXCLUSIVE decisions",
+                                "branch '${branch.id}' is DEFAULT but decision '${decision.id}'" +
+                                    " is PARALLEL — default branches are valid only on EXCLUSIVE decisions",
                                 targetId = branch.id,
                             )
                     }
@@ -142,8 +142,8 @@ internal class BpmnContractValidator {
                                 code = ContractValidationCode.CONDITIONAL_BRANCH_ON_PARALLEL,
                                 severity = ContractIssueSeverity.ERROR,
                                 message =
-                                    "branch '${branch.id}' is CONDITIONAL but decision" +
-                                        " '${decision.id}' is PARALLEL — all parallel branches fire unconditionally",
+                                "branch '${branch.id}' is CONDITIONAL but decision" +
+                                    " '${decision.id}' is PARALLEL — all parallel branches fire unconditionally",
                                 targetId = branch.id,
                             )
                     }

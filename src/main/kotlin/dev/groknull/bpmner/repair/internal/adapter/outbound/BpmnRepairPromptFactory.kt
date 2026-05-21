@@ -36,47 +36,44 @@ internal class BpmnRepairPromptFactory(
     override fun initialMessages(
         request: BpmnRequest,
         definition: BpmnDefinition,
-    ): List<Message> =
-        listOf(
-            UserMessage(request.generationPrompt()),
-            AssistantMessage(fingerprints.serializeDefinition(definition)),
-        )
+    ): List<Message> = listOf(
+        UserMessage(request.generationPrompt()),
+        AssistantMessage(fingerprints.serializeDefinition(definition)),
+    )
 
     override fun patchFeedback(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
         localOutcome: BpmnLocalRepairOutcome,
-    ): String =
-        buildString {
-            appendLine("The following diagnostics can be fixed with targeted name or label patches.")
-            appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
-            appendLine(
-                "Do not rewrite the whole graph — only include operations that " +
-                    "directly address the listed diagnostics.",
-            )
+    ): String = buildString {
+        appendLine("The following diagnostics can be fixed with targeted name or label patches.")
+        appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
+        appendLine(
+            "Do not rewrite the whole graph — only include operations that " +
+                "directly address the listed diagnostics.",
+        )
+        appendLine()
+        val guidance = ruleGuidance.getLlmRuleGuidance()
+        if (guidance.isNotEmpty()) {
+            appendLine(guidance)
             appendLine()
-            val guidance = ruleGuidance.getLlmRuleGuidance()
-            if (guidance.isNotEmpty()) {
-                appendLine(guidance)
-                appendLine()
-            }
-            appendLine("Current canonical BpmnDefinition JSON:")
-            appendLine(fingerprints.serializeDefinition(definition))
-            appendLine()
-            appendDiagnosticBlock(diagnostics, localOutcome)
         }
+        appendLine("Current canonical BpmnDefinition JSON:")
+        appendLine(fingerprints.serializeDefinition(definition))
+        appendLine()
+        appendDiagnosticBlock(diagnostics, localOutcome)
+    }
 
     override fun fullRepairFeedback(
         attempt: BpmnRepairAttempt,
         diagnostics: List<BpmnDiagnostic>,
         localOutcome: BpmnLocalRepairOutcome,
-    ): String =
-        fullRepairFeedback(
-            definition = attempt.definition,
-            renderedXml = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation),
-            diagnostics = diagnostics,
-            localOutcome = localOutcome,
-        )
+    ): String = fullRepairFeedback(
+        definition = attempt.definition,
+        renderedXml = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation),
+        diagnostics = diagnostics,
+        localOutcome = localOutcome,
+    )
 
     override fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules =
@@ -111,40 +108,39 @@ internal class BpmnRepairPromptFactory(
         renderedXml: String,
         diagnostics: List<BpmnDiagnostic>,
         localOutcome: BpmnLocalRepairOutcome,
-    ): String =
-        buildString {
-            appendLine("The BPMN definition needs repair. Return the full corrected BpmnDefinition object.")
+    ): String = buildString {
+        appendLine("The BPMN definition needs repair. Return the full corrected BpmnDefinition object.")
+        appendLine()
+        val guidance = ruleGuidance.getLlmRuleGuidance()
+        if (guidance.isNotEmpty()) {
+            appendLine(guidance)
             appendLine()
-            val guidance = ruleGuidance.getLlmRuleGuidance()
-            if (guidance.isNotEmpty()) {
-                appendLine(guidance)
-                appendLine()
-            }
-            appendLine("Use the typed BPMN definition as the canonical edit surface.")
-            appendLine(
-                "Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.",
-            )
-            appendLine()
-            appendLine("Current canonical BpmnDefinition JSON:")
-            appendLine(fingerprints.serializeDefinition(definition))
-            appendLine()
-            appendLine("Rendered BPMN XML:")
-            appendLine(renderedXml)
-            appendLine()
-            val scopes = diagnostics.mapNotNull { it.repairScope }.distinct()
-            if (scopes.isNotEmpty()) {
-                appendLine("Repair scope:")
-                scopes.forEach { scope ->
-                    val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
-                    appendLine(
-                        "- ${scope.name.lowercase()} owners=" +
-                            owners.ifEmpty { listOf("unscoped") }.joinToString(","),
-                    )
-                }
-                appendLine()
-            }
-            appendDiagnosticBlock(diagnostics, localOutcome)
         }
+        appendLine("Use the typed BPMN definition as the canonical edit surface.")
+        appendLine(
+            "Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.",
+        )
+        appendLine()
+        appendLine("Current canonical BpmnDefinition JSON:")
+        appendLine(fingerprints.serializeDefinition(definition))
+        appendLine()
+        appendLine("Rendered BPMN XML:")
+        appendLine(renderedXml)
+        appendLine()
+        val scopes = diagnostics.mapNotNull { it.repairScope }.distinct()
+        if (scopes.isNotEmpty()) {
+            appendLine("Repair scope:")
+            scopes.forEach { scope ->
+                val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
+                appendLine(
+                    "- ${scope.name.lowercase()} owners=" +
+                        owners.ifEmpty { listOf("unscoped") }.joinToString(","),
+                )
+            }
+            appendLine()
+        }
+        appendDiagnosticBlock(diagnostics, localOutcome)
+    }
 
     /**
      * Render the diagnostic list grouped by severity (errors first), with a single sentence
@@ -194,9 +190,8 @@ internal class BpmnRepairPromptFactory(
         return base + localFailureSuffix + shapeHintSuffix
     }
 
-    private fun renderFailureContext(evaluation: BpmnEvaluation): String =
-        buildString {
-            appendLine("<render failed>")
-            evaluation.renderFailureMessage?.let { appendLine(it) }
-        }
+    private fun renderFailureContext(evaluation: BpmnEvaluation): String = buildString {
+        appendLine("<render failed>")
+        evaluation.renderFailureMessage?.let { appendLine(it) }
+    }
 }

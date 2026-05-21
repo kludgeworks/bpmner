@@ -209,20 +209,20 @@ class BpmnRepairAgentTest {
         val lintService =
             RecordingLintService(
                 responses =
+                listOf(
                     listOf(
-                        listOf(
-                            LintIssue(
-                                id = "Task_1",
-                                rule = "bpmner/gen-no-duplicate-diagrams",
-                                message = "Duplicate BPMNDiagram",
-                            ),
+                        LintIssue(
+                            id = "Task_1",
+                            rule = "bpmner/gen-no-duplicate-diagrams",
+                            message = "Duplicate BPMNDiagram",
                         ),
-                        emptyList(),
                     ),
+                    emptyList(),
+                ),
                 docs =
-                    mapOf(
-                        "bpmner/gen-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs",
-                    ),
+                mapOf(
+                    "bpmner/gen-no-duplicate-diagrams" to "# gen-02-no-duplicate-diagrams\n\nDiagram docs",
+                ),
             )
         val converter = RecordingConverter()
         val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
@@ -454,13 +454,13 @@ class BpmnRepairAgentTest {
         context.expectResponse(
             BpmnRepairPatch(
                 operations =
-                    listOf(
-                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
-                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
-                            nodeId = "Task_1",
-                            name = "Toast bread fixed",
-                        ),
+                listOf(
+                    dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                        type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                        nodeId = "Task_1",
+                        name = "Toast bread fixed",
                     ),
+                ),
             ),
         )
         val definition = testBpmnDefinition()
@@ -511,13 +511,13 @@ class BpmnRepairAgentTest {
         context.expectResponse(
             BpmnRepairPatch(
                 operations =
-                    listOf(
-                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
-                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
-                            nodeId = "Task_1",
-                            name = "Toast bread",
-                        ),
+                listOf(
+                    dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                        type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                        nodeId = "Task_1",
+                        name = "Toast bread",
                     ),
+                ),
             ),
         )
         val definition = testBpmnDefinition()
@@ -561,13 +561,13 @@ class BpmnRepairAgentTest {
         context.expectResponse(
             BpmnRepairPatch(
                 operations =
-                    listOf(
-                        dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
-                            type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
-                            nodeId = "Task_X",
-                            name = "fix",
-                        ),
+                listOf(
+                    dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation(
+                        type = dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType.SET_NODE_NAME,
+                        nodeId = "Task_X",
+                        name = "fix",
                     ),
+                ),
             ),
         )
         context.expectResponse(corrected)
@@ -603,10 +603,10 @@ class BpmnRepairAgentTest {
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
     ) : BpmnLintService(
-            catalogService = RuleCatalogService(),
-            engine = BpmnLintJsEngine(),
-            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
-        ) {
+        catalogService = RuleCatalogService(),
+        engine = BpmnLintJsEngine(),
+        pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+    ) {
         val xmls = mutableListOf<String>()
         private var index = 0
 
@@ -615,12 +615,11 @@ class BpmnRepairAgentTest {
             return responses[index++]
         }
 
-        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> =
-            buildMap {
-                ruleNames.distinct().forEach { ruleName ->
-                    docs[ruleName]?.let { put(ruleName, it) }
-                }
+        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = buildMap {
+            ruleNames.distinct().forEach { ruleName ->
+                docs[ruleName]?.let { put(ruleName, it) }
             }
+        }
 
         override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.validation.BpmnLintRuleCapability>()
     }
@@ -670,15 +669,14 @@ class BpmnRepairAgentTest {
             promptContributors: List<PromptContributor>,
             contextualPromptContributors: List<ContextualPromptElement>,
             generateExamples: Boolean,
-        ): PromptRunner =
-            delegate.promptRunner(
-                llm = llm,
-                toolGroups = toolGroups,
-                toolObjects = toolObjects,
-                promptContributors = promptContributors,
-                contextualPromptContributors = contextualPromptContributors,
-                generateExamples = generateExamples,
-            )
+        ): PromptRunner = delegate.promptRunner(
+            llm = llm,
+            toolGroups = toolGroups,
+            toolObjects = toolObjects,
+            promptContributors = promptContributors,
+            contextualPromptContributors = contextualPromptContributors,
+            generateExamples = generateExamples,
+        )
     }
 
     private object NoopRuleGuidancePort : BpmnRuleGuidancePort {

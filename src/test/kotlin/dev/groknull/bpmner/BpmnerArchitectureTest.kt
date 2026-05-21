@@ -43,8 +43,8 @@ class BpmnerArchitectureTest {
             .check(classes)
     }
 
-    private fun haveAtLeastOneGoal() =
-        object : ArchCondition<JavaClass>("have at least one method annotated with @AchievesGoal") {
+    private fun haveAtLeastOneGoal(): ArchCondition<JavaClass> {
+        return object : ArchCondition<JavaClass>("have at least one method annotated with @AchievesGoal") {
             override fun check(
                 item: JavaClass,
                 events: ConditionEvents,
@@ -55,4 +55,5 @@ class BpmnerArchitectureTest {
                 }
             }
         }
+    }
 }
