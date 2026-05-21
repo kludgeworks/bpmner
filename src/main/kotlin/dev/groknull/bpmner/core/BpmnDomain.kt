@@ -200,6 +200,11 @@ data object BpmnTerminateEventDefinition : BpmnEventDefinition
     JsonSubTypes.Type(value = BpmnStartEvent::class, name = "START_EVENT"),
     JsonSubTypes.Type(value = BpmnUserTask::class, name = "USER_TASK"),
     JsonSubTypes.Type(value = BpmnServiceTask::class, name = "SERVICE_TASK"),
+    JsonSubTypes.Type(value = BpmnScriptTask::class, name = "SCRIPT_TASK"),
+    JsonSubTypes.Type(value = BpmnBusinessRuleTask::class, name = "BUSINESS_RULE_TASK"),
+    JsonSubTypes.Type(value = BpmnSendTask::class, name = "SEND_TASK"),
+    JsonSubTypes.Type(value = BpmnReceiveTask::class, name = "RECEIVE_TASK"),
+    JsonSubTypes.Type(value = BpmnManualTask::class, name = "MANUAL_TASK"),
     JsonSubTypes.Type(value = BpmnExclusiveGateway::class, name = "EXCLUSIVE_GATEWAY"),
     JsonSubTypes.Type(value = BpmnParallelGateway::class, name = "PARALLEL_GATEWAY"),
     JsonSubTypes.Type(value = BpmnIntermediateCatchEvent::class, name = "INTERMEDIATE_CATCH_EVENT"),
@@ -228,6 +233,11 @@ val BpmnNode.typeName: String
             is BpmnStartEvent -> "START_EVENT"
             is BpmnUserTask -> "USER_TASK"
             is BpmnServiceTask -> "SERVICE_TASK"
+            is BpmnScriptTask -> "SCRIPT_TASK"
+            is BpmnBusinessRuleTask -> "BUSINESS_RULE_TASK"
+            is BpmnSendTask -> "SEND_TASK"
+            is BpmnReceiveTask -> "RECEIVE_TASK"
+            is BpmnManualTask -> "MANUAL_TASK"
             is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
             is BpmnParallelGateway -> "PARALLEL_GATEWAY"
             is BpmnIntermediateCatchEvent -> "INTERMEDIATE_CATCH_EVENT"
@@ -241,17 +251,51 @@ val BpmnNode.typeName: String
  * interfaces have no synthetic `copy`, so this helper dispatches across the subtypes
  * exhaustively. Used by repair operations that rename a node while preserving its kind.
  */
+@Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
 fun BpmnNode.withName(name: String?): BpmnNode =
     when (this) {
         is BpmnStartEvent -> copy(name = name)
         is BpmnUserTask -> copy(name = name)
         is BpmnServiceTask -> copy(name = name)
+        is BpmnScriptTask -> copy(name = name)
+        is BpmnBusinessRuleTask -> copy(name = name)
+        is BpmnSendTask -> copy(name = name)
+        is BpmnReceiveTask -> copy(name = name)
+        is BpmnManualTask -> copy(name = name)
         is BpmnExclusiveGateway -> copy(name = name)
         is BpmnParallelGateway -> copy(name = name)
         is BpmnIntermediateCatchEvent -> copy(name = name)
         is BpmnIntermediateThrowEvent -> copy(name = name)
         is BpmnBoundaryEvent -> copy(name = name)
         is BpmnEndEvent -> copy(name = name)
+    }
+
+/**
+ * True when [node] is one of the BPMN task subtypes. Used by callers that need to
+ * dispatch over "any task" without enumerating every task kind individually (e.g. the
+ * naming policy that requires a name on every task, the transparency check, repair
+ * handlers that operate on tasks but not events or gateways). The exhaustive `when`
+ * forces every new task subtype to declare its membership when added.
+ */
+fun BpmnNode.isTask(): Boolean =
+    when (this) {
+        is BpmnUserTask,
+        is BpmnServiceTask,
+        is BpmnScriptTask,
+        is BpmnBusinessRuleTask,
+        is BpmnSendTask,
+        is BpmnReceiveTask,
+        is BpmnManualTask,
+        -> true
+
+        is BpmnStartEvent,
+        is BpmnExclusiveGateway,
+        is BpmnParallelGateway,
+        is BpmnIntermediateCatchEvent,
+        is BpmnIntermediateThrowEvent,
+        is BpmnBoundaryEvent,
+        is BpmnEndEvent,
+        -> false
     }
 
 private const val NODE_ID_DESCRIPTION: String =
@@ -285,6 +329,62 @@ data class BpmnUserTask(
 ) : BpmnNode
 
 data class BpmnServiceTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnScriptTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode
+
+data class BpmnBusinessRuleTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Identifier of the decision (e.g. DMN decision id, rule-set name) that this task evaluates. " +
+            "Free-form string until a typed decision catalogue exists; non-blank.",
+    )
+    val decisionRef: String,
+) : BpmnNode
+
+data class BpmnSendTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Id of the BpmnMessageRef in the process-level message catalogue that this send task emits.",
+    )
+    val messageRef: String,
+) : BpmnNode
+
+data class BpmnReceiveTask(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Id of the BpmnMessageRef in the process-level message catalogue that this receive task waits for.",
+    )
+    val messageRef: String,
+) : BpmnNode
+
+data class BpmnManualTask(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
     override val id: String,

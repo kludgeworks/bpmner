@@ -18,6 +18,7 @@ import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
+import dev.groknull.bpmner.contract.withSourceIds
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -230,7 +231,7 @@ class BpmnContractValidatorTest {
         val original = linearContract()
         val activitiesWithoutTrace =
             original.activities.mapIndexed { index, activity ->
-                if (index == 0) activity.copy(sourceIds = emptyList()) else activity
+                if (index == 0) activity.withSourceIds(emptyList()) else activity
             }
         val contract = original.copy(activities = activitiesWithoutTrace)
         val report = validator.validate(contract)

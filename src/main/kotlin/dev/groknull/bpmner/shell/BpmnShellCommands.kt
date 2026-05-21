@@ -60,24 +60,41 @@ class BpmnShellCommands(
                 styleGuide = styleGuide,
                 mode = GenerationMode.INTERACTIVE,
             )
-        val result = generationUseCase.generate(input)
-        if (result.status != BpmnGenerationStatus.NEEDS_CLARIFICATION) {
-            return responseFor(result)
+        // Loop up to MAX_CLARIFICATION_ROUNDS times. Each round runs readiness with the
+        // accumulated clarifications, asks any new (un-answered) questions, and re-runs.
+        // The bound prevents a misbehaving readiness LLM from looping forever; the
+        // question-id dedup prevents the same question being asked twice across rounds.
+        val accumulated = mutableListOf<ClarificationExchange>()
+        var lastResult: BpmnResult? = null
+        repeat(MAX_CLARIFICATION_ROUNDS) {
+            val result = generationUseCase.generate(input.copy(clarificationHistory = accumulated.toList()))
+            lastResult = result
+            if (result.status != BpmnGenerationStatus.NEEDS_CLARIFICATION) {
+                return responseFor(result)
+            }
+            val answeredIds = accumulated.map { it.questionId }.toSet()
+            val newQuestions =
+                result.readinessReport
+                    ?.clarificationQuestions
+                    .orEmpty()
+                    .filter { it.id !in answeredIds }
+            if (newQuestions.isEmpty()) {
+                return "Clarification still required. ${readinessSummary(result)}"
+            }
+            val newAnswers = askClarificationQuestions(newQuestions)
+            if (newAnswers.isEmpty()) {
+                return "Clarification still required. ${readinessSummary(result)}"
+            }
+            accumulated += newAnswers
         }
+        return "Clarification limit reached after $MAX_CLARIFICATION_ROUNDS rounds. ${readinessSummary(lastResult!!)}"
+    }
 
-        val questions = result.readinessReport?.clarificationQuestions.orEmpty()
-        if (questions.isEmpty()) return responseFor(result)
-
-        val clarifications = askClarificationQuestions(questions)
-        if (clarifications.isEmpty()) {
-            return "Clarification still required. ${readinessSummary(result)}"
-        }
-
-        val updatedResult =
-            generationUseCase.generate(
-                input.copy(clarificationHistory = clarifications),
-            )
-        return responseFor(updatedResult)
+    private companion object {
+        // Bound for the clarification loop. Three rounds is enough to resolve a thin input
+        // without becoming an interrogation; beyond that the input is probably underspecified
+        // for BPMN modelling and the user should refine the source prose.
+        const val MAX_CLARIFICATION_ROUNDS = 3
     }
 
     private fun askClarificationQuestions(questions: List<ClarificationQuestion>): List<ClarificationExchange> =

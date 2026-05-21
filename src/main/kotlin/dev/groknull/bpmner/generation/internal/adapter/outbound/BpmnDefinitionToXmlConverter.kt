@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -16,6 +17,8 @@ import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
@@ -54,6 +57,12 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
         private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+
+        // Foreign-namespace extension prefix for attributes we carry on flow elements that the
+        // BPMN 2.0 spec doesn't define (e.g. `decisionRef` on businessRuleTask). The BPMN XSD
+        // allows `xs:anyAttribute namespace="##other"` on most complex types, so qualifying
+        // these in our own namespace keeps XSD validation happy while still round-tripping.
+        const val BPMNER_EXT_NS = "https://groknull.dev/bpmner/ext"
         private const val EXPORTER = "bpmner"
         private const val EXPORTER_VERSION = "0.0.1"
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
@@ -237,6 +246,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             )
         }
 
+        val taskElementsById = document.taskElementsById()
+        var bpmnerNamespaceUsed = false
+
         definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> {
@@ -266,14 +278,58 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                     eventElementsById.eventElement(node.id).appendEventDefinition(document, node.eventDefinition)
                 }
 
+                // messageRef on send / receive tasks is a BPMN-spec attribute on the task
+                // element itself (no event-definition wrapper), so stamp it directly.
+                is BpmnSendTask -> {
+                    taskElementsById.taskElement(node.id).setAttribute("messageRef", node.messageRef)
+                }
+
+                is BpmnReceiveTask -> {
+                    taskElementsById.taskElement(node.id).setAttribute("messageRef", node.messageRef)
+                }
+
+                // decisionRef on business-rule tasks is not a BPMN-spec attribute. Emit it in
+                // our extension namespace so XSD validation (which allows `##other` foreign
+                // attributes on tBusinessRuleTask) accepts it.
+                is BpmnBusinessRuleTask -> {
+                    taskElementsById.taskElement(node.id).setAttributeNS(
+                        BPMNER_EXT_NS,
+                        "bpmner:decisionRef",
+                        node.decisionRef,
+                    )
+                    bpmnerNamespaceUsed = true
+                }
+
                 else -> {
                     Unit
                 }
             }
         }
 
+        if (bpmnerNamespaceUsed) {
+            root.setAttributeNS(
+                "http://www.w3.org/2000/xmlns/",
+                "xmlns:bpmner",
+                BPMNER_EXT_NS,
+            )
+        }
+
         return writeDocument(document)
     }
+
+    // Only the task kinds whose attribute payloads we DOM-stamp post-Camunda-write. Script /
+    // Manual / User / Service tasks have no payload attribute to apply here today, so we keep
+    // the list narrow to match `addCatalogsAndEventDefinitions`'s `when` arms. When a new task
+    // kind gains a DOM-stamp arm, add its element name here too — the writer-side `when` is
+    // the source of truth for which tasks need post-processing.
+    private fun Document.taskElementsById(): Map<String, Element> =
+        listOf("sendTask", "receiveTask", "businessRuleTask")
+            .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
+            .associateBy { it.getAttribute("id") }
+            .filterKeys { it.isNotBlank() }
+
+    private fun Map<String, Element>.taskElement(id: String): Element =
+        this[id] ?: error("Task element with id='$id' not found in rendered XML")
 
     private fun parseDocument(xml: String): Document =
         DocumentBuilderFactory

@@ -5,13 +5,18 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnScriptTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
@@ -293,6 +298,58 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "<exclusiveGateway id=\"Gateway_1\"")
         assertFalse(xml.contains("<exclusiveGateway id=\"Gateway_1\" name="))
         assertContains(xml, "<userTask id=\"Task_1\" name=\"Approve request\"")
+    }
+
+    @Test
+    fun `converter renders messageRef on send and receive tasks and decisionRef on business-rule tasks`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_mortgage",
+                processName = "Mortgage processing",
+                nodes =
+                    listOf(
+                        BpmnStartEvent("StartEvent_1", "Application submitted"),
+                        BpmnScriptTask("act-normalise", "Normalise address"),
+                        BpmnBusinessRuleTask("act-credit", "Evaluate credit policy", decisionRef = "credit-policy"),
+                        BpmnSendTask("act-decline", "Send decline notification", messageRef = "Message_Decline"),
+                        BpmnReceiveTask(
+                            "act-await-ack",
+                            "Customer acknowledgement received",
+                            messageRef = "Message_Ack",
+                        ),
+                        BpmnManualTask("act-inspect", "Inspect property"),
+                        BpmnEndEvent("EndEvent_1", "Application completed"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge("F1", "StartEvent_1", "act-normalise"),
+                        BpmnEdge("F2", "act-normalise", "act-credit"),
+                        BpmnEdge("F3", "act-credit", "act-decline"),
+                        BpmnEdge("F4", "act-decline", "act-await-ack"),
+                        BpmnEdge("F5", "act-await-ack", "act-inspect"),
+                        BpmnEdge("F6", "act-inspect", "EndEvent_1"),
+                    ),
+                messages =
+                    listOf(
+                        BpmnMessageRef("Message_Decline", "Decline notification"),
+                        BpmnMessageRef("Message_Ack", "Customer acknowledgement"),
+                    ),
+            )
+
+        val xml = converter.toXml(definition)
+
+        // Each task subtype emits the matching BPMN element with id intact.
+        assertContains(xml, "<scriptTask id=\"act-normalise\"")
+        assertContains(xml, "<businessRuleTask")
+        assertContains(xml, "<sendTask")
+        assertContains(xml, "<receiveTask")
+        assertContains(xml, "<manualTask id=\"act-inspect\"")
+        // messageRef is a BPMN spec attribute on send/receive task elements.
+        assertContains(xml, "messageRef=\"Message_Decline\"")
+        assertContains(xml, "messageRef=\"Message_Ack\"")
+        // decisionRef is qualified in the bpmner extension namespace.
+        assertContains(xml, "bpmner:decisionRef=\"credit-policy\"")
+        assertContains(xml, "xmlns:bpmner=\"https://groknull.dev/bpmner/ext\"")
     }
 
     private fun minimalDefinition(

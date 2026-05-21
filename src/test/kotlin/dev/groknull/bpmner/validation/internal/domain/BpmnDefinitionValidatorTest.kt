@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.validation.internal.domain
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -14,9 +15,14 @@ import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnScriptTask
+import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -490,6 +496,7 @@ class BpmnDefinitionValidatorTest {
         start: BpmnNode = BpmnStartEvent("StartEvent_1", "Request received"),
         task: BpmnNode = BpmnUserTask("Task_1", "Validate request"),
         end: BpmnNode = BpmnEndEvent("EndEvent_1", "Request completed"),
+        messages: List<BpmnMessageRef> = emptyList(),
     ) = BpmnDefinition(
         processId = "Process_1",
         processName = "Handle request",
@@ -499,7 +506,82 @@ class BpmnDefinitionValidatorTest {
                 BpmnEdge("Flow_1", start.id, task.id),
                 BpmnEdge("Flow_2", task.id, end.id),
             ),
+        messages = messages,
     )
+
+    @Test
+    fun `validator accepts new task subtypes with proper payloads`() {
+        val cases =
+            listOf(
+                BpmnScriptTask("Task_1", "Normalise address"),
+                BpmnBusinessRuleTask("Task_1", "Evaluate credit policy", decisionRef = "credit-policy"),
+                BpmnManualTask("Task_1", "Inspect property"),
+            )
+        cases.forEach { task ->
+            val errors = validator.validate(minimalDefinition(task = task))
+            assertTrue(
+                errors.isEmpty(),
+                "task ${task::class.simpleName} should validate clean; got: $errors",
+            )
+        }
+    }
+
+    @Test
+    fun `validator accepts send and receive tasks with resolvable messageRef`() {
+        val cases =
+            listOf(
+                BpmnSendTask("Task_1", "Send decline notification", messageRef = "Message_Decline"),
+                BpmnReceiveTask("Task_1", "Customer acknowledgement received", messageRef = "Message_Decline"),
+            )
+        cases.forEach { task ->
+            val errors =
+                validator.validate(
+                    minimalDefinition(
+                        task = task,
+                        messages = listOf(BpmnMessageRef("Message_Decline", "Decline notification")),
+                    ),
+                )
+            assertTrue(
+                errors.isEmpty(),
+                "task ${task::class.simpleName} with catalogued messageRef should validate clean; got: $errors",
+            )
+        }
+    }
+
+    @Test
+    fun `validator rejects send and receive tasks with unresolved messageRef`() {
+        // messageRef is non-blank but points at no entry in the message catalogue.
+        val sendErrors =
+            validator.validate(
+                minimalDefinition(task = BpmnSendTask("Task_1", "Send decline", messageRef = "Message_Missing")),
+            )
+        assertContains(
+            sendErrors.joinToString("\n"),
+            "sendTask Task_1 messageRef 'Message_Missing' does not match any message catalog id",
+        )
+        val receiveErrors =
+            validator.validate(
+                minimalDefinition(task = BpmnReceiveTask("Task_1", "Awaited", messageRef = "Message_Missing")),
+            )
+        assertContains(
+            receiveErrors.joinToString("\n"),
+            "receiveTask Task_1 messageRef 'Message_Missing' does not match any message catalog id",
+        )
+    }
+
+    @Test
+    fun `validator rejects business rule task with blank decisionRef`() {
+        // Construct via the no-arg secondary path: NotBlank bean-validation is bypassed for the
+        // explicit empty-string we feed in, so the validator's own diagnostic stream must fire.
+        val errors =
+            validator.validate(
+                minimalDefinition(task = BpmnBusinessRuleTask("Task_1", "Evaluate", decisionRef = "")),
+            )
+        assertContains(
+            errors.joinToString("\n"),
+            "businessRuleTask Task_1 is missing the required decisionRef attribute",
+        )
+    }
 
     private fun intermediateDefinition(intermediate: BpmnNode) =
         BpmnDefinition(

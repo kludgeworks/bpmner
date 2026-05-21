@@ -5,13 +5,22 @@
 
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.kindName
+import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnReceiveTask
+import dev.groknull.bpmner.core.BpmnScriptTask
+import dev.groknull.bpmner.core.BpmnSendTask
+import dev.groknull.bpmner.core.BpmnServiceTask
+import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.isSemanticallyTransparent
 import dev.groknull.bpmner.core.typeName
 import dev.groknull.bpmner.generation.BpmnFidelityCode
@@ -65,6 +74,10 @@ internal class BpmnContractFidelityChecker {
         val issues = mutableListOf<BpmnFidelityIssue>()
         val nodeById = definition.nodes.associateBy { it.id }
         val outgoingBySource = definition.sequences.groupBy { it.sourceRef }
+
+        contract.activities.forEach { activity ->
+            checkActivityKind(activity, nodeById, issues)
+        }
 
         contract.decisions.forEach { decision ->
             checkDecision(decision, nodeById, outgoingBySource, issues)
@@ -230,5 +243,51 @@ internal class BpmnContractFidelityChecker {
         when (kind) {
             ContractGatewayKind.EXCLUSIVE -> "pick one branch"
             ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+        }
+
+    /**
+     * Verifies the BPMN node that realises [activity] has the matching task subtype.
+     * Skips silently when no node by the activity id is present in the BPMN — the
+     * separate "activity not realised" check (not yet implemented) would catch that.
+     */
+    private fun checkActivityKind(
+        activity: ContractActivity,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val node = nodeById[activity.id] ?: return
+        if (activity.matchesTaskType(node)) return
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message =
+                    "Activity '${activity.id}' declares kind=${activity.kindName} but is realised as a " +
+                        "${node.typeName} node — expected ${activity.expectedTaskTypeName()}.",
+                contractElementId = activity.id,
+                bpmnElementId = node.id,
+            )
+    }
+
+    private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean =
+        when (this) {
+            is ContractActivity.Service -> node is BpmnServiceTask
+            is ContractActivity.User -> node is BpmnUserTask
+            is ContractActivity.Script -> node is BpmnScriptTask
+            is ContractActivity.BusinessRule -> node is BpmnBusinessRuleTask
+            is ContractActivity.Send -> node is BpmnSendTask
+            is ContractActivity.Receive -> node is BpmnReceiveTask
+            is ContractActivity.Manual -> node is BpmnManualTask
+        }
+
+    private fun ContractActivity.expectedTaskTypeName(): String =
+        when (this) {
+            is ContractActivity.Service -> "SERVICE_TASK"
+            is ContractActivity.User -> "USER_TASK"
+            is ContractActivity.Script -> "SCRIPT_TASK"
+            is ContractActivity.BusinessRule -> "BUSINESS_RULE_TASK"
+            is ContractActivity.Send -> "SEND_TASK"
+            is ContractActivity.Receive -> "RECEIVE_TASK"
+            is ContractActivity.Manual -> "MANUAL_TASK"
         }
 }

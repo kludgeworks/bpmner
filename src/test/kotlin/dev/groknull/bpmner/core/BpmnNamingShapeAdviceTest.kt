@@ -23,6 +23,11 @@ class BpmnNamingShapeAdviceTest {
                 BpmnEndEvent("e", "End"),
                 BpmnUserTask("ut", "User task"),
                 BpmnServiceTask("st", "Service task"),
+                BpmnScriptTask("sct", "Script task"),
+                BpmnBusinessRuleTask("brt", "Business rule task", decisionRef = "Decision_1"),
+                BpmnSendTask("set", "Send task", messageRef = "Message_1"),
+                BpmnReceiveTask("ret", "Receive task", messageRef = "Message_1"),
+                BpmnManualTask("mat", "Manual task"),
                 BpmnExclusiveGateway("xg", "X?"),
                 BpmnParallelGateway("pg", "PG"),
                 BpmnIntermediateCatchEvent("ice", "Caught", eventDefinition = BpmnNoneEventDefinition),
@@ -59,15 +64,21 @@ class BpmnNamingShapeAdviceTest {
     @Test
     fun `allAdvice returns every advice entry`() {
         val all = BpmnNamingShapeAdvice.allAdvice()
-        // 9 = start, intermediate-catch, intermediate-throw, boundary, end, user-task,
-        // service-task, exclusive-gateway, parallel-gateway. Covers every current BpmnNode
-        // subtype that has a naming-shape opinion.
-        assertEquals(9, all.size)
+        // 14 = start, intermediate-catch, intermediate-throw, boundary, end, user-task,
+        // service-task, script-task, business-rule-task, send-task, receive-task, manual-task,
+        // exclusive-gateway, parallel-gateway. Covers every current BpmnNode subtype that
+        // has a naming-shape opinion.
+        assertEquals(14, all.size)
         assertTrue(all.any { it.kind == "START_EVENT" })
         assertTrue(all.any { it.kind == "END_EVENT" })
         assertTrue(all.any { it.kind == "INTERMEDIATE_CATCH_EVENT" })
         assertTrue(all.any { it.kind == "INTERMEDIATE_THROW_EVENT" })
         assertTrue(all.any { it.kind == "BOUNDARY_EVENT" })
+        assertTrue(all.any { it.kind == "SCRIPT_TASK" })
+        assertTrue(all.any { it.kind == "BUSINESS_RULE_TASK" })
+        assertTrue(all.any { it.kind == "SEND_TASK" })
+        assertTrue(all.any { it.kind == "RECEIVE_TASK" })
+        assertTrue(all.any { it.kind == "MANUAL_TASK" })
         assertTrue(all.any { it.kind.startsWith("EXCLUSIVE_GATEWAY") })
     }
 

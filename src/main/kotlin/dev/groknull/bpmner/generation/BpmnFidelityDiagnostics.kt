@@ -47,6 +47,15 @@ enum class BpmnFidelityCode {
      * missing forward-skip edges in a single check.
      */
     BRANCH_FLOW_MISSING,
+
+    /**
+     * A ContractActivity is realised by a BPMN task node whose kind doesn't match. For
+     * example, `ContractActivity.Send` realised as `BpmnUserTask` — semantically wrong
+     * because the LLM has flattened the kind discriminator away. Catches the failure mode
+     * where the contract correctly identifies a fire-and-forget message (SEND) but the
+     * BPMN generator emits a plain task that loses the messaging semantic.
+     */
+    ACTIVITY_TASK_KIND_MISMATCH,
 }
 
 /**
