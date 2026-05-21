@@ -18,9 +18,12 @@ import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import kotlin.test.Test
@@ -198,6 +201,140 @@ class BpmnContractFidelityCheckerTest {
             "expected ACTIVITY_TASK_KIND_MISMATCH citing SEND vs USER_TASK; got: ${report.issues}",
         )
     }
+
+    @Test
+    fun `end state with matching event definition passes fidelity`() {
+        // Happy path: contract declares Terminate end; BPMN end event carries
+        // BpmnTerminateEventDefinition. No fidelity issue should fire.
+        val report =
+            checker.check(
+                typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
+                typedEndStateDefinition("end-cancelled", BpmnTerminateEventDefinition),
+            )
+        assertTrue(report.isValid, "expected valid report for matching end-state kind; got: ${report.issues}")
+    }
+
+    @Test
+    fun `end state realized as wrong event definition flagged as END_EVENT_KIND_MISMATCH`() {
+        // Contract declares Terminate, BPMN realises it with NoneEventDefinition — the
+        // terminate-scope semantic is lost. END_EVENT_KIND_MISMATCH should fire.
+        val report =
+            checker.check(
+                typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
+                typedEndStateDefinition("end-cancelled", BpmnNoneEventDefinition),
+            )
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.END_EVENT_KIND_MISMATCH &&
+                    it.message.contains("kind=TERMINATE") &&
+                    it.message.contains("BpmnNoneEventDefinition") &&
+                    it.message.contains("BpmnTerminateEventDefinition")
+            },
+            "expected END_EVENT_KIND_MISMATCH citing TERMINATE vs None; got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `end state realized as a non-end-event node flagged as END_EVENT_KIND_MISMATCH`() {
+        // Contract declares Message end; BPMN realises the id as a UserTask. The check
+        // should bail with END_EVENT_KIND_MISMATCH citing the expected END_EVENT shape
+        // before even getting to the event-definition comparison.
+        val sources = listOf("ev1")
+        val contract =
+            ProcessContract(
+                id = "c-msg",
+                processName = "Confirmation process",
+                summary = "send confirmation",
+                trigger = "start",
+                triggerSourceIds = sources,
+                activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
+                endStates =
+                    listOf(
+                        ContractEndState.Message(
+                            id = "end-sent",
+                            name = "Confirmation sent",
+                            messageName = "shipment confirmation",
+                            sourceIds = sources,
+                        ),
+                    ),
+            )
+        val definition =
+            BpmnDefinition(
+                processId = "P",
+                processName = "Confirmation process",
+                nodes =
+                    listOf(
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnUserTask(id = "act-do", name = "Do thing"),
+                        // The contract id end-sent is realised as a UserTask, not an EndEvent.
+                        BpmnUserTask(id = "end-sent", name = "Confirmation sent"),
+                    ),
+                sequences =
+                    listOf(
+                        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
+                        BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = "end-sent"),
+                    ),
+            )
+
+        val report = checker.check(contract, definition)
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.END_EVENT_KIND_MISMATCH &&
+                    it.message.contains("kind=MESSAGE") &&
+                    it.message.contains("USER_TASK") &&
+                    it.message.contains("END_EVENT")
+            },
+            "expected END_EVENT_KIND_MISMATCH citing MESSAGE vs USER_TASK; got: ${report.issues}",
+        )
+    }
+
+    // Compact fixture builders for the three end-state-kind tests above. Single activity,
+    // single end state — keeps the test focus on the END_EVENT_KIND_MISMATCH dispatch logic.
+    private fun typedEndStateContract(endState: ContractEndState): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
+            id = "c-end",
+            processName = "End-state fidelity",
+            summary = "single activity then typed end",
+            trigger = "start",
+            triggerSourceIds = sources,
+            activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
+            endStates =
+                listOf(
+                    when (endState) {
+                        is ContractEndState.Normal -> endState.copy(sourceIds = sources)
+                        is ContractEndState.Terminate -> endState.copy(sourceIds = sources)
+                        is ContractEndState.Error -> endState.copy(sourceIds = sources)
+                        is ContractEndState.Message -> endState.copy(sourceIds = sources)
+                        is ContractEndState.Signal -> endState.copy(sourceIds = sources)
+                        is ContractEndState.Escalation -> endState.copy(sourceIds = sources)
+                    },
+                ),
+        )
+    }
+
+    private fun typedEndStateDefinition(
+        endId: String,
+        endEventDefinition: BpmnEventDefinition,
+    ): BpmnDefinition =
+        BpmnDefinition(
+            processId = "P",
+            processName = "End-state fidelity",
+            nodes =
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnUserTask(id = "act-do", name = "Do thing"),
+                    BpmnEndEvent(id = endId, name = "End", eventDefinition = endEventDefinition),
+                ),
+            sequences =
+                listOf(
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
+                    BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = endId),
+                ),
+        )
 
     @Test
     fun `decision realized as a non-gateway node type flagged as DECISION_GATEWAY_MISSING`() {

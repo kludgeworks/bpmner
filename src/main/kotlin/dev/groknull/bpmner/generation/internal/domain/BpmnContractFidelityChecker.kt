@@ -372,6 +372,9 @@ internal class BpmnContractFidelityChecker {
             is ContractEndState.Escalation -> eventDefinition is BpmnEscalationEventDefinition
         }
 
+    // Class references rather than hardcoded strings so the diagnostic message stays
+    // in sync if any event-definition class is renamed (refactor-safe). simpleName is
+    // !!-asserted because these are concrete data classes / objects with stable names.
     private fun ContractEndState.expectedEventDefinitionName(): String =
         when (this) {
             is ContractEndState.Normal -> BpmnNoneEventDefinition::class.simpleName!!
