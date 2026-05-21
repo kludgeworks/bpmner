@@ -317,8 +317,13 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         return writeDocument(document)
     }
 
+    // Only the task kinds whose attribute payloads we DOM-stamp post-Camunda-write. Script /
+    // Manual / User / Service tasks have no payload attribute to apply here today, so we keep
+    // the list narrow to match `addCatalogsAndEventDefinitions`'s `when` arms. When a new task
+    // kind gains a DOM-stamp arm, add its element name here too — the writer-side `when` is
+    // the source of truth for which tasks need post-processing.
     private fun Document.taskElementsById(): Map<String, Element> =
-        listOf("sendTask", "receiveTask", "businessRuleTask", "scriptTask", "manualTask")
+        listOf("sendTask", "receiveTask", "businessRuleTask")
             .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
             .associateBy { it.getAttribute("id") }
             .filterKeys { it.isNotBlank() }

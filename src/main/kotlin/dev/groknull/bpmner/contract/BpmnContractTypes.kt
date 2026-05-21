@@ -191,14 +191,14 @@ sealed interface ContractActivity {
     data class Service(
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Stable activity id")
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Activity name from the workflow")
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Optional actor id responsible for the activity")
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -209,14 +209,14 @@ sealed interface ContractActivity {
     data class User(
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Stable activity id")
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Activity name from the workflow")
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:Size(max = 200)
-        @get:JsonPropertyDescription("Optional actor id responsible for the activity")
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -227,11 +227,14 @@ sealed interface ContractActivity {
     data class Script(
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -244,9 +247,11 @@ sealed interface ContractActivity {
     data class BusinessRule(
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
@@ -257,6 +262,7 @@ sealed interface ContractActivity {
         )
         val decisionName: String,
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -267,9 +273,11 @@ sealed interface ContractActivity {
     data class Send(
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
@@ -279,6 +287,7 @@ sealed interface ContractActivity {
         )
         val messageName: String,
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -291,9 +300,11 @@ sealed interface ContractActivity {
     data class Receive(
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
@@ -303,6 +314,7 @@ sealed interface ContractActivity {
         )
         val messageName: String,
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -313,11 +325,14 @@ sealed interface ContractActivity {
     data class Manual(
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
         override val id: String,
         @field:NotBlank
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
         override val name: String,
         @field:Size(max = 200)
+        @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
         override val actorId: String? = null,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
@@ -336,6 +351,12 @@ sealed interface ContractActivity {
         ): ContractActivity = Service(id = id, name = name, actorId = actorId, sourceIds = sourceIds)
     }
 }
+
+private const val ACTIVITY_ID_DESCRIPTION: String = "Stable activity id"
+
+private const val ACTIVITY_NAME_DESCRIPTION: String = "Activity name from the workflow"
+
+private const val ACTIVITY_ACTOR_ID_DESCRIPTION: String = "Optional actor id responsible for the activity"
 
 private const val ACTIVITY_SOURCE_IDS_DESCRIPTION: String =
     "Source ids grounding this activity in evidence. Each is an assessment evidence id, " +

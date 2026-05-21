@@ -11,8 +11,13 @@ object BpmnNodeNamingPolicy {
     fun requiresName(
         node: BpmnNode,
         outgoingCount: Int,
-    ): Boolean =
-        when (node) {
+    ): Boolean {
+        // Every task subtype requires a name. Short-circuiting on isTask() means each new
+        // task kind added via the vocabulary epic (#196) automatically participates without
+        // forcing this function to enumerate them individually — the rule is "all tasks",
+        // not "this specific list of tasks".
+        if (node.isTask()) return true
+        return when (node) {
             is BpmnStartEvent,
             is BpmnIntermediateCatchEvent,
             is BpmnIntermediateThrowEvent,
@@ -26,9 +31,8 @@ object BpmnNodeNamingPolicy {
             // join is a barrier. Labels would be noise; keep them optional.
             is BpmnParallelGateway -> false
 
-            // Every task subtype requires a name. Delegating to isTask() means each new
-            // task kind added via the vocabulary epic (#196) automatically participates
-            // without forcing this `when` to enumerate them individually.
+            // Tasks were already handled above via isTask(); the compiler still requires
+            // these arms for sealed-interface exhaustiveness even though they're unreachable.
             is BpmnUserTask,
             is BpmnServiceTask,
             is BpmnScriptTask,
@@ -38,6 +42,7 @@ object BpmnNodeNamingPolicy {
             is BpmnManualTask,
             -> true
         }
+    }
 
     fun missingNameMessage(node: BpmnNode): String {
         val nodeId = node.id.ifBlank { "<blank>" }
