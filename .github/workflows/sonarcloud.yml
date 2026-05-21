@@ -67,6 +67,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run Bazel coverage
+        id: coverage
         run: |
           # Generate coverage reports using the bazel-sonarqube coverage generator
           # (converts Kotlin JaCoCo + JS LCOV into the SonarQube generic-coverage XML
@@ -79,33 +80,45 @@ jobs:
           # (which runs from the bazel runfiles tree as its CWD) can resolve it.
           cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
 
-      - name: SonarCloud Scan
+      # Each scan runs in its own step so the GitHub Actions UI reports per-project
+      # status. A single shell block with `set -eo pipefail` (the GH Actions default)
+      # would terminate at the first failure and silently skip the remaining scans,
+      # leaving downstream dashboards dark with no clear signal.
+      #
+      # The three steps share `if: always() && needs-previous-step-was-attempted`
+      # behaviour via `if: always()` so a backend failure doesn't suppress the linter
+      # and web scans. The overall job still fails because each step's failure
+      # propagates; we just collect ALL signals before failing.
+
+      - name: SonarCloud Scan — Backend
+        if: always() && steps.coverage.outcome != 'skipped'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          # Use the idiomatic Bazel sonarqube runner for each project key.
-          # This ensures that analysis is pushed to the 3 separate projects
-          # defined in the SonarCloud dashboard. Each gets the same combined
-          # coverage report — SonarCloud only credits coverage for files that
-          # are in the project's analyzed `srcs`, so per-language scoping
-          # happens server-side automatically.
-          COVERAGE_REPORT_PATH="$GITHUB_WORKSPACE/coverage_report.dat"
-
-          echo "Scanning Backend..."
           bazel run //:sonar -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.coverageReportPaths="$COVERAGE_REPORT_PATH"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
 
-          echo "Scanning Linter..."
+      - name: SonarCloud Scan — Linter
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
           bazel run //linter:sonar -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.coverageReportPaths="$COVERAGE_REPORT_PATH"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
 
-          echo "Scanning Web..."
+      - name: SonarCloud Scan — Web
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
           bazel run //web:sonar -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.coverageReportPaths="$COVERAGE_REPORT_PATH"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"

@@ -17,11 +17,17 @@ import { env, argv, exit, execPath } from 'node:process';
  */
 
 const allArgs = argv.slice(2);
-// Filter out .map files and other non-test arguments for the runner
-const testFiles = allArgs.filter(arg => arg.endsWith('.js') || arg.endsWith('.mjs') || arg.endsWith('.cjs'));
+// Filter out .map files only. We deliberately use a denylist (rather than an
+// allowlist of .js/.mjs/.cjs) so that legitimate runner flags passed via
+// Bazel `--test_arg=...` — for example `--test-name-pattern`, `--test-only`,
+// `--test-concurrency` — survive the filter. .map files are the one
+// pathological case: the bundler emits source-map sidecars into the runfiles
+// alongside the test JS, and Node tries to parse them as JS, throwing
+// SyntaxError on the leading `{`.
+const testFiles = allArgs.filter(arg => !arg.endsWith('.map'));
 
 if (testFiles.length === 0) {
-    console.error('Error: No test files provided to test_wrapper.mjs');
+    console.error('Error: No test arguments provided to test_wrapper.mjs');
     console.error('Arguments received:', allArgs);
     exit(1);
 }
@@ -58,5 +64,13 @@ const result = spawnSync(execPath, args, {
         BAZEL_TEST: '1',
     }
 });
+
+// When spawnSync's own machinery fails (binary missing, EACCES, sandbox
+// violation, etc.), result.error is set and result.status is null. Without
+// this line the wrapper exits 1 with no trace — the test log just shows
+// our "Running test runner: ..." line and then nothing.
+if (result.error) {
+    console.error('test_wrapper: failed to spawn runner:', result.error.message);
+}
 
 exit(result.status ?? 1);
