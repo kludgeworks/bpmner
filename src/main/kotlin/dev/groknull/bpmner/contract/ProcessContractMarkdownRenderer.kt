@@ -69,7 +69,7 @@ internal class ProcessContractMarkdownRenderer {
             appendLine()
             appendLine("## End states")
             contract.endStates.forEach { endState ->
-                appendLine("- ${endState.id}: ${endState.name}")
+                appendLine("- ${endState.id}: ${endState.name}${endStateSuffix(endState)}")
             }
         }
 
@@ -96,5 +96,18 @@ internal class ProcessContractMarkdownRenderer {
         is ContractActivity.Send -> " [SEND messageName=\"${activity.messageName}\"]"
         is ContractActivity.Receive -> " [RECEIVE messageName=\"${activity.messageName}\"]"
         is ContractActivity.Manual -> " [MANUAL]"
+    }
+
+    // End-state-kind suffix for the markdown line. Normal is the default and gets no
+    // label; the four typed kinds carry their payload identifier (errorCode / messageName
+    // / signalName / escalationCode) so the BPMN-generation LLM sees the catalogue keys
+    // directly without re-walking the source prose.
+    private fun endStateSuffix(endState: ContractEndState): String = when (endState) {
+        is ContractEndState.Normal -> ""
+        is ContractEndState.Terminate -> " [TERMINATE]"
+        is ContractEndState.Error -> " [ERROR errorCode=\"${endState.errorCode}\"]"
+        is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"
+        is ContractEndState.Signal -> " [SIGNAL signalName=\"${endState.signalName}\"]"
+        is ContractEndState.Escalation -> " [ESCALATION escalationCode=\"${endState.escalationCode}\"]"
     }
 }

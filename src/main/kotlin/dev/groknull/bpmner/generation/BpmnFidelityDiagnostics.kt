@@ -56,6 +56,31 @@ enum class BpmnFidelityCode {
      * BPMN generator emits a plain task that loses the messaging semantic.
      */
     ACTIVITY_TASK_KIND_MISMATCH,
+
+    /**
+     * A [dev.groknull.bpmner.contract.ContractDecision] has a
+     * [dev.groknull.bpmner.contract.DefaultBranch] but no outbound edge from the corresponding
+     * gateway has `isDefault = true`. The BPMN spec requires the gateway's `default` attribute
+     * to point at the catch-all flow; without it process engines have no fallback when no
+     * outbound condition matches.
+     *
+     * This code fires in the fidelity checker (generation-time via `validateOutline`) and from
+     * the repair-loop evaluator (via `BpmnContractAwareValidator`).
+     * [dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner] runs
+     * deterministically after every LLM call to set `isDefault`; this check is
+     * the defence-in-depth that fires when the assigner could not resolve a match
+     * (e.g. the gateway is missing entirely — caught first by [DECISION_GATEWAY_MISSING]).
+     */
+    DEFAULT_FLOW_MISSING,
+
+    /**
+     * A ContractEndState is realised by a BPMN end event whose `eventDefinition` shape
+     * doesn't match the declared end-state kind. For example, `ContractEndState.Terminate`
+     * realised as `BpmnEndEvent` with `BpmnNoneEventDefinition` — semantically wrong
+     * because the terminate-scope behaviour is lost. Catches the failure mode where the
+     * generator LLM flattens the end-state kind discriminator away in the BPMN pass.
+     */
+    END_EVENT_KIND_MISMATCH,
 }
 
 /**

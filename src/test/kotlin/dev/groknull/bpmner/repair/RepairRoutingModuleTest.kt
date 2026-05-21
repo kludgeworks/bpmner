@@ -21,6 +21,9 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
@@ -142,6 +145,7 @@ class RepairRoutingModuleTest {
             request = BpmnRequest(processDescription = "Make toast"),
             graph = graph,
             rendered = rendered,
+            contract = testProcessContract(),
             context = context,
         )
 
@@ -195,6 +199,7 @@ class RepairRoutingModuleTest {
             request = BpmnRequest(processDescription = "Make toast"),
             graph = graph,
             rendered = rendered,
+            contract = testProcessContract(),
             context = context,
         )
 
@@ -277,6 +282,7 @@ class RepairRoutingModuleTest {
             request = BpmnRequest(processDescription = "Make toast"),
             graph = graph,
             rendered = rendered,
+            contract = testProcessContract(),
             context = context,
         )
 
@@ -352,6 +358,7 @@ class RepairRoutingModuleTest {
             request = BpmnRequest(processDescription = "Make toast"),
             graph = graph,
             rendered = rendered,
+            contract = testProcessContract(),
             context = context,
         )
 
@@ -407,6 +414,15 @@ class RepairRoutingModuleTest {
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 
     private fun anyRuleNames(): Collection<String> = ArgumentMatchers.anyCollection()
+
+    private fun testProcessContract(): ProcessContract = ProcessContract(
+        id = "c-test",
+        processName = "Make toast",
+        summary = "test",
+        trigger = "start",
+        activities = listOf(ContractActivity("Task_1", "Toast bread")),
+        endStates = listOf(ContractEndState("EndEvent_1", "Toast served")),
+    )
 
     @Suppress("TooManyFunctions")
     private class FakeActionContext(

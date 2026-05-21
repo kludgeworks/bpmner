@@ -7,12 +7,15 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
+import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
@@ -44,7 +47,10 @@ internal class BpmnRefinementEngine(
     private val fingerprints: BpmnFingerprintService,
     private val strategies: List<BpmnRepairStrategy>,
     private val eventPublisher: ApplicationEventPublisher,
+    private val defaultFlowAssigner: DefaultFlowAssigner,
+    private val fidelityChecker: BpmnContractFidelityChecker,
 ) {
+    private val contractAwareValidator = BpmnContractAwareValidator(validator, fidelityChecker)
     private val logger = LoggerFactory.getLogger(BpmnRefinementEngine::class.java)
 
     @Suppress("LongMethod") // repair loop; render() may throw any RuntimeException
@@ -52,20 +58,27 @@ internal class BpmnRefinementEngine(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
+        contract: ProcessContract,
         context: ActionContext,
     ): ValidatedBpmnXml {
         val maxEvaluations = config.maxAttempts.coerceAtLeast(1)
-        val initialMessages = promptFactory.initialMessages(request, rendered.definition)
+        // Deterministically normalise the incoming definition at the engine boundary.
+        // The generator produces a raw BpmnDefinition; the engine owns all contract-aware
+        // post-processing. This is the initial stamp — subsequent repair steps re-stamp below.
+        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
+        val normalisedRendered = rendered.copy(definition = normalisedDefinition)
+        val initialMessages = promptFactory.initialMessages(request, normalisedRendered.definition)
         val initialAttempt =
             BpmnRepairAttempt(
                 attemptNumber = 1,
                 repairAttempts = 0,
                 graph = graph,
                 evaluation =
-                validator.evaluate(
+                contractAwareValidator.evaluate(
                     graph = graph,
-                    definition = rendered.definition,
-                    rendered = rendered,
+                    definition = normalisedRendered.definition,
+                    rendered = normalisedRendered,
+                    contract = contract,
                     repairAttempts = 0,
                 ),
                 messages = initialMessages,
@@ -77,6 +90,7 @@ internal class BpmnRefinementEngine(
                 attempt = initialAttempt,
                 record = initialRecord,
                 history = BpmnAttemptHistory().append(initialRecord),
+                contract = contract,
             )
 
         if (state.attempt.evaluation.isSuccessful()) {
@@ -123,6 +137,7 @@ internal class BpmnRefinementEngine(
         val attempt: BpmnRepairAttempt,
         val record: BpmnAttemptRecord,
         val history: BpmnAttemptHistory,
+        val contract: ProcessContract,
     )
 
     private fun performRepairStep(
@@ -138,14 +153,23 @@ internal class BpmnRefinementEngine(
         logAndPublishEvent(request, currentAttempt, maxEvaluations, context)
 
         val resolution = runRepair(currentAttempt, maxEvaluations, history, request, context)
-        val repaired = resolution.repaired
 
-        logRouteSummary(currentAttempt, resolution)
+        // Deterministically re-stamp DefaultBranch semantics. The repair LLM has no
+        // explicit instruction to preserve isDefault; the assigner is the authoritative
+        // contract→BPMN bridge and must run after every LLM call.
+        val stamped =
+            resolution.repaired.copy(
+                definition = defaultFlowAssigner.assign(state.contract, resolution.repaired.definition),
+            )
+        val stampedResolution = resolution.copy(repaired = stamped)
+        val repaired = stampedResolution.repaired
+
+        logRouteSummary(currentAttempt, stampedResolution)
 
         validateRepairEffect(repaired, currentRecord, history, maxEvaluations, request)
 
         val nextGraph = state.graph.withUpdatedDefinition(repaired.definition)
-        val nextAttempt = evaluateNextAttempt(nextGraph, repaired, currentAttempt, history)
+        val nextAttempt = evaluateNextAttempt(nextGraph, repaired, currentAttempt, history, state.contract)
         val nextRecord =
             attemptRecordFactory.toRecord(
                 attempt = nextAttempt,
@@ -181,6 +205,7 @@ internal class BpmnRefinementEngine(
             attempt = nextAttempt,
             record = nextRecord,
             history = history,
+            contract = state.contract,
         )
     }
 
@@ -276,6 +301,7 @@ internal class BpmnRefinementEngine(
         repaired: BpmnRepairResult.Repaired,
         currentAttempt: BpmnRepairAttempt,
         history: BpmnAttemptHistory,
+        contract: ProcessContract,
     ): BpmnRepairAttempt {
         var renderFailureMessage: String? = null
         val correctedRendered =
@@ -290,10 +316,11 @@ internal class BpmnRefinementEngine(
             }
 
         val nextEvaluation =
-            validator.evaluate(
+            contractAwareValidator.evaluate(
                 graph = graph,
                 definition = repaired.definition,
                 rendered = correctedRendered,
+                contract = contract,
                 renderFailureMessage = renderFailureMessage,
                 repairAttempts = currentAttempt.repairAttempts + 1,
             )

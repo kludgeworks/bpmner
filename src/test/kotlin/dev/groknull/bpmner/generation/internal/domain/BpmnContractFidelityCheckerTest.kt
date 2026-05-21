@@ -18,9 +18,12 @@ import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import kotlin.test.Test
@@ -198,6 +201,139 @@ class BpmnContractFidelityCheckerTest {
             "expected ACTIVITY_TASK_KIND_MISMATCH citing SEND vs USER_TASK; got: ${report.issues}",
         )
     }
+
+    @Test
+    fun `end state with matching event definition passes fidelity`() {
+        // Happy path: contract declares Terminate end; BPMN end event carries
+        // BpmnTerminateEventDefinition. No fidelity issue should fire.
+        val report =
+            checker.check(
+                typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
+                typedEndStateDefinition("end-cancelled", BpmnTerminateEventDefinition),
+            )
+        assertTrue(report.isValid, "expected valid report for matching end-state kind; got: ${report.issues}")
+    }
+
+    @Test
+    fun `end state realized as wrong event definition flagged as END_EVENT_KIND_MISMATCH`() {
+        // Contract declares Terminate, BPMN realises it with NoneEventDefinition — the
+        // terminate-scope semantic is lost. END_EVENT_KIND_MISMATCH should fire.
+        val report =
+            checker.check(
+                typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
+                typedEndStateDefinition("end-cancelled", BpmnNoneEventDefinition),
+            )
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.END_EVENT_KIND_MISMATCH &&
+                    it.message.contains("kind=TERMINATE") &&
+                    it.message.contains("BpmnNoneEventDefinition") &&
+                    it.message.contains("BpmnTerminateEventDefinition")
+            },
+            "expected END_EVENT_KIND_MISMATCH citing TERMINATE vs None; got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `end state realized as a non-end-event node flagged as END_EVENT_KIND_MISMATCH`() {
+        // Contract declares Message end; BPMN realises the id as a UserTask. The check
+        // should bail with END_EVENT_KIND_MISMATCH citing the expected END_EVENT shape
+        // before even getting to the event-definition comparison.
+        val sources = listOf("ev1")
+        val contract =
+            ProcessContract(
+                id = "c-msg",
+                processName = "Confirmation process",
+                summary = "send confirmation",
+                trigger = "start",
+                triggerSourceIds = sources,
+                activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
+                endStates =
+                listOf(
+                    ContractEndState.Message(
+                        id = "end-sent",
+                        name = "Confirmation sent",
+                        messageName = "shipment confirmation",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+        val definition =
+            BpmnDefinition(
+                processId = "P",
+                processName = "Confirmation process",
+                nodes =
+                listOf(
+                    BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                    BpmnUserTask(id = "act-do", name = "Do thing"),
+                    // The contract id end-sent is realised as a UserTask, not an EndEvent.
+                    BpmnUserTask(id = "end-sent", name = "Confirmation sent"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
+                    BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = "end-sent"),
+                ),
+            )
+
+        val report = checker.check(contract, definition)
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.END_EVENT_KIND_MISMATCH &&
+                    it.message.contains("kind=MESSAGE") &&
+                    it.message.contains("USER_TASK") &&
+                    it.message.contains("END_EVENT")
+            },
+            "expected END_EVENT_KIND_MISMATCH citing MESSAGE vs USER_TASK; got: ${report.issues}",
+        )
+    }
+
+    // Compact fixture builders for the three end-state-kind tests above. Single activity,
+    // single end state — keeps the test focus on the END_EVENT_KIND_MISMATCH dispatch logic.
+    private fun typedEndStateContract(endState: ContractEndState): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
+            id = "c-end",
+            processName = "End-state fidelity",
+            summary = "single activity then typed end",
+            trigger = "start",
+            triggerSourceIds = sources,
+            activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
+            endStates =
+            listOf(
+                when (endState) {
+                    is ContractEndState.Normal -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Terminate -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Error -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Message -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Signal -> endState.copy(sourceIds = sources)
+                    is ContractEndState.Escalation -> endState.copy(sourceIds = sources)
+                },
+            ),
+        )
+    }
+
+    private fun typedEndStateDefinition(
+        endId: String,
+        endEventDefinition: BpmnEventDefinition,
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "End-state fidelity",
+        nodes =
+        listOf(
+            BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+            BpmnUserTask(id = "act-do", name = "Do thing"),
+            BpmnEndEvent(id = endId, name = "End", eventDefinition = endEventDefinition),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
+            BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = endId),
+        ),
+    )
 
     @Test
     fun `decision realized as a non-gateway node type flagged as DECISION_GATEWAY_MISSING`() {
@@ -473,6 +609,41 @@ class BpmnContractFidelityCheckerTest {
 
         assertEquals(0, report.issues.size)
         assertTrue(report.isValid)
+    }
+
+    @Test
+    fun `DefaultBranch without isDefault edge flagged as DEFAULT_FLOW_MISSING`() {
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoIsDefault())
+
+        assertFalse(report.isValid)
+        val dfm = report.issues.filter { it.code == BpmnFidelityCode.DEFAULT_FLOW_MISSING }
+        assertEquals(1, dfm.size, "expected exactly one DEFAULT_FLOW_MISSING; got: ${report.issues}")
+        assertTrue(dfm.single().message.contains("br-fallback"), "message should mention the DefaultBranch id")
+        assertTrue(dfm.single().message.contains("dec-approve"), "message should mention the gateway id")
+    }
+
+    @Test
+    fun `DefaultBranch with isDefault edge passes`() {
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionWithIsDefault())
+
+        assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
+    }
+
+    @Test
+    fun `DefaultBranch with gateway missing entirely does NOT fire DEFAULT_FLOW_MISSING`() {
+        // The gateway is absent → DECISION_GATEWAY_MISSING catches this first.
+        // DEFAULT_FLOW_MISSING must not fire because `gatewayIsValid` is false.
+        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoGateway())
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.DECISION_GATEWAY_MISSING },
+            "expected DECISION_GATEWAY_MISSING; got: ${report.issues.map { it.code }}",
+        )
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.DEFAULT_FLOW_MISSING },
+            "DEFAULT_FLOW_MISSING must not fire when gateway is missing; got: ${report.issues.map { it.code }}",
+        )
     }
 }
 
@@ -774,5 +945,110 @@ private fun skipForwardViaTaskDefinition(): BpmnDefinition = BpmnDefinition(
         BpmnEdge(id = "F4", sourceRef = "Task_intermediate", targetRef = "act-converge-target"),
         BpmnEdge(id = "F5", sourceRef = "act-fast-target", targetRef = "end-done"),
         BpmnEdge(id = "F6", sourceRef = "act-converge-target", targetRef = "end-done"),
+    ),
+)
+
+// ----- DEFAULT_FLOW_MISSING fixtures -----
+
+/** Contract with one EXCLUSIVE decision that has a DefaultBranch. */
+private fun defaultBranchContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-dfm",
+        processName = "Approval with fallback",
+        summary = "Approve or fall back to manual review",
+        trigger = "start",
+        triggerSourceIds = sources,
+        activities =
+        listOf(
+            ContractActivity.User(id = "act-review", name = "Review", sourceIds = sources),
+            ContractActivity.User(id = "act-manual", name = "Manual review", sourceIds = sources),
+        ),
+        decisions =
+        listOf(
+            ContractDecision(
+                id = "dec-approve",
+                question = "Approved?",
+                branches =
+                listOf(
+                    ConditionalBranch(
+                        id = "br-approve",
+                        label = "Approved",
+                        condition = "approved",
+                        nextRef = "end-done",
+                    ),
+                    DefaultBranch(
+                        id = "br-fallback",
+                        label = "Manual review",
+                        nextRef = "act-manual",
+                    ),
+                ),
+                sourceIds = sources,
+            ),
+        ),
+        endStates = listOf(ContractEndState(id = "end-done", name = "Done", sourceIds = sources)),
+    )
+}
+
+/** Gateway present, two outbound edges, but neither has isDefault=true. */
+private fun defaultBranchDefinitionNoIsDefault(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Approval with fallback",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-review", name = "Review"),
+        BpmnExclusiveGateway(id = "dec-approve", name = "Approved?"),
+        BpmnUserTask(id = "act-manual", name = "Manual review"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+        BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "dec-approve"),
+        BpmnEdge(id = "F3", sourceRef = "dec-approve", targetRef = "end-done", conditionExpression = "approved"),
+        BpmnEdge(id = "F4", sourceRef = "dec-approve", targetRef = "act-manual"),
+        BpmnEdge(id = "F5", sourceRef = "act-manual", targetRef = "end-done"),
+    ),
+)
+
+/** Same as above but with isDefault=true on the fallback edge. */
+private fun defaultBranchDefinitionWithIsDefault(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Approval with fallback",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-review", name = "Review"),
+        BpmnExclusiveGateway(id = "dec-approve", name = "Approved?"),
+        BpmnUserTask(id = "act-manual", name = "Manual review"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+        BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "dec-approve"),
+        BpmnEdge(id = "F3", sourceRef = "dec-approve", targetRef = "end-done", conditionExpression = "approved"),
+        BpmnEdge(id = "F4", sourceRef = "dec-approve", targetRef = "act-manual", isDefault = true),
+        BpmnEdge(id = "F5", sourceRef = "act-manual", targetRef = "end-done"),
+    ),
+)
+
+/** Gateway missing entirely — DECISION_GATEWAY_MISSING should fire, not DEFAULT_FLOW_MISSING. */
+private fun defaultBranchDefinitionNoGateway(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Approval with fallback",
+    nodes =
+    listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-review", name = "Review"),
+        BpmnUserTask(id = "act-manual", name = "Manual review"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences =
+    listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
+        BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "act-manual"),
+        BpmnEdge(id = "F3", sourceRef = "act-manual", targetRef = "end-done"),
     ),
 )

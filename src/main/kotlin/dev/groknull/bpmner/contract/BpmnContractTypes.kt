@@ -578,20 +578,224 @@ data class ContractArtifact(
     val description: String? = null,
 )
 
+/**
+ * Required end state for the extracted process contract.
+ *
+ * Mirrors the sealed-subtype pattern used by [ContractTrigger], [ContractBranch],
+ * and [ContractActivity]: the `kind` discriminator in the LLM-facing JSON dispatches
+ * to one of six subtypes, each carrying exactly the payload its end-event kind needs.
+ * Kind / payload coupling is enforced by the type system — [Error] always carries an
+ * `errorCode`, [Message] always carries a `messageName`, etc.
+ *
+ * Subtypes map 1:1 to BPMN end-event flavours rendered as
+ * `<bpmn:endEvent>` with a matching [dev.groknull.bpmner.core.BpmnEventDefinition] child:
+ *
+ *  - [Normal] — vanilla path completion → [dev.groknull.bpmner.core.BpmnNoneEventDefinition]
+ *  - [Terminate] — terminates the enclosing scope, killing all parallel tokens →
+ *    [dev.groknull.bpmner.core.BpmnTerminateEventDefinition]
+ *  - [Error] — raises a named error that propagates to the nearest matching boundary
+ *    catcher (falls back to scope completion if uncaught per BPMN spec) →
+ *    [dev.groknull.bpmner.core.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
+ *  - [Message] — point-to-point send on completion →
+ *    [dev.groknull.bpmner.core.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
+ *  - [Signal] — broadcast to every subscribing process →
+ *    [dev.groknull.bpmner.core.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
+ *  - [Escalation] — non-error notification that propagates to an escalation catcher
+ *    (per Camunda best practice: use for "report back" rather than "this failed") →
+ *    [dev.groknull.bpmner.core.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
+ *
+ * Field naming follows the convention from [ContractTrigger]: Message/Signal carry
+ * human-readable **names** (extracted from prose; mapped to catalogue ids at generation
+ * time), Error/Escalation carry **codes** (the BPMN-spec matching identifier on
+ * `<bpmn:error errorCode="...">` / `<bpmn:escalation escalationCode="...">`).
+ *
+ * The companion `invoke` keeps existing flat-constructor call sites compiling by
+ * defaulting to [Normal] — the most common end-state kind in practice.
+ */
 @JsonClassDescription("Required end state for the extracted process contract")
-data class ContractEndState(
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Stable end-state id")
-    val id: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("End-state name")
-    val name: String,
-    @field:Size(max = 10)
-    @get:JsonPropertyDescription("Source ids grounding this end state in evidence.")
-    val sourceIds: List<String> = emptyList(),
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
+@JsonSubTypes(
+    JsonSubTypes.Type(value = ContractEndState.Normal::class, name = "NORMAL"),
+    JsonSubTypes.Type(value = ContractEndState.Terminate::class, name = "TERMINATE"),
+    JsonSubTypes.Type(value = ContractEndState.Error::class, name = "ERROR"),
+    JsonSubTypes.Type(value = ContractEndState.Message::class, name = "MESSAGE"),
+    JsonSubTypes.Type(value = ContractEndState.Signal::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = ContractEndState.Escalation::class, name = "ESCALATION"),
 )
+sealed interface ContractEndState {
+    val id: String
+    val name: String
+    val sourceIds: List<String>
+
+    @JsonClassDescription("Normal end — vanilla path completion. Maps to BpmnEndEvent with NoneEventDefinition.")
+    data class Normal(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Terminate end — terminates the enclosing scope, killing all in-flight parallel " +
+            "tokens. Maps to BpmnEndEvent with TerminateEventDefinition.",
+    )
+    data class Terminate(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Error end — raises a named error that propagates to the nearest matching boundary " +
+            "catcher. Maps to BpmnEndEvent with ErrorEventDefinition.",
+    )
+    data class Error(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Stable business error code that boundary catchers match against (e.g. " +
+                "\"CREDIT_REJECTED\"). The downstream BPMN generator creates a BpmnErrorRef " +
+                "whose `code` equals this value and points the end event's `errorRef` at its id.",
+        )
+        val errorCode: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Message end — point-to-point message sent on completion. Maps to BpmnEndEvent with " +
+            "MessageEventDefinition.",
+    )
+    data class Message(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Human-readable name of the message sent on completion (e.g. \"shipment confirmation\"). " +
+                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
+        )
+        val messageName: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Signal end — broadcast to every subscribing process. Distinct from Message in being " +
+            "one-to-many. Maps to BpmnEndEvent with SignalEventDefinition.",
+    )
+    data class Signal(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Human-readable name of the broadcast signal (e.g. \"settlement complete\"). The " +
+                "downstream BPMN generator maps this to a stable BpmnSignalRef catalogue id.",
+        )
+        val signalName: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    @JsonClassDescription(
+        "Escalation end — non-error notification that propagates to an escalation catcher. " +
+            "Distinct from Error: signals \"please nudge\" rather than \"this failed\". Maps to " +
+            "BpmnEndEvent with EscalationEventDefinition.",
+    )
+    data class Escalation(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(
+            "Stable business escalation code matched by escalation catchers (e.g. " +
+                "\"APPROVAL_OVERDUE\"). The downstream BPMN generator creates a BpmnEscalationRef " +
+                "whose `code` equals this value and points the end event's `escalationRef` at its id.",
+        )
+        val escalationCode: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractEndState
+
+    companion object {
+        // Convenience factory: lets existing call sites that don't specify a kind keep working
+        // (`ContractEndState("id", "name")` → Normal). Most end states are NORMAL in practice;
+        // matches the analogous `ContractActivity.invoke` companion added in PR #203.
+        operator fun invoke(
+            id: String,
+            name: String,
+            sourceIds: List<String> = emptyList(),
+        ): ContractEndState = Normal(id = id, name = name, sourceIds = sourceIds)
+    }
+}
+
+private const val END_STATE_ID_DESCRIPTION: String = "Stable end-state id"
+
+private const val END_STATE_NAME_DESCRIPTION: String = "End-state name"
+
+private const val END_STATE_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this end state in evidence."
+
+/**
+ * The discriminator string for [endState], matching the `kind` field in the LLM JSON
+ * output and the names declared in `@JsonSubTypes` on [ContractEndState].
+ */
+val ContractEndState.kindName: String
+    get() =
+        when (this) {
+            is ContractEndState.Normal -> "NORMAL"
+            is ContractEndState.Terminate -> "TERMINATE"
+            is ContractEndState.Error -> "ERROR"
+            is ContractEndState.Message -> "MESSAGE"
+            is ContractEndState.Signal -> "SIGNAL"
+            is ContractEndState.Escalation -> "ESCALATION"
+        }
 
 @JsonClassDescription("Assumption made while extracting the process contract")
 data class ContractAssumption(

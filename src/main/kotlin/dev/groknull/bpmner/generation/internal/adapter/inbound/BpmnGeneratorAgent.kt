@@ -76,14 +76,18 @@ internal class BpmnGeneratorAgent(
         val rawDefinition =
             promptRunner.createObject(prompt, BpmnDefinition::class.java)
                 ?: error("Outline generator failed to produce a structured outline.")
-        // Deterministically propagate contract-side DefaultBranch semantics to the BPMN edge.
-        // The LLM is unreliable on this discriminator; the contract is the source of truth.
-        val definition = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
+        // Stamp isDefault on outbound flows from EXCLUSIVE_GATEWAY nodes that the contract
+        // marks as DefaultBranch. The LLM is unreliable on this attribute, so we
+        // deterministically apply it here BEFORE validateOutline runs the contract-fidelity
+        // check (which fires DEFAULT_FLOW_MISSING as ERROR and would abort the pipeline).
+        // The repair engine also re-runs DefaultFlowAssigner on every repair candidate as a
+        // second line of defence against LLM drift during refinement iterations.
+        val definitionWithDefaults = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
         val outline =
             ProcessOutline(
                 request = request,
-                definition = definition,
-                metrics = metricsCalculator.calculate(definition),
+                definition = definitionWithDefaults,
+                metrics = metricsCalculator.calculate(definitionWithDefaults),
             )
         logger.info(
             "Outline summary: phases={}, xorBranches={}, parallelBranches={}, loops={}, subprocesses={}",

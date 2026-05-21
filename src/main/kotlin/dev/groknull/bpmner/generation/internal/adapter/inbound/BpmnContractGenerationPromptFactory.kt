@@ -86,6 +86,38 @@ internal class BpmnContractGenerationPromptFactory(
                 " mentions. Pick stable ids like `Message_DeclineNotification` from the messageName.",
         )
         appendLine()
+        appendLine("End-state-kind → BpmnEndEvent mapping (each ContractEndState carries a `kind` discriminator):")
+        appendLine("- ContractEndState.Normal      → BpmnEndEvent with BpmnNoneEventDefinition (default)")
+        appendLine(
+            "- ContractEndState.Terminate   → BpmnEndEvent with BpmnTerminateEventDefinition" +
+                " (a data object — no payload)",
+        )
+        appendLine(
+            "- ContractEndState.Error       → BpmnEndEvent with BpmnErrorEventDefinition(errorRef)" +
+                " plus a matching BpmnErrorRef in `definition.errors` whose `code = errorCode`." +
+                " Pick stable ids like `Error_CreditRejected` from the errorCode.",
+        )
+        appendLine(
+            "- ContractEndState.Message     → BpmnEndEvent with BpmnMessageEventDefinition(messageRef)" +
+                " plus a matching BpmnMessageRef whose `name = messageName`. If the same messageName" +
+                " also appears on a Send/Receive task, REUSE the catalogue entry — one ref per distinct name.",
+        )
+        appendLine(
+            "- ContractEndState.Signal      → BpmnEndEvent with BpmnSignalEventDefinition(signalRef)" +
+                " plus a matching BpmnSignalRef in `definition.signals` whose `name = signalName`." +
+                " Pick stable ids like `Signal_SettlementComplete` from the signalName.",
+        )
+        appendLine(
+            "- ContractEndState.Escalation  → BpmnEndEvent with BpmnEscalationEventDefinition(escalationRef)" +
+                " plus a matching BpmnEscalationRef in `definition.escalations` whose `code = escalationCode`." +
+                " Pick stable ids like `Escalation_ApprovalOverdue` from the escalationCode.",
+        )
+        appendLine(
+            "- Catalogue reuse: a single `BpmnErrorRef` / `BpmnMessageRef` / `BpmnSignalRef` /" +
+                " `BpmnEscalationRef` can be referenced by multiple end events (and intermediate" +
+                " catch / throw events when those land); only declare each distinct code/name once.",
+        )
+        appendLine()
         appendLine("Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discriminator):")
         appendLine(
             "- CONDITIONAL (ConditionalBranch) → BpmnEdge with `conditionExpression = branch.condition`." +
