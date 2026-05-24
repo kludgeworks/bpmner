@@ -17,6 +17,7 @@ class BpmnerModulithTest {
         val moduleNames = modules.map { it.name }.toSet()
         val expectedModules =
             listOf(
+                "api",
                 "config",
                 "core",
                 "generation",
@@ -27,6 +28,7 @@ class BpmnerModulithTest {
                 "readiness",
                 "contract",
                 "alignment",
+                "rules",
                 "shell",
                 "web",
             )
