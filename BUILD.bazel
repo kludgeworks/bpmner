@@ -22,9 +22,9 @@ filegroup(
 
 sonarqube(
     name = "sonar",
+    srcs = ["//src:analysis_srcs"],
     project_key = "kludgeworks_bpmner_backend",
     project_name = "bpmner Backend",
-    srcs = ["//src:analysis_srcs"],
     scm_info = [":git_info"],
 )
 
@@ -99,6 +99,7 @@ test_suite(
         ":vale_fixtures_test",
         "//src:ktlint_check",
         "//src/test:ktlint_check",
+        "//tools/pkl-enum-gen:PklEnumGeneratorTest",
     ],
 )
 

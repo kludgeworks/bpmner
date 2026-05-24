@@ -10,8 +10,8 @@ package dev.groknull.bpmner.api
  * to Pkl rule definitions through the generated `NodeProperty.pkl` type alias. Annotated
  * properties are enumerated at build time by the `pkl-enum-gen` tool (#214).
  *
- * Retention is BINARY because the generator reads compiled class metadata — RUNTIME would be
- * unnecessary and pulls reflection into the deployment artifact.
+ * Retention is BINARY for downstream compiled consumers; the generator itself reads Kotlin source
+ * files in Bazel and does not require runtime reflection.
  */
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.FIELD)

@@ -7,11 +7,27 @@ package(default_visibility = ["//linter:__subpackages__"])
 
 PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
 
+PKL_GENERATED_SCHEMA_SRCS = [
+    "schema/generated/NodeProperty.pkl",
+    "schema/generated/NodeTypeName.pkl",
+]
+
 PKL_RULE_SRCS = glob(["rules/*.pkl"])
 
 pkl_library(
     name = "schema",
-    srcs = PKL_SCHEMA_SRCS,
+    srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS,
+)
+
+genrule(
+    name = "generated_enums",
+    srcs = ["//src:main/kotlin/dev/groknull/bpmner/core/BpmnDomain.kt"],
+    outs = [
+        "schema/generated/NodeProperty.pkl",
+        "schema/generated/NodeTypeName.pkl",
+    ],
+    cmd = "$(location //tools/pkl-enum-gen) --input $(location //src:main/kotlin/dev/groknull/bpmner/core/BpmnDomain.kt) --out-dir $(RULEDIR)/schema/generated",
+    tools = ["//tools/pkl-enum-gen"],
 )
 
 pkl_eval(
@@ -42,15 +58,17 @@ pkl_eval(
 
 pkl_test(
     name = "schema_test",
-    srcs = PKL_SCHEMA_SRCS + [
+    srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [
         "Catalog.pkl",
     ] + PKL_RULE_SRCS + [
         "test-fixtures/CatalogTest.pkl",
+        "test-fixtures/GeneratedEnumsTest.pkl",
         "test-fixtures/SchemaTest.pkl",
         "test-fixtures/UncommonAbbreviations.pkl",
     ],
     entrypoints = [
         "test-fixtures/SchemaTest.pkl",
         "test-fixtures/CatalogTest.pkl",
+        "test-fixtures/GeneratedEnumsTest.pkl",
     ],
 )

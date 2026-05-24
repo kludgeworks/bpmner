@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.api.PklProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -205,6 +206,8 @@ data object BpmnTerminateEventDefinition : BpmnEventDefinition
 )
 sealed interface BpmnNode {
     val id: String
+
+    @get:PklProperty("name")
     val name: String?
 }
 
@@ -305,6 +308,7 @@ data class BpmnStartEvent(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
+    @get:PklProperty("eventDefinition")
     @get:JsonPropertyDescription("Nested BPMN event definition; NONE represents a plain start event")
     val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
     @get:JsonPropertyDescription("Whether this start interrupts its enclosing scope; event subprocess starts may set false")
@@ -342,6 +346,7 @@ data class BpmnBusinessRuleTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
+    @get:PklProperty("decisionRef")
     @get:JsonPropertyDescription(
         "Identifier of the decision (e.g. DMN decision id, rule-set name) that this task evaluates. " +
             "Free-form string until a typed decision catalogue exists; non-blank.",
@@ -356,6 +361,7 @@ data class BpmnSendTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
+    @get:PklProperty("messageRef")
     @get:JsonPropertyDescription(
         "Id of the BpmnMessageRef in the process-level message catalogue that this send task emits.",
     )
@@ -428,8 +434,10 @@ data class BpmnBoundaryEvent(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
+    @get:PklProperty("attachedToRef")
     @get:JsonPropertyDescription("BPMN id of the activity this boundary event is attached to")
     val attachedToRef: String,
+    @get:PklProperty("cancelActivity")
     @get:JsonPropertyDescription("Whether the boundary event cancels the attached activity when it fires")
     val cancelActivity: Boolean = true,
     @field:Valid

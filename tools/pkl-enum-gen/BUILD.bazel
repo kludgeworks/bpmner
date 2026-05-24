@@ -1,0 +1,43 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+
+package(default_visibility = ["//visibility:public"])
+
+kt_jvm_library(
+    name = "pkl_enum_gen_lib",
+    srcs = glob(["src/main/kotlin/**/*.kt"]),
+    deps = [
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+    ],
+)
+
+java_binary(
+    name = "pkl-enum-gen",
+    main_class = "dev.groknull.bpmner.tools.pklenumgen.MainKt",
+    runtime_deps = [":pkl_enum_gen_lib"],
+)
+
+kt_jvm_library(
+    name = "pkl_enum_gen_tests_lib",
+    srcs = glob(["src/test/kotlin/**/*.kt"]),
+    deps = [
+        ":pkl_enum_gen_lib",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_junit_jupiter_junit_jupiter_api",
+    ],
+)
+
+java_junit5_test(
+    name = "PklEnumGeneratorTest",
+    test_class = "dev.groknull.bpmner.tools.pklenumgen.PklEnumGeneratorTest",
+    runtime_deps = [
+        ":pkl_enum_gen_tests_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+)
