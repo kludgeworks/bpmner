@@ -1,0 +1,193 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.api
+
+/**
+ * Annotation-free sealed BPMN domain hierarchy. Every concrete BPMN data class in
+ * `core/BpmnDomain.kt` implements one of these interfaces. Rule engines (compiled and
+ * Pkl-authored) consume the api types so they never depend on Jackson, Jakarta Validation,
+ * or any framework-side detail of the core types.
+ *
+ * The hierarchy is sealed all the way down, which gives api-side `when` blocks compile-time
+ * exhaustiveness: every new BPMN subtype must be added to both api and core in a single
+ * change. The cost is that api+core must stay in one Kotlin compilation module — if api/
+ * is ever split out as a standalone JAR, the seal must be lifted first.
+ */
+interface BpmnDefinition {
+    val processId: String
+    val processName: String
+    val nodes: List<BpmnNode>
+    val sequences: List<BpmnEdge>
+    val messages: List<BpmnMessageRef>
+    val signals: List<BpmnSignalRef>
+    val errors: List<BpmnErrorRef>
+    val escalations: List<BpmnEscalationRef>
+}
+
+/**
+ * A BPMN node. Implementations live in `core/BpmnDomain.kt`; each carries the Jackson
+ * polymorphism annotations and Jakarta Validation constraints required for LLM JSON
+ * round-tripping.
+ *
+ * [withName] is the api-side replacement for the prior `core.BpmnNode.withName` extension
+ * function. Sealed interfaces have no synthetic `copy`, so each concrete data class
+ * overrides this method, returning a clone of its own subtype with [name] replaced.
+ */
+sealed interface BpmnNode {
+    val id: String
+    val name: String?
+
+    fun withName(name: String?): BpmnNode
+}
+
+/** Grouping marker for activity-position nodes; supports `BpmnNode.isTask()` dispatch. */
+sealed interface BpmnTask : BpmnNode
+
+/** Grouping marker for gateway nodes. */
+sealed interface BpmnGateway : BpmnNode
+
+/** Grouping marker for event-position nodes carrying an event definition. */
+sealed interface BpmnEvent : BpmnNode {
+    val eventDefinition: BpmnEventDefinition
+}
+
+sealed interface BpmnStartEvent : BpmnEvent {
+    val isInterrupting: Boolean
+}
+
+sealed interface BpmnEndEvent : BpmnEvent
+
+sealed interface BpmnIntermediateCatchEvent : BpmnEvent
+
+sealed interface BpmnIntermediateThrowEvent : BpmnEvent
+
+sealed interface BpmnBoundaryEvent : BpmnEvent {
+    val attachedToRef: String
+    val cancelActivity: Boolean
+}
+
+sealed interface BpmnUserTask : BpmnTask
+
+sealed interface BpmnServiceTask : BpmnTask
+
+sealed interface BpmnScriptTask : BpmnTask
+
+sealed interface BpmnBusinessRuleTask : BpmnTask {
+    val decisionRef: String
+}
+
+sealed interface BpmnSendTask : BpmnTask {
+    val messageRef: String
+}
+
+sealed interface BpmnReceiveTask : BpmnTask {
+    val messageRef: String
+}
+
+sealed interface BpmnManualTask : BpmnTask
+
+sealed interface BpmnExclusiveGateway : BpmnGateway
+
+sealed interface BpmnParallelGateway : BpmnGateway
+
+/** A directed sequence-flow edge between two nodes. */
+interface BpmnEdge {
+    val id: String
+    val sourceRef: String
+    val targetRef: String
+    val name: String?
+    val conditionExpression: String?
+    val isDefault: Boolean
+}
+
+/** Process-level message catalog entry, referenced by message event definitions and tasks. */
+interface BpmnMessageRef {
+    val id: String
+    val name: String
+}
+
+/** Process-level signal catalog entry. */
+interface BpmnSignalRef {
+    val id: String
+    val name: String
+}
+
+/** Process-level error catalog entry. */
+interface BpmnErrorRef {
+    val id: String
+    val code: String
+    val name: String?
+}
+
+/** Process-level escalation catalog entry. */
+interface BpmnEscalationRef {
+    val id: String
+    val code: String
+    val name: String?
+}
+
+/** Sealed event-definition hierarchy carried by `BpmnEvent` subtypes. */
+sealed interface BpmnEventDefinition
+
+sealed interface BpmnNoneEventDefinition : BpmnEventDefinition
+
+sealed interface BpmnTimerEventDefinition : BpmnEventDefinition {
+    val timerKind: BpmnTimerKind
+    val expression: String
+}
+
+sealed interface BpmnMessageEventDefinition : BpmnEventDefinition {
+    val messageRef: String
+}
+
+sealed interface BpmnSignalEventDefinition : BpmnEventDefinition {
+    val signalRef: String
+}
+
+sealed interface BpmnErrorEventDefinition : BpmnEventDefinition {
+    val errorRef: String
+}
+
+sealed interface BpmnEscalationEventDefinition : BpmnEventDefinition {
+    val escalationRef: String
+}
+
+sealed interface BpmnTerminateEventDefinition : BpmnEventDefinition
+
+/**
+ * The discriminator string for [this] node, matching the `@JsonSubTypes` names on the
+ * concrete `core` data classes. Kept as a property extension to preserve the existing
+ * `node.typeName` call-site syntax across the codebase.
+ *
+ * NOTE: the string literals here must stay in sync with the `name` values in the
+ * `@JsonSubTypes` annotation on `core.BpmnNode`. The exhaustive `when` catches missing
+ * arms when a new subtype is added but cannot catch a typo or divergence; if a subtype is
+ * renamed, update both lists together.
+ */
+val BpmnNode.typeName: String
+    get() =
+        when (this) {
+            is BpmnStartEvent -> "START_EVENT"
+            is BpmnUserTask -> "USER_TASK"
+            is BpmnServiceTask -> "SERVICE_TASK"
+            is BpmnScriptTask -> "SCRIPT_TASK"
+            is BpmnBusinessRuleTask -> "BUSINESS_RULE_TASK"
+            is BpmnSendTask -> "SEND_TASK"
+            is BpmnReceiveTask -> "RECEIVE_TASK"
+            is BpmnManualTask -> "MANUAL_TASK"
+            is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
+            is BpmnParallelGateway -> "PARALLEL_GATEWAY"
+            is BpmnIntermediateCatchEvent -> "INTERMEDIATE_CATCH_EVENT"
+            is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
+            is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
+            is BpmnEndEvent -> "END_EVENT"
+        }
+
+/**
+ * True when [this] is one of the BPMN task subtypes. Backed by the marker interface
+ * [BpmnTask], so every new task subtype that extends [BpmnTask] participates automatically.
+ */
+fun BpmnNode.isTask(): Boolean = this is BpmnTask
