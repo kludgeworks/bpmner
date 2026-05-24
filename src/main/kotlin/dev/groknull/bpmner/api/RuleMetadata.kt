@@ -26,8 +26,6 @@ data class RuleMetadata(
     val severity: RuleSeverity = RuleSeverity.WARNING,
     val repair: RepairMetadata = RepairMetadata(),
     val staticConfig: Map<String, Any>? = null,
-    /** Kotlin class name of the compiled rule implementation, or null if not yet ported. */
-    val implementation: String? = null,
     val aliases: List<String> = emptyList(),
     val deprecated: Boolean = false,
     val replacedBy: List<String> = emptyList(),
@@ -38,8 +36,8 @@ data class RuleMetadata(
  * Repair strategy metadata for a rule, matching the `Repair` class in `BpmnRule.pkl`.
  */
 data class RepairMetadata(
-    val kind: String = "LLM_MODEL_PATCH",
-    val safety: String = "LLM_ONLY",
+    val kind: RepairKind = RepairKind.LLM_MODEL_PATCH,
+    val safety: RepairSafety = RepairSafety.LLM_ONLY,
     val handler: String? = null,
     val replacementMap: Map<String, String>? = null,
 )

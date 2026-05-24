@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
@@ -27,7 +28,6 @@ import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnValidator
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import dev.groknull.bpmner.validation.format
 import org.jmolecules.ddd.annotation.Service

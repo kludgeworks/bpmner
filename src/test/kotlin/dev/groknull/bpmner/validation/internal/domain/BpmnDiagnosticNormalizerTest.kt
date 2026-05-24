@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.validation.internal.domain
 
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.ComposedProcessGraph
@@ -15,9 +17,7 @@ import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -28,7 +28,7 @@ class BpmnDiagnosticNormalizerTest {
         BpmnLintRuleCapability(
             id = "gtw-converging-gateway-unnamed",
             kind = RepairKind.LOCAL_XML_FIX,
-            repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+            repairSafety = RepairSafety.SAFE_AUTOMATIC,
             fixHandler = "clearGatewayName",
             handlerExists = true,
             replacementMap = null,
@@ -37,7 +37,7 @@ class BpmnDiagnosticNormalizerTest {
         BpmnLintRuleCapability(
             id = "act-verb-object-name",
             kind = RepairKind.LLM_MODEL_PATCH,
-            repairSafety = BpmnRepairSafety.LLM_ONLY,
+            repairSafety = RepairSafety.LLM_ONLY,
             fixHandler = null,
             handlerExists = false,
             replacementMap = null,

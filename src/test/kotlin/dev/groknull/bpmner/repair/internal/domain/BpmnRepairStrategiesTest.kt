@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -36,7 +37,6 @@ import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse

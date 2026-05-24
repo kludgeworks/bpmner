@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.repair
 
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator
@@ -12,9 +14,7 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnRepairCapabilityValidation
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -86,7 +86,7 @@ class RepairStartupValidationTest {
                     BpmnLintRuleCapability(
                         id = "topo-01",
                         kind = RepairKind.LOCAL_MODEL_FIX,
-                        repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                        repairSafety = RepairSafety.SAFE_AUTOMATIC,
                         fixHandler = "absentHandler",
                         handlerExists = false,
                         replacementMap = null,

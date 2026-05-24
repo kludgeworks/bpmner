@@ -9,6 +9,7 @@ import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.repair.AutoFixedBpmnXml
@@ -21,7 +22,6 @@ import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
