@@ -44,6 +44,15 @@ interface BpmnNodeVisitor<T> {
     fun visitEndEvent(node: BpmnEndEvent): T? = null
 }
 
+/**
+ * Dispatches [this] to the matching `visitXxx` on [visitor].
+ *
+ * Returns `null` either when the visitor's matching method returned `null` *or* when the
+ * visitor did not override that method (every `visitXxx` defaults to `null`). Callers that
+ * need to distinguish "visitor didn't handle this subtype" from "visitor handled it and
+ * the result is `null`" should make their visitor return a non-nullable wrapper (e.g.
+ * `Optional`-like) instead of relying on `T?` semantics here.
+ */
 @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
 fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? =
     when (this) {

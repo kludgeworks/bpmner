@@ -9,6 +9,12 @@ package dev.groknull.bpmner.api
  * Decides which BPMN node kinds must carry a non-blank `name`. Pure logic over the api
  * hierarchy — no Jackson, no Jakarta. Compiled rules and the existing validator both
  * delegate here so the policy stays single-sourced.
+ *
+ * TODO(#210 PR-2): a parallel `core.BpmnNodeNamingPolicy` still exists for callers that
+ * pass `core.BpmnNode` instances. The two implementations are semantically equivalent today
+ * but use different dispatch (marker-interface check here vs exhaustive `when` in core),
+ * so they could diverge if a new task subtype lands between PR-1 and PR-2. PR-2 deletes the
+ * core copy and re-points all callers here.
  */
 object BpmnNodeNamingPolicy {
     fun normalize(name: String?): String? = name?.takeIf { it.isNotBlank() }

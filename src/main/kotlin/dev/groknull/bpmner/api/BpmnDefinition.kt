@@ -54,44 +54,50 @@ sealed interface BpmnEvent : BpmnNode {
     val eventDefinition: BpmnEventDefinition
 }
 
-sealed interface BpmnStartEvent : BpmnEvent {
+// Leaf interfaces are intentionally non-sealed: Kotlin requires direct subtypes of a sealed
+// interface to live in the same package, so sealing the leaves would block the core data
+// classes (in `dev.groknull.bpmner.core`) from implementing them. Exhaustive `when` over
+// `BpmnNode` still works because the sealed parents (`BpmnNode`, `BpmnEvent`, `BpmnTask`,
+// `BpmnGateway`) constrain their direct subtypes — all 14 leaves are declared here.
+
+interface BpmnStartEvent : BpmnEvent {
     val isInterrupting: Boolean
 }
 
-sealed interface BpmnEndEvent : BpmnEvent
+interface BpmnEndEvent : BpmnEvent
 
-sealed interface BpmnIntermediateCatchEvent : BpmnEvent
+interface BpmnIntermediateCatchEvent : BpmnEvent
 
-sealed interface BpmnIntermediateThrowEvent : BpmnEvent
+interface BpmnIntermediateThrowEvent : BpmnEvent
 
-sealed interface BpmnBoundaryEvent : BpmnEvent {
+interface BpmnBoundaryEvent : BpmnEvent {
     val attachedToRef: String
     val cancelActivity: Boolean
 }
 
-sealed interface BpmnUserTask : BpmnTask
+interface BpmnUserTask : BpmnTask
 
-sealed interface BpmnServiceTask : BpmnTask
+interface BpmnServiceTask : BpmnTask
 
-sealed interface BpmnScriptTask : BpmnTask
+interface BpmnScriptTask : BpmnTask
 
-sealed interface BpmnBusinessRuleTask : BpmnTask {
+interface BpmnBusinessRuleTask : BpmnTask {
     val decisionRef: String
 }
 
-sealed interface BpmnSendTask : BpmnTask {
+interface BpmnSendTask : BpmnTask {
     val messageRef: String
 }
 
-sealed interface BpmnReceiveTask : BpmnTask {
+interface BpmnReceiveTask : BpmnTask {
     val messageRef: String
 }
 
-sealed interface BpmnManualTask : BpmnTask
+interface BpmnManualTask : BpmnTask
 
-sealed interface BpmnExclusiveGateway : BpmnGateway
+interface BpmnExclusiveGateway : BpmnGateway
 
-sealed interface BpmnParallelGateway : BpmnGateway
+interface BpmnParallelGateway : BpmnGateway
 
 /** A directed sequence-flow edge between two nodes. */
 interface BpmnEdge {
@@ -129,33 +135,37 @@ interface BpmnEscalationRef {
     val name: String?
 }
 
-/** Sealed event-definition hierarchy carried by `BpmnEvent` subtypes. */
+/**
+ * Sealed event-definition hierarchy carried by `BpmnEvent` subtypes. The 7 leaf interfaces
+ * are non-sealed for the same package-locality reason as the `BpmnNode` leaves — see the
+ * note above the leaf node interfaces.
+ */
 sealed interface BpmnEventDefinition
 
-sealed interface BpmnNoneEventDefinition : BpmnEventDefinition
+interface BpmnNoneEventDefinition : BpmnEventDefinition
 
-sealed interface BpmnTimerEventDefinition : BpmnEventDefinition {
+interface BpmnTimerEventDefinition : BpmnEventDefinition {
     val timerKind: BpmnTimerKind
     val expression: String
 }
 
-sealed interface BpmnMessageEventDefinition : BpmnEventDefinition {
+interface BpmnMessageEventDefinition : BpmnEventDefinition {
     val messageRef: String
 }
 
-sealed interface BpmnSignalEventDefinition : BpmnEventDefinition {
+interface BpmnSignalEventDefinition : BpmnEventDefinition {
     val signalRef: String
 }
 
-sealed interface BpmnErrorEventDefinition : BpmnEventDefinition {
+interface BpmnErrorEventDefinition : BpmnEventDefinition {
     val errorRef: String
 }
 
-sealed interface BpmnEscalationEventDefinition : BpmnEventDefinition {
+interface BpmnEscalationEventDefinition : BpmnEventDefinition {
     val escalationRef: String
 }
 
-sealed interface BpmnTerminateEventDefinition : BpmnEventDefinition
+interface BpmnTerminateEventDefinition : BpmnEventDefinition
 
 /**
  * The discriminator string for [this] node, matching the `@JsonSubTypes` names on the
@@ -166,6 +176,11 @@ sealed interface BpmnTerminateEventDefinition : BpmnEventDefinition
  * `@JsonSubTypes` annotation on `core.BpmnNode`. The exhaustive `when` catches missing
  * arms when a new subtype is added but cannot catch a typo or divergence; if a subtype is
  * renamed, update both lists together.
+ *
+ * TODO(#210 PR-2): this duplicates the `core.BpmnNode.typeName` extension while PR-2 is in
+ * flight. Once core data classes implement the api interfaces, promote `typeName` to an
+ * abstract `val` on the api interface (each core data class overrides with its
+ * discriminator literal) so there is one source of truth.
  */
 val BpmnNode.typeName: String
     get() =
