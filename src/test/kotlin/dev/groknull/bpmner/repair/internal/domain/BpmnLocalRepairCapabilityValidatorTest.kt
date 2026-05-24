@@ -5,13 +5,13 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -102,7 +102,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
     ) = BpmnLintRuleCapability(
         id = id,
         kind = kind,
-        repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+        repairSafety = RepairSafety.SAFE_AUTOMATIC,
         fixHandler = fixHandler,
         handlerExists = kind == RepairKind.LOCAL_MODEL_FIX || kind == RepairKind.LOCAL_XML_FIX,
         replacementMap = null,

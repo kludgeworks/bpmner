@@ -6,6 +6,8 @@
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
 import dev.groknull.bpmner.validation.BpmnAutoFixChange
@@ -13,10 +15,8 @@ import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
@@ -39,7 +39,7 @@ class BpmnLayoutAgentTest {
     ) = BpmnLintRuleCapability(
         id = id,
         kind = RepairKind.LOCAL_XML_FIX,
-        repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+        repairSafety = RepairSafety.SAFE_AUTOMATIC,
         fixHandler = handler,
         handlerExists = true,
         replacementMap = null,
@@ -49,7 +49,7 @@ class BpmnLayoutAgentTest {
         BpmnLintRuleCapability(
             id = id,
             kind = RepairKind.LLM_MODEL_PATCH,
-            repairSafety = BpmnRepairSafety.LLM_ONLY,
+            repairSafety = RepairSafety.LLM_ONLY,
             fixHandler = null,
             handlerExists = false,
             replacementMap = null,

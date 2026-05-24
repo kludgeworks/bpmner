@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.validation.internal.domain
 
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnDiagnostic
@@ -14,7 +15,6 @@ import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import dev.groknull.bpmner.validation.format
 import org.jmolecules.ddd.annotation.Service

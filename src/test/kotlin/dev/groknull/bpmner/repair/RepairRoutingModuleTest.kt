@@ -21,6 +21,8 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
@@ -36,10 +38,8 @@ import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.AfterEach
@@ -109,7 +109,7 @@ class RepairRoutingModuleTest {
             BpmnLintRuleCapability(
                 id = "name-01",
                 kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
                 replacementMap = null,
@@ -169,7 +169,7 @@ class RepairRoutingModuleTest {
             BpmnLintRuleCapability(
                 id = "name-clarity",
                 kind = RepairKind.LLM_MODEL_PATCH,
-                repairSafety = BpmnRepairSafety.LLM_ONLY,
+                repairSafety = RepairSafety.LLM_ONLY,
                 fixHandler = null,
                 handlerExists = false,
                 replacementMap = null,
@@ -221,7 +221,7 @@ class RepairRoutingModuleTest {
             BpmnLintRuleCapability(
                 id = "name-01",
                 kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
                 replacementMap = null,
@@ -230,7 +230,7 @@ class RepairRoutingModuleTest {
             BpmnLintRuleCapability(
                 id = "name-clarity",
                 kind = RepairKind.LLM_MODEL_PATCH,
-                repairSafety = BpmnRepairSafety.LLM_ONLY,
+                repairSafety = RepairSafety.LLM_ONLY,
                 fixHandler = null,
                 handlerExists = false,
                 replacementMap = null,
@@ -320,7 +320,7 @@ class RepairRoutingModuleTest {
             BpmnLintRuleCapability(
                 id = "name-01",
                 kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
                 replacementMap = null,
