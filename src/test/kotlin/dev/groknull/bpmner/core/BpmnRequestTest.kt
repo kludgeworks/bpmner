@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.core
 
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.generation.generationPrompt
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue

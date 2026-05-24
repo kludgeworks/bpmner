@@ -10,20 +10,11 @@ import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.GenerationMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
-
-enum class BpmnTimerKind {
-    DATE,
-    DURATION,
-    CYCLE,
-}
-
-enum class GenerationMode {
-    SINGLE_SHOT,
-    INTERACTIVE,
-}
 
 data class BpmnRequest(
     @get:JsonPropertyDescription("Natural-language description of the workflow to model")

@@ -9,9 +9,9 @@ import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
-import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.core.InputPathResolver
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.generation.BpmnGenerationInput
