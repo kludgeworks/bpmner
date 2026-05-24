@@ -8,11 +8,11 @@ package dev.groknull.bpmner.alignment.internal.domain
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.api.typeName
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.typeName
 import org.springframework.stereotype.Component
 import java.util.LinkedList
 import java.util.Queue

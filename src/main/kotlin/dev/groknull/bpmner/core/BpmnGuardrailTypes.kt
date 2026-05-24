@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
+import dev.groknull.bpmner.api.ClarificationExchange as ApiClarificationExchange
 
 /**
  * Readiness dimensions used by the readiness LLM to score the input prose.
@@ -143,13 +144,13 @@ data class SourceEvidence(
 data class ClarificationExchange(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable id of the clarification question that was answered")
-    val questionId: String,
+    override val questionId: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Question text that was asked")
-    val questionText: String,
+    override val questionText: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Answer text supplied by the user")
-    val answerText: String,
+    override val answerText: String,
     @get:JsonPropertyDescription("Missing process areas resolved or affected by this exchange")
     val relatedMissingAreas: List<MissingProcessArea> = emptyList(),
     @get:JsonPropertyDescription("Readiness dimensions resolved or affected by this exchange")
@@ -157,4 +158,4 @@ data class ClarificationExchange(
     @field:Valid
     @get:JsonPropertyDescription("Evidence or trace metadata attached to this answered exchange")
     val evidence: List<SourceEvidence> = emptyList(),
-)
+) : ApiClarificationExchange
