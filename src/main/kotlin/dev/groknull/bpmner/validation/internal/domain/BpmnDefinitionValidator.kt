@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.validation.internal.domain
 
+import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
+import dev.groknull.bpmner.api.isTask
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -16,7 +18,6 @@ import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
-import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -24,7 +25,6 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
-import dev.groknull.bpmner.core.isTask
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 

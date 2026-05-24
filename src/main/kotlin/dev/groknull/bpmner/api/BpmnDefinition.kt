@@ -36,7 +36,7 @@ interface BpmnDefinition {
  * function. Sealed interfaces have no synthetic `copy`, so each concrete data class
  * overrides this method, returning a clone of its own subtype with [name] replaced.
  */
-sealed interface BpmnNode {
+interface BpmnNode {
     val id: String
     val name: String?
 
@@ -136,11 +136,13 @@ interface BpmnEscalationRef {
 }
 
 /**
- * Sealed event-definition hierarchy carried by `BpmnEvent` subtypes. The 7 leaf interfaces
- * are non-sealed for the same package-locality reason as the `BpmnNode` leaves — see the
- * note above the leaf node interfaces.
+ * Event-definition hierarchy carried by `BpmnEvent` subtypes. The top is intentionally
+ * non-sealed so concrete `core` data classes (in a different package) can implement it
+ * directly; the 7 leaf interfaces below are also non-sealed for the same reason. The
+ * package-locality rule that applies to `sealed` interfaces in Kotlin would otherwise
+ * block the cross-package implementation.
  */
-sealed interface BpmnEventDefinition
+interface BpmnEventDefinition
 
 interface BpmnNoneEventDefinition : BpmnEventDefinition
 
@@ -176,11 +178,6 @@ interface BpmnTerminateEventDefinition : BpmnEventDefinition
  * `@JsonSubTypes` annotation on `core.BpmnNode`. The exhaustive `when` catches missing
  * arms when a new subtype is added but cannot catch a typo or divergence; if a subtype is
  * renamed, update both lists together.
- *
- * TODO(#210 PR-2): this duplicates the `core.BpmnNode.typeName` extension while PR-2 is in
- * flight. Once core data classes implement the api interfaces, promote `typeName` to an
- * abstract `val` on the api interface (each core data class overrides with its
- * discriminator literal) so there is one source of truth.
  */
 val BpmnNode.typeName: String
     get() =
@@ -199,6 +196,7 @@ val BpmnNode.typeName: String
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
+            else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }
 
 /**

@@ -70,4 +70,5 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? =
         is BpmnIntermediateThrowEvent -> visitor.visitIntermediateThrowEvent(this)
         is BpmnBoundaryEvent -> visitor.visitBoundaryEvent(this)
         is BpmnEndEvent -> visitor.visitEndEvent(this)
+        else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode
     }
