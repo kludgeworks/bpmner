@@ -13,14 +13,14 @@ package dev.groknull.bpmner.api
  */
 enum class RepairDisposition {
     /** A compiled (local) repair was applied and the diagnostic is resolved. */
-    Applied,
+    APPLIED,
 
     /** An LLM-driven repair resolved the diagnostic. */
-    LlmResolved,
+    LLM_RESOLVED,
 
     /** The diagnostic could not be resolved by any available repair strategy. */
-    Unresolved,
+    UNRESOLVED,
 
     /** No repair was attempted (e.g., the diagnostic is advisory-only). */
-    NotApplicable,
+    NOT_APPLICABLE,
 }

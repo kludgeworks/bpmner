@@ -22,8 +22,8 @@ data class RuleMetadata(
     val forModellers: String,
     val forAI: String,
     val targetElements: List<String>,
-    val severity: RuleSeverity = RuleSeverity.WARNING,
     val errorMessages: Map<String, String>,
+    val severity: RuleSeverity = RuleSeverity.WARNING,
     val repair: RepairMetadata = RepairMetadata(),
     val staticConfig: Map<String, Any>? = null,
     /** Kotlin class name of the compiled rule implementation, or null if not yet ported. */

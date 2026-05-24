@@ -20,7 +20,7 @@ package dev.groknull.bpmner.api
  * @property elementId Optional BPMN element ID where the issue was detected.
  */
 data class RuleDiagnostic(
-    val diagnosticCode: String,
+    val diagnosticCode: DiagnosticCode,
     val ruleId: String,
     val severity: RuleSeverity,
     val message: String,

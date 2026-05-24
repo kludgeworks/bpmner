@@ -15,15 +15,14 @@ package dev.groknull.bpmner.api
 data class RuleEvaluation(
     val diagnostics: List<RuleDiagnostic>,
 ) {
-    /** True when no blocking (ERROR) diagnostics remain. */
-    val passed: Boolean
-        get() = diagnostics.none { it.severity == RuleSeverity.ERROR }
-
     /** ERROR-severity diagnostics — the ones the refinement engine must drive to zero. */
-    val blockingDiagnostics: List<RuleDiagnostic>
-        get() = diagnostics.filter { it.severity == RuleSeverity.ERROR }
+    val blockingDiagnostics: List<RuleDiagnostic> =
+        diagnostics.filter { it.severity == RuleSeverity.ERROR }
 
     /** WARNING / INFO diagnostics — surfaced in the final report but not blocking. */
-    val advisoryDiagnostics: List<RuleDiagnostic>
-        get() = diagnostics.filterNot { it.severity == RuleSeverity.ERROR }
+    val advisoryDiagnostics: List<RuleDiagnostic> =
+        diagnostics.filterNot { it.severity == RuleSeverity.ERROR }
+
+    /** True when no blocking (ERROR) diagnostics remain. */
+    val passed: Boolean = blockingDiagnostics.isEmpty()
 }
