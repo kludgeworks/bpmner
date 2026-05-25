@@ -21,9 +21,9 @@ import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

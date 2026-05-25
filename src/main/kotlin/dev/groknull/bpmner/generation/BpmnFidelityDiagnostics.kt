@@ -66,7 +66,7 @@ enum class BpmnFidelityCode {
      *
      * This code fires in the fidelity checker (generation-time via `validateOutline`) and from
      * the repair-loop evaluator (via `BpmnContractAwareValidator`).
-     * [dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner] runs
+     * [dev.groknull.bpmner.generation.DefaultFlowAssigner] runs
      * deterministically after every LLM call to set `isDefault`; this check is
      * the defence-in-depth that fires when the assigner could not resolve a match
      * (e.g. the gateway is missing entirely — caught first by [DECISION_GATEWAY_MISSING]).

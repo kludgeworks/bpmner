@@ -19,7 +19,7 @@ import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
-import dev.groknull.bpmner.validation.internal.domain.BpmnDefinitionValidator
+import dev.groknull.bpmner.validation.BpmnDefinitionValidator
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

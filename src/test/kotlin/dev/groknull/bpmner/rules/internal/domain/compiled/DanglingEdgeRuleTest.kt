@@ -71,11 +71,11 @@ class DanglingEdgeRuleTest {
                     processName = "P",
                     nodes = listOf(BpmnStartEvent(id = "s"), BpmnUserTask(id = "t"), BpmnEndEvent(id = "e")),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f-self", sourceRef = "t", targetRef = "t"),
-                            BpmnEdge(id = "f-start", sourceRef = "s", targetRef = "t"),
-                            BpmnEdge(id = "f-end", sourceRef = "t", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f-self", sourceRef = "t", targetRef = "t"),
+                        BpmnEdge(id = "f-start", sourceRef = "s", targetRef = "t"),
+                        BpmnEdge(id = "f-end", sourceRef = "t", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -93,10 +93,10 @@ class DanglingEdgeRuleTest {
                     processName = "P",
                     nodes = listOf(BpmnStartEvent(id = "s"), BpmnUserTask(id = "t"), BpmnEndEvent(id = "e")),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t"),
-                            BpmnEdge(id = "f2", sourceRef = "t", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t"),
+                        BpmnEdge(id = "f2", sourceRef = "t", targetRef = "e"),
+                    ),
                 ),
             )
 

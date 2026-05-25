@@ -42,16 +42,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Catch", eventDefinition = BpmnNoneEventDefinition),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Catch", eventDefinition = BpmnNoneEventDefinition),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -70,16 +70,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateThrowEvent(id = "it", name = "Throw", eventDefinition = BpmnNoneEventDefinition),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Throw", eventDefinition = BpmnNoneEventDefinition),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
-                            BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -96,23 +96,23 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task", name = "Work"),
-                            BpmnBoundaryEvent(
-                                id = "be",
-                                name = "Boundary",
-                                attachedToRef = "task",
-                                eventDefinition = BpmnNoneEventDefinition,
-                            ),
-                            BpmnEndEvent(id = "e", name = "Done"),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task", name = "Work"),
+                        BpmnBoundaryEvent(
+                            id = "be",
+                            name = "Boundary",
+                            attachedToRef = "task",
+                            eventDefinition = BpmnNoneEventDefinition,
                         ),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                            BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                        BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -129,18 +129,18 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task", name = "Work"),
-                            BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = " ", eventDefinition = timer),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task", name = "Work"),
+                        BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = " ", eventDefinition = timer),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                            BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                        BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -158,18 +158,18 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task", name = "Work"),
-                            BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "missing", eventDefinition = timer),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task", name = "Work"),
+                        BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "missing", eventDefinition = timer),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                            BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                        BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -190,18 +190,18 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task", name = "Work"),
-                            BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "s", eventDefinition = timer),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task", name = "Work"),
+                        BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "s", eventDefinition = timer),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                            BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                        BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -219,16 +219,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = blankTimer),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = blankTimer),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -246,16 +246,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = msgEvent),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = msgEvent),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                     messages = listOf(BpmnMessageRef(id = "m-known", name = "Known")),
                 ),
             )
@@ -274,16 +274,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = signalEvent),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = signalEvent),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                     signals = listOf(BpmnSignalRef(id = "sig-known", name = "Known")),
                 ),
             )
@@ -302,16 +302,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = errEvent),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = errEvent),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                     errors = listOf(BpmnErrorRef(id = "err-known", code = "EKNOWN")),
                 ),
             )
@@ -330,16 +330,16 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = escEvent),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = escEvent),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                            BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
                     escalations = listOf(BpmnEscalationRef(id = "esc-known", code = "EKNOWN")),
                 ),
             )
@@ -361,18 +361,18 @@ class EventDefinitionRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task", name = "Work"),
-                            BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "task", eventDefinition = timer),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task", name = "Work"),
+                        BpmnBoundaryEvent(id = "be", name = "On timeout", attachedToRef = "task", eventDefinition = timer),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                            BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                        BpmnEdge(id = "f3", sourceRef = "be", targetRef = "e"),
+                    ),
                 ),
             )
 

@@ -29,16 +29,16 @@ class RequiredNameRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "task"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "task"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -75,21 +75,21 @@ class RequiredNameRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnExclusiveGateway(id = "gw"),
-                            BpmnUserTask(id = "a", name = "Approve"),
-                            BpmnUserTask(id = "b", name = "Reject"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnExclusiveGateway(id = "gw"),
+                        BpmnUserTask(id = "a", name = "Approve"),
+                        BpmnUserTask(id = "b", name = "Reject"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
-                            BpmnEdge(id = "f2", sourceRef = "gw", targetRef = "a"),
-                            BpmnEdge(id = "f3", sourceRef = "gw", targetRef = "b"),
-                            BpmnEdge(id = "f4", sourceRef = "a", targetRef = "e"),
-                            BpmnEdge(id = "f5", sourceRef = "b", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
+                        BpmnEdge(id = "f2", sourceRef = "gw", targetRef = "a"),
+                        BpmnEdge(id = "f3", sourceRef = "gw", targetRef = "b"),
+                        BpmnEdge(id = "f4", sourceRef = "a", targetRef = "e"),
+                        BpmnEdge(id = "f5", sourceRef = "b", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -106,21 +106,21 @@ class RequiredNameRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnUserTask(id = "a", name = "Approve"),
-                            BpmnUserTask(id = "b", name = "Reject"),
-                            BpmnExclusiveGateway(id = "gw"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnUserTask(id = "a", name = "Approve"),
+                        BpmnUserTask(id = "b", name = "Reject"),
+                        BpmnExclusiveGateway(id = "gw"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "a"),
-                            BpmnEdge(id = "f2", sourceRef = "s", targetRef = "b"),
-                            BpmnEdge(id = "f3", sourceRef = "a", targetRef = "gw"),
-                            BpmnEdge(id = "f4", sourceRef = "b", targetRef = "gw"),
-                            BpmnEdge(id = "f5", sourceRef = "gw", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "a"),
+                        BpmnEdge(id = "f2", sourceRef = "s", targetRef = "b"),
+                        BpmnEdge(id = "f3", sourceRef = "a", targetRef = "gw"),
+                        BpmnEdge(id = "f4", sourceRef = "b", targetRef = "gw"),
+                        BpmnEdge(id = "f5", sourceRef = "gw", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -135,23 +135,23 @@ class RequiredNameRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnParallelGateway(id = "fork"),
-                            BpmnUserTask(id = "a", name = "Task A"),
-                            BpmnUserTask(id = "b", name = "Task B"),
-                            BpmnParallelGateway(id = "join"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnParallelGateway(id = "fork"),
+                        BpmnUserTask(id = "a", name = "Task A"),
+                        BpmnUserTask(id = "b", name = "Task B"),
+                        BpmnParallelGateway(id = "join"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "fork"),
-                            BpmnEdge(id = "f2", sourceRef = "fork", targetRef = "a"),
-                            BpmnEdge(id = "f3", sourceRef = "fork", targetRef = "b"),
-                            BpmnEdge(id = "f4", sourceRef = "a", targetRef = "join"),
-                            BpmnEdge(id = "f5", sourceRef = "b", targetRef = "join"),
-                            BpmnEdge(id = "f6", sourceRef = "join", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "fork"),
+                        BpmnEdge(id = "f2", sourceRef = "fork", targetRef = "a"),
+                        BpmnEdge(id = "f3", sourceRef = "fork", targetRef = "b"),
+                        BpmnEdge(id = "f4", sourceRef = "a", targetRef = "join"),
+                        BpmnEdge(id = "f5", sourceRef = "b", targetRef = "join"),
+                        BpmnEdge(id = "f6", sourceRef = "join", targetRef = "e"),
+                    ),
                 ),
             )
 

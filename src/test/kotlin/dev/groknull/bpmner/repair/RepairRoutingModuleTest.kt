@@ -28,8 +28,8 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.generation.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
-import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnDefinitionToXmlConverter
+import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
+import dev.groknull.bpmner.generation.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
@@ -38,10 +38,10 @@ import dev.groknull.bpmner.validation.BpmnAutoFixChange
 import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
+import dev.groknull.bpmner.validation.BpmnLintService
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
+import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse

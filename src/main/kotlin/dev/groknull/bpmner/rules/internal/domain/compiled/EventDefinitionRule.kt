@@ -129,8 +129,8 @@ internal class EventDefinitionRule : BpmnRule {
                         ruleId = id,
                         severity = RuleSeverity.ERROR,
                         message =
-                            "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
-                                "does not match any node id",
+                        "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                            "does not match any node id",
                         elementId = node.id,
                     )
             }
@@ -142,8 +142,8 @@ internal class EventDefinitionRule : BpmnRule {
                         ruleId = id,
                         severity = RuleSeverity.ERROR,
                         message =
-                            "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
-                                "must reference an attachable activity",
+                        "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                            "must reference an attachable activity",
                         elementId = node.id,
                     )
             }
@@ -153,14 +153,13 @@ internal class EventDefinitionRule : BpmnRule {
     private fun missingEventDef(
         nodeLabel: String,
         nodeId: String,
-    ): RuleDiagnostic =
-        RuleDiagnostic(
-            diagnosticCode = "def-missing-event-def",
-            ruleId = id,
-            severity = RuleSeverity.ERROR,
-            message = "$nodeLabel $nodeId must declare an event definition",
-            elementId = nodeId,
-        )
+    ): RuleDiagnostic = RuleDiagnostic(
+        diagnosticCode = "def-missing-event-def",
+        ruleId = id,
+        severity = RuleSeverity.ERROR,
+        message = "$nodeLabel $nodeId must declare an event definition",
+        elementId = nodeId,
+    )
 
     // Flat dispatcher over the 7-arm sealed BpmnEventDefinition hierarchy. Each arm is small
     // (a blank check + an optional catalog-membership check), but the cyclomatic + length
@@ -212,8 +211,8 @@ internal class EventDefinitionRule : BpmnRule {
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =
-                                "event $nodeId messageRef '${eventDefinition.messageRef}' " +
-                                    "does not match any message catalog id",
+                            "event $nodeId messageRef '${eventDefinition.messageRef}' " +
+                                "does not match any message catalog id",
                             elementId = nodeId,
                         )
                 }
@@ -236,8 +235,8 @@ internal class EventDefinitionRule : BpmnRule {
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =
-                                "event $nodeId signalRef '${eventDefinition.signalRef}' " +
-                                    "does not match any signal catalog id",
+                            "event $nodeId signalRef '${eventDefinition.signalRef}' " +
+                                "does not match any signal catalog id",
                             elementId = nodeId,
                         )
                 }
@@ -282,8 +281,8 @@ internal class EventDefinitionRule : BpmnRule {
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =
-                                "event $nodeId escalationRef '${eventDefinition.escalationRef}' " +
-                                    "does not match any escalation catalog id",
+                            "event $nodeId escalationRef '${eventDefinition.escalationRef}' " +
+                                "does not match any escalation catalog id",
                             elementId = nodeId,
                         )
                 }
