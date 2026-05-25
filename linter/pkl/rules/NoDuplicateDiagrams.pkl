@@ -21,3 +21,5 @@ errorMessages = new {
 staticConfig = new {}
 
 aliases = List("gen-02-no-duplicate-diagrams")
+
+hasTsImplementation = true

@@ -8,6 +8,15 @@ import { describe, it } from "node:test"
 import { getRuleCapabilities } from "../src/linter-bundle"
 
 describe("getRuleCapabilities", () => {
+	const tsLocalModelRuleIds = new Set([
+		"act-activity-label-capitalization",
+		"data-no-type-words-in-data-name",
+		"evt-start-no-incoming",
+		"gtw-gateway-no-work-label",
+		"name-no-element-type-words",
+		"name-uncommon-abbreviations",
+	])
+
 	it("returns a non-empty array", () => {
 		const caps = getRuleCapabilities()
 		assert.ok(Array.isArray(caps))
@@ -34,14 +43,14 @@ describe("getRuleCapabilities", () => {
 		}
 	})
 
-	it("LOCAL_XML_FIX rule act-activity-label-capitalization has correct capability", () => {
+	it("LOCAL_MODEL_FIX rule act-activity-label-capitalization has correct capability", () => {
 		const caps = getRuleCapabilities()
 		const cap = caps.find((c) => c.id === "act-activity-label-capitalization")
 		assert.ok(
 			cap,
 			"act-activity-label-capitalization not found in capabilities",
 		)
-		assert.equal(cap.kind, "LOCAL_XML_FIX")
+		assert.equal(cap.kind, "LOCAL_MODEL_FIX")
 		assert.equal(cap.safety, "SAFE_AUTOMATIC")
 		assert.equal(cap.handlerName, "fixSentenceCase")
 		assert.equal(cap.handlerExists, true)
@@ -67,11 +76,11 @@ describe("getRuleCapabilities", () => {
 		assert.equal(cap.handlerExists, false)
 	})
 
-	it("LOCAL_XML_FIX rule with replacementMap has it populated", () => {
+	it("LOCAL_MODEL_FIX rule with replacementMap has it populated", () => {
 		const caps = getRuleCapabilities()
 		const cap = caps.find((c) => c.id === "name-uncommon-abbreviations")
 		assert.ok(cap, "name-uncommon-abbreviations not found in capabilities")
-		assert.equal(cap.kind, "LOCAL_XML_FIX")
+		assert.equal(cap.kind, "LOCAL_MODEL_FIX")
 		assert.ok(cap.replacementMap !== null, "replacementMap should be present")
 		assert.ok(
 			typeof cap.replacementMap === "object",
@@ -111,15 +120,25 @@ describe("getRuleCapabilities", () => {
 		}
 	})
 
-	it("all LOCAL_XML_FIX rules have registered handlers", () => {
+	it("LOCAL_MODEL_FIX rules with TS handlers report registered handlers", () => {
 		const caps = getRuleCapabilities()
-		const localXml = caps.filter((c) => c.kind === "LOCAL_XML_FIX")
-		assert.ok(localXml.length > 0, "expected at least one LOCAL_XML_FIX rule")
-		for (const cap of localXml) {
+		const expectedTsCaps = caps.filter((c) => tsLocalModelRuleIds.has(c.id))
+		assert.deepEqual(
+			expectedTsCaps.map((c) => c.id).sort(),
+			[...tsLocalModelRuleIds].sort(),
+			"expected every TS-backed LOCAL_MODEL_FIX rule to appear in capabilities",
+		)
+		for (const cap of expectedTsCaps) {
+			assert.equal(
+				cap.kind,
+				"LOCAL_MODEL_FIX",
+				`${cap.id} should remain a LOCAL_MODEL_FIX rule`,
+			)
+			assert.ok(cap.handlerName, `${cap.id} should report handlerName`)
 			assert.equal(
 				cap.handlerExists,
 				true,
-				`LOCAL_XML_FIX rule ${cap.id} declares handler "${cap.handlerName}" but it is not registered`,
+				`LOCAL_MODEL_FIX rule ${cap.id} declares handler "${cap.handlerName}" but it is not registered`,
 			)
 		}
 	})

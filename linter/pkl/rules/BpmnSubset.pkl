@@ -45,3 +45,5 @@ staticConfig = new {
       "bpmn:EscalationEventDefinition",
     )
 }
+
+hasTsImplementation = true

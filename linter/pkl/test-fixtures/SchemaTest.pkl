@@ -28,7 +28,7 @@ facts {
     Rule.errorMessages["default"]
       == "Avoid uncommon abbreviations in labels or explain them via annotation/glossary"
     Rule.staticConfig.commonAcronyms.contains("BPMN")
-    Rule.repair.kind == "LOCAL_XML_FIX"
+    Rule.repair.kind == "LOCAL_MODEL_FIX"
     Rule.repair.handler == "expandAbbreviations"
     Rule.repair.safety == "SAFE_AUTOMATIC"
     Rule.repair.replacementMap != null

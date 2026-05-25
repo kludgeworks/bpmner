@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -36,12 +37,16 @@ class DefaultRuleEngineTest {
     private class NoOpRule(
         override val id: String,
     ) : BpmnRule {
+        override val metadata: RuleMetadata = testMetadata(id)
+
         override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = emptyList()
     }
 
     private class FlagsEveryNode(
         override val id: String,
     ) : BpmnRule {
+        override val metadata: RuleMetadata = testMetadata(id)
+
         override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = ctx.definition.nodes.map { node ->
             RuleDiagnostic(
                 diagnosticCode = "test-flag-every-node",
@@ -51,6 +56,20 @@ class DefaultRuleEngineTest {
                 elementId = node.id,
             )
         }
+    }
+
+    private companion object {
+        fun testMetadata(id: String): RuleMetadata = RuleMetadata(
+            id = id,
+            name = "Test Rule",
+            slug = id,
+            category = "Test",
+            intent = "Test rule.",
+            forModellers = "Test rule.",
+            forAI = "Test rule.",
+            targetElements = listOf("bpmn:FlowNode"),
+            errorMessages = mapOf("test-flag-every-node" to "Test diagnostic."),
+        )
     }
 
     private fun trivialDefinition(): BpmnDefinition = BpmnDefinition(
@@ -113,6 +132,7 @@ class DefaultRuleEngineTest {
         val throwingRule =
             object : BpmnRule {
                 override val id: String = "rule-throws"
+                override val metadata: RuleMetadata = testMetadata(id)
 
                 override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = error("simulated rule crash")
             }

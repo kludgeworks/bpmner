@@ -8,7 +8,11 @@ package dev.groknull.bpmner.rules.internal.domain.compiled
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import org.springframework.stereotype.Component
 
@@ -22,6 +26,19 @@ import org.springframework.stereotype.Component
 @Component
 internal class RequiredNameRule : BpmnRule {
     override val id: String = "def-required-names"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Required Names",
+        slug = "required-names",
+        category = "Definition",
+        intent = "Ensure BPMN elements that require business-readable labels have names.",
+        forModellers = "Name activities, events, and gateways when the notation requires a label.",
+        forAI = "Populate name fields for nodes that require labels under the BPMN naming policy.",
+        targetElements = listOf("bpmn:FlowNode"),
+        errorMessages = mapOf("def-missing-name" to "Required BPMN element name is missing."),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()

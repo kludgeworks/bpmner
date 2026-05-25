@@ -1,0 +1,79 @@
+typealias NonEmptyString = String(!isEmpty)
+
+typealias CheckPrimitive =
+  "RequiredPropertyCheck"
+    | "PropertyPatternCheck"
+    | "VocabularyCheck"
+    | "RequiredAssociationCheck"
+    | "TopologyCheck"
+    | "ConnectivityCheck"
+    | "PairingCheck"
+    | "CardinalityCheck"
+    | "PoolLabelCheck"
+    | "ElementConstraintCheck"
+    | "CompositeCheck"
+    | "LlmCheckRule"
+
+abstract class CheckConfig
+
+class RequiredPropertyCheck extends CheckConfig {
+  properties: List<NonEmptyString> = List()
+}
+
+class PropertyPatternCheck extends CheckConfig {
+  property: NonEmptyString
+  pattern: NonEmptyString
+}
+
+class VocabularyCheck extends CheckConfig {
+  property: NonEmptyString
+  allowedTerms: List<NonEmptyString> = List()
+}
+
+class RequiredAssociationCheck extends CheckConfig {
+  association: NonEmptyString
+  sourceTypes: List<NonEmptyString> = List()
+  targetTypes: List<NonEmptyString> = List()
+}
+
+class TopologyCheck extends CheckConfig {
+  topology: NonEmptyString
+  minIncoming: Int? = null
+  maxIncoming: Int? = null
+  minOutgoing: Int? = null
+  maxOutgoing: Int? = null
+}
+
+class ConnectivityCheck extends CheckConfig {
+  sourceTypes: List<NonEmptyString> = List()
+  targetTypes: List<NonEmptyString> = List()
+}
+
+class PairingCheck extends CheckConfig {
+  left: NonEmptyString
+  right: NonEmptyString
+}
+
+class CardinalityCheck extends CheckConfig {
+  element: NonEmptyString
+  min: Int? = null
+  max: Int? = null
+}
+
+class PoolLabelCheck extends CheckConfig {
+  mode: NonEmptyString
+}
+
+class ElementConstraintCheck extends CheckConfig {
+  element: NonEmptyString
+  constraints: Mapping<NonEmptyString, Dynamic> = Mapping()
+}
+
+class CompositeCheck extends CheckConfig {
+  checks: List<CheckConfig> = List()
+}
+
+class LlmCheckRule extends CheckConfig {
+  prompt: NonEmptyString
+  rubric: String? = null
+}

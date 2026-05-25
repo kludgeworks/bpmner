@@ -9,7 +9,11 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEndEvent
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.BpmnStartEvent
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import org.springframework.stereotype.Component
 
@@ -23,6 +27,23 @@ import org.springframework.stereotype.Component
 @Component
 internal class RequiredEventsRule : BpmnRule {
     override val id: String = "def-required-events"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Required Events",
+        slug = "required-events",
+        category = "Definition",
+        intent = "Ensure each BPMN definition has at least one start event and one end event.",
+        forModellers = "Model a clear process start and completion point.",
+        forAI = "Include at least one START_EVENT and one END_EVENT in every generated definition.",
+        targetElements = listOf("bpmn:StartEvent", "bpmn:EndEvent"),
+        errorMessages =
+        mapOf(
+            "def-missing-start-event" to "Definition must contain at least one start event.",
+            "def-missing-end-event" to "Definition must contain at least one end event.",
+        ),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()

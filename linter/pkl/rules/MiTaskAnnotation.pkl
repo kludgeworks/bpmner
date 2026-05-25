@@ -26,3 +26,5 @@ errorMessages = new {
 staticConfig = new {
   iterationQuantifiers = List("each", "every", "per")
 }
+
+hasTsImplementation = true

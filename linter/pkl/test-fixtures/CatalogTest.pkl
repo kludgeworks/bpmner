@@ -169,7 +169,6 @@ facts {
       List("error", "warning", "info", "off").contains(rule.severity)
         && List(
           "LOCAL_MODEL_FIX",
-          "LOCAL_XML_FIX",
           "LLM_MODEL_PATCH",
           "LLM_XML_REWRITE",
           "UNFIXABLE",
@@ -181,7 +180,7 @@ facts {
     Catalog.rules
       .filter((rule) -> fixableRuleIds.contains(rule.id))
       .every((rule) ->
-        (rule.repair.kind == "LOCAL_XML_FIX" || rule.repair.kind == "LOCAL_MODEL_FIX")
+        rule.repair.kind == "LOCAL_MODEL_FIX"
           && rule.repair.handler != null
           && rule.repair.safety == "SAFE_AUTOMATIC"
       )

@@ -1,16 +1,16 @@
+import "CheckPrimitive.pkl"
 import "RuleCategory.pkl"
 
 typealias NonEmptyString = String(!isEmpty)
 typealias Severity = "error" | "warning" | "info" | "off"
-typealias RepairKind =
-  "LOCAL_MODEL_FIX" | "LOCAL_XML_FIX" | "LLM_MODEL_PATCH" | "LLM_XML_REWRITE" | "UNFIXABLE"
+typealias RepairKind = "LOCAL_MODEL_FIX" | "LLM_MODEL_PATCH" | "LLM_XML_REWRITE" | "UNFIXABLE"
 typealias RepairSafety = "SAFE_AUTOMATIC" | "SAFE_MANUAL" | "LLM_ONLY"
 
 class Repair {
   kind: RepairKind = "LLM_MODEL_PATCH"
   safety: RepairSafety = "LLM_ONLY"
   handler: String?(
-    if (kind == "LOCAL_MODEL_FIX" || kind == "LOCAL_XML_FIX")
+    if (kind == "LOCAL_MODEL_FIX")
       this != null && !this.isEmpty
     else
       this == null,
@@ -31,10 +31,12 @@ targetElements: List<NonEmptyString>(!isEmpty)
 severity: Severity = "warning"
 errorMessages: Mapping<NonEmptyString, NonEmptyString>(!isEmpty)
 staticConfig: Dynamic? = null
+checkPrimitive: CheckPrimitive.CheckPrimitive? = null
+checkConfig: CheckPrimitive.CheckConfig? = null
 
 repair: Repair = new {}
 
-hasTsImplementation: Boolean = true
+hasTsImplementation: Boolean = false
 
 aliases: List<NonEmptyString> = List()
 deprecated: Boolean = false

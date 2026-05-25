@@ -8,7 +8,11 @@ package dev.groknull.bpmner.rules.internal.domain.compiled
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import org.springframework.stereotype.Component
 
@@ -25,6 +29,23 @@ import org.springframework.stereotype.Component
 @Component
 internal class DefaultFlowRule : BpmnRule {
     override val id: String = "def-default-flows"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Default Flows",
+        slug = "default-flows",
+        category = "Definition",
+        intent = "Ensure BPMN default sequence flows are only used from exclusive gateways and are unique per source.",
+        forModellers = "Use at most one default outgoing flow from an exclusive gateway.",
+        forAI = "Set isDefault only on a single outgoing flow from an exclusive gateway.",
+        targetElements = listOf("bpmn:SequenceFlow", "bpmn:ExclusiveGateway"),
+        errorMessages =
+        mapOf(
+            "def-default-flow-non-gateway" to "Default flow must originate from an exclusive gateway.",
+            "def-multiple-default-flows" to "A node can have at most one default flow.",
+        ),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
