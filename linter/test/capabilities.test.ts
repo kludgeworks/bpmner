@@ -8,6 +8,15 @@ import { describe, it } from "node:test"
 import { getRuleCapabilities } from "../src/linter-bundle"
 
 describe("getRuleCapabilities", () => {
+	const tsLocalModelRuleIds = new Set([
+		"act-activity-label-capitalization",
+		"data-no-type-words-in-data-name",
+		"evt-start-no-incoming",
+		"gtw-gateway-no-work-label",
+		"name-no-element-type-words",
+		"name-uncommon-abbreviations",
+	])
+
 	it("returns a non-empty array", () => {
 		const caps = getRuleCapabilities()
 		assert.ok(Array.isArray(caps))
@@ -113,14 +122,18 @@ describe("getRuleCapabilities", () => {
 
 	it("LOCAL_MODEL_FIX rules with TS handlers report registered handlers", () => {
 		const caps = getRuleCapabilities()
-		const localModelWithTsHandler = caps.filter(
-			(c) => c.kind === "LOCAL_MODEL_FIX" && c.handlerExists,
+		const expectedTsCaps = caps.filter((c) => tsLocalModelRuleIds.has(c.id))
+		assert.deepEqual(
+			expectedTsCaps.map((c) => c.id).sort(),
+			[...tsLocalModelRuleIds].sort(),
+			"expected every TS-backed LOCAL_MODEL_FIX rule to appear in capabilities",
 		)
-		assert.ok(
-			localModelWithTsHandler.length > 0,
-			"expected at least one LOCAL_MODEL_FIX rule with a TS handler",
-		)
-		for (const cap of localModelWithTsHandler) {
+		for (const cap of expectedTsCaps) {
+			assert.equal(
+				cap.kind,
+				"LOCAL_MODEL_FIX",
+				`${cap.id} should remain a LOCAL_MODEL_FIX rule`,
+			)
 			assert.ok(cap.handlerName, `${cap.id} should report handlerName`)
 			assert.equal(
 				cap.handlerExists,
