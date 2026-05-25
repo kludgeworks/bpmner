@@ -9,7 +9,6 @@ import com.tngtech.archunit.core.importer.ImportOption
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.modulith.core.ApplicationModules
-import org.springframework.modulith.core.VerificationOptions
 
 class BpmnerModulithTest {
     // ArchUnit's built-in DoNotIncludeTests only knows Maven/Gradle/IntelliJ test paths
@@ -53,15 +52,13 @@ class BpmnerModulithTest {
 
     @Test
     fun `verifies no illegal cross-module dependencies`() {
-        // We run Modulith's module-boundary rules (cycle detection, allowedDependencies
-        // enforcement, exposed-type checks) but skip the additional verifications that
-        // VerificationOptions.defaults() auto-registers — specifically the jMolecules
-        // hexagonal architecture rule that fires under VerificationDepth.LENIENT whenever
-        // jmolecules-hexagonal is on the classpath (spring-modulith-core 1.4.1's
-        // Types.JMoleculesTypes#getRules registers it transparently). The ~40 hexagonal
-        // stereotype violations that surfaces are real concerns but are orthogonal to
-        // Phase 1G's module-boundary scope; they're tracked in #234 and will be addressed
-        // separately. Once #234 lands, the call can revert to plain `modules.verify()`.
-        modules.verify(VerificationOptions.defaults().withoutAdditionalVerifications())
+        // verify() applies Modulith's module-boundary rules AND the additional verifications
+        // registered by VerificationOptions.defaults() — including the jMolecules hexagonal
+        // architecture rule (auto-discovered via JMoleculesTypes.getRules() because
+        // jmolecules-hexagonal is on the classpath). The Bazel-aware ImportOption above
+        // restricts the scan to production code, which is what makes this pass cleanly
+        // (#234 confirmed that the prior `withoutAdditionalVerifications()` bypass was
+        // only masking test-class leakage, not real production violations).
+        modules.verify()
     }
 }

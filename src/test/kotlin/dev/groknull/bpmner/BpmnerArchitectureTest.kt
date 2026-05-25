@@ -15,6 +15,7 @@ import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import org.jmolecules.archunit.JMoleculesArchitectureRules
+import org.jmolecules.archunit.JMoleculesArchitectureRules.VerificationDepth
 import org.jmolecules.archunit.JMoleculesDddRules
 import org.junit.jupiter.api.Test
 
@@ -32,6 +33,14 @@ class BpmnerArchitectureTest {
     @Test
     fun `verifies DDD building block rules`() {
         JMoleculesDddRules.all().check(classes)
+    }
+
+    @Test
+    fun `verifies hexagonal architecture`() {
+        // Mirrors what Modulith's verify() auto-applies through VerificationOptions.defaults()
+        // (jmolecules-hexagonal is on the classpath). Asserted here directly so the rule
+        // surfaces against the production-only ArchUnit scan even if Modulith config changes.
+        JMoleculesArchitectureRules.ensureHexagonal(VerificationDepth.LENIENT).check(classes)
     }
 
     @Test
