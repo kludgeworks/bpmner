@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.test.unit.FakeOperationContext
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -36,9 +37,9 @@ import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -68,6 +69,51 @@ class BpmnRepairStrategiesTest {
         val invocation = operationContext.llmInvocations.single()
         val criteria = invocation.interaction.llm.criteria as ByRoleModelSelectionCriteria
         assertEquals("repair-label", criteria.role)
+    }
+
+    @Test
+    fun `TargetedLabelRepairStrategy is NotApplicable when LLM returns no patch`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(null)
+        val ctx =
+            contextOf(
+                diagnostics =
+                listOf(
+                    diag(
+                        rule = "label-rule",
+                        elementId = "Task_1",
+                        kind = RepairKind.LLM_MODEL_PATCH,
+                        scope = BpmnRepairScope.LABEL,
+                    ),
+                ),
+                operationContext = operationContext,
+            )
+
+        val result = labelStrategy().repair(ctx)
+
+        assertIs<BpmnRepairResult.NotApplicable>(result)
+    }
+
+    @Test
+    fun `TargetedLabelRepairStrategy propagates provider failures`() {
+        val operationContext = FakeOperationContext()
+        val ctx =
+            contextOf(
+                diagnostics =
+                listOf(
+                    diag(
+                        rule = "label-rule",
+                        elementId = "Task_1",
+                        kind = RepairKind.LLM_MODEL_PATCH,
+                        scope = BpmnRepairScope.LABEL,
+                    ),
+                ),
+                operationContext = operationContext,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            labelStrategy().repair(ctx)
+        }
     }
 
     @Test
@@ -189,6 +235,35 @@ class BpmnRepairStrategiesTest {
     }
 
     @Test
+    fun `LlmPatchRepairStrategy is NotApplicable when LLM returns no patch`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(null)
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH)),
+                operationContext = operationContext,
+            )
+
+        val result = patchStrategy().repair(ctx)
+
+        assertIs<BpmnRepairResult.NotApplicable>(result)
+    }
+
+    @Test
+    fun `LlmPatchRepairStrategy propagates provider failures`() {
+        val operationContext = FakeOperationContext()
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH)),
+                operationContext = operationContext,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            patchStrategy().repair(ctx)
+        }
+    }
+
+    @Test
     fun `FullLlmRewriteRepairStrategy is NotApplicable when only LOCAL_XML diagnostics exist`() {
         val operationContext = FakeOperationContext()
         val ctx =
@@ -242,6 +317,21 @@ class BpmnRepairStrategiesTest {
             invocation.messages.contains(historyMessage),
             "expected repair history to be included in LLM invocation",
         )
+    }
+
+    @Test
+    fun `FullLlmRewriteRepairStrategy is NotApplicable when LLM returns no definition`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(null)
+        val ctx =
+            contextOf(
+                diagnostics = listOf(diag(rule = "bpmner/name-02", elementId = "Task_1", kind = RepairKind.LLM_MODEL_PATCH)),
+                operationContext = operationContext,
+            )
+
+        val result = fullRewriteStrategy().repair(ctx)
+
+        assertIs<BpmnRepairResult.NotApplicable>(result)
     }
 
     private fun labelStrategy(): TargetedLabelRepairStrategy {

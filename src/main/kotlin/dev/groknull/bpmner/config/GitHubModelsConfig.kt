@@ -13,13 +13,15 @@ import com.embabel.common.ai.autoconfig.ProviderInitialization
 import com.embabel.common.ai.autoconfig.RegisteredModel
 import io.micrometer.observation.ObservationRegistry
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.beans.factory.config.ConfigurableBeanFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.context.annotation.Profile
-import org.springframework.http.client.ClientHttpRequestFactory
+import org.springframework.web.client.RestClient
+import org.springframework.web.reactive.function.client.WebClient
 
 private const val PROVIDER = "GitHub"
 private const val DEFAULT_MAX_ATTEMPTS = 10
@@ -46,7 +48,10 @@ class GitHubProperties : RetryProperties {
 @EnableConfigurationProperties(GitHubProperties::class)
 class GitHubModelsConfig(
     observationRegistry: ObjectProvider<ObservationRegistry>,
-    requestFactory: ObjectProvider<ClientHttpRequestFactory>,
+    @Qualifier("aiModelRestClientBuilder")
+    restClientBuilder: ObjectProvider<RestClient.Builder>,
+    @Qualifier("aiModelWebClientBuilder")
+    webClientBuilder: ObjectProvider<WebClient.Builder>,
     private val properties: GitHubProperties,
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
@@ -59,8 +64,10 @@ class GitHubModelsConfig(
         ),
     completionsPath = COMPLETIONS_PATH,
     embeddingsPath = null,
+    httpHeaders = emptyMap(),
     observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
-    requestFactory = requestFactory,
+    restClientBuilder = restClientBuilder,
+    webClientBuilder = webClientBuilder,
 ) {
     private val modelList = properties.models
 

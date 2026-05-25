@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.shell
 
+import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.GenerationMode
 import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationInput

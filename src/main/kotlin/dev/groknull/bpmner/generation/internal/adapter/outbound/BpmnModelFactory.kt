@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
+import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -13,7 +14,6 @@ import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask

@@ -10,6 +10,7 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.core.ActionRetryPolicy
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
@@ -48,7 +49,10 @@ internal class BpmnAlignmentAgent(
             ],
         ),
     )
-    @Action(description = "Verify semantic alignment between process contract and generated BPMN")
+    @Action(
+        description = "Verify semantic alignment between process contract and generated BPMN",
+        actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
+    )
     fun checkAlignment(
         request: BpmnRequest,
         contract: ValidatedProcessContract,

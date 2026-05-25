@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
@@ -34,7 +35,6 @@ import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals

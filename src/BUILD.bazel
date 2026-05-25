@@ -10,6 +10,8 @@ load("//tools/kotlin:spring.bzl", "SPRING_OPEN_ANNOTATIONS", "spring_allopen_plu
 
 package(default_visibility = ["//visibility:public"])
 
+exports_files(["main/kotlin/dev/groknull/bpmner/core/BpmnDomain.kt"])
+
 # Kotlin Compiler Plugins
 kt_compiler_plugin(
     name = "allopen_base",

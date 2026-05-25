@@ -6,6 +6,8 @@
 package dev.groknull.bpmner.validation
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 
 enum class BpmnDiagnosticSource {
     GRAPH,
@@ -21,21 +23,6 @@ enum class BpmnRepairScope {
     COMPOSITION,
     FULL_PROCESS,
 }
-
-enum class RepairKind {
-    LOCAL_MODEL_FIX,
-    LOCAL_XML_FIX,
-    LLM_MODEL_PATCH,
-    LLM_XML_REWRITE,
-    UNFIXABLE,
-    ;
-
-    fun isLocal(): Boolean = this == LOCAL_MODEL_FIX || this == LOCAL_XML_FIX
-
-    fun isLlm(): Boolean = this == LLM_MODEL_PATCH || this == LLM_XML_REWRITE
-}
-
-enum class BpmnRepairSafety { SAFE_AUTOMATIC, SAFE_MANUAL, LLM_ONLY }
 
 /**
  * Severity classification for a [BpmnDiagnostic].
@@ -83,7 +70,7 @@ data class BpmnDiagnostic(
     val repairScope: BpmnRepairScope? = null,
     val ownerRef: String? = null,
     val kind: RepairKind? = null,
-    val repairSafety: BpmnRepairSafety? = null,
+    val repairSafety: RepairSafety? = null,
     val fixHandler: String? = null,
 ) {
     /** True for [BpmnDiagnosticSeverity.ERROR] diagnostics that must be fixed before the pipeline can succeed. */

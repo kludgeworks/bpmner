@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation.internal.domain
 
+import dev.groknull.bpmner.api.typeName
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -33,7 +34,6 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.isSemanticallyTransparent
-import dev.groknull.bpmner.core.typeName
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
 import dev.groknull.bpmner.generation.BpmnFidelityReport

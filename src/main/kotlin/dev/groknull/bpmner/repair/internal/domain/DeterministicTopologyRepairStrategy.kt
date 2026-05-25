@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.repair.BpmnLocalFixFailure
 import dev.groknull.bpmner.repair.BpmnLocalFixSummary
@@ -17,7 +18,6 @@ import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

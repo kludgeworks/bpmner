@@ -99,6 +99,9 @@ class BpmnerModuleBoundariesTest {
                     val pkg = input.packageName
                     if (!pkg.startsWith("dev.groknull.bpmner")) return false
                     if (pkg == "dev.groknull.bpmner.core" || pkg.startsWith("dev.groknull.bpmner.core.")) return false
+                    // api/ is the shared kernel: annotation-free POKOs that every module
+                    // (including core) is permitted to depend on.
+                    if (pkg == "dev.groknull.bpmner.api" || pkg.startsWith("dev.groknull.bpmner.api.")) return false
                     return true
                 }
             }

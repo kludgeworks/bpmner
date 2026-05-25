@@ -17,6 +17,8 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
@@ -46,10 +48,8 @@ import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnRepairSafety
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairKind
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
@@ -117,7 +117,7 @@ class BpmnRefinementEngineTest {
             BpmnLintRuleCapability(
                 id = "name-01",
                 kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
                 replacementMap = null,
@@ -210,7 +210,7 @@ class BpmnRefinementEngineTest {
             BpmnLintRuleCapability(
                 id = "name-01",
                 kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "stripTypeWords",
                 handlerExists = true,
                 replacementMap = null,
@@ -240,7 +240,7 @@ class BpmnRefinementEngineTest {
             BpmnLintRuleCapability(
                 id = "no-gateway-join-fork",
                 kind = RepairKind.LOCAL_MODEL_FIX,
-                repairSafety = BpmnRepairSafety.SAFE_AUTOMATIC,
+                repairSafety = RepairSafety.SAFE_AUTOMATIC,
                 fixHandler = "splitJoinForkGateway",
                 handlerExists = true,
                 replacementMap = null,

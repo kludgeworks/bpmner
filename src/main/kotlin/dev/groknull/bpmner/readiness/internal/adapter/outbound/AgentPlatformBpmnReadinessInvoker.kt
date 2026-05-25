@@ -7,6 +7,7 @@ package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
+import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
@@ -23,6 +24,9 @@ internal class AgentPlatformBpmnReadinessInvoker(
         .transform<BpmnRequest, ProcessInputAssessment>(
             request,
             ProcessInputAssessment::class.java,
-            ProcessOptions(),
+            ProcessOptions(
+                budget = Budget(actions = 20),
+                ephemeral = true,
+            ),
         )
 }
