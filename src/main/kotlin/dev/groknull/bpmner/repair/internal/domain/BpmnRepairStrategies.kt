@@ -31,7 +31,6 @@ internal class TargetedLabelRepairStrategy(
 
     override fun getOrder(): Int = 150
 
-    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -42,15 +41,14 @@ internal class TargetedLabelRepairStrategy(
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
         val runner = context.promptRunner(config.labelRepairer, promptFactory)
         val patch =
-            try {
-                runner.createObject(
-                    context.attempt.messages + UserMessage(feedback),
-                    BpmnRepairPatch::class.java,
-                )
-            } catch (e: RuntimeException) {
-                logger.warn("LLM label patch creation failed: {}", e.message)
-                return BpmnRepairResult.NotApplicable
-            }
+            runner.createObjectIfPossible(
+                context.attempt.messages + UserMessage(feedback),
+                BpmnRepairPatch::class.java,
+            )
+        if (patch == null) {
+            logger.warn("LLM label patch creation returned no structured patch, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -86,7 +84,6 @@ internal class LlmPatchRepairStrategy(
 
     override fun getOrder(): Int = 200
 
-    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -98,15 +95,14 @@ internal class LlmPatchRepairStrategy(
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
         val runner = context.promptRunner(config.patchRepairer, promptFactory)
         val patch =
-            try {
-                runner.createObject(
-                    context.attempt.messages + UserMessage(feedback),
-                    BpmnRepairPatch::class.java,
-                )
-            } catch (e: RuntimeException) {
-                logger.warn("LLM patch creation failed: {}", e.message)
-                return BpmnRepairResult.NotApplicable
-            }
+            runner.createObjectIfPossible(
+                context.attempt.messages + UserMessage(feedback),
+                BpmnRepairPatch::class.java,
+            )
+        if (patch == null) {
+            logger.warn("LLM patch creation returned no structured patch, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -141,7 +137,6 @@ internal class FullLlmRewriteRepairStrategy(
 
     override fun getOrder(): Int = 300
 
-    @Suppress("TooGenericExceptionCaught")
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val candidates =
             context.attempt.evaluation.diagnostics.filter { d ->
@@ -152,15 +147,14 @@ internal class FullLlmRewriteRepairStrategy(
         val feedback = promptFactory.fullRepairFeedback(context.attempt, candidates, context.localOutcome)
         val runner = context.promptRunner(config.rewriteRepairer, promptFactory)
         val repaired =
-            try {
-                runner.createObject(
-                    context.attempt.messages + UserMessage(feedback),
-                    BpmnDefinition::class.java,
-                )
-            } catch (e: RuntimeException) {
-                logger.warn("LLM rewrite failed: {}", e.message)
-                return BpmnRepairResult.NotApplicable
-            }
+            runner.createObjectIfPossible(
+                context.attempt.messages + UserMessage(feedback),
+                BpmnDefinition::class.java,
+            )
+        if (repaired == null) {
+            logger.warn("LLM rewrite returned no structured definition, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return BpmnRepairResult.Repaired(
             definition = repaired,
