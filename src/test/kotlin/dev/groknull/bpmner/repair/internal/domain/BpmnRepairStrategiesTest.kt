@@ -72,6 +72,51 @@ class BpmnRepairStrategiesTest {
     }
 
     @Test
+    fun `TargetedLabelRepairStrategy is NotApplicable when LLM returns no patch`() {
+        val operationContext = FakeOperationContext()
+        operationContext.expectResponse(null)
+        val ctx =
+            contextOf(
+                diagnostics =
+                    listOf(
+                        diag(
+                            rule = "label-rule",
+                            elementId = "Task_1",
+                            kind = RepairKind.LLM_MODEL_PATCH,
+                            scope = BpmnRepairScope.LABEL,
+                        ),
+                    ),
+                operationContext = operationContext,
+            )
+
+        val result = labelStrategy().repair(ctx)
+
+        assertIs<BpmnRepairResult.NotApplicable>(result)
+    }
+
+    @Test
+    fun `TargetedLabelRepairStrategy propagates provider failures`() {
+        val operationContext = FakeOperationContext()
+        val ctx =
+            contextOf(
+                diagnostics =
+                    listOf(
+                        diag(
+                            rule = "label-rule",
+                            elementId = "Task_1",
+                            kind = RepairKind.LLM_MODEL_PATCH,
+                            scope = BpmnRepairScope.LABEL,
+                        ),
+                    ),
+                operationContext = operationContext,
+            )
+
+        assertFailsWith<IllegalStateException> {
+            labelStrategy().repair(ctx)
+        }
+    }
+
+    @Test
     fun `LlmPatchRepairStrategy routes through repair-patch actor`() {
         val operationContext = FakeOperationContext()
         operationContext.expectResponse(BpmnRepairPatch(operations = emptyList()))

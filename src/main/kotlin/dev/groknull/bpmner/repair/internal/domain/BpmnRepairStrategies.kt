@@ -44,7 +44,11 @@ internal class TargetedLabelRepairStrategy(
             runner.createObjectIfPossible(
                 context.attempt.messages + UserMessage(feedback),
                 BpmnRepairPatch::class.java,
-            ) ?: return BpmnRepairResult.NotApplicable
+            )
+        if (patch == null) {
+            logger.warn("LLM label patch creation returned no structured patch, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -94,7 +98,11 @@ internal class LlmPatchRepairStrategy(
             runner.createObjectIfPossible(
                 context.attempt.messages + UserMessage(feedback),
                 BpmnRepairPatch::class.java,
-            ) ?: return BpmnRepairResult.NotApplicable
+            )
+        if (patch == null) {
+            logger.warn("LLM patch creation returned no structured patch, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
             is PatchApplicationResult.Success -> {
@@ -125,6 +133,8 @@ internal class FullLlmRewriteRepairStrategy(
     private val config: BpmnConfig,
     private val promptFactory: BpmnRepairPromptPort,
 ) : BpmnRepairStrategy {
+    private val logger = LoggerFactory.getLogger(FullLlmRewriteRepairStrategy::class.java)
+
     override fun getOrder(): Int = 300
 
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
@@ -140,7 +150,11 @@ internal class FullLlmRewriteRepairStrategy(
             runner.createObjectIfPossible(
                 context.attempt.messages + UserMessage(feedback),
                 BpmnDefinition::class.java,
-            ) ?: return BpmnRepairResult.NotApplicable
+            )
+        if (repaired == null) {
+            logger.warn("LLM rewrite returned no structured definition, falling back")
+            return BpmnRepairResult.NotApplicable
+        }
 
         return BpmnRepairResult.Repaired(
             definition = repaired,
