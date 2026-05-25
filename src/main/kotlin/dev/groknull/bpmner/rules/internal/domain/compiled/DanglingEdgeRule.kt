@@ -1,0 +1,68 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.rules.internal.domain.compiled
+
+import dev.groknull.bpmner.api.BpmnDefinitionContext
+import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleSeverity
+import org.springframework.stereotype.Component
+
+/**
+ * Flags sequence-flow edges whose `sourceRef` or `targetRef` does not resolve to a node in
+ * the definition, and edges whose source and target are identical (self-references). Ports
+ * `BpmnDefinitionValidator.validateEdges` with byte-identical messages.
+ *
+ * `elementId` is the edge id when present, `null` when the edge id is blank — matching the
+ * legacy validator's behavior of inlining `"<blank>"` into the message but not pretending
+ * the edge has a stable id.
+ */
+@Component
+internal class DanglingEdgeRule : BpmnRule {
+    override val id: String = "def-dangling-edges"
+
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
+        val diagnostics = mutableListOf<RuleDiagnostic>()
+
+        ctx.definition.sequences.forEach { edge ->
+            val edgeLabel = edge.id.ifBlank { "<blank>" }
+            val edgeElementId = edge.id.ifBlank { null }
+
+            if (edge.sourceRef !in ctx.nodeIds) {
+                diagnostics +=
+                    RuleDiagnostic(
+                        diagnosticCode = "def-dangling-source",
+                        ruleId = id,
+                        severity = RuleSeverity.ERROR,
+                        message = "edge $edgeLabel sourceRef '${edge.sourceRef}' does not match any node id",
+                        elementId = edgeElementId,
+                    )
+            }
+            if (edge.targetRef !in ctx.nodeIds) {
+                diagnostics +=
+                    RuleDiagnostic(
+                        diagnosticCode = "def-dangling-target",
+                        ruleId = id,
+                        severity = RuleSeverity.ERROR,
+                        message = "edge $edgeLabel targetRef '${edge.targetRef}' does not match any node id",
+                        elementId = edgeElementId,
+                    )
+            }
+            if (edge.sourceRef == edge.targetRef) {
+                diagnostics +=
+                    RuleDiagnostic(
+                        diagnosticCode = "def-self-reference",
+                        ruleId = id,
+                        severity = RuleSeverity.ERROR,
+                        message = "edge $edgeLabel must not self-reference source and target",
+                        elementId = edgeElementId,
+                    )
+            }
+        }
+
+        return diagnostics
+    }
+}
