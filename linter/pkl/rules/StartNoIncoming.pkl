@@ -18,8 +18,10 @@ errorMessages = new {
 
 staticConfig = new {}
 
+hasTsImplementation = true
+
 repair = new {
-  kind = "LOCAL_XML_FIX"
+  kind = "LOCAL_MODEL_FIX"
   safety = "SAFE_AUTOMATIC"
   handler = "deleteIncomingFlows"
 }

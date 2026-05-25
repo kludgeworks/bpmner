@@ -10,7 +10,11 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnReceiveTask
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.BpmnSendTask
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import org.springframework.stereotype.Component
 
@@ -27,6 +31,24 @@ import org.springframework.stereotype.Component
 @Component
 internal class TaskPayloadRule : BpmnRule {
     override val id: String = "def-task-payloads"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Task Payloads",
+        slug = "task-payloads",
+        category = "Definition",
+        intent = "Ensure task payload references are present and resolve to known catalog entries where applicable.",
+        forModellers = "Reference an existing message or decision from specialized tasks.",
+        forAI = "Set messageRef on send/receive tasks and decisionRef on business rule tasks.",
+        targetElements = listOf("bpmn:SendTask", "bpmn:ReceiveTask", "bpmn:BusinessRuleTask"),
+        errorMessages =
+        mapOf(
+            "def-missing-message-ref" to "Send and receive tasks must declare messageRef.",
+            "def-invalid-task-message-ref" to "Task messageRef must match a message catalog id.",
+            "def-missing-decision-ref" to "Business rule tasks must declare decisionRef.",
+        ),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()

@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.api
 
+import kotlin.reflect.KClass
+
 /**
  * Pre-computed index over a [BpmnDefinition], wrapping the set / map structures that every
  * structural rule needs. Each compiled rule receives a single [BpmnDefinitionContext]
@@ -54,6 +56,18 @@ class BpmnDefinitionContext(
 
     /** Outgoing-edge count per source node id — feeds the gateway / naming-policy rules. */
     val outgoingCounts: Map<String, Int> = definition.sequences.groupingBy { it.sourceRef }.eachCount()
+
+    /** Edges grouped by raw source node id. */
+    val edgesFrom: Map<String, List<BpmnEdge>> = definition.sequences.groupBy { it.sourceRef }
+
+    /** Edges grouped by raw target node id. */
+    val edgesTo: Map<String, List<BpmnEdge>> = definition.sequences.groupBy { it.targetRef }
+
+    /** Incoming-edge count per target node id. */
+    val incomingCounts: Map<String, Int> = definition.sequences.groupingBy { it.targetRef }.eachCount()
+
+    /** Nodes grouped by their concrete runtime type. */
+    val nodesByType: Map<KClass<out BpmnNode>, List<BpmnNode>> = definition.nodes.groupBy { it::class }
 
     /** Default-flow edges grouped by source node id (each source should have at most one). */
     val defaultsBySource: Map<String, List<BpmnEdge>> =

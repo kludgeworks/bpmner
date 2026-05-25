@@ -31,6 +31,7 @@ class BpmnRuleContractTest {
     /** A minimal `BpmnRule` impl that flags every node lacking a name. */
     private class RequireNamedNodes : BpmnRule {
         override val id: String = "test-require-named-nodes"
+        override val metadata: RuleMetadata = testMetadata(id)
 
         override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = ctx.definition.nodes
             .filter { it.name.isNullOrBlank() }
@@ -43,6 +44,20 @@ class BpmnRuleContractTest {
                     elementId = node.id,
                 )
             }
+    }
+
+    private companion object {
+        fun testMetadata(id: String): RuleMetadata = RuleMetadata(
+            id = id,
+            name = "Test Require Named Nodes",
+            slug = "test-require-named-nodes",
+            category = "Test",
+            intent = "Exercise the BpmnRule contract in tests.",
+            forModellers = "Test metadata for modellers.",
+            forAI = "Test metadata for AI.",
+            targetElements = listOf("bpmn:FlowNode"),
+            errorMessages = mapOf("test-missing-name" to "Node requires a name."),
+        )
     }
 
     @Test
@@ -69,6 +84,7 @@ class BpmnRuleContractTest {
         val rule: BpmnRule = RequireNamedNodes()
         val diagnostics = rule.evaluate(ctx)
 
+        assertEquals(rule.id, rule.metadata.id)
         assertEquals(1, diagnostics.size, "Expected exactly the unnamed user task to be flagged")
         val only = diagnostics.single()
         assertEquals("test-require-named-nodes", only.ruleId)

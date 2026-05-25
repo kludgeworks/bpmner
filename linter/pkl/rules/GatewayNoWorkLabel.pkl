@@ -27,8 +27,10 @@ staticConfig = new {
     List("check", "validate", "verify", "approve", "reject", "review", "assess", "confirm")
 }
 
+hasTsImplementation = true
+
 repair = new {
-  kind = "LOCAL_XML_FIX"
+  kind = "LOCAL_MODEL_FIX"
   safety = "SAFE_AUTOMATIC"
   handler = "clearName"
 }

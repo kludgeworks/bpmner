@@ -20,7 +20,11 @@ import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.api.isTask
 import org.springframework.stereotype.Component
@@ -44,6 +48,37 @@ import org.springframework.stereotype.Component
 @Component
 internal class EventDefinitionRule : BpmnRule {
     override val id: String = "def-event-definitions"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Event Definitions",
+        slug = "event-definitions",
+        category = "Definition",
+        intent = "Ensure BPMN event definitions are present, structurally valid, and resolve to catalog entries.",
+        forModellers = "Choose the correct event trigger and attach boundary events to activities.",
+        forAI = "Populate event definitions and catalog refs consistently for every event node.",
+        targetElements =
+        listOf(
+            "bpmn:StartEvent",
+            "bpmn:EndEvent",
+            "bpmn:IntermediateCatchEvent",
+            "bpmn:IntermediateThrowEvent",
+            "bpmn:BoundaryEvent",
+        ),
+        errorMessages =
+        mapOf(
+            "def-missing-event-def" to "Intermediate and boundary events must declare an event definition.",
+            "def-missing-attached-to" to "Boundary events must declare attachedToRef.",
+            "def-invalid-attached-to" to "Boundary event attachedToRef must match an existing node id.",
+            "def-non-task-attached-to" to "Boundary events must attach to an activity.",
+            "def-missing-timer-expr" to "Timer event expression must not be blank.",
+            "def-invalid-message-ref" to "Message event definitions must reference an existing message.",
+            "def-invalid-signal-ref" to "Signal event definitions must reference an existing signal.",
+            "def-invalid-error-ref" to "Error event definitions must reference an existing error.",
+            "def-invalid-escalation-ref" to "Escalation event definitions must reference an existing escalation.",
+        ),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()

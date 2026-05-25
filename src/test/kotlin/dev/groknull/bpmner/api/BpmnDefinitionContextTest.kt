@@ -12,6 +12,7 @@ import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnMessageRef
+import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -87,6 +88,8 @@ class BpmnDefinitionContextTest {
         assertTrue("end" in ctx.nodeIds)
         assertNotNull(ctx.nodesById["  start  "])
         assertNull(ctx.nodesById["start"])
+        assertEquals(listOf("f1"), ctx.edgesFrom["  start  "]?.map { it.id })
+        assertNull(ctx.edgesFrom["start"])
         // Trimmed comparison is the future DuplicateIdRule's concern; the context stays raw.
     }
 
@@ -129,6 +132,22 @@ class BpmnDefinitionContextTest {
         assertEquals(1, ctx.outgoingCounts["reject"])
         // end has no outgoing
         assertNull(ctx.outgoingCounts["end"])
+    }
+
+    @Test
+    fun `edge indexes and nodesByType use raw ids and concrete implementations`() {
+        val ctx = BpmnDefinitionContext(fixture())
+
+        assertEquals(listOf("f_approve", "f_reject"), ctx.edgesFrom["gw"]?.map { it.id })
+        assertEquals(listOf("f_approve_end", "f_reject_end"), ctx.edgesTo["end"]?.map { it.id })
+        assertEquals(2, ctx.incomingCounts["end"])
+        assertNull(ctx.edgesFrom["missing"])
+        assertNull(ctx.edgesTo["missing"])
+        assertNull(ctx.incomingCounts["missing"])
+        assertEquals(listOf("start"), ctx.nodesByType[BpmnStartEvent::class]?.map { it.id })
+        assertEquals(listOf("review", "approve", "reject"), ctx.nodesByType[BpmnUserTask::class]?.map { it.id })
+        assertEquals(listOf("gw"), ctx.nodesByType[BpmnExclusiveGateway::class]?.map { it.id })
+        assertNull(ctx.nodesByType[BpmnServiceTask::class])
     }
 
     @Test

@@ -34,3 +34,5 @@ staticConfig = new {
     List("parallelCondition", "parallelSplitCardinality", "parallelJoinCardinality")
   heuristicChecks = List("xor-vs-or-business-intent", "matching-split-join-context")
 }
+
+hasTsImplementation = true

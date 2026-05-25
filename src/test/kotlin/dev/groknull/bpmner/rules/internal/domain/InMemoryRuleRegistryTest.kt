@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertSame
@@ -23,6 +24,18 @@ class InMemoryRuleRegistryTest {
     private class StubRule(
         override val id: String,
     ) : BpmnRule {
+        override val metadata: RuleMetadata = RuleMetadata(
+            id = id,
+            name = "Stub Rule",
+            slug = id,
+            category = "Test",
+            intent = "Test rule.",
+            forModellers = "Test rule.",
+            forAI = "Test rule.",
+            targetElements = listOf("bpmn:FlowNode"),
+            errorMessages = mapOf("stub" to "Stub diagnostic."),
+        )
+
         override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = emptyList()
     }
 
@@ -44,6 +57,7 @@ class InMemoryRuleRegistryTest {
         assertEquals(listOf(first, second), registry.activeRules())
         assertSame(first, registry.ruleById("rule-a"))
         assertSame(second, registry.ruleById("rule-b"))
+        assertEquals("rule-a", registry.ruleById("rule-a")?.metadata?.id)
         assertNull(registry.ruleById("rule-missing"))
     }
 

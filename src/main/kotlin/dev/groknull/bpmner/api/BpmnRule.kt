@@ -26,6 +26,7 @@ package dev.groknull.bpmner.api
  */
 interface BpmnRule {
     val id: String
+    val metadata: RuleMetadata
 
     fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic>
 }

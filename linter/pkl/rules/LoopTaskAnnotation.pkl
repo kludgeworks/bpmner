@@ -40,3 +40,5 @@ staticConfig = new {
     )
   conditionWords = List("until", "while", "unless", "till")
 }
+
+hasTsImplementation = true

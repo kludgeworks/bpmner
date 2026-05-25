@@ -14,5 +14,5 @@ import org.springframework.modulith.ApplicationModule
  * BpmnDefinitionValidator, BpmnDiagnosticNormalizer, BpmnEvaluationPipeline,
  * PklRuleCapabilityAdapter, RuleCatalogService, BpmnLintJsEngine.
  */
-@ApplicationModule(allowedDependencies = ["api", "core"])
+@ApplicationModule(allowedDependencies = ["api", "core", "rules"])
 internal object ValidationModule

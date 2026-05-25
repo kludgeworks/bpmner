@@ -7,7 +7,11 @@ package dev.groknull.bpmner.rules.internal.domain.compiled
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import org.springframework.stereotype.Component
 
@@ -22,6 +26,23 @@ import org.springframework.stereotype.Component
 @Component
 internal class DuplicateIdRule : BpmnRule {
     override val id: String = "def-duplicate-ids"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Duplicate IDs",
+        slug = "duplicate-ids",
+        category = "Definition",
+        intent = "Ensure node and sequence-flow identifiers are unique after trimming whitespace.",
+        forModellers = "Give every element and flow a unique id.",
+        forAI = "Generate unique ids for every node and sequenceFlow.",
+        targetElements = listOf("bpmn:FlowNode", "bpmn:SequenceFlow"),
+        errorMessages =
+        mapOf(
+            "def-duplicate-node-id" to "Node ids must be unique.",
+            "def-duplicate-edge-id" to "Sequence flow ids must be unique.",
+        ),
+        severity = RuleSeverity.ERROR,
+        repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
+    )
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
