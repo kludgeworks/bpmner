@@ -56,8 +56,8 @@ internal class TargetedLabelRepairStrategy(
                     definition = application.definition,
                     promptText = feedback,
                     messages =
-                        context.attempt.messages + UserMessage(feedback) +
-                            AssistantMessage(patch.toString()),
+                    context.attempt.messages + UserMessage(feedback) +
+                        AssistantMessage(patch.toString()),
                 )
             }
 
@@ -110,8 +110,8 @@ internal class LlmPatchRepairStrategy(
                     definition = application.definition,
                     promptText = feedback,
                     messages =
-                        context.attempt.messages + UserMessage(feedback) +
-                            AssistantMessage(patch.toString()),
+                    context.attempt.messages + UserMessage(feedback) +
+                        AssistantMessage(patch.toString()),
                 )
             }
 
@@ -160,7 +160,7 @@ internal class FullLlmRewriteRepairStrategy(
             definition = repaired,
             promptText = feedback,
             messages =
-                context.attempt.messages + UserMessage(feedback) + AssistantMessage(repaired.toString()),
+            context.attempt.messages + UserMessage(feedback) + AssistantMessage(repaired.toString()),
         )
     }
 }

@@ -308,202 +308,195 @@ class TopologyHandlersTest {
 
     // ---- Fixtures ----------------------------------------------------------
 
-    private fun parallelJoinForkDefinition() =
-        BpmnDefinition(
-            processId = "Process_PJF",
-            processName = "Parallel join-fork misencoded as one node",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnStartEvent("Start_2", "Trigger"),
-                    BpmnParallelGateway("Gateway_1", null),
-                    BpmnUserTask("Task_1", "Handle A"),
-                    BpmnUserTask("Task_2", "Handle B"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
-                    BpmnEdge("Flow_4", "Gateway_1", "Task_2"),
-                    BpmnEdge("Flow_5", "Task_1", "End_1"),
-                    BpmnEdge("Flow_6", "Task_2", "End_1"),
-                ),
-        )
+    private fun parallelJoinForkDefinition() = BpmnDefinition(
+        processId = "Process_PJF",
+        processName = "Parallel join-fork misencoded as one node",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnStartEvent("Start_2", "Trigger"),
+            BpmnParallelGateway("Gateway_1", null),
+            BpmnUserTask("Task_1", "Handle A"),
+            BpmnUserTask("Task_2", "Handle B"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
+            BpmnEdge("Flow_4", "Gateway_1", "Task_2"),
+            BpmnEdge("Flow_5", "Task_1", "End_1"),
+            BpmnEdge("Flow_6", "Task_2", "End_1"),
+        ),
+    )
 
-    private fun parallelForkMissingJoinDefinition() =
-        // Parallel fork into three tracks, all converging directly into act-finalise
-        // with no join gateway in between. This is the malformed shape the repair handler
-        // must detect — and must synthesize a *parallel* join, not exclusive.
-        BpmnDefinition(
+    // Parallel fork into three tracks, all converging directly into act-finalise with no join
+    // gateway in between. This is the malformed shape the repair handler must detect, and it must
+    // synthesize a parallel join, not exclusive.
+    private fun parallelForkMissingJoinDefinition(): BpmnDefinition {
+        return BpmnDefinition(
             processId = "Process_PFMissingJoin",
             processName = "Parallel fork missing its join",
             nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnParallelGateway("dec-fork", "Fork"),
-                    BpmnUserTask("act-a", "Track A"),
-                    BpmnUserTask("act-b", "Track B"),
-                    BpmnUserTask("act-c", "Track C"),
-                    BpmnUserTask("act-finalise", "Finalise"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
+            listOf(
+                BpmnStartEvent("Start_1", "Start"),
+                BpmnParallelGateway("dec-fork", "Fork"),
+                BpmnUserTask("act-a", "Track A"),
+                BpmnUserTask("act-b", "Track B"),
+                BpmnUserTask("act-c", "Track C"),
+                BpmnUserTask("act-finalise", "Finalise"),
+                BpmnEndEvent("End_1", "End"),
+            ),
             sequences =
-                listOf(
-                    BpmnEdge("F1", "Start_1", "dec-fork"),
-                    BpmnEdge("F2", "dec-fork", "act-a"),
-                    BpmnEdge("F3", "dec-fork", "act-b"),
-                    BpmnEdge("F4", "dec-fork", "act-c"),
-                    BpmnEdge("F5", "act-a", "act-finalise"),
-                    BpmnEdge("F6", "act-b", "act-finalise"),
-                    BpmnEdge("F7", "act-c", "act-finalise"),
-                    BpmnEdge("F8", "act-finalise", "End_1"),
-                ),
+            listOf(
+                BpmnEdge("F1", "Start_1", "dec-fork"),
+                BpmnEdge("F2", "dec-fork", "act-a"),
+                BpmnEdge("F3", "dec-fork", "act-b"),
+                BpmnEdge("F4", "dec-fork", "act-c"),
+                BpmnEdge("F5", "act-a", "act-finalise"),
+                BpmnEdge("F6", "act-b", "act-finalise"),
+                BpmnEdge("F7", "act-c", "act-finalise"),
+                BpmnEdge("F8", "act-finalise", "End_1"),
+            ),
         )
+    }
 
-    private fun joinForkDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Join Fork Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnStartEvent("Start_2", "Trigger"),
-                    BpmnExclusiveGateway("Gateway_1", "Route?"),
-                    BpmnUserTask("Task_1", "Handle A"),
-                    BpmnUserTask("Task_2", "Handle B"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
-                    BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
-                    BpmnEdge("Flow_5", "Task_1", "End_1"),
-                    BpmnEdge("Flow_6", "Task_2", "End_1"),
-                ),
-        )
+    private fun joinForkDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Join Fork Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnStartEvent("Start_2", "Trigger"),
+            BpmnExclusiveGateway("Gateway_1", "Route?"),
+            BpmnUserTask("Task_1", "Handle A"),
+            BpmnUserTask("Task_2", "Handle B"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
+            BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
+            BpmnEdge("Flow_5", "Task_1", "End_1"),
+            BpmnEdge("Flow_6", "Task_2", "End_1"),
+        ),
+    )
 
-    private fun fakeJoinDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Fake Join Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnStartEvent("Start_2", "Trigger"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Start_2", "Task_1"),
-                    BpmnEdge("Flow_3", "Task_1", "End_1"),
-                ),
-        )
+    private fun fakeJoinDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Fake Join Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnStartEvent("Start_2", "Trigger"),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1"),
+            BpmnEdge("Flow_2", "Start_2", "Task_1"),
+            BpmnEdge("Flow_3", "Task_1", "End_1"),
+        ),
+    )
 
-    private fun singleIncomingTaskDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Single Incoming",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Task_1", "End_1"),
-                ),
-        )
+    private fun singleIncomingTaskDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Single Incoming",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1"),
+            BpmnEdge("Flow_2", "Task_1", "End_1"),
+        ),
+    )
 
-    private fun multiIncomingEndEventDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Multi Incoming End Event",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnStartEvent("Start_2", "Trigger"),
-                    BpmnEndEvent("End_1", "Done"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "End_1"),
-                    BpmnEdge("Flow_2", "Start_2", "End_1"),
-                ),
-        )
+    private fun multiIncomingEndEventDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Multi Incoming End Event",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnStartEvent("Start_2", "Trigger"),
+            BpmnEndEvent("End_1", "Done"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "End_1"),
+            BpmnEdge("Flow_2", "Start_2", "End_1"),
+        ),
+    )
 
-    private fun superfluousGatewayDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Superfluous Gateway Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnExclusiveGateway("Gateway_1", null),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1"),
-                    BpmnEdge("Flow_3", "Task_1", "End_1"),
-                ),
-        )
+    private fun superfluousGatewayDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Superfluous Gateway Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnExclusiveGateway("Gateway_1", null),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Gateway_1", "Task_1"),
+            BpmnEdge("Flow_3", "Task_1", "End_1"),
+        ),
+    )
 
-    private fun divergingGatewayDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Diverging Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnExclusiveGateway(
-                        "Gateway_1",
-                        "Is valid?",
-                    ),
-                    BpmnUserTask("Task_1", "Approve"),
-                    BpmnUserTask("Task_2", "Reject"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes"),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No"),
-                    BpmnEdge("Flow_4", "Task_1", "End_1"),
-                    BpmnEdge("Flow_5", "Task_2", "End_1"),
-                ),
-        )
+    private fun divergingGatewayDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Diverging Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnExclusiveGateway(
+                "Gateway_1",
+                "Is valid?",
+            ),
+            BpmnUserTask("Task_1", "Approve"),
+            BpmnUserTask("Task_2", "Reject"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Yes"),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "No"),
+            BpmnEdge("Flow_4", "Task_1", "End_1"),
+            BpmnEdge("Flow_5", "Task_2", "End_1"),
+        ),
+    )
 
-    private fun convergingNamedGatewayDefinition(gatewayName: String? = "Join") =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Converging Named Gateway Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Path A"),
-                    BpmnStartEvent("Start_2", "Path B"),
-                    BpmnExclusiveGateway(
-                        "Gateway_1",
-                        gatewayName,
-                    ),
-                    BpmnUserTask("Task_1", "Continue"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
-                    BpmnEdge("Flow_4", "Task_1", "End_1"),
-                ),
-        )
+    private fun convergingNamedGatewayDefinition(gatewayName: String? = "Join") = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Converging Named Gateway Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Path A"),
+            BpmnStartEvent("Start_2", "Path B"),
+            BpmnExclusiveGateway(
+                "Gateway_1",
+                gatewayName,
+            ),
+            BpmnUserTask("Task_1", "Continue"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_1"),
+            BpmnEdge("Flow_4", "Task_1", "End_1"),
+        ),
+    )
 }

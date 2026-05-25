@@ -32,51 +32,50 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
     private fun render(
         originalInput: String,
         assessment: ProcessInputAssessment,
-    ): String =
-        buildString {
-            appendLine("# BPMN readiness report")
-            appendLine()
-            appendLine("**Verdict:** ${assessment.verdict.name}")
-            appendLine("**Overall score:** ${assessment.overallScore}")
-            appendLine()
-            appendLine("## Missing dimensions")
-            val missingDims = assessment.dimensions.filter { it.missingAreas.isNotEmpty() }
-            if (missingDims.isEmpty()) {
-                appendLine("- (none flagged by readiness assessor)")
-            } else {
-                missingDims.forEach { dim ->
-                    appendLine("- ${dim.dimension.name} (score ${dim.score}) — ${dim.rationale}")
-                }
+    ): String = buildString {
+        appendLine("# BPMN readiness report")
+        appendLine()
+        appendLine("**Verdict:** ${assessment.verdict.name}")
+        appendLine("**Overall score:** ${assessment.overallScore}")
+        appendLine()
+        appendLine("## Missing dimensions")
+        val missingDims = assessment.dimensions.filter { it.missingAreas.isNotEmpty() }
+        if (missingDims.isEmpty()) {
+            appendLine("- (none flagged by readiness assessor)")
+        } else {
+            missingDims.forEach { dim ->
+                appendLine("- ${dim.dimension.name} (score ${dim.score}) — ${dim.rationale}")
             }
-            appendLine()
-            appendLine("## Assumptions that would be required to proceed")
-            val assumptions = assessment.missingAreas.distinct()
-            if (assumptions.isEmpty()) {
-                appendLine("- (no missing process areas reported)")
-            } else {
-                assumptions.forEach { area ->
-                    appendLine("- ${area.name} — ${assumptionPhrase(area)}")
-                }
-            }
-            appendLine()
-            appendLine("## Clarification questions")
-            if (assessment.clarificationQuestions.isEmpty()) {
-                appendLine("- (no clarification questions available)")
-            } else {
-                assessment.clarificationQuestions.forEachIndexed { index, question ->
-                    appendLine("${index + 1}. [${question.id}] ${question.questionText}")
-                }
-            }
-            appendLine()
-            appendLine("## Rationale")
-            appendLine(assessment.rationale)
-            appendLine()
-            appendLine("## Original input (preview)")
-            appendLine()
-            appendLine("```")
-            appendLine(previewOf(originalInput))
-            appendLine("```")
         }
+        appendLine()
+        appendLine("## Assumptions that would be required to proceed")
+        val assumptions = assessment.missingAreas.distinct()
+        if (assumptions.isEmpty()) {
+            appendLine("- (no missing process areas reported)")
+        } else {
+            assumptions.forEach { area ->
+                appendLine("- ${area.name} — ${assumptionPhrase(area)}")
+            }
+        }
+        appendLine()
+        appendLine("## Clarification questions")
+        if (assessment.clarificationQuestions.isEmpty()) {
+            appendLine("- (no clarification questions available)")
+        } else {
+            assessment.clarificationQuestions.forEachIndexed { index, question ->
+                appendLine("${index + 1}. [${question.id}] ${question.questionText}")
+            }
+        }
+        appendLine()
+        appendLine("## Rationale")
+        appendLine(assessment.rationale)
+        appendLine()
+        appendLine("## Original input (preview)")
+        appendLine()
+        appendLine("```")
+        appendLine(previewOf(originalInput))
+        appendLine("```")
+    }
 
     private fun previewOf(input: String): String {
         val collapsed = input.trim()
@@ -87,52 +86,51 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
         }
     }
 
-    private fun assumptionPhrase(area: MissingProcessArea): String =
-        when (area) {
-            MissingProcessArea.PROCESS_BOUNDARY -> {
-                "process boundary would be assumed"
-            }
-
-            MissingProcessArea.START_TRIGGER -> {
-                "a start trigger would be invented"
-            }
-
-            MissingProcessArea.END_STATE -> {
-                "an end state would be invented"
-            }
-
-            MissingProcessArea.ACTIVITY_SEQUENCE -> {
-                "activities and their order would be invented"
-            }
-
-            MissingProcessArea.ACTOR_RESPONSIBILITY -> {
-                "actor responsibilities would be assigned without grounding"
-            }
-
-            MissingProcessArea.DECISION_CRITERIA -> {
-                "decision criteria would be invented"
-            }
-
-            MissingProcessArea.EXCEPTION_HANDLING -> {
-                "exception paths would be invented"
-            }
-
-            MissingProcessArea.INPUT_ARTIFACT -> {
-                "input artifacts would be invented"
-            }
-
-            MissingProcessArea.OUTPUT_ARTIFACT -> {
-                "output artifacts would be invented"
-            }
-
-            MissingProcessArea.BPMN_PROCESS_SUITABILITY -> {
-                "the source text would be treated as a process despite weak suitability"
-            }
-
-            MissingProcessArea.SOURCE_TRACE -> {
-                "process details would be added without traceability to the source"
-            }
+    private fun assumptionPhrase(area: MissingProcessArea): String = when (area) {
+        MissingProcessArea.PROCESS_BOUNDARY -> {
+            "process boundary would be assumed"
         }
+
+        MissingProcessArea.START_TRIGGER -> {
+            "a start trigger would be invented"
+        }
+
+        MissingProcessArea.END_STATE -> {
+            "an end state would be invented"
+        }
+
+        MissingProcessArea.ACTIVITY_SEQUENCE -> {
+            "activities and their order would be invented"
+        }
+
+        MissingProcessArea.ACTOR_RESPONSIBILITY -> {
+            "actor responsibilities would be assigned without grounding"
+        }
+
+        MissingProcessArea.DECISION_CRITERIA -> {
+            "decision criteria would be invented"
+        }
+
+        MissingProcessArea.EXCEPTION_HANDLING -> {
+            "exception paths would be invented"
+        }
+
+        MissingProcessArea.INPUT_ARTIFACT -> {
+            "input artifacts would be invented"
+        }
+
+        MissingProcessArea.OUTPUT_ARTIFACT -> {
+            "output artifacts would be invented"
+        }
+
+        MissingProcessArea.BPMN_PROCESS_SUITABILITY -> {
+            "the source text would be treated as a process despite weak suitability"
+        }
+
+        MissingProcessArea.SOURCE_TRACE -> {
+            "process details would be added without traceability to the source"
+        }
+    }
 
     private companion object {
         const val DEFAULT_OUTPUT_FILE = "output.bpmn"

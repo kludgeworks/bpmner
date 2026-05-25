@@ -28,17 +28,16 @@ internal object BpmnPatchOperationApplier {
     fun applyOperation(
         definition: BpmnDefinition,
         op: BpmnPatchOperation,
-    ): OperationResult =
-        when (op.type) {
-            BpmnPatchOperationType.SET_NODE_NAME -> applySetNodeName(definition, op)
-            BpmnPatchOperationType.SET_EDGE_LABEL -> applySetEdgeLabel(definition, op)
-            BpmnPatchOperationType.ADD_NODE -> applyAddNode(definition, op)
-            BpmnPatchOperationType.REMOVE_NODE -> applyRemoveNode(definition, op)
-            BpmnPatchOperationType.REPLACE_NODE -> applyReplaceNode(definition, op)
-            BpmnPatchOperationType.ADD_EDGE -> applyAddEdge(definition, op)
-            BpmnPatchOperationType.REMOVE_EDGE -> applyRemoveEdge(definition, op)
-            BpmnPatchOperationType.REPLACE_EDGE -> applyReplaceEdge(definition, op)
-        }
+    ): OperationResult = when (op.type) {
+        BpmnPatchOperationType.SET_NODE_NAME -> applySetNodeName(definition, op)
+        BpmnPatchOperationType.SET_EDGE_LABEL -> applySetEdgeLabel(definition, op)
+        BpmnPatchOperationType.ADD_NODE -> applyAddNode(definition, op)
+        BpmnPatchOperationType.REMOVE_NODE -> applyRemoveNode(definition, op)
+        BpmnPatchOperationType.REPLACE_NODE -> applyReplaceNode(definition, op)
+        BpmnPatchOperationType.ADD_EDGE -> applyAddEdge(definition, op)
+        BpmnPatchOperationType.REMOVE_EDGE -> applyRemoveEdge(definition, op)
+        BpmnPatchOperationType.REPLACE_EDGE -> applyReplaceEdge(definition, op)
+    }
 
     private fun applySetNodeName(
         definition: BpmnDefinition,
@@ -58,11 +57,10 @@ internal object BpmnPatchOperationApplier {
         return OperationResult.Changed(updated)
     }
 
-    private fun BpmnNode.requiresName(definition: BpmnDefinition): Boolean =
-        BpmnNodeNamingPolicy.requiresName(
-            node = this,
-            outgoingCount = definition.sequences.count { it.sourceRef == id },
-        )
+    private fun BpmnNode.requiresName(definition: BpmnDefinition): Boolean = BpmnNodeNamingPolicy.requiresName(
+        node = this,
+        outgoingCount = definition.sequences.count { it.sourceRef == id },
+    )
 
     private fun applySetEdgeLabel(
         definition: BpmnDefinition,

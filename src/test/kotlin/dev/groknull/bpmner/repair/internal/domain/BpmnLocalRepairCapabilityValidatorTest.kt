@@ -85,15 +85,14 @@ class BpmnLocalRepairCapabilityValidatorTest {
         )
     }
 
-    private fun stubHandler(name: String): BpmnLocalModelFixHandler =
-        object : BpmnLocalModelFixHandler {
-            override val handlerName: String = name
+    private fun stubHandler(name: String): BpmnLocalModelFixHandler = object : BpmnLocalModelFixHandler {
+        override val handlerName: String = name
 
-            override fun buildPatch(
-                definition: BpmnDefinition,
-                elementId: String,
-            ): List<BpmnPatchOperation> = emptyList()
-        }
+        override fun buildPatch(
+            definition: BpmnDefinition,
+            elementId: String,
+        ): List<BpmnPatchOperation> = emptyList()
+    }
 
     private fun cap(
         id: String,

@@ -28,10 +28,10 @@ class BpmnContractGenerationPromptFactoryTest {
         val prompt =
             factory.prompt(
                 request =
-                    BpmnRequest(
-                        processDescription = "Customer submits a claim and the team reviews it.",
-                        styleGuide = "Use sentence case task names.",
-                    ),
+                BpmnRequest(
+                    processDescription = "Customer submits a claim and the team reviews it.",
+                    styleGuide = "Use sentence case task names.",
+                ),
                 validatedContract = ValidatedProcessContract(contract(), ContractValidationReport(emptyList())),
             )
 
@@ -112,37 +112,37 @@ class BpmnContractGenerationPromptFactoryTest {
             trigger = "Credit-check subprocess returns a score",
             triggerSourceIds = sources,
             activities =
-                listOf(
-                    ContractActivity(id = "a-fast", name = "Fast-track underwriting", sourceIds = sources),
-                    ContractActivity(id = "a-standard", name = "Standard underwriting", sourceIds = sources),
-                    ContractActivity(id = "a-manual", name = "Manual review", sourceIds = sources),
-                ),
+            listOf(
+                ContractActivity(id = "a-fast", name = "Fast-track underwriting", sourceIds = sources),
+                ContractActivity(id = "a-standard", name = "Standard underwriting", sourceIds = sources),
+                ContractActivity(id = "a-manual", name = "Manual review", sourceIds = sources),
+            ),
             decisions =
-                listOf(
-                    ContractDecision(
-                        id = "d-tier",
-                        question = "Which credit tier?",
-                        branches =
-                            listOf(
-                                ConditionalBranch(
-                                    id = "b-fast",
-                                    label = "Fast-track",
-                                    condition = "score >= 750",
-                                ),
-                                ConditionalBranch(
-                                    id = "b-standard",
-                                    label = "Standard",
-                                    condition = "score in 600..749",
-                                ),
-                                DefaultBranch(id = "b-manual", label = "Manual review"),
-                            ),
-                        sourceIds = sources,
+            listOf(
+                ContractDecision(
+                    id = "d-tier",
+                    question = "Which credit tier?",
+                    branches =
+                    listOf(
+                        ConditionalBranch(
+                            id = "b-fast",
+                            label = "Fast-track",
+                            condition = "score >= 750",
+                        ),
+                        ConditionalBranch(
+                            id = "b-standard",
+                            label = "Standard",
+                            condition = "score in 600..749",
+                        ),
+                        DefaultBranch(id = "b-manual", label = "Manual review"),
                     ),
+                    sourceIds = sources,
                 ),
+            ),
             endStates =
-                listOf(
-                    ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = sources),
-                ),
+            listOf(
+                ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = sources),
+            ),
         )
     }
 
@@ -157,58 +157,58 @@ class BpmnContractGenerationPromptFactoryTest {
             triggerSourceIds = sources,
             actors = listOf(ContractActor(id = "actor-claims", name = "Claims team")),
             activities =
-                listOf(
-                    ContractActivity(
-                        id = "a-review",
-                        name = "Claims team reviews claim",
-                        actorId = "actor-claims",
-                        sourceIds = sources,
-                    ),
-                    ContractActivity(
-                        id = "a-rework",
-                        name = "Request corrected claim details",
-                        actorId = "actor-claims",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractActivity(
+                    id = "a-review",
+                    name = "Claims team reviews claim",
+                    actorId = "actor-claims",
+                    sourceIds = sources,
                 ),
+                ContractActivity(
+                    id = "a-rework",
+                    name = "Request corrected claim details",
+                    actorId = "actor-claims",
+                    sourceIds = sources,
+                ),
+            ),
             decisions =
-                listOf(
-                    ContractDecision(
-                        id = "d-complete",
-                        question = "Is the claim complete?",
-                        branches =
-                            listOf(
-                                ConditionalBranch(id = "b-complete", label = "Complete", condition = "claim is complete"),
-                                ConditionalBranch(
-                                    id = "b-rework",
-                                    label = "Needs rework",
-                                    condition = "claim is incomplete",
-                                ),
-                            ),
-                        sourceIds = sources,
+            listOf(
+                ContractDecision(
+                    id = "d-complete",
+                    question = "Is the claim complete?",
+                    branches =
+                    listOf(
+                        ConditionalBranch(id = "b-complete", label = "Complete", condition = "claim is complete"),
+                        ConditionalBranch(
+                            id = "b-rework",
+                            label = "Needs rework",
+                            condition = "claim is incomplete",
+                        ),
                     ),
+                    sourceIds = sources,
                 ),
+            ),
             endStates =
-                listOf(
-                    ContractEndState(
-                        id = "end-approved",
-                        name = "Claim approved",
-                        sourceIds = sources,
-                    ),
-                    ContractEndState(
-                        id = "end-rejected",
-                        name = "Claim rejected",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractEndState(
+                    id = "end-approved",
+                    name = "Claim approved",
+                    sourceIds = sources,
                 ),
+                ContractEndState(
+                    id = "end-rejected",
+                    name = "Claim rejected",
+                    sourceIds = sources,
+                ),
+            ),
             assumptions =
-                listOf(
-                    ContractAssumption(
-                        id = "assume-cutoff",
-                        text = "Claims after cutoff move to next business day",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractAssumption(
+                    id = "assume-cutoff",
+                    text = "Claims after cutoff move to next business day",
+                    sourceIds = sources,
                 ),
+            ),
         )
     }
 }

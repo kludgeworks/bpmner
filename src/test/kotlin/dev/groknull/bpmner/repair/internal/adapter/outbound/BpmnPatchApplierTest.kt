@@ -32,16 +32,16 @@ class BpmnPatchApplierTest {
             processId = "Process_1",
             processName = "Test Process",
             nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
+            listOf(
+                BpmnStartEvent("Start_1", "Start"),
+                BpmnUserTask("Task_1", "Do work"),
+                BpmnEndEvent("End_1", "End"),
+            ),
             sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Task_1", "End_1"),
-                ),
+            listOf(
+                BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                BpmnEdge("Flow_2", "Task_1", "End_1"),
+            ),
         )
 
     // -------------------------------------------------------------------------
@@ -148,9 +148,9 @@ class BpmnPatchApplierTest {
         val withLabel =
             baseDefinition.copy(
                 sequences =
-                    baseDefinition.sequences.map {
-                        if (it.id == "Flow_1") it.copy(name = "Old label") else it
-                    },
+                baseDefinition.sequences.map {
+                    if (it.id == "Flow_1") it.copy(name = "Old label") else it
+                },
             )
         val patch = patch(BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = null))
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(withLabel, patch))
@@ -360,10 +360,10 @@ class BpmnPatchApplierTest {
         val patch =
             BpmnRepairPatch(
                 operations =
-                    listOf(
-                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "First fix"),
-                        BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = "start"),
-                    ),
+                listOf(
+                    BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "First fix"),
+                    BpmnPatchOperation(BpmnPatchOperationType.SET_EDGE_LABEL, edgeId = "Flow_1", label = "start"),
+                ),
             )
         val result = assertIs<PatchApplicationResult.Success>(applier.apply(baseDefinition, patch))
         assertEquals(
@@ -385,10 +385,10 @@ class BpmnPatchApplierTest {
         val patch =
             BpmnRepairPatch(
                 operations =
-                    listOf(
-                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Bad_Id", name = "fix"),
-                        BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Good fix"),
-                    ),
+                listOf(
+                    BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Bad_Id", name = "fix"),
+                    BpmnPatchOperation(BpmnPatchOperationType.SET_NODE_NAME, nodeId = "Task_1", name = "Good fix"),
+                ),
             )
         assertIs<PatchApplicationResult.Failure>(applier.apply(baseDefinition, patch))
     }
@@ -417,47 +417,45 @@ class BpmnPatchApplierTest {
 
     private fun patch(vararg ops: BpmnPatchOperation) = BpmnRepairPatch(operations = ops.toList())
 
-    private fun convergingGatewayDefinition(gatewayName: String?) =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Merge decisions",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnUserTask("Task_2", "Do other work"),
-                    BpmnExclusiveGateway("Gateway_1", gatewayName),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Start_1", "Task_2"),
-                    BpmnEdge("Flow_3", "Task_1", "Gateway_1"),
-                    BpmnEdge("Flow_4", "Task_2", "Gateway_1"),
-                    BpmnEdge("Flow_5", "Gateway_1", "End_1"),
-                ),
-        )
+    private fun convergingGatewayDefinition(gatewayName: String?) = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Merge decisions",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnUserTask("Task_2", "Do other work"),
+            BpmnExclusiveGateway("Gateway_1", gatewayName),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Task_1"),
+            BpmnEdge("Flow_2", "Start_1", "Task_2"),
+            BpmnEdge("Flow_3", "Task_1", "Gateway_1"),
+            BpmnEdge("Flow_4", "Task_2", "Gateway_1"),
+            BpmnEdge("Flow_5", "Gateway_1", "End_1"),
+        ),
+    )
 
-    private fun divergingGatewayDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Route decision",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnExclusiveGateway("Gateway_1", "Is request valid?"),
-                    BpmnUserTask("Task_1", "Approve request"),
-                    BpmnUserTask("Task_2", "Reject request"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-                    BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Valid"),
-                    BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Invalid"),
-                    BpmnEdge("Flow_4", "Task_1", "End_1"),
-                    BpmnEdge("Flow_5", "Task_2", "End_1"),
-                ),
-        )
+    private fun divergingGatewayDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Route decision",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnExclusiveGateway("Gateway_1", "Is request valid?"),
+            BpmnUserTask("Task_1", "Approve request"),
+            BpmnUserTask("Task_2", "Reject request"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
+            BpmnEdge("Flow_2", "Gateway_1", "Task_1", name = "Valid"),
+            BpmnEdge("Flow_3", "Gateway_1", "Task_2", name = "Invalid"),
+            BpmnEdge("Flow_4", "Task_1", "End_1"),
+            BpmnEdge("Flow_5", "Task_2", "End_1"),
+        ),
+    )
 }

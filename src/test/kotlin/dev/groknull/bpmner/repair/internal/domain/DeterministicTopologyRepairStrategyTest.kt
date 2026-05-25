@@ -56,11 +56,11 @@ class DeterministicTopologyRepairStrategyTest {
         val lint =
             FakeLintingPort(
                 autoFixResult =
-                    BpmnAutoFixResult(
-                        changed = true,
-                        xml = "<fixed/>",
-                        applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                    ),
+                BpmnAutoFixResult(
+                    changed = true,
+                    xml = "<fixed/>",
+                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+                ),
             )
         val xsd = FakeXsdValidationPort(issues = emptyList())
         val parser = FakeXmlParser(parsed)
@@ -113,11 +113,11 @@ class DeterministicTopologyRepairStrategyTest {
         val lint =
             FakeLintingPort(
                 autoFixResult =
-                    BpmnAutoFixResult(
-                        changed = true,
-                        xml = "<broken/>",
-                        applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                    ),
+                BpmnAutoFixResult(
+                    changed = true,
+                    xml = "<broken/>",
+                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+                ),
             )
         val xsd = FakeXsdValidationPort(issues = listOf(XsdValidationIssue("cvc-something")))
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
@@ -135,11 +135,11 @@ class DeterministicTopologyRepairStrategyTest {
         val lint =
             FakeLintingPort(
                 autoFixResult =
-                    BpmnAutoFixResult(
-                        changed = false,
-                        xml = "<unchanged/>",
-                        skipped = listOf(BpmnAutoFixSkip("bpmner/name-01", "Task_1", "no fixable tokens")),
-                    ),
+                BpmnAutoFixResult(
+                    changed = false,
+                    xml = "<unchanged/>",
+                    skipped = listOf(BpmnAutoFixSkip("bpmner/name-01", "Task_1", "no fixable tokens")),
+                ),
             )
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
         val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
@@ -156,11 +156,11 @@ class DeterministicTopologyRepairStrategyTest {
         val lint =
             FakeLintingPort(
                 autoFixResult =
-                    BpmnAutoFixResult(
-                        changed = false,
-                        xml = "<unchanged/>",
-                        errors = listOf(BpmnAutoFixError("bpmner/name-01", "Task_1", "handler boom")),
-                    ),
+                BpmnAutoFixResult(
+                    changed = false,
+                    xml = "<unchanged/>",
+                    errors = listOf(BpmnAutoFixError("bpmner/name-01", "Task_1", "handler boom")),
+                ),
             )
         val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
         val operationContext = FakeOperationContext()
@@ -205,17 +205,17 @@ class DeterministicTopologyRepairStrategyTest {
                 repairAttempts = 0,
                 graph = graph(definition),
                 evaluation =
-                    BpmnEvaluation(
-                        definition = definition,
-                        rendered = renderedFrom(definition),
-                        diagnostics = diagnostics,
-                        globalDiagnostics = GlobalDiagnostics(diagnostics),
-                        validatedXml = null,
-                        rawLintIssues =
-                            diagnostics
-                                .filter { it.source == BpmnDiagnosticSource.LINT }
-                                .mapNotNull { d -> d.rule?.let { LintIssue(id = d.elementId, rule = it, message = d.message) } },
-                    ),
+                BpmnEvaluation(
+                    definition = definition,
+                    rendered = renderedFrom(definition),
+                    diagnostics = diagnostics,
+                    globalDiagnostics = GlobalDiagnostics(diagnostics),
+                    validatedXml = null,
+                    rawLintIssues =
+                    diagnostics
+                        .filter { it.source == BpmnDiagnosticSource.LINT }
+                        .mapNotNull { d -> d.rule?.let { LintIssue(id = d.elementId, rule = it, message = d.message) } },
+                ),
                 messages = emptyList(),
             )
         return BpmnRepairStrategyContext(
@@ -242,44 +242,42 @@ class DeterministicTopologyRepairStrategyTest {
 
     private fun sampleDefinition() = validDefinition()
 
-    private fun validDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Test Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        id = "Flow_1",
-                        sourceRef = "Start_1",
-                        targetRef = "Task_1",
-                    ),
-                    BpmnEdge(
-                        id = "Flow_2",
-                        sourceRef = "Task_1",
-                        targetRef = "End_1",
-                    ),
-                ),
-        )
+    private fun validDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Test Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                id = "Flow_1",
+                sourceRef = "Start_1",
+                targetRef = "Task_1",
+            ),
+            BpmnEdge(
+                id = "Flow_2",
+                sourceRef = "Task_1",
+                targetRef = "End_1",
+            ),
+        ),
+    )
 
     private fun otherValidDefinition() = validDefinition().copy(processName = "After Local Fix")
 
-    private fun renderedFrom(definition: BpmnDefinition): RenderedBpmn =
-        RenderedBpmn(
-            definition = definition,
-            xml = "<bpmn/>",
-            elementIndex =
-                BpmnElementIndex(
-                    processId = definition.processId,
-                    nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
-                    edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-                ),
-        )
+    private fun renderedFrom(definition: BpmnDefinition): RenderedBpmn = RenderedBpmn(
+        definition = definition,
+        xml = "<bpmn/>",
+        elementIndex =
+        BpmnElementIndex(
+            processId = definition.processId,
+            nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
+            edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
+        ),
+    )
 
     private fun graph(definition: BpmnDefinition): LaidOutProcessGraph {
         val owner = "phase:main"

@@ -55,20 +55,20 @@ class GitHubModelsConfig(
     private val properties: GitHubProperties,
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
-        baseUrl = BASE_URL,
-        apiKey =
-            properties.apiKey
-                ?: error(
-                    "GitHub token required: set GITHUB_TOKEN env var or" +
-                        " embabel.agent.platform.models.github.api-key",
-                ),
-        completionsPath = COMPLETIONS_PATH,
-        embeddingsPath = null,
-        httpHeaders = emptyMap(),
-        observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
-        restClientBuilder = restClientBuilder,
-        webClientBuilder = webClientBuilder,
-    ) {
+    baseUrl = BASE_URL,
+    apiKey =
+    properties.apiKey
+        ?: error(
+            "GitHub token required: set GITHUB_TOKEN env var or" +
+                " embabel.agent.platform.models.github.api-key",
+        ),
+    completionsPath = COMPLETIONS_PATH,
+    embeddingsPath = null,
+    httpHeaders = emptyMap(),
+    observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
+    restClientBuilder = restClientBuilder,
+    webClientBuilder = webClientBuilder,
+) {
     private val modelList = properties.models
 
     @Bean

@@ -42,25 +42,23 @@ class DefaultRuleEngineTest {
     private class FlagsEveryNode(
         override val id: String,
     ) : BpmnRule {
-        override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> =
-            ctx.definition.nodes.map { node ->
-                RuleDiagnostic(
-                    diagnosticCode = "test-flag-every-node",
-                    ruleId = id,
-                    severity = RuleSeverity.WARNING,
-                    message = "Flagging ${node.id}",
-                    elementId = node.id,
-                )
-            }
+        override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = ctx.definition.nodes.map { node ->
+            RuleDiagnostic(
+                diagnosticCode = "test-flag-every-node",
+                ruleId = id,
+                severity = RuleSeverity.WARNING,
+                message = "Flagging ${node.id}",
+                elementId = node.id,
+            )
+        }
     }
 
-    private fun trivialDefinition(): BpmnDefinition =
-        BpmnDefinition(
-            processId = "P",
-            processName = "Trivial",
-            nodes = listOf(BpmnStartEvent(id = "s"), BpmnEndEvent(id = "e")),
-            sequences = listOf(BpmnEdge(id = "f1", sourceRef = "s", targetRef = "e")),
-        )
+    private fun trivialDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Trivial",
+        nodes = listOf(BpmnStartEvent(id = "s"), BpmnEndEvent(id = "e")),
+        sequences = listOf(BpmnEdge(id = "f1", sourceRef = "s", targetRef = "e")),
+    )
 
     @Test
     fun `empty registry yields a passing evaluation with no diagnostics`() {

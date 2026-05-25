@@ -32,38 +32,37 @@ class BpmnDefinitionContextTest {
      * approve branch marked as the default flow on the exclusive gateway. Catalogs are
      * populated so the message/signal/error/escalation indexes have something to find.
      */
-    private fun fixture(): BpmnDefinition =
-        BpmnDefinition(
-            processId = "Process_test",
-            processName = "Order review",
-            nodes =
-                listOf(
-                    BpmnStartEvent(id = "start"),
-                    BpmnUserTask(id = "review", name = "Review order"),
-                    BpmnExclusiveGateway(id = "gw", name = "Approved?"),
-                    BpmnUserTask(id = "approve", name = "Approve order"),
-                    BpmnUserTask(id = "reject", name = "Reject order"),
-                    BpmnEndEvent(id = "end"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(id = "f_start_review", sourceRef = "start", targetRef = "review"),
-                    BpmnEdge(id = "f_review_gw", sourceRef = "review", targetRef = "gw"),
-                    BpmnEdge(id = "f_approve", sourceRef = "gw", targetRef = "approve", isDefault = true),
-                    BpmnEdge(
-                        id = "f_reject",
-                        sourceRef = "gw",
-                        targetRef = "reject",
-                        conditionExpression = "\${rejected}",
-                    ),
-                    BpmnEdge(id = "f_approve_end", sourceRef = "approve", targetRef = "end"),
-                    BpmnEdge(id = "f_reject_end", sourceRef = "reject", targetRef = "end"),
-                ),
-            messages = listOf(BpmnMessageRef(id = "m_order_received", name = "OrderReceived")),
-            signals = listOf(BpmnSignalRef(id = "s_market_close", name = "MarketClose")),
-            errors = listOf(BpmnErrorRef(id = "e_invalid_order", code = "INVALID")),
-            escalations = listOf(BpmnEscalationRef(id = "esc_supervisor", code = "ESCALATE")),
-        )
+    private fun fixture(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_test",
+        processName = "Order review",
+        nodes =
+        listOf(
+            BpmnStartEvent(id = "start"),
+            BpmnUserTask(id = "review", name = "Review order"),
+            BpmnExclusiveGateway(id = "gw", name = "Approved?"),
+            BpmnUserTask(id = "approve", name = "Approve order"),
+            BpmnUserTask(id = "reject", name = "Reject order"),
+            BpmnEndEvent(id = "end"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(id = "f_start_review", sourceRef = "start", targetRef = "review"),
+            BpmnEdge(id = "f_review_gw", sourceRef = "review", targetRef = "gw"),
+            BpmnEdge(id = "f_approve", sourceRef = "gw", targetRef = "approve", isDefault = true),
+            BpmnEdge(
+                id = "f_reject",
+                sourceRef = "gw",
+                targetRef = "reject",
+                conditionExpression = "\${rejected}",
+            ),
+            BpmnEdge(id = "f_approve_end", sourceRef = "approve", targetRef = "end"),
+            BpmnEdge(id = "f_reject_end", sourceRef = "reject", targetRef = "end"),
+        ),
+        messages = listOf(BpmnMessageRef(id = "m_order_received", name = "OrderReceived")),
+        signals = listOf(BpmnSignalRef(id = "s_market_close", name = "MarketClose")),
+        errors = listOf(BpmnErrorRef(id = "e_invalid_order", code = "INVALID")),
+        escalations = listOf(BpmnEscalationRef(id = "esc_supervisor", code = "ESCALATE")),
+    )
 
     @Test
     fun `nodeIds contains every node id`() {

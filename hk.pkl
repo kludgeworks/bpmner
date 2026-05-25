@@ -48,9 +48,9 @@ local linters = new Mapping<String, Step> {
     glob = List("src/**/*.kt")
     batch = true
     check =
-      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path ."
+      "detekt-cli --build-upon-default-config --config detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path ."
     fix =
-      "detekt-cli --build-upon-default-config --config config/detekt/detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path . --auto-correct"
+      "detekt-cli --build-upon-default-config --config detekt.yml --input {{ files_list | join(sep=',') }} --language-version 2.1 --jvm-target 21 --base-path . --auto-correct"
   }
 }
 

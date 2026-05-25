@@ -15,8 +15,9 @@ import java.security.MessageDigest
 class BpmnFingerprintService {
     private val objectMapper: ObjectMapper = jacksonObjectMapper().findAndRegisterModules()
 
-    fun serializeDefinition(definition: BpmnDefinition): String =
-        objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
+    fun serializeDefinition(definition: BpmnDefinition): String {
+        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
+    }
 
     fun definitionFingerprint(definition: BpmnDefinition): String = textFingerprint(serializeDefinition(definition))
 
@@ -31,25 +32,25 @@ class BpmnFingerprintService {
      * a permanently-stuck blocking error — the engine would burn through every remaining
      * `maxEvaluations` attempt instead of failing fast.
      */
-    fun blockingDiagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String =
-        textFingerprint(diagnostics.filter { it.isBlocking }.fingerprintInput())
+    fun blockingDiagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String {
+        return textFingerprint(diagnostics.filter { it.isBlocking }.fingerprintInput())
+    }
 
     fun promptFingerprint(prompt: String): String = textFingerprint(prompt)
 
-    private fun List<BpmnDiagnostic>.fingerprintInput(): String =
-        map { diagnostic ->
-            listOf(
-                diagnostic.source.name,
-                diagnostic.rule.orEmpty(),
-                diagnostic.severity.name,
-                diagnostic.elementId.orEmpty(),
-                diagnostic.objectRef.orEmpty(),
-                diagnostic.repairScope?.name.orEmpty(),
-                diagnostic.ownerRef.orEmpty(),
-                diagnostic.message,
-            ).joinToString("")
-        }.sorted()
-            .joinToString("")
+    private fun List<BpmnDiagnostic>.fingerprintInput(): String = map { diagnostic ->
+        listOf(
+            diagnostic.source.name,
+            diagnostic.rule.orEmpty(),
+            diagnostic.severity.name,
+            diagnostic.elementId.orEmpty(),
+            diagnostic.objectRef.orEmpty(),
+            diagnostic.repairScope?.name.orEmpty(),
+            diagnostic.ownerRef.orEmpty(),
+            diagnostic.message,
+        ).joinToString("")
+    }.sorted()
+        .joinToString("")
 
     companion object {
         private const val FINGERPRINT_LENGTH = 12

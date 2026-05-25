@@ -64,11 +64,11 @@ internal class BpmnContractAwareValidator(
                     elementId = issue.bpmnElementId,
                     repairScope = BpmnRepairScope.FULL_PROCESS,
                     severity =
-                        if (issue.severity == BpmnFidelitySeverity.ERROR) {
-                            BpmnDiagnosticSeverity.ERROR
-                        } else {
-                            BpmnDiagnosticSeverity.WARNING
-                        },
+                    if (issue.severity == BpmnFidelitySeverity.ERROR) {
+                        BpmnDiagnosticSeverity.ERROR
+                    } else {
+                        BpmnDiagnosticSeverity.WARNING
+                    },
                 )
             }
         if (fidelityDiagnostics.isEmpty()) return base

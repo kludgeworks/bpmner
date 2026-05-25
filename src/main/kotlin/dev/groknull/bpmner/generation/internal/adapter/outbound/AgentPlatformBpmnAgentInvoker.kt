@@ -59,32 +59,29 @@ internal class AgentPlatformBpmnAgentInvoker(
     }
 
     // Seed both request and readiness assessment; AgentPlatformTypedOps supports one input binding.
-    private fun synthesizeResultAgent(resultClass: Class<*>): Agent =
-        agentPlatform
-            .createAgent(
-                name = "goal-${resultClass.simpleName}",
-                provider = Constants.EMBABEL_PROVIDER,
-                description = "Goal agent for ${resultClass.simpleName}",
-            ).withSingleGoal(
-                Goal(
-                    name = "create-${resultClass.simpleName}",
-                    description = "Create ${resultClass.simpleName}",
-                    satisfiedBy = resultClass,
-                ),
-            )
+    private fun synthesizeResultAgent(resultClass: Class<*>): Agent = agentPlatform
+        .createAgent(
+            name = "goal-${resultClass.simpleName}",
+            provider = Constants.EMBABEL_PROVIDER,
+            description = "Goal agent for ${resultClass.simpleName}",
+        ).withSingleGoal(
+            Goal(
+                name = "create-${resultClass.simpleName}",
+                description = "Create ${resultClass.simpleName}",
+                satisfiedBy = resultClass,
+            ),
+        )
 
     companion object {
         private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"
 
-        private fun syncGenerationProcessOptions(): ProcessOptions =
-            ProcessOptions(
-                budget = Budget(actions = 100),
-                ephemeral = true,
-            )
+        private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
+            budget = Budget(actions = 100),
+            ephemeral = true,
+        )
 
-        private fun asyncGenerationProcessOptions(): ProcessOptions =
-            ProcessOptions(
-                budget = Budget(actions = 100),
-            )
+        private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
+            budget = Budget(actions = 100),
+        )
     }
 }

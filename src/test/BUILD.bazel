@@ -72,5 +72,6 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
 ktlint_test(
     name = "ktlint_check",
     srcs = glob(["kotlin/**/*.kt"]),
+    config = "//:ktlint_config",
     visibility = ["//visibility:public"],
 )

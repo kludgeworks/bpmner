@@ -42,13 +42,13 @@ class BpmnReadinessAgentTest {
         verdict = verdict,
         overallScore = score,
         dimensions =
-            ReadinessDimension.entries.map {
-                ReadinessDimensionScore(
-                    dimension = it,
-                    score = score,
-                    rationale = "Model score for ${it.name}.",
-                )
-            },
+        ReadinessDimension.entries.map {
+            ReadinessDimensionScore(
+                dimension = it,
+                score = score,
+                rationale = "Model score for ${it.name}.",
+            )
+        },
         rationale = "Model rationale.",
     )
 }

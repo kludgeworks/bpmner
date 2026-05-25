@@ -88,20 +88,19 @@ class BpmnContractPromptFactoryTest {
 
     private fun request() = BpmnRequest(processDescription = "When a customer submits an order, ship it.")
 
-    private fun assessment() =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
-            overallScore = 60,
-            dimensions = emptyList(),
-            missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
-            evidence =
-                listOf(
-                    SourceEvidence(
-                        id = "ev1",
-                        text = "Ship approved order",
-                        sourceType = EvidenceSourceType.ORIGINAL_INPUT,
-                    ),
-                ),
-            rationale = "One actor responsibility is underspecified.",
-        )
+    private fun assessment() = ProcessInputAssessment(
+        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+        overallScore = 60,
+        dimensions = emptyList(),
+        missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
+        evidence =
+        listOf(
+            SourceEvidence(
+                id = "ev1",
+                text = "Ship approved order",
+                sourceType = EvidenceSourceType.ORIGINAL_INPUT,
+            ),
+        ),
+        rationale = "One actor responsibility is underspecified.",
+    )
 }

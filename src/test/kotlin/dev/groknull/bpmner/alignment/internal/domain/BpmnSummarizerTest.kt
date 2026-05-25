@@ -25,16 +25,16 @@ class BpmnSummarizerTest {
                 processId = "Process_1",
                 processName = "Linear Process",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("Start_1", "Start"),
-                        BpmnEndEvent("End_1", "End"),
-                        BpmnUserTask("Task_1", "Do Work"),
-                    ),
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnEndEvent("End_1", "End"),
+                    BpmnUserTask("Task_1", "Do Work"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_2", "Task_1", "End_1"),
-                        BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_2", "Task_1", "End_1"),
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                ),
             )
 
         val summary = summarizer.summarize(definition)
@@ -57,21 +57,21 @@ class BpmnSummarizerTest {
                 processId = "Process_1",
                 processName = "Branching Process",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("Start_1", "Start"),
-                        BpmnExclusiveGateway("Gateway_1", "Is Valid?"),
-                        BpmnUserTask("Task_A", "A"),
-                        BpmnUserTask("Task_B", "B"),
-                        BpmnEndEvent("End_1", "End"),
-                    ),
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway("Gateway_1", "Is Valid?"),
+                    BpmnUserTask("Task_A", "A"),
+                    BpmnUserTask("Task_B", "B"),
+                    BpmnEndEvent("End_1", "End"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_Start", "Start_1", "Gateway_1"),
-                        BpmnEdge("Flow_B", "Gateway_1", "Task_B", "No", "valid == false"),
-                        BpmnEdge("Flow_A", "Gateway_1", "Task_A", "Yes", "valid == true"),
-                        BpmnEdge("Flow_End_A", "Task_A", "End_1"),
-                        BpmnEdge("Flow_End_B", "Task_B", "End_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_Start", "Start_1", "Gateway_1"),
+                    BpmnEdge("Flow_B", "Gateway_1", "Task_B", "No", "valid == false"),
+                    BpmnEdge("Flow_A", "Gateway_1", "Task_A", "Yes", "valid == true"),
+                    BpmnEdge("Flow_End_A", "Task_A", "End_1"),
+                    BpmnEdge("Flow_End_B", "Task_B", "End_1"),
+                ),
             )
 
         val summary = summarizer.summarize(definition)
@@ -97,16 +97,16 @@ class BpmnSummarizerTest {
                 processId = "Process_1",
                 processName = "Broken Process",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("Start_1", "Start"),
-                        BpmnUserTask("Task_1", "Reachable"),
-                        BpmnUserTask("Task_Unreachable", "Unreachable"),
-                    ),
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnUserTask("Task_1", "Reachable"),
+                    BpmnUserTask("Task_Unreachable", "Unreachable"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                        BpmnEdge("Flow_Dangling", "Task_Unreachable", "Task_1"),
-                    ),
+                listOf(
+                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                    BpmnEdge("Flow_Dangling", "Task_Unreachable", "Task_1"),
+                ),
             )
 
         val summary = summarizer.summarize(definition)

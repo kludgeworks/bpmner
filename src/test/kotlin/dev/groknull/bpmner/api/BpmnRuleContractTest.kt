@@ -32,18 +32,17 @@ class BpmnRuleContractTest {
     private class RequireNamedNodes : BpmnRule {
         override val id: String = "test-require-named-nodes"
 
-        override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> =
-            ctx.definition.nodes
-                .filter { it.name.isNullOrBlank() }
-                .map { node ->
-                    RuleDiagnostic(
-                        diagnosticCode = "test-missing-name",
-                        ruleId = id,
-                        severity = RuleSeverity.WARNING,
-                        message = "Node ${node.id} requires a name",
-                        elementId = node.id,
-                    )
-                }
+        override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = ctx.definition.nodes
+            .filter { it.name.isNullOrBlank() }
+            .map { node ->
+                RuleDiagnostic(
+                    diagnosticCode = "test-missing-name",
+                    ruleId = id,
+                    severity = RuleSeverity.WARNING,
+                    message = "Node ${node.id} requires a name",
+                    elementId = node.id,
+                )
+            }
     }
 
     @Test
@@ -54,16 +53,16 @@ class BpmnRuleContractTest {
                     processId = "P1",
                     processName = "Test process",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "start", name = "Started"),
-                            BpmnUserTask(id = "task", name = null), // missing name on purpose
-                            BpmnEndEvent(id = "end", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "start", name = "Started"),
+                        BpmnUserTask(id = "task", name = null), // missing name on purpose
+                        BpmnEndEvent(id = "end", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task"),
-                            BpmnEdge(id = "f2", sourceRef = "task", targetRef = "end"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task"),
+                        BpmnEdge(id = "f2", sourceRef = "task", targetRef = "end"),
+                    ),
                 ),
             )
 
@@ -86,18 +85,18 @@ class BpmnRuleContractTest {
                     processId = "P2",
                     processName = "Four anonymous nodes",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s"),
-                            BpmnUserTask(id = "t1"),
-                            BpmnUserTask(id = "t2"),
-                            BpmnEndEvent(id = "e"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnUserTask(id = "t1"),
+                        BpmnUserTask(id = "t2"),
+                        BpmnEndEvent(id = "e"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t1"),
-                            BpmnEdge(id = "f2", sourceRef = "t1", targetRef = "t2"),
-                            BpmnEdge(id = "f3", sourceRef = "t2", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t1"),
+                        BpmnEdge(id = "f2", sourceRef = "t1", targetRef = "t2"),
+                        BpmnEdge(id = "f3", sourceRef = "t2", targetRef = "e"),
+                    ),
                 ),
             )
 

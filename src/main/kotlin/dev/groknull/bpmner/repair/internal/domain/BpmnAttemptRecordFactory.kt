@@ -36,13 +36,12 @@ internal class BpmnAttemptRecordFactory(
         )
     }
 
-    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String =
-        buildString {
-            append(diagnostic.source.name.lowercase())
-            diagnostic.rule?.let { append(" [$it]") }
-            diagnostic.elementId?.let { append(" @$it") }
-            append(": ${diagnostic.message.take(DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH)}")
-        }
+    private fun formatTopDiagnostic(diagnostic: BpmnDiagnostic): String = buildString {
+        append(diagnostic.source.name.lowercase())
+        diagnostic.rule?.let { append(" [$it]") }
+        diagnostic.elementId?.let { append(" @$it") }
+        append(": ${diagnostic.message.take(DIAGNOSTIC_MESSAGE_PREVIEW_LENGTH)}")
+    }
 
     companion object {
         private const val TOP_DIAGNOSTICS_LIMIT = 5

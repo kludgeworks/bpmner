@@ -34,13 +34,12 @@ data class BpmnEvaluation(
     val advisoryDiagnostics: List<BpmnDiagnostic>
         get() = diagnostics.filterNot { it.isBlocking }
 
-    fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml =
-        ValidatedBpmnXml(
-            definition = definition,
-            xml = validatedXml ?: error("No validated BPMN XML available"),
-            diagnostics = diagnostics,
-            repairAttempts = repairAttempts,
-        )
+    fun toValidatedBpmnXml(repairAttempts: Int): ValidatedBpmnXml = ValidatedBpmnXml(
+        definition = definition,
+        xml = validatedXml ?: error("No validated BPMN XML available"),
+        diagnostics = diagnostics,
+        repairAttempts = repairAttempts,
+    )
 }
 
 class BpmnValidatorInfrastructureException(

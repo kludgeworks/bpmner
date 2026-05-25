@@ -74,13 +74,13 @@ internal class BpmnRefinementEngine(
                 repairAttempts = 0,
                 graph = graph,
                 evaluation =
-                    contractAwareValidator.evaluate(
-                        graph = graph,
-                        definition = normalisedRendered.definition,
-                        rendered = normalisedRendered,
-                        contract = contract,
-                        repairAttempts = 0,
-                    ),
+                contractAwareValidator.evaluate(
+                    graph = graph,
+                    definition = normalisedRendered.definition,
+                    rendered = normalisedRendered,
+                    contract = contract,
+                    repairAttempts = 0,
+                ),
                 messages = initialMessages,
             )
         val initialRecord = attemptRecordFactory.toRecord(initialAttempt)

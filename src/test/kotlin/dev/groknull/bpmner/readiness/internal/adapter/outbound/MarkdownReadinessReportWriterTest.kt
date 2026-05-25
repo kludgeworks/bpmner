@@ -32,29 +32,29 @@ class MarkdownReadinessReportWriterTest {
                 verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                 overallScore = 55,
                 dimensions =
-                    ReadinessDimension.entries.map { dim ->
-                        ReadinessDimensionScore(
-                            dimension = dim,
-                            score = if (dim == ReadinessDimension.START_TRIGGER) 30 else 60,
-                            rationale = "Dimension rationale for ${dim.name}.",
-                            missingAreas =
-                                if (dim == ReadinessDimension.START_TRIGGER) {
-                                    listOf(MissingProcessArea.START_TRIGGER)
-                                } else {
-                                    emptyList()
-                                },
-                        )
-                    },
+                ReadinessDimension.entries.map { dim ->
+                    ReadinessDimensionScore(
+                        dimension = dim,
+                        score = if (dim == ReadinessDimension.START_TRIGGER) 30 else 60,
+                        rationale = "Dimension rationale for ${dim.name}.",
+                        missingAreas =
+                        if (dim == ReadinessDimension.START_TRIGGER) {
+                            listOf(MissingProcessArea.START_TRIGGER)
+                        } else {
+                            emptyList()
+                        },
+                    )
+                },
                 missingAreas = listOf(MissingProcessArea.START_TRIGGER, MissingProcessArea.ACTIVITY_SEQUENCE),
                 clarificationQuestions =
-                    listOf(
-                        ClarificationQuestion(
-                            id = "q1",
-                            questionText = "What event starts the process?",
-                            relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
-                            relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
-                        ),
+                listOf(
+                    ClarificationQuestion(
+                        id = "q1",
+                        questionText = "What event starts the process?",
+                        relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                        relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
                     ),
+                ),
                 rationale = "Source is too short to ground a workflow.",
             )
 
@@ -102,18 +102,17 @@ class MarkdownReadinessReportWriterTest {
         assertTrue(content.contains("…"), "Long inputs should be truncated with an ellipsis marker")
     }
 
-    private fun minimalAssessment(): ProcessInputAssessment =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
-            overallScore = 10,
-            dimensions =
-                ReadinessDimension.entries.map {
-                    ReadinessDimensionScore(
-                        dimension = it,
-                        score = 10,
-                        rationale = "Stubbed rationale.",
-                    )
-                },
-            rationale = "Stub.",
-        )
+    private fun minimalAssessment(): ProcessInputAssessment = ProcessInputAssessment(
+        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+        overallScore = 10,
+        dimensions =
+        ReadinessDimension.entries.map {
+            ReadinessDimensionScore(
+                dimension = it,
+                score = 10,
+                rationale = "Stubbed rationale.",
+            )
+        },
+        rationale = "Stub.",
+    )
 }

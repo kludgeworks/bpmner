@@ -38,113 +38,113 @@ data class BpmnConfig(
         val DEFAULT_GENERATOR =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Designer",
-                        persona = "You are an expert BPMN 2.0 process modeller",
-                        objective =
-                            "Create a valid, well-structured BPMN process definition from a workflow description",
-                        voice = "precise and thorough",
-                    ),
+                Persona(
+                    name = "BPMN Designer",
+                    persona = "You are an expert BPMN 2.0 process modeller",
+                    objective =
+                    "Create a valid, well-structured BPMN process definition from a workflow description",
+                    voice = "precise and thorough",
+                ),
                 llm = LlmOptions.withLlmForRole("generator"),
             )
 
         val DEFAULT_LABEL_REPAIRER =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Label Copy Editor",
-                        persona = "You are a fast, detail-oriented BPMN copy editor",
-                        objective =
-                            "Fix naming and label capitalization rules by providing targeted node and edge patches",
-                        voice = "concise and exact",
-                    ),
+                Persona(
+                    name = "BPMN Label Copy Editor",
+                    persona = "You are a fast, detail-oriented BPMN copy editor",
+                    objective =
+                    "Fix naming and label capitalization rules by providing targeted node and edge patches",
+                    voice = "concise and exact",
+                ),
                 llm = LlmOptions.withLlmForRole("repair-label"),
             )
 
         val DEFAULT_PATCH_REPAIRER =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Patch Repair Specialist",
-                        persona = "You are a strict BPMN 2.0 graph topology validator and patch expert",
-                        objective =
-                            "Fix structural and routing validation errors by adding or removing" +
-                                " specific elements without rewriting the whole definition",
-                        voice = "concise and exact",
-                    ),
+                Persona(
+                    name = "BPMN Patch Repair Specialist",
+                    persona = "You are a strict BPMN 2.0 graph topology validator and patch expert",
+                    objective =
+                    "Fix structural and routing validation errors by adding or removing" +
+                        " specific elements without rewriting the whole definition",
+                    voice = "concise and exact",
+                ),
                 llm = LlmOptions.withLlmForRole("repair-patch"),
             )
 
         val DEFAULT_REWRITE_REPAIRER =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Full Rewrite Specialist",
-                        persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
-                        objective =
-                            "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
-                        voice = "concise and exact",
-                    ),
+                Persona(
+                    name = "BPMN Full Rewrite Specialist",
+                    persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
+                    objective =
+                    "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
+                    voice = "concise and exact",
+                ),
                 llm = LlmOptions.withLlmForRole("repair-rewrite"),
             )
 
         val DEFAULT_REPAIRER =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Repair Specialist",
-                        persona = "You are a strict BPMN 2.0 validator and repair expert",
-                        objective =
-                            "Fix every validation error in the BPMN definition" +
-                                " and return the complete corrected object",
-                        voice = "concise and exact",
-                    ),
+                Persona(
+                    name = "BPMN Repair Specialist",
+                    persona = "You are a strict BPMN 2.0 validator and repair expert",
+                    objective =
+                    "Fix every validation error in the BPMN definition" +
+                        " and return the complete corrected object",
+                    voice = "concise and exact",
+                ),
                 llm = LlmOptions.withLlmForRole("repairer"),
             )
         val DEFAULT_READINESS_ASSESSOR =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Readiness Assessor",
-                        persona =
-                            "You are a conservative workflow readiness reviewer. You accept any" +
-                                " repeatable sequenced workflow — business, automated, technical, scientific," +
-                                " or personal — and you only block inputs that genuinely lack workflow structure",
-                        objective =
-                            "Assess whether source text contains enough grounded process detail" +
-                                " for BPMN generation without inventing missing facts",
-                        voice = "specific and evidence-grounded",
-                    ),
+                Persona(
+                    name = "BPMN Readiness Assessor",
+                    persona =
+                    "You are a conservative workflow readiness reviewer. You accept any" +
+                        " repeatable sequenced workflow — business, automated, technical, scientific," +
+                        " or personal — and you only block inputs that genuinely lack workflow structure",
+                    objective =
+                    "Assess whether source text contains enough grounded process detail" +
+                        " for BPMN generation without inventing missing facts",
+                    voice = "specific and evidence-grounded",
+                ),
                 llm = LlmOptions.withLlmForRole("readiness-assessor"),
             )
         val DEFAULT_CONTRACT_EXTRACTOR =
             Actor(
                 persona =
-                    Persona(
-                        name = "Process Contract Extractor",
-                        persona =
-                            "You are a conservative workflow analyst who extracts source-grounded process" +
-                                " contracts from any kind of sequenced workflow (business, automated, technical," +
-                                " scientific, or personal)",
-                        objective =
-                            "Produce a typed ProcessContract whose every element is traceable to the source" +
-                                " input, an assessment evidence id, a clarification answer, or an explicit" +
-                                " assumption; never invent facts that are not grounded",
-                        voice = "specific and evidence-grounded",
-                    ),
+                Persona(
+                    name = "Process Contract Extractor",
+                    persona =
+                    "You are a conservative workflow analyst who extracts source-grounded process" +
+                        " contracts from any kind of sequenced workflow (business, automated, technical," +
+                        " scientific, or personal)",
+                    objective =
+                    "Produce a typed ProcessContract whose every element is traceable to the source" +
+                        " input, an assessment evidence id, a clarification answer, or an explicit" +
+                        " assumption; never invent facts that are not grounded",
+                    voice = "specific and evidence-grounded",
+                ),
                 llm = LlmOptions.withLlmForRole("contract-extractor"),
             )
         val DEFAULT_ALIGNMENT_VALIDATOR =
             Actor(
                 persona =
-                    Persona(
-                        name = "BPMN Alignment Guard",
-                        persona = "You are a strict BPMN semantic validator",
-                        objective =
-                            "Verify that generated BPMN process matches the process contract exactly;" +
-                                " flag any invented tasks, missing branches, or unsupported end states",
-                        voice = "critical and precise",
-                    ),
+                Persona(
+                    name = "BPMN Alignment Guard",
+                    persona = "You are a strict BPMN semantic validator",
+                    objective =
+                    "Verify that generated BPMN process matches the process contract exactly;" +
+                        " flag any invented tasks, missing branches, or unsupported end states",
+                    voice = "critical and precise",
+                ),
                 llm = LlmOptions.withLlmForRole("alignment-validator"),
             )
     }

@@ -54,21 +54,20 @@ interface BpmnNodeVisitor<T> {
  * `Optional`-like) instead of relying on `T?` semantics here.
  */
 @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
-fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? =
-    when (this) {
-        is BpmnStartEvent -> visitor.visitStartEvent(this)
-        is BpmnUserTask -> visitor.visitUserTask(this)
-        is BpmnServiceTask -> visitor.visitServiceTask(this)
-        is BpmnScriptTask -> visitor.visitScriptTask(this)
-        is BpmnBusinessRuleTask -> visitor.visitBusinessRuleTask(this)
-        is BpmnSendTask -> visitor.visitSendTask(this)
-        is BpmnReceiveTask -> visitor.visitReceiveTask(this)
-        is BpmnManualTask -> visitor.visitManualTask(this)
-        is BpmnExclusiveGateway -> visitor.visitExclusiveGateway(this)
-        is BpmnParallelGateway -> visitor.visitParallelGateway(this)
-        is BpmnIntermediateCatchEvent -> visitor.visitIntermediateCatchEvent(this)
-        is BpmnIntermediateThrowEvent -> visitor.visitIntermediateThrowEvent(this)
-        is BpmnBoundaryEvent -> visitor.visitBoundaryEvent(this)
-        is BpmnEndEvent -> visitor.visitEndEvent(this)
-        else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode
-    }
+fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
+    is BpmnStartEvent -> visitor.visitStartEvent(this)
+    is BpmnUserTask -> visitor.visitUserTask(this)
+    is BpmnServiceTask -> visitor.visitServiceTask(this)
+    is BpmnScriptTask -> visitor.visitScriptTask(this)
+    is BpmnBusinessRuleTask -> visitor.visitBusinessRuleTask(this)
+    is BpmnSendTask -> visitor.visitSendTask(this)
+    is BpmnReceiveTask -> visitor.visitReceiveTask(this)
+    is BpmnManualTask -> visitor.visitManualTask(this)
+    is BpmnExclusiveGateway -> visitor.visitExclusiveGateway(this)
+    is BpmnParallelGateway -> visitor.visitParallelGateway(this)
+    is BpmnIntermediateCatchEvent -> visitor.visitIntermediateCatchEvent(this)
+    is BpmnIntermediateThrowEvent -> visitor.visitIntermediateThrowEvent(this)
+    is BpmnBoundaryEvent -> visitor.visitBoundaryEvent(this)
+    is BpmnEndEvent -> visitor.visitEndEvent(this)
+    else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode
+}

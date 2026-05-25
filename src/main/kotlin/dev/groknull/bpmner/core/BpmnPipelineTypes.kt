@@ -30,10 +30,9 @@ data class BpmnElementIndex(
         return nodeObjectRefs[elementId] ?: edgeObjectRefs[elementId]
     }
 
-    fun knownElementIds(): Set<String> =
-        buildSet {
-            add(processId)
-            addAll(nodeObjectRefs.keys)
-            addAll(edgeObjectRefs.keys)
-        }
+    fun knownElementIds(): Set<String> = buildSet {
+        add(processId)
+        addAll(nodeObjectRefs.keys)
+        addAll(edgeObjectRefs.keys)
+    }
 }

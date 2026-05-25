@@ -123,49 +123,47 @@ class RepairModuleTest {
         return LaidOutProcessGraph(OwnedElementGraph(composed, emptyMap(), emptyMap()), definition)
     }
 
-    private fun testProcessContract(): ProcessContract =
-        ProcessContract(
-            id = "c-test",
-            processName = "Make toast",
-            summary = "test",
-            trigger = "start",
-            activities = listOf(ContractActivity("Task_1", "Toast bread")),
-            endStates = listOf(ContractEndState("EndEvent_1", "Toast served")),
-        )
+    private fun testProcessContract(): ProcessContract = ProcessContract(
+        id = "c-test",
+        processName = "Make toast",
+        summary = "test",
+        trigger = "start",
+        activities = listOf(ContractActivity("Task_1", "Toast bread")),
+        endStates = listOf(ContractEndState("EndEvent_1", "Toast served")),
+    )
 
-    private fun validDefinition() =
-        BpmnDefinition(
-            processId = "Process_MakeToast",
-            processName = "Make toast",
-            nodes =
-                listOf(
-                    BpmnStartEvent(
-                        id = "StartEvent_1",
-                        name = "Order received",
-                    ),
-                    BpmnServiceTask(
-                        id = "Task_1",
-                        name = "Toast bread",
-                    ),
-                    BpmnEndEvent(
-                        id = "EndEvent_1",
-                        name = "Toast served",
-                    ),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "Flow_1",
-                        "StartEvent_1",
-                        "Task_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_2",
-                        "Task_1",
-                        "EndEvent_1",
-                    ),
-                ),
-        )
+    private fun validDefinition() = BpmnDefinition(
+        processId = "Process_MakeToast",
+        processName = "Make toast",
+        nodes =
+        listOf(
+            BpmnStartEvent(
+                id = "StartEvent_1",
+                name = "Order received",
+            ),
+            BpmnServiceTask(
+                id = "Task_1",
+                name = "Toast bread",
+            ),
+            BpmnEndEvent(
+                id = "EndEvent_1",
+                name = "Toast served",
+            ),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                "Flow_1",
+                "StartEvent_1",
+                "Task_1",
+            ),
+            BpmnEdge(
+                "Flow_2",
+                "Task_1",
+                "EndEvent_1",
+            ),
+        ),
+    )
 
     private fun anyString(): String = ArgumentMatchers.anyString()
 
@@ -191,14 +189,13 @@ class RepairModuleTest {
             promptContributors: List<PromptContributor>,
             contextualPromptContributors: List<ContextualPromptElement>,
             generateExamples: Boolean,
-        ): PromptRunner =
-            delegate.promptRunner(
-                llm = llm,
-                toolGroups = toolGroups,
-                toolObjects = toolObjects,
-                promptContributors = promptContributors,
-                contextualPromptContributors = contextualPromptContributors,
-                generateExamples = generateExamples,
-            )
+        ): PromptRunner = delegate.promptRunner(
+            llm = llm,
+            toolGroups = toolGroups,
+            toolObjects = toolObjects,
+            promptContributors = promptContributors,
+            contextualPromptContributors = contextualPromptContributors,
+            generateExamples = generateExamples,
+        )
     }
 }

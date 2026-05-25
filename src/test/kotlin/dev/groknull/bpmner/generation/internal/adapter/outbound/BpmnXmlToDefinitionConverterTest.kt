@@ -49,33 +49,33 @@ class BpmnXmlToDefinitionConverterTest {
                 processId = "Process_mortgage_rt",
                 processName = "Mortgage processing",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Application submitted"),
-                        BpmnScriptTask("act-normalise", "Normalise address"),
-                        BpmnBusinessRuleTask("act-credit", "Evaluate credit policy", decisionRef = "credit-policy"),
-                        BpmnSendTask("act-decline", "Send decline notification", messageRef = "Message_Decline"),
-                        BpmnReceiveTask(
-                            "act-await-ack",
-                            "Customer acknowledgement received",
-                            messageRef = "Message_Ack",
-                        ),
-                        BpmnManualTask("act-inspect", "Inspect property"),
-                        BpmnEndEvent("EndEvent_1", "Application completed"),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Application submitted"),
+                    BpmnScriptTask("act-normalise", "Normalise address"),
+                    BpmnBusinessRuleTask("act-credit", "Evaluate credit policy", decisionRef = "credit-policy"),
+                    BpmnSendTask("act-decline", "Send decline notification", messageRef = "Message_Decline"),
+                    BpmnReceiveTask(
+                        "act-await-ack",
+                        "Customer acknowledgement received",
+                        messageRef = "Message_Ack",
                     ),
+                    BpmnManualTask("act-inspect", "Inspect property"),
+                    BpmnEndEvent("EndEvent_1", "Application completed"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("F1", "StartEvent_1", "act-normalise"),
-                        BpmnEdge("F2", "act-normalise", "act-credit"),
-                        BpmnEdge("F3", "act-credit", "act-decline"),
-                        BpmnEdge("F4", "act-decline", "act-await-ack"),
-                        BpmnEdge("F5", "act-await-ack", "act-inspect"),
-                        BpmnEdge("F6", "act-inspect", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "act-normalise"),
+                    BpmnEdge("F2", "act-normalise", "act-credit"),
+                    BpmnEdge("F3", "act-credit", "act-decline"),
+                    BpmnEdge("F4", "act-decline", "act-await-ack"),
+                    BpmnEdge("F5", "act-await-ack", "act-inspect"),
+                    BpmnEdge("F6", "act-inspect", "EndEvent_1"),
+                ),
                 messages =
-                    listOf(
-                        BpmnMessageRef("Message_Decline", "Decline notification"),
-                        BpmnMessageRef("Message_Ack", "Customer acknowledgement"),
-                    ),
+                listOf(
+                    BpmnMessageRef("Message_Decline", "Decline notification"),
+                    BpmnMessageRef("Message_Ack", "Customer acknowledgement"),
+                ),
             )
 
         val xml = forward.toXml(original)
@@ -105,23 +105,23 @@ class BpmnXmlToDefinitionConverterTest {
                 processId = "Process_RT",
                 processName = "Round-trip parallel",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("StartEvent_1", "Start"),
-                        BpmnParallelGateway("dec-fork", "Fork"),
-                        BpmnUserTask("act-a", "Track A"),
-                        BpmnUserTask("act-b", "Track B"),
-                        BpmnParallelGateway("Gateway_join", null),
-                        BpmnEndEvent("EndEvent_1", "Done"),
-                    ),
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnParallelGateway("dec-fork", "Fork"),
+                    BpmnUserTask("act-a", "Track A"),
+                    BpmnUserTask("act-b", "Track B"),
+                    BpmnParallelGateway("Gateway_join", null),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                ),
                 sequences =
-                    listOf(
-                        BpmnEdge("F1", "StartEvent_1", "dec-fork"),
-                        BpmnEdge("F2", "dec-fork", "act-a"),
-                        BpmnEdge("F3", "dec-fork", "act-b"),
-                        BpmnEdge("F4", "act-a", "Gateway_join"),
-                        BpmnEdge("F5", "act-b", "Gateway_join"),
-                        BpmnEdge("F6", "Gateway_join", "EndEvent_1"),
-                    ),
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "dec-fork"),
+                    BpmnEdge("F2", "dec-fork", "act-a"),
+                    BpmnEdge("F3", "dec-fork", "act-b"),
+                    BpmnEdge("F4", "act-a", "Gateway_join"),
+                    BpmnEdge("F5", "act-b", "Gateway_join"),
+                    BpmnEdge("F6", "Gateway_join", "EndEvent_1"),
+                ),
             )
 
         val xml = forward.render(original).xml
@@ -259,21 +259,21 @@ class BpmnXmlToDefinitionConverterTest {
                 processId = "Process_catalogs",
                 processName = "Catalogs",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("Start_1", "Start"),
-                        BpmnEndEvent("End_1", "End"),
-                    ),
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnEndEvent("End_1", "End"),
+                ),
                 sequences = listOf(BpmnEdge("Flow_1", "Start_1", "End_1")),
                 errors =
-                    listOf(
-                        BpmnErrorRef("Error_good", "ORDER_FAILED", "Order failed"),
-                        BpmnErrorRef("Error_blank", "", "Blank"),
-                    ),
+                listOf(
+                    BpmnErrorRef("Error_good", "ORDER_FAILED", "Order failed"),
+                    BpmnErrorRef("Error_blank", "", "Blank"),
+                ),
                 escalations =
-                    listOf(
-                        BpmnEscalationRef("Escalation_good", "ORDER_DELAYED", "Order delayed"),
-                        BpmnEscalationRef("Escalation_blank", " ", "Blank"),
-                    ),
+                listOf(
+                    BpmnEscalationRef("Escalation_good", "ORDER_DELAYED", "Order delayed"),
+                    BpmnEscalationRef("Escalation_blank", " ", "Blank"),
+                ),
             )
 
         val parsed = reverse.parse(forward.toXml(definition))
@@ -294,21 +294,21 @@ class BpmnXmlToDefinitionConverterTest {
                 processId = "Process_catalogs",
                 processName = "Catalogs",
                 nodes =
-                    listOf(
-                        BpmnStartEvent("Start_1", "Start"),
-                        BpmnEndEvent("End_1", "End"),
-                    ),
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnEndEvent("End_1", "End"),
+                ),
                 sequences = listOf(BpmnEdge("Flow_1", "Start_1", "End_1")),
                 messages =
-                    listOf(
-                        BpmnMessageRef("Message_good", "Order received"),
-                        BpmnMessageRef("Message_blank", ""),
-                    ),
+                listOf(
+                    BpmnMessageRef("Message_good", "Order received"),
+                    BpmnMessageRef("Message_blank", ""),
+                ),
                 signals =
-                    listOf(
-                        BpmnSignalRef("Signal_good", "Incident broadcast"),
-                        BpmnSignalRef("Signal_blank", " "),
-                    ),
+                listOf(
+                    BpmnSignalRef("Signal_good", "Incident broadcast"),
+                    BpmnSignalRef("Signal_blank", " "),
+                ),
             )
 
         val parsed = reverse.parse(forward.toXml(definition))
@@ -392,32 +392,31 @@ class BpmnXmlToDefinitionConverterTest {
         assertEquals(original.sequences.byId(), parsed.sequences.byId())
     }
 
-    private fun creditTierDefinition() =
-        BpmnDefinition(
-            processId = "Process_credit",
-            processName = "Credit-tier routing",
-            nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Score received"),
-                    BpmnExclusiveGateway("Gateway_1", "Which credit tier?"),
-                    BpmnUserTask("Task_fast", "Fast-track underwriting"),
-                    BpmnUserTask("Task_manual", "Manual review"),
-                    BpmnEndEvent("EndEvent_1", "Offer generated"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-                    BpmnEdge(
-                        "Flow_fast",
-                        "Gateway_1",
-                        "Task_fast",
-                        conditionExpression = "score >= 750",
-                    ),
-                    BpmnEdge("Flow_manual", "Gateway_1", "Task_manual", isDefault = true),
-                    BpmnEdge("Flow_3", "Task_fast", "EndEvent_1"),
-                    BpmnEdge("Flow_4", "Task_manual", "EndEvent_1"),
-                ),
-        )
+    private fun creditTierDefinition() = BpmnDefinition(
+        processId = "Process_credit",
+        processName = "Credit-tier routing",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Score received"),
+            BpmnExclusiveGateway("Gateway_1", "Which credit tier?"),
+            BpmnUserTask("Task_fast", "Fast-track underwriting"),
+            BpmnUserTask("Task_manual", "Manual review"),
+            BpmnEndEvent("EndEvent_1", "Offer generated"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
+            BpmnEdge(
+                "Flow_fast",
+                "Gateway_1",
+                "Task_fast",
+                conditionExpression = "score >= 750",
+            ),
+            BpmnEdge("Flow_manual", "Gateway_1", "Task_manual", isDefault = true),
+            BpmnEdge("Flow_3", "Task_fast", "EndEvent_1"),
+            BpmnEdge("Flow_4", "Task_manual", "EndEvent_1"),
+        ),
+    )
 
     private fun assertProcessShellEqual(
         a: BpmnDefinition,
@@ -434,78 +433,76 @@ class BpmnXmlToDefinitionConverterTest {
     @JvmName("edgesById")
     private fun List<BpmnEdge>.byId(): Map<String, BpmnEdge> = associateBy { it.id }
 
-    private fun linearDefinition() =
-        BpmnDefinition(
-            processId = "Process_1",
-            processName = "Linear Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "Flow_1",
-                        "Start_1",
-                        "Task_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_2",
-                        "Task_1",
-                        "End_1",
-                    ),
-                ),
-        )
+    private fun linearDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Linear Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUserTask("Task_1", "Do work"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                "Flow_1",
+                "Start_1",
+                "Task_1",
+            ),
+            BpmnEdge(
+                "Flow_2",
+                "Task_1",
+                "End_1",
+            ),
+        ),
+    )
 
-    private fun branchingDefinition() =
-        BpmnDefinition(
-            processId = "Process_2",
-            processName = "Branching Process",
-            nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnExclusiveGateway(
-                        "Gateway_1",
-                        "Is valid?",
-                    ),
-                    BpmnUserTask("Task_1", "Approve"),
-                    BpmnServiceTask("Task_2", "Reject"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "Flow_1",
-                        "Start_1",
-                        "Gateway_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_2",
-                        "Gateway_1",
-                        "Task_1",
-                        name = "Yes",
-                    ),
-                    BpmnEdge(
-                        "Flow_3",
-                        "Gateway_1",
-                        "Task_2",
-                        name = "No",
-                        conditionExpression = "\${value < 0}",
-                    ),
-                    BpmnEdge(
-                        "Flow_4",
-                        "Task_1",
-                        "End_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_5",
-                        "Task_2",
-                        "End_1",
-                    ),
-                ),
-        )
+    private fun branchingDefinition() = BpmnDefinition(
+        processId = "Process_2",
+        processName = "Branching Process",
+        nodes =
+        listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnExclusiveGateway(
+                "Gateway_1",
+                "Is valid?",
+            ),
+            BpmnUserTask("Task_1", "Approve"),
+            BpmnServiceTask("Task_2", "Reject"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                "Flow_1",
+                "Start_1",
+                "Gateway_1",
+            ),
+            BpmnEdge(
+                "Flow_2",
+                "Gateway_1",
+                "Task_1",
+                name = "Yes",
+            ),
+            BpmnEdge(
+                "Flow_3",
+                "Gateway_1",
+                "Task_2",
+                name = "No",
+                conditionExpression = "\${value < 0}",
+            ),
+            BpmnEdge(
+                "Flow_4",
+                "Task_1",
+                "End_1",
+            ),
+            BpmnEdge(
+                "Flow_5",
+                "Task_2",
+                "End_1",
+            ),
+        ),
+    )
 
     private fun assertEventStartRoundTrip(original: BpmnDefinition) {
         val parsed = reverse.parse(forward.toXml(original))
@@ -524,10 +521,10 @@ class BpmnXmlToDefinitionConverterTest {
         processId = "Process_events",
         processName = "Event starts",
         nodes =
-            listOf(
-                start,
-                BpmnEndEvent("End_1", "Done"),
-            ),
+        listOf(
+            start,
+            BpmnEndEvent("End_1", "Done"),
+        ),
         sequences = listOf(BpmnEdge("Flow_1", start.id, "End_1")),
         messages = messages,
         signals = signals,

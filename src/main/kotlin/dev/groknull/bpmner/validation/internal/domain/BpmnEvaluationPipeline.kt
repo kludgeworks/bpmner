@@ -118,10 +118,10 @@ internal class BpmnEvaluationPipeline(
                 normalizer.scopedDiagnostic(
                     graph = graph,
                     diagnostic =
-                        BpmnDiagnostic(
-                            source = BpmnDiagnosticSource.RENDER,
-                            message = renderFailureMessage ?: "Unknown BPMN rendering error",
-                        ),
+                    BpmnDiagnostic(
+                        source = BpmnDiagnosticSource.RENDER,
+                        message = renderFailureMessage ?: "Unknown BPMN rendering error",
+                    ),
                 )
             return null
         }

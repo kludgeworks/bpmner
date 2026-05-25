@@ -28,8 +28,9 @@ data class BpmnLocalFixSummary(
 data class BpmnLocalRepairOutcome(
     val failures: List<BpmnLocalFixFailure>,
 ) {
-    fun matches(diagnostic: BpmnDiagnostic): BpmnLocalFixFailure? =
-        failures.firstOrNull { it.rule == diagnostic.rule && it.elementId == diagnostic.elementId }
+    fun matches(diagnostic: BpmnDiagnostic): BpmnLocalFixFailure? {
+        return failures.firstOrNull { it.rule == diagnostic.rule && it.elementId == diagnostic.elementId }
+    }
 
     companion object {
         val EMPTY = BpmnLocalRepairOutcome(emptyList())

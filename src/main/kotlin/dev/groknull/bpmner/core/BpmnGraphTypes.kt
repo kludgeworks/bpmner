@@ -36,16 +36,15 @@ data class LaidOutProcessGraph(
 
     fun ownerForObjectRef(objectRef: String?): String? = ownedGraph.ownerForObjectRef(objectRef)
 
-    fun validateOwnership(): List<String> =
-        buildList {
-            if (ownedGraph.objectOwnersByObjectRef.isEmpty()) return@buildList
-            definition.nodes.forEach { node ->
-                if (ownerForElementId(node.id) == null) add("Node '${node.id}' has no owner assignment")
-            }
-            definition.sequences.forEach { edge ->
-                if (ownerForElementId(edge.id) == null) add("Edge '${edge.id}' has no owner assignment")
-            }
+    fun validateOwnership(): List<String> = buildList {
+        if (ownedGraph.objectOwnersByObjectRef.isEmpty()) return@buildList
+        definition.nodes.forEach { node ->
+            if (ownerForElementId(node.id) == null) add("Node '${node.id}' has no owner assignment")
         }
+        definition.sequences.forEach { edge ->
+            if (ownerForElementId(edge.id) == null) add("Edge '${edge.id}' has no owner assignment")
+        }
+    }
 }
 
 fun LaidOutProcessGraph.withUpdatedDefinition(newDefinition: BpmnDefinition): LaidOutProcessGraph {
@@ -85,10 +84,10 @@ fun LaidOutProcessGraph.withUpdatedDefinition(newDefinition: BpmnDefinition): La
     val updatedOwnedGraph =
         OwnedElementGraph(
             composedGraph =
-                ownedGraph.composedGraph.copy(
-                    definition = newDefinition,
-                    objectOwnersByObjectRef = updatedObjectOwners,
-                ),
+            ownedGraph.composedGraph.copy(
+                definition = newDefinition,
+                objectOwnersByObjectRef = updatedObjectOwners,
+            ),
             elementOwnersByElementId = newElementOwners,
             objectOwnersByObjectRef = updatedObjectOwners,
         )

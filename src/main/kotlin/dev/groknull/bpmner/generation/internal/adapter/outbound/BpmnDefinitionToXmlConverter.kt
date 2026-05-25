@@ -190,12 +190,11 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         definitions.exporterVersion = EXPORTER_VERSION
     }
 
-    private fun buildElementIndex(definition: BpmnDefinition): BpmnElementIndex =
-        BpmnElementIndex(
-            processId = definition.processId,
-            nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
-            edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
-        )
+    private fun buildElementIndex(definition: BpmnDefinition): BpmnElementIndex = BpmnElementIndex(
+        processId = definition.processId,
+        nodeObjectRefs = definition.nodes.associate { it.id to "nodes[id=${it.id}]" },
+        edgeObjectRefs = definition.sequences.associate { it.id to "sequences[id=${it.id}]" },
+    )
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
     private fun addCatalogsAndEventDefinitions(
@@ -322,29 +321,28 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     // the list narrow to match `addCatalogsAndEventDefinitions`'s `when` arms. When a new task
     // kind gains a DOM-stamp arm, add its element name here too — the writer-side `when` is
     // the source of truth for which tasks need post-processing.
-    private fun Document.taskElementsById(): Map<String, Element> =
-        listOf("sendTask", "receiveTask", "businessRuleTask")
-            .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
-            .associateBy { it.getAttribute("id") }
-            .filterKeys { it.isNotBlank() }
+    private fun Document.taskElementsById(): Map<String, Element> = listOf("sendTask", "receiveTask", "businessRuleTask")
+        .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
+        .associateBy { it.getAttribute("id") }
+        .filterKeys { it.isNotBlank() }
 
-    private fun Map<String, Element>.taskElement(id: String): Element =
-        this[id] ?: error("Task element with id='$id' not found in rendered XML")
+    private fun Map<String, Element>.taskElement(id: String): Element {
+        return this[id] ?: error("Task element with id='$id' not found in rendered XML")
+    }
 
-    private fun parseDocument(xml: String): Document =
-        DocumentBuilderFactory
-            .newInstance()
-            .also {
-                it.isNamespaceAware = true
-                it.setFeature(DISALLOW_DOCTYPE_DECL, true)
-                it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
-                it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
-                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
-                it.isXIncludeAware = false
-                it.isExpandEntityReferences = false
-            }.newDocumentBuilder()
-            .parse(org.xml.sax.InputSource(StringReader(xml)))
+    private fun parseDocument(xml: String): Document = DocumentBuilderFactory
+        .newInstance()
+        .also {
+            it.isNamespaceAware = true
+            it.setFeature(DISALLOW_DOCTYPE_DECL, true)
+            it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
+            it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
+            it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+            it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+            it.isXIncludeAware = false
+            it.isExpandEntityReferences = false
+        }.newDocumentBuilder()
+        .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun writeDocument(document: Document): String {
         val writer = StringWriter()
@@ -363,21 +361,26 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
     private fun Document.bpmnElement(localName: String): Element = createElementNS(BPMN_NS, "bpmn:$localName")
 
-    private fun Document.eventElementsById(): Map<String, Element> =
-        listOf("startEvent", "intermediateCatchEvent", "intermediateThrowEvent", "boundaryEvent", "endEvent")
-            .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
-            .associateBy { it.getAttribute("id") }
-            .filterKeys { it.isNotBlank() }
+    private fun Document.eventElementsById(): Map<String, Element> = listOf(
+        "startEvent",
+        "intermediateCatchEvent",
+        "intermediateThrowEvent",
+        "boundaryEvent",
+        "endEvent",
+    )
+        .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
+        .associateBy { it.getAttribute("id") }
+        .filterKeys { it.isNotBlank() }
 
-    private fun Map<String, Element>.eventElement(id: String): Element =
-        this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
+    private fun Map<String, Element>.eventElement(id: String): Element {
+        return this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
+    }
 
-    private fun org.w3c.dom.NodeList.elements(): Sequence<Element> =
-        sequence {
-            for (index in 0 until length) {
-                (item(index) as? Element)?.let { yield(it) }
-            }
+    private fun org.w3c.dom.NodeList.elements(): Sequence<Element> = sequence {
+        for (index in 0 until length) {
+            (item(index) as? Element)?.let { yield(it) }
         }
+    }
 
     @Suppress("CyclomaticComplexMethod")
     private fun Element.appendEventDefinition(

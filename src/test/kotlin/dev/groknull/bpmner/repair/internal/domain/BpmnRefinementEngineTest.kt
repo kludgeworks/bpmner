@@ -126,11 +126,11 @@ class BpmnRefinementEngineTest {
             RecordingLintService(
                 lintResponses = listOf(listOf(lintIssue), emptyList()),
                 autoFixResponse =
-                    BpmnAutoFixResult(
-                        changed = true,
-                        xml = "<bpmn:locally-fixed/>",
-                        applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                    ),
+                BpmnAutoFixResult(
+                    changed = true,
+                    xml = "<bpmn:locally-fixed/>",
+                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+                ),
                 capabilities = mapOf("name-01" to capability),
             )
         val xsd = RecordingXsdValidator(listOf(emptyList(), emptyList(), emptyList()))
@@ -227,11 +227,10 @@ class BpmnRefinementEngineTest {
     private fun setNodeNamePatch(
         nodeId: String,
         name: String,
-    ): BpmnRepairPatch =
-        BpmnRepairPatch(
-            operations =
-                listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
-        )
+    ): BpmnRepairPatch = BpmnRepairPatch(
+        operations =
+        listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
+    )
 
     @Test
     fun `local model fix strategy repairs topology diagnostic without calling LLM`() {
@@ -249,16 +248,16 @@ class BpmnRefinementEngineTest {
         val lint =
             RecordingLintService(
                 lintResponses =
+                listOf(
                     listOf(
-                        listOf(
-                            LintIssue(
-                                id = "Gateway_1",
-                                rule = "bpmner/no-gateway-join-fork",
-                                message = "Gateway joins and forks at the same point",
-                            ),
+                        LintIssue(
+                            id = "Gateway_1",
+                            rule = "bpmner/no-gateway-join-fork",
+                            message = "Gateway joins and forks at the same point",
                         ),
-                        emptyList(),
                     ),
+                    emptyList(),
+                ),
                 capabilities = mapOf("no-gateway-join-fork" to topologyCapability),
             )
         val converter = RecordingConverter()
@@ -285,9 +284,9 @@ class BpmnRefinementEngineTest {
         val invalid =
             validDefinition().copy(
                 sequences =
-                    validDefinition().sequences.map {
-                        if (it.id == "Flow_1") it.copy(sourceRef = "Missing_Start") else it
-                    },
+                validDefinition().sequences.map {
+                    if (it.id == "Flow_1") it.copy(sourceRef = "Missing_Start") else it
+                },
             )
         val xsd = RecordingXsdValidator(listOf(emptyList()))
         val lint = RecordingLintService(listOf(emptyList()))
@@ -330,37 +329,37 @@ class BpmnRefinementEngineTest {
             config = config,
             bpmnRenderer = converter,
             validator =
-                BpmnEvaluationPipeline(
-                    config = config,
-                    bpmnLintingPort = lintService,
-                    bpmnXsdValidationPort = xsdValidator,
-                    bpmnDefinitionValidator = BpmnDefinitionValidator(),
-                    normalizer = normalizer,
-                    fingerprints = fingerprints,
-                ),
+            BpmnEvaluationPipeline(
+                config = config,
+                bpmnLintingPort = lintService,
+                bpmnXsdValidationPort = xsdValidator,
+                bpmnDefinitionValidator = BpmnDefinitionValidator(),
+                normalizer = normalizer,
+                fingerprints = fingerprints,
+            ),
             attemptRecordFactory = BpmnAttemptRecordFactory(fingerprints),
             promptFactory = promptFactory,
             fingerprints = fingerprints,
             strategies =
-                listOf(
-                    DeterministicTopologyRepairStrategy(
-                        lintService,
-                        xsdValidator,
-                        xmlParser,
-                        BpmnLocalModelFixHandlerRegistry(
-                            listOf(
-                                SplitJoinForkGatewayHandler(),
-                                InsertConvergingGatewayHandler(),
-                                BypassGatewayHandler(),
-                                ConvergingGatewayClearNameHandler(),
-                            ),
+            listOf(
+                DeterministicTopologyRepairStrategy(
+                    lintService,
+                    xsdValidator,
+                    xmlParser,
+                    BpmnLocalModelFixHandlerRegistry(
+                        listOf(
+                            SplitJoinForkGatewayHandler(),
+                            InsertConvergingGatewayHandler(),
+                            BypassGatewayHandler(),
+                            ConvergingGatewayClearNameHandler(),
                         ),
-                        patchApplier,
                     ),
-                    TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
-                    LlmPatchRepairStrategy(config, promptFactory, patchApplier),
-                    FullLlmRewriteRepairStrategy(config, promptFactory),
+                    patchApplier,
                 ),
+                TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
+                LlmPatchRepairStrategy(config, promptFactory, patchApplier),
+                FullLlmRewriteRepairStrategy(config, promptFactory),
+            ),
             eventPublisher = NoOpEventPublisher,
             defaultFlowAssigner = DefaultFlowAssigner(),
             fidelityChecker = BpmnContractFidelityChecker(),
@@ -376,10 +375,10 @@ class BpmnRefinementEngineTest {
         private val autoFixResponse: BpmnAutoFixResult? = null,
         private val capabilities: Map<String, BpmnLintRuleCapability> = emptyMap(),
     ) : BpmnLintService(
-            catalogService = RuleCatalogService(),
-            engine = BpmnLintJsEngine(),
-            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
-        ) {
+        catalogService = RuleCatalogService(),
+        engine = BpmnLintJsEngine(),
+        pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
+    ) {
         val xmls = mutableListOf<String>()
         private var _autoFixCalls = 0
         val autoFixCalls: Int get() = _autoFixCalls
@@ -452,97 +451,92 @@ class BpmnRefinementEngineTest {
             promptContributors: List<PromptContributor>,
             contextualPromptContributors: List<ContextualPromptElement>,
             generateExamples: Boolean,
-        ): PromptRunner =
-            delegate.promptRunner(
-                llm = llm,
-                toolGroups = toolGroups,
-                toolObjects = toolObjects,
-                promptContributors = promptContributors,
-                contextualPromptContributors = contextualPromptContributors,
-                generateExamples = generateExamples,
-            )
+        ): PromptRunner = delegate.promptRunner(
+            llm = llm,
+            toolGroups = toolGroups,
+            toolObjects = toolObjects,
+            promptContributors = promptContributors,
+            contextualPromptContributors = contextualPromptContributors,
+            generateExamples = generateExamples,
+        )
     }
 
-    private fun validDefinition(): BpmnDefinition =
-        testBpmnDefinition(
-            processId = "Process_Test",
-            processName = "Test",
-            task = BpmnUserTask("Task_1", "Do work"),
-            startName = "Started",
-            endName = "Done",
-        )
+    private fun validDefinition(): BpmnDefinition = testBpmnDefinition(
+        processId = "Process_Test",
+        processName = "Test",
+        task = BpmnUserTask("Task_1", "Do work"),
+        startName = "Started",
+        endName = "Done",
+    )
 
-    private fun testProcessContract(): ProcessContract =
-        ProcessContract(
-            id = "c-test",
-            processName = "Test",
-            summary = "test",
-            trigger = "start",
-            activities = listOf(ContractActivity.User(id = "Task_1", name = "Do work")),
-            endStates = listOf(ContractEndState(id = "end-done", name = "Done")),
-        )
+    private fun testProcessContract(): ProcessContract = ProcessContract(
+        id = "c-test",
+        processName = "Test",
+        summary = "test",
+        trigger = "start",
+        activities = listOf(ContractActivity.User(id = "Task_1", name = "Do work")),
+        endStates = listOf(ContractEndState(id = "end-done", name = "Done")),
+    )
 
-    private fun joinForkContract(): ProcessContract =
-        ProcessContract(
-            id = "c-jf",
-            processName = "Join fork",
-            summary = "Join-fork test",
-            trigger = "start",
-            activities =
-                listOf(
-                    ContractActivity.Service(id = "Task_1", name = "Do one"),
-                    ContractActivity.Service(id = "Task_2", name = "Do two"),
-                ),
-            endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Done")),
-        )
+    private fun joinForkContract(): ProcessContract = ProcessContract(
+        id = "c-jf",
+        processName = "Join fork",
+        summary = "Join-fork test",
+        trigger = "start",
+        activities =
+        listOf(
+            ContractActivity.Service(id = "Task_1", name = "Do one"),
+            ContractActivity.Service(id = "Task_2", name = "Do two"),
+        ),
+        endStates = listOf(ContractEndState(id = "EndEvent_1", name = "Done")),
+    )
 
-    private fun joinForkDefinition(): BpmnDefinition =
-        BpmnDefinition(
-            processId = "Process_JoinFork",
-            processName = "Join fork",
-            nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "A"),
-                    BpmnStartEvent("StartEvent_2", "B"),
-                    BpmnExclusiveGateway("Gateway_1", "Route?"),
-                    BpmnServiceTask("Task_1", "Do one"),
-                    BpmnServiceTask("Task_2", "Do two"),
-                    BpmnEndEvent("EndEvent_1", "Done"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "Flow_1",
-                        "StartEvent_1",
-                        "Gateway_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_2",
-                        "StartEvent_2",
-                        "Gateway_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_3",
-                        "Gateway_1",
-                        "Task_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_4",
-                        "Gateway_1",
-                        "Task_2",
-                    ),
-                    BpmnEdge(
-                        "Flow_5",
-                        "Task_1",
-                        "EndEvent_1",
-                    ),
-                    BpmnEdge(
-                        "Flow_6",
-                        "Task_2",
-                        "EndEvent_1",
-                    ),
-                ),
-        )
+    private fun joinForkDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_JoinFork",
+        processName = "Join fork",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "A"),
+            BpmnStartEvent("StartEvent_2", "B"),
+            BpmnExclusiveGateway("Gateway_1", "Route?"),
+            BpmnServiceTask("Task_1", "Do one"),
+            BpmnServiceTask("Task_2", "Do two"),
+            BpmnEndEvent("EndEvent_1", "Done"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                "Flow_1",
+                "StartEvent_1",
+                "Gateway_1",
+            ),
+            BpmnEdge(
+                "Flow_2",
+                "StartEvent_2",
+                "Gateway_1",
+            ),
+            BpmnEdge(
+                "Flow_3",
+                "Gateway_1",
+                "Task_1",
+            ),
+            BpmnEdge(
+                "Flow_4",
+                "Gateway_1",
+                "Task_2",
+            ),
+            BpmnEdge(
+                "Flow_5",
+                "Task_1",
+                "EndEvent_1",
+            ),
+            BpmnEdge(
+                "Flow_6",
+                "Task_2",
+                "EndEvent_1",
+            ),
+        ),
+    )
 
     private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
         override fun getLlmRuleGuidance(): String = ""

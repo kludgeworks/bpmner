@@ -56,9 +56,9 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        extends = listOf("bpmnlint:recommended", "plugin:bpmner/recommended"),
-                    ),
+                BpmnLintProperties(
+                    extends = listOf("bpmnlint:recommended", "plugin:bpmner/recommended"),
+                ),
             )
         service.init()
 
@@ -94,13 +94,13 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        rules =
-                            mapOf(
-                                "bpmner/gen-no-duplicate-diagrams" to "off",
-                                "bpmner/gen-02-no-duplicate-diagrams" to "error",
-                            ),
+                BpmnLintProperties(
+                    rules =
+                    mapOf(
+                        "bpmner/gen-no-duplicate-diagrams" to "off",
+                        "bpmner/gen-02-no-duplicate-diagrams" to "error",
                     ),
+                ),
             )
         service.init()
 
@@ -143,9 +143,9 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        extends = listOf("plugin:bpmner/recommended"),
-                    ),
+                BpmnLintProperties(
+                    extends = listOf("plugin:bpmner/recommended"),
+                ),
             )
         service.init()
 
@@ -199,9 +199,9 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        rules = mapOf("bpmner/truly-unknown-rule" to "error"),
-                    ),
+                BpmnLintProperties(
+                    rules = mapOf("bpmner/truly-unknown-rule" to "error"),
+                ),
             )
 
         val exception =
@@ -224,9 +224,9 @@ class BpmnLintServiceIntegrationTest {
                 engine = engine,
                 pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
                 properties =
-                    BpmnLintProperties(
-                        extends = listOf("plugin:bpmner/recommended-error"),
-                    ),
+                BpmnLintProperties(
+                    extends = listOf("plugin:bpmner/recommended-error"),
+                ),
             )
         service.init()
 

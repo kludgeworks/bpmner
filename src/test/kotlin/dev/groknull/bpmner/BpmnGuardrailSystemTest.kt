@@ -83,13 +83,13 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
                 verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                 overallScore = 20,
                 dimensions =
-                    listOf(
-                        ReadinessDimensionScore(
-                            ReadinessDimension.BPMN_SUITABILITY,
-                            20,
-                            "No sequenced workflow found in the source text.",
-                        ),
+                listOf(
+                    ReadinessDimensionScore(
+                        ReadinessDimension.BPMN_SUITABILITY,
+                        20,
+                        "No sequenced workflow found in the source text.",
                     ),
+                ),
                 rationale = "The input is a simple statement, not a workflow.",
                 missingAreas = listOf(MissingProcessArea.BPMN_PROCESS_SUITABILITY),
             ),
@@ -122,20 +122,20 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
                 verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                 overallScore = 60,
                 dimensions =
-                    listOf(
-                        ReadinessDimensionScore(ReadinessDimension.SEQUENCE_ORDER, 60, "Activities are vague."),
-                    ),
+                listOf(
+                    ReadinessDimensionScore(ReadinessDimension.SEQUENCE_ORDER, 60, "Activities are vague."),
+                ),
                 rationale = "Input is missing activity sequence.",
                 missingAreas = listOf(MissingProcessArea.ACTIVITY_SEQUENCE),
                 clarificationQuestions =
-                    listOf(
-                        ClarificationQuestion(
-                            "q1",
-                            "What are the specific activities?",
-                            listOf(MissingProcessArea.ACTIVITY_SEQUENCE),
-                            listOf(ReadinessDimension.SEQUENCE_ORDER),
-                        ),
+                listOf(
+                    ClarificationQuestion(
+                        "q1",
+                        "What are the specific activities?",
+                        listOf(MissingProcessArea.ACTIVITY_SEQUENCE),
+                        listOf(ReadinessDimension.SEQUENCE_ORDER),
                     ),
+                ),
             ),
         )
 
@@ -196,12 +196,12 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
         ).thenReturn(
             AlignmentFindings(
                 issues =
-                    listOf(
-                        AlignmentIssue(
-                            elementId = "Task_Invented",
-                            classification = AlignmentClassification.UNSUPPORTED,
-                        ),
+                listOf(
+                    AlignmentIssue(
+                        elementId = "Task_Invented",
+                        classification = AlignmentClassification.UNSUPPORTED,
                     ),
+                ),
                 rationale = "BPMN contains invented tasks not in contract.",
             ),
         )
@@ -220,61 +220,58 @@ class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
     @Suppress("UNCHECKED_CAST")
     private fun <T> castNull(): T = null as T
 
-    private fun validAssessment() =
-        ProcessInputAssessment(
-            verdict = ReadinessVerdict.READY,
-            overallScore = 90,
-            dimensions =
-                listOf(
-                    ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "Explicit trigger."),
-                ),
-            evidence =
-                listOf(
-                    SourceEvidence("ev1", "When an order is submitted", EvidenceSourceType.ORIGINAL_INPUT),
-                ),
-            rationale = "Input is ready.",
-        )
+    private fun validAssessment() = ProcessInputAssessment(
+        verdict = ReadinessVerdict.READY,
+        overallScore = 90,
+        dimensions =
+        listOf(
+            ReadinessDimensionScore(ReadinessDimension.START_TRIGGER, 90, "Explicit trigger."),
+        ),
+        evidence =
+        listOf(
+            SourceEvidence("ev1", "When an order is submitted", EvidenceSourceType.ORIGINAL_INPUT),
+        ),
+        rationale = "Input is ready.",
+    )
 
-    private fun validContract() =
-        ProcessContract(
-            id = "c1",
-            processName = "Order",
-            summary = "Handle order.",
-            trigger = "Order submitted",
-            triggerSourceIds = listOf("ev1"),
-            activities =
-                listOf(
-                    ContractActivity("a1", "Review", sourceIds = listOf("ev1")),
-                    ContractActivity("a2", "Ship", sourceIds = listOf("ev1")),
-                ),
-            endStates =
-                listOf(
-                    ContractEndState("e1", "Shipped", sourceIds = listOf("ev1")),
-                ),
-        )
+    private fun validContract() = ProcessContract(
+        id = "c1",
+        processName = "Order",
+        summary = "Handle order.",
+        trigger = "Order submitted",
+        triggerSourceIds = listOf("ev1"),
+        activities =
+        listOf(
+            ContractActivity("a1", "Review", sourceIds = listOf("ev1")),
+            ContractActivity("a2", "Ship", sourceIds = listOf("ev1")),
+        ),
+        endStates =
+        listOf(
+            ContractEndState("e1", "Shipped", sourceIds = listOf("ev1")),
+        ),
+    )
 
-    private fun validDefinition() =
-        BpmnDefinition(
-            processId = "P1",
-            processName = "Order",
-            nodes =
-                listOf(
-                    BpmnStartEvent("S1", "Start"),
-                    BpmnUserTask("T1", "Review"),
-                    BpmnEndEvent("E1", "End"),
-                ),
-            sequences =
-                listOf(
-                    BpmnEdge(
-                        "F1",
-                        "S1",
-                        "T1",
-                    ),
-                    BpmnEdge(
-                        "F2",
-                        "T1",
-                        "E1",
-                    ),
-                ),
-        )
+    private fun validDefinition() = BpmnDefinition(
+        processId = "P1",
+        processName = "Order",
+        nodes =
+        listOf(
+            BpmnStartEvent("S1", "Start"),
+            BpmnUserTask("T1", "Review"),
+            BpmnEndEvent("E1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(
+                "F1",
+                "S1",
+                "T1",
+            ),
+            BpmnEdge(
+                "F2",
+                "T1",
+                "E1",
+            ),
+        ),
+    )
 }

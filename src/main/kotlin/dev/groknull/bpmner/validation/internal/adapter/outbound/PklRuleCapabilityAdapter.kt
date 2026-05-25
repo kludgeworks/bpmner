@@ -25,14 +25,13 @@ internal class PklRuleCapabilityAdapter(
         }
     }
 
-    private fun buildCapabilityMap(rules: List<BpmnRuleMetadata>): Map<String, BpmnLintRuleCapability> =
-        buildMap {
-            for (rule in rules) {
-                val capability = toCapability(rule)
-                put(rule.id, capability)
-                rule.aliases.forEach { alias -> put(alias, capability) }
-            }
+    private fun buildCapabilityMap(rules: List<BpmnRuleMetadata>): Map<String, BpmnLintRuleCapability> = buildMap {
+        for (rule in rules) {
+            val capability = toCapability(rule)
+            put(rule.id, capability)
+            rule.aliases.forEach { alias -> put(alias, capability) }
         }
+    }
 
     internal fun toCapability(rule: BpmnRuleMetadata): BpmnLintRuleCapability {
         val repair = rule.repair

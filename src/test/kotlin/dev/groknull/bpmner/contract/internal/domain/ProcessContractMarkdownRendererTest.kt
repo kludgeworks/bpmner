@@ -73,43 +73,43 @@ class ProcessContractMarkdownRendererTest {
                 trigger = "Credit score returned",
                 triggerSourceIds = sources,
                 activities =
-                    listOf(
-                        ContractActivity(id = "act-fast", name = "Fast-track", sourceIds = sources),
-                        ContractActivity(id = "act-manual", name = "Manual review", sourceIds = sources),
-                    ),
+                listOf(
+                    ContractActivity(id = "act-fast", name = "Fast-track", sourceIds = sources),
+                    ContractActivity(id = "act-manual", name = "Manual review", sourceIds = sources),
+                ),
                 decisions =
-                    listOf(
-                        ContractDecision(
-                            id = "d-tier",
-                            question = "Which credit tier?",
-                            branches =
-                                listOf(
-                                    ConditionalBranch(
-                                        id = "b-fast",
-                                        label = "Fast-track",
-                                        condition = "score >= 750",
-                                        nextRef = "act-fast",
-                                    ),
-                                    DefaultBranch(
-                                        id = "b-manual",
-                                        label = "Manual review",
-                                        nextRef = "act-manual",
-                                    ),
-                                ),
-                            sourceIds = sources,
+                listOf(
+                    ContractDecision(
+                        id = "d-tier",
+                        question = "Which credit tier?",
+                        branches =
+                        listOf(
+                            ConditionalBranch(
+                                id = "b-fast",
+                                label = "Fast-track",
+                                condition = "score >= 750",
+                                nextRef = "act-fast",
+                            ),
+                            DefaultBranch(
+                                id = "b-manual",
+                                label = "Manual review",
+                                nextRef = "act-manual",
+                            ),
                         ),
-                        ContractDecision(
-                            id = "d-prep",
-                            question = "Run preparation tracks",
-                            branches =
-                                listOf(
-                                    UnconditionalBranch(id = "b-it", label = "IT prep"),
-                                    UnconditionalBranch(id = "b-fac", label = "Facilities prep"),
-                                ),
-                            kind = ContractGatewayKind.PARALLEL,
-                            sourceIds = sources,
-                        ),
+                        sourceIds = sources,
                     ),
+                    ContractDecision(
+                        id = "d-prep",
+                        question = "Run preparation tracks",
+                        branches =
+                        listOf(
+                            UnconditionalBranch(id = "b-it", label = "IT prep"),
+                            UnconditionalBranch(id = "b-fac", label = "Facilities prep"),
+                        ),
+                        kind = ContractGatewayKind.PARALLEL,
+                        sourceIds = sources,
+                    ),
+                ),
                 endStates = listOf(ContractEndState(id = "end-offer", name = "Offer generated", sourceIds = sources)),
             )
 
@@ -147,10 +147,10 @@ class ProcessContractMarkdownRendererTest {
                 summary = "Approves things.",
                 trigger = "Request arrives",
                 activities =
-                    listOf(
-                        ContractActivity(id = "a", name = "Review", sourceIds = sources),
-                        ContractActivity(id = "b", name = "Decide", sourceIds = sources),
-                    ),
+                listOf(
+                    ContractActivity(id = "a", name = "Review", sourceIds = sources),
+                    ContractActivity(id = "b", name = "Decide", sourceIds = sources),
+                ),
                 endStates = listOf(ContractEndState(id = "e", name = "Done", sourceIds = sources)),
             )
 
@@ -175,61 +175,61 @@ class ProcessContractMarkdownRendererTest {
             trigger = "An order is submitted",
             triggerSourceIds = sources,
             actors =
-                listOf(
-                    ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),
-                ),
+            listOf(
+                ContractActor(id = "actor-warehouse", name = "Warehouse", role = "fulfilment"),
+            ),
             activities =
-                listOf(
-                    ContractActivity(
-                        id = "a-pack",
-                        name = "Pack order",
-                        actorId = "actor-warehouse",
-                        sourceIds = sources,
-                    ),
-                    ContractActivity(
-                        id = "a-ship",
-                        name = "Ship order",
-                        actorId = "actor-warehouse",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractActivity(
+                    id = "a-pack",
+                    name = "Pack order",
+                    actorId = "actor-warehouse",
+                    sourceIds = sources,
                 ),
+                ContractActivity(
+                    id = "a-ship",
+                    name = "Ship order",
+                    actorId = "actor-warehouse",
+                    sourceIds = sources,
+                ),
+            ),
             decisions =
-                listOf(
-                    ContractDecision(
-                        id = "d-stock",
-                        question = "Is the item in stock?",
-                        branches =
-                            listOf(
-                                ConditionalBranch(id = "b-yes", label = "In stock", condition = "stock > 0"),
-                                ConditionalBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
-                            ),
-                        sourceIds = sources,
+            listOf(
+                ContractDecision(
+                    id = "d-stock",
+                    question = "Is the item in stock?",
+                    branches =
+                    listOf(
+                        ConditionalBranch(id = "b-yes", label = "In stock", condition = "stock > 0"),
+                        ConditionalBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
                     ),
+                    sourceIds = sources,
                 ),
+            ),
             artifacts =
-                listOf(
-                    ContractArtifact(
-                        id = "art-package",
-                        name = "Package",
-                        description = "Wrapped order ready to ship",
-                    ),
+            listOf(
+                ContractArtifact(
+                    id = "art-package",
+                    name = "Package",
+                    description = "Wrapped order ready to ship",
                 ),
+            ),
             endStates =
-                listOf(
-                    ContractEndState(
-                        id = "end-shipped",
-                        name = "Order shipped",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractEndState(
+                    id = "end-shipped",
+                    name = "Order shipped",
+                    sourceIds = sources,
                 ),
+            ),
             assumptions =
-                listOf(
-                    ContractAssumption(
-                        id = "assume-payment",
-                        text = "Payment is authorised upstream",
-                        sourceIds = sources,
-                    ),
+            listOf(
+                ContractAssumption(
+                    id = "assume-payment",
+                    text = "Payment is authorised upstream",
+                    sourceIds = sources,
                 ),
+            ),
         )
     }
 }

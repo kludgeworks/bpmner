@@ -23,12 +23,11 @@ enum class RuleSeverity {
          * Map a raw lint-output severity string (e.g. from bpmnlint or Pkl rule metadata)
          * to the typed enum. Unrecognised or null values default to [WARNING].
          */
-        fun fromLintCategory(raw: String?): RuleSeverity =
-            when (raw?.lowercase()) {
-                "error" -> ERROR
-                "warn", "warning" -> WARNING
-                "info" -> INFO
-                else -> WARNING
-            }
+        fun fromLintCategory(raw: String?): RuleSeverity = when (raw?.lowercase()) {
+            "error" -> ERROR
+            "warn", "warning" -> WARNING
+            "info" -> INFO
+            else -> WARNING
+        }
     }
 }

@@ -54,10 +54,9 @@ data class BpmnAttemptRecord(
     val repairPromptFingerprint: String?,
     val topDiagnostics: List<String> = emptyList(),
 ) {
-    fun compact(): String =
-        "#$attemptNumber(repairs=$repairAttempts,graph=$graphDiagnostics,render=$renderDiagnostics," +
-            "xsd=$xsdDiagnostics,lint=$lintDiagnostics,diag=$diagnosticFingerprint," +
-            "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
+    fun compact(): String = "#$attemptNumber(repairs=$repairAttempts,graph=$graphDiagnostics,render=$renderDiagnostics," +
+        "xsd=$xsdDiagnostics,lint=$lintDiagnostics,diag=$diagnosticFingerprint," +
+        "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
 }
 
 class BpmnRefinementFailureException(

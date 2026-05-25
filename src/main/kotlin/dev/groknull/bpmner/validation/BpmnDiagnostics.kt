@@ -48,13 +48,12 @@ enum class BpmnDiagnosticSeverity {
          * the typed enum. Unrecognised or null values default to [WARNING] — the conservative
          * choice for the documentation-grade pipeline.
          */
-        fun fromLintCategory(raw: String?): BpmnDiagnosticSeverity =
-            when (raw?.lowercase()) {
-                "error" -> ERROR
-                "warn", "warning" -> WARNING
-                "info" -> INFO
-                else -> WARNING
-            }
+        fun fromLintCategory(raw: String?): BpmnDiagnosticSeverity = when (raw?.lowercase()) {
+            "error" -> ERROR
+            "warn", "warning" -> WARNING
+            "info" -> INFO
+            else -> WARNING
+        }
     }
 }
 
@@ -85,15 +84,14 @@ data class GlobalDiagnostics(
     fun countFor(source: BpmnDiagnosticSource): Int = diagnostics.count { it.source == source }
 }
 
-fun BpmnDiagnostic.format(): String =
-    buildString {
-        append("source=${source.name.lowercase()}")
-        rule?.let { append(", rule=$it") }
-        append(", severity=${severity.name.lowercase()}")
-        elementId?.let { append(", elementId=$it") }
-        objectRef?.let { append(", objectRef=$it") }
-        repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
-        ownerRef?.let { append(", owner=$it") }
-        kind?.let { append(", kind=${it.name.lowercase()}") }
-        append(": $message")
-    }
+fun BpmnDiagnostic.format(): String = buildString {
+    append("source=${source.name.lowercase()}")
+    rule?.let { append(", rule=$it") }
+    append(", severity=${severity.name.lowercase()}")
+    elementId?.let { append(", elementId=$it") }
+    objectRef?.let { append(", objectRef=$it") }
+    repairScope?.let { append(", repairScope=${it.name.lowercase()}") }
+    ownerRef?.let { append(", owner=$it") }
+    kind?.let { append(", kind=${it.name.lowercase()}") }
+    append(": $message")
+}

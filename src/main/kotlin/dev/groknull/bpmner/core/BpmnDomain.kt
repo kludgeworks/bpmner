@@ -60,10 +60,9 @@ data class BpmnRequest(
     override val clarificationHistory: List<ClarificationExchange> = emptyList(),
 ) : ApiBpmnRequest,
     PromptContributor {
-    override fun contribution(): String =
-        buildString {
-            appendLine(
-                """
+    override fun contribution(): String = buildString {
+        appendLine(
+            """
                 You are a BPMN process design expert. Given a workflow description — business, automated,
                 technical, scientific, or personal — generate a typed BPMN process definition object that
                 can be converted to valid BPMN 2.0 XML.
@@ -91,17 +90,17 @@ data class BpmnRequest(
                 - Use conditionExpression on conditional gateway branches when needed.
 
                 If you receive validation errors, fix them and return the full corrected object.
-                """.trimIndent(),
-            )
-            if (styleGuide != null) {
-                appendLine()
-                appendLine("---")
-                appendLine()
-                appendLine("## Style guide")
-                appendLine()
-                appendLine(styleGuide)
-            }
+            """.trimIndent(),
+        )
+        if (styleGuide != null) {
+            appendLine()
+            appendLine("---")
+            appendLine()
+            appendLine("## Style guide")
+            appendLine()
+            appendLine(styleGuide)
         }
+    }
 }
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")

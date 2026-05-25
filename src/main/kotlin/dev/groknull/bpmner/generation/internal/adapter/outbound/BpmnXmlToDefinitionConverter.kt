@@ -119,20 +119,19 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         )
     }
 
-    private fun parseDocument(xml: String): Document =
-        DocumentBuilderFactory
-            .newInstance()
-            .also {
-                it.isNamespaceAware = true
-                it.setFeature(DISALLOW_DOCTYPE_DECL, true)
-                it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
-                it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
-                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-                it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
-                it.isXIncludeAware = false
-                it.isExpandEntityReferences = false
-            }.newDocumentBuilder()
-            .parse(org.xml.sax.InputSource(StringReader(xml)))
+    private fun parseDocument(xml: String): Document = DocumentBuilderFactory
+        .newInstance()
+        .also {
+            it.isNamespaceAware = true
+            it.setFeature(DISALLOW_DOCTYPE_DECL, true)
+            it.setFeature(EXTERNAL_GENERAL_ENTITIES, false)
+            it.setFeature(EXTERNAL_PARAMETER_ENTITIES, false)
+            it.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+            it.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+            it.isXIncludeAware = false
+            it.isExpandEntityReferences = false
+        }.newDocumentBuilder()
+        .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun rejectIfHasDiagramInterchange(model: BpmnModelInstance) {
         if (model.getModelElementsByType(BpmnDiagram::class.java).isNotEmpty()) {
@@ -286,70 +285,69 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .flatMap { document.bpmnElements(it).toList() }
         return EventMetadata(
             eventDefinitions =
-                eventElements
-                    .associate { it.getAttribute("id") to it.eventDefinition() }
-                    .filterKeys { it.isNotBlank() },
+            eventElements
+                .associate { it.getAttribute("id") to it.eventDefinition() }
+                .filterKeys { it.isNotBlank() },
             isInterrupting =
-                document
-                    .bpmnElements("startEvent")
-                    .filter { it.hasAttribute("isInterrupting") }
-                    .associate { it.getAttribute("id") to it.getAttribute("isInterrupting").toBoolean() },
+            document
+                .bpmnElements("startEvent")
+                .filter { it.hasAttribute("isInterrupting") }
+                .associate { it.getAttribute("id") to it.getAttribute("isInterrupting").toBoolean() },
             attachedToRefs =
-                document
-                    .bpmnElements("boundaryEvent")
-                    .associate { it.getAttribute("id") to it.getAttribute("attachedToRef") }
-                    .filterValues { it.isNotBlank() },
+            document
+                .bpmnElements("boundaryEvent")
+                .associate { it.getAttribute("id") to it.getAttribute("attachedToRef") }
+                .filterValues { it.isNotBlank() },
             cancelActivity =
-                document
-                    .bpmnElements("boundaryEvent")
-                    .filter { it.hasAttribute("cancelActivity") }
-                    .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
+            document
+                .bpmnElements("boundaryEvent")
+                .filter { it.hasAttribute("cancelActivity") }
+                .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
             messages =
-                document
-                    .bpmnElements("message")
-                    .map { BpmnMessageRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                    .filter { it.id.isNotBlank() && it.name.isNotBlank() }
-                    .toList(),
+            document
+                .bpmnElements("message")
+                .map { BpmnMessageRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+                .filter { it.id.isNotBlank() && it.name.isNotBlank() }
+                .toList(),
             signals =
-                document
-                    .bpmnElements("signal")
-                    .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                    .filter { it.id.isNotBlank() && it.name.isNotBlank() }
-                    .toList(),
+            document
+                .bpmnElements("signal")
+                .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+                .filter { it.id.isNotBlank() && it.name.isNotBlank() }
+                .toList(),
             errors =
-                document
-                    .bpmnElements("error")
-                    .map {
-                        BpmnErrorRef(
-                            id = it.getAttribute("id"),
-                            code = it.getAttribute("errorCode"),
-                            name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
-                        )
-                    }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
-                    .toList(),
+            document
+                .bpmnElements("error")
+                .map {
+                    BpmnErrorRef(
+                        id = it.getAttribute("id"),
+                        code = it.getAttribute("errorCode"),
+                        name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
+                    )
+                }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
+                .toList(),
             escalations =
-                document
-                    .bpmnElements("escalation")
-                    .map {
-                        BpmnEscalationRef(
-                            id = it.getAttribute("id"),
-                            code = it.getAttribute("escalationCode"),
-                            name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
-                        )
-                    }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
-                    .toList(),
+            document
+                .bpmnElements("escalation")
+                .map {
+                    BpmnEscalationRef(
+                        id = it.getAttribute("id"),
+                        code = it.getAttribute("escalationCode"),
+                        name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
+                    )
+                }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
+                .toList(),
         )
     }
 
     @Suppress("MaxLineLength")
     private fun Document.bpmnElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_NS, localName).elements()
 
-    private fun org.w3c.dom.NodeList.elements(): Sequence<Element> =
-        sequence {
-            for (index in 0 until length) {
-                (item(index) as? Element)?.let { yield(it) }
-            }
+    private fun org.w3c.dom.NodeList.elements(): Sequence<Element> = sequence {
+        for (index in 0 until length) {
+            (item(index) as? Element)?.let { yield(it) }
         }
+    }
 
     private fun Element.eventDefinition(): BpmnEventDefinition {
         val child =

@@ -65,6 +65,7 @@ class BpmnDiagnosticSeverityTest {
         assertTrue(s.contains("rule=bpmner/evt-event-state-name"))
     }
 
-    private fun diag(severity: BpmnDiagnosticSeverity) =
-        BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, message = "x", severity = severity)
+    private fun diag(severity: BpmnDiagnosticSeverity): BpmnDiagnostic {
+        return BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, message = "x", severity = severity)
+    }
 }

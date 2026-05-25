@@ -60,8 +60,9 @@ class RepairStartupValidationTest {
         internal open fun lintingPort(): BpmnLintingPort = MissingHandlerLintingPort
 
         @Bean
-        internal open fun handlerRegistry(): BpmnLocalModelFixHandlerRegistry =
-            BpmnLocalModelFixHandlerRegistry(emptyList<BpmnLocalModelFixHandler>())
+        internal open fun handlerRegistry(): BpmnLocalModelFixHandlerRegistry {
+            return BpmnLocalModelFixHandlerRegistry(emptyList<BpmnLocalModelFixHandler>())
+        }
 
         @Bean
         internal open fun validator(
@@ -80,17 +81,16 @@ class RepairStartupValidationTest {
 
         override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
 
-        override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> =
-            mapOf(
-                "topo-01" to
-                    BpmnLintRuleCapability(
-                        id = "topo-01",
-                        kind = RepairKind.LOCAL_MODEL_FIX,
-                        repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                        fixHandler = "absentHandler",
-                        handlerExists = false,
-                        replacementMap = null,
-                    ),
-            )
+        override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = mapOf(
+            "topo-01" to
+                BpmnLintRuleCapability(
+                    id = "topo-01",
+                    kind = RepairKind.LOCAL_MODEL_FIX,
+                    repairSafety = RepairSafety.SAFE_AUTOMATIC,
+                    fixHandler = "absentHandler",
+                    handlerExists = false,
+                    replacementMap = null,
+                ),
+        )
     }
 }

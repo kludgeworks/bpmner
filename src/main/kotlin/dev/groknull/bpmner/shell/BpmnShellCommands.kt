@@ -97,8 +97,8 @@ class BpmnShellCommands(
         const val MAX_CLARIFICATION_ROUNDS = 3
     }
 
-    private fun askClarificationQuestions(questions: List<ClarificationQuestion>): List<ClarificationExchange> =
-        questions.mapNotNull { question ->
+    private fun askClarificationQuestions(questions: List<ClarificationQuestion>): List<ClarificationExchange> {
+        return questions.mapNotNull { question ->
             val answer = prompter.ask(question)?.trim().orEmpty()
             if (answer.isBlank()) return@mapNotNull null
             ClarificationExchange(
@@ -107,36 +107,35 @@ class BpmnShellCommands(
                 answerText = answer,
                 relatedMissingAreas = question.relatedMissingAreas,
                 relatedDimensions = question.relatedDimensions,
-                evidence =
-                    listOf(
-                        SourceEvidence(
-                            id = "clarification-${question.id}",
-                            text = answer,
-                            sourceType = EvidenceSourceType.CLARIFICATION,
-                            sourceRef = question.id,
-                        ),
+                evidence = listOf(
+                    SourceEvidence(
+                        id = "clarification-${question.id}",
+                        text = answer,
+                        sourceType = EvidenceSourceType.CLARIFICATION,
+                        sourceRef = question.id,
                     ),
+                ),
             )
         }
+    }
 
-    private fun responseFor(result: BpmnResult): String =
-        when (result.status) {
-            BpmnGenerationStatus.GENERATED -> {
-                "BPMN written to: ${result.outputFile ?: "(none)"}"
-            }
-
-            BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
-                "Clarification required. ${readinessSummary(result)}"
-            }
-
-            BpmnGenerationStatus.ALIGNMENT_FAILED -> {
-                "BPMN not generated because semantic alignment failed.${reportFileSuffix(result)}"
-            }
-
-            BpmnGenerationStatus.VALIDATION_FAILED -> {
-                "BPMN not generated because validation failed.${reportFileSuffix(result)}"
-            }
+    private fun responseFor(result: BpmnResult): String = when (result.status) {
+        BpmnGenerationStatus.GENERATED -> {
+            "BPMN written to: ${result.outputFile ?: "(none)"}"
         }
+
+        BpmnGenerationStatus.NEEDS_CLARIFICATION -> {
+            "Clarification required. ${readinessSummary(result)}"
+        }
+
+        BpmnGenerationStatus.ALIGNMENT_FAILED -> {
+            "BPMN not generated because semantic alignment failed.${reportFileSuffix(result)}"
+        }
+
+        BpmnGenerationStatus.VALIDATION_FAILED -> {
+            "BPMN not generated because validation failed.${reportFileSuffix(result)}"
+        }
+    }
 
     private fun readinessSummary(result: BpmnResult): String {
         val report = result.readinessReport ?: return reportFileSuffix(result)
@@ -145,12 +144,11 @@ class BpmnShellCommands(
         return "Verdict=${report.verdict}, score=${report.overallScore}$missing$reportFile"
     }
 
-    private fun missingAreasSummary(missingAreas: List<MissingProcessArea>): String =
-        if (missingAreas.isEmpty()) {
-            ""
-        } else {
-            ", missing=${missingAreas.joinToString { it.name }}"
-        }
+    private fun missingAreasSummary(missingAreas: List<MissingProcessArea>): String = if (missingAreas.isEmpty()) {
+        ""
+    } else {
+        ", missing=${missingAreas.joinToString { it.name }}"
+    }
 
     private fun reportFileSuffix(result: BpmnResult): String = result.reportFile?.let { ", report=$it" }.orEmpty()
 }

@@ -66,10 +66,10 @@ class BpmnAlignmentPostCheckerTest {
         val findings =
             AlignmentFindings(
                 issues =
-                    listOf(
-                        AlignmentIssue("Task_A", AlignmentClassification.ASSUMED),
-                        AlignmentIssue("Task_B", AlignmentClassification.ASSUMED),
-                    ),
+                listOf(
+                    AlignmentIssue("Task_A", AlignmentClassification.ASSUMED),
+                    AlignmentIssue("Task_B", AlignmentClassification.ASSUMED),
+                ),
                 rationale = "Two assumed tasks.",
             )
 
@@ -89,9 +89,9 @@ class BpmnAlignmentPostCheckerTest {
         val findings =
             AlignmentFindings(
                 issues =
-                    listOf(
-                        AlignmentIssue("Task_A", AlignmentClassification.PARTIALLY_COVERED),
-                    ),
+                listOf(
+                    AlignmentIssue("Task_A", AlignmentClassification.PARTIALLY_COVERED),
+                ),
                 rationale = "Partial coverage.",
             )
 

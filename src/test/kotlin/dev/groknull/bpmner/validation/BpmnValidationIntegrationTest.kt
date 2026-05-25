@@ -28,9 +28,9 @@ class BpmnValidationIntegrationTest {
         BpmnLintService(
             catalogService = RuleCatalogService(),
             engine =
-                BpmnLintJsEngine().apply {
-                    init()
-                },
+            BpmnLintJsEngine().apply {
+                init()
+            },
             pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
         )
     private val xsdValidator = BpmnXsdValidator()
@@ -56,11 +56,11 @@ class BpmnValidationIntegrationTest {
                 definition = definition,
                 xml = "MOCK_XML",
                 elementIndex =
-                    BpmnElementIndex(
-                        processId = definition.processId,
-                        nodeObjectRefs = emptyMap(),
-                        edgeObjectRefs = emptyMap(),
-                    ),
+                BpmnElementIndex(
+                    processId = definition.processId,
+                    nodeObjectRefs = emptyMap(),
+                    edgeObjectRefs = emptyMap(),
+                ),
                 sourceGraph = graph,
             )
 

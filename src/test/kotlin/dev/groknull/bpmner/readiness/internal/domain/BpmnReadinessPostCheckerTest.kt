@@ -93,14 +93,14 @@ class BpmnReadinessPostCheckerTest {
                     verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                     score = 60,
                     questions =
-                        listOf(
-                            ClarificationQuestion(
-                                id = "q1",
-                                questionText = "What starts the process?",
-                                relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
-                                relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
-                            ),
+                    listOf(
+                        ClarificationQuestion(
+                            id = "q1",
+                            questionText = "What starts the process?",
+                            relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                            relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
                         ),
+                    ),
                 ),
             )
 
@@ -182,12 +182,12 @@ class BpmnReadinessPostCheckerTest {
                     verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
                     score = 70,
                     questions =
-                        List(6) { index ->
-                            ClarificationQuestion(
-                                id = "q$index",
-                                questionText = "Question $index?",
-                            )
-                        },
+                    List(6) { index ->
+                        ClarificationQuestion(
+                            id = "q$index",
+                            questionText = "Question $index?",
+                        )
+                    },
                 ),
             )
 
@@ -214,13 +214,13 @@ class BpmnReadinessPostCheckerTest {
         verdict = verdict,
         overallScore = score,
         dimensions =
-            ReadinessDimension.entries.map {
-                ReadinessDimensionScore(
-                    dimension = it,
-                    score = score,
-                    rationale = "Model score for ${it.name}.",
-                )
-            },
+        ReadinessDimension.entries.map {
+            ReadinessDimensionScore(
+                dimension = it,
+                score = score,
+                rationale = "Model score for ${it.name}.",
+            )
+        },
         clarificationQuestions = questions,
         rationale = "Model rationale.",
     )

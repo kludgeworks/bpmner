@@ -71,16 +71,16 @@ class BpmnGeneratorAgentTest {
             ValidatedProcessContract(
                 contract = validContract().contract,
                 report =
-                    ContractValidationReport(
-                        listOf(
-                            ContractValidationIssue(
-                                code = ContractValidationCode.INSUFFICIENT_ACTIVITIES,
-                                severity = ContractIssueSeverity.ERROR,
-                                message = "At least two activities are required",
-                                targetId = "contract-claim",
-                            ),
+                ContractValidationReport(
+                    listOf(
+                        ContractValidationIssue(
+                            code = ContractValidationCode.INSUFFICIENT_ACTIVITIES,
+                            severity = ContractIssueSeverity.ERROR,
+                            message = "At least two activities are required",
+                            targetId = "contract-claim",
                         ),
                     ),
+                ),
             )
 
         val error =
@@ -93,65 +93,63 @@ class BpmnGeneratorAgentTest {
         assertTrue(context.llmInvocations.isEmpty())
     }
 
-    private fun agent() =
-        BpmnGeneratorAgent(
-            config = BpmnConfig(),
-            bpmnConverter = NoopRenderer,
-            metricsCalculator = BpmnGeneratorMetrics(),
-            fidelityChecker = BpmnContractFidelityChecker(),
-            defaultFlowAssigner = DefaultFlowAssigner(),
-            eventPublisher = ApplicationEventPublisher {},
-            contractRenderer = ProcessContractMarkdownRenderer(),
-        )
+    private fun agent() = BpmnGeneratorAgent(
+        config = BpmnConfig(),
+        bpmnConverter = NoopRenderer,
+        metricsCalculator = BpmnGeneratorMetrics(),
+        fidelityChecker = BpmnContractFidelityChecker(),
+        defaultFlowAssigner = DefaultFlowAssigner(),
+        eventPublisher = ApplicationEventPublisher {},
+        contractRenderer = ProcessContractMarkdownRenderer(),
+    )
 
     private fun validContract(): ValidatedProcessContract {
         val sources = listOf("ev1")
         return ValidatedProcessContract(
             contract =
-                ProcessContract(
-                    id = "contract-claim",
-                    processName = "Handle claim",
-                    summary = "Claims are reviewed and closed.",
-                    trigger = "Claim is submitted",
-                    triggerSourceIds = sources,
-                    activities =
-                        listOf(
-                            ContractActivity(
-                                id = "a-review",
-                                name = "Review claim",
-                                sourceIds = sources,
-                            ),
-                            ContractActivity(
-                                id = "a-close",
-                                name = "Close claim",
-                                sourceIds = sources,
-                            ),
-                        ),
-                    endStates =
-                        listOf(
-                            ContractEndState(
-                                id = "end-done",
-                                name = "Claim closed",
-                                sourceIds = sources,
-                            ),
-                        ),
+            ProcessContract(
+                id = "contract-claim",
+                processName = "Handle claim",
+                summary = "Claims are reviewed and closed.",
+                trigger = "Claim is submitted",
+                triggerSourceIds = sources,
+                activities =
+                listOf(
+                    ContractActivity(
+                        id = "a-review",
+                        name = "Review claim",
+                        sourceIds = sources,
+                    ),
+                    ContractActivity(
+                        id = "a-close",
+                        name = "Close claim",
+                        sourceIds = sources,
+                    ),
                 ),
+                endStates =
+                listOf(
+                    ContractEndState(
+                        id = "end-done",
+                        name = "Claim closed",
+                        sourceIds = sources,
+                    ),
+                ),
+            ),
             report = ContractValidationReport(emptyList()),
         )
     }
 
     private object NoopRenderer : BpmnRenderer {
-        override fun render(definition: BpmnDefinition): RenderedBpmn =
-            RenderedBpmn(
-                definition = definition,
-                xml = "<definitions />",
-                elementIndex =
-                    BpmnElementIndex(
-                        processId = definition.processId,
-                        nodeObjectRefs = emptyMap(),
-                        edgeObjectRefs = emptyMap(),
-                    ),
-            )
+        override fun render(definition: BpmnDefinition): RenderedBpmn = RenderedBpmn(
+            definition = definition,
+            xml = "<definitions />",
+            elementIndex =
+            BpmnElementIndex(
+                processId = definition.processId,
+                nodeObjectRefs = emptyMap(),
+                edgeObjectRefs = emptyMap(),
+            ),
+        )
 
         override fun render(graph: LaidOutProcessGraph): RenderedBpmn = render(graph.definition)
     }

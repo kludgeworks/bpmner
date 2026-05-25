@@ -75,9 +75,8 @@ class BpmnWebController(
         }
     }
 
-    private fun blockedBody(result: BpmnResult): WebGenerationBlockedResponse =
-        WebGenerationBlockedResponse(
-            status = result.status.name,
-            reportFile = result.reportFile,
-        )
+    private fun blockedBody(result: BpmnResult): WebGenerationBlockedResponse = WebGenerationBlockedResponse(
+        status = result.status.name,
+        reportFile = result.reportFile,
+    )
 }

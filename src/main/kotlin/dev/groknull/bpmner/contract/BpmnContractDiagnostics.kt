@@ -62,11 +62,10 @@ data class ValidatedProcessContract(
     val isValid: Boolean = report.isValid
 }
 
-fun ContractValidationIssue.format(): String =
-    buildString {
-        append("code=${code.name.lowercase()}")
-        append(", severity=${severity.name.lowercase()}")
-        targetId?.let { append(", targetId=$it") }
-        if (evidenceIds.isNotEmpty()) append(", evidenceIds=${evidenceIds.joinToString(",")}")
-        append(": $message")
-    }
+fun ContractValidationIssue.format(): String = buildString {
+    append("code=${code.name.lowercase()}")
+    append(", severity=${severity.name.lowercase()}")
+    targetId?.let { append(", targetId=$it") }
+    if (evidenceIds.isNotEmpty()) append(", evidenceIds=${evidenceIds.joinToString(",")}")
+    append(": $message")
+}

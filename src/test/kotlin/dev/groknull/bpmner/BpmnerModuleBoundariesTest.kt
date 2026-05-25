@@ -47,8 +47,8 @@ class BpmnerModuleBoundariesTest {
         rule.check(classes)
     }
 
-    private fun notHaveDomainName(): ArchCondition<JavaClass> =
-        object : ArchCondition<JavaClass>("not have a domain-flavored name") {
+    private fun notHaveDomainName(): ArchCondition<JavaClass> {
+        return object : ArchCondition<JavaClass>("not have a domain-flavored name") {
             override fun check(
                 item: JavaClass,
                 events: ConditionEvents,
@@ -64,6 +64,7 @@ class BpmnerModuleBoundariesTest {
                 }
             }
         }
+    }
 
     private companion object {
         val DOMAIN_NAME_PATTERN =
@@ -86,13 +87,14 @@ class BpmnerModuleBoundariesTest {
                 "ClarificationExchange",
             )
 
-        fun notAllowedInCore(): DescribedPredicate<JavaClass> =
-            object : DescribedPredicate<JavaClass>("is not on the core allowlist") {
+        fun notAllowedInCore(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>("is not on the core allowlist") {
                 override fun test(input: JavaClass): Boolean = input.simpleName !in CORE_ALLOWLIST
             }
+        }
 
-        fun internalNonCoreClass(): DescribedPredicate<JavaClass> =
-            object : DescribedPredicate<JavaClass>("is in another bpmner module") {
+        fun internalNonCoreClass(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>("is in another bpmner module") {
                 override fun test(input: JavaClass): Boolean {
                     val pkg = input.packageName
                     if (!pkg.startsWith("dev.groknull.bpmner")) return false
@@ -103,5 +105,6 @@ class BpmnerModuleBoundariesTest {
                     return true
                 }
             }
+        }
     }
 }

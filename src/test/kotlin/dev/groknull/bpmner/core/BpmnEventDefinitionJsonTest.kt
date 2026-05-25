@@ -22,14 +22,14 @@ class BpmnEventDefinitionJsonTest {
                 processId = "Process_events",
                 processName = "Event starts",
                 nodes =
-                    listOf(
-                        BpmnStartEvent(
-                            id = "Start_timer",
-                            name = "Every morning",
-                            eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.CYCLE, "R/PT24H"),
-                        ),
-                        BpmnEndEvent("End_1", "Done"),
+                listOf(
+                    BpmnStartEvent(
+                        id = "Start_timer",
+                        name = "Every morning",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.CYCLE, "R/PT24H"),
                     ),
+                    BpmnEndEvent("End_1", "Done"),
+                ),
                 sequences = listOf(BpmnEdge("Flow_1", "Start_timer", "End_1")),
             )
 

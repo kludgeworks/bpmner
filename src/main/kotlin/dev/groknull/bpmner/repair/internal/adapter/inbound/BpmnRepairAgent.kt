@@ -22,30 +22,30 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 @PrimaryAdapter
 @Agent(
     description =
-        "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+    "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
 )
 internal class BpmnRepairAgent(
     private val refinementEngine: BpmnRefinementEngine,
 ) {
     @AchievesGoal(
         description =
-            "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
+        "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
         export =
-            Export(
-                name = "repairBpmn",
-                remote = true,
-                startingInputTypes = [
-                    BpmnRequest::class,
-                    LaidOutProcessGraph::class,
-                    RenderedBpmn::class,
-                    ValidatedProcessContract::class,
-                ],
-            ),
+        Export(
+            name = "repairBpmn",
+            remote = true,
+            startingInputTypes = [
+                BpmnRequest::class,
+                LaidOutProcessGraph::class,
+                RenderedBpmn::class,
+                ValidatedProcessContract::class,
+            ],
+        ),
     )
     @Action(
         description =
-            "Iteratively validate and repair a generated BPMN process graph" +
-                " until it passes all XSD and lint rules",
+        "Iteratively validate and repair a generated BPMN process graph" +
+            " until it passes all XSD and lint rules",
         actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
     )
     fun repair(
@@ -54,8 +54,7 @@ internal class BpmnRepairAgent(
         rendered: RenderedBpmn,
         validatedContract: ValidatedProcessContract,
         context: ActionContext,
-    ): ValidatedBpmnXml =
-        // Take ValidatedProcessContract (the wrapper produced by BpmnContractAgent) rather
+    ): ValidatedBpmnXml = // Take ValidatedProcessContract (the wrapper produced by BpmnContractAgent) rather
         // than the bare ProcessContract. The planner can satisfy this input via the existing
         // contract-extraction action; requiring a bare ProcessContract would leave the
         // planner stuck because no action in the agent graph produces one. Unwrap to the
