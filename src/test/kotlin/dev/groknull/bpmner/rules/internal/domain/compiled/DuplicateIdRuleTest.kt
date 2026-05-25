@@ -27,17 +27,17 @@ class DuplicateIdRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s"),
-                            BpmnUserTask(id = "dup"),
-                            BpmnUserTask(id = "dup"),
-                            BpmnEndEvent(id = "e"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnUserTask(id = "dup"),
+                        BpmnUserTask(id = "dup"),
+                        BpmnEndEvent(id = "e"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "dup"),
-                            BpmnEdge(id = "f2", sourceRef = "dup", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "dup"),
+                        BpmnEdge(id = "f2", sourceRef = "dup", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -61,10 +61,10 @@ class DuplicateIdRuleTest {
                     processName = "P",
                     nodes = listOf(BpmnStartEvent(id = "s"), BpmnEndEvent(id = "e")),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "dup", sourceRef = "s", targetRef = "e"),
-                            BpmnEdge(id = "dup", sourceRef = "s", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "dup", sourceRef = "s", targetRef = "e"),
+                        BpmnEdge(id = "dup", sourceRef = "s", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -104,10 +104,10 @@ class DuplicateIdRuleTest {
                     processName = "P",
                     nodes = listOf(BpmnStartEvent(id = "s"), BpmnUserTask(id = "t"), BpmnEndEvent(id = "e")),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t"),
-                            BpmnEdge(id = "f2", sourceRef = "t", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "t"),
+                        BpmnEdge(id = "f2", sourceRef = "t", targetRef = "e"),
+                    ),
                 ),
             )
 

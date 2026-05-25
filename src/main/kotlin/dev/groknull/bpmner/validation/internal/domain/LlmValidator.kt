@@ -10,7 +10,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
-import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleCatalogService
+import dev.groknull.bpmner.validation.RuleCatalogService
 import org.springframework.stereotype.Component
 
 @Component

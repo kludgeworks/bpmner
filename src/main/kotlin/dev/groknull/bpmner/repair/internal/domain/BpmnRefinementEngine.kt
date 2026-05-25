@@ -14,9 +14,9 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.withUpdatedDefinition
+import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnRenderer
-import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
-import dev.groknull.bpmner.generation.internal.domain.DefaultFlowAssigner
+import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome

@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.rules
 
+import org.springframework.modulith.ApplicationModule
+
 /**
  * Rule engine module — orchestrates evaluation of
  * [dev.groknull.bpmner.api.BpmnRule] implementations against a `BpmnDefinition`.
@@ -15,7 +17,7 @@ package dev.groknull.bpmner.rules
  * - `RuleProfile` for severity overrides
  * - Default implementations in `internal/domain/`
  *
- * Populated by Phase 1D (#212). This marker object ensures Spring Modulith
- * detects the module by convention.
+ * Populated by Phase 1D (#212).
  */
+@ApplicationModule(allowedDependencies = ["api"])
 internal object RulesModule

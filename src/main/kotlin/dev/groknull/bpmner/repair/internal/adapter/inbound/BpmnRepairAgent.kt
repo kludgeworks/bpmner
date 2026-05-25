@@ -17,9 +17,9 @@ import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Application
 
-@PrimaryAdapter
+@Application
 @Agent(
     description =
     "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",

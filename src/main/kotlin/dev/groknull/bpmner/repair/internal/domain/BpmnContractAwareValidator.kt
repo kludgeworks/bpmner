@@ -9,8 +9,8 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnFidelitySeverity
-import dev.groknull.bpmner.generation.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
@@ -24,7 +24,7 @@ import dev.groknull.bpmner.validation.GlobalDiagnostics
  * graph) with the [BpmnContractFidelityChecker] (contract→BPMN topology correspondence).
  *
  * Exists in the repair domain layer so that the `validation` module remains contract-agnostic.
- * The [BpmnValidator] interface and [dev.groknull.bpmner.validation.internal.domain.BpmnEvaluationPipeline]
+ * The [BpmnValidator] interface and [dev.groknull.bpmner.validation.BpmnEvaluationPipeline]
  * are not modified.
  *
  * Fidelity issues are projected as [BpmnDiagnostic] entries with `source = GRAPH`,

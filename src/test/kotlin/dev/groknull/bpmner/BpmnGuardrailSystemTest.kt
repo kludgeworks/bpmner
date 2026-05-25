@@ -28,9 +28,9 @@ import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnLintService
-import dev.groknull.bpmner.validation.internal.adapter.outbound.BpmnXsdValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -58,9 +58,9 @@ import java.nio.file.Path
         "bpmner.readiness.clarification-threshold=40",
     ],
 )
-class BpmnGuardrailSystemTest : EmbabelMockitoIntegrationTest() {
-    @Autowired
-    private lateinit var generationUseCase: BpmnGenerationUseCase
+class BpmnGuardrailSystemTest(
+    @Autowired private val generationUseCase: BpmnGenerationUseCase,
+) : EmbabelMockitoIntegrationTest() {
 
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator

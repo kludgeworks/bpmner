@@ -29,18 +29,18 @@ class DefaultFlowRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s"),
-                            BpmnParallelGateway(id = "pgw"),
-                            BpmnUserTask(id = "a", name = "A"),
-                            BpmnEndEvent(id = "e"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnParallelGateway(id = "pgw"),
+                        BpmnUserTask(id = "a", name = "A"),
+                        BpmnEndEvent(id = "e"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "pgw"),
-                            BpmnEdge(id = "f-default", sourceRef = "pgw", targetRef = "a", isDefault = true),
-                            BpmnEdge(id = "f3", sourceRef = "a", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "pgw"),
+                        BpmnEdge(id = "f-default", sourceRef = "pgw", targetRef = "a", isDefault = true),
+                        BpmnEdge(id = "f3", sourceRef = "a", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -61,10 +61,10 @@ class DefaultFlowRuleTest {
                     processName = "P",
                     nodes = listOf(BpmnStartEvent(id = "s"), BpmnEndEvent(id = "e")),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "e"),
-                            BpmnEdge(id = "f-orphan", sourceRef = "missing", targetRef = "e", isDefault = true),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "e"),
+                        BpmnEdge(id = "f-orphan", sourceRef = "missing", targetRef = "e", isDefault = true),
+                    ),
                 ),
             )
 
@@ -80,21 +80,21 @@ class DefaultFlowRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s"),
-                            BpmnExclusiveGateway(id = "gw", name = "Q?"),
-                            BpmnUserTask(id = "a", name = "A"),
-                            BpmnUserTask(id = "b", name = "B"),
-                            BpmnEndEvent(id = "e"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnExclusiveGateway(id = "gw", name = "Q?"),
+                        BpmnUserTask(id = "a", name = "A"),
+                        BpmnUserTask(id = "b", name = "B"),
+                        BpmnEndEvent(id = "e"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
-                            BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
-                            BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", isDefault = true),
-                            BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
-                            BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
+                        BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
+                        BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", isDefault = true),
+                        BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
+                        BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -112,21 +112,21 @@ class DefaultFlowRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s"),
-                            BpmnExclusiveGateway(id = "gw", name = "Q?"),
-                            BpmnUserTask(id = "a", name = "A"),
-                            BpmnUserTask(id = "b", name = "B"),
-                            BpmnEndEvent(id = "e"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnExclusiveGateway(id = "gw", name = "Q?"),
+                        BpmnUserTask(id = "a", name = "A"),
+                        BpmnUserTask(id = "b", name = "B"),
+                        BpmnEndEvent(id = "e"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
-                            BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
-                            BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", conditionExpression = "x"),
-                            BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
-                            BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
+                        BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
+                        BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", conditionExpression = "x"),
+                        BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
+                        BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
+                    ),
                 ),
             )
 

@@ -30,16 +30,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnSendTask(id = "send", name = "Notify", messageRef = "m-missing"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnSendTask(id = "send", name = "Notify", messageRef = "m-missing"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
-                            BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
+                        BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
+                    ),
                     messages = listOf(BpmnMessageRef(id = "m-known", name = "Known")),
                 ),
             )
@@ -60,16 +60,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnSendTask(id = "send", name = "Notify", messageRef = " "),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnSendTask(id = "send", name = "Notify", messageRef = " "),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
-                            BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
+                        BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -89,16 +89,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnReceiveTask(id = "recv", name = "Wait", messageRef = "m-missing"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnReceiveTask(id = "recv", name = "Wait", messageRef = "m-missing"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "recv"),
-                            BpmnEdge(id = "f2", sourceRef = "recv", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "recv"),
+                        BpmnEdge(id = "f2", sourceRef = "recv", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -115,16 +115,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnBusinessRuleTask(id = "br", name = "Apply rules", decisionRef = " "),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnBusinessRuleTask(id = "br", name = "Apply rules", decisionRef = " "),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "br"),
-                            BpmnEdge(id = "f2", sourceRef = "br", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "br"),
+                        BpmnEdge(id = "f2", sourceRef = "br", targetRef = "e"),
+                    ),
                 ),
             )
 
@@ -142,16 +142,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnSendTask(id = "send", name = "Notify", messageRef = "m-known"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnSendTask(id = "send", name = "Notify", messageRef = "m-known"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
-                            BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "send"),
+                        BpmnEdge(id = "f2", sourceRef = "send", targetRef = "e"),
+                    ),
                     messages = listOf(BpmnMessageRef(id = "m-known", name = "Known")),
                 ),
             )
@@ -167,16 +167,16 @@ class TaskPayloadRuleTest {
                     processId = "P",
                     processName = "P",
                     nodes =
-                        listOf(
-                            BpmnStartEvent(id = "s", name = "Started"),
-                            BpmnBusinessRuleTask(id = "br", name = "Apply", decisionRef = "d1"),
-                            BpmnEndEvent(id = "e", name = "Done"),
-                        ),
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnBusinessRuleTask(id = "br", name = "Apply", decisionRef = "d1"),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
                     sequences =
-                        listOf(
-                            BpmnEdge(id = "f1", sourceRef = "s", targetRef = "br"),
-                            BpmnEdge(id = "f2", sourceRef = "br", targetRef = "e"),
-                        ),
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "br"),
+                        BpmnEdge(id = "f2", sourceRef = "br", targetRef = "e"),
+                    ),
                 ),
             )
 
