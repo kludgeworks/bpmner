@@ -11,10 +11,15 @@ import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import org.junit.jupiter.api.Test
 
 /**
- * Guards the `api` shared-kernel module: its types must never depend on Jackson, Jakarta
- * Validation, Spring, or Embabel. Annotated implementations stay in `core/`; `api/` is the
- * neutral contract layer everyone — including future Tier-3 plugin authors — can depend on
+ * Guards the `api` shared-kernel module: its **contract types** must never depend on Jackson,
+ * Jakarta Validation, Spring, or Embabel. Annotated implementations stay in `core/`; `api/` is
+ * the neutral contract layer everyone — including future Tier-3 plugin authors — can depend on
  * without pulling in the framework world.
+ *
+ * Excluded: module-marker objects (suffix `Module`, e.g. `ApiModule`). They carry the
+ * `@org.springframework.modulith.ApplicationModule` annotation for Spring Modulith's module-
+ * boundary gate (#215), which is build-tooling metadata — not a runtime dependency that any
+ * api consumer would observe. The exclusion is by simple-name suffix.
  */
 class ApiAnnotationFreeTest {
     private val classes =
@@ -27,6 +32,8 @@ class ApiAnnotationFreeTest {
         noClasses()
             .that()
             .resideInAPackage("..bpmner.api..")
+            .and()
+            .haveSimpleNameNotEndingWith("Module")
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("com.fasterxml.jackson..")
@@ -38,6 +45,8 @@ class ApiAnnotationFreeTest {
         noClasses()
             .that()
             .resideInAPackage("..bpmner.api..")
+            .and()
+            .haveSimpleNameNotEndingWith("Module")
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("jakarta..")
@@ -49,6 +58,8 @@ class ApiAnnotationFreeTest {
         noClasses()
             .that()
             .resideInAPackage("..bpmner.api..")
+            .and()
+            .haveSimpleNameNotEndingWith("Module")
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("org.springframework..")
@@ -60,6 +71,8 @@ class ApiAnnotationFreeTest {
         noClasses()
             .that()
             .resideInAPackage("..bpmner.api..")
+            .and()
+            .haveSimpleNameNotEndingWith("Module")
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("com.embabel..")

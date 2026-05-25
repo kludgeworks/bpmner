@@ -124,12 +124,14 @@ test_suite(
 test_suite(
     name = "ci_kotlin",
     tests = [
+        "//src/test:ApiAnnotationFreeTest",
         "//src/test:BpmnAgentFlowSystemTest",
         "//src/test:BpmnAlignmentFailureIntegrationTest",
         "//src/test:BpmnGuardrailSystemTest",
         "//src/test:BpmnerArchitectureTest",
         "//src/test:BpmnerModuleBoundariesTest",
         "//src/test:BpmnerModulithTest",
+        "//src/test:BpmnerParityTest",
         "//src/test:bpmnerAppRunfilesDataTest",
     ],
 )
