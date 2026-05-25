@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 
 import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform
+import com.embabel.agent.core.Budget
 import com.embabel.agent.core.Goal
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.spi.common.Constants
@@ -31,7 +32,7 @@ internal class AgentPlatformBpmnAgentInvoker(
         val process =
             agentPlatform.createAgentProcessFrom(
                 goalAgent,
-                ProcessOptions(),
+                syncGenerationProcessOptions(),
                 request,
                 assessment,
             )
@@ -46,13 +47,18 @@ internal class AgentPlatformBpmnAgentInvoker(
         val agent =
             agentPlatform.agents().find { it.name == GENERATE_BPMN_GOAL_NAME }
                 ?: error("Agent platform has no agent exporting goal '$GENERATE_BPMN_GOAL_NAME'")
-        val process = agentPlatform.createAgentProcessFrom(agent, ProcessOptions(), request, assessment)
+        val process =
+            agentPlatform.createAgentProcessFrom(
+                agent,
+                asyncGenerationProcessOptions(),
+                request,
+                assessment,
+            )
         agentPlatform.start(process)
         return process.id
     }
 
-    // Mirrors AgentPlatformTypedOps.transform: spin up a synthetic goal agent over the platform
-    // scope so the planner can draw on every deployed action when planning toward BpmnResult.
+    // Seed both request and readiness assessment; AgentPlatformTypedOps supports one input binding.
     private fun synthesizeResultAgent(resultClass: Class<*>): Agent =
         agentPlatform
             .createAgent(
@@ -69,5 +75,16 @@ internal class AgentPlatformBpmnAgentInvoker(
 
     companion object {
         private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"
+
+        private fun syncGenerationProcessOptions(): ProcessOptions =
+            ProcessOptions(
+                budget = Budget(actions = 100),
+                ephemeral = true,
+            )
+
+        private fun asyncGenerationProcessOptions(): ProcessOptions =
+            ProcessOptions(
+                budget = Budget(actions = 100),
+            )
     }
 }
