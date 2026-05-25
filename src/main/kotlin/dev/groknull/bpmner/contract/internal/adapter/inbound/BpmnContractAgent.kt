@@ -19,10 +19,10 @@ import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
-@PrimaryAdapter
+@Application
 @Agent(description = "Extract a source-grounded process contract from natural-language input")
 internal class BpmnContractAgent(
     private val config: BpmnConfig,

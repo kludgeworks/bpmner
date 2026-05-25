@@ -24,7 +24,7 @@ import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import dev.groknull.bpmner.validation.LintIssue
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import dev.groknull.bpmner.validation.XsdValidationIssue
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
 /**
@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory
  * and there are no layout-sensitive lint rules left in the catalog after auto-layout took over
  * coordinate generation.
  */
-@PrimaryAdapter
+@Application
 @Agent(description = "Apply auto-layout and final validation to validated BPMN XML")
 internal class BpmnLayoutAgent(
     private val layoutService: BpmnLayoutPort,
