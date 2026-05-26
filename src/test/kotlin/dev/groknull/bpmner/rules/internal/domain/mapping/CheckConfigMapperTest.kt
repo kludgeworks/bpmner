@@ -27,8 +27,9 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
-import dev.groknull.bpmner.pkl.generated.CheckPrimitive as PklCheckPrim
+import dev.groknull.bpmner.pkl.CheckPrimitive as PklCheckPrim
 
+@Suppress("TooManyFunctions") // 15 cases: one per primitive type plus rejection paths
 internal class CheckConfigMapperTest {
 
     @Test

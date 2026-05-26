@@ -1,4 +1,4 @@
-module dev.groknull.bpmner.pkl.generated.BpmnRule
+module dev.groknull.bpmner.pkl.BpmnRule
 
 import "CheckPrimitive.pkl"
 import "RuleCategory.pkl"

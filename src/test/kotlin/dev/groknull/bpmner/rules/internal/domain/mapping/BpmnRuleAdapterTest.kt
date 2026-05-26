@@ -8,14 +8,14 @@ package dev.groknull.bpmner.rules.internal.domain.mapping
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.pkl.generated.RuleCategory
+import dev.groknull.bpmner.pkl.RuleCategory
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNull
-import dev.groknull.bpmner.pkl.generated.BpmnRule as PklBpmnRule
-import dev.groknull.bpmner.pkl.generated.CheckPrimitive as PklCheckPrim
+import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
+import dev.groknull.bpmner.pkl.CheckPrimitive as PklCheckPrim
 
 internal class BpmnRuleAdapterTest {
 
@@ -62,9 +62,39 @@ internal class BpmnRuleAdapterTest {
         assertEquals(true, failure.message?.contains("checkConfig"))
     }
 
+    @Test
+    fun `severity=OFF rule is skipped`() {
+        val generated = newGenerated(
+            checkPrimitive = PklCheckPrim.Primitive.PROPERTY_PATTERN_CHECK,
+            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null),
+            severity = PklBpmnRule.Severity.OFF,
+        )
+
+        assertNull(BpmnRuleAdapter.adapt(generated))
+    }
+
+    @Test
+    fun `staticConfig Pkl object propagates to RuleMetadata`() {
+        val staticConfig: Map<String, Any> = mapOf(
+            "discouragedLeadingVerbs" to listOf("manage", "handle"),
+            "minLen" to 3,
+        )
+        val generated = newGenerated(
+            checkPrimitive = PklCheckPrim.Primitive.PROPERTY_PATTERN_CHECK,
+            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null),
+            staticConfig = staticConfig,
+        )
+
+        val adapted = BpmnRuleAdapter.adapt(generated)
+            ?: error("adapter returned null for rule with checkPrimitive set")
+        assertEquals<Map<String, Any>?>(staticConfig, adapted.metadata.staticConfig)
+    }
+
     private fun newGenerated(
         checkPrimitive: PklCheckPrim.Primitive?,
         checkConfig: PklCheckPrim.CheckConfig?,
+        severity: PklBpmnRule.Severity = PklBpmnRule.Severity.WARNING,
+        staticConfig: Any? = null,
     ): PklBpmnRule {
         // Constructor arg order matches BpmnRule.pkl: name, category, slug, id, intent,
         // forModellers, forAI, targetElements, severity, errorMessages, staticConfig,
@@ -87,9 +117,9 @@ internal class BpmnRuleAdapterTest {
             "for modellers",
             "for AI",
             listOf("bpmn:Task"),
-            PklBpmnRule.Severity.WARNING,
+            severity,
             mapOf("default" to "violation"),
-            null,
+            staticConfig,
             checkPrimitive,
             checkConfig,
             repair,

@@ -1,4 +1,4 @@
-module dev.groknull.bpmner.pkl.generated.CheckPrimitive
+module dev.groknull.bpmner.pkl.CheckPrimitive
 
 /// Schema for the Phase 2B check primitive system.
 ///

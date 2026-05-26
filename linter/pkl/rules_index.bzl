@@ -28,11 +28,14 @@ def _rules_index_impl(ctx):
         "",
     ]
 
+    # Wrap each alias in backticks so a rule filename whose camelCase form collides with a
+    # Pkl reserved word (`module`, `import`, `local`, `class`, …) still produces a parseable
+    # RulesIndex.pkl. No current rule triggers this; the backticks make future additions safe.
     aliases = []
     for f in rule_files:
         alias = _to_pkl_identifier(f.basename)
-        lines.append('import "rules/{}" as {}'.format(f.basename, alias))
-        aliases.append(alias)
+        lines.append('import "rules/{}" as `{}`'.format(f.basename, alias))
+        aliases.append("`{}`".format(alias))
 
     lines.append("")
     lines.append("local ruleList: List = List(")

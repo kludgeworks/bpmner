@@ -1,4 +1,4 @@
-module dev.groknull.bpmner.pkl.generated.RuleCategory
+module dev.groknull.bpmner.pkl.RuleCategory
 
 class Category {
   name: "Activity"

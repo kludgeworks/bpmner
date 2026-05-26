@@ -10,7 +10,7 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.pkl.generated.BpmnRule as PklBpmnRule
+import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
 
 /**
  * The output of adapting a Pkl-generated rule POJO into Kotlin domain types. The mapped
@@ -29,9 +29,15 @@ internal data class AdaptedRule(
 internal object BpmnRuleAdapter {
     fun adapt(generated: PklBpmnRule): AdaptedRule? {
         val primitive = generated.checkPrimitive ?: return null
+        // Pkl's `severity = "off"` is an author-level opt-out (today only UncommonAbbreviations.pkl
+        // uses it). Surfacing it as RuleSeverity.WARNING would silently re-enable the rule, so
+        // disabled rules drop out here — same null-return contract as no-checkPrimitive. The
+        // loader counts both in the skipped tally.
+        if (generated.severity == PklBpmnRule.Severity.OFF) return null
+
         val config = generated.checkConfig
             ?: error(
-                "Rule '${generated.id}' declares checkPrimitive=${primitive.toString()} but no checkConfig — " +
+                "Rule '${generated.id}' declares checkPrimitive=$primitive but no checkConfig — " +
                     "both must be set together (see CheckPrimitive.pkl)",
             )
 
@@ -48,7 +54,7 @@ internal object BpmnRuleAdapter {
                 errorMessages = generated.errorMessages,
                 severity = severityFromPkl(generated.severity),
                 repair = repairFromPkl(generated.repair),
-                staticConfig = null,
+                staticConfig = staticConfigFromPkl(generated.id, generated.staticConfig),
                 checkPrimitive = primitive.toString(),
                 checkConfig = null,
                 aliases = generated.aliases,
@@ -64,12 +70,7 @@ internal object BpmnRuleAdapter {
         PklBpmnRule.Severity.ERROR -> RuleSeverity.ERROR
         PklBpmnRule.Severity.WARNING -> RuleSeverity.WARNING
         PklBpmnRule.Severity.INFO -> RuleSeverity.INFO
-        // Pkl's "off" maps to WARNING with the expectation that the loader inspects severity
-        // separately if it wants to drop the rule. The domain [RuleSeverity] enum has no OFF —
-        // keep it that way to avoid spreading a fourth state through the diagnostic pipeline
-        // for the single case where an author wants to disable a rule via Pkl. The right place
-        // to suppress in that case is a future RuleProfile (Phase 2E).
-        PklBpmnRule.Severity.OFF -> RuleSeverity.WARNING
+        PklBpmnRule.Severity.OFF -> error("severity=off rules are filtered before this point in adapt()")
     }
 
     private fun repairFromPkl(pkl: PklBpmnRule.Repair): RepairMetadata = RepairMetadata(
@@ -78,4 +79,19 @@ internal object BpmnRuleAdapter {
         handler = pkl.handler,
         replacementMap = pkl.replacementMap,
     )
+
+    // Pkl's `staticConfig: Dynamic? = null` maps to Java Object. In practice Pkl objects and
+    // Mappings deserialize to Map<String, Object>, which is what DeterministicTopologyRepairStrategy
+    // expects when it casts meta.staticConfig (see HandlerConfig). Anything else is a rule-author
+    // mistake worth surfacing at load time rather than letting it fail later as an empty handler
+    // config.
+    @Suppress("UNCHECKED_CAST")
+    private fun staticConfigFromPkl(ruleId: String, raw: Any?): Map<String, Any>? = when (raw) {
+        null -> null
+        is Map<*, *> -> raw as Map<String, Any>
+        else -> error(
+            "Rule '$ruleId' staticConfig must be a Pkl object/mapping (Map<String, Any>), " +
+                "got ${raw::class.java.name}",
+        )
+    }
 }

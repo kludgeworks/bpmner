@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.rules.internal.domain.mapping
 
-import dev.groknull.bpmner.pkl.generated.CheckPrimitive as PklCheckPrim
 import dev.groknull.bpmner.rules.LlmCheckRuleConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.CardinalityCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
@@ -26,6 +25,7 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.TopologyCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.TopologyMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyMode
+import dev.groknull.bpmner.pkl.CheckPrimitive as PklCheckPrim
 
 /**
  * Result of mapping a Pkl-generated `CheckConfig` into a typed Kotlin config. Each Pkl rule's
@@ -145,7 +145,7 @@ internal object CheckConfigMapper {
                         val mappedSub = map(subCheck.config)
                         require(mappedSub is MappedCheck.Deterministic) {
                             "CompositeCheck sub-check '${subCheck.diagnosticCode}' must be deterministic; " +
-                                "got ${mappedSub::class.simpleName}"
+                                "got ${mappedSub::class.java.simpleName}"
                         }
                         SubCheckConfig(
                             diagnosticCode = subCheck.diagnosticCode,
@@ -160,7 +160,7 @@ internal object CheckConfigMapper {
                 LlmCheckRuleConfig(prompt = generated.prompt, rubric = generated.rubric),
             )
 
-        else -> error("Unknown CheckConfig subtype: ${generated::class.qualifiedName}")
+        else -> error("Unknown CheckConfig subtype: ${generated::class.java.name}")
     }
 
     private fun vocabularyMode(raw: String): VocabularyMode = when (raw) {
@@ -195,7 +195,7 @@ internal object CheckConfigMapper {
     private fun poolLabelMode(raw: String): PoolLabelMode = runCatching {
         PoolLabelMode.valueOf(raw)
     }.getOrElse {
-        error("Unknown PoolLabelCheck.mode '$raw' (expected one of ${PoolLabelMode.values().joinToString { it.name }})")
+        error("Unknown PoolLabelCheck.mode '$raw' (expected one of ${PoolLabelMode.entries.joinToString { it.name }})")
     }
 
     private fun elementConstraintMode(raw: String): ElementConstraintMode = when (raw) {
