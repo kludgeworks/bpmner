@@ -68,7 +68,11 @@ class PropertyPatternCheck extends CheckConfig {
 
 class VocabularyCheck extends CheckConfig {
   property: NonEmptyString
-  mode: "REQUIRE" | "FORBID"
+  /// `REQUIRE` / `FORBID` check whether **any** token in the property's tokenization matches a
+  /// word in [words]. `REQUIRE_LEADING` / `FORBID_LEADING` restrict the check to the **first**
+  /// token only — used by leading-verb rules like `DiscouragedBusinessVerbs` whose legacy
+  /// semantics matched on `name.split(/\s+/)[0]`.
+  mode: "REQUIRE" | "FORBID" | "REQUIRE_LEADING" | "FORBID_LEADING"
   words: List<NonEmptyString> = List()
 }
 

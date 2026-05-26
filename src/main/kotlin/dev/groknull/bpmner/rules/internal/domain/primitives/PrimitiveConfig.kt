@@ -52,6 +52,8 @@ internal data class VocabularyCheckConfig(
 internal enum class VocabularyMode {
     REQUIRE,
     FORBID,
+    REQUIRE_LEADING,
+    FORBID_LEADING,
 }
 
 internal data class RequiredAssociationCheckConfig(

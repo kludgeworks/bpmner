@@ -25,18 +25,22 @@ internal class VocabularyCheck {
         return metadata.targetedElements(model)
             .filter { element ->
                 val tokens = element.property(config.property).tokens()
-                val matched = tokens.any { it in words }
+                val matched = when (config.mode) {
+                    VocabularyMode.REQUIRE, VocabularyMode.FORBID ->
+                        tokens.any { it in words }
+                    VocabularyMode.REQUIRE_LEADING, VocabularyMode.FORBID_LEADING ->
+                        tokens.firstOrNull() in words
+                }
                 when (config.mode) {
-                    VocabularyMode.REQUIRE -> !matched
-                    VocabularyMode.FORBID -> matched
+                    VocabularyMode.REQUIRE, VocabularyMode.REQUIRE_LEADING -> !matched
+                    VocabularyMode.FORBID, VocabularyMode.FORBID_LEADING -> matched
                 }
             }
             .map { metadata.diagnostic(it.id, config.words.joinToString(", ")) }
     }
 
-    private fun String?.tokens(): Set<String> = orEmpty()
+    private fun String?.tokens(): List<String> = orEmpty()
         .lowercase()
         .split(Regex("[^a-z0-9]+"))
         .filter { it.isNotBlank() }
-        .toSet()
 }

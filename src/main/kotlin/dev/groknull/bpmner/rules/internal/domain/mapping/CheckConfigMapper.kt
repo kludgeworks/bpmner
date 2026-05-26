@@ -166,7 +166,11 @@ internal object CheckConfigMapper {
     private fun vocabularyMode(raw: String): VocabularyMode = when (raw) {
         "REQUIRE" -> VocabularyMode.REQUIRE
         "FORBID" -> VocabularyMode.FORBID
-        else -> error("Unknown VocabularyCheck.mode '$raw' (expected REQUIRE or FORBID)")
+        "REQUIRE_LEADING" -> VocabularyMode.REQUIRE_LEADING
+        "FORBID_LEADING" -> VocabularyMode.FORBID_LEADING
+        else -> error(
+            "Unknown VocabularyCheck.mode '$raw' (expected REQUIRE, FORBID, REQUIRE_LEADING, or FORBID_LEADING)",
+        )
     }
 
     private fun topologyMode(raw: String): TopologyMode = when (raw) {
