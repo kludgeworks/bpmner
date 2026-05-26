@@ -78,19 +78,19 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
 
             future.get(LAYOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         } catch (e: org.graalvm.polyglot.PolyglotException) {
-            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             xml
         } catch (e: java.util.concurrent.ExecutionException) {
-            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             xml
         } catch (e: java.util.concurrent.TimeoutException) {
-            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             xml
         } catch (e: InterruptedException) {
-            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             xml
         } catch (e: java.util.concurrent.CancellationException) {
-            logger.warn("BPMN auto-layout execution error: {}", e.message)
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             xml
         }
     }
@@ -100,6 +100,7 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
     }
 
     companion object {
+        private const val AUTO_LAYOUT_EXEC_ERROR = "BPMN auto-layout execution error: {}"
         private const val LAYOUT_TIMEOUT_SECONDS = 30L
     }
 }

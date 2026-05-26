@@ -7,6 +7,8 @@ package dev.groknull.bpmner.core
 
 import jakarta.validation.Valid
 
+internal const val MAIN_PHASE_OWNER = "phase:main"
+
 // --- Pipeline graph types shared across composition, repair, and layout stages ---
 
 data class ComposedProcessGraph(
@@ -57,7 +59,7 @@ fun LaidOutProcessGraph.withUpdatedDefinition(newDefinition: BpmnDefinition): La
             )
         return LaidOutProcessGraph(ownedGraph = emptyOwnedGraph, definition = newDefinition)
     }
-    val defaultOwner = ownedGraph.objectOwnersByObjectRef["process"] ?: "phase:main"
+    val defaultOwner = ownedGraph.objectOwnersByObjectRef["process"] ?: MAIN_PHASE_OWNER
     val baseObjectOwners = ownedGraph.objectOwnersByObjectRef
     val updatedObjectOwners: Map<String, String> =
         baseObjectOwners +

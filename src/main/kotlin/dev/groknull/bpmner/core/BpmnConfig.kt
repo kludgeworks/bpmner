@@ -35,6 +35,8 @@ data class BpmnConfig(
     companion object {
         const val DEFAULT_MAX_ATTEMPTS = 5
 
+        private const val CONCISE_AND_EXACT = "concise and exact"
+
         val DEFAULT_GENERATOR =
             Actor(
                 persona =
@@ -56,7 +58,7 @@ data class BpmnConfig(
                     persona = "You are a fast, detail-oriented BPMN copy editor",
                     objective =
                     "Fix naming and label capitalization rules by providing targeted node and edge patches",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-label"),
             )
@@ -70,7 +72,7 @@ data class BpmnConfig(
                     objective =
                     "Fix structural and routing validation errors by adding or removing" +
                         " specific elements without rewriting the whole definition",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-patch"),
             )
@@ -83,7 +85,7 @@ data class BpmnConfig(
                     persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
                     objective =
                     "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-rewrite"),
             )
@@ -97,7 +99,7 @@ data class BpmnConfig(
                     objective =
                     "Fix every validation error in the BPMN definition" +
                         " and return the complete corrected object",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repairer"),
             )
