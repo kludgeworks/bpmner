@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Fake Join"
@@ -32,6 +33,11 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "TopologyCheck"
+checkConfig = new CheckPrimitive.TopologyCheck {
+  topology = "NO_FAKE_JOIN"
+}
 
 repair = new {
   kind = "LOCAL_MODEL_FIX"
