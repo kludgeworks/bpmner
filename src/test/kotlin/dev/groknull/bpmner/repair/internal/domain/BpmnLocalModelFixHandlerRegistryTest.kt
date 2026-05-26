@@ -47,6 +47,7 @@ class BpmnLocalModelFixHandlerRegistryTest {
         override fun buildPatch(
             definition: BpmnDefinition,
             elementId: String,
+            config: HandlerConfig,
         ): List<BpmnPatchOperation> = emptyList()
     }
 }

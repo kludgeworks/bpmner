@@ -12,6 +12,7 @@ import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
+import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
 import org.springframework.stereotype.Component
 
 @Component
@@ -21,6 +22,7 @@ internal class SplitJoinForkGatewayHandler : BpmnLocalModelFixHandler {
     override fun buildPatch(
         definition: BpmnDefinition,
         elementId: String,
+        config: HandlerConfig,
     ): List<BpmnPatchOperation> {
         val gateway = definition.nodes.firstOrNull { it.id == elementId } ?: return emptyList()
         val incomingEdges = definition.sequences.filter { it.targetRef == elementId }

@@ -387,6 +387,7 @@ internal class BpmnRefinementEngine(
         )
     }
 
+    @Suppress("DEPRECATION") // TODO(Phase 3): drop LOCAL_XML_FIX branch with the enum value
     private fun computeRouteSummary(
         diagnostics: List<BpmnDiagnostic>,
         resolution: RepairStepResolution,

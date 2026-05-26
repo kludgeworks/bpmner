@@ -9,6 +9,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
+import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
 import org.springframework.stereotype.Component
 
 @Component
@@ -18,6 +19,7 @@ internal class BypassGatewayHandler : BpmnLocalModelFixHandler {
     override fun buildPatch(
         definition: BpmnDefinition,
         elementId: String,
+        config: HandlerConfig,
     ): List<BpmnPatchOperation> {
         val incomingEdge = definition.sequences.singleOrNull { it.targetRef == elementId } ?: return emptyList()
         val outgoingEdge = definition.sequences.singleOrNull { it.sourceRef == elementId } ?: return emptyList()

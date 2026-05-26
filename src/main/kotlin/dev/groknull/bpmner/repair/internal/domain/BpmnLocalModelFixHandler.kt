@@ -13,5 +13,6 @@ internal interface BpmnLocalModelFixHandler {
     fun buildPatch(
         definition: BpmnDefinition,
         elementId: String,
+        config: HandlerConfig = HandlerConfig.EMPTY,
     ): List<BpmnPatchOperation>
 }

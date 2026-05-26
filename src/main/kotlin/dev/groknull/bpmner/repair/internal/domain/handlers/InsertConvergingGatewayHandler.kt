@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
+import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
 import org.springframework.stereotype.Component
 
 @Component
@@ -20,6 +21,7 @@ internal class InsertConvergingGatewayHandler : BpmnLocalModelFixHandler {
     override fun buildPatch(
         definition: BpmnDefinition,
         elementId: String,
+        config: HandlerConfig,
     ): List<BpmnPatchOperation> {
         val task = definition.nodes.firstOrNull { it.id == elementId } ?: return emptyList()
         if (!task.isTask()) return emptyList()

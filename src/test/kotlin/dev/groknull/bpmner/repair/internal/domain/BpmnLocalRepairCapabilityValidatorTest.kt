@@ -18,16 +18,16 @@ import kotlin.test.assertTrue
 
 class BpmnLocalRepairCapabilityValidatorTest {
     @Test
-    fun `validate passes when all handlers are bound`() {
+    fun `validate passes when all LOCAL_MODEL_FIX handlers are bound`() {
         val caps =
             mapOf(
-                "name-01" to cap("name-01", RepairKind.LOCAL_XML_FIX, fixHandler = "stripTypeWords"),
                 "topo-01" to cap("topo-01", RepairKind.LOCAL_MODEL_FIX, fixHandler = "splitJoinForkGateway"),
+                "name-01" to cap("name-01", RepairKind.LOCAL_MODEL_FIX, fixHandler = "stripTypeWords"),
                 "llm-01" to cap("llm-01", RepairKind.LLM_MODEL_PATCH, fixHandler = null),
                 "unfix-01" to cap("unfix-01", RepairKind.UNFIXABLE, fixHandler = null),
             )
-        val validator = validatorWith(handlers = setOf("splitJoinForkGateway"))
-        validator.validate(caps, setOf("splitJoinForkGateway"), setOf("stripTypeWords"))
+        val validator = validatorWith(handlers = setOf("splitJoinForkGateway", "stripTypeWords"))
+        validator.validate(caps, setOf("splitJoinForkGateway", "stripTypeWords"))
     }
 
     @Test
@@ -36,22 +36,10 @@ class BpmnLocalRepairCapabilityValidatorTest {
         val validator = validatorWith(handlers = emptySet())
         val error =
             assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
+                validator.validate(caps, emptySet())
             }
         assertTrue(error.message!!.contains("missingHandler"))
         assertTrue(error.message!!.contains("LOCAL_MODEL_FIX"))
-    }
-
-    @Test
-    fun `validate fails when LOCAL_XML_FIX handler is missing from TS registry`() {
-        val caps = mapOf("name-01" to cap("name-01", RepairKind.LOCAL_XML_FIX, fixHandler = "missingTs"))
-        val validator = validatorWith(handlers = emptySet())
-        val error =
-            assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
-            }
-        assertTrue(error.message!!.contains("missingTs"))
-        assertTrue(error.message!!.contains("LOCAL_XML_FIX"))
     }
 
     @Test
@@ -60,7 +48,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
         val validator = validatorWith(handlers = emptySet())
         val error =
             assertFailsWith<BpmnRepairCapabilityValidationException> {
-                validator.validate(caps, emptySet(), emptySet())
+                validator.validate(caps, emptySet())
             }
         assertTrue(error.message!!.contains("topo-01"))
     }
@@ -74,7 +62,17 @@ class BpmnLocalRepairCapabilityValidatorTest {
                 "unfix-01" to cap("unfix-01", RepairKind.UNFIXABLE, fixHandler = null),
             )
         val validator = validatorWith(handlers = emptySet())
-        validator.validate(caps, emptySet(), emptySet())
+        validator.validate(caps, emptySet())
+    }
+
+    @Test
+    fun `validate ignores stale LOCAL_XML_FIX capabilities after the 2F collapse`() {
+        // LOCAL_XML_FIX is deprecated; the validator no longer enforces a TS handler registry.
+        // Any stale LOCAL_XML_FIX cap that sneaks in from an external catalog is silently skipped.
+        @Suppress("DEPRECATION")
+        val staleCap = cap("legacy-xml", RepairKind.LOCAL_XML_FIX, fixHandler = "nonExistentTsHandler")
+        val validator = validatorWith(handlers = emptySet())
+        validator.validate(mapOf("legacy-xml" to staleCap), emptySet())
     }
 
     private fun validatorWith(handlers: Set<String>): BpmnLocalRepairCapabilityValidator {
@@ -91,6 +89,7 @@ class BpmnLocalRepairCapabilityValidatorTest {
         override fun buildPatch(
             definition: BpmnDefinition,
             elementId: String,
+            config: HandlerConfig,
         ): List<BpmnPatchOperation> = emptyList()
     }
 

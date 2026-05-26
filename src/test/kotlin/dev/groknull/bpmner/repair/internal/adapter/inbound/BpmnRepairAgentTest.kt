@@ -31,7 +31,6 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnDefinitionToXmlConverter
-import dev.groknull.bpmner.generation.BpmnXmlToDefinitionConverter
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
@@ -87,11 +86,9 @@ class BpmnRepairAgentTest {
         val strategies =
             listOf(
                 DeterministicTopologyRepairStrategy(
-                    lintService,
-                    xsdValidator,
-                    BpmnXmlToDefinitionConverter(),
                     BpmnLocalModelFixHandlerRegistry(emptyList()),
                     patchApplier,
+                    RuleCatalogService(),
                 ),
                 TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
                 LlmPatchRepairStrategy(config, promptFactory, patchApplier),
