@@ -118,3 +118,19 @@ internal enum class ElementConstraintMode {
     PARALLEL_GATEWAY_STRUCTURE,
     EVENT_BASED_GATEWAY_DIRECT_EVENTS,
 }
+
+/**
+ * Composite primitive config — composes deterministic sub-checks. See
+ * [linter/pkl/schema/CheckPrimitive.pkl](linter/pkl/schema/CheckPrimitive.pkl) for the
+ * authoritative shape. The `SubCheckEvaluator` rejects `LlmCheckRuleConfig` and nested
+ * `CompositeCheckConfig` sub-checks at evaluation time.
+ */
+internal data class CompositeCheckConfig(
+    val targetTypes: List<String> = emptyList(),
+    val subChecks: List<SubCheckConfig> = emptyList(),
+)
+
+internal data class SubCheckConfig(
+    val diagnosticCode: String,
+    val config: Any,
+)
