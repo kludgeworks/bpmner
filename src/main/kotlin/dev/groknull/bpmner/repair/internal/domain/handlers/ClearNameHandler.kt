@@ -12,9 +12,14 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
 import org.springframework.stereotype.Component
 
+/**
+ * Clears a node's name. Mirrors `clearName` in `linter/src/auto-fix/registry.ts`.
+ *
+ * Idempotent: returns no ops when the node is missing or already has a blank name.
+ */
 @Component
-internal class ConvergingGatewayClearNameHandler : BpmnLocalModelFixHandler {
-    override val handlerName: String = "clearConvergingGatewayName"
+internal class ClearNameHandler : BpmnLocalModelFixHandler {
+    override val handlerName: String = "clearName"
 
     override fun buildPatch(
         definition: BpmnDefinition,
@@ -23,10 +28,6 @@ internal class ConvergingGatewayClearNameHandler : BpmnLocalModelFixHandler {
     ): List<BpmnPatchOperation> {
         val node = definition.nodes.firstOrNull { it.id == elementId } ?: return emptyList()
         if (node.name.isNullOrBlank()) return emptyList()
-        val incoming = definition.sequences.count { it.targetRef == elementId }
-        val outgoing = definition.sequences.count { it.sourceRef == elementId }
-        // Converging-only: two or more incoming flows and at most one outgoing flow.
-        if (incoming <= 1 || outgoing > 1) return emptyList()
         return listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = elementId, name = null))
     }
 }

@@ -123,7 +123,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertTrue(result.xml!!.contains("<process"))
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(anyString())
-        verify(bpmnLintService, times(2)).lint(anyString())
+        // BpmnLayoutAgent.autoFixBpmnXml stopped calling lint() in #243 (passthrough);
+        // only BpmnEvaluationPipeline still invokes the linter once during evaluation.
+        verify(bpmnLintService, times(1)).lint(anyString())
     }
 
     private fun validDefinition() = BpmnDefinition(

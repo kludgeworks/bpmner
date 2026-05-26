@@ -33,7 +33,6 @@ import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnDefinitionToXmlConverter
-import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnRepairPromptFactory
@@ -42,8 +41,6 @@ import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
-import dev.groknull.bpmner.validation.BpmnAutoFixChange
-import dev.groknull.bpmner.validation.BpmnAutoFixError
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.BpmnDiagnosticNormalizer
@@ -72,7 +69,6 @@ class BpmnRefinementEngineTest {
         val config = BpmnConfig()
         val lint = RecordingLintService(listOf(emptyList()))
         val xsd = RecordingXsdValidator(listOf(emptyList()))
-        val parser = RecordingXmlParser(validDefinition())
         val fingerprints = BpmnFingerprintService()
         val prompts = BpmnRepairPromptFactory(lint, fingerprints, NoopRuleGuidancePort)
         val patchApplier = BpmnPatchApplier()
@@ -82,11 +78,9 @@ class BpmnRefinementEngineTest {
                 LlmPatchRepairStrategy(config, prompts, patchApplier),
                 TargetedLabelRepairStrategy(config, prompts, patchApplier),
                 DeterministicTopologyRepairStrategy(
-                    lint,
-                    xsd,
-                    parser,
                     BpmnLocalModelFixHandlerRegistry(emptyList()),
                     patchApplier,
+                    RuleCatalogService(),
                 ),
             )
 
@@ -103,134 +97,12 @@ class BpmnRefinementEngineTest {
         )
     }
 
-    @Test
-    fun `lint local strategy resolves LOCAL_XML diagnostic without calling LLM`() {
-        val initial = validDefinition()
-        val corrected = initial.copy(processName = "Test corrected")
-        val lintIssue =
-            LintIssue(
-                id = "Task_1",
-                rule = "bpmner/name-01",
-                message = "Element name must not include its BPMN element type",
-            )
-        val capability =
-            BpmnLintRuleCapability(
-                id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
-                handlerExists = true,
-                replacementMap = null,
-            )
-        val lint =
-            RecordingLintService(
-                lintResponses = listOf(listOf(lintIssue), emptyList()),
-                autoFixResponse =
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = "<bpmn:locally-fixed/>",
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                ),
-                capabilities = mapOf("name-01" to capability),
-            )
-        val xsd = RecordingXsdValidator(listOf(emptyList(), emptyList(), emptyList()))
-        val parser = RecordingXmlParser(corrected)
-        val engine =
-            refinementEngine(
-                config = BpmnConfig(maxAttempts = 3),
-                lintService = lint,
-                xsdValidator = xsd,
-                converter = RecordingConverter(),
-                xmlParser = parser,
-            )
-        val context = FakeActionContext()
-
-        val result =
-            engine.refine(
-                BpmnRequest("Generate a process"),
-                testLaidOutGraph(initial, withOwnership = true),
-                RecordingConverter().render(initial),
-                testProcessContract(),
-                context,
-            )
-
-        assertEquals(1, result.repairAttempts)
-        assertTrue(context.llmInvocations.isEmpty())
-        assertEquals(1, lint.autoFixCalls)
-        assertEquals(1, parser.parseCalls)
-    }
-
-    @Test
-    fun `mixed local-failed and LLM diagnostics route LLM with annotated context`() {
-        val initial = validDefinition()
-        val corrected = initial.copy(processName = "Test corrected")
-        val lint = mixedDiagnosticLintService()
-        val xsd = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val parser = RecordingXmlParser(corrected)
-        val engine =
-            refinementEngine(
-                config = BpmnConfig(maxAttempts = 3),
-                lintService = lint,
-                xsdValidator = xsd,
-                converter = RecordingConverter(),
-                xmlParser = parser,
-            )
-        val context = FakeActionContext()
-        context.expectResponse(setNodeNamePatch(nodeId = "EndEvent_1", name = "Order completed"))
-
-        engine.refine(
-            BpmnRequest("Generate a process"),
-            testLaidOutGraph(initial, withOwnership = true),
-            RecordingConverter().render(initial),
-            testProcessContract(),
-            context,
-        )
-
-        assertEquals(1, context.llmInvocations.size, "expected exactly one LLM call after local repair fell through")
-        val prompt =
-            context.llmInvocations
-                .single()
-                .messages
-                .joinToString("\n") { it.content }
-        assertTrue(prompt.contains("rule=bpmner/name-02"), "LLM diagnostic should appear in prompt")
-        assertTrue(prompt.contains("rule=bpmner/name-01"), "failed-local diagnostic should appear in prompt")
-        assertTrue(
-            prompt.contains("[local-fix-failed: handler boom]"),
-            "failed-local diagnostic should be annotated; got: $prompt",
-        )
-        assertEquals(1, lint.autoFixCalls)
-    }
-
-    private fun mixedDiagnosticLintService(): RecordingLintService {
-        val localLintIssue =
-            LintIssue(id = "Task_1", rule = "bpmner/name-01", message = "Element name must not include its BPMN element type")
-        val llmLintIssue =
-            LintIssue(id = "EndEvent_1", rule = "bpmner/name-02", message = "Use a verb-object name")
-        val localCapability =
-            BpmnLintRuleCapability(
-                id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
-                handlerExists = true,
-                replacementMap = null,
-            )
-        val autoFixError =
-            BpmnAutoFixError(rule = "bpmner/name-01", elementId = "Task_1", message = "handler boom")
-        return RecordingLintService(
-            lintResponses = listOf(listOf(localLintIssue, llmLintIssue), emptyList()),
-            autoFixResponse = BpmnAutoFixResult(changed = false, xml = "", errors = listOf(autoFixError)),
-            capabilities = mapOf("name-01" to localCapability),
-        )
-    }
-
-    private fun setNodeNamePatch(
-        nodeId: String,
-        name: String,
-    ): BpmnRepairPatch = BpmnRepairPatch(
-        operations =
-        listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = nodeId, name = name)),
-    )
+    // Two tests previously exercised the bpmnlint `LOCAL_XML_FIX` auto-fix path and its
+    // `local-fix-failed` LLM-fallback annotation. After #243 collapsed `LOCAL_XML_FIX` into
+    // `LOCAL_MODEL_FIX`, both pathways no longer exist: Kotlin handlers either patch the
+    // model in-process or fall through silently. The LOCAL_MODEL_FIX integration is covered
+    // by `local model fix strategy repairs topology diagnostic without calling LLM` below
+    // and by `DeterministicTopologyRepairStrategyTest` at the unit level.
 
     @Test
     fun `local model fix strategy repairs topology diagnostic without calling LLM`() {
@@ -319,7 +191,6 @@ class BpmnRefinementEngineTest {
         lintService: BpmnLintService,
         xsdValidator: BpmnXsdValidator,
         converter: BpmnDefinitionToXmlConverter,
-        xmlParser: BpmnXmlParser = RecordingXmlParser(validDefinition()),
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
         val normalizer = BpmnDiagnosticNormalizer(lintService)
@@ -343,9 +214,6 @@ class BpmnRefinementEngineTest {
             strategies =
             listOf(
                 DeterministicTopologyRepairStrategy(
-                    lintService,
-                    xsdValidator,
-                    xmlParser,
                     BpmnLocalModelFixHandlerRegistry(
                         listOf(
                             SplitJoinForkGatewayHandler(),
@@ -355,6 +223,7 @@ class BpmnRefinementEngineTest {
                         ),
                     ),
                     patchApplier,
+                    RuleCatalogService(),
                 ),
                 TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
                 LlmPatchRepairStrategy(config, promptFactory, patchApplier),
@@ -399,18 +268,6 @@ class BpmnRefinementEngineTest {
         }
 
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = capabilities
-    }
-
-    private class RecordingXmlParser(
-        private val definition: BpmnDefinition,
-    ) : BpmnXmlParser {
-        var parseCalls = 0
-            private set
-
-        override fun parse(xml: String): BpmnDefinition {
-            parseCalls++
-            return definition
-        }
     }
 
     private class RecordingXsdValidator(
@@ -467,15 +324,6 @@ class BpmnRefinementEngineTest {
         task = BpmnUserTask("Task_1", "Do work"),
         startName = "Started",
         endName = "Done",
-    )
-
-    private fun testProcessContract(): ProcessContract = ProcessContract(
-        id = "c-test",
-        processName = "Test",
-        summary = "test",
-        trigger = "start",
-        activities = listOf(ContractActivity.User(id = "Task_1", name = "Do work")),
-        endStates = listOf(ContractEndState(id = "end-done", name = "Done")),
     )
 
     private fun joinForkContract(): ProcessContract = ProcessContract(

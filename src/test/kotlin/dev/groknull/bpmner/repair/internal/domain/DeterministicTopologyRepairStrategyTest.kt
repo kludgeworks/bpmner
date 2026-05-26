@@ -19,70 +19,52 @@ import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.generation.BpmnXmlParser
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
-import dev.groknull.bpmner.validation.BpmnAutoFixChange
-import dev.groknull.bpmner.validation.BpmnAutoFixError
-import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnAutoFixSkip
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
+import dev.groknull.bpmner.validation.BpmnRuleMetadata
 import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.XsdValidationIssue
+import dev.groknull.bpmner.validation.RepairMetadata
+import dev.groknull.bpmner.validation.RuleCatalogService
+import dev.groknull.bpmner.validation.RuleCategoryMetadata
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
+import kotlin.test.assertNotNull
 
 @Suppress("TooManyFunctions")
 class DeterministicTopologyRepairStrategyTest {
     @Test
-    fun `returns NotApplicable when no LOCAL_XML_FIX diagnostics are stamped`() {
-        val strategy = strategy(lint = FakeLintingPort())
+    fun `returns NotApplicable when no LOCAL_MODEL_FIX diagnostics are stamped`() {
+        val strategy = strategy()
         val context = contextOf(diagnostics = listOf(lintDiagnostic(kind = RepairKind.LLM_MODEL_PATCH)))
 
         assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
     }
 
     @Test
-    fun `applied auto-fix returns Repaired with parsed definition`() {
-        val parsed = otherValidDefinition()
-        val lint =
-            FakeLintingPort(
-                autoFixResult =
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = "<fixed/>",
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                ),
-            )
-        val xsd = FakeXsdValidationPort(issues = emptyList())
-        val parser = FakeXmlParser(parsed)
-        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val operationContext = FakeOperationContext()
+    fun `returns NotApplicable when no handler is registered for the diagnostic fixHandler`() {
+        val strategy = strategy(handlers = emptyList())
         val context =
             contextOf(
-                diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")),
-                operationContext = operationContext,
+                diagnostics =
+                listOf(
+                    lintDiagnostic(
+                        kind = RepairKind.LOCAL_MODEL_FIX,
+                        fixHandler = "missing",
+                    ),
+                ),
             )
 
-        val result = assertIs<BpmnRepairResult.Repaired>(strategy.repair(context))
-        assertEquals(parsed, result.definition)
-        assertEquals(1, xsd.calls)
-        assertEquals(1, parser.calls)
-        assertEquals(1, lint.autoFixCalls)
-        assertEquals(0, operationContext.llmInvocations.size, "deterministic LOCAL_XML_FIX path must not invoke the LLM")
+        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
     }
 
     @Test
-    fun `DeterministicTopologyRepairStrategy applies local model fix when handler is found`() {
-        val definition = sampleDefinition()
+    fun `applies local model fix when handler is found`() {
         val handler = StubModelFixHandler("some-handler")
         val diag =
             BpmnDiagnostic(
@@ -96,7 +78,6 @@ class DeterministicTopologyRepairStrategyTest {
         val ctx =
             contextOf(
                 diagnostics = listOf(diag),
-                definition = definition,
                 operationContext = operationContext,
             )
 
@@ -104,94 +85,114 @@ class DeterministicTopologyRepairStrategyTest {
 
         assertIs<BpmnRepairResult.Repaired>(result)
         assertEquals(1, result.localFixSummary?.modelApplied)
-        assertEquals(0, operationContext.llmInvocations.size, "deterministic LOCAL_MODEL_FIX path must not invoke the LLM")
+        assertEquals(
+            0,
+            operationContext.llmInvocations.size,
+            "deterministic LOCAL_MODEL_FIX path must not invoke the LLM",
+        )
     }
 
     @Test
-    fun `auto-fix that produces XSD-invalid XML returns NotApplicable and skips parsing`() {
-        val parser = FakeXmlParser(otherValidDefinition())
-        val lint =
-            FakeLintingPort(
-                autoFixResult =
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = "<broken/>",
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
+    fun `passes rule staticConfig and replacementMap through to handler via HandlerConfig`() {
+        val captured = CapturingHandler("captureHandler")
+        val catalog =
+            stubCatalog(
+                rule(
+                    id = "demo-rule",
+                    staticConfig = mapOf("discouragedWords" to listOf("activity")),
+                    replacementMap = mapOf("REQ" to "request"),
                 ),
             )
-        val xsd = FakeXsdValidationPort(issues = listOf(XsdValidationIssue("cvc-something")))
-        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
+        val diag =
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.LINT,
+                message = "fix it",
+                rule = "bpmner/demo-rule",
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                fixHandler = "captureHandler",
+                elementId = "Task_1",
+            )
 
-        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
-        assertEquals(1, xsd.calls)
-        assertEquals(0, parser.calls)
+        val ctx = contextOf(diagnostics = listOf(diag))
+        strategy(handlers = listOf(captured), catalog = catalog).repair(ctx)
+
+        val received = assertNotNull(captured.lastConfig, "Handler must receive a HandlerConfig from the strategy")
+        assertEquals(mapOf("discouragedWords" to listOf("activity")), received.staticConfig)
+        assertEquals(mapOf("REQ" to "request"), received.replacementMap)
     }
 
     @Test
-    fun `auto-fix that skips a declared-local rule with no errors returns NotApplicable so LLM can take over`() {
-        val parser = FakeXmlParser(otherValidDefinition())
-        val xsd = FakeXsdValidationPort(issues = emptyList())
-        val lint =
-            FakeLintingPort(
-                autoFixResult =
-                BpmnAutoFixResult(
-                    changed = false,
-                    xml = "<unchanged/>",
-                    skipped = listOf(BpmnAutoFixSkip("bpmner/name-01", "Task_1", "no fixable tokens")),
-                ),
+    fun `falls back to empty HandlerConfig when rule is not in the catalog`() {
+        val captured = CapturingHandler("captureHandler")
+        val diag =
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.LINT,
+                message = "fix it",
+                rule = "bpmner/unknown-rule",
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                fixHandler = "captureHandler",
+                elementId = "Task_1",
             )
-        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val context = contextOf(diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")))
 
-        assertIs<BpmnRepairResult.NotApplicable>(strategy.repair(context))
-        assertEquals(0, xsd.calls)
-        assertEquals(0, parser.calls)
+        val ctx = contextOf(diagnostics = listOf(diag))
+        strategy(handlers = listOf(captured), catalog = stubCatalog()).repair(ctx)
+
+        val received = assertNotNull(captured.lastConfig)
+        assertEquals(HandlerConfig.EMPTY, received)
     }
 
     @Test
-    fun `auto-fix errors return LocalAttemptedNoChange carrying failure records and skip XSD or parser`() {
-        val parser = FakeXmlParser(otherValidDefinition())
-        val xsd = FakeXsdValidationPort(issues = emptyList())
-        val lint =
-            FakeLintingPort(
-                autoFixResult =
-                BpmnAutoFixResult(
-                    changed = false,
-                    xml = "<unchanged/>",
-                    errors = listOf(BpmnAutoFixError("bpmner/name-01", "Task_1", "handler boom")),
-                ),
-            )
-        val strategy = strategy(lint = lint, xsd = xsd, parser = parser)
-        val operationContext = FakeOperationContext()
-        val context =
-            contextOf(
-                diagnostics = listOf(lintDiagnostic(rule = "bpmner/name-01")),
-                operationContext = operationContext,
+    fun `returns NotApplicable when the handler emits no ops`() {
+        val handler = StubModelFixHandler("noop-handler", emitsOps = false)
+        val diag =
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.LINT,
+                message = "fix it",
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                fixHandler = "noop-handler",
+                elementId = "Task_1",
             )
 
-        val result = assertIs<BpmnRepairResult.LocalAttemptedNoChange>(strategy.repair(context))
-        val failure = result.outcome.failures.single()
-        assertEquals(1, result.outcome.failures.size)
-        assertEquals("bpmner/name-01", failure.rule)
-        assertEquals("Task_1", failure.elementId)
-        assertEquals("handler boom", failure.reason)
-        assertEquals(0, xsd.calls)
-        assertEquals(0, parser.calls)
-        assertEquals(0, operationContext.llmInvocations.size, "deterministic failure path must not fall through to the LLM")
+        val result = strategy(handlers = listOf(handler)).repair(contextOf(diagnostics = listOf(diag)))
+
+        assertIs<BpmnRepairResult.NotApplicable>(result)
     }
 
     private fun strategy(
-        lint: BpmnLintingPort = FakeLintingPort(),
-        xsd: BpmnXsdValidationPort = FakeXsdValidationPort(),
-        parser: BpmnXmlParser = FakeXmlParser(otherValidDefinition()),
         handlers: List<BpmnLocalModelFixHandler> = emptyList(),
+        catalog: RuleCatalogService = stubCatalog(),
     ) = DeterministicTopologyRepairStrategy(
-        lint,
-        xsd,
-        parser,
         BpmnLocalModelFixHandlerRegistry(handlers),
         BpmnPatchApplier(),
+        catalog,
+    )
+
+    private fun stubCatalog(vararg rules: BpmnRuleMetadata): RuleCatalogService = object : RuleCatalogService() {
+        override fun getRule(id: String): BpmnRuleMetadata? = rules.firstOrNull { it.id == id }
+    }
+
+    private fun rule(
+        id: String,
+        staticConfig: Any? = null,
+        replacementMap: Map<String, String>? = null,
+    ) = BpmnRuleMetadata(
+        id = id,
+        name = id,
+        category = RuleCategoryMetadata(name = "test", shortCode = "T"),
+        slug = id,
+        intent = "test",
+        forModellers = "test",
+        forAI = "test",
+        targetElements = emptyList(),
+        severity = "warning",
+        errorMessages = emptyMap(),
+        staticConfig = staticConfig,
+        hasTsImplementation = false,
+        aliases = emptyList(),
+        deprecated = false,
+        replacedBy = emptyList(),
+        deprecationReason = null,
+        repair = RepairMetadata(replacementMap = replacementMap),
     )
 
     private fun contextOf(
@@ -227,7 +228,7 @@ class DeterministicTopologyRepairStrategyTest {
 
     private fun lintDiagnostic(
         rule: String = "bpmner/name-01",
-        kind: RepairKind? = RepairKind.LOCAL_XML_FIX,
+        kind: RepairKind? = RepairKind.LOCAL_MODEL_FIX,
         fixHandler: String? = null,
         elementId: String? = "Task_1",
     ) = BpmnDiagnostic(
@@ -240,9 +241,7 @@ class DeterministicTopologyRepairStrategyTest {
         fixHandler = fixHandler,
     )
 
-    private fun sampleDefinition() = validDefinition()
-
-    private fun validDefinition() = BpmnDefinition(
+    private fun sampleDefinition() = BpmnDefinition(
         processId = "Process_1",
         processName = "Test Process",
         nodes =
@@ -253,20 +252,10 @@ class DeterministicTopologyRepairStrategyTest {
         ),
         sequences =
         listOf(
-            BpmnEdge(
-                id = "Flow_1",
-                sourceRef = "Start_1",
-                targetRef = "Task_1",
-            ),
-            BpmnEdge(
-                id = "Flow_2",
-                sourceRef = "Task_1",
-                targetRef = "End_1",
-            ),
+            BpmnEdge(id = "Flow_1", sourceRef = "Start_1", targetRef = "Task_1"),
+            BpmnEdge(id = "Flow_2", sourceRef = "Task_1", targetRef = "End_1"),
         ),
     )
-
-    private fun otherValidDefinition() = validDefinition().copy(processName = "After Local Fix")
 
     private fun renderedFrom(definition: BpmnDefinition): RenderedBpmn = RenderedBpmn(
         definition = definition,
@@ -308,55 +297,6 @@ class DeterministicTopologyRepairStrategyTest {
     }
 
     @Suppress("TooManyFunctions")
-    private class FakeLintingPort(
-        private val autoFixResult: BpmnAutoFixResult? =
-            BpmnAutoFixResult(changed = false, xml = ""),
-    ) : BpmnLintingPort {
-        var autoFixCalls = 0
-            private set
-
-        override fun lint(bpmnXml: String): List<LintIssue> = emptyList()
-
-        override fun autoFix(
-            bpmnXml: String,
-            issues: List<LintIssue>,
-        ): BpmnAutoFixResult? {
-            autoFixCalls++
-            return autoFixResult
-        }
-
-        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
-
-        override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
-    }
-
-    @Suppress("TooManyFunctions")
-    private class FakeXsdValidationPort(
-        private val issues: List<XsdValidationIssue> = emptyList(),
-    ) : BpmnXsdValidationPort {
-        var calls = 0
-            private set
-
-        override fun validateDetailed(bpmnXml: String): List<XsdValidationIssue> {
-            calls++
-            return issues
-        }
-    }
-
-    @Suppress("TooManyFunctions")
-    private class FakeXmlParser(
-        private val definition: BpmnDefinition,
-    ) : BpmnXmlParser {
-        var calls = 0
-            private set
-
-        override fun parse(xml: String): BpmnDefinition {
-            calls++
-            return definition
-        }
-    }
-
-    @Suppress("TooManyFunctions")
     private class StubModelFixHandler(
         override val handlerName: String,
         private val emitsOps: Boolean = true,
@@ -364,6 +304,7 @@ class DeterministicTopologyRepairStrategyTest {
         override fun buildPatch(
             definition: BpmnDefinition,
             elementId: String,
+            config: HandlerConfig,
         ): List<BpmnPatchOperation> {
             if (!emitsOps) return emptyList()
             return listOf(
@@ -371,6 +312,30 @@ class DeterministicTopologyRepairStrategyTest {
                     type = BpmnPatchOperationType.SET_NODE_NAME,
                     nodeId = elementId,
                     name = "renamed",
+                ),
+            )
+        }
+    }
+
+    private class CapturingHandler(
+        override val handlerName: String,
+    ) : BpmnLocalModelFixHandler {
+        var lastConfig: HandlerConfig? = null
+            private set
+
+        override fun buildPatch(
+            definition: BpmnDefinition,
+            elementId: String,
+            config: HandlerConfig,
+        ): List<BpmnPatchOperation> {
+            lastConfig = config
+            // Emit at least one op so the strategy proceeds through patch application; tests inspect
+            // only the captured config, not the final result.
+            return listOf(
+                BpmnPatchOperation(
+                    type = BpmnPatchOperationType.SET_NODE_NAME,
+                    nodeId = elementId,
+                    name = "captured",
                 ),
             )
         }

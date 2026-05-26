@@ -6,30 +6,33 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.generation.BpmnXmlParser
-import dev.groknull.bpmner.repair.BpmnLocalFixFailure
 import dev.groknull.bpmner.repair.BpmnLocalFixSummary
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
-import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.validation.RuleCatalogService
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
+/**
+ * Applies `LOCAL_MODEL_FIX` repairs by dispatching diagnostics to their declared Kotlin handler.
+ *
+ * Until issue #243 closed the `LOCAL_XML_FIX` collapse, this strategy also routed
+ * `LOCAL_XML_FIX`-flagged diagnostics to bpmnlint's TS auto-fixer via [BpmnLintingPort.autoFix].
+ * After 2A migrated the last 6 rules to `LOCAL_MODEL_FIX`, that branch became dead code and is
+ * gone. `BpmnLintingPort` itself is deprecated in #217's 2G.
+ *
+ * Per-rule handler config (e.g. `discouragedWords`, `replacementMap`) is pulled from
+ * [RuleCatalogService.getRule] and projected to a [HandlerConfig] before dispatch — so the Pkl
+ * rule remains the single source of truth for the handler's data inputs.
+ */
 @Service
 @Component
 internal class DeterministicTopologyRepairStrategy(
-    private val lintingPort: BpmnLintingPort,
-    private val xsdValidationPort: BpmnXsdValidationPort,
-    private val xmlParser: BpmnXmlParser,
     private val modelFixHandlerRegistry: BpmnLocalModelFixHandlerRegistry,
     private val patchApplier: BpmnPatchApplicationPort,
+    private val ruleCatalogService: RuleCatalogService,
 ) : BpmnRepairStrategy {
     private val logger = LoggerFactory.getLogger(DeterministicTopologyRepairStrategy::class.java)
 
@@ -37,22 +40,6 @@ internal class DeterministicTopologyRepairStrategy(
 
     override fun repair(context: BpmnRepairStrategyContext): BpmnRepairResult {
         val attempt = context.attempt
-        val modelFixResult = tryLocalModelFix(attempt)
-        if (modelFixResult !is BpmnRepairResult.NotApplicable) {
-            return modelFixResult
-        }
-        val rendered = attempt.evaluation.rendered ?: return BpmnRepairResult.NotApplicable
-        val rawIssues = attempt.evaluation.rawLintIssues ?: return BpmnRepairResult.NotApplicable
-        val localXmlRules = collectLocalXmlRules(attempt.diagnostics)
-        val issuesForFix = rawIssues.filter { it.bareRuleId() in localXmlRules }
-        return when {
-            localXmlRules.isEmpty() -> BpmnRepairResult.NotApplicable
-            issuesForFix.isEmpty() -> BpmnRepairResult.NotApplicable
-            else -> runAutoFixAndDecide(rendered.xml, issuesForFix, attempt)
-        }
-    }
-
-    private fun tryLocalModelFix(attempt: BpmnRepairAttempt): BpmnRepairResult {
         attempt.diagnostics.forEach { diagnostic ->
             val repaired = applyLocalModelFix(attempt, diagnostic)
             if (repaired != null) return repaired
@@ -68,7 +55,8 @@ internal class DeterministicTopologyRepairStrategy(
         val handlerName = diagnostic.fixHandler ?: return null
         val elementId = diagnostic.elementId ?: return null
         val handler = modelFixHandlerRegistry.lookup(handlerName) ?: return null
-        val ops = handler.buildPatch(attempt.definition, elementId)
+        val config = handlerConfigFor(diagnostic)
+        val ops = handler.buildPatch(attempt.definition, elementId, config)
         if (ops.isEmpty()) return null
         val patch =
             BpmnRepairPatch(
@@ -96,82 +84,21 @@ internal class DeterministicTopologyRepairStrategy(
                 null
             }
 
-            PatchApplicationResult.NoOp -> {
-                null
-            }
+            PatchApplicationResult.NoOp -> null
         }
     }
 
-    private fun runAutoFixAndDecide(
-        xml: String,
-        issues: List<LintIssue>,
-        attempt: BpmnRepairAttempt,
-    ): BpmnRepairResult {
-        val result =
-            lintingPort.autoFix(xml, issues)
-                ?: return BpmnRepairResult.NotApplicable
-        if (result.errors.isNotEmpty()) {
-            logger.warn(
-                "Local auto-fix errors; recording failures for LLM fallback context: {}",
-                result.errors.joinToString { "${it.rule}@${it.elementId ?: "-"}:${it.message}" },
-            )
-            val failures =
-                result.errors.map { err ->
-                    BpmnLocalFixFailure(rule = err.rule, elementId = err.elementId, reason = err.message)
-                }
-            return BpmnRepairResult.LocalAttemptedNoChange(BpmnLocalRepairOutcome(failures))
-        }
-        return when {
-            !isAutoFixUsable(result) -> BpmnRepairResult.NotApplicable
-            !autoFixedXmlIsXsdValid(result) -> BpmnRepairResult.NotApplicable
-            else -> toRepaired(result, attempt)
-        }
-    }
+    private fun handlerConfigFor(diagnostic: BpmnDiagnostic): HandlerConfig {
+        val ruleId = diagnostic.bareRuleId() ?: return HandlerConfig.EMPTY
+        val meta = ruleCatalogService.getRule(ruleId) ?: return HandlerConfig.EMPTY
 
-    private fun collectLocalXmlRules(diagnostics: List<BpmnDiagnostic>): Set<String> = diagnostics
-        .asSequence()
-        .filter { it.source == BpmnDiagnosticSource.LINT && it.kind == RepairKind.LOCAL_XML_FIX }
-        .mapNotNull { it.bareRuleId() }
-        .toSet()
-
-    private fun isAutoFixUsable(result: BpmnAutoFixResult): Boolean = result.changed && result.applied.isNotEmpty()
-
-    private fun autoFixedXmlIsXsdValid(result: BpmnAutoFixResult): Boolean {
-        val xsdIssues = xsdValidationPort.validateDetailed(result.xml)
-        if (xsdIssues.isNotEmpty()) {
-            logger.warn(
-                "Local auto-fix produced XSD-invalid XML; falling through. xsdErrors={}",
-                xsdIssues.joinToString { it.message },
-            )
-            return false
-        }
-        return true
-    }
-
-    private fun toRepaired(
-        result: BpmnAutoFixResult,
-        attempt: BpmnRepairAttempt,
-    ): BpmnRepairResult.Repaired {
-        val newDefinition = xmlParser.parse(result.xml)
-        logger.info(
-            "Local lint auto-fix applied {} fix(es): {}",
-            result.applied.size,
-            result.applied.joinToString { "${it.rule}@${it.elementId ?: "-"}" },
-        )
-        return BpmnRepairResult.Repaired(
-            definition = newDefinition,
-            promptText = "Local lint auto-fix (" + result.applied.joinToString { it.rule } + ")",
-            messages = attempt.messages,
-            localFixSummary =
-            BpmnLocalFixSummary(
-                modelApplied = 0,
-                xmlApplied = result.applied.size,
-                xmlErrors = result.errors.size,
-            ),
+        @Suppress("UNCHECKED_CAST")
+        val staticConfig = meta.staticConfig as? Map<String, Any>
+        return HandlerConfig(
+            staticConfig = staticConfig,
+            replacementMap = meta.repair.replacementMap,
         )
     }
 
     private fun BpmnDiagnostic.bareRuleId(): String? = rule?.let(BpmnLintRuleIds::bareRuleId)
-
-    private fun LintIssue.bareRuleId(): String = BpmnLintRuleIds.bareRuleId(rule)
 }
