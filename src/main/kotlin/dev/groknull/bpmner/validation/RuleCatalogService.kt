@@ -46,7 +46,11 @@ data class BpmnRuleMetadata(
     val replacedBy: List<String>,
     val deprecationReason: String?,
     val repair: RepairMetadata = RepairMetadata(),
-)
+) {
+    init {
+        require(errorMessages.isNotEmpty()) { "Rule '$id' must define at least one error message" }
+    }
+}
 
 data class RuleCatalog(
     val rules: List<BpmnRuleMetadata>,

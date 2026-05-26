@@ -141,7 +141,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
 }
 
 internal fun RuleMetadata.diagnostic(elementId: String?, messageSuffix: String? = null): RuleDiagnostic {
-    val template = errorMessages["default"] ?: errorMessages.values.firstOrNull() ?: name
+    val template = errorMessages["default"] ?: errorMessages.values.first()
     return RuleDiagnostic(
         diagnosticCode = diagnosticCode(),
         ruleId = id,

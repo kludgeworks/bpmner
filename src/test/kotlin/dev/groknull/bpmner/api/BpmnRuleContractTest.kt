@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 
 /**
  * Smoke test for the [BpmnRule] extension-point contract. Verifies that a trivial inline
@@ -47,7 +48,10 @@ class BpmnRuleContractTest {
     }
 
     private companion object {
-        fun testMetadata(id: String): RuleMetadata = RuleMetadata(
+        fun testMetadata(
+            id: String,
+            errorMessages: Map<String, String> = mapOf("test-missing-name" to "Node requires a name."),
+        ): RuleMetadata = RuleMetadata(
             id = id,
             name = "Test Require Named Nodes",
             slug = "test-require-named-nodes",
@@ -56,7 +60,7 @@ class BpmnRuleContractTest {
             forModellers = "Test metadata for modellers.",
             forAI = "Test metadata for AI.",
             targetElements = listOf("bpmn:FlowNode"),
-            errorMessages = mapOf("test-missing-name" to "Node requires a name."),
+            errorMessages = errorMessages,
         )
     }
 
@@ -124,5 +128,15 @@ class BpmnRuleContractTest {
             diagnostics.all { it.ruleId == rule.id },
             "Every diagnostic must carry the rule's `id` as `ruleId`",
         )
+    }
+
+    @Test
+    fun `RuleMetadata rejects empty error messages at construction time`() {
+        val exception =
+            assertThrows<IllegalArgumentException> {
+                testMetadata("test-empty-errors", errorMessages = emptyMap())
+            }
+
+        assertEquals("Rule 'test-empty-errors' must define at least one error message", exception.message)
     }
 }

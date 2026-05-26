@@ -112,7 +112,7 @@ internal class BpmnRefinementEngine(
             }
         }
 
-        failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts", request)
+        failRefinement(maxEvaluations, state.history, "exhausted BPMN repair attempts")
     }
 
     /**
@@ -166,7 +166,7 @@ internal class BpmnRefinementEngine(
 
         logRouteSummary(currentAttempt, stampedResolution)
 
-        validateRepairEffect(repaired, currentRecord, history, maxEvaluations, request)
+        validateRepairEffect(repaired, currentRecord, history, maxEvaluations)
 
         val nextGraph = state.graph.withUpdatedDefinition(repaired.definition)
         val nextAttempt = evaluateNextAttempt(nextGraph, repaired, currentAttempt, history, state.contract)
@@ -196,7 +196,6 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "unchanged blocking diagnostics after repair attempt ${nextAttempt.repairAttempts}",
-                _request = request,
             )
         }
 
@@ -249,7 +248,7 @@ internal class BpmnRefinementEngine(
             }
 
             is BpmnRepairResult.TerminalFailure -> {
-                failRefinement(maxEvaluations, history, result.reason, request)
+                failRefinement(maxEvaluations, history, result.reason)
             }
 
             BpmnRepairResult.NotApplicable,
@@ -259,7 +258,6 @@ internal class BpmnRefinementEngine(
                     maxEvaluations = maxEvaluations,
                     history = history,
                     reason = "no repair strategy produced a candidate",
-                    _request = request,
                 )
             }
         }
@@ -275,7 +273,6 @@ internal class BpmnRefinementEngine(
         currentRecord: BpmnAttemptRecord,
         history: BpmnAttemptHistory,
         maxEvaluations: Int,
-        request: BpmnRequest,
     ) {
         val correctedDefinitionFingerprint = fingerprints.definitionFingerprint(repaired.definition)
         if (correctedDefinitionFingerprint == currentRecord.definitionFingerprint) {
@@ -283,7 +280,6 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "unchanged patch on repair attempt ${currentRecord.attemptNumber}",
-                _request = request,
             )
         }
         if (history.containsDefinitionFingerprint(correctedDefinitionFingerprint)) {
@@ -291,7 +287,6 @@ internal class BpmnRefinementEngine(
                 maxEvaluations = maxEvaluations,
                 history = history,
                 reason = "repeated invalid output on repair attempt ${currentRecord.attemptNumber}",
-                _request = request,
             )
         }
     }
@@ -428,7 +423,6 @@ internal class BpmnRefinementEngine(
         maxEvaluations: Int,
         history: BpmnAttemptHistory,
         reason: String,
-        _request: BpmnRequest,
     ): Nothing {
         val compactHistory = history.compact()
 

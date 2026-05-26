@@ -92,9 +92,11 @@ internal class DeterministicTopologyRepairStrategy(
         val ruleId = diagnostic.bareRuleId() ?: return HandlerConfig.EMPTY
         val meta = ruleCatalogService.getRule(ruleId) ?: return HandlerConfig.EMPTY
 
+        val rawStaticConfig = meta.staticConfig
+
         @Suppress("UNCHECKED_CAST")
-        val staticConfig = meta.staticConfig as? Map<String, Any>
-        if (meta.staticConfig != null && staticConfig == null) {
+        val staticConfig = rawStaticConfig as? Map<String, Any>
+        if (rawStaticConfig != null && staticConfig == null) {
             // A non-null `staticConfig` that isn't a Map silently produces an empty
             // HandlerConfig and the handler emits no patches — looks identical to "rule
             // satisfied" in production. Surface the misconfiguration so it can be fixed in
@@ -102,7 +104,7 @@ internal class DeterministicTopologyRepairStrategy(
             logger.warn(
                 "Rule '{}' staticConfig has unexpected type {}; handler config will be empty",
                 ruleId,
-                meta.staticConfig!!::class.simpleName,
+                rawStaticConfig::class.simpleName,
             )
         }
         return HandlerConfig(

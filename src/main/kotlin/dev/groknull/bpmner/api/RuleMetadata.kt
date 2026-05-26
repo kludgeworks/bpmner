@@ -32,7 +32,11 @@ data class RuleMetadata(
     val deprecated: Boolean = false,
     val replacedBy: List<String> = emptyList(),
     val deprecationReason: String? = null,
-)
+) {
+    init {
+        require(errorMessages.isNotEmpty()) { "Rule '$id' must define at least one error message" }
+    }
+}
 
 /**
  * Repair strategy metadata for a rule, matching the `Repair` class in `BpmnRule.pkl`.
