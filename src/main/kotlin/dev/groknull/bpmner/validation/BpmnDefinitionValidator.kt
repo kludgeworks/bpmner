@@ -18,6 +18,7 @@ import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -30,6 +31,7 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
+@Suppress("TooManyFunctions")
 internal class BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
@@ -117,119 +119,97 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    @Suppress("LongMethod", "CyclomaticComplexMethod", "NestedBlockDepth")
+    private data class EventValidationContext(
+        val nodesById: Map<String, BpmnNode>,
+        val messageIds: Set<String>,
+        val signalIds: Set<String>,
+        val errorIds: Set<String>,
+        val escalationIds: Set<String>,
+    )
+
     private fun validateEventDefinitions(
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        val nodesById = definition.nodes.associateBy { it.id }
-        val messageIds = definition.messages.map { it.id }.toSet()
-        val signalIds = definition.signals.map { it.id }.toSet()
-        val errorIds = definition.errors.map { it.id }.toSet()
-        val escalationIds = definition.escalations.map { it.id }.toSet()
+        val context = EventValidationContext(
+            nodesById = definition.nodes.associateBy { it.id },
+            messageIds = definition.messages.map { it.id }.toSet(),
+            signalIds = definition.signals.map { it.id }.toSet(),
+            errorIds = definition.errors.map { it.id }.toSet(),
+            escalationIds = definition.escalations.map { it.id }.toSet(),
+        )
 
         definition.nodes.forEach { node ->
             when (node) {
-                is BpmnStartEvent -> {
-                    validateEventDefinition(
-                        node.id,
-                        node.eventDefinition,
-                        messageIds,
-                        signalIds,
-                        errorIds,
-                        escalationIds,
-                        errors,
-                    )
-                }
-
+                is BpmnStartEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
+                is BpmnEndEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 is BpmnIntermediateCatchEvent -> {
-                    if (node.eventDefinition is BpmnNoneEventDefinition) {
-                        errors.add("intermediate catch event ${node.id} must declare an event definition")
-                    }
-                    validateEventDefinition(
+                    validateRequiredIntermediateEventDefinition(
+                        "intermediate catch event",
                         node.id,
                         node.eventDefinition,
-                        messageIds,
-                        signalIds,
-                        errorIds,
-                        escalationIds,
                         errors,
                     )
+                    validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
-
                 is BpmnIntermediateThrowEvent -> {
-                    if (node.eventDefinition is BpmnNoneEventDefinition) {
-                        errors.add("intermediate throw event ${node.id} must declare an event definition")
-                    }
-                    validateEventDefinition(
+                    validateRequiredIntermediateEventDefinition(
+                        "intermediate throw event",
                         node.id,
                         node.eventDefinition,
-                        messageIds,
-                        signalIds,
-                        errorIds,
-                        escalationIds,
                         errors,
                     )
+                    validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
-
-                is BpmnBoundaryEvent -> {
-                    if (node.eventDefinition is BpmnNoneEventDefinition) {
-                        errors.add("boundary event ${node.id} must declare an event definition")
-                    }
-                    if (node.attachedToRef.isBlank()) {
-                        errors.add("boundary event ${node.id} is missing the required attachedToRef attribute")
-                    } else {
-                        val attachedTo = nodesById[node.attachedToRef]
-                        if (attachedTo == null) {
-                            errors.add(
-                                "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
-                                    "does not match any node id",
-                            )
-                        } else if (!attachedTo.isTask()) {
-                            errors.add(
-                                "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
-                                    "must reference an attachable activity",
-                            )
-                        }
-                    }
-                    validateEventDefinition(
-                        node.id,
-                        node.eventDefinition,
-                        messageIds,
-                        signalIds,
-                        errorIds,
-                        escalationIds,
-                        errors,
-                    )
-                }
-
-                is BpmnEndEvent -> {
-                    validateEventDefinition(
-                        node.id,
-                        node.eventDefinition,
-                        messageIds,
-                        signalIds,
-                        errorIds,
-                        escalationIds,
-                        errors,
-                    )
-                }
-
-                else -> {
-                    Unit
-                }
+                is BpmnBoundaryEvent -> validateBoundaryEvent(node, context, errors)
+                else -> Unit
             }
         }
     }
 
-    @Suppress("LongParameterList", "CyclomaticComplexMethod")
+    private fun validateRequiredIntermediateEventDefinition(
+        label: String,
+        nodeId: String,
+        eventDefinition: BpmnEventDefinition,
+        errors: MutableList<String>,
+    ) {
+        if (eventDefinition is BpmnNoneEventDefinition) {
+            errors.add("$label $nodeId must declare an event definition")
+        }
+    }
+
+    private fun validateBoundaryEvent(
+        node: BpmnBoundaryEvent,
+        context: EventValidationContext,
+        errors: MutableList<String>,
+    ) {
+        if (node.eventDefinition is BpmnNoneEventDefinition) {
+            errors.add("boundary event ${node.id} must declare an event definition")
+        }
+        if (node.attachedToRef.isBlank()) {
+            errors.add("boundary event ${node.id} is missing the required attachedToRef attribute")
+        } else {
+            val attachedTo = context.nodesById[node.attachedToRef]
+            if (attachedTo == null) {
+                errors.add(
+                    "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                        "does not match any node id",
+                )
+            } else if (!attachedTo.isTask()) {
+                errors.add(
+                    "boundary event ${node.id} attachedToRef '${node.attachedToRef}' " +
+                        "must reference an attachable activity",
+                )
+            }
+        }
+        validateEventDefinition(node.id, node.eventDefinition, context, errors)
+    }
+
+    @Suppress("CyclomaticComplexMethod")
     private fun validateEventDefinition(
         nodeId: String,
         eventDefinition: BpmnEventDefinition,
-        messageIds: Set<String>,
-        signalIds: Set<String>,
-        errorIds: Set<String>,
-        escalationIds: Set<String>,
+        context: EventValidationContext,
         errors: MutableList<String>,
     ) {
         when (eventDefinition) {
@@ -248,7 +228,7 @@ internal class BpmnDefinitionValidator {
                     errors.add(
                         "event $nodeId messageEventDefinition is missing the required messageRef attribute",
                     )
-                } else if (eventDefinition.messageRef !in messageIds) {
+                } else if (eventDefinition.messageRef !in context.messageIds) {
                     errors.add(
                         "event $nodeId messageRef '${eventDefinition.messageRef}' " +
                             "does not match any message catalog id",
@@ -261,7 +241,7 @@ internal class BpmnDefinitionValidator {
                     errors.add(
                         "event $nodeId signalEventDefinition is missing the required signalRef attribute",
                     )
-                } else if (eventDefinition.signalRef !in signalIds) {
+                } else if (eventDefinition.signalRef !in context.signalIds) {
                     errors.add("event $nodeId signalRef '${eventDefinition.signalRef}' does not match any signal catalog id")
                 }
             }
@@ -271,7 +251,7 @@ internal class BpmnDefinitionValidator {
                     errors.add(
                         "event $nodeId errorEventDefinition is missing the required errorRef attribute",
                     )
-                } else if (eventDefinition.errorRef !in errorIds) {
+                } else if (eventDefinition.errorRef !in context.errorIds) {
                     errors.add("event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id")
                 }
             }
@@ -281,7 +261,7 @@ internal class BpmnDefinitionValidator {
                     errors.add(
                         "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
                     )
-                } else if (eventDefinition.escalationRef !in escalationIds) {
+                } else if (eventDefinition.escalationRef !in context.escalationIds) {
                     errors.add(
                         "event $nodeId escalationRef '${eventDefinition.escalationRef}' does not match any escalation catalog id",
                     )
