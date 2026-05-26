@@ -40,6 +40,7 @@ data class BpmnConfig(
         const val DEFAULT_LINT_BATCH_SIZE = 10
 
         private const val CONCISE_AND_EXACT = "concise and exact"
+        private const val SOURCE_GROUNDED_VOICE = "specific and evidence-grounded"
 
         val DEFAULT_GENERATOR =
             Actor(
@@ -119,7 +120,7 @@ data class BpmnConfig(
                     objective =
                     "Assess whether source text contains enough grounded process detail" +
                         " for BPMN generation without inventing missing facts",
-                    voice = "specific and evidence-grounded",
+                    voice = SOURCE_GROUNDED_VOICE,
                 ),
                 llm = LlmOptions.withLlmForRole("readiness-assessor"),
             )
@@ -136,7 +137,7 @@ data class BpmnConfig(
                     "Produce a typed ProcessContract whose every element is traceable to the source" +
                         " input, an assessment evidence id, a clarification answer, or an explicit" +
                         " assumption; never invent facts that are not grounded",
-                    voice = "specific and evidence-grounded",
+                    voice = SOURCE_GROUNDED_VOICE,
                 ),
                 llm = LlmOptions.withLlmForRole("contract-extractor"),
             )
@@ -165,7 +166,7 @@ data class BpmnConfig(
                     "Evaluate LLM-judgement BPMN rules against a definition and report" +
                         " specific, element-anchored violations — never invent failures, never" +
                         " skip rules that apply",
-                    voice = "specific and evidence-grounded",
+                    voice = SOURCE_GROUNDED_VOICE,
                 ),
                 llm = LlmOptions.withLlmForRole("lint"),
             )
