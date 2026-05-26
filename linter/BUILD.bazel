@@ -1,98 +1,16 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
-load("@aspect_rules_js//js:defs.bzl", "js_binary", "js_library", "js_run_binary")
-load("@bazel_skylib//rules:write_file.bzl", "write_file")
-load("@bazel_sonarqube//:defs.bzl", "sonarqube")
-load("@npm//:defs.bzl", "npm_link_all_packages")
-load("//tools/js:test.bzl", "bpmner_node_test")
-load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 
 package(default_visibility = [
     "//:__pkg__",
     "//src:__subpackages__",
 ])
 
-# Single sonarqube rule (no sq_project wrapper) — each package IS its own SonarCloud
-# project, so the multi-module aggregation that sq_project enables is unused here.
-# Having both rules in one package fails to load because each generates the same
-# `sonar-project.properties` output file.
-#
-# Visibility is explicitly public on this rule (overriding the restricted package
-# default) so the SonarCloud workflow can `bazel run //linter:sonar` from outside
-# the package. The package-level default stays restricted to avoid leaking the
-# bundler / test targets to the rest of the build graph.
-sonarqube(
-    name = "sonar",
-    srcs = glob(
-        ["src/**/*.ts"],
-        exclude = [
-            "src/polyfills.ts",
-            "src/generated/**",
-        ],
-    ),
-    project_key = "kludgeworks_bpmner_linter",
-    project_name = "bpmner Linter",
-    scm_info = ["//:git_info"],
-    visibility = ["//visibility:public"],
-)
-
-STATIC_RULES_OUTPUT = "src/generated/static-rules.ts"
-
-LIB_SRCS = glob(
-    [
-        "src/**/*.ts",
-        "types/**/*.d.ts",
-    ],
-    exclude = [
-        "src/polyfills.ts",
-    ],
-)
-
-TEST_SRCS = glob([
-    "test/**/*.ts",
-])
-
-BPMN_FIXTURES = glob([
-    "test/fixtures/**/*.bpmn",
-])
-
-alias(
-    name = "cpd_srcs",
-    actual = ":analysis_srcs",
-)
-
-genrule(
-    name = "copy_polyfills",
-    srcs = ["//tools/js:polyfills.ts"],
-    outs = ["src/polyfills-shared.ts"],
-    cmd = "cp $< $@",
-)
-
-write_file(
-    name = "write_polyfills",
-    out = "src/polyfills.ts",
-    content = [
-        "import { installPolyfills } from './polyfills-shared';",
-        "installPolyfills();",
-    ],
-)
-
-genrule(
-    name = "linter_rules_json",
-    srcs = ["//linter/pkl:catalog_json"],
-    outs = ["src/generated/linter-rules.json"],
-    cmd = "cp $< $@",
-)
-
-GENERATED_SRCS = [
-    ":generated_rule_registry_ts",
-    ":linter_rules_json",
-    ":copy_polyfills",
-    ":write_polyfills",
-]
-
+# `vale_docs` is consumed by the root `vale_docs_test` / `vale_fixtures_test` to lint
+# documentation prose via `js_test`. After 2G the linter has no TypeScript surface, so
+# this `js_library` only carries the markdown sources + the Pkl-generated rule docs.
 js_library(
     name = "vale_docs",
     srcs = [
@@ -102,97 +20,3 @@ js_library(
         "//linter/pkl:generated_docs",
     ],
 )
-
-# Link the standalone linter package's node_modules
-npm_link_all_packages(name = "node_modules")
-
-LINTER_TS_DEPS = [
-    "//:node_modules/@types/node",
-    "//:node_modules/bpmn-moddle",
-    "//:node_modules/bpmnlint",
-    "//:node_modules/bpmnlint-utils",
-    "//:node_modules/wink-eng-lite-web-model",
-    "//:node_modules/wink-nlp",
-]
-
-filegroup(
-    name = "analysis_srcs",
-    srcs = glob(
-        [
-            "src/**/*.ts",
-            "test/**/*.ts",
-        ],
-        exclude = ["src/generated/**"],
-    ),
-)
-
-bpmner_ts_configs()
-
-bpmner_ts_project(
-    name = "ts",
-    srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS,
-    assets = BPMN_FIXTURES,
-    out_dir = "tsc",
-    resolve_json_module = True,
-    tsconfig = ":tsconfig_bazel",
-    deps = LINTER_TS_DEPS,
-)
-
-js_binary(
-    name = "generate_rule_registry_bin",
-    data = [
-        "src/generated/linter-rules.json",
-        "//:node_modules/bpmnlint",
-        "//linter/pkl:generated_docs",
-    ] + glob([
-        "src/rules/**/*.ts",
-    ]),
-    entry_point = "scripts/generate-static-rules.mjs",
-)
-
-js_run_binary(
-    name = "generated_rule_registry_ts",
-    srcs = [
-        "src/generated/linter-rules.json",
-        "//linter/pkl:generated_docs",
-    ] + glob([
-        "src/rules/**/*.ts",
-    ]),
-    outs = [STATIC_RULES_OUTPUT],
-    args = [
-        "$(location %s)" % STATIC_RULES_OUTPUT,
-        "$(location //linter/pkl:generated_docs)",
-        "$(location src/generated/linter-rules.json)",
-    ],
-    mnemonic = "GenerateRuleRegistry",
-    progress_message = "Generating %{label}",
-    tool = ":generate_rule_registry_bin",
-)
-
-esbuild(
-    name = "bundle",
-    srcs = LIB_SRCS + GENERATED_SRCS,
-    config = {
-        "inject": ["linter/src/polyfills.ts"],
-        "sourcemap": False,
-    },
-    entry_point = "src/linter-bundle.ts",
-    format = "iife",
-    output = "dist/js/bpmnlint-bundle.js",
-    platform = "node",
-    target = "es2022",
-    deps = LINTER_TS_DEPS,
-)
-
-[bpmner_node_test(
-    name = t,
-    srcs = LIB_SRCS + TEST_SRCS + GENERATED_SRCS + BPMN_FIXTURES,
-    entry_point = "test/%s.test.ts" % t.replace("_test", "").replace("_", "-"),
-    loaders = {".bpmn": "text"},
-    deps = LINTER_TS_DEPS,
-) for t in [
-    "lint_test",
-    "smoke_test",
-    "auto_fix_test",
-    "capabilities_test",
-]]
