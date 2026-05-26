@@ -25,8 +25,6 @@ staticConfig = new {
   discouragedWords = List("activity", "process", "event")
 }
 
-hasTsImplementation = true
-
 repair = new {
   kind = "LOCAL_MODEL_FIX"
   safety = "SAFE_AUTOMATIC"

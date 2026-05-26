@@ -27,8 +27,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 checkPrimitive = "PairingCheck"
 checkConfig = new CheckPrimitive.PairingCheck {
   mode = "LINK_PAIRING"

@@ -36,8 +36,6 @@ staticConfig = new {
     )
 }
 
-hasTsImplementation = false
-
 checkPrimitive = "LlmCheckRule"
 checkConfig = new CheckPrimitive.LlmCheckRule {
   prompt =

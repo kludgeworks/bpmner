@@ -29,8 +29,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 checkPrimitive = "PropertyPatternCheck"
 checkConfig = new CheckPrimitive.PropertyPatternCheck {
   property = "name"

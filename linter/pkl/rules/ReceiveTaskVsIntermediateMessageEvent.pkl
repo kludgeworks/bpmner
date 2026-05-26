@@ -20,8 +20,6 @@ errorMessages = new {
     "Use Receive Task for explicit participant interaction; use Intermediate Message Event for passive events."
 }
 
-hasTsImplementation = false
-
 checkPrimitive = "LlmCheckRule"
 checkConfig = new CheckPrimitive.LlmCheckRule {
   prompt =

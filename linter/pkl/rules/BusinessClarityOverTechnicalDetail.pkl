@@ -23,8 +23,6 @@ staticConfig = new {
   cookbookCode = "GEN-02"
 }
 
-hasTsImplementation = false
-
 checkPrimitive = "LlmCheckRule"
 checkConfig = new CheckPrimitive.LlmCheckRule {
   prompt =

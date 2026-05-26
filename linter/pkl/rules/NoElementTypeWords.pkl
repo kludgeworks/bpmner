@@ -37,8 +37,6 @@ staticConfig = new {
   discouragedWords = List("activity", "process", "event")
 }
 
-hasTsImplementation = true
-
 checkPrimitive = "VocabularyCheck"
 checkConfig = new CheckPrimitive.VocabularyCheck {
   property = "name"

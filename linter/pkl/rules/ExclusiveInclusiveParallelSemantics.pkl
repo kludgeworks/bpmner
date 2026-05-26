@@ -36,8 +36,6 @@ staticConfig = new {
   heuristicChecks = List("xor-vs-or-business-intent", "matching-split-join-context")
 }
 
-hasTsImplementation = true
-
 // The deterministic part of this rule (parallelCondition / parallelSplitCardinality /
 // parallelJoinCardinality from staticConfig.deterministicChecks) stays on the JS path —
 // the new path routes the heuristic XOR-vs-OR-vs-AND judgement to LlmRuleAgent. Splitting

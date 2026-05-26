@@ -27,5 +27,3 @@ staticConfig = new {
   loopCharacteristics =
     List("bpmn:StandardLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
 }
-
-hasTsImplementation = true

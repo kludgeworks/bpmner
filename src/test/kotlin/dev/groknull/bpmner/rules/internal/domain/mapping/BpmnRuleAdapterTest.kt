@@ -98,8 +98,8 @@ internal class BpmnRuleAdapterTest {
     ): PklBpmnRule {
         // Constructor arg order matches BpmnRule.pkl: name, category, slug, id, intent,
         // forModellers, forAI, targetElements, severity, errorMessages, staticConfig,
-        // checkPrimitive, checkConfig, repair, hasTsImplementation, aliases, deprecated,
-        // replacedBy, deprecationReason.
+        // checkPrimitive, checkConfig, repair, aliases, deprecated, replacedBy,
+        // deprecationReason.
         val repair = PklBpmnRule.Repair(
             PklBpmnRule.RepairKind.LOCAL_MODEL_FIX,
             PklBpmnRule.RepairSafety.SAFE_AUTOMATIC,
@@ -123,7 +123,6 @@ internal class BpmnRuleAdapterTest {
             checkPrimitive,
             checkConfig,
             repair,
-            false,
             emptyList(),
             false,
             emptyList(),

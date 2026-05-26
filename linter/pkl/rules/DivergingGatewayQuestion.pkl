@@ -56,5 +56,3 @@ staticConfig = new {
       "whom",
     )
 }
-
-hasTsImplementation = true

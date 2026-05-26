@@ -20,8 +20,6 @@ errorMessages = new {
     "Use Send Task for user-driven sends; use throwing Intermediate Message Event for event-driven sends."
 }
 
-hasTsImplementation = false
-
 checkPrimitive = "LlmCheckRule"
 checkConfig = new CheckPrimitive.LlmCheckRule {
   prompt =

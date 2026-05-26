@@ -21,8 +21,8 @@ class Repair {
   // Optional GOAP-ready preconditions/effects. Reserved for Phase 2I (GOAP unification) — no
   // rule fills these in today. Map keys are condition names; values follow Embabel's
   // ConditionDetermination idiom ("TRUE" / "FALSE").
-  preconditions: Mapping<String, "TRUE"|"FALSE">? = null
-  postconditions: Mapping<String, "TRUE"|"FALSE">? = null
+  preconditions: Mapping<String, "TRUE" | "FALSE">? = null
+  postconditions: Mapping<String, "TRUE" | "FALSE">? = null
 }
 
 name: NonEmptyString
@@ -42,8 +42,6 @@ checkPrimitive: CheckPrimitive.Primitive? = null
 checkConfig: CheckPrimitive.CheckConfig? = null
 
 repair: Repair = new {}
-
-hasTsImplementation: Boolean = false
 
 aliases: List<NonEmptyString> = List()
 deprecated: Boolean = false
