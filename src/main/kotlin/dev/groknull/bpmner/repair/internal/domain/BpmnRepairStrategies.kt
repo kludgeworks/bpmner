@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.Actor
+import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
