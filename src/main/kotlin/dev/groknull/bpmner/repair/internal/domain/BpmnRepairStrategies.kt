@@ -47,8 +47,7 @@ internal class TargetedLabelRepairStrategy(
             promptFactory = promptFactory,
             patchApplier = patchApplier,
             feedback = feedback,
-            emptyPatchWarning = "LLM label patch creation returned no structured patch, falling back",
-            patchFailureWarning = "LLM label patch application failed, falling back: {}",
+            patchTypeName = "LLM label patch",
             logger = logger,
         )
     }
@@ -81,8 +80,7 @@ internal class LlmPatchRepairStrategy(
             promptFactory = promptFactory,
             patchApplier = patchApplier,
             feedback = feedback,
-            emptyPatchWarning = "LLM patch creation returned no structured patch, falling back",
-            patchFailureWarning = "LLM patch application failed, falling back: {}",
+            patchTypeName = "LLM patch",
             logger = logger,
         )
     }
@@ -126,15 +124,15 @@ internal class FullLlmRewriteRepairStrategy(
     }
 }
 
-@Suppress("LongParameterList") // Refactoring duplicate block out across two instances where strategy shape dictates similar large param counts
+// Refactoring duplicate blocks across two strategies leaves the helper with the same workflow inputs.
+@Suppress("LongParameterList")
 private fun repairWithPatch(
     context: BpmnRepairStrategyContext,
     actor: Actor<Persona>,
     promptFactory: BpmnRepairPromptPort,
     patchApplier: BpmnPatchApplicationPort,
     feedback: String,
-    emptyPatchWarning: String,
-    patchFailureWarning: String,
+    patchTypeName: String,
     logger: Logger,
 ): BpmnRepairResult {
     val runner = context.promptRunner(actor, promptFactory)
@@ -144,7 +142,7 @@ private fun repairWithPatch(
             BpmnRepairPatch::class.java,
         )
     if (patch == null) {
-        logger.warn(emptyPatchWarning)
+        logger.warn("$patchTypeName creation returned no structured patch, falling back")
         return BpmnRepairResult.NotApplicable
     }
 
@@ -160,7 +158,7 @@ private fun repairWithPatch(
         }
 
         is PatchApplicationResult.Failure -> {
-            logger.warn(patchFailureWarning, application.reason)
+            logger.warn("$patchTypeName application failed, falling back: {}", application.reason)
             BpmnRepairResult.NotApplicable
         }
 
