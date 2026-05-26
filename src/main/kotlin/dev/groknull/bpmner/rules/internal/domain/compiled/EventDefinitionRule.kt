@@ -6,18 +6,12 @@ package dev.groknull.bpmner.rules.internal.domain.compiled
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEndEvent
-import dev.groknull.bpmner.api.BpmnErrorEventDefinition
-import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.api.BpmnMessageEventDefinition
 import dev.groknull.bpmner.api.BpmnNoneEventDefinition
 import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
-import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.api.BpmnTimerEventDefinition
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
@@ -45,10 +39,10 @@ import org.springframework.stereotype.Component
 @Component
 internal class EventDefinitionRule : BpmnRule {
     companion object {
-        private const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
-        private const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
-        private const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
-        private const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
+        internal const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
+        internal const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
+        internal const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
+        internal const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
     }
     override val id: String = "def-event-definitions"
     override val metadata: RuleMetadata = RuleMetadata(
@@ -84,26 +78,27 @@ internal class EventDefinitionRule : BpmnRule {
     )
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
+        val eventValidator = EventDefinitionValidator(id, ctx)
         ctx.definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> {
-                    validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
+                    diagnostics += eventValidator.validate(node.id, node.eventDefinition)
                 }
 
                 is BpmnEndEvent -> {
-                    validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
+                    diagnostics += eventValidator.validate(node.id, node.eventDefinition)
                 }
 
                 is BpmnIntermediateCatchEvent -> {
-                    validateIntermediate("intermediate catch event", node.id, node.eventDefinition, ctx, diagnostics)
+                    validateIntermediate("intermediate catch event", node.id, node.eventDefinition, eventValidator, diagnostics)
                 }
 
                 is BpmnIntermediateThrowEvent -> {
-                    validateIntermediate("intermediate throw event", node.id, node.eventDefinition, ctx, diagnostics)
+                    validateIntermediate("intermediate throw event", node.id, node.eventDefinition, eventValidator, diagnostics)
                 }
 
                 is BpmnBoundaryEvent -> {
-                    validateBoundary(node, ctx, diagnostics)
+                    validateBoundary(node, ctx, eventValidator, diagnostics)
                 }
 
                 else -> {
@@ -117,24 +112,25 @@ internal class EventDefinitionRule : BpmnRule {
         nodeLabel: String,
         nodeId: String,
         eventDefinition: BpmnEventDefinition,
-        ctx: BpmnDefinitionContext,
+        eventValidator: EventDefinitionValidator,
         diagnostics: MutableList<RuleDiagnostic>,
     ) {
         if (eventDefinition is BpmnNoneEventDefinition) {
             diagnostics += missingEventDef(nodeLabel = nodeLabel, nodeId = nodeId)
         }
-        validateEventDefinition(nodeId, eventDefinition, ctx, diagnostics)
+        diagnostics += eventValidator.validate(nodeId, eventDefinition)
     }
     private fun validateBoundary(
         node: BpmnBoundaryEvent,
         ctx: BpmnDefinitionContext,
+        eventValidator: EventDefinitionValidator,
         diagnostics: MutableList<RuleDiagnostic>,
     ) {
         if (node.eventDefinition is BpmnNoneEventDefinition) {
             diagnostics += missingEventDef(nodeLabel = "boundary event", nodeId = node.id)
         }
         validateAttachedToRef(node, ctx, diagnostics)
-        validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
+        diagnostics += eventValidator.validate(node.id, node.eventDefinition)
     }
     private fun validateAttachedToRef(
         node: BpmnBoundaryEvent,
@@ -192,133 +188,4 @@ internal class EventDefinitionRule : BpmnRule {
         message = "$nodeLabel $nodeId must declare an event definition",
         elementId = nodeId,
     )
-
-    // Flat dispatcher over the 7-arm sealed BpmnEventDefinition hierarchy. Each arm is small
-    // (a blank check + an optional catalog-membership check), but the cyclomatic + length
-    // thresholds key on arm count, not per-arm complexity. Splitting into 4 per-type helpers
-    // (one per typed catalog) would inflate signature noise without changing testability.
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
-    private fun validateEventDefinition(
-        nodeId: String,
-        eventDefinition: BpmnEventDefinition,
-        ctx: BpmnDefinitionContext,
-        diagnostics: MutableList<RuleDiagnostic>,
-    ) {
-        when (eventDefinition) {
-            is BpmnNoneEventDefinition -> {
-                Unit
-            }
-
-            is BpmnTerminateEventDefinition -> {
-                Unit
-            }
-
-            is BpmnTimerEventDefinition -> {
-                if (eventDefinition.expression.isBlank()) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = "def-missing-timer-expr",
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId timer definition expression must not be blank",
-                            elementId = nodeId,
-                        )
-                }
-            }
-
-            is BpmnMessageEventDefinition -> {
-                if (eventDefinition.messageRef.isBlank()) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_MESSAGE_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId messageEventDefinition is missing the required messageRef attribute",
-                            elementId = nodeId,
-                        )
-                } else if (eventDefinition.messageRef !in ctx.messageIds) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_MESSAGE_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message =
-                            "event $nodeId messageRef '${eventDefinition.messageRef}' " +
-                                "does not match any message catalog id",
-                            elementId = nodeId,
-                        )
-                }
-            }
-
-            is BpmnSignalEventDefinition -> {
-                if (eventDefinition.signalRef.isBlank()) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_SIGNAL_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId signalEventDefinition is missing the required signalRef attribute",
-                            elementId = nodeId,
-                        )
-                } else if (eventDefinition.signalRef !in ctx.signalIds) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_SIGNAL_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message =
-                            "event $nodeId signalRef '${eventDefinition.signalRef}' " +
-                                "does not match any signal catalog id",
-                            elementId = nodeId,
-                        )
-                }
-            }
-
-            is BpmnErrorEventDefinition -> {
-                if (eventDefinition.errorRef.isBlank()) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_ERROR_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId errorEventDefinition is missing the required errorRef attribute",
-                            elementId = nodeId,
-                        )
-                } else if (eventDefinition.errorRef !in ctx.errorIds) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_ERROR_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id",
-                            elementId = nodeId,
-                        )
-                }
-            }
-
-            is BpmnEscalationEventDefinition -> {
-                if (eventDefinition.escalationRef.isBlank()) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_ESCALATION_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message = "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
-                            elementId = nodeId,
-                        )
-                } else if (eventDefinition.escalationRef !in ctx.escalationIds) {
-                    diagnostics +=
-                        RuleDiagnostic(
-                            diagnosticCode = DEF_INVALID_ESCALATION_REF,
-                            ruleId = id,
-                            severity = RuleSeverity.ERROR,
-                            message =
-                            "event $nodeId escalationRef '${eventDefinition.escalationRef}' " +
-                                "does not match any escalation catalog id",
-                            elementId = nodeId,
-                        )
-                }
-            }
-        }
-    }
 }
