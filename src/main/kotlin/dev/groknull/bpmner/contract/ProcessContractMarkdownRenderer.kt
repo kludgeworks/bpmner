@@ -8,9 +8,9 @@ package dev.groknull.bpmner.contract
 import dev.groknull.bpmner.contract.ProcessContract
 import org.springframework.stereotype.Component
 
+@Suppress("TooManyFunctions")
 @Component
 internal class ProcessContractMarkdownRenderer {
-    @Suppress("LongMethod", "CyclomaticComplexMethod")
     fun render(contract: ProcessContract): String = buildString {
         appendLine("# ${contract.processName}")
         appendLine("Trigger: ${contract.trigger}")
@@ -18,6 +18,15 @@ internal class ProcessContractMarkdownRenderer {
         appendLine("## Summary")
         appendLine(contract.summary)
 
+        appendActors(contract)
+        appendActivities(contract)
+        appendDecisions(contract)
+        appendArtifacts(contract)
+        appendEndStates(contract)
+        appendAssumptions(contract)
+    }
+
+    private fun StringBuilder.appendActors(contract: ProcessContract) {
         if (contract.actors.isNotEmpty()) {
             appendLine()
             appendLine("## Actors")
@@ -26,7 +35,9 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine("- ${actor.id}: ${actor.name}$role")
             }
         }
+    }
 
+    private fun StringBuilder.appendActivities(contract: ProcessContract) {
         if (contract.activities.isNotEmpty()) {
             appendLine()
             appendLine("## Activities")
@@ -36,26 +47,39 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
             }
         }
+    }
 
+    private fun StringBuilder.appendDecisions(contract: ProcessContract) {
         if (contract.decisions.isNotEmpty()) {
             appendLine()
             appendLine("## Decisions")
             contract.decisions.forEach { decision ->
-                val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
+                val kindSuffix = decisionSuffix(decision)
                 appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
                 decision.branches.forEach { branch ->
-                    val suffix =
-                        when (branch) {
-                            is ConditionalBranch -> " if \"${branch.condition}\""
-                            is DefaultBranch -> " [default]"
-                            is UnconditionalBranch -> ""
-                        }
-                    val next = branch.nextRef?.let { " → $it" }.orEmpty()
+                    val suffix = branchSuffix(branch)
+                    val next = branchNextSuffix(branch)
                     appendLine("  - ${branch.id} → \"${branch.label}\"$suffix$next")
                 }
             }
         }
+    }
 
+    private fun decisionSuffix(decision: ContractDecision): String {
+        return if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
+    }
+
+    private fun branchSuffix(branch: ContractBranch): String {
+        return when (branch) {
+            is ConditionalBranch -> " if \"${branch.condition}\""
+            is DefaultBranch -> " [default]"
+            is UnconditionalBranch -> ""
+        }
+    }
+
+    private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()
+
+    private fun StringBuilder.appendArtifacts(contract: ProcessContract) {
         if (contract.artifacts.isNotEmpty()) {
             appendLine()
             appendLine("## Artifacts")
@@ -64,7 +88,9 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine("- ${artifact.id}: ${artifact.name}$description")
             }
         }
+    }
 
+    private fun StringBuilder.appendEndStates(contract: ProcessContract) {
         if (contract.endStates.isNotEmpty()) {
             appendLine()
             appendLine("## End states")
@@ -72,7 +98,9 @@ internal class ProcessContractMarkdownRenderer {
                 appendLine("- ${endState.id}: ${endState.name}${endStateSuffix(endState)}")
             }
         }
+    }
 
+    private fun StringBuilder.appendAssumptions(contract: ProcessContract) {
         if (contract.assumptions.isNotEmpty()) {
             appendLine()
             appendLine("## Assumptions")
