@@ -19,6 +19,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.MAIN_PHASE_OWNER
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
@@ -149,8 +150,8 @@ internal class BpmnGeneratorAgent(
         val phasePlans =
             listOf(
                 PhasePlan(
-                    phaseId = "phase:main",
-                    ownerRef = "phase:main",
+                    phaseId = MAIN_PHASE_OWNER,
+                    ownerRef = MAIN_PHASE_OWNER,
                     definition = outline.definition,
                 ),
             )
@@ -204,14 +205,14 @@ internal class BpmnGeneratorAgent(
     fun assignOwnership(graph: ComposedProcessGraph): OwnedElementGraph {
         val elementOwners =
             buildMap {
-                put(graph.definition.processId, graph.objectOwnersByObjectRef["process"] ?: "phase:main")
+                put(graph.definition.processId, graph.objectOwnersByObjectRef["process"] ?: MAIN_PHASE_OWNER)
                 graph.definition.nodes.forEach { node ->
-                    put(node.id, graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: "phase:main")
-                    put("${node.id}_di", graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: "phase:main")
+                    put(node.id, graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
+                    put("${node.id}_di", graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
                 }
                 graph.definition.sequences.forEach { edge ->
-                    put(edge.id, graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: "phase:main")
-                    put("${edge.id}_di", graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: "phase:main")
+                    put(edge.id, graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
+                    put("${edge.id}_di", graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
                 }
             }
         return OwnedElementGraph(

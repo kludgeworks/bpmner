@@ -10,6 +10,8 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 
+private const val BPMN_TOPOLOGY_LABEL = "  BPMN topology:"
+
 internal class BpmnContractGenerationPromptFactory(
     private val contractRenderer: ProcessContractMarkdownRenderer,
 ) {
@@ -170,7 +172,7 @@ internal class BpmnContractGenerationPromptFactory(
         appendLine(
             "    - {kind: CONDITIONAL, id: br-retry, label: \"Continue\", condition: \"continue\", nextRef: \"act-strategy-1\"}  // back-edge",
         )
-        appendLine("  BPMN topology:")
+        appendLine(BPMN_TOPOLOGY_LABEL)
         appendLine("    - The decision is realized as ONE EXCLUSIVE_GATEWAY node:")
         appendLine("        BpmnNode(id=\"dec-validate\", type=EXCLUSIVE_GATEWAY, name=\"Did validation pass?\")")
         appendLine("    - Three outbound sequence flows from that gateway with the conditions above.")
@@ -182,7 +184,7 @@ internal class BpmnContractGenerationPromptFactory(
             "    - {kind: CONDITIONAL, id: br-standard, label: \"Standard\", condition: \"score in 600..749\", nextRef: \"act-standard\"}",
         )
         appendLine("    - {kind: DEFAULT, id: br-manual, label: \"Manual review\", nextRef: \"act-manual\"}")
-        appendLine("  BPMN topology:")
+        appendLine(BPMN_TOPOLOGY_LABEL)
         appendLine("    - One EXCLUSIVE_GATEWAY node `dec-tier`.")
         appendLine("    - Three outbound flows from `dec-tier`. The flow targeting `act-manual` has")
         appendLine("      `isDefault = true` and no conditionExpression; the renderer writes the")
@@ -212,7 +214,7 @@ internal class BpmnContractGenerationPromptFactory(
         appendLine("    - {kind: UNCONDITIONAL, id: br-facilities, label: \"Facilities prep\", nextRef: \"act-prep-facilities\"}")
         appendLine("    - {kind: UNCONDITIONAL, id: br-manager,    label: \"Manager prep\",    nextRef: \"act-prep-manager\"}")
         appendLine("  After all three complete, the process continues to `act-orientation`.")
-        appendLine("  BPMN topology:")
+        appendLine(BPMN_TOPOLOGY_LABEL)
         appendLine("    - Fork: BpmnNode(id=\"dec-prep-tracks\", type=PARALLEL_GATEWAY, name=\"Run preparation tracks\")")
         appendLine("    - Three unconditional outbound flows from the fork:")
         appendLine("        * to `act-prep-it`        (no condition)")

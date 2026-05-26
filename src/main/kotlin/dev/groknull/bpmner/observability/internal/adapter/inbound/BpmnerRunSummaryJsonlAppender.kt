@@ -34,15 +34,16 @@ class BpmnerRunSummaryJsonlAppender(
                 StandardOpenOption.APPEND,
             )
         } catch (e: JsonProcessingException) {
-            logger.warn("Failed to append BPMN structured run summary", e)
+            logger.warn(FAILED_TO_APPEND_MSG, e)
         } catch (e: java.io.IOException) {
-            logger.warn("Failed to append BPMN structured run summary", e)
+            logger.warn(FAILED_TO_APPEND_MSG, e)
         } catch (e: SecurityException) {
-            logger.warn("Failed to append BPMN structured run summary", e)
+            logger.warn(FAILED_TO_APPEND_MSG, e)
         }
     }
 
     companion object {
+        private const val FAILED_TO_APPEND_MSG = "Failed to append BPMN structured run summary"
         const val JSONL_FILE_NAME = "bpmner-runs.jsonl"
     }
 }
