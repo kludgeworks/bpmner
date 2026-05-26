@@ -37,7 +37,7 @@ internal interface BpmnRepairPromptPort {
 }
 
 @SecondaryPort
-internal interface BpmnPatchApplicationPort {
+internal fun interface BpmnPatchApplicationPort {
     fun apply(
         definition: BpmnDefinition,
         patch: BpmnRepairPatch,

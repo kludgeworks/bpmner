@@ -12,7 +12,7 @@ import org.jline.reader.UserInterruptException
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Component
 
-interface BpmnShellPrompter {
+fun interface BpmnShellPrompter {
     fun ask(question: ClarificationQuestion): String?
 }
 

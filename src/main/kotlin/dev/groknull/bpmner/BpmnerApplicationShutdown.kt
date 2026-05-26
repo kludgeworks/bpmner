@@ -10,7 +10,7 @@ import org.springframework.context.ConfigurableApplicationContext
 import org.springframework.stereotype.Component
 import kotlin.system.exitProcess
 
-interface BpmnerApplicationShutdown {
+fun interface BpmnerApplicationShutdown {
     fun exit()
 }
 

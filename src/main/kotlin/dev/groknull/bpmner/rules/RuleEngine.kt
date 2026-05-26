@@ -21,6 +21,6 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * work the context has already done.
  */
 @PrimaryPort
-interface RuleEngine {
+fun interface RuleEngine {
     fun evaluate(definition: BpmnDefinition): RuleEvaluation
 }
