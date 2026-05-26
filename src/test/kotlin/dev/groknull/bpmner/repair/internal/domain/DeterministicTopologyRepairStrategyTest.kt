@@ -220,7 +220,7 @@ class DeterministicTopologyRepairStrategyTest {
         forAI = "test",
         targetElements = emptyList(),
         severity = "warning",
-        errorMessages = emptyMap(),
+        errorMessages = mapOf("default" to "test violation"),
         staticConfig = staticConfig,
         hasTsImplementation = false,
         aliases = emptyList(),

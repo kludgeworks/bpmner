@@ -141,7 +141,6 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
 }
 
 internal fun RuleMetadata.diagnostic(elementId: String?, messageSuffix: String? = null): RuleDiagnostic {
-    require(errorMessages.isNotEmpty()) { "Rule '$id' must define at least one error message" }
     val template = errorMessages["default"] ?: errorMessages.values.first()
     return RuleDiagnostic(
         diagnosticCode = diagnosticCode(),
