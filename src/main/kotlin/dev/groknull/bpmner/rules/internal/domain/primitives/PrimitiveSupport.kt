@@ -125,17 +125,17 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         listOf(
             PrimitiveElement(
                 id = "definitions",
-                typeName = "bpmn:Definitions",
+                typeName = BpmnTypeName.DEFINITIONS,
                 properties = mapOf("id" to "definitions"),
             ),
             PrimitiveElement(
                 id = definition.processId,
-                typeName = "bpmn:Process",
+                typeName = BpmnTypeName.PROCESS,
                 properties = mapOf("id" to definition.processId, "name" to definition.processName),
             ),
         ) +
             definition.nodes.map { it.toPrimitiveElement() } +
-            sequenceFlows.map { it.asElement("bpmn:SequenceFlow") },
+            sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
     )
 }
@@ -172,33 +172,58 @@ internal fun RuleMetadata.targetedElements(model: PrimitiveModelContext): List<P
         targetElements.any { target -> BpmnTypeMatcher.matches(element.typeName, target) }
     }
 
+private object BpmnTypeName {
+    const val SEQUENCE_FLOW = "bpmn:SequenceFlow"
+    const val FLOW_ELEMENT = "bpmn:FlowElement"
+    const val FLOW_NODE = "bpmn:FlowNode"
+    const val TASK = "bpmn:Task"
+    const val GATEWAY = "bpmn:Gateway"
+    const val EVENT = "bpmn:Event"
+    const val DEFINITIONS = "bpmn:Definitions"
+    const val PROCESS = "bpmn:Process"
+    const val START_EVENT = "bpmn:StartEvent"
+    const val END_EVENT = "bpmn:EndEvent"
+    const val INTERMEDIATE_CATCH_EVENT = "bpmn:IntermediateCatchEvent"
+    const val INTERMEDIATE_THROW_EVENT = "bpmn:IntermediateThrowEvent"
+    const val BOUNDARY_EVENT = "bpmn:BoundaryEvent"
+    const val USER_TASK = "bpmn:UserTask"
+    const val SERVICE_TASK = "bpmn:ServiceTask"
+    const val SCRIPT_TASK = "bpmn:ScriptTask"
+    const val BUSINESS_RULE_TASK = "bpmn:BusinessRuleTask"
+    const val SEND_TASK = "bpmn:SendTask"
+    const val RECEIVE_TASK = "bpmn:ReceiveTask"
+    const val MANUAL_TASK = "bpmn:ManualTask"
+    const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
+    const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
+}
+
 internal object BpmnTypeMatcher {
     internal val broadTypeNames = setOf(
-        "bpmn:FlowElement",
-        "bpmn:FlowNode",
-        "bpmn:Task",
-        "bpmn:Gateway",
-        "bpmn:Event",
+        BpmnTypeName.FLOW_ELEMENT,
+        BpmnTypeName.FLOW_NODE,
+        BpmnTypeName.TASK,
+        BpmnTypeName.GATEWAY,
+        BpmnTypeName.EVENT,
     )
 
     internal val supportedTypeNames = setOf(
-        "bpmn:Definitions",
-        "bpmn:Process",
-        "bpmn:StartEvent",
-        "bpmn:EndEvent",
-        "bpmn:IntermediateCatchEvent",
-        "bpmn:IntermediateThrowEvent",
-        "bpmn:BoundaryEvent",
-        "bpmn:UserTask",
-        "bpmn:ServiceTask",
-        "bpmn:ScriptTask",
-        "bpmn:BusinessRuleTask",
-        "bpmn:SendTask",
-        "bpmn:ReceiveTask",
-        "bpmn:ManualTask",
-        "bpmn:ExclusiveGateway",
-        "bpmn:ParallelGateway",
-        "bpmn:SequenceFlow",
+        BpmnTypeName.DEFINITIONS,
+        BpmnTypeName.PROCESS,
+        BpmnTypeName.START_EVENT,
+        BpmnTypeName.END_EVENT,
+        BpmnTypeName.INTERMEDIATE_CATCH_EVENT,
+        BpmnTypeName.INTERMEDIATE_THROW_EVENT,
+        BpmnTypeName.BOUNDARY_EVENT,
+        BpmnTypeName.USER_TASK,
+        BpmnTypeName.SERVICE_TASK,
+        BpmnTypeName.SCRIPT_TASK,
+        BpmnTypeName.BUSINESS_RULE_TASK,
+        BpmnTypeName.SEND_TASK,
+        BpmnTypeName.RECEIVE_TASK,
+        BpmnTypeName.MANUAL_TASK,
+        BpmnTypeName.EXCLUSIVE_GATEWAY,
+        BpmnTypeName.PARALLEL_GATEWAY,
+        BpmnTypeName.SEQUENCE_FLOW,
     )
 
     /**
@@ -215,11 +240,11 @@ internal object BpmnTypeMatcher {
     fun matches(elementType: String, targetType: String): Boolean {
         if (targetType == elementType) return true
         return when (targetType) {
-            "bpmn:FlowElement" -> elementType in flowNodeTypeNames || elementType == "bpmn:SequenceFlow"
-            "bpmn:FlowNode" -> elementType in flowNodeTypeNames
-            "bpmn:Task" -> elementType in taskTypeNames
-            "bpmn:Gateway" -> elementType in gatewayTypeNames
-            "bpmn:Event" -> elementType in eventTypeNames
+            BpmnTypeName.FLOW_ELEMENT -> elementType in flowNodeTypeNames || elementType == BpmnTypeName.SEQUENCE_FLOW
+            BpmnTypeName.FLOW_NODE -> elementType in flowNodeTypeNames
+            BpmnTypeName.TASK -> elementType in taskTypeNames
+            BpmnTypeName.GATEWAY -> elementType in gatewayTypeNames
+            BpmnTypeName.EVENT -> elementType in eventTypeNames
             else -> false
         }
     }
@@ -232,33 +257,33 @@ internal object BpmnTypeMatcher {
     fun isSupportedProductionType(typeName: String): Boolean = typeName in supportedTypeNames || typeName in broadTypeNames
 
     private val taskTypeNames = setOf(
-        "bpmn:UserTask",
-        "bpmn:ServiceTask",
-        "bpmn:ScriptTask",
-        "bpmn:BusinessRuleTask",
-        "bpmn:SendTask",
-        "bpmn:ReceiveTask",
-        "bpmn:ManualTask",
+        BpmnTypeName.USER_TASK,
+        BpmnTypeName.SERVICE_TASK,
+        BpmnTypeName.SCRIPT_TASK,
+        BpmnTypeName.BUSINESS_RULE_TASK,
+        BpmnTypeName.SEND_TASK,
+        BpmnTypeName.RECEIVE_TASK,
+        BpmnTypeName.MANUAL_TASK,
     )
     private val gatewayTypeNames = setOf(
-        "bpmn:ExclusiveGateway",
-        "bpmn:ParallelGateway",
+        BpmnTypeName.EXCLUSIVE_GATEWAY,
+        BpmnTypeName.PARALLEL_GATEWAY,
     )
     private val eventTypeNames = setOf(
-        "bpmn:StartEvent",
-        "bpmn:EndEvent",
-        "bpmn:IntermediateCatchEvent",
-        "bpmn:IntermediateThrowEvent",
-        "bpmn:BoundaryEvent",
+        BpmnTypeName.START_EVENT,
+        BpmnTypeName.END_EVENT,
+        BpmnTypeName.INTERMEDIATE_CATCH_EVENT,
+        BpmnTypeName.INTERMEDIATE_THROW_EVENT,
+        BpmnTypeName.BOUNDARY_EVENT,
     )
     private val flowNodeTypeNames = taskTypeNames + gatewayTypeNames + eventTypeNames
 }
 
-internal fun PrimitiveElement.isGateway(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Gateway")
+internal fun PrimitiveElement.isGateway(): Boolean = BpmnTypeMatcher.matches(typeName, BpmnTypeName.GATEWAY)
 
-internal fun PrimitiveElement.isTask(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Task")
+internal fun PrimitiveElement.isTask(): Boolean = BpmnTypeMatcher.matches(typeName, BpmnTypeName.TASK)
 
-internal fun PrimitiveElement.isEvent(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Event")
+internal fun PrimitiveElement.isEvent(): Boolean = BpmnTypeMatcher.matches(typeName, BpmnTypeName.EVENT)
 
 internal fun BpmnNode.toPrimitiveElement(): PrimitiveElement = PrimitiveElement(
     id = id,
@@ -288,20 +313,20 @@ internal fun BpmnEdge.toPrimitiveFlow(): PrimitiveFlow = PrimitiveFlow(
 )
 
 private fun BpmnNode.bpmnTypeName(): String = when (this) {
-    is BpmnStartEvent -> "bpmn:StartEvent"
-    is BpmnEndEvent -> "bpmn:EndEvent"
-    is BpmnIntermediateCatchEvent -> "bpmn:IntermediateCatchEvent"
-    is BpmnIntermediateThrowEvent -> "bpmn:IntermediateThrowEvent"
-    is BpmnBoundaryEvent -> "bpmn:BoundaryEvent"
-    is BpmnUserTask -> "bpmn:UserTask"
-    is BpmnServiceTask -> "bpmn:ServiceTask"
-    is BpmnScriptTask -> "bpmn:ScriptTask"
-    is BpmnBusinessRuleTask -> "bpmn:BusinessRuleTask"
-    is BpmnSendTask -> "bpmn:SendTask"
-    is BpmnReceiveTask -> "bpmn:ReceiveTask"
-    is BpmnManualTask -> "bpmn:ManualTask"
-    is BpmnExclusiveGateway -> "bpmn:ExclusiveGateway"
-    is BpmnParallelGateway -> "bpmn:ParallelGateway"
+    is BpmnStartEvent -> BpmnTypeName.START_EVENT
+    is BpmnEndEvent -> BpmnTypeName.END_EVENT
+    is BpmnIntermediateCatchEvent -> BpmnTypeName.INTERMEDIATE_CATCH_EVENT
+    is BpmnIntermediateThrowEvent -> BpmnTypeName.INTERMEDIATE_THROW_EVENT
+    is BpmnBoundaryEvent -> BpmnTypeName.BOUNDARY_EVENT
+    is BpmnUserTask -> BpmnTypeName.USER_TASK
+    is BpmnServiceTask -> BpmnTypeName.SERVICE_TASK
+    is BpmnScriptTask -> BpmnTypeName.SCRIPT_TASK
+    is BpmnBusinessRuleTask -> BpmnTypeName.BUSINESS_RULE_TASK
+    is BpmnSendTask -> BpmnTypeName.SEND_TASK
+    is BpmnReceiveTask -> BpmnTypeName.RECEIVE_TASK
+    is BpmnManualTask -> BpmnTypeName.MANUAL_TASK
+    is BpmnExclusiveGateway -> BpmnTypeName.EXCLUSIVE_GATEWAY
+    is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
     else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
 }
 
