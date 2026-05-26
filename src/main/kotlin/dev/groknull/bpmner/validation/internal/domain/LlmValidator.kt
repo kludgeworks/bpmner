@@ -13,6 +13,12 @@ import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.RuleCatalogService
 import org.springframework.stereotype.Component
 
+@Deprecated(
+    message = "LLM-rule validation has moved to LlmRuleAgent in Phase 2C (#240). " +
+        "The remaining guidance-provider role (getLlmRuleGuidance() used by BpmnRepairPromptFactory) " +
+        "will move to a `rules`-side helper in Phase 3 once the Pkl catalog loader (#241) ships. " +
+        "Do not extend this class — the GOAP-shaped LlmRuleAgent is the replacement.",
+)
 @Component
 internal class LlmValidator(
     private val catalogService: RuleCatalogService,

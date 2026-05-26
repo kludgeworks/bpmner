@@ -103,8 +103,8 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "START_EVENT",
             shape = "Trigger event in past-participle / state form (subject + received/fired/arrived).",
-            examples = listOf("Order received", "Timer fired", "Application submitted"),
-            antiExamples = listOf("Receive order", "Trigger timer", "Submit application"),
+            examples = listOf("Order received", TIMER_FIRED, "Application submitted"),
+            antiExamples = listOf("Receive order", TRIGGER_TIMER, "Submit application"),
         )
 
     private val END_EVENT_ADVICE =
@@ -129,7 +129,7 @@ internal object BpmnNamingShapeAdvice {
         Advice(
             kind = "SERVICE_TASK",
             shape = "Imperative verb-object naming the work the system performs.",
-            examples = listOf("Send notification", "Charge card", "Generate offer letter"),
+            examples = listOf(SEND_NOTIFICATION, "Charge card", "Generate offer letter"),
             antiExamples = listOf("Notification", "Card charge", "Letter generation"),
         )
 
@@ -160,8 +160,8 @@ internal object BpmnNamingShapeAdvice {
             "Past-tense state form describing what was caught (same shape as start/end" +
                 " events). The event-definition kind (timer / message / signal / error /" +
                 " escalation) determines what's caught; the name describes the observed state.",
-            examples = listOf("Approval received", "Timer fired", "Confirmation arrived"),
-            antiExamples = listOf("Receive approval", "Trigger timer", "Wait for confirmation"),
+            examples = listOf("Approval received", TIMER_FIRED, "Confirmation arrived"),
+            antiExamples = listOf("Receive approval", TRIGGER_TIMER, "Wait for confirmation"),
         )
 
     private val INTERMEDIATE_THROW_EVENT_ADVICE =
@@ -172,7 +172,7 @@ internal object BpmnNamingShapeAdvice {
                 " thrown). The event-definition kind (message / signal / escalation) determines" +
                 " what's thrown; the name describes the emission's effect.",
             examples = listOf("Notification sent", "Escalation raised", "Signal broadcast"),
-            antiExamples = listOf("Send notification", "Raise escalation", "Broadcast signal"),
+            antiExamples = listOf(SEND_NOTIFICATION, "Raise escalation", "Broadcast signal"),
         )
 
     private val BOUNDARY_EVENT_ADVICE =
@@ -182,7 +182,7 @@ internal object BpmnNamingShapeAdvice {
             "Short event-shaped name describing what the boundary catches on the host" +
                 " activity. Past-tense state or noun phrase. The host activity is named" +
                 " separately and is not duplicated here.",
-            examples = listOf("Timer fired", "Error caught", "Escalation received"),
+            examples = listOf(TIMER_FIRED, "Error caught", "Escalation received"),
             antiExamples = listOf("Cancel approval", "Handle error", "Catch escalation"),
         )
 
@@ -260,7 +260,7 @@ internal object BpmnNamingShapeAdvice {
             examples =
             listOf(
                 "Order received",
-                "Timer fired",
+                TIMER_FIRED,
                 "Offer issued",
                 "Application declined",
                 "Decline letter written",
@@ -268,12 +268,16 @@ internal object BpmnNamingShapeAdvice {
             antiExamples =
             listOf(
                 "Receive order",
-                "Trigger timer",
+                TRIGGER_TIMER,
                 "Issue offer",
                 "Decline application",
                 "Write decline letter",
             ),
         )
+
+    private const val TIMER_FIRED = "Timer fired"
+    private const val TRIGGER_TIMER = "Trigger timer"
+    private const val SEND_NOTIFICATION = "Send notification"
 
     private val TASK_VERB_OBJECT_ADVICE =
         Advice(
@@ -285,7 +289,7 @@ internal object BpmnNamingShapeAdvice {
             listOf(
                 "Validate request",
                 "Approve loan",
-                "Send notification",
+                SEND_NOTIFICATION,
                 "Charge card",
                 "Generate offer letter",
             ),
