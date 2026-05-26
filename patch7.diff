@@ -1,0 +1,17 @@
+--- src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compiled/EventDefinitionRule.kt
++++ src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compiled/EventDefinitionRule.kt
+@@ -39,10 +39,10 @@
+ @Component
+ internal class EventDefinitionRule : BpmnRule {
+     companion object {
+-        private const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
+-        private const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
+-        private const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
+-        private const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
++        internal const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
++        internal const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
++        internal const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
++        internal const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
+     }
+     override val id: String = "def-event-definitions"
+     override val metadata: RuleMetadata = RuleMetadata(
