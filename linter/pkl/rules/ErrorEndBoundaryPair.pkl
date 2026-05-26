@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Error End Boundary Pair"
@@ -24,3 +25,8 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "PairingCheck"
+checkConfig = new CheckPrimitive.PairingCheck {
+  mode = "ERROR_END_BOUNDARY"
+}

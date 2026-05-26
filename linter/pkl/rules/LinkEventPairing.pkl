@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Link Event Pairing"
@@ -27,3 +28,8 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "PairingCheck"
+checkConfig = new CheckPrimitive.PairingCheck {
+  mode = "LINK_PAIRING"
+}

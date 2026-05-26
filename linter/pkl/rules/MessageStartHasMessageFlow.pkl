@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Message Start Has Message Flow"
@@ -20,3 +21,11 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+// MESSAGE_START_FLOW is dormant in production until message flow edges land via #196 — the
+// primitive short-circuits to empty diagnostics without the MESSAGE_FLOWS capability. The
+// rule loads through the new path but produces no diagnostics until then.
+checkPrimitive = "PairingCheck"
+checkConfig = new CheckPrimitive.PairingCheck {
+  mode = "MESSAGE_START_FLOW"
+}
