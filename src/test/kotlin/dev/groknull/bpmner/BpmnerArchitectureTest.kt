@@ -15,6 +15,7 @@ import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import com.tngtech.archunit.library.Architectures.LayeredArchitecture
 import org.jmolecules.archunit.JMoleculesArchitectureRules
 import org.jmolecules.archunit.JMoleculesArchitectureRules.VerificationDepth
@@ -68,6 +69,26 @@ class BpmnerArchitectureTest {
             .that()
             .areAnnotatedWith(Agent::class.java)
             .should(haveAtLeastOneGoal())
+            .check(classes)
+    }
+
+    @Test
+    fun `Ai bean reference is restricted to inbound adapters`() {
+        // The framework-centric posture (issue #240 discussion): LLM calls go through Embabel
+        // via `OperationContext`+`PromptRunner` inside `@Action` methods, never via the
+        // injectable `com.embabel.agent.api.common.Ai` Spring bean. The bean exists for
+        // non-agent code that Embabel supports, but bpmner has agreed it should not be the
+        // pattern here — every LLM call site is a GOAP node.
+        //
+        // Allow `Ai` only in `internal.adapter.inbound` packages (where `@Agent` classes
+        // live). Anywhere else would constitute a re-emergence of the abandoned `LlmPort`/
+        // bean-injection escape hatch.
+        noClasses()
+            .that()
+            .resideOutsideOfPackages("..internal.adapter.inbound..")
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("com.embabel.agent.api.common.Ai")
             .check(classes)
     }
 

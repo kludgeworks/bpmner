@@ -22,21 +22,32 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
+/**
+ * Marker for the typed configs of the 10 deterministic check primitives. `SubCheckConfig`
+ * accepts only this type, so `CompositeCheck` cannot embed a `CompositeCheckConfig`
+ * (no nesting) or an `LlmCheckRuleConfig` (different evaluation tier) at compile time —
+ * what was a runtime `rule-config-error` is now caught by the Kotlin type system.
+ *
+ * Pkl-side enforcement of the same constraint lives in `CheckPrimitive.pkl`'s `SubCheck`
+ * doc comment; this sealed hierarchy is the in-process backstop.
+ */
+internal sealed interface DeterministicCheckConfig
+
 internal data class RequiredPropertyCheckConfig(
     val property: String,
-)
+) : DeterministicCheckConfig
 
 internal data class PropertyPatternCheckConfig(
     val property: String,
     val pattern: String,
     val patternDescription: String? = null,
-)
+) : DeterministicCheckConfig
 
 internal data class VocabularyCheckConfig(
     val property: String,
     val mode: VocabularyMode,
     val words: List<String>,
-)
+) : DeterministicCheckConfig
 
 internal enum class VocabularyMode {
     REQUIRE,
@@ -47,7 +58,7 @@ internal data class RequiredAssociationCheckConfig(
     val association: String,
     val sourceTypes: List<String> = emptyList(),
     val targetTypes: List<String> = emptyList(),
-)
+) : DeterministicCheckConfig
 
 internal data class TopologyCheckConfig(
     val topology: TopologyMode,
@@ -55,7 +66,7 @@ internal data class TopologyCheckConfig(
     val maxIncoming: Int? = null,
     val minOutgoing: Int? = null,
     val maxOutgoing: Int? = null,
-)
+) : DeterministicCheckConfig
 
 internal enum class TopologyMode {
     NO_FAKE_JOIN,
@@ -68,7 +79,7 @@ internal data class ConnectivityCheckConfig(
     val mode: ConnectivityMode,
     val sourceTypes: List<String> = emptyList(),
     val targetTypes: List<String> = emptyList(),
-)
+) : DeterministicCheckConfig
 
 internal enum class ConnectivityMode {
     NO_INCOMING,
@@ -81,7 +92,7 @@ internal data class PairingCheckConfig(
     val mode: PairingMode,
     val left: String? = null,
     val right: String? = null,
-)
+) : DeterministicCheckConfig
 
 internal enum class PairingMode {
     ERROR_END_BOUNDARY,
@@ -93,11 +104,11 @@ internal data class CardinalityCheckConfig(
     val element: String,
     val min: Int? = null,
     val max: Int? = null,
-)
+) : DeterministicCheckConfig
 
 internal data class PoolLabelCheckConfig(
     val mode: PoolLabelMode,
-)
+) : DeterministicCheckConfig
 
 internal enum class PoolLabelMode {
     WHITE_BOX_NAMED_BY_PROCESS,
@@ -110,7 +121,7 @@ internal data class ElementConstraintCheckConfig(
     val element: String,
     val mode: ElementConstraintMode,
     val constraints: Map<String, Any?> = emptyMap(),
-)
+) : DeterministicCheckConfig
 
 internal enum class ElementConstraintMode {
     ALLOWED_ELEMENT_SUBSET,
@@ -118,3 +129,20 @@ internal enum class ElementConstraintMode {
     PARALLEL_GATEWAY_STRUCTURE,
     EVENT_BASED_GATEWAY_DIRECT_EVENTS,
 }
+
+/**
+ * Composite primitive config — composes deterministic sub-checks. See
+ * [linter/pkl/schema/CheckPrimitive.pkl](linter/pkl/schema/CheckPrimitive.pkl) for the
+ * authoritative shape. Note that `CompositeCheckConfig` itself is NOT a
+ * `DeterministicCheckConfig` — nesting is rejected by the type system (you cannot pass a
+ * `CompositeCheckConfig` to a `SubCheckConfig.config` field).
+ */
+internal data class CompositeCheckConfig(
+    val targetTypes: List<String> = emptyList(),
+    val subChecks: List<SubCheckConfig> = emptyList(),
+)
+
+internal data class SubCheckConfig(
+    val diagnosticCode: String,
+    val config: DeterministicCheckConfig,
+)

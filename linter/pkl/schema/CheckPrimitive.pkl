@@ -115,10 +115,45 @@ class ElementConstraintCheck extends CheckConfig {
   constraints: Mapping<NonEmptyString, Dynamic> = Mapping()
 }
 
+/// CompositeCheck composes several typed deterministic sub-checks under one Pkl rule. Each
+/// sub-check declares the `errorMessages` key it owns, so multi-code rules like
+/// `BoundaryEventConstraints` ({detached, incoming, outgoing, errorInterrupting}) remain
+/// distinct diagnostics in the engine output rather than collapsing under one code.
+///
+/// CompositeCheck is for *deterministic* composition only. Mixing `LlmCheckRule` sub-checks
+/// is rejected at load time — LLM judgment is evaluated by the `LlmRuleAgent` (which
+/// participates in the GOAP plan), while composite sub-checks run as plain function calls.
+/// Nesting (`CompositeCheck` inside `CompositeCheck`) is also rejected to keep diagnostic
+/// attribution unambiguous; rules needing two layers of composition should chain two
+/// top-level Pkl rules instead.
 class CompositeCheck extends CheckConfig {
-  checks: List<CheckConfig> = List()
+  /// Optional element-type narrowing applied before sub-checks see the model. When non-
+  /// empty, overrides the outer rule's `targetElements` for the duration of evaluation.
+  targetTypes: List<NonEmptyString> = List()
+
+  /// Ordered list of sub-checks. Each pairs a `diagnosticCode` (must exist in the parent
+  /// rule's `errorMessages`) with the typed deterministic CheckConfig that emits that
+  /// violation kind.
+  subChecks: List<SubCheck> = List()
 }
 
+class SubCheck {
+  /// Selects which key in the parent rule's `errorMessages` map this sub-check's
+  /// violations are attributed to. Must NOT be `"default"` — the default key is reserved
+  /// as a fallback when no sub-check matched.
+  diagnosticCode: NonEmptyString
+
+  /// The typed CheckConfig describing what this sub-check looks for. Any concrete
+  /// deterministic CheckConfig subclass is allowed. `CompositeCheck` (no nesting) and
+  /// `LlmCheckRule` (different evaluation tier) are both rejected at load time.
+  config: CheckConfig
+}
+
+/// `LlmCheckRule` rules are evaluated by `LlmRuleAgent` (an Embabel `@Agent`), not by the
+/// deterministic rule engine. The agent batches multiple `LlmCheckRule`-typed rules into a
+/// single prompt per `BpmnConfig.lintBatchSize` chunk (default 10) and parses violations
+/// back to per-rule diagnostics. The `rubric` is optional grading guidance appended to the
+/// prompt body alongside the rule's `forAI` metadata.
 class LlmCheckRule extends CheckConfig {
   prompt: NonEmptyString
   rubric: String? = null

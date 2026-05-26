@@ -31,9 +31,13 @@ data class BpmnConfig(
     val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
     val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
     val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
+    val linter: Actor<Persona> = DEFAULT_LINTER,
+    @field:Min(1)
+    val lintBatchSize: Int = DEFAULT_LINT_BATCH_SIZE,
 ) {
     companion object {
         const val DEFAULT_MAX_ATTEMPTS = 5
+        const val DEFAULT_LINT_BATCH_SIZE = 10
 
         private const val CONCISE_AND_EXACT = "concise and exact"
 
@@ -148,6 +152,22 @@ data class BpmnConfig(
                     voice = "critical and precise",
                 ),
                 llm = LlmOptions.withLlmForRole("alignment-validator"),
+            )
+        val DEFAULT_LINTER =
+            Actor(
+                persona =
+                Persona(
+                    name = "BPMN Linter",
+                    persona =
+                    "You are a meticulous BPMN 2.0 quality reviewer focused on labelling," +
+                        " clarity, and modelling conventions",
+                    objective =
+                    "Evaluate LLM-judgement BPMN rules against a definition and report" +
+                        " specific, element-anchored violations — never invent failures, never" +
+                        " skip rules that apply",
+                    voice = "specific and evidence-grounded",
+                ),
+                llm = LlmOptions.withLlmForRole("lint"),
             )
     }
 }
