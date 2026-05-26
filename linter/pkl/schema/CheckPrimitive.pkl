@@ -114,7 +114,7 @@ class ElementConstraintCheck extends CheckConfig {
     | "TIMER_EXPRESSION"
     | "PARALLEL_GATEWAY_STRUCTURE"
     | "EVENT_BASED_GATEWAY_DIRECT_EVENTS"
-  constraints: Mapping<NonEmptyString, Dynamic> = Mapping()
+  constraints: Mapping<NonEmptyString, Any> = new Mapping {}
 }
 
 /// CompositeCheck composes several typed deterministic sub-checks under one Pkl rule. Each

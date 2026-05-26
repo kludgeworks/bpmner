@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Timer Start Events Block Until Time"
@@ -25,3 +26,14 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// TIMER_EXPRESSION flags timer events whose `timerExpression` property is blank. The
+// primitive supports an optional `constraints.pattern` regex for stricter formats, but
+// the legacy rule only enforces presence, so the pattern is omitted. "Multiple timer
+// expressions" (the second legacy diagnostic) is an XML-shape concern not visible at
+// the parsed-model layer.
+checkPrimitive = "ElementConstraintCheck"
+checkConfig = new CheckPrimitive.ElementConstraintCheck {
+  element = "bpmn:StartEvent"
+  mode = "TIMER_EXPRESSION"
+}

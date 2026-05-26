@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "No Element Type Words"
@@ -37,6 +38,13 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+checkPrimitive = "VocabularyCheck"
+checkConfig = new CheckPrimitive.VocabularyCheck {
+  property = "name"
+  mode = "FORBID"
+  words = List("activity", "process", "event")
+}
 
 repair = new {
   kind = "LOCAL_MODEL_FIX"

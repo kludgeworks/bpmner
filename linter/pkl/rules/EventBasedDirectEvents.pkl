@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Event Based Direct Events"
@@ -24,3 +25,12 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// EVENT_BASED_GATEWAY_DIRECT_EVENTS hardcodes the allowed targets (intermediate catch
+// events and receive tasks per BPMN 2.0 §10.5.4.6). The `allowedTargets` in staticConfig
+// is the legacy JS-bridge mirror — kept until 2G retires that path.
+checkPrimitive = "ElementConstraintCheck"
+checkConfig = new CheckPrimitive.ElementConstraintCheck {
+  element = "bpmn:EventBasedGateway"
+  mode = "EVENT_BASED_GATEWAY_DIRECT_EVENTS"
+}
