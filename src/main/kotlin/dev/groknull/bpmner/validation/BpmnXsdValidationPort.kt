@@ -9,6 +9,6 @@ import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
-interface BpmnXsdValidationPort {
+fun interface BpmnXsdValidationPort {
     fun validateDetailed(bpmnXml: String): List<XsdValidationIssue>
 }
