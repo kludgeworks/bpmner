@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Activity Label Capitalization"
@@ -29,6 +30,17 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "PropertyPatternCheck"
+checkConfig = new CheckPrimitive.PropertyPatternCheck {
+  property = "name"
+  // First character must be uppercase. Catches the dominant violation kind (lowercase start);
+  // mid-string title-case / mixed-case violations stay with the legacy JS path until that
+  // path is retired in 2G. The matcher anchors at start of string only — the rest of the
+  // label can be anything (including acronyms like "Send PO" or proper nouns).
+  pattern = "^[A-Z].*"
+  patternDescription = "label should start with an uppercase letter"
+}
 
 repair = new {
   kind = "LOCAL_MODEL_FIX"
