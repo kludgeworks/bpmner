@@ -23,6 +23,7 @@ import org.pkl.config.kotlin.forKotlin
 import org.pkl.config.kotlin.to
 import org.pkl.core.ModuleSource
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import java.net.URI
 import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
@@ -56,11 +57,11 @@ import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
 @Component
 internal class PklRuleCatalog(
     compiledRules: List<BpmnRule>,
-    rulesIndexUri: String = RULES_INDEX_URI,
+    @Value("\${bpmner.rules.indexUri:${RULES_INDEX_URI}}")
+    private val rulesIndexUri: String = RULES_INDEX_URI,
 ) : RuleRegistry {
     private val logger = LoggerFactory.getLogger(PklRuleCatalog::class.java)
 
-    private val rulesIndexUri: String = rulesIndexUri
     private val allRules: List<BpmnRule>
     private val byId: Map<String, BpmnRule>
     private val llmSpecs: List<LlmRuleSpec>
@@ -145,7 +146,7 @@ internal class PklRuleCatalog(
 
     private fun evaluatePklRules(): List<PklBpmnRule> {
         ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
-            val config = evaluator.evaluate(ModuleSource.uri(URI(rulesIndexUri)))
+            val config = evaluator.evaluate(ModuleSource.uri(URI.create(rulesIndexUri)))
             return config.get("rules").to()
         }
     }
