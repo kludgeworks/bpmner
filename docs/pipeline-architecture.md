@@ -14,7 +14,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`. |
 | `contract/` | Guardrail 2: Extraction of source-grounded process contracts, multi-source evidence tracking. | `BpmnContractAgent`, `ProcessContract`, `ValidatedProcessContract`. |
 | `generation/` | LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGeneratorAgent`, `BpmnRenderer` (port), `BpmnGeneratedEvent`. |
-| `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, bpmn-lint via GraalJS, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
+| `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
 | `repair/` | Local-first deterministic repair, LLM patch / rewrite strategies, refinement loop with stuck-state detection. | `BpmnRepairAgent`, `BpmnRefinementEngine` (internal), `BpmnLocalFixSummary`. |
 | `layout/` | Bounded pre-layout XML cleanup, deterministic auto-layout, final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort`. |
 | `alignment/` | Guardrail 3: Semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAlignmentAgent`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
@@ -89,7 +89,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │              │    │ definition checks                   │
             │              │    │ ownership checks                    │
             │              │    │ XSD validation                      │
-            │              │    │ bpmn-lint (semantic)                │
+            │              │    │ rule-engine (semantic)              │
             │              │    │ normalize + stamp RepairKind        │
             │              │    ▼                                     │
             │              ├─ repair strategies, in @Order:           │
@@ -173,7 +173,7 @@ RenderedBpmn ──► BpmnRefinementEngine.refine ──► ValidatedBpmnXml
               │  BpmnDefinitionValidator  │   structural sanity
               │  graph.validateOwnership  │   ownership integrity
               │  BpmnXsdValidationPort    │   schema compliance
-              │  BpmnLintingPort.lint     │   bpmn-lint diagnostics
+              │  BpmnLintingPort.lint     │   rule-engine diagnostics
               │  BpmnDiagnosticNormalizer │   stamps RepairKind on each
               └───────────────────────────┘
                           │
@@ -229,10 +229,15 @@ Final validation is intentionally narrow: it catches structural corruption from 
 
 - `BpmnDefinitionValidator` — structural invariants on the typed model.
 - `BpmnXsdValidator` — strict BPMN 2.0 XSD compliance.
-- `BpmnLintService` — GraalJS-hosted bpmn-lint bundle, with a phase argument so semantic rules run pre-layout and layout-sensitive rules run post-layout.
-- `BpmnDiagnosticNormalizer` — strips rule-id prefixes, looks up the Pkl-declared capability, and stamps each lint diagnostic with `kind`, `repairSafety`, and `fixHandler`; infers `repairScope` from ownership context.
-- `PklRuleCapabilityAdapter` + `RuleCatalogService` — load the Pkl-generated catalog once at startup; the loaded map is the single source of truth for routing.
-- `BpmnLocalRepairCapabilityValidator` — startup guard: any `LOCAL_*_FIX` capability whose handler isn't registered fails the Spring context refresh.
+- `RuleEngineLintingAdapter` — implements `BpmnLintingPort` by delegating to the
+  `rules` module's `RuleEngine` and projecting `RuleRegistry` metadata into
+  `LintIssue` / `BpmnLintRuleCapability` shapes. Replaced the GraalJS-hosted
+  `BpmnLintService` in #241 phase 2G.
+- `BpmnDiagnosticNormalizer` — looks up the Pkl-declared capability and stamps
+  each diagnostic with `kind`, `repairSafety`, and `fixHandler`; infers
+  `repairScope` from ownership context.
+- `BpmnLocalRepairCapabilityValidator` — startup guard: any `LOCAL_*_FIX`
+  capability whose handler isn't registered fails the Spring context refresh.
 
 The `validation` module emits `BpmnValidationPassedEvent` and `BpmnValidationFailedEvent`; `observability/` listeners turn those into log lines and per-run summaries.
 

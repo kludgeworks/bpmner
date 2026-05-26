@@ -50,7 +50,7 @@ A `@PrimaryPort` interface always has an implementation in `internal/domain/` th
 ```
 validation/
 ├── BpmnValidator.kt            @PrimaryPort   (use-case API)
-├── BpmnLintingPort.kt          @SecondaryPort (lint SPI)
+├── BpmnLintingPort.kt          @SecondaryPort (rule-evaluation SPI)
 ├── BpmnXsdValidationPort.kt    @SecondaryPort (XSD SPI)
 ├── BpmnRuleGuidancePort.kt     @SecondaryPort (rule docs SPI)
 ├── BpmnValidationPassedEvent   @DomainEvent
@@ -58,17 +58,21 @@ validation/
 └── internal/
     ├── adapter/
     │   └── outbound/
-    │       ├── BpmnLintService.kt          @SecondaryAdapter (GraalJS)
-    │       ├── BpmnXsdValidator.kt         @SecondaryAdapter (JAXP)
-    │       ├── BpmnLintJsEngine.kt         (helper)
-    │       ├── PklRuleCapabilityAdapter.kt (helper)
-    │       └── RuleCatalogService.kt       (helper)
+    │       ├── RuleEngineLintingAdapter.kt @Component (delegates to rules.RuleEngine)
+    │       └── BpmnXsdValidator.kt         @SecondaryAdapter (JAXP)
     └── domain/
         ├── BpmnEvaluationPipeline.kt       @Service implements BpmnValidator
         ├── BpmnDiagnosticNormalizer.kt     @Service
         ├── BpmnDefinitionValidator.kt      @Service
         └── LlmValidator.kt
 ```
+
+> `BpmnLintingPort` is misleadingly named — `RuleEngineLintingAdapter` delegates to
+> the Pkl rule catalog, not a JS linter. The port and types (`LintIssue`,
+> `BpmnLintRuleCapability`) are kept for one more cycle so consumers don't churn;
+> a rename pass is scheduled for a follow-up phase. The legacy GraalJS-hosted
+> `bpmnlint` bridge (`BpmnLintService`, `BpmnLintJsEngine`, `RuleCatalogService`,
+> `PklRuleCapabilityAdapter`) was retired in #241 phase 2G.
 
 ### Primary port — the module's API
 
@@ -103,43 +107,43 @@ interface BpmnValidator {
 ```kotlin
 package dev.groknull.bpmner.validation
 
+import dev.groknull.bpmner.core.BpmnDefinition
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
 interface BpmnLintingPort {
-    fun lint(bpmnXml: String): List<LintIssue>?
+    fun lint(definition: BpmnDefinition): List<LintIssue>?
     fun autoFix(bpmnXml: String, issues: List<LintIssue>): BpmnAutoFixResult?
     fun ruleDocs(ruleNames: Collection<String>): Map<String, String>
     fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability>
 }
 ```
 
-This declares "the validation module needs *something* that can lint XML." It deliberately doesn't say *how*.
+This declares "the validation module needs *something* that can evaluate rules against a BPMN definition." It deliberately doesn't say *how*.
 
 ### Secondary adapter — the concrete implementation
 
-`src/main/kotlin/dev/groknull/bpmner/validation/internal/adapter/outbound/BpmnLintService.kt`:
+`src/main/kotlin/dev/groknull/bpmner/validation/internal/adapter/outbound/RuleEngineLintingAdapter.kt`:
 
 ```kotlin
 package dev.groknull.bpmner.validation.internal.adapter.outbound
 
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
-import org.springframework.stereotype.Service
+import dev.groknull.bpmner.rules.RuleEngine
+import dev.groknull.bpmner.rules.RuleRegistry
+import dev.groknull.bpmner.validation.BpmnLintingPort
+import org.springframework.stereotype.Component
 
-@SecondaryAdapter
-@Service
-@EnableConfigurationProperties(BpmnLintProperties::class)
-internal open class BpmnLintService(
-    private val properties: BpmnLintProperties = BpmnLintProperties(),
-    private val catalogService: RuleCatalogService,
-    private val engine: BpmnLintJsEngine,
-    private val pklAdapter: PklRuleCapabilityAdapter,
+@Component
+internal class RuleEngineLintingAdapter(
+    private val ruleEngine: RuleEngine,
+    private val ruleRegistry: RuleRegistry,
 ) : BpmnLintingPort {
-    // … runs the bpmnlint bundle inside GraalJS
+    // … delegates to ruleEngine.evaluate(definition) and projects RuleRegistry
+    //   metadata into LintIssue / BpmnLintRuleCapability shapes
 }
 ```
 
-The adapter is `internal`, marked `@SecondaryAdapter` for jMolecules and `@Service` for Spring. Replacing GraalJS with a native bpmnlint binding would mean swapping this class — nothing else changes.
+The adapter is `internal` and Spring-registered. Branch by Abstraction kept the port intact while the GraalJS-hosted `BpmnLintService` was swapped for this Kotlin-native implementation; consumers (`BpmnEvaluationPipeline`, `BpmnDiagnosticNormalizer`, etc.) didn't change. The class deliberately omits the jMolecules `@SecondaryAdapter` stereotype — calling another module's `RuleEngine` (a `@PrimaryPort`) violates the strict hexagonal layered-arch rule, and this adapter is closer to an Anti-Corruption Layer than a pure secondary adapter.
 
 ### Domain service — the use-case implementation
 
@@ -163,7 +167,7 @@ internal class BpmnDiagnosticNormalizer(
 Two things to note:
 
 1. The `@Service` here is `org.jmolecules.ddd.annotation.Service`, **not** `org.springframework.stereotype.Service`. The jMolecules annotation says "this is a domain service in DDD terms"; `@Component` does the Spring DI registration.
-2. The constructor depends on `BpmnLintingPort` — the SPI interface — not on `BpmnLintService`. Domain code never sees the concrete adapter.
+2. The constructor depends on `BpmnLintingPort` — the SPI interface — not on `RuleEngineLintingAdapter`. Domain code never sees the concrete adapter.
 
 ## Worked example: the `generation` module
 
@@ -328,7 +332,7 @@ A few decision points that come up often:
 
 - **Adding a new way to trigger generation** (HTTP endpoint, schedule, message queue) — `@PrimaryAdapter` in `generation/internal/adapter/inbound/`. Depend on `BpmnGenerationUseCase`. Do not touch the domain.
 - **Adding a new validator** (e.g. semantic guard rails over the typed `BpmnDefinition`) — `@Service` in `validation/internal/domain/`. Implement `BpmnValidator` or be invoked by `BpmnEvaluationPipeline`.
-- **Swapping bpmn-lint for a different engine** — write a new `@SecondaryAdapter` that implements `BpmnLintingPort`. Toggle via Spring profile or `@Primary`.
+- **Swapping the rule engine for a different evaluator** — write a new `@SecondaryAdapter` that implements `BpmnLintingPort`. Toggle via Spring profile or `@Primary`.
 - **Adding a brand-new module** (say, an export module) — create `export/` with `BpmnExportUseCase` (`@PrimaryPort`), `BpmnExportTargetPort` (`@SecondaryPort`), an `internal/domain/` service and `internal/adapter/{inbound,outbound}/` adapters. The architecture and Modulith tests pick up the new module without configuration.
 - **Cross-module event** (something one module emits, others react to) — `@DomainEvent` in the emitting module's public package. Listeners are `@PrimaryAdapter` in the consuming module.
 

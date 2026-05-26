@@ -73,6 +73,21 @@ class BpmnerArchitectureTest {
     }
 
     @Test
+    fun `GraalJS polyglot is restricted to the layout module`() {
+        // Phase 2G (#241) removed the GraalJS-hosted bpmnlint bridge. The remaining
+        // GraalJS consumer is the BPMN auto-layout JS bundle in `..layout..`. This pin
+        // prevents drift: nobody else may reach for `org.graalvm.polyglot` for a quick
+        // JS escape hatch without first justifying the dep and updating this rule.
+        noClasses()
+            .that()
+            .resideOutsideOfPackages("..layout..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("org.graalvm.polyglot..")
+            .check(classes)
+    }
+
+    @Test
     fun `Ai bean reference is restricted to inbound adapters`() {
         // The framework-centric posture (issue #240 discussion): LLM calls go through Embabel
         // via `OperationContext`+`PromptRunner` inside `@Action` methods, never via the

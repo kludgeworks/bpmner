@@ -12,17 +12,17 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 - **Process Contract Extraction:** Derives a structured "contract" from the source text and clarifications. This contract serves as the source of truth, grounding every subsequent generation step in evidence.
 - **Semantic Alignment:** After generation, the system performs a terminal check comparing the BPMN elements against the Process Contract. Any invented tasks or missing branches are detected and reported, preventing ungrounded models from being delivered.
 
-### 2. Technical Quality (XSD & bpmn-lint)
+### 2. Technical Quality (XSD & Pkl rule engine)
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
-- A custom **bpmn-lint plugin** with 27 specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic).
+- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; the legacy GraalJS-hosted `bpmnlint` bridge was retired in #241 phase 2G.
 
 ### 3. Deterministic Repair
-When validation fails, `bpmner` doesn't just "try again." It uses a **local-first repair loop** that attempts to fix technical issues (like ID mismatches or simple naming violations) using deterministic Kotlin and TypeScript code before falling back to the LLM for more complex semantic refactoring.
+When validation fails, `bpmner` doesn't just "try again." It uses a **local-first repair loop** that attempts to fix technical issues (like ID mismatches or simple naming violations) using deterministic Kotlin handlers before falling back to the LLM for more complex semantic refactoring.
 
 ## Model Routing
 
-Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation (XSD, bpmn-lint) and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin/TypeScript and remain that way by design.
+Each LLM call routes through a named **role** (e.g. `repair-label`) rather than a hard-coded model. Roles let us match model cost and capability to the task: a label tweak goes to a small fast model, a full rewrite goes to a large one. Deterministic validation (XSD, Pkl rule engine) and `DeterministicTopologyRepairStrategy` never call an LLM — they are pure Kotlin and remain that way by design.
 
 | Role             | Persona                          | Requirement                      |
 |------------------|----------------------------------|----------------------------------|
@@ -86,7 +86,7 @@ Kotlin code is checked by three complementary tools:
 
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
-- `linter/`: TypeScript `bpmn-lint` plugin and custom rule catalog.
+- `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
 - `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), and [Repair Architecture](docs/repair-architecture.md).
 
 ## Contributing
