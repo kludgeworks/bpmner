@@ -9,6 +9,11 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Why this manual dispatch (free-text, optional)'
+        required: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
