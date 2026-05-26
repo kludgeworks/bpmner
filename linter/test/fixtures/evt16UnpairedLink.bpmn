@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
-  <bpmn:process id="Process_1">
-    <bpmn:intermediateThrowEvent id="Throw_1" name="L1">
-      <bpmn:linkEventDefinition id="LinkDef_1" />
-    </bpmn:intermediateThrowEvent>
-  </bpmn:process>
-</bpmn:definitions>
