@@ -118,6 +118,17 @@ internal class PklRuleCatalogTest {
     }
 
     @Test
+    fun `round-trip - DiscouragedBusinessVerbs is silent when forbidden verb is not leading`() {
+        val catalog = PklRuleCatalog(emptyList())
+        val rule = catalog.ruleById("act-discouraged-business-verbs")
+            ?: error("Pkl rule 'act-discouraged-business-verbs' not loaded")
+
+        val ctx = ctxWithUserTask(taskId = "t", taskName = "Review and handle invoice")
+
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
     fun `round-trip - StartNoIncoming flags start events with incoming sequence flow`() {
         val catalog = PklRuleCatalog(emptyList())
         val rule = catalog.ruleById("evt-start-no-incoming")
