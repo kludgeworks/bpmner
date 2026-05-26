@@ -111,17 +111,17 @@ internal class BpmnContractFidelityChecker {
         issues: MutableList<BpmnFidelityIssue>,
     ) {
         val gateway = nodeById[decision.id]
-        val gatewayIsValid = gateway != null && gateway.isGateway()
+        val validGateway = gateway?.takeIf { it.isGateway() }
 
         verifyGatewayTypeAndPresence(decision, gateway, issues)
 
-        if (gatewayIsValid) {
-            val outbound = outgoingBySource[gateway!!.id].orEmpty()
-            verifyOutboundBranchCount(decision, gateway!!, outbound, issues)
-            verifyDefaultFlow(decision, gateway, outbound, issues)
+        if (validGateway != null) {
+            val outbound = outgoingBySource[validGateway.id].orEmpty()
+            verifyOutboundBranchCount(decision, validGateway, outbound, issues)
+            verifyDefaultFlow(decision, validGateway, outbound, issues)
         }
 
-        verifyBranchTargetsAndFlows(decision, gateway, nodeById, outgoingBySource, issues)
+        verifyBranchTargetsAndFlows(decision, validGateway, nodeById, outgoingBySource, issues)
     }
 
     private fun verifyGatewayTypeAndPresence(
@@ -129,39 +129,43 @@ internal class BpmnContractFidelityChecker {
         gateway: BpmnNode?,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
-        if (gateway == null) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Decision '${decision.id}' has no corresponding node in the generated BPMN. " +
-                        "Under the unified-id convention the gateway must share the decision's id.",
-                    contractElementId = decision.id,
-                )
-        } else if (!gateway.isGateway()) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Decision '${decision.id}' is realized as a ${gateway.typeName} node — " +
-                        "expected a gateway type.",
-                    contractElementId = decision.id,
-                    bpmnElementId = gateway.id,
-                )
-        } else if (!decision.kind.matchesGatewayType(gateway)) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Decision '${decision.id}' declares kind=${decision.kind} but is realized as a " +
-                        "${gateway.typeName} node — semantically wrong " +
-                        "(${decision.kind} means \"${kindDescription(decision.kind)}\").",
-                    contractElementId = decision.id,
-                    bpmnElementId = gateway.id,
-                )
+        when {
+            gateway == null -> {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Decision '${decision.id}' has no corresponding node in the generated BPMN. " +
+                            "Under the unified-id convention the gateway must share the decision's id.",
+                        contractElementId = decision.id,
+                    )
+            }
+            !gateway.isGateway() -> {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Decision '${decision.id}' is realized as a ${gateway.typeName} node — " +
+                            "expected a gateway type.",
+                        contractElementId = decision.id,
+                        bpmnElementId = gateway.id,
+                    )
+            }
+            !decision.kind.matchesGatewayType(gateway) -> {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Decision '${decision.id}' declares kind=${decision.kind} but is realized as a " +
+                            "${gateway.typeName} node — semantically wrong " +
+                            "(${decision.kind} means \"${kindDescription(decision.kind)}\").",
+                        contractElementId = decision.id,
+                        bpmnElementId = gateway.id,
+                    )
+            }
         }
     }
 
@@ -224,7 +228,6 @@ internal class BpmnContractFidelityChecker {
         outgoingBySource: Map<String, List<BpmnEdge>>,
         issues: MutableList<BpmnFidelityIssue>,
     ) {
-        val gatewayIsValid = gateway != null && gateway.isGateway()
         decision.branches.forEach { branch ->
             val ref = branch.nextRef ?: return@forEach
             val targetExists = ref in nodeById
@@ -241,8 +244,8 @@ internal class BpmnContractFidelityChecker {
                     )
                 return@forEach
             }
-            if (gatewayIsValid &&
-                !targetReachableSemantically(gateway!!, ref, outgoingBySource, nodeById)
+            if (gateway != null &&
+                !targetReachableSemantically(gateway, ref, outgoingBySource, nodeById)
             ) {
                 issues +=
                     BpmnFidelityIssue(

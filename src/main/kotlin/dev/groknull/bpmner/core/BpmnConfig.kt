@@ -31,9 +31,15 @@ data class BpmnConfig(
     val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
     val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
     val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
+    val linter: Actor<Persona> = DEFAULT_LINTER,
+    @field:Min(1)
+    val lintBatchSize: Int = DEFAULT_LINT_BATCH_SIZE,
 ) {
     companion object {
         const val DEFAULT_MAX_ATTEMPTS = 5
+        const val DEFAULT_LINT_BATCH_SIZE = 10
+
+        private const val CONCISE_AND_EXACT = "concise and exact"
 
         val DEFAULT_GENERATOR =
             Actor(
@@ -56,7 +62,7 @@ data class BpmnConfig(
                     persona = "You are a fast, detail-oriented BPMN copy editor",
                     objective =
                     "Fix naming and label capitalization rules by providing targeted node and edge patches",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-label"),
             )
@@ -70,7 +76,7 @@ data class BpmnConfig(
                     objective =
                     "Fix structural and routing validation errors by adding or removing" +
                         " specific elements without rewriting the whole definition",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-patch"),
             )
@@ -83,7 +89,7 @@ data class BpmnConfig(
                     persona = "You are an expert BPMN 2.0 validator who specializes in holistic process restructuring",
                     objective =
                     "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repair-rewrite"),
             )
@@ -97,7 +103,7 @@ data class BpmnConfig(
                     objective =
                     "Fix every validation error in the BPMN definition" +
                         " and return the complete corrected object",
-                    voice = "concise and exact",
+                    voice = CONCISE_AND_EXACT,
                 ),
                 llm = LlmOptions.withLlmForRole("repairer"),
             )
@@ -146,6 +152,22 @@ data class BpmnConfig(
                     voice = "critical and precise",
                 ),
                 llm = LlmOptions.withLlmForRole("alignment-validator"),
+            )
+        val DEFAULT_LINTER =
+            Actor(
+                persona =
+                Persona(
+                    name = "BPMN Linter",
+                    persona =
+                    "You are a meticulous BPMN 2.0 quality reviewer focused on labelling," +
+                        " clarity, and modelling conventions",
+                    objective =
+                    "Evaluate LLM-judgement BPMN rules against a definition and report" +
+                        " specific, element-anchored violations — never invent failures, never" +
+                        " skip rules that apply",
+                    voice = "specific and evidence-grounded",
+                ),
+                llm = LlmOptions.withLlmForRole("lint"),
             )
     }
 }

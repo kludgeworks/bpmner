@@ -2,9 +2,7 @@
  * Copyright 2026 The Project Contributors
  * SPDX-License-Identifier: MIT
  */
-
 package dev.groknull.bpmner.rules.internal.domain.compiled
-
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEndEvent
@@ -28,7 +26,6 @@ import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.api.isTask
 import org.springframework.stereotype.Component
-
 /**
  * Validates the event-definition correctness invariants on every event-position node:
  *
@@ -47,6 +44,12 @@ import org.springframework.stereotype.Component
  */
 @Component
 internal class EventDefinitionRule : BpmnRule {
+    companion object {
+        private const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
+        private const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
+        private const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
+        private const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
+    }
     override val id: String = "def-event-definitions"
     override val metadata: RuleMetadata = RuleMetadata(
         id = id,
@@ -71,18 +74,16 @@ internal class EventDefinitionRule : BpmnRule {
             "def-invalid-attached-to" to "Boundary event attachedToRef must match an existing node id.",
             "def-non-task-attached-to" to "Boundary events must attach to an activity.",
             "def-missing-timer-expr" to "Timer event expression must not be blank.",
-            "def-invalid-message-ref" to "Message event definitions must reference an existing message.",
-            "def-invalid-signal-ref" to "Signal event definitions must reference an existing signal.",
-            "def-invalid-error-ref" to "Error event definitions must reference an existing error.",
-            "def-invalid-escalation-ref" to "Escalation event definitions must reference an existing escalation.",
+            DEF_INVALID_MESSAGE_REF to "Message event definitions must reference an existing message.",
+            DEF_INVALID_SIGNAL_REF to "Signal event definitions must reference an existing signal.",
+            DEF_INVALID_ERROR_REF to "Error event definitions must reference an existing error.",
+            DEF_INVALID_ESCALATION_REF to "Escalation event definitions must reference an existing escalation.",
         ),
         severity = RuleSeverity.ERROR,
         repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
     )
-
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
-
         ctx.definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> {
@@ -110,10 +111,8 @@ internal class EventDefinitionRule : BpmnRule {
                 }
             }
         }
-
         return diagnostics
     }
-
     private fun validateIntermediate(
         nodeLabel: String,
         nodeId: String,
@@ -126,7 +125,6 @@ internal class EventDefinitionRule : BpmnRule {
         }
         validateEventDefinition(nodeId, eventDefinition, ctx, diagnostics)
     }
-
     private fun validateBoundary(
         node: BpmnBoundaryEvent,
         ctx: BpmnDefinitionContext,
@@ -138,7 +136,6 @@ internal class EventDefinitionRule : BpmnRule {
         validateAttachedToRef(node, ctx, diagnostics)
         validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
     }
-
     private fun validateAttachedToRef(
         node: BpmnBoundaryEvent,
         ctx: BpmnDefinitionContext,
@@ -233,7 +230,7 @@ internal class EventDefinitionRule : BpmnRule {
                 if (eventDefinition.messageRef.isBlank()) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-message-ref",
+                            diagnosticCode = DEF_INVALID_MESSAGE_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message = "event $nodeId messageEventDefinition is missing the required messageRef attribute",
@@ -242,7 +239,7 @@ internal class EventDefinitionRule : BpmnRule {
                 } else if (eventDefinition.messageRef !in ctx.messageIds) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-message-ref",
+                            diagnosticCode = DEF_INVALID_MESSAGE_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =
@@ -257,7 +254,7 @@ internal class EventDefinitionRule : BpmnRule {
                 if (eventDefinition.signalRef.isBlank()) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-signal-ref",
+                            diagnosticCode = DEF_INVALID_SIGNAL_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message = "event $nodeId signalEventDefinition is missing the required signalRef attribute",
@@ -266,7 +263,7 @@ internal class EventDefinitionRule : BpmnRule {
                 } else if (eventDefinition.signalRef !in ctx.signalIds) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-signal-ref",
+                            diagnosticCode = DEF_INVALID_SIGNAL_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =
@@ -281,7 +278,7 @@ internal class EventDefinitionRule : BpmnRule {
                 if (eventDefinition.errorRef.isBlank()) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-error-ref",
+                            diagnosticCode = DEF_INVALID_ERROR_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message = "event $nodeId errorEventDefinition is missing the required errorRef attribute",
@@ -290,7 +287,7 @@ internal class EventDefinitionRule : BpmnRule {
                 } else if (eventDefinition.errorRef !in ctx.errorIds) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-error-ref",
+                            diagnosticCode = DEF_INVALID_ERROR_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message = "event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id",
@@ -303,7 +300,7 @@ internal class EventDefinitionRule : BpmnRule {
                 if (eventDefinition.escalationRef.isBlank()) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-escalation-ref",
+                            diagnosticCode = DEF_INVALID_ESCALATION_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message = "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
@@ -312,7 +309,7 @@ internal class EventDefinitionRule : BpmnRule {
                 } else if (eventDefinition.escalationRef !in ctx.escalationIds) {
                     diagnostics +=
                         RuleDiagnostic(
-                            diagnosticCode = "def-invalid-escalation-ref",
+                            diagnosticCode = DEF_INVALID_ESCALATION_REF,
                             ruleId = id,
                             severity = RuleSeverity.ERROR,
                             message =

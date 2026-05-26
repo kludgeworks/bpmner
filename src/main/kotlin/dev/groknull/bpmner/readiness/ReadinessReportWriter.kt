@@ -9,7 +9,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
-interface ReadinessReportWriter {
+fun interface ReadinessReportWriter {
     fun writeReport(
         originalInput: String,
         assessment: ProcessInputAssessment,

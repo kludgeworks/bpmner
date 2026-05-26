@@ -134,11 +134,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun rejectIfHasDiagramInterchange(model: BpmnModelInstance) {
-        if (model.getModelElementsByType(BpmnDiagram::class.java).isNotEmpty()) {
-            throw IllegalArgumentException(
-                "BPMNDI input rejected — semantic-only XML required. " +
-                    "Strip <bpmndi:BPMNDiagram> elements before parsing.",
-            )
+        require(model.getModelElementsByType(BpmnDiagram::class.java).isEmpty()) {
+            "BPMNDI input rejected — semantic-only XML required. " +
+                "Strip <bpmndi:BPMNDiagram> elements before parsing."
         }
     }
 

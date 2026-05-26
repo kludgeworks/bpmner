@@ -94,54 +94,15 @@ build_test(
     ],
 )
 
-test_suite(
-    name = "ci_static",
-    tests = [
-        ":buildifier_check",
-        ":cpd_kotlin_main",
-        ":cpd_kotlin_test",
-        ":detekt_check",
-        ":vale_docs_test",
-        ":vale_fixtures_test",
-        "//src:ktlint_check",
-        "//src/test:ktlint_check",
-        "//tools/pkl-enum-gen:PklEnumGeneratorTest",
-    ],
-)
-
-test_suite(
-    name = "ci_typescript",
-    tests = [
-        ":typescript_build_test",
-        "//layout:smoke_test",
-        "//linter:auto_fix_test",
-        "//linter:capabilities_test",
-        "//linter:lint_test",
-        "//linter:smoke_test",
-    ],
-)
-
-test_suite(
-    name = "ci_kotlin",
-    tests = [
-        "//src/test:ApiAnnotationFreeTest",
-        "//src/test:BpmnAgentFlowSystemTest",
-        "//src/test:BpmnAlignmentFailureIntegrationTest",
-        "//src/test:BpmnGuardrailSystemTest",
-        "//src/test:BpmnerArchitectureTest",
-        "//src/test:BpmnerModuleBoundariesTest",
-        "//src/test:BpmnerModulithTest",
-        "//src/test:BpmnerParityTest",
-        "//src/test:bpmnerAppRunfilesDataTest",
-    ],
-)
-
-test_suite(
-    name = "ci",
-    tests = [
-        ":ci_kotlin",
-        ":ci_static",
-        ":ci_typescript",
-        "//linter/pkl:schema_test",
-    ],
-)
+# CI runs `bazel test //...` directly — no curated test_suite. Every test target
+# discoverable in the build graph is part of PR CI by default; the `.bazelrc` policy
+# (`test --test_tag_filters=-integration`) gates integration tests off the wildcard
+# run. To exercise integration tests use:
+#   bazel test --test_tag_filters=integration //src/test/...
+#
+# Pre-PR-#250 this file carried `:ci`, `:ci_kotlin`, `:ci_typescript`, and `:ci_static`
+# allowlists. Curating tests in BUILD inverted the polarity (opt-in to CI) and let
+# `RepairRoutingModuleTest` silently break on main between Phase 2F (#243) and PR #249
+# until `bazel coverage //...` (SonarCloud) caught it. Removing the curation aligns
+# PR CI scope with the SonarCloud coverage job, eliminates the allowlist-drift bug class
+# entirely, and matches the canonical Bazel pattern.

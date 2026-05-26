@@ -10,6 +10,6 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
-interface BpmnReadinessInvoker {
+fun interface BpmnReadinessInvoker {
     fun assess(request: BpmnRequest): ProcessInputAssessment
 }

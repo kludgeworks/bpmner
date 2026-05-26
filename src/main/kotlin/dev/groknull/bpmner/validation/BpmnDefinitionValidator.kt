@@ -29,6 +29,8 @@ import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
+private const val BLANK_EDGE_ID_LABEL = "<blank>"
+
 @Service
 @Component
 @Suppress("TooManyFunctions")
@@ -93,16 +95,16 @@ internal class BpmnDefinitionValidator {
         definition.sequences.forEach { edge ->
             if (edge.sourceRef !in nodeIdSet) {
                 errors.add(
-                    "edge ${edge.id.ifBlank { "<blank>" }} sourceRef '${edge.sourceRef}' does not match any node id",
+                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} sourceRef '${edge.sourceRef}' does not match any node id",
                 )
             }
             if (edge.targetRef !in nodeIdSet) {
                 errors.add(
-                    "edge ${edge.id.ifBlank { "<blank>" }} targetRef '${edge.targetRef}' does not match any node id",
+                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} targetRef '${edge.targetRef}' does not match any node id",
                 )
             }
             if (edge.sourceRef == edge.targetRef) {
-                errors.add("edge ${edge.id.ifBlank { "<blank>" }} must not self-reference source and target")
+                errors.add("edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} must not self-reference source and target")
             }
         }
     }
