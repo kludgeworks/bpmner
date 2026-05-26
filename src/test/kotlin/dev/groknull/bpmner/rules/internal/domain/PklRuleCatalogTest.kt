@@ -12,6 +12,7 @@ import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import org.junit.jupiter.api.Test
@@ -22,6 +23,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions") // round-trip tests fan out per primitive family; one test per rule
 internal class PklRuleCatalogTest {
 
     @Test
@@ -101,6 +103,75 @@ internal class PklRuleCatalogTest {
 
         val ctx = ctxWithUserTask(taskId = "t-good", taskName = "Approve request")
         assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - DiscouragedBusinessVerbs flags labels starting with a forbidden verb`() {
+        val catalog = PklRuleCatalog(emptyList())
+        val rule = catalog.ruleById("act-discouraged-business-verbs")
+            ?: error("Pkl rule 'act-discouraged-business-verbs' not loaded")
+
+        val ctx = ctxWithUserTask(taskId = "t", taskName = "Handle invoice")
+        val diagnostics = rule.evaluate(ctx)
+
+        assertEquals(listOf("t"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - StartNoIncoming flags start events with incoming sequence flow`() {
+        val catalog = PklRuleCatalog(emptyList())
+        val rule = catalog.ruleById("evt-start-no-incoming")
+            ?: error("Pkl rule 'evt-start-no-incoming' not loaded")
+
+        // Build a context where the start event has an incoming edge — the canonical violation
+        // of "start must have zero incoming flow".
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnUserTask("t1", "First task"),
+                    BpmnStartEvent("s", "Start"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("bad", "t1", "s"),
+                    BpmnEdge("ok", "s", "e"),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("s"), rule.evaluate(ctx).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - ConvergingGatewayUnnamed flags named converging gateways`() {
+        val catalog = PklRuleCatalog(emptyList())
+        val rule = catalog.ruleById("gtw-converging-gateway-unnamed")
+            ?: error("Pkl rule 'gtw-converging-gateway-unnamed' not loaded")
+
+        // Two start events fanning into one named exclusive gateway, then a single outgoing
+        // flow to End — matches the CONVERGING_UNNAMED topology check: incoming >= 2,
+        // outgoing <= 1, and name is non-blank.
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s1", "Start A"),
+                    BpmnStartEvent("s2", "Start B"),
+                    BpmnExclusiveGateway("g", "Combine paths"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s1", "g"),
+                    BpmnEdge("f2", "s2", "g"),
+                    BpmnEdge("f3", "g", "e"),
+                ),
+            ),
+        )
+
+        assertEquals(listOf("g"), rule.evaluate(ctx).map { it.elementId })
     }
 
     @Test

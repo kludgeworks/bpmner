@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Converging Gateway Unnamed"
@@ -26,6 +27,11 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "TopologyCheck"
+checkConfig = new CheckPrimitive.TopologyCheck {
+  topology = "CONVERGING_UNNAMED"
+}
 
 repair = new {
   kind = "LOCAL_MODEL_FIX"

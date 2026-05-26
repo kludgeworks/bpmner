@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Discouraged Business Verbs"
@@ -27,3 +28,13 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// VocabularyCheck tokenizes the property value and flags any token matching the FORBID list.
+// `discouragedLeadingVerbs` in staticConfig is the legacy JS-bridge mirror of `words` here —
+// they stay in sync by convention; the JS path dies in 2G and the staticConfig copy with it.
+checkPrimitive = "VocabularyCheck"
+checkConfig = new CheckPrimitive.VocabularyCheck {
+  property = "name"
+  mode = "FORBID"
+  words = List("handle", "manage", "process", "perform", "do")
+}

@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Start No Incoming"
@@ -19,6 +20,11 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+checkPrimitive = "ConnectivityCheck"
+checkConfig = new CheckPrimitive.ConnectivityCheck {
+  mode = "NO_INCOMING"
+}
 
 repair = new {
   kind = "LOCAL_MODEL_FIX"
