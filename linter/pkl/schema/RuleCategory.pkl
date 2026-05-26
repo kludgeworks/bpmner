@@ -1,4 +1,6 @@
-class RuleCategory {
+module dev.groknull.bpmner.pkl.RuleCategory
+
+class Category {
   name: "Activity"
     | "Association"
     | "Artifact"
@@ -14,57 +16,57 @@ class RuleCategory {
   shortCode: String(!isEmpty) = name.toLowerCase()
 }
 
-Activity: RuleCategory = new {
+Activity: Category = new {
   name = "Activity"
   shortCode = "act"
 }
 
-Association: RuleCategory = new {
+Association: Category = new {
   name = "Association"
   shortCode = "assoc"
 }
 
-Artifact: RuleCategory = new {
+Artifact: Category = new {
   name = "Artifact"
   shortCode = "art"
 }
 
-Data: RuleCategory = new {
+Data: Category = new {
   name = "Data"
 }
 
-Event: RuleCategory = new {
+Event: Category = new {
   name = "Event"
   shortCode = "evt"
 }
 
-Flow: RuleCategory = new {
+Flow: Category = new {
   name = "Flow"
 }
 
-Gateway: RuleCategory = new {
+Gateway: Category = new {
   name = "Gateway"
   shortCode = "gtw"
 }
 
-General: RuleCategory = new {
+General: Category = new {
   name = "General"
   shortCode = "gen"
 }
 
-Lane: RuleCategory = new {
+Lane: Category = new {
   name = "Lane"
 }
 
-Message: RuleCategory = new {
+Message: Category = new {
   name = "Message"
   shortCode = "msg"
 }
 
-Name: RuleCategory = new {
+Name: Category = new {
   name = "Name"
 }
 
-Pool: RuleCategory = new {
+Pool: Category = new {
   name = "Pool"
 }

@@ -28,6 +28,7 @@ data class BpmnConfig(
     val alignment: BpmnAlignmentConfig = BpmnAlignmentConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
+    val rules: BpmnRulesConfig = BpmnRulesConfig(),
     val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
     val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
     val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
@@ -210,4 +211,11 @@ data class BpmnLoggingConfig(
 
 data class BpmnRepairConfig(
     val abbreviations: Map<String, String> = emptyMap(),
+)
+
+data class BpmnRulesConfig(
+    // Filesystem directory scanned at startup for custom .pkl rule modules. When unset (default),
+    // only rules packaged with the application are loaded. Custom rules are evaluated through a
+    // separate file:-scheme evaluator so runtime glob works (modulepath: is not globbable).
+    val customDir: java.nio.file.Path? = null,
 )

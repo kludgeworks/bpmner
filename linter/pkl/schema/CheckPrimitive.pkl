@@ -1,3 +1,5 @@
+module dev.groknull.bpmner.pkl.CheckPrimitive
+
 /// Schema for the Phase 2B check primitive system.
 ///
 /// A `BpmnRule` (see `BpmnRule.pkl`) carries `checkPrimitive: CheckPrimitive?` and
@@ -32,7 +34,7 @@ typealias NonEmptyString = String(!isEmpty)
 /// The full set of primitive names that may appear in a rule's `checkPrimitive` field. The
 /// Kotlin loader fails fast at startup on an unknown name. Two of these are composite /
 /// non-deterministic (`CompositeCheck`, `LlmCheckRule`) and land later in Phase 2C.
-typealias CheckPrimitive =
+typealias Primitive =
   "RequiredPropertyCheck"
     | "PropertyPatternCheck"
     | "VocabularyCheck"
