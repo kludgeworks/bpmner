@@ -53,5 +53,11 @@ jobs:
       - name: Run hk lint checks
         run: hk check all
 
-      - name: Build and run CI test suite
-        run: bazel test //:ci
+      # Run every test discoverable in the build graph. Integration tests are gated
+      # out by the `.bazelrc` policy (`test --test_tag_filters=-integration`) and run
+      # separately with `bazel test --test_tag_filters=integration //src/test/...`.
+      # This matches the canonical Bazel pattern (`rules_pkl/.github/workflows/build.yml`)
+      # and removes the allowlist-drift class of bug that hid `RepairRoutingModuleTest`
+      # failures on main between Phase 2F (#243) and PR #249.
+      - name: Build and run all tests
+        run: bazel test //...
