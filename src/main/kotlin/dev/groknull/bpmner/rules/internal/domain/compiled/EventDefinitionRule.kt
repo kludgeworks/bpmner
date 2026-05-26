@@ -2,9 +2,7 @@
  * Copyright 2026 The Project Contributors
  * SPDX-License-Identifier: MIT
  */
-
 package dev.groknull.bpmner.rules.internal.domain.compiled
-
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEndEvent
@@ -28,7 +26,6 @@ import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.api.isTask
 import org.springframework.stereotype.Component
-
 /**
  * Validates the event-definition correctness invariants on every event-position node:
  *
@@ -47,6 +44,18 @@ import org.springframework.stereotype.Component
  */
 @Component
 internal class EventDefinitionRule : BpmnRule {
+    companion object {
+        private const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
+        private const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
+        private const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
+        private const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
+    }
+    companion object {
+        private const val DEF_INVALID_MESSAGE_REF = DEF_INVALID_MESSAGE_REF
+        private const val DEF_INVALID_SIGNAL_REF = DEF_INVALID_SIGNAL_REF
+        private const val DEF_INVALID_ERROR_REF = DEF_INVALID_ERROR_REF
+        private const val DEF_INVALID_ESCALATION_REF = DEF_INVALID_ESCALATION_REF
+    }
     override val id: String = "def-event-definitions"
     override val metadata: RuleMetadata = RuleMetadata(
         id = id,
@@ -79,41 +88,32 @@ internal class EventDefinitionRule : BpmnRule {
         severity = RuleSeverity.ERROR,
         repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),
     )
-
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
-
         ctx.definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> {
                     validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
                 }
-
                 is BpmnEndEvent -> {
                     validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
                 }
-
                 is BpmnIntermediateCatchEvent -> {
                     validateIntermediate("intermediate catch event", node.id, node.eventDefinition, ctx, diagnostics)
                 }
-
                 is BpmnIntermediateThrowEvent -> {
                     validateIntermediate("intermediate throw event", node.id, node.eventDefinition, ctx, diagnostics)
                 }
-
                 is BpmnBoundaryEvent -> {
                     validateBoundary(node, ctx, diagnostics)
                 }
-
                 else -> {
                     Unit
                 }
             }
         }
-
         return diagnostics
     }
-
     private fun validateIntermediate(
         nodeLabel: String,
         nodeId: String,
@@ -126,7 +126,6 @@ internal class EventDefinitionRule : BpmnRule {
         }
         validateEventDefinition(nodeId, eventDefinition, ctx, diagnostics)
     }
-
     private fun validateBoundary(
         node: BpmnBoundaryEvent,
         ctx: BpmnDefinitionContext,
@@ -138,7 +137,6 @@ internal class EventDefinitionRule : BpmnRule {
         validateAttachedToRef(node, ctx, diagnostics)
         validateEventDefinition(node.id, node.eventDefinition, ctx, diagnostics)
     }
-
     private fun validateAttachedToRef(
         node: BpmnBoundaryEvent,
         ctx: BpmnDefinitionContext,
@@ -169,7 +167,6 @@ internal class EventDefinitionRule : BpmnRule {
                         elementId = node.id,
                     )
             }
-
             !attachedTo.isTask() -> {
                 diagnostics +=
                     RuleDiagnostic(
@@ -211,11 +208,9 @@ internal class EventDefinitionRule : BpmnRule {
             is BpmnNoneEventDefinition -> {
                 Unit
             }
-
             is BpmnTerminateEventDefinition -> {
                 Unit
             }
-
             is BpmnTimerEventDefinition -> {
                 if (eventDefinition.expression.isBlank()) {
                     diagnostics +=
@@ -228,7 +223,6 @@ internal class EventDefinitionRule : BpmnRule {
                         )
                 }
             }
-
             is BpmnMessageEventDefinition -> {
                 if (eventDefinition.messageRef.isBlank()) {
                     diagnostics +=
@@ -252,7 +246,6 @@ internal class EventDefinitionRule : BpmnRule {
                         )
                 }
             }
-
             is BpmnSignalEventDefinition -> {
                 if (eventDefinition.signalRef.isBlank()) {
                     diagnostics +=
@@ -276,7 +269,6 @@ internal class EventDefinitionRule : BpmnRule {
                         )
                 }
             }
-
             is BpmnErrorEventDefinition -> {
                 if (eventDefinition.errorRef.isBlank()) {
                     diagnostics +=
@@ -298,7 +290,6 @@ internal class EventDefinitionRule : BpmnRule {
                         )
                 }
             }
-
             is BpmnEscalationEventDefinition -> {
                 if (eventDefinition.escalationRef.isBlank()) {
                     diagnostics +=
@@ -323,12 +314,5 @@ internal class EventDefinitionRule : BpmnRule {
                 }
             }
         }
-    }
-
-    companion object {
-        private const val DEF_INVALID_MESSAGE_REF = "def-invalid-message-ref"
-        private const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
-        private const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
-        private const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
     }
 }
