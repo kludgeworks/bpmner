@@ -1,4 +1,6 @@
 amends "../schema/BpmnRule.pkl"
+
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Send Task Vs Throwing Message Event"
@@ -19,3 +21,9 @@ errorMessages = new {
 }
 
 hasTsImplementation = false
+
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Suggest Send Task when message sending is tied to a user action; suggest throwing message event for automated or event-driven sending."
+}

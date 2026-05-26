@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Business Clarity Over Technical Detail"
@@ -23,3 +24,9 @@ staticConfig = new {
 }
 
 hasTsImplementation = false
+
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Review labels and structure for business readability. Flag technical detail only when it dominates or obscures business intent."
+}

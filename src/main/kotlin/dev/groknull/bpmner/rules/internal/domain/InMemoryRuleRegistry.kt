@@ -7,26 +7,19 @@ package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.rules.RuleRegistry
-import org.jmolecules.ddd.annotation.Service
-import org.springframework.stereotype.Component
 
 /**
- * Default [RuleRegistry] backed by the `List<BpmnRule>` Spring discovers in the
- * application context. When no `BpmnRule` beans are registered (true until #213 lands
- * compiled rules), Spring injects an empty list and the registry reports no active rules.
+ * Plain `RuleRegistry` backed by a fixed `List<BpmnRule>`. Not a Spring `@Component` —
+ * [PklRuleCatalog] is the single registered registry in production. This class is kept
+ * around as a test utility (e.g. `BpmnerParityTest`) and for any caller that wants an
+ * in-process registry without booting the full Pkl pipeline.
  *
- * Duplicate-id rules collapse to the last in [rules] under [ruleById] — by design. The
- * Phase 1H startup verification (#216) detects duplicate ids at registry-load time so
- * this lookup stays a pure data structure.
+ * Duplicate-id rules collapse to the last entry under [ruleById]; the Phase 1H startup
+ * verification (#216) is what guards against duplicate ids reaching production.
  */
-@Service
-@Component
 internal class InMemoryRuleRegistry(
     rules: List<BpmnRule>,
 ) : RuleRegistry {
-    // Defensive copy: callers that pass a mutable list cannot mutate the registry's
-    // active set after construction. Spring's standard injection passes an immutable
-    // list, but the constructor contract should not depend on that detail.
     private val rules: List<BpmnRule> = rules.toList()
     private val byId: Map<String, BpmnRule> = this.rules.associateBy { it.id }
 

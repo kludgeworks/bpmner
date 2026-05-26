@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Discouraged Business Verbs"
@@ -27,3 +28,14 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// FORBID_LEADING tokenizes the label and matches the first token only — preserving the
+// legacy "discouragedLeadingVerbs" semantics (the staticConfig key spells "leading" for a
+// reason). A label like "Review and process invoice" passes because "review" is not on the
+// list; without the leading-only mode, "process" anywhere in the label would trigger.
+checkPrimitive = "VocabularyCheck"
+checkConfig = new CheckPrimitive.VocabularyCheck {
+  property = "name"
+  mode = "FORBID_LEADING"
+  words = List("handle", "manage", "process", "perform", "do")
+}

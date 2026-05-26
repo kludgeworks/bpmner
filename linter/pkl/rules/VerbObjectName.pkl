@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Verb Object Name"
@@ -26,3 +27,14 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+// Partial port: enforces the "at least two words" half of the legacy contract (the
+// `tooShort` diagnostic). The `missingVerb` half requires POS tagging which the
+// deterministic primitives cannot express — that check stays on the legacy JS path
+// until either a part-of-speech-aware primitive lands or 2G retires the JS path.
+checkPrimitive = "PropertyPatternCheck"
+checkConfig = new CheckPrimitive.PropertyPatternCheck {
+  property = "name"
+  pattern = "^\\S+\\s+\\S+.*"
+  patternDescription = "label should be at least two words (Verb + Object)"
+}

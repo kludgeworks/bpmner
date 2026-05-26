@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Signal Events Broadcast Only When Needed"
@@ -36,3 +37,9 @@ staticConfig = new {
 }
 
 hasTsImplementation = false
+
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Treat signal event replacement as a modelling-intent heuristic. Deterministic linting can identify signal event usage, but deciding whether a message, error, or escalation is better requires business context."
+}

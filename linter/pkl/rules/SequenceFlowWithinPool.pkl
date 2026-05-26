@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Sequence Flow Within Pool"
@@ -20,3 +21,12 @@ errorMessages = new {
 staticConfig = new {}
 
 hasTsImplementation = true
+
+// WITHIN_POOL is dormant in production today — the deterministic primitive short-circuits to
+// empty diagnostics until participants, lanes, and per-flow pool fields land via #196. The
+// rule still loads through the new path; it just produces no diagnostics until that capability
+// bit is enabled.
+checkPrimitive = "ConnectivityCheck"
+checkConfig = new CheckPrimitive.ConnectivityCheck {
+  mode = "WITHIN_POOL"
+}

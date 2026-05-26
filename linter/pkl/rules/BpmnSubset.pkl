@@ -47,3 +47,8 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// BpmnSubset stays on the legacy JS path until pkl-config-java can convert Pkl Lists into
+// the Mapping<String, Any> value slot — the codegen target field is java.lang.Object and
+// no built-in converter handles `pkl.base#List` -> `java.lang.Object`. Revisit once 2G
+// retires the JS path or the codegen converter chain is extended.

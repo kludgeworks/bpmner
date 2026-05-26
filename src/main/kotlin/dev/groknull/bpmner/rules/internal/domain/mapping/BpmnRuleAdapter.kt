@@ -80,18 +80,20 @@ internal object BpmnRuleAdapter {
         replacementMap = pkl.replacementMap,
     )
 
-    // Pkl's `staticConfig: Dynamic? = null` maps to Java Object. In practice Pkl objects and
-    // Mappings deserialize to Map<String, Object>, which is what DeterministicTopologyRepairStrategy
-    // expects when it casts meta.staticConfig (see HandlerConfig). Anything else is a rule-author
-    // mistake worth surfacing at load time rather than letting it fail later as an empty handler
-    // config.
+    // Pkl's `staticConfig: Dynamic? = null` maps to Java Object. The runtime returns one of:
+    //  - null (the rule didn't set staticConfig, or set it to null explicitly)
+    //  - org.pkl.core.PObject (the common case — `new { foo = ... }`)
+    //  - java.util.Map (Pkl Mapping)
+    // DeterministicTopologyRepairStrategy reads meta.staticConfig as Map<String, Any> via
+    // HandlerConfig, so we normalize at the adapter boundary rather than at every consumer.
+    // Any other type is a rule-author mistake worth surfacing here, not silently swallowed.
     @Suppress("UNCHECKED_CAST")
     private fun staticConfigFromPkl(ruleId: String, raw: Any?): Map<String, Any>? = when (raw) {
         null -> null
+        is org.pkl.core.PObject -> raw.properties as Map<String, Any>
         is Map<*, *> -> raw as Map<String, Any>
         else -> error(
-            "Rule '$ruleId' staticConfig must be a Pkl object/mapping (Map<String, Any>), " +
-                "got ${raw::class.java.name}",
+            "Rule '$ruleId' staticConfig must be a Pkl object/mapping, got ${raw::class.java.name}",
         )
     }
 }
