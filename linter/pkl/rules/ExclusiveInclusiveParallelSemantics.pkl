@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Exclusive Inclusive Parallel Semantics"
@@ -36,3 +37,14 @@ staticConfig = new {
 }
 
 hasTsImplementation = true
+
+// The deterministic part of this rule (parallelCondition / parallelSplitCardinality /
+// parallelJoinCardinality from staticConfig.deterministicChecks) stays on the JS path —
+// the new path routes the heuristic XOR-vs-OR-vs-AND judgement to LlmRuleAgent. Splitting
+// the rule into two would mean two ids and two diagnostics; keeping it as one LLM-routed
+// rule is the simpler shape until that split is justified.
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid."
+}

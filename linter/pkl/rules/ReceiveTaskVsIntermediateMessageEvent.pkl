@@ -1,4 +1,6 @@
 amends "../schema/BpmnRule.pkl"
+
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Receive Task Vs Intermediate Message Event"
@@ -19,3 +21,9 @@ errorMessages = new {
 }
 
 hasTsImplementation = false
+
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Detect message-driven waits where the description implies an explicit participant interaction versus a passive event."
+}

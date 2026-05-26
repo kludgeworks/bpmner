@@ -1,4 +1,6 @@
 amends "../schema/BpmnRule.pkl"
+
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Task Vs Subprocess Vs Call Activity"
@@ -19,3 +21,9 @@ errorMessages = new {
 }
 
 hasTsImplementation = false
+
+checkPrimitive = "LlmCheckRule"
+checkConfig = new CheckPrimitive.LlmCheckRule {
+  prompt =
+    "Identify embedded logic that should be a Subprocess versus external logic that should be a Call Activity."
+}
