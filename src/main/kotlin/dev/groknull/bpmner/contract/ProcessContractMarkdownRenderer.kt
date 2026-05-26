@@ -54,7 +54,7 @@ private fun StringBuilder.appendDecisions(contract: ProcessContract) {
         appendLine()
         appendLine("## Decisions")
         contract.decisions.forEach { decision ->
-            val kindSuffix = decisionSuffix(decision)
+            val kindSuffix = if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
             appendLine("- ${decision.id}: ${decision.question}$kindSuffix")
             decision.branches.forEach { branch ->
                 val suffix = branchSuffix(branch)
@@ -97,9 +97,6 @@ private fun StringBuilder.appendAssumptions(contract: ProcessContract) {
         }
     }
 }
-
-private fun decisionSuffix(decision: ContractDecision): String =
-    if (decision.kind == ContractGatewayKind.PARALLEL) " (PARALLEL)" else ""
 
 private fun branchSuffix(branch: ContractBranch): String = when (branch) {
     is ConditionalBranch -> " if \"${branch.condition}\""
