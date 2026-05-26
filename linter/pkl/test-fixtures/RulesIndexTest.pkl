@@ -1,0 +1,23 @@
+amends "pkl:test"
+
+import "../RulesIndex.pkl" as RulesIndex
+import "../Catalog.pkl" as Catalog
+
+// Parity test: the build-time-generated RulesIndex must produce the exact same
+// rule set (in id-sorted order) as the legacy runtime-glob Catalog. Catalog is
+// kept alive in 2D-a (additive only) and removed in 2D-b once the runtime
+// loader is cut over to RulesIndex.
+facts {
+  ["RulesIndex rule ids match Catalog rule ids"] {
+    RulesIndex.rules.map((rule) -> rule.id)
+      == Catalog.rules.map((rule) -> rule.id)
+  }
+
+  ["RulesIndex rule count matches Catalog"] {
+    RulesIndex.rules.length == Catalog.rules.length
+  }
+
+  ["RulesIndex rule ids are unique"] {
+    RulesIndex.rules.map((rule) -> rule.id).toSet().length == RulesIndex.rules.length
+  }
+}

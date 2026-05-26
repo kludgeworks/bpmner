@@ -1,3 +1,5 @@
+module dev.groknull.bpmner.pkl.generated.BpmnRule
+
 import "CheckPrimitive.pkl"
 import "RuleCategory.pkl"
 
@@ -16,10 +18,15 @@ class Repair {
       this == null,
   ) = null
   replacementMap: Mapping<String, String>? = null
+  // Optional GOAP-ready preconditions/effects. Reserved for Phase 2I (GOAP unification) — no
+  // rule fills these in today. Map keys are condition names; values follow Embabel's
+  // ConditionDetermination idiom ("TRUE" / "FALSE").
+  preconditions: Mapping<String, "TRUE"|"FALSE">? = null
+  postconditions: Mapping<String, "TRUE"|"FALSE">? = null
 }
 
 name: NonEmptyString
-category: RuleCategory.RuleCategory
+category: RuleCategory.Category
 slug: String = name.toLowerCase().replaceAll(Regex("[^a-z0-9]+"), "-")
 id: String = "\(category.shortCode)-\(slug)"
 
@@ -31,7 +38,7 @@ targetElements: List<NonEmptyString>(!isEmpty)
 severity: Severity = "warning"
 errorMessages: Mapping<NonEmptyString, NonEmptyString>(!isEmpty)
 staticConfig: Dynamic? = null
-checkPrimitive: CheckPrimitive.CheckPrimitive? = null
+checkPrimitive: CheckPrimitive.Primitive? = null
 checkConfig: CheckPrimitive.CheckConfig? = null
 
 repair: Repair = new {}

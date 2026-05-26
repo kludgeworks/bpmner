@@ -69,6 +69,9 @@ JMOLECULES_INTEGRATIONS_VERSION = "0.33.0"
 # these versions, and Spring Modulith calls into it at compile-time-expected signatures.
 JMOLECULES_ARCHUNIT_VERSION = "0.26.0"
 
+# Must match the Pkl CLI version shipped by rules_pkl (see rules_pkl/pkl/private/constants.bzl).
+PKL_VERSION = "0.31.0"
+
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
@@ -104,6 +107,8 @@ maven.install(
         "org.jmolecules.integrations:jmolecules-spring:" + JMOLECULES_INTEGRATIONS_VERSION,
         "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_ARCHUNIT_VERSION,
         "com.tngtech.archunit:archunit:1.4.1",
+        "org.pkl-lang:pkl-config-java:" + PKL_VERSION,
+        "org.pkl-lang:pkl-config-kotlin:" + PKL_VERSION,
     ],
     repositories = [
         "https://repo.maven.apache.org/maven2",
