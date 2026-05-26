@@ -59,9 +59,15 @@ class LlmRuleAgentTest {
         assertTrue(prompt.contains("business-clarity"), "prompt should name the rule id")
         assertTrue(prompt.contains("Prefer business language over technical detail."), "prompt should embed the rule prompt text")
         assertEquals(1, result.diagnostics.size)
-        assertEquals("business-clarity", result.diagnostics.single().ruleId)
-        assertEquals("t1", result.diagnostics.single().elementId)
-        assertEquals("Label is too technical", result.diagnostics.single().message)
+        val diagnostic = result.diagnostics.single()
+        assertEquals("business-clarity", diagnostic.ruleId)
+        assertEquals("t1", diagnostic.elementId)
+        assertEquals("Label is too technical", diagnostic.message)
+        // diagnosticCode falls back to the rule id when errorMessages has only "default",
+        // matching the codebase-wide convention (see api/RuleDiagnostic.kt) — diagnosticCode
+        // is a stable per-check identifier for severity-override filtering, not a key into
+        // errorMessages.
+        assertEquals("business-clarity", diagnostic.diagnosticCode)
     }
 
     @Test
@@ -162,6 +168,94 @@ class LlmRuleAgentTest {
 
         val prompt = context.llmInvocations.single().prompt
         assertTrue(prompt.contains("Rubric: Flag only when the violation obscures business intent."))
+    }
+
+    @Test
+    fun `multi non-default errorMessages keys produces rule-config-error per violation`() {
+        // PR #249 G2: an LLM rule with two or more non-"default" errorMessages keys is
+        // ambiguous — LlmRuleViolation carries no diagnosticCode so the model can't
+        // signal which code applies. The agent surfaces the drift as rule-config-error
+        // rather than silently picking one code.
+        val context = FakeOperationContext()
+        val ambiguousMetadata = RuleMetadata(
+            id = "ambiguous",
+            name = "ambiguous",
+            slug = "ambiguous",
+            category = "Test",
+            intent = "Test",
+            forModellers = "Test",
+            forAI = "Test",
+            targetElements = listOf("bpmn:UserTask"),
+            errorMessages = mapOf(
+                "first-issue" to "first kind of issue",
+                "second-issue" to "second kind of issue",
+                "default" to "fallback",
+            ),
+            severity = RuleSeverity.WARNING,
+        )
+        val ambiguous = LlmRuleSpec(
+            metadata = ambiguousMetadata,
+            config = LlmCheckRuleConfig(prompt = "evaluate"),
+        )
+        context.expectResponse(
+            LlmEvaluationResponse(
+                violations = listOf(LlmRuleViolation(ruleId = "ambiguous", elementId = "t1", message = "anything")),
+            ),
+        )
+        val agent = LlmRuleAgent(BpmnConfig())
+
+        val result = agent.evaluateLlmRules(
+            LlmRuleEvaluationRequest(sampleDefinition(), listOf(ambiguous)),
+            context,
+        )
+
+        val diagnostic = result.diagnostics.single()
+        assertEquals("rule-config-error", diagnostic.diagnosticCode)
+        assertEquals(RuleSeverity.ERROR, diagnostic.severity)
+        assertTrue(diagnostic.message.contains("ambiguous"), "config-error should name the offending rule")
+        assertTrue(
+            diagnostic.message.contains("first-issue") && diagnostic.message.contains("second-issue"),
+            "config-error should list the conflicting keys",
+        )
+    }
+
+    @Test
+    fun `single non-default errorMessages key flows through as diagnosticCode`() {
+        // Companion to the multi-key test: when the rule has exactly one non-"default"
+        // key, that key becomes the diagnosticCode (not the rule id). This is the
+        // CompositeCheck-shaped single-code rule scenario.
+        val context = FakeOperationContext()
+        val singleCoded = LlmRuleSpec(
+            metadata = RuleMetadata(
+                id = "single-coded",
+                name = "single-coded",
+                slug = "single-coded",
+                category = "Test",
+                intent = "Test",
+                forModellers = "Test",
+                forAI = "Test",
+                targetElements = listOf("bpmn:UserTask"),
+                errorMessages = mapOf(
+                    "the-only-code" to "violation message",
+                    "default" to "fallback",
+                ),
+                severity = RuleSeverity.WARNING,
+            ),
+            config = LlmCheckRuleConfig(prompt = "evaluate"),
+        )
+        context.expectResponse(
+            LlmEvaluationResponse(
+                violations = listOf(LlmRuleViolation(ruleId = "single-coded", elementId = "t1", message = "msg")),
+            ),
+        )
+        val agent = LlmRuleAgent(BpmnConfig())
+
+        val result = agent.evaluateLlmRules(
+            LlmRuleEvaluationRequest(sampleDefinition(), listOf(singleCoded)),
+            context,
+        )
+
+        assertEquals("the-only-code", result.diagnostics.single().diagnosticCode)
     }
 
     private fun spec(id: String, prompt: String, rubric: String? = null): LlmRuleSpec = LlmRuleSpec(

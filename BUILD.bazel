@@ -121,17 +121,15 @@ test_suite(
     ],
 )
 
+# Auto-includes every `*Test.kt` under `src/test/kotlin/` via the `all_kotlin_tests`
+# test_suite assembled in `src/test/BUILD.bazel`. Any new Kotlin test lands in PR CI
+# automatically — no manual edits to this list. Pre-PR-#249 this was an explicit allowlist
+# of 9 tests; the broader set caught a `RepairRoutingModuleTest` regression that had been
+# silently failing on main since Phase 2F (#243).
 test_suite(
     name = "ci_kotlin",
     tests = [
-        "//src/test:ApiAnnotationFreeTest",
-        "//src/test:BpmnAgentFlowSystemTest",
-        "//src/test:BpmnAlignmentFailureIntegrationTest",
-        "//src/test:BpmnGuardrailSystemTest",
-        "//src/test:BpmnerArchitectureTest",
-        "//src/test:BpmnerModuleBoundariesTest",
-        "//src/test:BpmnerModulithTest",
-        "//src/test:BpmnerParityTest",
+        "//src/test:all_kotlin_tests",
         "//src/test:bpmnerAppRunfilesDataTest",
     ],
 )

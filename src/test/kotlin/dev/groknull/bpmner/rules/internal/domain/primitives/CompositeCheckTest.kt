@@ -15,7 +15,6 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
-import dev.groknull.bpmner.rules.LlmCheckRuleConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -143,43 +142,12 @@ class CompositeCheckTest {
         assertTrue(diagnostics.single().message.contains("\"default\""))
     }
 
-    @Test
-    fun `emits rule-config-error when a sub-check tries to nest CompositeCheck`() {
-        val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t", "Task"), BpmnEndEvent("e", "End")))
-        val metadata = compositeMetadata(errorMessages = mapOf("nested" to "nested violation"))
-        val config = CompositeCheckConfig(
-            subChecks = listOf(
-                SubCheckConfig(
-                    diagnosticCode = "nested",
-                    config = CompositeCheckConfig(),
-                ),
-            ),
-        )
-
-        val diagnostics = check.evaluate(ctx, metadata, config)
-
-        assertEquals("rule-config-error", diagnostics.single().diagnosticCode)
-        assertTrue(diagnostics.single().message.contains("CompositeCheck"))
-    }
-
-    @Test
-    fun `emits rule-config-error when a sub-check tries to embed LlmCheckRule`() {
-        val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t", "Task"), BpmnEndEvent("e", "End")))
-        val metadata = compositeMetadata(errorMessages = mapOf("llm" to "llm violation"))
-        val config = CompositeCheckConfig(
-            subChecks = listOf(
-                SubCheckConfig(
-                    diagnosticCode = "llm",
-                    config = LlmCheckRuleConfig(prompt = "is this OK?"),
-                ),
-            ),
-        )
-
-        val diagnostics = check.evaluate(ctx, metadata, config)
-
-        assertEquals("rule-config-error", diagnostics.single().diagnosticCode)
-        assertTrue(diagnostics.single().message.contains("LlmCheckRule"))
-    }
+    // The previous tests `emits rule-config-error when a sub-check tries to nest CompositeCheck`
+    // and `emits rule-config-error when a sub-check tries to embed LlmCheckRule` exercised
+    // runtime rejection. After PR #249 review, `SubCheckConfig.config` is typed as the
+    // sealed `DeterministicCheckConfig` — `CompositeCheckConfig` and `LlmCheckRuleConfig`
+    // don't implement it, so both nesting attempts now fail to compile. The Kotlin type
+    // system is the test; no runtime assertion is needed.
 
     private fun compositeMetadata(
         id: String = "composite",

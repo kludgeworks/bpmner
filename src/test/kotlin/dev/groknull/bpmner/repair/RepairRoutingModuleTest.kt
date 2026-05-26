@@ -26,17 +26,14 @@ import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.validation.BpmnAutoFixChange
-import dev.groknull.bpmner.validation.BpmnAutoFixError
-import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintService
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
@@ -105,12 +102,18 @@ class RepairRoutingModuleTest {
 
     @Test
     fun `locally fixable lint violation is repaired without any LLM invocation`(events: PublishedEvents) {
+        // Post-Phase 2F (#243): local repair flows through `DeterministicTopologyRepairStrategy`
+        // dispatching to Kotlin handlers keyed on `LOCAL_MODEL_FIX`. The old `LOCAL_XML_FIX`
+        // routing (bpmnlint TS auto-fix via `BpmnLintService.autoFix`) was removed.
+        // `fixSentenceCase` is a deterministic handler that needs no Pkl catalog lookup and
+        // produces a valid SET_NODE_NAME patch whenever the input name needs case
+        // adjustment — used here to drive a real repair against `Task_1`.
         val localCapability =
             BpmnLintRuleCapability(
                 id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
+                kind = RepairKind.LOCAL_MODEL_FIX,
                 repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
+                fixHandler = "fixSentenceCase",
                 handlerExists = true,
                 replacementMap = null,
             )
@@ -122,22 +125,16 @@ class RepairRoutingModuleTest {
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
         `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
-        // attempt 1: one local-fix issue → attempt 2 after auto-fix: clean
+        // attempt 1: one local-fix issue → attempt 2 after handler patch applied: clean
         `when`(bpmnLintService.lint(anyString()))
             .thenReturn(listOf(lintIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
-            .thenReturn(
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = renderedXmlOf(testBpmnDefinition(processName = "Locally fixed")),
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                ),
-            )
         `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
         val context = FakeActionContext()
-        val definition = testBpmnDefinition()
+        // Name with miscapitalised second word so `fixSentenceCase` produces a real
+        // SET_NODE_NAME patch ("Toast Bread" → "Toast bread").
+        val definition = testBpmnDefinition(task = BpmnServiceTask("Task_1", "Toast Bread"))
         val graph = testLaidOutGraph(definition, withOwnership = true)
         val rendered = BpmnDefinitionToXmlConverter().render(graph)
 
@@ -149,11 +146,12 @@ class RepairRoutingModuleTest {
             context = context,
         )
 
-        assertTrue(context.llmInvocations.isEmpty(), "no LLM call expected for a LOCAL_XML_FIX rule")
+        assertTrue(context.llmInvocations.isEmpty(), "no LLM call expected for a LOCAL_MODEL_FIX rule")
         assertTrue(
             events.ofType(BpmnValidationPassedEvent::class.java).toList().isNotEmpty(),
             "expected a BpmnValidationPassedEvent after local-only repair",
         )
+        verify(bpmnLintService, never()).autoFix(anyString(), anyLintIssues())
         assertRouteSummaryLogged(
             attemptNumber = 1,
             "localAttempted=1",
@@ -217,12 +215,14 @@ class RepairRoutingModuleTest {
     @Test
     @Suppress("LongMethod")
     fun `mixed local and LLM diagnostics route local first then LLM with only unresolved diagnostic`() {
+        // See the "locally fixable …" test for the post-2F rationale: `LOCAL_MODEL_FIX`
+        // routes through a Kotlin handler in the registry, not bpmnlint TS auto-fix.
         val localCapability =
             BpmnLintRuleCapability(
                 id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
+                kind = RepairKind.LOCAL_MODEL_FIX,
                 repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
+                fixHandler = "fixSentenceCase",
                 handlerExists = true,
                 replacementMap = null,
             )
@@ -259,22 +259,14 @@ class RepairRoutingModuleTest {
             .thenReturn(listOf(localIssue, llmIssue))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
-        val locallyFixed = testBpmnDefinition(processName = "Locally fixed")
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
-            .thenReturn(
-                BpmnAutoFixResult(
-                    changed = true,
-                    xml = renderedXmlOf(locallyFixed),
-                    applied = listOf(BpmnAutoFixChange("bpmner/name-01", "Task_1", "stripped")),
-                ),
-            )
         `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
         val context =
             FakeActionContext().also {
                 it.expectResponse(setNodeNamePatch("EndEvent_1", "Toast served to customer"))
             }
-        val definition = testBpmnDefinition()
+        // Task_1 name needs case adjustment so `fixSentenceCase` produces a real patch.
+        val definition = testBpmnDefinition(task = BpmnServiceTask("Task_1", "Toast Bread"))
         val graph = testLaidOutGraph(definition, withOwnership = true)
         val rendered = BpmnDefinitionToXmlConverter().render(graph)
 
@@ -314,69 +306,13 @@ class RepairRoutingModuleTest {
         )
     }
 
-    @Test
-    fun `local fix failure annotates LLM prompt and records local failure in route summary`() {
-        val localCapability =
-            BpmnLintRuleCapability(
-                id = "name-01",
-                kind = RepairKind.LOCAL_XML_FIX,
-                repairSafety = RepairSafety.SAFE_AUTOMATIC,
-                fixHandler = "stripTypeWords",
-                handlerExists = true,
-                replacementMap = null,
-            )
-        val localIssue =
-            LintIssue(
-                id = "Task_1",
-                rule = "bpmner/name-01",
-                message = "Element name must not include its BPMN element type",
-            )
-        `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
-        `when`(bpmnLintService.lint(anyString()))
-            .thenReturn(listOf(localIssue))
-            .thenReturn(emptyList())
-        `when`(bpmnLintService.autoFix(anyString(), anyLintIssues()))
-            .thenReturn(
-                BpmnAutoFixResult(
-                    changed = false,
-                    xml = "",
-                    errors = listOf(BpmnAutoFixError("bpmner/name-01", "Task_1", "handler boom")),
-                ),
-            )
-        `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
-
-        val context =
-            FakeActionContext().also {
-                it.expectResponse(setNodeNamePatch("Task_1", "Toast bread carefully"))
-            }
-        val definition = testBpmnDefinition()
-        val graph = testLaidOutGraph(definition, withOwnership = true)
-        val rendered = BpmnDefinitionToXmlConverter().render(graph)
-
-        refinementEngine.refine(
-            request = BpmnRequest(processDescription = "Make toast"),
-            graph = graph,
-            rendered = rendered,
-            contract = testProcessContract(),
-            context = context,
-        )
-
-        assertEquals(1, context.llmInvocations.size, "LLM should be called after local failure")
-        val prompt =
-            context.llmInvocations
-                .single()
-                .messages
-                .joinToString("\n") { it.content }
-        assertTrue(prompt.contains("[local-fix-failed: handler boom]"), "LLM prompt should annotate the failure")
-        assertRouteSummaryLogged(
-            attemptNumber = 1,
-            "localAttempted=1",
-            "localApplied=0",
-            "localFailed=1",
-            "llmRouted=0",
-        )
-    }
+    // The previous `local fix failure annotates LLM prompt and records local failure in route
+    // summary` test exercised the bpmnlint TS auto-fix error-annotation path
+    // (`[local-fix-failed: handler boom]` in the LLM prompt). Phase 2F (#243) deleted that
+    // path entirely: when a Kotlin local-fix handler returns empty patches it falls through
+    // silently to the LLM strategy, no error message threaded through. The test has been
+    // removed as it documented obsolete behavior. The "LLM fallback when local fix doesn't
+    // apply" semantic is now covered by the `mixed local and LLM` test above.
 
     private fun setNodeNamePatch(
         nodeId: String,
@@ -403,10 +339,6 @@ class RepairRoutingModuleTest {
                 expectedFragments.joinToString(prefix = "[", postfix = "]") +
                 "; saw: " + engineLogAppender.list.joinToString("\n") { it.formattedMessage },
         )
-    }
-
-    private fun renderedXmlOf(definition: BpmnDefinition): String {
-        return BpmnDefinitionToXmlConverter().render(testLaidOutGraph(definition, withOwnership = true)).xml
     }
 
     private fun anyString(): String = ArgumentMatchers.anyString()

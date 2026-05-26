@@ -11,9 +11,12 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.rules.LlmRuleEvaluationRequest
 import dev.groknull.bpmner.rules.LlmRuleEvaluationResult
@@ -41,14 +44,17 @@ import org.slf4j.LoggerFactory
  *  - No Embabel `Ai` bean is injected anywhere. The `PromptRunner` comes from the
  *    `OperationContext` passed into this `@Action`. An ArchUnit invariant guards the rest
  *    of the codebase against drift back to direct `Ai` injection.
+ *  - [ObjectMapper] is injected so production runs use the Spring-managed mapper with all
+ *    its configured modules (KotlinModule, JSR-310, etc.); the default arg falls back to
+ *    a fresh `jacksonObjectMapper()` for unit tests that don't boot Spring.
  */
 @Application
 @Agent(description = "Evaluate LLM-judgement BPMN rules against a definition")
 internal class LlmRuleAgent(
     private val config: BpmnConfig,
+    private val objectMapper: ObjectMapper = jacksonObjectMapper(),
 ) {
     private val logger = LoggerFactory.getLogger(LlmRuleAgent::class.java)
-    private val objectMapper = jacksonObjectMapper()
 
     @AchievesGoal(
         description = "Evaluate LLM-judgement BPMN rules against a definition and report violations",
@@ -139,31 +145,73 @@ internal class LlmRuleAgent(
         appendLine("are not in the list above. Do not flag rules that the process satisfies.")
     }
 
+    /**
+     * Fail fast on serialization error rather than send a placeholder prompt to the LLM
+     * — burning tokens on a guaranteed-broken evaluation is worse than aborting the call.
+     * `BpmnDefinition` is a stable Kotlin data class graph so this should never happen
+     * outside genuinely-corrupt fixtures; the throw is here as a defence-in-depth signal.
+     */
     private fun serialize(definition: Any): String = try {
         objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(definition)
     } catch (e: com.fasterxml.jackson.core.JsonProcessingException) {
-        logger.warn("Failed to serialize BPMN definition for LLM prompt: {}", e.message)
-        "(definition serialization failed)"
+        logger.error("Failed to serialize BPMN definition for LLM prompt", e)
+        throw IllegalStateException("Failed to serialize BPMN definition for LLM prompt", e)
     }
 
-    private fun RuleMetadata.diagnosticForViolation(violation: LlmRuleViolation): RuleDiagnostic = RuleDiagnostic(
-        diagnosticCode = errorMessages.keys.firstOrNull { it != "default" } ?: id,
-        ruleId = id,
-        severity = severity,
-        message = violation.message,
-        elementId = violation.elementId,
-    )
+    /**
+     * Builds the per-violation [RuleDiagnostic]. The `diagnosticCode` fallback to `id`
+     * (when `errorMessages` has only the `"default"` key) matches the convention in
+     * [dev.groknull.bpmner.rules.internal.domain.primitives.RuleMetadata.diagnosticCode]
+     * — `diagnosticCode` is a stable per-check identifier used by `RuleProfile` severity
+     * overrides, not a map key into `errorMessages`. See `api/RuleDiagnostic.kt` doc for
+     * the codebase-wide semantic.
+     *
+     * **Guards multi-key LLM rules** (PR #249 G2): an `LlmCheckRule`-typed rule with two
+     * or more non-`"default"` keys in `errorMessages` is ambiguous — `LlmRuleViolation`
+     * doesn't carry a `diagnosticCode` field so the model can't signal which code
+     * applies. The single-message assumption is the supported contract; we surface drift
+     * as a focused `rule-config-error` rather than silently picking one code.
+     */
+    private fun RuleMetadata.diagnosticForViolation(violation: LlmRuleViolation): RuleDiagnostic {
+        val nonDefaultKeys = errorMessages.keys.filter { it != "default" }
+        if (nonDefaultKeys.size > 1) {
+            return RuleDiagnostic(
+                diagnosticCode = "rule-config-error",
+                ruleId = id,
+                severity = RuleSeverity.ERROR,
+                message = "LlmCheckRule '$id' has multiple non-default errorMessages keys " +
+                    "($nonDefaultKeys); LLM violations cannot disambiguate. Use exactly one code, " +
+                    "or split into separate rules.",
+                elementId = null,
+            )
+        }
+        return RuleDiagnostic(
+            diagnosticCode = nonDefaultKeys.singleOrNull() ?: id,
+            ruleId = id,
+            severity = severity,
+            message = violation.message,
+            elementId = violation.elementId,
+        )
+    }
 }
 
 /**
  * Structured LLM response shape. Internal to the agent because no caller outside the agent
  * cares how the model serialises its output — the public output type is
  * [LlmRuleEvaluationResult] carrying `RuleDiagnostic`s.
+ *
+ * `@JsonIgnoreProperties(ignoreUnknown = true)`: LLMs routinely emit auxiliary fields
+ * (`reasoning`, `confidence`, `_meta`, etc.) even when given a strict response schema.
+ * Without this annotation Jackson throws `UnrecognizedPropertyException` on the first
+ * unknown field and the whole batch's diagnostics drop silently. The annotation makes
+ * the response parser tolerant of extra fields it doesn't care about.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 internal data class LlmEvaluationResponse(
     val violations: List<LlmRuleViolation> = emptyList(),
 )
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 internal data class LlmRuleViolation(
     val ruleId: String,
     val elementId: String?,
