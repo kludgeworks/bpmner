@@ -7,7 +7,14 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.api.BpmnDefinitionContext
+import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.api.RepairMetadata
+import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
@@ -21,16 +28,12 @@ import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
+import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnRuleMetadata
 import dev.groknull.bpmner.validation.GlobalDiagnostics
-import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.RepairMetadata
-import dev.groknull.bpmner.validation.RuleCatalogService
-import dev.groknull.bpmner.validation.RuleCategoryMetadata
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
@@ -97,7 +100,7 @@ class DeterministicTopologyRepairStrategyTest {
     fun `passes rule staticConfig and replacementMap through to handler via HandlerConfig`() {
         val captured = CapturingHandler("captureHandler")
         val catalog =
-            stubCatalog(
+            stubRegistry(
                 rule(
                     id = "demo-rule",
                     staticConfig = mapOf("discouragedWords" to listOf("activity")),
@@ -115,7 +118,7 @@ class DeterministicTopologyRepairStrategyTest {
             )
 
         val ctx = contextOf(diagnostics = listOf(diag))
-        strategy(handlers = listOf(captured), catalog = catalog).repair(ctx)
+        strategy(handlers = listOf(captured), registry = catalog).repair(ctx)
 
         val received = assertNotNull(captured.lastConfig, "Handler must receive a HandlerConfig from the strategy")
         assertEquals(mapOf("discouragedWords" to listOf("activity")), received.staticConfig)
@@ -136,7 +139,7 @@ class DeterministicTopologyRepairStrategyTest {
             )
 
         val ctx = contextOf(diagnostics = listOf(diag))
-        strategy(handlers = listOf(captured), catalog = stubCatalog()).repair(ctx)
+        strategy(handlers = listOf(captured), registry = stubRegistry()).repair(ctx)
 
         val received = assertNotNull(captured.lastConfig)
         assertEquals(HandlerConfig.EMPTY, received)
@@ -144,16 +147,20 @@ class DeterministicTopologyRepairStrategyTest {
 
     @Test
     fun `falls back to empty staticConfig when the rule's staticConfig is not a Map`() {
-        // Reviewer concern: a non-null `staticConfig` that isn't a Map (e.g. a JSON array)
-        // would silently produce an empty HandlerConfig. The cast still fails safely, but the
-        // strategy must surface the misconfiguration via a warn log.
+        // Historical reviewer concern: a non-null `staticConfig` that wasn't a Map (e.g. a JSON
+        // array) would silently produce an empty HandlerConfig. After 2D-a, BpmnRuleAdapter
+        // normalises staticConfig to Map<String, Any>? at load time, so a non-Map value would
+        // fail loudly at startup rather than reach this code path. We keep the test as a
+        // regression guard: any rule whose registry-side `staticConfig` is null produces an
+        // EMPTY HandlerConfig — same observable behaviour as before.
         val captured = CapturingHandler("captureHandler")
         val catalog =
-            stubCatalog(
+            stubRegistry(
                 rule(
                     id = "bad-config-rule",
-                    // A list at the staticConfig level — not a Map — simulates the broken Pkl shape.
-                    staticConfig = listOf("not", "a", "map"),
+                    // Simulate the post-adapter shape: any non-Map value at the Pkl side would
+                    // have thrown at load; here we pretend the rule arrived with null staticConfig.
+                    staticConfig = null,
                 ),
             )
         val diag =
@@ -167,13 +174,10 @@ class DeterministicTopologyRepairStrategyTest {
             )
 
         val ctx = contextOf(diagnostics = listOf(diag))
-        strategy(handlers = listOf(captured), catalog = catalog).repair(ctx)
+        strategy(handlers = listOf(captured), registry = catalog).repair(ctx)
 
         val received = assertNotNull(captured.lastConfig)
-        assertNull(received.staticConfig, "Non-Map staticConfig must not survive the cast")
-        // Note: we don't assert the warn log here — verifying SLF4J output requires test
-        // appender wiring that the rest of this test class doesn't use. The behaviour we
-        // care about (no silent crash, no leaked bad value) is covered above.
+        assertNull(received.staticConfig, "Null staticConfig must produce EMPTY HandlerConfig")
     }
 
     @Test
@@ -195,40 +199,52 @@ class DeterministicTopologyRepairStrategyTest {
 
     private fun strategy(
         handlers: List<BpmnLocalModelFixHandler> = emptyList(),
-        catalog: RuleCatalogService = stubCatalog(),
+        registry: RuleRegistry = stubRegistry(),
     ) = DeterministicTopologyRepairStrategy(
         BpmnLocalModelFixHandlerRegistry(handlers),
         BpmnPatchApplier(),
-        catalog,
+        registry,
     )
 
-    private fun stubCatalog(vararg rules: BpmnRuleMetadata): RuleCatalogService = object : RuleCatalogService() {
-        override fun getRule(id: String): BpmnRuleMetadata? = rules.firstOrNull { it.id == id }
+    private fun stubRegistry(vararg rules: BpmnRule): RuleRegistry = object : RuleRegistry {
+        private val byId = rules.associateBy { it.id }
+        override fun activeRules(): List<BpmnRule> = rules.toList()
+        override fun ruleById(id: String): BpmnRule? = byId[id]
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun rule(
         id: String,
         staticConfig: Any? = null,
         replacementMap: Map<String, String>? = null,
-    ) = BpmnRuleMetadata(
+    ): BpmnRule = TestRule(
         id = id,
-        name = id,
-        category = RuleCategoryMetadata(name = "test", shortCode = "T"),
-        slug = id,
-        intent = "test",
-        forModellers = "test",
-        forAI = "test",
-        targetElements = emptyList(),
-        severity = "warning",
-        errorMessages = mapOf("default" to "test violation"),
-        staticConfig = staticConfig,
-        hasTsImplementation = false,
-        aliases = emptyList(),
-        deprecated = false,
-        replacedBy = emptyList(),
-        deprecationReason = null,
-        repair = RepairMetadata(replacementMap = replacementMap),
+        metadata = RuleMetadata(
+            id = id,
+            name = id,
+            slug = id,
+            category = "Test",
+            intent = "test",
+            forModellers = "test",
+            forAI = "test",
+            targetElements = emptyList(),
+            errorMessages = mapOf("default" to "test violation"),
+            severity = RuleSeverity.WARNING,
+            repair = RepairMetadata(
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                safety = RepairSafety.SAFE_AUTOMATIC,
+                replacementMap = replacementMap,
+            ),
+            staticConfig = staticConfig as? Map<String, Any>,
+        ),
     )
+
+    private class TestRule(
+        override val id: String,
+        override val metadata: RuleMetadata,
+    ) : BpmnRule {
+        override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = emptyList()
+    }
 
     private fun contextOf(
         diagnostics: List<BpmnDiagnostic>,
@@ -247,10 +263,6 @@ class DeterministicTopologyRepairStrategyTest {
                     diagnostics = diagnostics,
                     globalDiagnostics = GlobalDiagnostics(diagnostics),
                     validatedXml = null,
-                    rawLintIssues =
-                    diagnostics
-                        .filter { it.source == BpmnDiagnosticSource.LINT }
-                        .mapNotNull { d -> d.rule?.let { LintIssue(id = d.elementId, rule = it, message = d.message) } },
                 ),
                 messages = emptyList(),
             )

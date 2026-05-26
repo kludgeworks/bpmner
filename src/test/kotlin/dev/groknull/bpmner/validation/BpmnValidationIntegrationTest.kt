@@ -7,46 +7,39 @@ package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RuleEvaluation
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.validation.BpmnDefinitionValidator
-import dev.groknull.bpmner.validation.BpmnDiagnosticNormalizer
-import dev.groknull.bpmner.validation.BpmnEvaluationPipeline
-import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintJsEngine
-import dev.groknull.bpmner.validation.BpmnLintService
-import dev.groknull.bpmner.validation.BpmnXsdValidator
-import dev.groknull.bpmner.validation.PklRuleCapabilityAdapter
-import dev.groknull.bpmner.validation.RuleCatalogService
+import dev.groknull.bpmner.rules.RuleEngine
+import dev.groknull.bpmner.rules.RuleRegistry
+import dev.groknull.bpmner.validation.internal.adapter.outbound.RuleEngineLintingAdapter
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class BpmnValidationIntegrationTest {
-    private val lintService =
-        BpmnLintService(
-            catalogService = RuleCatalogService(),
-            engine =
-            BpmnLintJsEngine().apply {
-                init()
-            },
-            pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
-        )
+    private val emptyRegistry =
+        object : RuleRegistry {
+            override fun activeRules(): List<BpmnRule> = emptyList()
+            override fun ruleById(id: String): BpmnRule? = null
+        }
+    private val noopEngine = RuleEngine { RuleEvaluation(diagnostics = emptyList()) }
+    private val lintingPort = RuleEngineLintingAdapter(noopEngine, emptyRegistry)
     private val xsdValidator = BpmnXsdValidator()
     private val validator =
         BpmnEvaluationPipeline(
             config = BpmnConfig(),
-            bpmnLintingPort = lintService,
+            bpmnLintingPort = lintingPort,
             bpmnXsdValidationPort = xsdValidator,
             bpmnDefinitionValidator = BpmnDefinitionValidator(),
-            normalizer = BpmnDiagnosticNormalizer(lintService),
+            normalizer = BpmnDiagnosticNormalizer(lintingPort),
             fingerprints = BpmnFingerprintService(),
         )
 
     @Test
     fun `full validation cycle of toast sample`() {
-        lintService.init()
         val definition = testBpmnDefinition()
 
         val graph = testLaidOutGraph(definition)

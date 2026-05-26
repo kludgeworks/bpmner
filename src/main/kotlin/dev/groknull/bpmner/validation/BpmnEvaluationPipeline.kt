@@ -135,9 +135,9 @@ internal class BpmnEvaluationPipeline(
         if (diagnostics.any { it.source == BpmnDiagnosticSource.XSD }) {
             return null
         }
-        val lintIssues = bpmnLintingPort.lint(rendered.xml)
+        val lintIssues = bpmnLintingPort.lint(rendered.definition)
         if (lintIssues == null) {
-            logger.warn("bpmn-lint was unavailable; continuing without lint feedback")
+            logger.warn("Rule evaluator was unavailable; continuing without rule feedback")
             return null
         }
         diagnostics.addAll(normalizer.normalizeLintDiagnostics(lintIssues, rendered.elementIndex, graph))

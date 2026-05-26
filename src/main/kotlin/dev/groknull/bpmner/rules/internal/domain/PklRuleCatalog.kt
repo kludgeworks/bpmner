@@ -64,6 +64,7 @@ internal class PklRuleCatalog(
 
     private val allRules: List<BpmnRule>
     private val byId: Map<String, BpmnRule>
+    private val byAlias: Map<String, BpmnRule>
     private val llmSpecs: List<LlmRuleSpec>
 
     init {
@@ -92,6 +93,13 @@ internal class PklRuleCatalog(
 
         allRules = compiledRules + pklDeduped
         byId = allRules.associateBy { it.id }
+        // Build the alias index — only entries that don't collide with canonical ids.
+        // Last-write-wins on duplicate aliases between rules; ids always take precedence
+        // via `ruleByIdOrAlias`'s `byId.orElse(byAlias)` fallback ordering.
+        byAlias = allRules
+            .flatMap { rule -> rule.metadata.aliases.map { alias -> alias to rule } }
+            .filter { (alias, _) -> alias !in byId }
+            .toMap()
         llmSpecs = llmDeduped
 
         logger.info(
@@ -105,6 +113,8 @@ internal class PklRuleCatalog(
     override fun activeRules(): List<BpmnRule> = allRules
 
     override fun ruleById(id: String): BpmnRule? = byId[id]
+
+    override fun ruleByIdOrAlias(id: String): BpmnRule? = byId[id] ?: byAlias[id]
 
     /**
      * Pkl-loaded rules whose `checkPrimitive == "LlmCheckRule"`. Consumers (e.g. a pipeline
@@ -127,8 +137,10 @@ internal class PklRuleCatalog(
             when (val mc = adapted.mappedCheck) {
                 is MappedCheck.Deterministic ->
                     bpmn += DeterministicPklRule(adapted.metadata, mc.config)
+
                 is MappedCheck.Composite ->
                     bpmn += CompositePklRule(adapted.metadata, mc.config)
+
                 is MappedCheck.Llm -> {
                     bpmn += LlmPklRule(adapted.metadata)
                     llm += LlmRuleSpec(adapted.metadata, mc.config)

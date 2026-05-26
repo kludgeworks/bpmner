@@ -21,13 +21,14 @@ import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.times
@@ -54,7 +55,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
 
     @MockitoBean
-    private lateinit var bpmnLintService: BpmnLintService
+    private lateinit var bpmnLintingPort: BpmnLintingPort
 
     @Test
     @Suppress("LongMethod")
@@ -105,8 +106,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         `when`(bpmnXsdValidator.validateDetailed(anyString()))
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
-            .`when`(bpmnLintService)
-            .lint(anyString())
+            .`when`(bpmnLintingPort)
+            .lint(anyDefinition())
 
         val result =
             AgentPlatformTypedOps(agentPlatform)
@@ -124,8 +125,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(anyString())
         // BpmnLayoutAgent.autoFixBpmnXml stopped calling lint() in #243 (passthrough);
-        // only BpmnEvaluationPipeline still invokes the linter once during evaluation.
-        verify(bpmnLintService, times(1)).lint(anyString())
+        // only BpmnEvaluationPipeline still invokes the rule engine once during evaluation.
+        verify(bpmnLintingPort, times(1)).lint(anyDefinition())
     }
 
     private fun validDefinition() = BpmnDefinition(
@@ -162,5 +163,13 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
                 ContractEndState(id = "e1", name = "Toast ready", sourceIds = sources),
             ),
         )
+    }
+
+    private fun anyDefinition(): BpmnDefinition = anyNonNull()
+
+    private fun <T> anyNonNull(): T {
+        org.mockito.ArgumentMatchers.any<T>()
+        @Suppress("UNCHECKED_CAST")
+        return null as T
     }
 }
