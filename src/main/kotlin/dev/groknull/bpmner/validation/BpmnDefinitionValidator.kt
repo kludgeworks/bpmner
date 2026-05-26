@@ -144,7 +144,7 @@ internal class BpmnDefinitionValidator {
                 is BpmnStartEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 is BpmnEndEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 is BpmnIntermediateCatchEvent -> {
-                    validateRequiredIntermediateEventDefinition(
+                    validateRequiredEventDefinition(
                         "intermediate catch event",
                         node.id,
                         node.eventDefinition,
@@ -153,7 +153,7 @@ internal class BpmnDefinitionValidator {
                     validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
                 is BpmnIntermediateThrowEvent -> {
-                    validateRequiredIntermediateEventDefinition(
+                    validateRequiredEventDefinition(
                         "intermediate throw event",
                         node.id,
                         node.eventDefinition,
@@ -167,7 +167,7 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    private fun validateRequiredIntermediateEventDefinition(
+    private fun validateRequiredEventDefinition(
         label: String,
         nodeId: String,
         eventDefinition: BpmnEventDefinition,
@@ -183,9 +183,7 @@ internal class BpmnDefinitionValidator {
         context: EventValidationContext,
         errors: MutableList<String>,
     ) {
-        if (node.eventDefinition is BpmnNoneEventDefinition) {
-            errors.add("boundary event ${node.id} must declare an event definition")
-        }
+        validateRequiredEventDefinition("boundary event", node.id, node.eventDefinition, errors)
         if (node.attachedToRef.isBlank()) {
             errors.add("boundary event ${node.id} is missing the required attachedToRef attribute")
         } else {
