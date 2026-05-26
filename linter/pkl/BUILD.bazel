@@ -1,6 +1,7 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
+load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_java_library", "pkl_library", "pkl_test")
 load(":rules_index.bzl", "rules_index")
 
@@ -41,6 +42,16 @@ pkl_java_library(
         "schema/CheckPrimitive.pkl",
         "schema/RuleCategory.pkl",
     ],
+    visibility = ["//src:__subpackages__"],
+)
+
+# Packages the .pkl source files as classpath resources so the runtime ConfigEvaluator can
+# load RulesIndex.pkl via `modulepath:/linter/pkl/RulesIndex.pkl` and follow its explicit
+# imports of rules/*.pkl and ../schema/*.pkl. Workspace-relative paths are preserved (no
+# resource_strip_prefix) so the in-Pkl relative imports resolve correctly.
+java_library(
+    name = "pkl_runtime_resources",
+    resources = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + PKL_RULE_SRCS + [":rules_index_pkl"],
     visibility = ["//src:__subpackages__"],
 )
 
