@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
+import java.util.regex.PatternSyntaxException
 
 internal class ElementConstraintCheck {
     fun evaluate(
@@ -34,7 +35,7 @@ internal class ElementConstraintCheck {
     ): List<RuleDiagnostic> {
         val allowed = (config.constraints["allowed"] as? List<*>)?.filterIsInstance<String>().orEmpty()
         return metadata.targetedElements(model)
-            .filter { element -> allowed.none { BpmnTypeMatcher.matches(element.typeName, it, model.synthetic) } }
+            .filter { element -> allowed.none { BpmnTypeMatcher.matches(element.typeName, it) } }
             .map { metadata.diagnostic(it.id, it.typeName) }
     }
 
@@ -43,7 +44,20 @@ internal class ElementConstraintCheck {
         metadata: RuleMetadata,
         config: ElementConstraintCheckConfig,
     ): List<RuleDiagnostic> {
-        val pattern = (config.constraints["pattern"] as? String)?.let(::Regex)
+        val patternSource = config.constraints["pattern"] as? String
+        val pattern = if (patternSource == null) {
+            null
+        } else {
+            try {
+                Regex(patternSource)
+            } catch (e: PatternSyntaxException) {
+                return listOf(
+                    metadata.configError(
+                        "timerExpression pattern '$patternSource' is not a valid regex: ${e.description}",
+                    ),
+                )
+            }
+        }
         return metadata.targetedElements(model)
             .filter { it.property("eventDefinition") == "TIMER" }
             .filter {
@@ -73,7 +87,10 @@ internal class ElementConstraintCheck {
             val id = gateway.id ?: return@filter false
             model.edgesFrom[id].orEmpty().any { flow ->
                 val target = model.elementsById[flow.targetRef] ?: return@any false
-                !target.isEvent()
+                // BPMN 2.0 §10.5.4.6 — event-based gateways may target intermediate catch
+                // events OR a `bpmn:ReceiveTask` (which behaves as a catching message event
+                // for routing purposes). Anything else is invalid.
+                !target.isEvent() && target.typeName != "bpmn:ReceiveTask"
             }
         }
         .map { metadata.diagnostic(it.id) }

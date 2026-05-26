@@ -36,12 +36,34 @@ import dev.groknull.bpmner.api.BpmnUserTask
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 
+/**
+ * Capability bits declared on a [PrimitiveModelContext] to advertise which BPMN construct
+ * families are actually populated.
+ *
+ * Each value corresponds to a family the production `BpmnDefinition` does **not** yet model
+ * but the framework already accepts test fixtures for. Primitives that depend on a family
+ * (e.g. [RequiredAssociationCheck] on [ASSOCIATIONS]) short-circuit to an empty diagnostic
+ * list when the context's [PrimitiveModelContext.supportedCapabilities] omits the bit — this
+ * is how dormant primitives stay genuinely dormant in production until the model gains the
+ * relevant constructs in #196.
+ */
+internal enum class ModelCapability {
+    /** `bpmn:Association` links between elements (e.g. task ↔ text annotation). */
+    ASSOCIATIONS,
+
+    /** `bpmn:MessageFlow` edges between participants. */
+    MESSAGE_FLOWS,
+
+    /** `bpmn:Participant` / `bpmn:Lane` and the `sourcePool` / `targetPool` fields on flows. */
+    POOLS_AND_LANES,
+}
+
 internal data class PrimitiveModelContext(
     val elements: List<PrimitiveElement>,
     val sequenceFlows: List<PrimitiveFlow> = emptyList(),
     val associations: List<PrimitiveAssociation> = emptyList(),
     val messageFlows: List<PrimitiveFlow> = emptyList(),
-    val synthetic: Boolean = false,
+    val supportedCapabilities: Set<ModelCapability> = emptySet(),
 ) {
     val elementsById: Map<String, PrimitiveElement> = elements.mapNotNull { element ->
         element.id?.let { it to element }
@@ -50,6 +72,8 @@ internal data class PrimitiveModelContext(
     val outgoingCounts: Map<String, Int> = sequenceFlows.groupingBy { it.sourceRef }.eachCount()
     val edgesFrom: Map<String, List<PrimitiveFlow>> = sequenceFlows.groupBy { it.sourceRef }
     val edgesTo: Map<String, List<PrimitiveFlow>> = sequenceFlows.groupBy { it.targetRef }
+
+    fun supports(capability: ModelCapability): Boolean = capability in supportedCapabilities
 }
 
 internal data class PrimitiveElement(
@@ -127,20 +151,28 @@ internal fun RuleMetadata.diagnostic(elementId: String?, messageSuffix: String? 
     )
 }
 
+/**
+ * Emit a single rule-scoped diagnostic indicating that a rule's Pkl configuration is
+ * malformed — used by primitives that compile user-supplied regexes or other config values
+ * at evaluation time. The diagnostic is `RuleSeverity.ERROR` regardless of the rule's
+ * declared severity, since a misconfigured rule cannot be skipped.
+ */
+internal fun RuleMetadata.configError(detail: String): RuleDiagnostic = RuleDiagnostic(
+    diagnosticCode = "rule-config-error",
+    ruleId = id,
+    severity = dev.groknull.bpmner.api.RuleSeverity.ERROR,
+    message = "Rule '$id' has invalid configuration: $detail",
+    elementId = null,
+)
+
 internal fun RuleMetadata.diagnosticCode(): String = errorMessages.keys.firstOrNull { it != "default" } ?: id
 
 internal fun RuleMetadata.targetedElements(model: PrimitiveModelContext): List<PrimitiveElement> = model.elements
     .filter { element ->
-        targetElements.any { target -> BpmnTypeMatcher.matches(element.typeName, target, model.synthetic) }
+        targetElements.any { target -> BpmnTypeMatcher.matches(element.typeName, target) }
     }
 
 internal object BpmnTypeMatcher {
-    private val unsupportedTypeNames = setOf(
-        "bpmn:InclusiveGateway",
-        "bpmn:ComplexGateway",
-        "bpmn:EventBasedGateway",
-    )
-
     internal val broadTypeNames = setOf(
         "bpmn:FlowElement",
         "bpmn:FlowNode",
@@ -169,19 +201,34 @@ internal object BpmnTypeMatcher {
         "bpmn:SequenceFlow",
     )
 
-    fun matches(elementType: String, targetType: String, synthetic: Boolean = false): Boolean {
-        if (targetType in unsupportedTypeNames && !synthetic) return false
-        if (targetType == elementType) return targetType !in unsupportedTypeNames || synthetic
+    /**
+     * Pure type-membership check. Returns `true` iff [elementType] belongs to [targetType] —
+     * either exact equality or membership in one of the broad categories (`bpmn:Task`,
+     * `bpmn:Gateway`, `bpmn:Event`, `bpmn:FlowNode`, `bpmn:FlowElement`).
+     *
+     * No special-casing for "unsupported" BPMN types (`bpmn:InclusiveGateway`,
+     * `bpmn:ComplexGateway`, `bpmn:EventBasedGateway`): if production never produces them,
+     * the model context simply has no elements of that type and the primitive's targeted
+     * scan returns empty. Tests that exercise those types construct synthetic elements and
+     * the matcher handles them like any other type.
+     */
+    fun matches(elementType: String, targetType: String): Boolean {
+        if (targetType == elementType) return true
         return when (targetType) {
-            "bpmn:FlowElement" -> elementType in flowNodeTypeNames || elementType == "bpmn:SequenceFlow" || synthetic
-            "bpmn:FlowNode" -> elementType in flowNodeTypeNames || synthetic
+            "bpmn:FlowElement" -> elementType in flowNodeTypeNames || elementType == "bpmn:SequenceFlow"
+            "bpmn:FlowNode" -> elementType in flowNodeTypeNames
             "bpmn:Task" -> elementType in taskTypeNames
             "bpmn:Gateway" -> elementType in gatewayTypeNames
             "bpmn:Event" -> elementType in eventTypeNames
-            else -> synthetic && targetType !in unsupportedTypeNames && targetType == elementType
+            else -> false
         }
     }
 
+    /**
+     * Used by [CardinalityCheck] to skip rules targeting types the production model can't
+     * produce — without this guard, a `min: 1` cardinality on `bpmn:InclusiveGateway` would
+     * fire on every evaluation since the count is always zero.
+     */
     fun isSupportedProductionType(typeName: String): Boolean = typeName in supportedTypeNames || typeName in broadTypeNames
 
     private val taskTypeNames = setOf(
@@ -207,11 +254,11 @@ internal object BpmnTypeMatcher {
     private val flowNodeTypeNames = taskTypeNames + gatewayTypeNames + eventTypeNames
 }
 
-internal fun PrimitiveElement.isGateway(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Gateway", synthetic = true)
+internal fun PrimitiveElement.isGateway(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Gateway")
 
-internal fun PrimitiveElement.isTask(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Task", synthetic = true)
+internal fun PrimitiveElement.isTask(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Task")
 
-internal fun PrimitiveElement.isEvent(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Event", synthetic = true)
+internal fun PrimitiveElement.isEvent(): Boolean = BpmnTypeMatcher.matches(typeName, "bpmn:Event")
 
 internal fun BpmnNode.toPrimitiveElement(): PrimitiveElement = PrimitiveElement(
     id = id,

@@ -57,11 +57,17 @@ internal class PairingCheck {
     private fun messageStartFlow(
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
-    ): List<RuleDiagnostic> = metadata.targetedElements(model)
-        .filter { it.typeName == "bpmn:StartEvent" && it.property("eventDefinition") == "MESSAGE" }
-        .filter { start ->
-            val id = start.id ?: return@filter false
-            model.messageFlows.none { it.targetRef == id && it.name?.isNotBlank() == true }
-        }
-        .map { metadata.diagnostic(it.id, it.property("messageRef")) }
+    ): List<RuleDiagnostic> {
+        // Dormant in production until the BPMN model carries `bpmn:MessageFlow` edges (#196).
+        // Without the capability, every message start event would be flagged (since
+        // `messageFlows` is always empty in production) — a false positive on every run.
+        if (!model.supports(ModelCapability.MESSAGE_FLOWS)) return emptyList()
+        return metadata.targetedElements(model)
+            .filter { it.typeName == "bpmn:StartEvent" && it.property("eventDefinition") == "MESSAGE" }
+            .filter { start ->
+                val id = start.id ?: return@filter false
+                model.messageFlows.none { it.targetRef == id && it.name?.isNotBlank() == true }
+            }
+            .map { metadata.diagnostic(it.id, it.property("messageRef")) }
+    }
 }

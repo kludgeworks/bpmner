@@ -30,22 +30,36 @@ internal class ConnectivityCheck {
             .filter { it.property("name").isNullOrBlank() }
             .map { metadata.diagnostic(it.id) }
 
-        ConnectivityMode.WITHIN_POOL ->
-            model.sequenceFlows
-                .filter {
-                    !it.sourcePool.isNullOrBlank() &&
-                        !it.targetPool.isNullOrBlank() &&
-                        it.sourcePool != it.targetPool
-                }
-                .map { metadata.diagnostic(it.id) }
+        // WITHIN_POOL / ACROSS_POOLS are dormant in production until participants, lanes, and
+        // `sourcePool`/`targetPool` flow fields land in the BPMN model (#196). Until then,
+        // production flows have null pool fields — every flow would be flagged — so we
+        // short-circuit on the capability bit.
+        ConnectivityMode.WITHIN_POOL -> {
+            if (!model.supports(ModelCapability.POOLS_AND_LANES)) {
+                emptyList()
+            } else {
+                model.sequenceFlows
+                    .filter {
+                        !it.sourcePool.isNullOrBlank() &&
+                            !it.targetPool.isNullOrBlank() &&
+                            it.sourcePool != it.targetPool
+                    }
+                    .map { metadata.diagnostic(it.id) }
+            }
+        }
 
-        ConnectivityMode.ACROSS_POOLS ->
-            model.messageFlows
-                .filter {
-                    it.sourcePool.isNullOrBlank() ||
-                        it.targetPool.isNullOrBlank() ||
-                        it.sourcePool == it.targetPool
-                }
-                .map { metadata.diagnostic(it.id) }
+        ConnectivityMode.ACROSS_POOLS -> {
+            if (!model.supports(ModelCapability.POOLS_AND_LANES)) {
+                emptyList()
+            } else {
+                model.messageFlows
+                    .filter {
+                        it.sourcePool.isNullOrBlank() ||
+                            it.targetPool.isNullOrBlank() ||
+                            it.sourcePool == it.targetPool
+                    }
+                    .map { metadata.diagnostic(it.id) }
+            }
+        }
     }
 }

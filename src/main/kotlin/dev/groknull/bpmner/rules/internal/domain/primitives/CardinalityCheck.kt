@@ -21,10 +21,11 @@ internal class CardinalityCheck {
         metadata: RuleMetadata,
         config: CardinalityCheckConfig,
     ): List<RuleDiagnostic> {
-        if (!model.synthetic && !BpmnTypeMatcher.isSupportedProductionType(config.element)) {
-            return emptyList()
-        }
-        val count = model.elements.count { BpmnTypeMatcher.matches(it.typeName, config.element, model.synthetic) }
+        // Skip rules targeting types the production model can't produce (e.g. `bpmn:InclusiveGateway`).
+        // Otherwise a `min` constraint would fire on every evaluation, since the count is always
+        // zero for unsupported types.
+        if (!BpmnTypeMatcher.isSupportedProductionType(config.element)) return emptyList()
+        val count = model.elements.count { BpmnTypeMatcher.matches(it.typeName, config.element) }
         val tooFew = config.min?.let { count < it } ?: false
         val tooMany = config.max?.let { count > it } ?: false
         return if (tooFew || tooMany) {

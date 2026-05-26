@@ -1,5 +1,37 @@
+/// Schema for the Phase 2B check primitive system.
+///
+/// A `BpmnRule` (see `BpmnRule.pkl`) carries `checkPrimitive: CheckPrimitive?` and
+/// `checkConfig: CheckConfig?`. When both are set, the Kotlin loader picks the matching
+/// primitive class and instantiates it with the typed config. When unset, the rule is
+/// skipped at load time (awaiting Phase 3 / #196).
+///
+/// # Why no common fields on `CheckConfig`?
+///
+/// Each primitive has its own structural inputs (property names, modes, regexes, …) with
+/// almost nothing in common across primitives. Cross-cutting metadata — `name`,
+/// `description`, `forModellers`, `forAI` — already lives on `RuleMetadata` in
+/// `BpmnRule.pkl`, one level up. Repeating it on every primitive's `CheckConfig` would
+/// duplicate the source of truth and create two places to keep in sync. The abstract
+/// `CheckConfig` is therefore intentionally a pure marker: its job is to give
+/// `BpmnRule.checkConfig` a polymorphic type so Pkl accepts any subclass.
+///
+/// # Why are optional fields written `T? = null` ?
+///
+/// `T?` is the canonical Pkl pattern for nullable / optional values, and `= null` declares
+/// the default so the rule author can omit the field. Pkl evaluates the right-hand side
+/// only when the rule omits the property, so the default is free.
+///
+/// # Why is `patternDescription` only on `PropertyPatternCheck`?
+///
+/// It's presentation metadata for the diagnostic emitted by *this specific primitive* (a
+/// human-friendly explanation of what the regex enforces). It is not config that other
+/// primitives could use, so it stays local to its primitive rather than being lifted to
+/// the abstract base. Same reasoning would apply to any future presentation hints.
 typealias NonEmptyString = String(!isEmpty)
 
+/// The full set of primitive names that may appear in a rule's `checkPrimitive` field. The
+/// Kotlin loader fails fast at startup on an unknown name. Two of these are composite /
+/// non-deterministic (`CompositeCheck`, `LlmCheckRule`) and land later in Phase 2C.
 typealias CheckPrimitive =
   "RequiredPropertyCheck"
     | "PropertyPatternCheck"
@@ -14,6 +46,8 @@ typealias CheckPrimitive =
     | "CompositeCheck"
     | "LlmCheckRule"
 
+/// Marker base class. Exists only so `BpmnRule.checkConfig: CheckConfig?` can accept any of
+/// the typed subclasses below. Intentionally empty — see the file-level doc comment.
 abstract class CheckConfig
 
 class RequiredPropertyCheck extends CheckConfig {
@@ -23,6 +57,10 @@ class RequiredPropertyCheck extends CheckConfig {
 class PropertyPatternCheck extends CheckConfig {
   property: NonEmptyString
   pattern: NonEmptyString
+
+  /// Human-readable description of what `pattern` enforces, surfaced in the violation
+  /// message (e.g. `"sentence case"`). Optional because some rules use a self-explanatory
+  /// pattern. Local to this primitive — see the file-level doc comment.
   patternDescription: String? = null
 }
 

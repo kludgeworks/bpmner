@@ -75,9 +75,9 @@ class DeterministicPrimitivesTest {
     }
 
     @Test
-    fun `required association is covered synthetically`() {
+    fun `required association flags targeted elements missing their association`() {
         val model = PrimitiveModelContext(
-            synthetic = true,
+            supportedCapabilities = setOf(ModelCapability.ASSOCIATIONS),
             elements = listOf(
                 PrimitiveElement("task", "bpmn:Task"),
                 PrimitiveElement("note", "bpmn:TextAnnotation"),
@@ -94,6 +94,27 @@ class DeterministicPrimitivesTest {
                 metadata("association", "bpmn:Task"),
                 RequiredAssociationCheckConfig("bpmn:Association", targetTypes = listOf("bpmn:TextAnnotation")),
             ).map { it.elementId },
+        )
+    }
+
+    @Test
+    fun `required association is dormant when the model does not advertise ASSOCIATIONS capability`() {
+        // Same fixture as above but without the capability bit — what production looks like
+        // until #196 lands association support.
+        val model = PrimitiveModelContext(
+            elements = listOf(
+                PrimitiveElement("task", "bpmn:Task"),
+                PrimitiveElement("other", "bpmn:Task"),
+            ),
+        )
+
+        assertTrue(
+            RequiredAssociationCheck().evaluate(
+                model,
+                metadata("association", "bpmn:Task"),
+                RequiredAssociationCheckConfig("bpmn:Association", targetTypes = listOf("bpmn:TextAnnotation")),
+            ).isEmpty(),
+            "Dormant primitive must not fire without ASSOCIATIONS capability",
         )
     }
 
@@ -172,18 +193,32 @@ class DeterministicPrimitivesTest {
         assertEquals(listOf("s"), check.evaluate(ctx, metadata("incoming", "bpmn:StartEvent"), ConnectivityCheckConfig(ConnectivityMode.NO_INCOMING)).map { it.elementId })
         assertEquals(listOf("f1"), check.evaluate(ctx, metadata("flows", "bpmn:SequenceFlow"), ConnectivityCheckConfig(ConnectivityMode.FLOWS_NAMED)).map { it.elementId })
 
-        val synthetic = PrimitiveModelContext(
-            synthetic = true,
+        val poolAware = PrimitiveModelContext(
+            supportedCapabilities = setOf(ModelCapability.POOLS_AND_LANES),
             elements = emptyList(),
             sequenceFlows = listOf(PrimitiveFlow("sf", "a", "b", sourcePool = "p1", targetPool = "p2")),
             messageFlows = listOf(PrimitiveFlow("mf", "a", "b", name = "message", sourcePool = "p1", targetPool = "p1")),
         )
-        assertEquals(listOf("sf"), check.evaluate(synthetic, metadata("within", "bpmn:SequenceFlow"), ConnectivityCheckConfig(ConnectivityMode.WITHIN_POOL)).map { it.elementId })
-        assertEquals(listOf("mf"), check.evaluate(synthetic, metadata("across", "bpmn:MessageFlow"), ConnectivityCheckConfig(ConnectivityMode.ACROSS_POOLS)).map { it.elementId })
+        assertEquals(listOf("sf"), check.evaluate(poolAware, metadata("within", "bpmn:SequenceFlow"), ConnectivityCheckConfig(ConnectivityMode.WITHIN_POOL)).map { it.elementId })
+        assertEquals(listOf("mf"), check.evaluate(poolAware, metadata("across", "bpmn:MessageFlow"), ConnectivityCheckConfig(ConnectivityMode.ACROSS_POOLS)).map { it.elementId })
     }
 
     @Test
-    fun `pairing handles error end boundary and synthetic link and message starts`() {
+    fun `connectivity pool modes are dormant without POOLS_AND_LANES capability`() {
+        // Same data shape as above but no capability bit — a production context.
+        val production = PrimitiveModelContext(
+            elements = emptyList(),
+            sequenceFlows = listOf(PrimitiveFlow("sf", "a", "b", sourcePool = "p1", targetPool = "p2")),
+            messageFlows = listOf(PrimitiveFlow("mf", "a", "b", name = "message", sourcePool = "p1", targetPool = "p1")),
+        )
+        val check = ConnectivityCheck()
+
+        assertTrue(check.evaluate(production, metadata("within", "bpmn:SequenceFlow"), ConnectivityCheckConfig(ConnectivityMode.WITHIN_POOL)).isEmpty())
+        assertTrue(check.evaluate(production, metadata("across", "bpmn:MessageFlow"), ConnectivityCheckConfig(ConnectivityMode.ACROSS_POOLS)).isEmpty())
+    }
+
+    @Test
+    fun `pairing handles error end boundary plus link and message-start pairings`() {
         val ctx = context(
             nodes = listOf(
                 BpmnStartEvent("s", "Start"),
@@ -201,16 +236,33 @@ class DeterministicPrimitivesTest {
             check.evaluate(ctx, metadata("error-pair", "bpmn:EndEvent"), PairingCheckConfig(PairingMode.ERROR_END_BOUNDARY)).map { it.elementId },
         )
 
-        val synthetic = PrimitiveModelContext(
-            synthetic = true,
+        val messageAware = PrimitiveModelContext(
+            supportedCapabilities = setOf(ModelCapability.MESSAGE_FLOWS),
             elements = listOf(
                 PrimitiveElement("throw", "bpmn:IntermediateThrowEvent", mapOf("eventDefinition" to "LINK", "linkRef" to "L1")),
                 PrimitiveElement("msg", "bpmn:StartEvent", mapOf("eventDefinition" to "MESSAGE", "messageRef" to "M1")),
             ),
             messageFlows = listOf(PrimitiveFlow("mf", "external", "other", name = "Message")),
         )
-        assertEquals(listOf("throw"), check.evaluate(synthetic, metadata("link", "bpmn:Event"), PairingCheckConfig(PairingMode.LINK_PAIRING)).map { it.elementId })
-        assertEquals(listOf("msg"), check.evaluate(synthetic, metadata("message", "bpmn:StartEvent"), PairingCheckConfig(PairingMode.MESSAGE_START_FLOW)).map { it.elementId })
+        assertEquals(listOf("throw"), check.evaluate(messageAware, metadata("link", "bpmn:Event"), PairingCheckConfig(PairingMode.LINK_PAIRING)).map { it.elementId })
+        assertEquals(listOf("msg"), check.evaluate(messageAware, metadata("message", "bpmn:StartEvent"), PairingCheckConfig(PairingMode.MESSAGE_START_FLOW)).map { it.elementId })
+    }
+
+    @Test
+    fun `pairing MESSAGE_START_FLOW is dormant without MESSAGE_FLOWS capability`() {
+        val production = PrimitiveModelContext(
+            elements = listOf(
+                PrimitiveElement("msg", "bpmn:StartEvent", mapOf("eventDefinition" to "MESSAGE", "messageRef" to "M1")),
+            ),
+        )
+        assertTrue(
+            PairingCheck().evaluate(
+                production,
+                metadata("message", "bpmn:StartEvent"),
+                PairingCheckConfig(PairingMode.MESSAGE_START_FLOW),
+            ).isEmpty(),
+            "Dormant primitive must not flag message starts when MESSAGE_FLOWS is absent",
+        )
     }
 
     @Test
@@ -230,24 +282,24 @@ class DeterministicPrimitivesTest {
     }
 
     @Test
-    fun `pool labels are synthetic until pools and lanes are in the model`() {
+    fun `pool labels are dormant until pools and lanes are in the model`() {
         val check = PoolLabelCheck()
         val production = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnEndEvent("e", "End")))
         assertTrue(check.evaluate(production, metadata("pool", "bpmn:Participant"), PoolLabelCheckConfig(PoolLabelMode.WHITE_BOX_NAMED_BY_PROCESS)).isEmpty())
 
-        val synthetic = PrimitiveModelContext(
-            synthetic = true,
+        val poolAware = PrimitiveModelContext(
+            supportedCapabilities = setOf(ModelCapability.POOLS_AND_LANES),
             elements = listOf(
                 PrimitiveElement("pool", "bpmn:Participant", mapOf("poolKind" to "WHITE_BOX", "name" to "Sales", "processName" to "Fulfil order")),
                 PrimitiveElement("lane", "bpmn:Lane", mapOf("name" to "Team")),
             ),
         )
-        assertEquals(listOf("pool"), check.evaluate(synthetic, metadata("pool", "bpmn:Participant"), PoolLabelCheckConfig(PoolLabelMode.WHITE_BOX_NAMED_BY_PROCESS)).map { it.elementId })
-        assertEquals(listOf("lane"), check.evaluate(synthetic, metadata("lane", "bpmn:Lane"), PoolLabelCheckConfig(PoolLabelMode.LANE_LABELS_BUSINESS_ROLES_PERFORMERS)).map { it.elementId })
+        assertEquals(listOf("pool"), check.evaluate(poolAware, metadata("pool", "bpmn:Participant"), PoolLabelCheckConfig(PoolLabelMode.WHITE_BOX_NAMED_BY_PROCESS)).map { it.elementId })
+        assertEquals(listOf("lane"), check.evaluate(poolAware, metadata("lane", "bpmn:Lane"), PoolLabelCheckConfig(PoolLabelMode.LANE_LABELS_BUSINESS_ROLES_PERFORMERS)).map { it.elementId })
     }
 
     @Test
-    fun `element constraints cover subset timer parallel and synthetic event-based gateways`() {
+    fun `element constraint subset timer and parallel modes flag the right elements`() {
         val ctx = context(
             nodes = listOf(
                 BpmnStartEvent("s", "Start", BpmnTimerEventDefinition(BpmnTimerKind.DATE, "")),
@@ -277,9 +329,12 @@ class DeterministicPrimitivesTest {
         )
         assertEquals(listOf("s"), check.evaluate(ctx, metadata("timer", "bpmn:StartEvent"), ElementConstraintCheckConfig("bpmn:StartEvent", ElementConstraintMode.TIMER_EXPRESSION)).map { it.elementId })
         assertEquals(listOf("pg"), check.evaluate(ctx, metadata("parallel", "bpmn:ParallelGateway"), ElementConstraintCheckConfig("bpmn:ParallelGateway", ElementConstraintMode.PARALLEL_GATEWAY_STRUCTURE)).map { it.elementId })
+    }
 
-        val synthetic = PrimitiveModelContext(
-            synthetic = true,
+    @Test
+    fun `event-based gateway flags non-event non-receive-task targets`() {
+        // EventBasedGateway pointing at a plain task — invalid per BPMN 2.0 §10.5.4.6.
+        val model = PrimitiveModelContext(
             elements = listOf(
                 PrimitiveElement("eg", "bpmn:EventBasedGateway"),
                 PrimitiveElement("task", "bpmn:Task"),
@@ -288,12 +343,69 @@ class DeterministicPrimitivesTest {
         )
         assertEquals(
             listOf("eg"),
-            check.evaluate(
-                synthetic,
+            ElementConstraintCheck().evaluate(
+                model,
                 metadata("event-based", "bpmn:EventBasedGateway"),
                 ElementConstraintCheckConfig("bpmn:EventBasedGateway", ElementConstraintMode.EVENT_BASED_GATEWAY_DIRECT_EVENTS),
             ).map { it.elementId },
         )
+    }
+
+    @Test
+    fun `event-based gateway accepts a ReceiveTask target per BPMN 2 dot 0`() {
+        // EventBasedGateway pointing at a ReceiveTask — valid per BPMN 2.0 §10.5.4.6.
+        val model = PrimitiveModelContext(
+            elements = listOf(
+                PrimitiveElement("eg", "bpmn:EventBasedGateway"),
+                PrimitiveElement("rt", "bpmn:ReceiveTask"),
+            ),
+            sequenceFlows = listOf(PrimitiveFlow("f", "eg", "rt")),
+        )
+        assertTrue(
+            ElementConstraintCheck().evaluate(
+                model,
+                metadata("event-based", "bpmn:EventBasedGateway"),
+                ElementConstraintCheckConfig("bpmn:EventBasedGateway", ElementConstraintMode.EVENT_BASED_GATEWAY_DIRECT_EVENTS),
+            ).isEmpty(),
+            "ReceiveTask is a valid event-based gateway target per BPMN 2.0 §10.5.4.6",
+        )
+    }
+
+    @Test
+    fun `property pattern emits rule-config-error on malformed regex`() {
+        val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t", "name"), BpmnEndEvent("e", "End")))
+        val diagnostics = PropertyPatternCheck().evaluate(
+            ctx,
+            metadata("bad-pattern", "bpmn:UserTask"),
+            PropertyPatternCheckConfig("name", "[unclosed", "explain"),
+        )
+
+        assertEquals(1, diagnostics.size)
+        val diag = diagnostics.single()
+        assertEquals("rule-config-error", diag.diagnosticCode)
+        assertEquals(dev.groknull.bpmner.api.RuleSeverity.ERROR, diag.severity)
+        assertTrue(diag.message.contains("[unclosed"), "config-error message should quote the offending pattern: ${diag.message}")
+    }
+
+    @Test
+    fun `element constraint timer expression emits rule-config-error on malformed regex`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start", BpmnTimerEventDefinition(BpmnTimerKind.DATE, "PT5M")),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = ElementConstraintCheck().evaluate(
+            ctx,
+            metadata("bad-timer-pattern", "bpmn:StartEvent"),
+            ElementConstraintCheckConfig(
+                "bpmn:StartEvent",
+                ElementConstraintMode.TIMER_EXPRESSION,
+                mapOf("pattern" to "(?<malformed"),
+            ),
+        )
+
+        assertEquals("rule-config-error", diagnostics.single().diagnosticCode)
     }
 
     @Test

@@ -20,17 +20,23 @@ internal class RequiredAssociationCheck {
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
         config: RequiredAssociationCheckConfig,
-    ): List<RuleDiagnostic> = metadata.targetedElements(model)
-        .filter { source ->
-            val sourceId = source.id ?: return@filter false
-            val associations = model.associations.filter {
-                it.typeName == config.association && it.sourceRef == sourceId
+    ): List<RuleDiagnostic> {
+        // Dormant in production until the BPMN model carries `bpmn:Association` edges (#196).
+        // Without the capability, "no associations found" applies to every targeted element —
+        // a false positive on every run. Return empty until the capability flips on.
+        if (!model.supports(ModelCapability.ASSOCIATIONS)) return emptyList()
+        return metadata.targetedElements(model)
+            .filter { source ->
+                val sourceId = source.id ?: return@filter false
+                val associations = model.associations.filter {
+                    it.typeName == config.association && it.sourceRef == sourceId
+                }
+                associations.none { association ->
+                    val target = model.elementsById[association.targetRef] ?: return@none false
+                    config.targetTypes.isEmpty() ||
+                        config.targetTypes.any { BpmnTypeMatcher.matches(target.typeName, it) }
+                }
             }
-            associations.none { association ->
-                val target = model.elementsById[association.targetRef] ?: return@none false
-                config.targetTypes.isEmpty() ||
-                    config.targetTypes.any { BpmnTypeMatcher.matches(target.typeName, it, model.synthetic) }
-            }
-        }
-        .map { metadata.diagnostic(it.id, config.association) }
+            .map { metadata.diagnostic(it.id, config.association) }
+    }
 }
