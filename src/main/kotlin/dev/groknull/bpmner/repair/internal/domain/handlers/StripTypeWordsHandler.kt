@@ -49,8 +49,10 @@ internal class StripTypeWordsHandler : BpmnLocalModelFixHandler {
 
     private fun discouragedWords(config: HandlerConfig): List<String>? {
         val raw = config.staticConfig?.get(DISCOURAGED_WORDS_KEY) ?: return null
-        @Suppress("UNCHECKED_CAST")
-        return (raw as? List<String>) ?: (raw as? Iterable<*>)?.mapNotNull { it as? String }
+        // Cannot use `raw as? List<String>` directly — JVM erasure makes the generic check
+        // unenforceable, so a list containing non-strings would pass the cast and then blow up
+        // on iteration. Walk the iterable and keep only the String elements.
+        return (raw as? Iterable<*>)?.mapNotNull { it as? String }
     }
 
     private fun wordRemovalPattern(words: List<String>): Regex {

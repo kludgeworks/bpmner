@@ -94,6 +94,17 @@ internal class DeterministicTopologyRepairStrategy(
 
         @Suppress("UNCHECKED_CAST")
         val staticConfig = meta.staticConfig as? Map<String, Any>
+        if (meta.staticConfig != null && staticConfig == null) {
+            // A non-null `staticConfig` that isn't a Map silently produces an empty
+            // HandlerConfig and the handler emits no patches — looks identical to "rule
+            // satisfied" in production. Surface the misconfiguration so it can be fixed in
+            // the Pkl rule rather than chased through dispatch logs.
+            logger.warn(
+                "Rule '{}' staticConfig has unexpected type {}; handler config will be empty",
+                ruleId,
+                meta.staticConfig!!::class.simpleName,
+            )
+        }
         return HandlerConfig(
             staticConfig = staticConfig,
             replacementMap = meta.repair.replacementMap,

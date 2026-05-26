@@ -35,6 +35,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 @Suppress("TooManyFunctions")
 class DeterministicTopologyRepairStrategyTest {
@@ -139,6 +140,40 @@ class DeterministicTopologyRepairStrategyTest {
 
         val received = assertNotNull(captured.lastConfig)
         assertEquals(HandlerConfig.EMPTY, received)
+    }
+
+    @Test
+    fun `falls back to empty staticConfig when the rule's staticConfig is not a Map`() {
+        // Reviewer concern: a non-null `staticConfig` that isn't a Map (e.g. a JSON array)
+        // would silently produce an empty HandlerConfig. The cast still fails safely, but the
+        // strategy must surface the misconfiguration via a warn log.
+        val captured = CapturingHandler("captureHandler")
+        val catalog =
+            stubCatalog(
+                rule(
+                    id = "bad-config-rule",
+                    // A list at the staticConfig level — not a Map — simulates the broken Pkl shape.
+                    staticConfig = listOf("not", "a", "map"),
+                ),
+            )
+        val diag =
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.LINT,
+                message = "fix it",
+                rule = "bpmner/bad-config-rule",
+                kind = RepairKind.LOCAL_MODEL_FIX,
+                fixHandler = "captureHandler",
+                elementId = "Task_1",
+            )
+
+        val ctx = contextOf(diagnostics = listOf(diag))
+        strategy(handlers = listOf(captured), catalog = catalog).repair(ctx)
+
+        val received = assertNotNull(captured.lastConfig)
+        assertNull(received.staticConfig, "Non-Map staticConfig must not survive the cast")
+        // Note: we don't assert the warn log here — verifying SLF4J output requires test
+        // appender wiring that the rest of this test class doesn't use. The behaviour we
+        // care about (no silent crash, no leaked bad value) is covered above.
     }
 
     @Test

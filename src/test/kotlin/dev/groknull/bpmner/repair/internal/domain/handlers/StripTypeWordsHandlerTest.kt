@@ -66,6 +66,15 @@ class StripTypeWordsHandlerTest {
     }
 
     @Test
+    fun `filters non-string elements out of the discouragedWords list`() {
+        // JVM erasure means a mixed-type List would pass an unchecked `as? List<String>` cast and
+        // ClassCastException on iteration. The handler walks the iterable and keeps only strings.
+        val mixedConfig = HandlerConfig(staticConfig = mapOf("discouragedWords" to listOf("activity", 42, null, "process")))
+        val ops = handler.buildPatch(definitionWithTask("Approve Order Activity Process"), "Task_1", mixedConfig)
+        assertEquals("Approve Order", ops.single().name, "Non-string entries must be ignored, not crash the handler")
+    }
+
+    @Test
     fun `no ops for unknown element id`() {
         val ops = handler.buildPatch(definitionWithTask("Bad Name Activity"), "NotPresent", defaultConfig)
         assertTrue(ops.isEmpty())

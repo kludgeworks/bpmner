@@ -16,6 +16,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class ExpandAbbreviationsHandlerTest {
     private val handler = ExpandAbbreviationsHandler()
     private val defaultConfig = HandlerConfig(
@@ -48,9 +49,34 @@ class ExpandAbbreviationsHandlerTest {
 
     @Test
     fun `respects word boundaries`() {
-        // "REQUIRED" must NOT match "REQ" — the `\b` boundary keeps the abbreviation whole-word only.
+        // "REQUIRED" must NOT match "REQ" — lookarounds keep the abbreviation whole-word only.
         val ops = handler.buildPatch(definitionWithTask("REQUIRED check"), "Task_1", defaultConfig)
         assertTrue(ops.isEmpty(), "Substring of a longer word must not be expanded")
+    }
+
+    @Test
+    fun `matches abbreviation followed by punctuation`() {
+        // `\b` would fail to find a boundary after `Q.`; lookarounds match correctly.
+        val ops = handler.buildPatch(definitionWithTask("Validate REQ."), "Task_1", defaultConfig)
+        assertEquals("Validate request.", ops.single().name)
+    }
+
+    @Test
+    fun `matches abbreviation followed by comma`() {
+        val ops = handler.buildPatch(definitionWithTask("Process REQ, then RESP"), "Task_1", defaultConfig)
+        assertEquals("Process request, then response", ops.single().name)
+    }
+
+    @Test
+    fun `does not chain replacements when an expansion is also a key`() {
+        // Sequential per-key fold would expand A → B → C; single-pass alternation stops at B.
+        val chainConfig = HandlerConfig(replacementMap = mapOf("A" to "B", "B" to "C"))
+        val ops = handler.buildPatch(definitionWithTask("word A"), "Task_1", chainConfig)
+        assertEquals(
+            "word B",
+            ops.single().name,
+            "Expansion 'B' must not be re-scanned as the key for 'C'",
+        )
     }
 
     @Test

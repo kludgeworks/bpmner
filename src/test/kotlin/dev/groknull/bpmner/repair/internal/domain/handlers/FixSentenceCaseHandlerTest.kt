@@ -15,6 +15,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+@Suppress("TooManyFunctions")
 class FixSentenceCaseHandlerTest {
     private val handler = FixSentenceCaseHandler()
 
@@ -50,6 +51,42 @@ class FixSentenceCaseHandlerTest {
     fun `idempotent on already-sentence-case name`() {
         val ops = handler.buildPatch(definitionWithTask("Approve customer order"), "Task_1")
         assertTrue(ops.isEmpty())
+    }
+
+    @Test
+    fun `preserves trailing punctuation on acronym in non-initial position`() {
+        // Old TS spec lowercased the acronym to `"aPI,"` because the trailing comma broke the
+        // `^[A-Z]{2,}$` match. The widened regex tolerates non-alphabetic boundary chars.
+        val ops = handler.buildPatch(definitionWithTask("Process API, then return"), "Task_1")
+        assertTrue(ops.isEmpty(), "name with preserved acronym must already be sentence-case")
+    }
+
+    @Test
+    fun `preserves acronym with trailing period when casing change is needed`() {
+        val ops = handler.buildPatch(definitionWithTask("call BPMN. spec"), "Task_1")
+        assertEquals("Call BPMN. spec", ops.single().name)
+    }
+
+    @Test
+    fun `preserves multiple inner spaces`() {
+        // Old TS spec collapsed runs of whitespace to a single space, emitting a SET_NODE_NAME
+        // patch even when the casing was already correct. The Kotlin port leaves inner
+        // whitespace untouched.
+        val ops = handler.buildPatch(definitionWithTask("Approve  customer order"), "Task_1")
+        assertTrue(ops.isEmpty(), "double-space inside an otherwise-correct name must not trigger a patch")
+    }
+
+    @Test
+    fun `preserves tab as inner whitespace`() {
+        val ops = handler.buildPatch(definitionWithTask("Approve\tcustomer order"), "Task_1")
+        assertTrue(ops.isEmpty())
+    }
+
+    @Test
+    fun `preserves inner whitespace when a casing change is needed`() {
+        // Force a casing change so we can assert the double space survives the transform.
+        val ops = handler.buildPatch(definitionWithTask("approve  Customer order"), "Task_1")
+        assertEquals("Approve  customer order", ops.single().name)
     }
 
     @Test
