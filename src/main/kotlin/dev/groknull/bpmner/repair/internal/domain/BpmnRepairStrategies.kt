@@ -17,6 +17,7 @@ import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import org.jmolecules.ddd.annotation.Service
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -39,37 +40,16 @@ internal class TargetedLabelRepairStrategy(
         if (candidates.isEmpty()) return BpmnRepairResult.NotApplicable
 
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
-        val runner = context.promptRunner(config.labelRepairer, promptFactory)
-        val patch =
-            runner.createObjectIfPossible(
-                context.attempt.messages + UserMessage(feedback),
-                BpmnRepairPatch::class.java,
-            )
-        if (patch == null) {
-            logger.warn("LLM label patch creation returned no structured patch, falling back")
-            return BpmnRepairResult.NotApplicable
-        }
 
-        return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
-            is PatchApplicationResult.Success -> {
-                BpmnRepairResult.Repaired(
-                    definition = application.definition,
-                    promptText = feedback,
-                    messages =
-                    context.attempt.messages + UserMessage(feedback) +
-                        AssistantMessage(patch.toString()),
-                )
-            }
-
-            is PatchApplicationResult.Failure -> {
-                logger.warn("LLM label patch application failed, falling back: {}", application.reason)
-                BpmnRepairResult.NotApplicable
-            }
-
-            PatchApplicationResult.NoOp -> {
-                BpmnRepairResult.NotApplicable
-            }
-        }
+        return repairWithPatch(
+            context = context,
+            actor = config.labelRepairer,
+            promptFactory = promptFactory,
+            patchApplier = patchApplier,
+            feedback = feedback,
+            patchTypeName = "LLM label patch",
+            logger = logger,
+        )
     }
 }
 
@@ -93,37 +73,16 @@ internal class LlmPatchRepairStrategy(
         if (candidates.isEmpty()) return BpmnRepairResult.NotApplicable
 
         val feedback = promptFactory.patchFeedback(context.attempt.definition, candidates, context.localOutcome)
-        val runner = context.promptRunner(config.patchRepairer, promptFactory)
-        val patch =
-            runner.createObjectIfPossible(
-                context.attempt.messages + UserMessage(feedback),
-                BpmnRepairPatch::class.java,
-            )
-        if (patch == null) {
-            logger.warn("LLM patch creation returned no structured patch, falling back")
-            return BpmnRepairResult.NotApplicable
-        }
 
-        return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
-            is PatchApplicationResult.Success -> {
-                BpmnRepairResult.Repaired(
-                    definition = application.definition,
-                    promptText = feedback,
-                    messages =
-                    context.attempt.messages + UserMessage(feedback) +
-                        AssistantMessage(patch.toString()),
-                )
-            }
-
-            is PatchApplicationResult.Failure -> {
-                logger.warn("LLM patch application failed, falling back: {}", application.reason)
-                BpmnRepairResult.NotApplicable
-            }
-
-            PatchApplicationResult.NoOp -> {
-                BpmnRepairResult.NotApplicable
-            }
-        }
+        return repairWithPatch(
+            context = context,
+            actor = config.patchRepairer,
+            promptFactory = promptFactory,
+            patchApplier = patchApplier,
+            feedback = feedback,
+            patchTypeName = "LLM patch",
+            logger = logger,
+        )
     }
 }
 
@@ -162,6 +121,50 @@ internal class FullLlmRewriteRepairStrategy(
             messages =
             context.attempt.messages + UserMessage(feedback) + AssistantMessage(repaired.toString()),
         )
+    }
+}
+
+// Refactoring duplicate blocks across two strategies leaves the helper with the same workflow inputs.
+@Suppress("LongParameterList")
+private fun repairWithPatch(
+    context: BpmnRepairStrategyContext,
+    actor: Actor<Persona>,
+    promptFactory: BpmnRepairPromptPort,
+    patchApplier: BpmnPatchApplicationPort,
+    feedback: String,
+    patchTypeName: String,
+    logger: Logger,
+): BpmnRepairResult {
+    val runner = context.promptRunner(actor, promptFactory)
+    val patch =
+        runner.createObjectIfPossible(
+            context.attempt.messages + UserMessage(feedback),
+            BpmnRepairPatch::class.java,
+        )
+    if (patch == null) {
+        logger.warn("$patchTypeName creation returned no structured patch, falling back")
+        return BpmnRepairResult.NotApplicable
+    }
+
+    return when (val application = patchApplier.apply(context.attempt.definition, patch)) {
+        is PatchApplicationResult.Success -> {
+            BpmnRepairResult.Repaired(
+                definition = application.definition,
+                promptText = feedback,
+                messages =
+                context.attempt.messages + UserMessage(feedback) +
+                    AssistantMessage(patch.toString()),
+            )
+        }
+
+        is PatchApplicationResult.Failure -> {
+            logger.warn("$patchTypeName application failed, falling back: {}", application.reason)
+            BpmnRepairResult.NotApplicable
+        }
+
+        PatchApplicationResult.NoOp -> {
+            BpmnRepairResult.NotApplicable
+        }
     }
 }
 
