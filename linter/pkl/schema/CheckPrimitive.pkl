@@ -17,17 +17,19 @@ typealias CheckPrimitive =
 abstract class CheckConfig
 
 class RequiredPropertyCheck extends CheckConfig {
-  properties: List<NonEmptyString> = List()
+  property: NonEmptyString
 }
 
 class PropertyPatternCheck extends CheckConfig {
   property: NonEmptyString
   pattern: NonEmptyString
+  patternDescription: String? = null
 }
 
 class VocabularyCheck extends CheckConfig {
   property: NonEmptyString
-  allowedTerms: List<NonEmptyString> = List()
+  mode: "REQUIRE" | "FORBID"
+  words: List<NonEmptyString> = List()
 }
 
 class RequiredAssociationCheck extends CheckConfig {
@@ -37,7 +39,7 @@ class RequiredAssociationCheck extends CheckConfig {
 }
 
 class TopologyCheck extends CheckConfig {
-  topology: NonEmptyString
+  topology: "NO_FAKE_JOIN" | "NO_SUPERFLUOUS" | "NO_JOIN_FORK" | "CONVERGING_UNNAMED"
   minIncoming: Int? = null
   maxIncoming: Int? = null
   minOutgoing: Int? = null
@@ -45,13 +47,15 @@ class TopologyCheck extends CheckConfig {
 }
 
 class ConnectivityCheck extends CheckConfig {
+  mode: "NO_INCOMING" | "FLOWS_NAMED" | "WITHIN_POOL" | "ACROSS_POOLS"
   sourceTypes: List<NonEmptyString> = List()
   targetTypes: List<NonEmptyString> = List()
 }
 
 class PairingCheck extends CheckConfig {
-  left: NonEmptyString
-  right: NonEmptyString
+  mode: "ERROR_END_BOUNDARY" | "LINK_PAIRING" | "MESSAGE_START_FLOW"
+  left: String? = null
+  right: String? = null
 }
 
 class CardinalityCheck extends CheckConfig {
@@ -66,6 +70,10 @@ class PoolLabelCheck extends CheckConfig {
 
 class ElementConstraintCheck extends CheckConfig {
   element: NonEmptyString
+  mode: "ALLOWED_ELEMENT_SUBSET"
+    | "TIMER_EXPRESSION"
+    | "PARALLEL_GATEWAY_STRUCTURE"
+    | "EVENT_BASED_GATEWAY_DIRECT_EVENTS"
   constraints: Mapping<NonEmptyString, Dynamic> = Mapping()
 }
 
