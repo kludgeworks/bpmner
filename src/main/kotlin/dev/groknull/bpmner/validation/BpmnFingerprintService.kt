@@ -26,11 +26,11 @@ class BpmnFingerprintService {
     /**
      * Fingerprint computed over **only the blocking (ERROR-severity)** diagnostics.
      *
-     * Used by [dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine]'s "stuck
-     * blocking" guard. If we compared the full fingerprint there, advisory warnings
-     * oscillating between iterations would make the fingerprint change every round, masking
-     * a permanently-stuck blocking error — the engine would burn through every remaining
-     * `maxEvaluations` attempt instead of failing fast.
+     * Used by `BpmnRepairAgent.revalidateAndAdvance`'s "stuck blocking" guard. If we
+     * compared the full fingerprint there, advisory warnings oscillating between
+     * iterations would make the fingerprint change every round, masking a permanently-
+     * stuck blocking error — the planner would burn through every remaining budget
+     * action via `ReplanRequestedException` instead of TERMINATING.
      */
     fun blockingDiagnosticFingerprint(diagnostics: List<BpmnDiagnostic>): String {
         return textFingerprint(diagnostics.filter { it.isBlocking }.fingerprintInput())
