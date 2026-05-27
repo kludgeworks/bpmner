@@ -10,7 +10,6 @@ package dev.groknull.bpmner.repair
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.api.common.autonomy.ProcessExecutionStuckException
 import com.embabel.agent.api.common.autonomy.ProcessExecutionTerminatedException
-import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
@@ -39,6 +38,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
@@ -127,12 +127,16 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     @Disabled(
-        "Embabel `ReplanRequestedException` does not currently count against `Budget(actions)`, so " +
-            "the planner loops on `applyFullLlmRewrite` without exhausting the budget when the rewrite " +
-            "LLM mock returns null. Enabling this test requires either (a) the framework counting " +
-            "replans toward budget, or (b) a more precise LLM-mock predicate that the rewrite repair " +
-            "path actually matches at runtime (current `Fix complex, cascading…` matcher misses). " +
-            "Tracked for follow-up; chain wiring + STUCK still cover the high-risk Phase 4 paths.",
+        "The architectural fix (dead replan-throws removed, scope-specific eligibility) is in " +
+            "place but this test still can't trigger TERMINATED end-to-end. The rewrite-repair " +
+            "LLM call via `Actor.promptRunner(...).createObject(messages, BpmnDefinition::class.java)` " +
+            "doesn't get intercepted by `EmbabelMockitoIntegrationTest.whenCreateObject({ true }, " +
+            "BpmnDefinition::class.java)` — the mock returns null regardless of predicate, so the " +
+            "rewrite throws RepairReplans.signal and the planner replans forever. The mismatch " +
+            "appears to be in how Embabel routes per-actor LLM operations vs the global " +
+            "`LlmOperations.createObject` that `whenCreateObject` mocks. Re-enable once that " +
+            "routing is understood (Embabel docs / source dive), or once a different test surface " +
+            "is available (e.g. the per-actor mock helper Embabel may add).",
     )
     fun `TERMINATED — budget exhaustion on repeated no-progress repairs maps to ProcessExecutionTerminatedException`(
         @TempDir tempDir: Path,
@@ -141,40 +145,46 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
         val outputFile = tempDir.resolve("process.bpmn")
         stubReadinessContractGenerationAlignment(definition)
 
-        // Lint returns a persistent blocking diagnostic; no handler can fix it deterministically,
-        // and the LLM mock returns the same definition each time. The repair agent's
-        // fingerprint guard fires `ReplanRequestedException` every iteration, costing a
-        // budget action. With Budget(actions = 12) the budget exhausts before any progress.
+        // The setup must avoid every `RepairReplans.signal` branch so each repair attempt
+        // completes normally and ticks the budget down. The three branches that could fire:
+        //   - LLM returns null              → return a non-null definition (varied processName)
+        //   - definitionFingerprint repeats → vary `processName` per call
+        //   - blockingDiagnosticFingerprint repeats → vary lint `id` per call
+        // With all three avoided, the planner picks `applyFullLlmRewrite` every iteration
+        // (full-process scope eliminates label/structural-eligibility), the action runs,
+        // history grows, and Budget(actions=N) terminates cleanly.
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        val persistentIssue = LintIssue(
-            id = "Task_1",
-            rule = "act-verb-object-name",
-            message = "Persistent unfixable lint diagnostic",
-        )
-        doReturn(listOf(persistentIssue)).`when`(bpmnLintingPort).lint(anyDefinition())
+
+        val lintCalls = AtomicInteger(0)
+        doAnswer {
+            val n = lintCalls.incrementAndGet()
+            listOf(
+                LintIssue(
+                    id = "Task_$n", // varies per call → blockingDiagnosticFingerprint differs
+                    rule = "act-verb-object-name",
+                    message = "Persistent blocking diagnostic on attempt $n",
+                ),
+            )
+        }.`when`(bpmnLintingPort).lint(anyDefinition())
         doReturn(null).`when`(bpmnLintingPort).autoFix(anyString(), anyLintIssues())
         doReturn(emptyMap<String, String>()).`when`(bpmnLintingPort).ruleDocs(anyRuleNames())
 
-        // The rewrite-repair action expects an LLM-produced BpmnDefinition. Vary it across
-        // calls (different processName each iteration) so the fingerprint guard does NOT
-        // fire — each repair attempt completes and ticks the budget down. Without this,
-        // ReplanRequestedException loops forever (replans don't charge against budget).
+        // Permissive predicate — both the generation prompt and the rewrite-repair prompt
+        // request a BpmnDefinition, and we want each call (including the rewrite path) to
+        // return a definition with a unique processName so the fingerprint guard never fires.
+        // Mockito returns the LAST matching stub when overlapping predicates match; this
+        // overrides the generation stub set up in `stubReadinessContractGenerationAlignment`.
         val rewriteCalls = AtomicInteger(0)
-        whenCreateObject(
-            { it.contains("Fix complex, cascading validation errors") },
-            BpmnDefinition::class.java,
-        ).thenAnswer {
+        whenCreateObject({ true }, BpmnDefinition::class.java).thenAnswer {
             val n = rewriteCalls.incrementAndGet()
             definition.copy(processName = "Make toast attempt $n")
         }
 
         assertThrows(ProcessExecutionTerminatedException::class.java) {
-            AgentPlatformTypedOps(agentPlatform)
-                .transform(
-                    BpmnRequest(processDescription = "Make toast", outputFile = outputFile.toString()),
-                    BpmnResult::class.java,
-                    ProcessOptions(budget = Budget(actions = TIGHT_BUDGET)),
-                )
+            bpmnAgentInvoker.generate(
+                request = BpmnRequest(processDescription = "Make toast", outputFile = outputFile.toString()),
+                assessment = readyAssessment(),
+            )
         }
     }
 

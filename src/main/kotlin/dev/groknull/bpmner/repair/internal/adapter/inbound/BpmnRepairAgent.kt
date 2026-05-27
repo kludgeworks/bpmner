@@ -183,9 +183,11 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
-        val candidates = repairEval.diagnostics.filter { eligibleForLlm(it) && it.repairScope == BpmnRepairScope.LABEL }
-        if (candidates.isEmpty()) {
-            throw RepairReplans.signal("no LABEL-scope diagnostics for LLM label patch")
+        // `hasLlmLabelEligible` precondition guarantees at least one candidate — no runtime
+        // emptiness check needed. ReplanRequestedException is reserved for genuine "I tried
+        // and couldn't make progress" signals, not "I shouldn't have been selected."
+        val candidates = repairEval.diagnostics.filter {
+            eligibleForLlm(it) && it.repairScope == BpmnRepairScope.LABEL
         }
         val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
         return applyLlmPatch(repairEval, context, config.labelRepairer, feedback, "LLM label patch")
@@ -207,11 +209,10 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
+        // `hasLlmStructuralEligible` precondition guarantees at least one OUTLINE/PHASE
+        // candidate — the runtime filter is non-empty by construction.
         val candidates = repairEval.diagnostics.filter {
             eligibleForLlm(it) && (it.repairScope == BpmnRepairScope.OUTLINE || it.repairScope == BpmnRepairScope.PHASE)
-        }
-        if (candidates.isEmpty()) {
-            throw RepairReplans.signal("no OUTLINE/PHASE diagnostics for LLM structural patch")
         }
         val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
         return applyLlmPatch(repairEval, context, config.patchRepairer, feedback, "LLM structural patch")
@@ -233,16 +234,21 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
+        // `hasLlmEligible` precondition (`kind != UNFIXABLE`) exactly matches `eligibleForLlm` —
+        // the filter is non-empty by construction.
         val candidates = repairEval.diagnostics.filter { eligibleForLlm(it) }
-        if (candidates.isEmpty()) {
-            throw RepairReplans.signal("no LLM-eligible diagnostics for full rewrite")
-        }
         val feedback = promptFactory.fullRepairFeedback(repairEval.toAttempt(), candidates)
         val runner = promptRunner(repairEval, context, config.rewriteRepairer)
-        val repaired = runner.createObjectIfPossible(
-            repairEval.messages + UserMessage(feedback),
-            BpmnDefinition::class.java,
-        ) ?: throw RepairReplans.signal("LLM rewrite returned no structured definition")
+        // `createObject` (not `createObjectIfPossible`) routes through `LlmOperations.createObject`,
+        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. If the LLM
+        // genuinely produces no structured result, `createObject` throws — we catch and replan.
+        val repaired: BpmnDefinition = runCatching {
+            runner.createObject(
+                repairEval.messages + UserMessage(feedback),
+                BpmnDefinition::class.java,
+            )
+        }.getOrNull()
+            ?: throw RepairReplans.signal("LLM rewrite returned no structured definition")
         return revalidateAndAdvance(
             prior = repairEval,
             repaired = repaired,
@@ -449,10 +455,15 @@ internal class BpmnRepairAgent(
         patchTypeName: String,
     ): BpmnRepairEvaluation {
         val runner = promptRunner(repairEval, operationContext, actor)
-        val patch = runner.createObjectIfPossible(
-            repairEval.messages + UserMessage(feedback),
-            BpmnRepairPatch::class.java,
-        ) ?: throw RepairReplans.signal("$patchTypeName returned no structured patch")
+        // See applyFullLlmRewrite for why this uses `createObject` rather than
+        // `createObjectIfPossible` — alignment with what `whenCreateObject` mocks.
+        val patch: BpmnRepairPatch = runCatching {
+            runner.createObject(
+                repairEval.messages + UserMessage(feedback),
+                BpmnRepairPatch::class.java,
+            )
+        }.getOrNull()
+            ?: throw RepairReplans.signal("$patchTypeName returned no structured patch")
         val application = patchApplier.apply(repairEval.definition, patch)
         val success = patchSuccessOrReplan(application, patchTypeName)
         return revalidateAndAdvance(
