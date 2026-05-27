@@ -27,6 +27,7 @@ sonarqube(
     project_key = "kludgeworks_bpmner_backend",
     project_name = "bpmner Backend",
     scm_info = [":git_info"],
+    sonar_scanner = "@sonar_scanner_cli//:sonar_scanner",
 )
 
 buildifier_test(

@@ -26,6 +26,7 @@ sonarqube(
     project_key = "kludgeworks_bpmner_web",
     project_name = "bpmner Web",
     scm_info = ["//:git_info"],
+    sonar_scanner = "@sonar_scanner_cli//:sonar_scanner",
     visibility = ["//visibility:public"],
 )
 

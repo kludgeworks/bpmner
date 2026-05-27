@@ -44,6 +44,9 @@ SonarScanner invocations.
 
 - `MODULE.bazel` uses `bazel_sonarqube` `1.0.6`.
 - `bazel_sonarqube` `1.0.6` vendors SonarScanner CLI `5.0.2.4997`.
+- This branch overrides the scanner binary used by the `sonarqube()` targets to
+  SonarScanner CLI `8.1.0.6389`, the latest release published to Maven Central
+  as of `2026-05-27`.
 - The workflow passes `-Dsonar.host.url=https://sonarcloud.io`, so it targets
   the SonarQube Cloud EU instance.
 - SonarCloud project keys in the workflow are:
@@ -85,8 +88,9 @@ are clearly attached to the selected branch.
    The failing API is the quality-profile search endpoint itself, and it returns
    HTTP `500` after the scanner has authenticated, loaded project settings, and
    created an analysis.
-2. Upgrade or replace the scanner path so CI no longer depends on the
-   `bazel_sonarqube`-bundled SonarScanner CLI `5.0.2.4997`.
+2. Re-run SonarCloud with the upgraded SonarScanner CLI `8.1.0.6389` on this
+   branch. If the quality-profile endpoint still returns HTTP `500`, scanner
+   age has been ruled out.
 3. Open a SonarSource support/community issue with debug run `26518741206`, the
    two failing endpoint URLs, and the project keys. The failure occurs after
    SonarCloud accepts the project binding and creates the analysis, so
