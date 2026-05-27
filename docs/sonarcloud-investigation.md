@@ -39,6 +39,11 @@ SonarScanner invocations.
   `-X` logging. It showed SonarCloud returning HTTP `500` for:
   - `GET https://sonarcloud.io/api/qualityprofiles/search.protobuf?projectKey=kludgeworks_bpmner_backend&organization=kludgeworks`
   - `GET https://sonarcloud.io/api/qualityprofiles/search.protobuf?projectKey=kludgeworks_bpmner_web&organization=kludgeworks`
+- Manual debug run `26519939370` on `2026-05-27T15:16:58Z` used the upgraded
+  SonarScanner CLI `8.1.0.6389` and scanner engine `12.36.0.3399`. The scanner
+  created short-branch analyses for `investigate/sonar-assessments`, then still
+  received HTTP `500` from the same quality-profile endpoints for backend and
+  web.
 
 ## Local configuration facts
 
@@ -67,12 +72,12 @@ successfully loaded quality profiles at `2026-05-26T16:36Z`, and the next main
 run began failing at `2026-05-26T16:46Z` after analysis creation but before
 source analysis. The failure is repeated across multiple SonarCloud projects.
 
-The scanner version is also stale relative to current SonarQube Cloud
-documentation. SonarScanner CLI 7.1 introduced SonarQube Cloud region support,
-and the current CLI line is newer than the `5.0.2.4997` bundled by
-`bazel_sonarqube` `1.0.6`. Because this workflow explicitly targets
-`https://sonarcloud.io`, scanner age is not proven to be the direct cause, but it
-is a realistic compatibility risk and should be removed from the equation.
+The scanner version was stale relative to current SonarQube Cloud documentation.
+SonarScanner CLI 7.1 introduced SonarQube Cloud region support, and the current
+CLI line is newer than the `5.0.2.4997` bundled by `bazel_sonarqube` `1.0.6`.
+This branch removes that variable by supplying SonarScanner CLI `8.1.0.6389`
+explicitly. The upgraded run still fails on SonarCloud's quality-profile
+endpoint, so scanner age is no longer the likely cause.
 
 The debug run also showed that `workflow_dispatch` does not get the same
 automatic branch configuration as `push` or `pull_request`: the scanner created
@@ -88,14 +93,11 @@ are clearly attached to the selected branch.
    The failing API is the quality-profile search endpoint itself, and it returns
    HTTP `500` after the scanner has authenticated, loaded project settings, and
    created an analysis.
-2. Re-run SonarCloud with the upgraded SonarScanner CLI `8.1.0.6389` on this
-   branch. If the quality-profile endpoint still returns HTTP `500`, scanner
-   age has been ruled out.
-3. Open a SonarSource support/community issue with debug run `26518741206`, the
-   two failing endpoint URLs, and the project keys. The failure occurs after
-   SonarCloud accepts the project binding and creates the analysis, so
-   SonarSource will likely need server-side request logs.
-4. Keep the manual debug toggle in the workflow until the issue is resolved. It
+2. Open a SonarSource support/community issue with debug runs `26518741206` and
+   `26519939370`, the two failing endpoint URLs, and the project keys. The
+   failure occurs after SonarCloud accepts the project binding and creates the
+   analysis, so SonarSource will likely need server-side request logs.
+3. Keep the manual debug toggle in the workflow until the issue is resolved. It
    makes it possible to re-run the same analysis with `-X` without permanently
    enabling verbose logs on every PR.
 
