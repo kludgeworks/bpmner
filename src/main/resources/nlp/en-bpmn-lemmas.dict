@@ -1,0 +1,233 @@
+# OpenNLP DictionaryLemmatizer input. TSV: word<TAB>Penn-POS<TAB>lemma.
+# Hand-curated for the BPMN domain — covers common verbs, nouns and auxiliaries that
+# the seven Phase-3 NLP-dependent rules (#218) need to lemmatize. Unknown forms are
+# handled by the morphological fallback in OpenNlpBpmnNlp.
+#
+# Lines starting with `#` and blank lines are ignored by DictionaryLemmatizer.
+#
+# Penn tags used:
+#   VB  bare infinitive            VBP non-3rd-person singular present
+#   VBD past tense                 VBZ 3rd-person singular present
+#   VBG gerund / present participle
+#   VBN past participle
+#   NN  singular common noun       NNS plural common noun
+#   MD  modal                      JJ  adjective
+#   WP  wh-pronoun                 WRB wh-adverb
+#
+# Irregular verbs (BPMN-relevant) — bare forms
+send	VB	send
+make	VB	make
+get	VB	get
+bring	VB	bring
+catch	VB	catch
+run	VB	run
+choose	VB	choose
+take	VB	take
+come	VB	come
+go	VB	go
+break	VB	break
+# Irregular verb inflected forms
+is	VBZ	be
+are	VBP	be
+am	VBP	be
+was	VBD	be
+were	VBD	be
+been	VBN	be
+being	VBG	be
+has	VBZ	have
+have	VBP	have
+had	VBD	have
+having	VBG	have
+does	VBZ	do
+do	VBP	do
+did	VBD	do
+done	VBN	do
+doing	VBG	do
+sent	VBD	send
+sent	VBN	send
+sending	VBG	send
+sends	VBZ	send
+sends	NNS	send
+made	VBD	make
+made	VBN	make
+making	VBG	make
+makes	VBZ	make
+got	VBD	get
+got	VBN	get
+getting	VBG	get
+gets	VBZ	get
+brought	VBD	bring
+brought	VBN	bring
+bringing	VBG	bring
+brings	VBZ	bring
+caught	VBD	catch
+caught	VBN	catch
+catching	VBG	catch
+catches	VBZ	catch
+ran	VBD	run
+running	VBG	run
+runs	VBZ	run
+runs	NNS	run
+chose	VBD	choose
+chosen	VBN	choose
+choosing	VBG	choose
+chooses	VBZ	choose
+took	VBD	take
+taken	VBN	take
+taking	VBG	take
+takes	VBZ	take
+came	VBD	come
+come	VBN	come
+coming	VBG	come
+comes	VBZ	come
+went	VBD	go
+gone	VBN	go
+going	VBG	go
+goes	VBZ	go
+broke	VBD	break
+broken	VBN	break
+breaking	VBG	break
+breaks	VBZ	break
+# Common regular verbs (Verb + Object pattern in BPMN labels)
+review	VB	review
+reviews	VBZ	review
+reviewed	VBD	review
+reviewed	VBN	review
+reviewing	VBG	review
+process	VB	process
+process	NN	process
+processes	VBZ	process
+processes	NNS	process
+processed	VBD	process
+processed	VBN	process
+processing	VBG	process
+approve	VB	approve
+approves	VBZ	approve
+approved	VBD	approve
+approved	VBN	approve
+approving	VBG	approve
+reject	VB	reject
+rejects	VBZ	reject
+rejected	VBD	reject
+rejected	VBN	reject
+rejecting	VBG	reject
+receive	VB	receive
+receives	VBZ	receive
+received	VBD	receive
+received	VBN	receive
+receiving	VBG	receive
+submit	VB	submit
+submits	VBZ	submit
+submitted	VBD	submit
+submitted	VBN	submit
+submitting	VBG	submit
+validate	VB	validate
+validates	VBZ	validate
+validated	VBD	validate
+validated	VBN	validate
+validating	VBG	validate
+verify	VB	verify
+verifies	VBZ	verify
+verified	VBD	verify
+verified	VBN	verify
+verifying	VBG	verify
+check	VB	check
+checks	VBZ	check
+checked	VBD	check
+checked	VBN	check
+checking	VBG	check
+fulfil	VB	fulfil
+fulfils	VBZ	fulfil
+fulfilled	VBD	fulfil
+fulfilled	VBN	fulfil
+fulfilling	VBG	fulfil
+complete	VB	complete
+completes	VBZ	complete
+completed	VBD	complete
+completed	VBN	complete
+completing	VBG	complete
+cancel	VB	cancel
+cancels	VBZ	cancel
+cancelled	VBD	cancel
+cancelled	VBN	cancel
+cancelling	VBG	cancel
+notify	VB	notify
+notifies	VBZ	notify
+notified	VBD	notify
+notified	VBN	notify
+notifying	VBG	notify
+generate	VB	generate
+generates	VBZ	generate
+generated	VBD	generate
+generated	VBN	generate
+generating	VBG	generate
+update	VB	update
+updates	VBZ	update
+updated	VBD	update
+updated	VBN	update
+updating	VBG	update
+create	VB	create
+creates	VBZ	create
+created	VBD	create
+created	VBN	create
+creating	VBG	create
+issue	VB	issue
+issue	NN	issue
+issues	VBZ	issue
+issued	VBD	issue
+issued	VBN	issue
+issuing	VBG	issue
+fail	VB	fail
+fails	VBZ	fail
+failed	VBD	fail
+failed	VBN	fail
+failing	VBG	fail
+succeed	VB	succeed
+succeeds	VBZ	succeed
+succeeded	VBD	succeed
+succeeded	VBN	succeed
+succeeding	VBG	succeed
+# Common nouns (object slots in Verb + Object)
+order	NN	order
+orders	NNS	order
+payment	NN	payment
+payments	NNS	payment
+request	NN	request
+requests	NNS	request
+invoice	NN	invoice
+invoices	NNS	invoice
+customer	NN	customer
+customers	NNS	customer
+account	NN	account
+accounts	NNS	account
+booking	NN	booking
+bookings	NNS	booking
+submission	NN	submission
+submissions	NNS	submission
+application	NN	application
+applications	NNS	application
+report	NN	report
+reports	NNS	report
+notification	NN	notification
+notifications	NNS	notification
+# WH-words
+what	WP	what
+who	WP	who
+whom	WP	whom
+whose	WP	whose
+which	WP	which
+where	WRB	where
+when	WRB	when
+why	WRB	why
+how	WRB	how
+# Modal / auxiliary verbs
+can	MD	can
+could	MD	could
+may	MD	may
+might	MD	might
+must	MD	must
+shall	MD	shall
+should	MD	should
+will	MD	will
+would	MD	would
+ought	MD	ought

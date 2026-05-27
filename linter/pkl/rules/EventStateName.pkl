@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Event State Name"
@@ -25,3 +26,12 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+// Phase 3 (#218): activate via GrammaticalShapeCheck. STATE_LABEL passes for noun-led or
+// past-participle-led labels ("Order received", "Payment failed"); fires when the leading
+// token is an action verb in any other form ("Process the order").
+checkPrimitive = "GrammaticalShapeCheck"
+checkConfig = new CheckPrimitive.GrammaticalShapeCheck {
+  property = "name"
+  mode = "STATE_LABEL"
+}

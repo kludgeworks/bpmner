@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Diverging Gateway Question"
@@ -55,4 +56,14 @@ staticConfig = new {
       "whose",
       "whom",
     )
+}
+
+// Phase 3 (#218): activate via GrammaticalShapeCheck. QUESTION_FORM passes when the leading
+// token is a WH-word or modal/copular auxiliary, OR when the label ends with `?`. The
+// `interrogativeStarters` list above is presentation/legacy metadata — every entry is
+// either a WH-word or an auxiliary, both of which the BpmnNlp facade tags accordingly.
+checkPrimitive = "GrammaticalShapeCheck"
+checkConfig = new CheckPrimitive.GrammaticalShapeCheck {
+  property = "name"
+  mode = "QUESTION_FORM"
 }

@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 
 /**
  * Composes several deterministic sub-checks under one Pkl rule, attributing each
@@ -34,17 +35,19 @@ import dev.groknull.bpmner.api.RuleMetadata
  * rule's `targetElements` is broad (`bpmn:FlowNode`) but its sub-checks only apply to a
  * narrower set (`bpmn:BoundaryEvent`).
  */
-internal class CompositeCheck {
+internal object CompositeCheck {
     fun evaluate(
         ctx: BpmnDefinitionContext,
         metadata: RuleMetadata,
         config: CompositeCheckConfig,
-    ): List<RuleDiagnostic> = evaluate(ctx.toPrimitiveModelContext(), metadata, config)
+        nlp: BpmnNlp,
+    ): List<RuleDiagnostic> = evaluate(ctx.toPrimitiveModelContext(), metadata, config, nlp)
 
     fun evaluate(
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
         config: CompositeCheckConfig,
+        nlp: BpmnNlp,
     ): List<RuleDiagnostic> {
         if (config.subChecks.isEmpty()) return emptyList()
         val effectiveMetadata = if (config.targetTypes.isEmpty()) {
@@ -52,13 +55,14 @@ internal class CompositeCheck {
         } else {
             metadata.copy(targetElements = config.targetTypes)
         }
-        return config.subChecks.flatMap { sub -> evaluateSubCheck(model, effectiveMetadata, sub) }
+        return config.subChecks.flatMap { sub -> evaluateSubCheck(model, effectiveMetadata, sub, nlp) }
     }
 
     private fun evaluateSubCheck(
         model: PrimitiveModelContext,
         parentMetadata: RuleMetadata,
         sub: SubCheckConfig,
+        nlp: BpmnNlp,
     ): List<RuleDiagnostic> {
         if (sub.diagnosticCode == "default") {
             return listOf(parentMetadata.configError("SubCheck.diagnosticCode must not be \"default\""))
@@ -73,6 +77,6 @@ internal class CompositeCheck {
         // Narrow the metadata so the sub-check primitive's call to `metadata.diagnostic(...)`
         // picks `sub.diagnosticCode` (the only non-"default" key) and the matching message.
         val subMetadata = parentMetadata.copy(errorMessages = mapOf(sub.diagnosticCode to template))
-        return SubCheckEvaluator.evaluate(model, subMetadata, sub.config)
+        return SubCheckEvaluator.evaluate(model, subMetadata, sub.config, nlp)
     }
 }

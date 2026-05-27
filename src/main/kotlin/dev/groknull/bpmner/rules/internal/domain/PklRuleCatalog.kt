@@ -13,6 +13,7 @@ import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.mapping.BpmnRuleAdapter
 import dev.groknull.bpmner.rules.internal.domain.mapping.MappedCheck
+import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheck
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
@@ -57,6 +58,7 @@ import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
 @Component
 internal class PklRuleCatalog(
     compiledRules: List<BpmnRule>,
+    private val nlp: BpmnNlp,
     @Value("\${bpmner.rules.indexUri:${RULES_INDEX_URI}}")
     private val rulesIndexUri: String = RULES_INDEX_URI,
 ) : RuleRegistry {
@@ -136,10 +138,10 @@ internal class PklRuleCatalog(
             }
             when (val mc = adapted.mappedCheck) {
                 is MappedCheck.Deterministic ->
-                    bpmn += DeterministicPklRule(adapted.metadata, mc.config)
+                    bpmn += DeterministicPklRule(adapted.metadata, mc.config, nlp)
 
                 is MappedCheck.Composite ->
-                    bpmn += CompositePklRule(adapted.metadata, mc.config)
+                    bpmn += CompositePklRule(adapted.metadata, mc.config, nlp)
 
                 is MappedCheck.Llm -> {
                     bpmn += LlmPklRule(adapted.metadata)
@@ -171,6 +173,7 @@ internal class PklRuleCatalog(
 private class DeterministicPklRule(
     override val metadata: RuleMetadata,
     private val config: DeterministicCheckConfig,
+    private val nlp: BpmnNlp,
 ) : BpmnRule {
     override val id: String = metadata.id
 
@@ -178,16 +181,18 @@ private class DeterministicPklRule(
         ctx.toPrimitiveModelContext(),
         metadata,
         config,
+        nlp,
     )
 }
 
 private class CompositePklRule(
     override val metadata: RuleMetadata,
     private val config: CompositeCheckConfig,
+    private val nlp: BpmnNlp,
 ) : BpmnRule {
     override val id: String = metadata.id
 
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck().evaluate(ctx, metadata, config)
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck.evaluate(ctx, metadata, config, nlp)
 }
 
 private class LlmPklRule(

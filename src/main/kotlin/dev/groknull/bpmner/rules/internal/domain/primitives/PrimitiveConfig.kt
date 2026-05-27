@@ -132,6 +132,67 @@ internal enum class ElementConstraintMode {
     EVENT_BASED_GATEWAY_DIRECT_EVENTS,
 }
 
+// ---------------------------------------------------------------------------------------
+// Phase 3 (#218) NLP-aware primitives. Each takes a [BpmnNlp] facade at evaluation time —
+// see SubCheckEvaluator for the dispatch wiring.
+
+internal data class PartOfSpeechCheckConfig(
+    val property: String,
+    val mode: PartOfSpeechMode,
+    val posClass: NlpPosTag,
+) : DeterministicCheckConfig
+
+internal enum class PartOfSpeechMode {
+    LEADING_MUST_BE,
+    LEADING_MUST_NOT_BE,
+}
+
+/**
+ * Pkl-side mirror of [dev.groknull.bpmner.rules.internal.domain.nlp.PosTag]. Lives in this
+ * file so the Pkl config DSL doesn't need to import the `nlp` package — the loader maps
+ * one to the other in [dev.groknull.bpmner.rules.internal.domain.mapping.CheckConfigMapper].
+ */
+internal enum class NlpPosTag {
+    VERB,
+    NOUN,
+    ADJ,
+    AUX,
+    WH,
+    OTHER,
+}
+
+internal data class LemmaCheckConfig(
+    val property: String,
+    val mode: LemmaMode,
+    val lemmas: List<String>,
+) : DeterministicCheckConfig
+
+internal enum class LemmaMode {
+    REQUIRE_LEADING_LEMMA,
+    FORBID_LEADING_LEMMA,
+    REQUIRE_ANY_LEMMA,
+    FORBID_ANY_LEMMA,
+}
+
+internal data class GrammaticalShapeCheckConfig(
+    val property: String,
+    val mode: GrammaticalShape,
+) : DeterministicCheckConfig
+
+internal enum class GrammaticalShape {
+    /** Leading token is a noun OR a past-participle verb (`Order received`, `Payment failed`). */
+    STATE_LABEL,
+
+    /** Leading token is an action verb (`Process the order`). */
+    ACTION_LABEL,
+
+    /**
+     * Label is question-shaped: leading token is a WH-word or modal/copular auxiliary, OR
+     * the label ends with `?`.
+     */
+    QUESTION_FORM,
+}
+
 /**
  * Composite primitive config — composes deterministic sub-checks. See
  * [linter/pkl/schema/CheckPrimitive.pkl](linter/pkl/schema/CheckPrimitive.pkl) for the

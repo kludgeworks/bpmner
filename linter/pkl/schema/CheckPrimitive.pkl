@@ -45,6 +45,9 @@ typealias Primitive =
     | "CardinalityCheck"
     | "PoolLabelCheck"
     | "ElementConstraintCheck"
+    | "PartOfSpeechCheck"
+    | "LemmaCheck"
+    | "GrammaticalShapeCheck"
     | "CompositeCheck"
     | "LlmCheckRule"
 
@@ -119,6 +122,40 @@ class ElementConstraintCheck extends CheckConfig {
     | "PARALLEL_GATEWAY_STRUCTURE"
     | "EVENT_BASED_GATEWAY_DIRECT_EVENTS"
   constraints: Mapping<NonEmptyString, Any> = new Mapping {}
+}
+
+// --------------------------------------------------------------------------------------
+// Phase 3 (#218) NLP-aware primitives. Backed by [BpmnNlp] on the Kotlin side; rules using
+// these primitives consume tokenisation, POS-tagging, and lemmatisation built from a small
+// hand-curated BPMN-domain lemma dictionary. See `OpenNlpBpmnNlp.kt` for the heuristics.
+
+class PartOfSpeechCheck extends CheckConfig {
+  property: NonEmptyString
+  /// `LEADING_MUST_BE` fires when the leading token's POS is not [posClass] (e.g.
+  /// `VerbObjectName.missingVerb` expects `VERB`). `LEADING_MUST_NOT_BE` fires when it
+  /// IS [posClass]. Tokens classified as `OTHER` never fire either direction.
+  mode: "LEADING_MUST_BE" | "LEADING_MUST_NOT_BE"
+  /// One of the coarse POS classes exposed by `BpmnNlp`. Penn-Treebank tags are mapped to
+  /// these on the Kotlin side; rule authors never see Penn tags.
+  posClass: "VERB" | "NOUN" | "ADJ" | "AUX" | "WH" | "OTHER"
+}
+
+class LemmaCheck extends CheckConfig {
+  property: NonEmptyString
+  /// `REQUIRE_LEADING_LEMMA` / `FORBID_LEADING_LEMMA` constrain the leading token; the
+  /// `*_ANY_LEMMA` variants look at every token. Lemmas are case-folded at evaluation
+  /// time so authors can write them in any case.
+  mode: "REQUIRE_LEADING_LEMMA" | "FORBID_LEADING_LEMMA" | "REQUIRE_ANY_LEMMA" | "FORBID_ANY_LEMMA"
+  lemmas: List<NonEmptyString>
+}
+
+class GrammaticalShapeCheck extends CheckConfig {
+  property: NonEmptyString
+  /// `STATE_LABEL` passes for noun-led or past-participle-led labels (`Order received`).
+  /// `ACTION_LABEL` passes only for action-verb-led labels (`Process the order`).
+  /// `QUESTION_FORM` passes for labels starting with a WH-word or modal/copular auxiliary,
+  /// or ending with `?`.
+  mode: "STATE_LABEL" | "ACTION_LABEL" | "QUESTION_FORM"
 }
 
 /// CompositeCheck composes several typed deterministic sub-checks under one Pkl rule. Each

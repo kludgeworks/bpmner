@@ -88,6 +88,21 @@ class BpmnerArchitectureTest {
     }
 
     @Test
+    fun `OpenNLP imports are restricted to the nlp package`() {
+        // Phase 3 (#218) added OpenNLP behind the [BpmnNlp] facade. Same intent as the
+        // GraalJS pin above: keep the vendor dependency on one side of the interface so
+        // future swaps (e.g. to a POSModel-backed implementation) only touch ..nlp..
+        // without rippling into rule code.
+        noClasses()
+            .that()
+            .resideOutsideOfPackages("..rules.internal.domain.nlp..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("opennlp.tools..")
+            .check(classes)
+    }
+
+    @Test
     fun `Ai bean reference is restricted to inbound adapters`() {
         // The framework-centric posture (issue #240 discussion): LLM calls go through Embabel
         // via `OperationContext`+`PromptRunner` inside `@Action` methods, never via the

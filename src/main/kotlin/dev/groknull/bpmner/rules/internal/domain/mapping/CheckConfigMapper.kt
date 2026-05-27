@@ -13,8 +13,15 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShape
+import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShapeCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.LemmaCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.LemmaMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.NlpPosTag
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
@@ -31,8 +38,9 @@ import dev.groknull.bpmner.pkl.CheckPrimitive as PklCheckPrim
  * Result of mapping a Pkl-generated `CheckConfig` into a typed Kotlin config. Each Pkl rule's
  * `checkPrimitive` lands in one of three families:
  *
- *  - [Deterministic] — the 10 structural primitives. Consumed by the primitive check classes
- *    via `SubCheckEvaluator` or direct evaluate calls in [dev.groknull.bpmner.rules.internal.domain.primitives].
+ *  - [Deterministic] — the structural and NLP-aware primitives. Consumed by the primitive
+ *    check classes via `SubCheckEvaluator` or direct evaluate calls in
+ *    [dev.groknull.bpmner.rules.internal.domain.primitives].
  *  - [Composite] — `CompositeCheck` composes deterministic sub-checks. Each sub-check is
  *    itself a [Deterministic]; mixing in [Composite] (nesting) or [Llm] is rejected here.
  *  - [Llm] — LLM-judged check, routed through `LlmRuleAgent` rather than the deterministic
@@ -53,160 +61,98 @@ internal sealed interface MappedCheck {
 
 internal object CheckConfigMapper {
     fun map(generated: PklCheckPrim.CheckConfig): MappedCheck = when (generated) {
-        is PklCheckPrim.RequiredPropertyCheck ->
-            MappedCheck.Deterministic(
-                RequiredPropertyCheckConfig(property = generated.property),
-            )
-
-        is PklCheckPrim.PropertyPatternCheck ->
-            MappedCheck.Deterministic(
-                PropertyPatternCheckConfig(
-                    property = generated.property,
-                    pattern = generated.pattern,
-                    patternDescription = generated.patternDescription,
-                ),
-            )
-
-        is PklCheckPrim.VocabularyCheck ->
-            MappedCheck.Deterministic(
-                VocabularyCheckConfig(
-                    property = generated.property,
-                    mode = vocabularyMode(generated.mode),
-                    words = generated.words,
-                ),
-            )
-
-        is PklCheckPrim.RequiredAssociationCheck ->
-            MappedCheck.Deterministic(
-                RequiredAssociationCheckConfig(
-                    association = generated.association,
-                    sourceTypes = generated.sourceTypes,
-                    targetTypes = generated.targetTypes,
-                ),
-            )
-
-        is PklCheckPrim.TopologyCheck ->
-            MappedCheck.Deterministic(
-                TopologyCheckConfig(
-                    topology = topologyMode(generated.topology),
-                    minIncoming = generated.minIncoming?.toInt(),
-                    maxIncoming = generated.maxIncoming?.toInt(),
-                    minOutgoing = generated.minOutgoing?.toInt(),
-                    maxOutgoing = generated.maxOutgoing?.toInt(),
-                ),
-            )
-
-        is PklCheckPrim.ConnectivityCheck ->
-            MappedCheck.Deterministic(
-                ConnectivityCheckConfig(
-                    mode = connectivityMode(generated.mode),
-                    sourceTypes = generated.sourceTypes,
-                    targetTypes = generated.targetTypes,
-                ),
-            )
-
-        is PklCheckPrim.PairingCheck ->
-            MappedCheck.Deterministic(
-                PairingCheckConfig(
-                    mode = pairingMode(generated.mode),
-                    left = generated.left,
-                    right = generated.right,
-                ),
-            )
-
-        is PklCheckPrim.CardinalityCheck ->
-            MappedCheck.Deterministic(
-                CardinalityCheckConfig(
-                    element = generated.element,
-                    min = generated.min?.toInt(),
-                    max = generated.max?.toInt(),
-                ),
-            )
-
-        is PklCheckPrim.PoolLabelCheck ->
-            MappedCheck.Deterministic(
-                PoolLabelCheckConfig(mode = poolLabelMode(generated.mode)),
-            )
-
-        is PklCheckPrim.ElementConstraintCheck ->
-            MappedCheck.Deterministic(
-                ElementConstraintCheckConfig(
-                    element = generated.element,
-                    mode = elementConstraintMode(generated.mode),
-                    constraints = generated.constraints,
-                ),
-            )
-
-        is PklCheckPrim.CompositeCheck ->
-            MappedCheck.Composite(
-                CompositeCheckConfig(
-                    targetTypes = generated.targetTypes,
-                    subChecks = generated.subChecks.map { subCheck ->
-                        val mappedSub = map(subCheck.config)
-                        require(mappedSub is MappedCheck.Deterministic) {
-                            "CompositeCheck sub-check '${subCheck.diagnosticCode}' must be deterministic; " +
-                                "got ${mappedSub::class.java.simpleName}"
-                        }
-                        SubCheckConfig(
-                            diagnosticCode = subCheck.diagnosticCode,
-                            config = mappedSub.config,
-                        )
-                    },
-                ),
-            )
-
-        is PklCheckPrim.LlmCheckRule ->
-            MappedCheck.Llm(
-                LlmCheckRuleConfig(prompt = generated.prompt, rubric = generated.rubric),
-            )
-
-        else -> error("Unknown CheckConfig subtype: ${generated::class.java.name}")
-    }
-
-    private fun vocabularyMode(raw: String): VocabularyMode = when (raw) {
-        "REQUIRE" -> VocabularyMode.REQUIRE
-        "FORBID" -> VocabularyMode.FORBID
-        "REQUIRE_LEADING" -> VocabularyMode.REQUIRE_LEADING
-        "FORBID_LEADING" -> VocabularyMode.FORBID_LEADING
-        else -> error(
-            "Unknown VocabularyCheck.mode '$raw' (expected REQUIRE, FORBID, REQUIRE_LEADING, or FORBID_LEADING)",
-        )
-    }
-
-    private fun topologyMode(raw: String): TopologyMode = when (raw) {
-        "NO_FAKE_JOIN" -> TopologyMode.NO_FAKE_JOIN
-        "NO_SUPERFLUOUS" -> TopologyMode.NO_SUPERFLUOUS
-        "NO_JOIN_FORK" -> TopologyMode.NO_JOIN_FORK
-        "CONVERGING_UNNAMED" -> TopologyMode.CONVERGING_UNNAMED
-        else -> error("Unknown TopologyCheck.topology '$raw'")
-    }
-
-    private fun connectivityMode(raw: String): ConnectivityMode = when (raw) {
-        "NO_INCOMING" -> ConnectivityMode.NO_INCOMING
-        "FLOWS_NAMED" -> ConnectivityMode.FLOWS_NAMED
-        "WITHIN_POOL" -> ConnectivityMode.WITHIN_POOL
-        "ACROSS_POOLS" -> ConnectivityMode.ACROSS_POOLS
-        else -> error("Unknown ConnectivityCheck.mode '$raw'")
-    }
-
-    private fun pairingMode(raw: String): PairingMode = when (raw) {
-        "ERROR_END_BOUNDARY" -> PairingMode.ERROR_END_BOUNDARY
-        "LINK_PAIRING" -> PairingMode.LINK_PAIRING
-        "MESSAGE_START_FLOW" -> PairingMode.MESSAGE_START_FLOW
-        else -> error("Unknown PairingCheck.mode '$raw'")
-    }
-
-    private fun poolLabelMode(raw: String): PoolLabelMode = runCatching {
-        PoolLabelMode.valueOf(raw)
-    }.getOrElse {
-        error("Unknown PoolLabelCheck.mode '$raw' (expected one of ${PoolLabelMode.entries.joinToString { it.name }})")
-    }
-
-    private fun elementConstraintMode(raw: String): ElementConstraintMode = when (raw) {
-        "ALLOWED_ELEMENT_SUBSET" -> ElementConstraintMode.ALLOWED_ELEMENT_SUBSET
-        "TIMER_EXPRESSION" -> ElementConstraintMode.TIMER_EXPRESSION
-        "PARALLEL_GATEWAY_STRUCTURE" -> ElementConstraintMode.PARALLEL_GATEWAY_STRUCTURE
-        "EVENT_BASED_GATEWAY_DIRECT_EVENTS" -> ElementConstraintMode.EVENT_BASED_GATEWAY_DIRECT_EVENTS
-        else -> error("Unknown ElementConstraintCheck.mode '$raw'")
+        is PklCheckPrim.CompositeCheck -> MappedCheck.Composite(generated.toCompositeConfig())
+        is PklCheckPrim.LlmCheckRule -> MappedCheck.Llm(generated.toLlmConfig())
+        else -> MappedCheck.Deterministic(generated.toDeterministicConfig())
     }
 }
+
+// ---------------------------------------------------------------------------------------
+// Per-family mappers, split so each function's branch count stays well under detekt's
+// CyclomaticComplexMethod threshold. The Pkl→Kotlin mapping is just constructor calls
+// per primitive, so each branch is one line.
+
+private fun PklCheckPrim.CheckConfig.toDeterministicConfig(): DeterministicCheckConfig = toStructuralConfig()
+    ?: toNlpConfig()
+    ?: error("Unknown CheckConfig subtype: ${this::class.java.name}")
+
+private fun PklCheckPrim.CheckConfig.toStructuralConfig(): DeterministicCheckConfig? = when (this) {
+    is PklCheckPrim.RequiredPropertyCheck -> RequiredPropertyCheckConfig(property)
+
+    is PklCheckPrim.PropertyPatternCheck -> PropertyPatternCheckConfig(property, pattern, patternDescription)
+
+    is PklCheckPrim.VocabularyCheck -> VocabularyCheckConfig(
+        property = property,
+        mode = parseMode<VocabularyMode>(mode, "VocabularyCheck.mode"),
+        words = words,
+    )
+
+    is PklCheckPrim.RequiredAssociationCheck -> RequiredAssociationCheckConfig(association, sourceTypes, targetTypes)
+
+    is PklCheckPrim.TopologyCheck -> TopologyCheckConfig(
+        topology = parseMode<TopologyMode>(topology, "TopologyCheck.topology"),
+        minIncoming = minIncoming?.toInt(),
+        maxIncoming = maxIncoming?.toInt(),
+        minOutgoing = minOutgoing?.toInt(),
+        maxOutgoing = maxOutgoing?.toInt(),
+    )
+
+    is PklCheckPrim.ConnectivityCheck -> ConnectivityCheckConfig(
+        mode = parseMode<ConnectivityMode>(mode, "ConnectivityCheck.mode"),
+        sourceTypes = sourceTypes,
+        targetTypes = targetTypes,
+    )
+
+    is PklCheckPrim.PairingCheck -> PairingCheckConfig(parseMode<PairingMode>(mode, "PairingCheck.mode"), left, right)
+
+    is PklCheckPrim.CardinalityCheck -> CardinalityCheckConfig(element, min?.toInt(), max?.toInt())
+
+    is PklCheckPrim.PoolLabelCheck -> PoolLabelCheckConfig(parseMode<PoolLabelMode>(mode, "PoolLabelCheck.mode"))
+
+    is PklCheckPrim.ElementConstraintCheck -> ElementConstraintCheckConfig(
+        element = element,
+        mode = parseMode<ElementConstraintMode>(mode, "ElementConstraintCheck.mode"),
+        constraints = constraints,
+    )
+
+    else -> null
+}
+
+private fun PklCheckPrim.CheckConfig.toNlpConfig(): DeterministicCheckConfig? = when (this) {
+    is PklCheckPrim.PartOfSpeechCheck -> PartOfSpeechCheckConfig(
+        property = property,
+        mode = parseMode<PartOfSpeechMode>(mode, "PartOfSpeechCheck.mode"),
+        posClass = parseMode<NlpPosTag>(posClass, "PartOfSpeechCheck.posClass"),
+    )
+
+    is PklCheckPrim.LemmaCheck -> LemmaCheckConfig(property, parseMode<LemmaMode>(mode, "LemmaCheck.mode"), lemmas)
+
+    is PklCheckPrim.GrammaticalShapeCheck -> GrammaticalShapeCheckConfig(
+        property = property,
+        mode = parseMode<GrammaticalShape>(mode, "GrammaticalShapeCheck.mode"),
+    )
+
+    else -> null
+}
+
+private fun PklCheckPrim.CompositeCheck.toCompositeConfig(): CompositeCheckConfig = CompositeCheckConfig(
+    targetTypes = targetTypes,
+    subChecks = subChecks.map { sub ->
+        val mapped = CheckConfigMapper.map(sub.config)
+        require(mapped is MappedCheck.Deterministic) {
+            "CompositeCheck sub-check '${sub.diagnosticCode}' must be deterministic; got ${mapped::class.java.simpleName}"
+        }
+        SubCheckConfig(diagnosticCode = sub.diagnosticCode, config = mapped.config)
+    },
+)
+
+private fun PklCheckPrim.LlmCheckRule.toLlmConfig(): LlmCheckRuleConfig = LlmCheckRuleConfig(prompt = prompt, rubric = rubric)
+
+/**
+ * Parses [raw] as an enum value of [T], using the enum's declared `name`. Produces an
+ * actionable error message naming the [owner] (typically `Primitive.fieldName`) and the
+ * expected values when [raw] doesn't match. Used by every Pkl-mode parser so the failure
+ * mode is identical across primitives.
+ */
+private inline fun <reified T : Enum<T>> parseMode(raw: String, owner: String): T = enumValues<T>().firstOrNull { it.name == raw }
+    ?: error("Unknown $owner '$raw' (expected one of ${enumValues<T>().joinToString { it.name }})")

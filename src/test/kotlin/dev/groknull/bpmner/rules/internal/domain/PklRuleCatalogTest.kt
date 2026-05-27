@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -25,13 +26,14 @@ import kotlin.test.assertTrue
 
 @Suppress("TooManyFunctions") // round-trip tests fan out per primitive family; one test per rule
 internal class PklRuleCatalogTest {
+    private val nlp = testBpmnNlp()
 
     @Test
     fun `catalog initializes from classpath RulesIndex without throwing`() {
         // Just exercises the Pkl runtime evaluation path against the real RulesIndex.pkl on
         // the test classpath. Until 2D.7 ports rules with checkPrimitive set, every Pkl rule
         // gets skipped at adapt time — but the loader itself must complete cleanly.
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         catalog.activeRules()
         catalog.llmRuleSpecs()
     }
@@ -40,7 +42,7 @@ internal class PklRuleCatalogTest {
     fun `compiled rules are present in activeRules and ruleById`() {
         val compiled = TestBpmnRule("test-compiled-rule")
 
-        val catalog = PklRuleCatalog(listOf(compiled))
+        val catalog = PklRuleCatalog(listOf(compiled), nlp)
 
         assertEquals(listOf<BpmnRule>(compiled), catalog.activeRules().filter { it === compiled })
         assertSame(compiled, catalog.ruleById("test-compiled-rule"))
@@ -48,7 +50,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `ruleById returns null for unknown id`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
 
         assertNull(catalog.ruleById("definitely-not-a-rule-id"))
     }
@@ -63,6 +65,7 @@ internal class PklRuleCatalogTest {
             assertFailsWith<RuntimeException> {
                 PklRuleCatalog(
                     compiledRules = emptyList(),
+                    nlp = nlp,
                     rulesIndexUri = "modulepath:/no/such/resource/RulesIndex.pkl",
                 )
             }
@@ -81,7 +84,7 @@ internal class PklRuleCatalogTest {
         //   CheckConfigMapper -> PropertyPatternCheck -> RuleDiagnostic.
         // The rule is configured with pattern "^[A-Z].*"; a lowercase-starting activity name
         // is the canonical violation kind.
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById(ACTIVITY_LABEL_RULE_ID)
             ?: error("Pkl rule '$ACTIVITY_LABEL_RULE_ID' not loaded; check the rule's checkPrimitive/checkConfig in RulesIndex")
 
@@ -97,7 +100,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `round-trip - ActivityLabelCapitalization is silent on a sentence-case label`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById(ACTIVITY_LABEL_RULE_ID)
             ?: error("Pkl rule '$ACTIVITY_LABEL_RULE_ID' not loaded")
 
@@ -107,7 +110,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `round-trip - DiscouragedBusinessVerbs flags labels starting with a forbidden verb`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById("act-discouraged-business-verbs")
             ?: error("Pkl rule 'act-discouraged-business-verbs' not loaded")
 
@@ -119,7 +122,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `round-trip - DiscouragedBusinessVerbs is silent when forbidden verb is not leading`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById("act-discouraged-business-verbs")
             ?: error("Pkl rule 'act-discouraged-business-verbs' not loaded")
 
@@ -130,7 +133,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `round-trip - StartNoIncoming flags start events with incoming sequence flow`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById("evt-start-no-incoming")
             ?: error("Pkl rule 'evt-start-no-incoming' not loaded")
 
@@ -157,7 +160,7 @@ internal class PklRuleCatalogTest {
 
     @Test
     fun `round-trip - ConvergingGatewayUnnamed flags named converging gateways`() {
-        val catalog = PklRuleCatalog(emptyList())
+        val catalog = PklRuleCatalog(emptyList(), nlp)
         val rule = catalog.ruleById("gtw-converging-gateway-unnamed")
             ?: error("Pkl rule 'gtw-converging-gateway-unnamed' not loaded")
 
@@ -185,6 +188,112 @@ internal class PklRuleCatalogTest {
         assertEquals(listOf("g"), rule.evaluate(ctx).map { it.elementId })
     }
 
+    // -------------------------------------------------------------------------------------
+    // Phase 3 (#218) NLP-aware rule activations — one round-trip test per activated rule.
+
+    @Test
+    fun `round-trip - VerbObjectName fires the missingVerb sub-check on a noun-led activity`() {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        val rule = catalog.ruleById("act-verb-object-name") ?: error("Pkl rule 'act-verb-object-name' not loaded")
+
+        // "Order processing" is two words (passes tooShort) but starts with a noun, not a verb
+        // — only the `missingVerb` sub-check should fire.
+        val ctx = ctxWithUserTask(taskId = "t", taskName = "Order processing")
+        val diagnostics = rule.evaluate(ctx)
+
+        assertEquals(1, diagnostics.size, "expected exactly one diagnostic (missingVerb); got: $diagnostics")
+        assertEquals("missingVerb", diagnostics.single().diagnosticCode)
+    }
+
+    @Test
+    fun `round-trip - EventStateName fires on an action-led start event`() {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        val rule = catalog.ruleById("evt-event-state-name") ?: error("Pkl rule 'evt-event-state-name' not loaded")
+
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("bad", "Process the order"),
+                    BpmnEndEvent("good", "Order received"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "bad", "good")),
+            ),
+        )
+        val diagnostics = rule.evaluate(ctx)
+        assertEquals(listOf("bad"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - IntermediateEventNotAction fires on an action-led intermediate event`() {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        val rule = catalog.ruleById("evt-intermediate-event-not-action")
+            ?: error("Pkl rule 'evt-intermediate-event-not-action' not loaded")
+
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    dev.groknull.bpmner.core.BpmnIntermediateCatchEvent(
+                        "bad",
+                        name = "Send the notification",
+                        eventDefinition = dev.groknull.bpmner.core.BpmnNoneEventDefinition,
+                    ),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "s", "bad"), BpmnEdge("f2", "bad", "e")),
+            ),
+        )
+        val diagnostics = rule.evaluate(ctx)
+        assertEquals(listOf("bad"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - GatewayNoWorkLabel fires on a verb-led gateway`() {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        val rule = catalog.ruleById("gtw-gateway-no-work-label") ?: error("Pkl rule 'gtw-gateway-no-work-label' not loaded")
+
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnExclusiveGateway("bad", "Validate the order"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "s", "bad"), BpmnEdge("f2", "bad", "e")),
+            ),
+        )
+        val diagnostics = rule.evaluate(ctx)
+        assertEquals(listOf("bad"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - DivergingGatewayQuestion fires on a non-question gateway`() {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        val rule = catalog.ruleById("gtw-diverging-gateway-question")
+            ?: error("Pkl rule 'gtw-diverging-gateway-question' not loaded")
+
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnExclusiveGateway("bad", "Order outcome"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "s", "bad"), BpmnEdge("f2", "bad", "e")),
+            ),
+        )
+        val diagnostics = rule.evaluate(ctx)
+        assertEquals(listOf("bad"), diagnostics.map { it.elementId })
+    }
+
     @Test
     fun `catalog reports loaded count clearly when only compiled rules contribute`() {
         // Until 2D.7 ports rules with checkPrimitive set, the Pkl side adds nothing. The
@@ -193,7 +302,7 @@ internal class PklRuleCatalogTest {
         // is incrementally adopted.
         val compiled = listOf(TestBpmnRule("test-r1"), TestBpmnRule("test-r2"))
 
-        val catalog = PklRuleCatalog(compiled)
+        val catalog = PklRuleCatalog(compiled, nlp)
 
         val ids = catalog.activeRules().map { it.id }.toSet()
         assertTrue(ids.containsAll(listOf("test-r1", "test-r2")))
