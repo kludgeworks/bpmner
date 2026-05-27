@@ -1,8 +1,6 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-name: CodeQL Config
-
 paths-ignore:
   - bazel-*
   - '**/node_modules/**'
