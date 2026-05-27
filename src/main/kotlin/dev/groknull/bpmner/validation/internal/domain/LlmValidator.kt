@@ -55,5 +55,5 @@ internal class LlmValidator(
         }
     }
 
-    private fun isLlmJudged(rule: BpmnRule): Boolean = rule.metadata.checkPrimitive == "LlmCheck"
+    private fun isLlmJudged(rule: BpmnRule): Boolean = rule.metadata.checkPrimitive == "LlmCheckRule"
 }

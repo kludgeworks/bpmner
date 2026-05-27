@@ -34,8 +34,12 @@ interface RuleRegistry {
      * alias-form id such as `gen-02-no-duplicate-diagrams` and need to resolve back to the
      * canonical rule.
      *
-     * Returns the same rule [ruleById] returns when the lookup hits a canonical id; falls
-     * back to the alias index when not. Returns `null` if neither matches.
+     * **The default implementation only resolves canonical ids** — it delegates to
+     * [ruleById] and has no alias index. Implementations that want to honour
+     * [RuleMetadata.aliases] must override this method and build their own alias map
+     * (see [dev.groknull.bpmner.rules.internal.domain.PklRuleCatalog] for the reference
+     * implementation). Test stubs that don't override will silently return `null` for any
+     * alias-form id.
      */
     fun ruleByIdOrAlias(id: String): BpmnRule? = ruleById(id)
 }

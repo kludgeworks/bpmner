@@ -13,6 +13,7 @@ import dev.groknull.bpmner.rules.RuleEngine
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
+import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.LintIssue
 import org.slf4j.LoggerFactory
@@ -73,7 +74,11 @@ internal class RuleEngineLintingAdapter(
     override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = ruleNames
         .distinct()
         .mapNotNull { name ->
-            ruleRegistry.ruleByIdOrAlias(name)?.metadata?.let { name to renderRuleMarkdown(it) }
+            // Strip any legacy `bpmner/` or `bpmnlint-plugin-bpmner/` prefix before lookup —
+            // `RuleRegistry` indexes by bare id. Defensive against externally-sourced
+            // diagnostics whose `rule` field still carries the prefix.
+            val bareName = BpmnLintRuleIds.bareRuleId(name)
+            ruleRegistry.ruleByIdOrAlias(bareName)?.metadata?.let { name to renderRuleMarkdown(it) }
         }
         .toMap()
 
