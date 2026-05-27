@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
-  <bpmn:process id="Process_1" name="Handle rebooking request">
-    <bpmn:startEvent id="StartEvent_1" name="Request received" />
-  </bpmn:process>
-  <bpmn:collaboration id="Collaboration_1">
-    <bpmn:participant id="Participant_1" name="Customer Service" processRef="Process_1" />
-  </bpmn:collaboration>
-</bpmn:definitions>

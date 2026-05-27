@@ -26,8 +26,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 // Partial port: enforces the "at least two words" half of the legacy contract (the
 // `tooShort` diagnostic). The `missingVerb` half requires POS tagging which the
 // deterministic primitives cannot express — that check stays on the legacy JS path

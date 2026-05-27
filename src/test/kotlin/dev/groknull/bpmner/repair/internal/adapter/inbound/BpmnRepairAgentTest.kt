@@ -20,6 +20,7 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractValidationReport
@@ -44,18 +45,15 @@ import dev.groknull.bpmner.repair.internal.domain.FullLlmRewriteRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.LlmPatchRepairStrategy
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
 import dev.groknull.bpmner.repair.internal.domain.TargetedLabelRepairStrategy
+import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.BpmnEvaluationPipeline
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintJsEngine
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
-import dev.groknull.bpmner.validation.BpmnValidatorInfrastructureException
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.PklRuleCapabilityAdapter
-import dev.groknull.bpmner.validation.RuleCatalogService
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
@@ -66,18 +64,18 @@ import kotlin.test.assertTrue
 class BpmnRepairAgentTest {
     private fun buildRepairAgent(
         config: BpmnConfig,
-        lintService: BpmnLintService,
+        lintingPort: BpmnLintingPort,
         xsdValidator: BpmnXsdValidator,
         converter: BpmnDefinitionToXmlConverter,
         patchApplier: BpmnPatchApplier = BpmnPatchApplier(),
     ): BpmnRepairAgent {
         val fingerprints = BpmnFingerprintService()
-        val normalizer = BpmnDiagnosticNormalizer(lintService)
-        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, NoopRuleGuidancePort)
+        val normalizer = BpmnDiagnosticNormalizer(lintingPort)
+        val promptFactory = BpmnRepairPromptFactory(lintingPort, fingerprints, NoopRuleGuidancePort)
         val evaluationPipeline =
             BpmnEvaluationPipeline(
                 config = config,
-                bpmnLintingPort = lintService,
+                bpmnLintingPort = lintingPort,
                 bpmnXsdValidationPort = xsdValidator,
                 bpmnDefinitionValidator = BpmnDefinitionValidator(),
                 normalizer = normalizer,
@@ -88,7 +86,7 @@ class BpmnRepairAgentTest {
                 DeterministicTopologyRepairStrategy(
                     BpmnLocalModelFixHandlerRegistry(emptyList()),
                     patchApplier,
-                    RuleCatalogService(),
+                    EmptyRuleRegistry,
                 ),
                 TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
                 LlmPatchRepairStrategy(config, promptFactory, patchApplier),
@@ -113,9 +111,9 @@ class BpmnRepairAgentTest {
     @Test
     fun `valid rendered bpmn passes straight through to validated xml`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(listOf(emptyList()))
+        val lintingPort = RecordingLintingPort(listOf(emptyList()))
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintingPort, xsdValidator, converter)
         val definition = testBpmnDefinition()
         val rendered = converter.render(definition)
         val context = FakeActionContext()
@@ -133,7 +131,7 @@ class BpmnRepairAgentTest {
         assertTrue(result.diagnostics.isEmpty())
         assertEquals(0, result.repairAttempts)
         assertEquals(1, xsdValidator.xmls.size)
-        assertEquals(1, lintService.xmls.size)
+        assertEquals(1, lintingPort.definitions.size)
         assertEquals(1, converter.renderCalls)
     }
 
@@ -142,15 +140,15 @@ class BpmnRepairAgentTest {
         val invalid = testBpmnDefinition()
         val corrected = testBpmnDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService =
-            RecordingLintService(
+        val lintingPort =
+            RecordingLintingPort(
                 listOf(
                     listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
                     emptyList(),
                 ),
             )
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(invalid)
@@ -168,7 +166,7 @@ class BpmnRepairAgentTest {
         assertTrue(result.xml.contains("id=\"Process_MakeToast\""))
         assertTrue(result.xml.contains("id=\"Task_1\""))
         assertEquals(2, xsdValidator.xmls.size)
-        assertEquals(2, lintService.xmls.size)
+        assertEquals(2, lintingPort.definitions.size)
         assertEquals(2, converter.renderCalls)
         assertEquals(1, result.repairAttempts)
         val repairPrompt =
@@ -182,52 +180,12 @@ class BpmnRepairAgentTest {
     }
 
     @Test
-    fun `lint parse error for unknown rule aborts without repair`() {
-        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService =
-            RecordingLintService(
-                listOf(
-                    listOf(
-                        LintIssue(
-                            id = null,
-                            rule = "parse-error",
-                            message = "unknown rule <bpmneract-verb-object-name>",
-                        ),
-                    ),
-                ),
-            )
-        val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
-        val context = FakeActionContext()
-        val definition = testBpmnDefinition()
-        val initialRendered = converter.render(definition)
-
-        val error =
-            assertFailsWith<BpmnValidatorInfrastructureException> {
-                agent.repair(
-                    BpmnRequest("Make toast"),
-                    testLaidOutGraph(definition),
-                    initialRendered,
-                    testProcessContract(),
-                    context,
-                )
-            }
-
-        assertTrue(error.message!!.contains("BPMN validator infrastructure failure"))
-        assertTrue(error.message!!.contains("bpmneract-verb-object-name"))
-        assertTrue(context.llmInvocations.isEmpty())
-        assertEquals(1, xsdValidator.xmls.size)
-        assertEquals(1, lintService.xmls.size)
-        assertEquals(1, converter.renderCalls)
-    }
-
-    @Test
     fun `bpmner lint issue includes matching rule docs in repair prompt contributor`() {
         val invalid = testBpmnDefinition()
         val corrected = testBpmnDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService =
-            RecordingLintService(
+        val lintingPort =
+            RecordingLintingPort(
                 responses =
                 listOf(
                     listOf(
@@ -245,7 +203,7 @@ class BpmnRepairAgentTest {
                 ),
             )
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(invalid)
@@ -281,9 +239,9 @@ class BpmnRepairAgentTest {
                     emptyList(),
                 ),
             )
-        val lintService = RecordingLintService(listOf(emptyList()))
+        val lintingPort = RecordingLintingPort(listOf(emptyList()))
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 3), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
@@ -300,7 +258,7 @@ class BpmnRepairAgentTest {
         assertTrue(result.xml.contains("id=\"Process_Fixed\""))
         assertTrue(result.xml.contains("name=\"Prepare toast safely\""))
         assertEquals(2, xsdValidator.xmls.size)
-        assertEquals(1, lintService.xmls.size)
+        assertEquals(1, lintingPort.definitions.size)
         val repairPrompt =
             context.llmInvocations
                 .single()
@@ -316,8 +274,8 @@ class BpmnRepairAgentTest {
         val initial = testBpmnDefinition()
         val corrected = testBpmnDefinition(processName = "Make toast again")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService =
-            RecordingLintService(
+        val lintingPort =
+            RecordingLintingPort(
                 listOf(
                     listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
                     listOf(
@@ -330,7 +288,7 @@ class BpmnRepairAgentTest {
                 ),
             )
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 2), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 2), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
@@ -348,7 +306,7 @@ class BpmnRepairAgentTest {
 
         assertTrue(error.message!!.contains("Failed to produce valid BPMN after 2 attempts"))
         assertEquals(2, xsdValidator.xmls.size)
-        assertEquals(2, lintService.xmls.size)
+        assertEquals(2, lintingPort.definitions.size)
     }
 
     @Test
@@ -357,9 +315,9 @@ class BpmnRepairAgentTest {
         val corrected = testBpmnDefinition(processName = "Make toast again")
         val repeatedIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(listOf(listOf(repeatedIssue), listOf(repeatedIssue)))
+        val lintingPort = RecordingLintingPort(listOf(listOf(repeatedIssue), listOf(repeatedIssue)))
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(corrected)
         val initialRendered = converter.render(initial)
@@ -379,15 +337,15 @@ class BpmnRepairAgentTest {
         assertTrue(error.message!!.contains("history=#1"))
         assertEquals(1, context.llmInvocations.size)
         assertEquals(2, xsdValidator.xmls.size)
-        assertEquals(2, lintService.xmls.size)
+        assertEquals(2, lintingPort.definitions.size)
     }
 
     @Test
     fun `unchanged repaired definition fails before rerender`() {
         val initial = testBpmnDefinition()
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService =
-            RecordingLintService(
+        val lintingPort =
+            RecordingLintingPort(
                 listOf(
                     listOf(
                         LintIssue(
@@ -399,7 +357,7 @@ class BpmnRepairAgentTest {
                 ),
             )
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(initial)
         val initialRendered = converter.render(initial)
@@ -418,7 +376,7 @@ class BpmnRepairAgentTest {
         assertTrue(error.message!!.contains("unchanged patch"))
         assertEquals(1, context.llmInvocations.size)
         assertEquals(1, xsdValidator.xmls.size)
-        assertEquals(1, lintService.xmls.size)
+        assertEquals(1, lintingPort.definitions.size)
         assertEquals(1, converter.renderCalls)
     }
 
@@ -427,15 +385,15 @@ class BpmnRepairAgentTest {
         val initial = testBpmnDefinition()
         val firstRepair = testBpmnDefinition(processName = "Make toast again")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService =
-            RecordingLintService(
+        val lintingPort =
+            RecordingLintingPort(
                 listOf(
                     listOf(LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")),
                     listOf(LintIssue(id = "Task_1", rule = "end-event-required", message = "Missing end event")),
                 ),
             )
         val converter = RecordingConverter()
-        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintService, xsdValidator, converter)
+        val agent = buildRepairAgent(BpmnConfig(maxAttempts = 5), lintingPort, xsdValidator, converter)
         val context = FakeActionContext()
         context.expectResponse(firstRepair)
         context.expectResponse(initial)
@@ -455,7 +413,7 @@ class BpmnRepairAgentTest {
         assertTrue(error.message!!.contains("repeated invalid output"))
         assertEquals(2, context.llmInvocations.size)
         assertEquals(2, xsdValidator.xmls.size)
-        assertEquals(2, lintService.xmls.size)
+        assertEquals(2, lintingPort.definitions.size)
         assertEquals(2, converter.renderCalls)
     }
 
@@ -463,7 +421,7 @@ class BpmnRepairAgentTest {
     fun `patchable lint diagnostic results in patch repair prompt and patch application`() {
         val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
+        val lintingPort = RecordingLintingPort(listOf(listOf(patchableLintIssue), emptyList()))
         val converter = RecordingConverter()
         val patchedDefinition = testBpmnDefinition(processName = "Make toast — patched")
         val patchApplier =
@@ -476,7 +434,7 @@ class BpmnRepairAgentTest {
         val agent =
             buildRepairAgent(
                 BpmnConfig(maxAttempts = 3),
-                lintService,
+                lintingPort,
                 xsdValidator,
                 converter,
                 patchApplier = patchApplier,
@@ -522,7 +480,7 @@ class BpmnRepairAgentTest {
     fun `no-op patch fails refinement fast`() {
         val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
-        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue)))
+        val lintingPort = RecordingLintingPort(listOf(listOf(patchableLintIssue)))
         val converter = RecordingConverter()
         val patchApplier =
             object : BpmnPatchApplier() {
@@ -534,7 +492,7 @@ class BpmnRepairAgentTest {
         val agent =
             buildRepairAgent(
                 BpmnConfig(maxAttempts = 3),
-                lintService,
+                lintingPort,
                 xsdValidator,
                 converter,
                 patchApplier = patchApplier,
@@ -573,7 +531,7 @@ class BpmnRepairAgentTest {
         val patchableLintIssue = LintIssue(id = "Task_1", rule = "label-required", message = "Task label required")
         val corrected = testBpmnDefinition(processName = "Make toast correctly")
         val xsdValidator = RecordingXsdValidator(listOf(emptyList(), emptyList()))
-        val lintService = RecordingLintService(listOf(listOf(patchableLintIssue), emptyList()))
+        val lintingPort = RecordingLintingPort(listOf(listOf(patchableLintIssue), emptyList()))
         val converter = RecordingConverter()
         val patchApplier =
             object : BpmnPatchApplier() {
@@ -585,7 +543,7 @@ class BpmnRepairAgentTest {
         val agent =
             buildRepairAgent(
                 BpmnConfig(maxAttempts = 3),
-                lintService,
+                lintingPort,
                 xsdValidator,
                 converter,
                 patchApplier = patchApplier,
@@ -650,21 +608,22 @@ class BpmnRepairAgentTest {
         report = ContractValidationReport(issues = emptyList()),
     )
 
-    private class RecordingLintService(
+    private class RecordingLintingPort(
         private val responses: List<List<LintIssue>?>,
         private val docs: Map<String, String> = emptyMap(),
-    ) : BpmnLintService(
-        catalogService = RuleCatalogService(),
-        engine = BpmnLintJsEngine(),
-        pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
-    ) {
-        val xmls = mutableListOf<String>()
+    ) : BpmnLintingPort {
+        val definitions = mutableListOf<BpmnDefinition>()
         private var index = 0
 
-        override fun lint(bpmnXml: String): List<LintIssue>? {
-            xmls += bpmnXml
+        override fun lint(definition: BpmnDefinition): List<LintIssue>? {
+            definitions += definition
             return responses[index++]
         }
+
+        override fun autoFix(
+            bpmnXml: String,
+            issues: List<LintIssue>,
+        ) = null
 
         override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = buildMap {
             ruleNames.distinct().forEach { ruleName ->
@@ -673,6 +632,11 @@ class BpmnRepairAgentTest {
         }
 
         override fun lintRuleCapabilities() = emptyMap<String, dev.groknull.bpmner.validation.BpmnLintRuleCapability>()
+    }
+
+    private object EmptyRuleRegistry : RuleRegistry {
+        override fun activeRules(): List<BpmnRule> = emptyList()
+        override fun ruleById(id: String): BpmnRule? = null
     }
 
     private class RecordingXsdValidator(

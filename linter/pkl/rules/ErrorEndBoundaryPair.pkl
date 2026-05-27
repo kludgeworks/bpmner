@@ -24,8 +24,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 checkPrimitive = "PairingCheck"
 checkConfig = new CheckPrimitive.PairingCheck {
   mode = "ERROR_END_BOUNDARY"

@@ -17,6 +17,7 @@ import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.TestBpmnFixtures.testLaidOutGraph
+import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.contract.ContractActivity
@@ -41,20 +42,18 @@ import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.ConvergingGatewayClearNameHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.SplitJoinForkGatewayHandler
+import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDefinitionValidator
 import dev.groknull.bpmner.validation.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluationPipeline
 import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintJsEngine
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
-import dev.groknull.bpmner.validation.PklRuleCapabilityAdapter
-import dev.groknull.bpmner.validation.RuleCatalogService
 import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.core.annotation.AnnotationAwareOrderComparator
@@ -67,7 +66,7 @@ class BpmnRefinementEngineTest {
     @Test
     fun `strategy annotations order deterministic repairs before LLM repairs`() {
         val config = BpmnConfig()
-        val lint = RecordingLintService(listOf(emptyList()))
+        val lint = RecordingLintingPort(listOf(emptyList()))
         val xsd = RecordingXsdValidator(listOf(emptyList()))
         val fingerprints = BpmnFingerprintService()
         val prompts = BpmnRepairPromptFactory(lint, fingerprints, NoopRuleGuidancePort)
@@ -80,7 +79,7 @@ class BpmnRefinementEngineTest {
                 DeterministicTopologyRepairStrategy(
                     BpmnLocalModelFixHandlerRegistry(emptyList()),
                     patchApplier,
-                    RuleCatalogService(),
+                    EmptyRuleRegistry,
                 ),
             )
 
@@ -118,7 +117,7 @@ class BpmnRefinementEngineTest {
                 replacementMap = null,
             )
         val lint =
-            RecordingLintService(
+            RecordingLintingPort(
                 lintResponses =
                 listOf(
                     listOf(
@@ -148,7 +147,7 @@ class BpmnRefinementEngineTest {
         assertEquals(1, result.repairAttempts)
         assertTrue(context.llmInvocations.isEmpty())
         assertEquals(2, xsd.xmls.size)
-        assertEquals(2, lint.xmls.size)
+        assertEquals(2, lint.definitions.size)
     }
 
     @Test
@@ -161,7 +160,7 @@ class BpmnRefinementEngineTest {
                 },
             )
         val xsd = RecordingXsdValidator(listOf(emptyList()))
-        val lint = RecordingLintService(listOf(emptyList()))
+        val lint = RecordingLintingPort(listOf(emptyList()))
         val normalizer = BpmnDiagnosticNormalizer(lint)
         val pipeline =
             BpmnEvaluationPipeline(
@@ -183,18 +182,18 @@ class BpmnRefinementEngineTest {
 
         assertTrue(evaluation.diagnostics.any { it.source == BpmnDiagnosticSource.GRAPH })
         assertEquals(0, xsd.xmls.size)
-        assertEquals(0, lint.xmls.size)
+        assertEquals(0, lint.definitions.size)
     }
 
     private fun refinementEngine(
         config: BpmnConfig,
-        lintService: BpmnLintService,
+        lintingPort: BpmnLintingPort,
         xsdValidator: BpmnXsdValidator,
         converter: BpmnDefinitionToXmlConverter,
     ): BpmnRefinementEngine {
         val fingerprints = BpmnFingerprintService()
-        val normalizer = BpmnDiagnosticNormalizer(lintService)
-        val promptFactory = BpmnRepairPromptFactory(lintService, fingerprints, NoopRuleGuidancePort)
+        val normalizer = BpmnDiagnosticNormalizer(lintingPort)
+        val promptFactory = BpmnRepairPromptFactory(lintingPort, fingerprints, NoopRuleGuidancePort)
         val patchApplier = BpmnPatchApplier()
         return BpmnRefinementEngine(
             config = config,
@@ -202,7 +201,7 @@ class BpmnRefinementEngineTest {
             validator =
             BpmnEvaluationPipeline(
                 config = config,
-                bpmnLintingPort = lintService,
+                bpmnLintingPort = lintingPort,
                 bpmnXsdValidationPort = xsdValidator,
                 bpmnDefinitionValidator = BpmnDefinitionValidator(),
                 normalizer = normalizer,
@@ -223,7 +222,7 @@ class BpmnRefinementEngineTest {
                         ),
                     ),
                     patchApplier,
-                    RuleCatalogService(),
+                    EmptyRuleRegistry,
                 ),
                 TargetedLabelRepairStrategy(config, promptFactory, patchApplier),
                 LlmPatchRepairStrategy(config, promptFactory, patchApplier),
@@ -239,23 +238,19 @@ class BpmnRefinementEngineTest {
         override fun publishEvent(event: Any) = Unit
     }
 
-    private class RecordingLintService(
+    private class RecordingLintingPort(
         lintResponses: List<List<LintIssue>?>,
         private val autoFixResponse: BpmnAutoFixResult? = null,
         private val capabilities: Map<String, BpmnLintRuleCapability> = emptyMap(),
-    ) : BpmnLintService(
-        catalogService = RuleCatalogService(),
-        engine = BpmnLintJsEngine(),
-        pklAdapter = PklRuleCapabilityAdapter(RuleCatalogService()),
-    ) {
-        val xmls = mutableListOf<String>()
+    ) : BpmnLintingPort {
+        val definitions = mutableListOf<BpmnDefinition>()
         private var _autoFixCalls = 0
         val autoFixCalls: Int get() = _autoFixCalls
         private val responses = lintResponses
         private var index = 0
 
-        override fun lint(bpmnXml: String): List<LintIssue>? {
-            xmls += bpmnXml
+        override fun lint(definition: BpmnDefinition): List<LintIssue>? {
+            definitions += definition
             return responses[index++]
         }
 
@@ -267,7 +262,14 @@ class BpmnRefinementEngineTest {
             return autoFixResponse
         }
 
+        override fun ruleDocs(ruleNames: Collection<String>): Map<String, String> = emptyMap()
+
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = capabilities
+    }
+
+    private object EmptyRuleRegistry : RuleRegistry {
+        override fun activeRules(): List<BpmnRule> = emptyList()
+        override fun ruleById(id: String): BpmnRule? = null
     }
 
     private class RecordingXsdValidator(

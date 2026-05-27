@@ -27,4 +27,19 @@ interface RuleRegistry {
 
     /** The rule with the given [BpmnRule.id], or `null` if no such rule is registered. */
     fun ruleById(id: String): BpmnRule?
+
+    /**
+     * Lookup by [BpmnRule.id] OR by any entry in [dev.groknull.bpmner.api.RuleMetadata.aliases].
+     * Used by consumers (notably the diagnostic→repair mapping) that may receive a legacy
+     * alias-form id such as `gen-02-no-duplicate-diagrams` and need to resolve back to the
+     * canonical rule.
+     *
+     * **The default implementation only resolves canonical ids** — it delegates to
+     * [ruleById] and has no alias index. Implementations that want to honour
+     * [RuleMetadata.aliases] must override this method and build their own alias map
+     * (see [dev.groknull.bpmner.rules.internal.domain.PklRuleCatalog] for the reference
+     * implementation). Test stubs that don't override will silently return `null` for any
+     * alias-form id.
+     */
+    fun ruleByIdOrAlias(id: String): BpmnRule? = ruleById(id)
 }

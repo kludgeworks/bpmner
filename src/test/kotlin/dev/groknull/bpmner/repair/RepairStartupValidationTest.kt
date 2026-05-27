@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair
 
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator
@@ -72,7 +73,7 @@ class RepairStartupValidationTest {
     }
 
     private object MissingHandlerLintingPort : BpmnLintingPort {
-        override fun lint(bpmnXml: String): List<LintIssue> = emptyList()
+        override fun lint(definition: BpmnDefinition): List<LintIssue> = emptyList()
 
         override fun autoFix(
             bpmnXml: String,

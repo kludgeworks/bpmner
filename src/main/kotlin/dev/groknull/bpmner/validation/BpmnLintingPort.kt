@@ -5,11 +5,12 @@
 
 package dev.groknull.bpmner.validation
 
+import dev.groknull.bpmner.core.BpmnDefinition
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
 interface BpmnLintingPort {
-    fun lint(bpmnXml: String): List<LintIssue>?
+    fun lint(definition: BpmnDefinition): List<LintIssue>?
 
     fun autoFix(
         bpmnXml: String,

@@ -23,5 +23,3 @@ staticConfig = new {
   diField = "bpmndi:BPMNEdge.messageVisibleKind"
   deterministicLinting = false
 }
-
-hasTsImplementation = false

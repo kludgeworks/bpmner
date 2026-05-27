@@ -20,8 +20,6 @@ errorMessages = new {
     "Business Process elements should only be used for high-level overviews, not detailed flows."
 }
 
-hasTsImplementation = false
-
 checkPrimitive = "LlmCheckRule"
 checkConfig = new CheckPrimitive.LlmCheckRule {
   prompt =

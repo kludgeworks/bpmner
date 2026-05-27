@@ -1,4 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
-  <bpmn:choreography id="Choreography_1" name="Some choreography" />
-</bpmn:definitions>

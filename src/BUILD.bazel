@@ -25,14 +25,6 @@ kt_compiler_plugin(
     plugin = ":allopen_base",
 ) for a in SPRING_OPEN_ANNOTATIONS]
 
-# Wrap the JS bundle in a java_library to handle resource path stripping.
-# This ensures it ends up at /js/bpmnlint-bundle.js on the classpath.
-java_library(
-    name = "linter_bundle_resources",
-    resource_strip_prefix = "linter/dist",
-    resources = ["//linter:bundle"],
-)
-
 java_library(
     name = "layout_bundle_resources",
     resource_strip_prefix = "layout/dist",
@@ -63,12 +55,6 @@ filegroup(
     srcs = glob(["main/kotlin/**/*.kt"]),
 )
 
-java_library(
-    name = "linter_rules_resources",
-    resource_strip_prefix = "linter/src/generated",
-    resources = ["//linter:linter_rules_json"],
-)
-
 kt_jvm_library(
     name = "bpmner_core",
     srcs = glob(["main/kotlin/**/*.kt"]),
@@ -76,8 +62,6 @@ kt_jvm_library(
     resources = glob(["main/resources/**"]),
     deps = [
         ":layout_bundle_resources",
-        ":linter_bundle_resources",
-        ":linter_rules_resources",
         ":web_bundle_resources",
         ":web_static_resources",
         "//linter/pkl:pkl_runtime_resources",

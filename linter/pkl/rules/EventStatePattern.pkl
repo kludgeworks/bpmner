@@ -40,5 +40,3 @@ staticConfig = new {
       "closed",
     )
 }
-
-hasTsImplementation = true

@@ -21,5 +21,3 @@ errorMessages = new {
 staticConfig = new {
   cookbookCode = "POOL-03"
 }
-
-hasTsImplementation = false

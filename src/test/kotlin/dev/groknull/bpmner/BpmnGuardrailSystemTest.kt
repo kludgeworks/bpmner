@@ -28,7 +28,7 @@ import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -66,7 +66,7 @@ class BpmnGuardrailSystemTest(
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
 
     @MockitoBean
-    private lateinit var bpmnLintService: BpmnLintService
+    private lateinit var bpmnLintingPort: BpmnLintingPort
 
     @Test
     fun `blocks generation when input lacks workflow signal`(
@@ -186,7 +186,7 @@ class BpmnGuardrailSystemTest(
 
         // 4. Validation passes (XSD + Lint)
         `when`(bpmnXsdValidator.validateDetailed(anyNonNull())).thenReturn(emptyList())
-        doReturn(emptyList<LintIssue>()).`when`(bpmnLintService).lint(anyNonNull())
+        doReturn(emptyList<LintIssue>()).`when`(bpmnLintingPort).lint(anyNonNull())
 
         // 5. Alignment check fails (LLM detects invented tasks)
         val alignmentPrompt = "You are a BPMN alignment validator"

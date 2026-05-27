@@ -18,5 +18,3 @@ errorMessages = new {
 }
 
 staticConfig = new {}
-
-hasTsImplementation = true

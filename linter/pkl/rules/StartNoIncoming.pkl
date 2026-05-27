@@ -19,8 +19,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 checkPrimitive = "ConnectivityCheck"
 checkConfig = new CheckPrimitive.ConnectivityCheck {
   mode = "NO_INCOMING"

@@ -44,35 +44,3 @@ bpmner:
       ITBL: ineligible-to-board list
       PNR: booking reference
       FFP: frequent flyer programme
-  lint:
-    extends:
-      - plugin:bpmner/recommended-error
-    rules:
-      "[bpmner/act-discouraged-business-verbs]": error
-      "[bpmner/act-loop-task-annotation]": error
-      "[bpmner/act-mi-task-annotation]": error
-      # The bpmner pipeline produces semantic-only XML pre-layout; BPMNDI is added
-      # downstream by yet-another-bpmn-auto-layout. These upstream bpmnlint rules
-      # require BPMNDI to be present and so fire on every element pre-layout.
-      # They are already filtered out of plugin:bpmner/recommended-error by the
-      # static-rules generator; this is belt-and-braces for any drift.
-      "[bpmner/no-bpmndi]": "off"
-      "[bpmner/no-overlapping-elements]": "off"
-      # Disabled pending #167: the rule has no domain glossary, so every
-      # BPMN/XML/XSD/LLM/JSON token is flagged. On technical inputs the repair
-      # LLM cycles through equivalent renames without ever passing. The rule is
-      # warn-level but BpmnRefinementEngine counts warnings toward loop-detection.
-      "[bpmner/name-uncommon-abbreviations]": "off"
-      # Disabled pending #168: the business-verb allowlist is too narrow and the
-      # rule rejects camelCase verb+noun composites (e.g. RepairLoop). Repair LLM
-      # cycles between equivalent renames with no signal to escape.
-      "[bpmner/act-verb-object-name]": "off"
-      # Disabled pending #170: the generator emits the element id as the element
-      # name (PascalCase, e.g. name="AssessReadiness"), so the capitalization rule
-      # fires on every task. Re-enable once the generator prompt is fixed to emit
-      # sentence-case names distinct from ids.
-      "[bpmner/act-activity-label-capitalization]": "off"
-      # Disabled pending #170: same underlying cause — when the generator copies
-      # the id (e.g. "Gateway_Readiness") into the name, the rule flags the
-      # element-type word ("Gateway") in the name.
-      "[bpmner/name-no-element-type-words]": "off"

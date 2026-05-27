@@ -89,7 +89,6 @@ build_test(
     name = "typescript_build_test",
     targets = [
         "//layout:bundle",
-        "//linter:bundle",
         "//web:bundle",
     ],
 )

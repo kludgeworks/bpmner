@@ -1,4 +1,10 @@
-import "Catalog.pkl"
+// Build-time-only docs generator. Imports rules via `import*` glob (the same pattern
+// the now-removed Catalog.pkl used) so this file remains independent of the
+// build-generated `RulesIndex.pkl`, which `pkl_eval` cannot consume as a dep input.
+// The runtime loader continues to use `RulesIndex.pkl` for explicit module imports;
+// docs generation just doesn't need to.
+local ruleModules = import*("rules/*.pkl")
+local rules = ruleModules.toMap().values.toList().sortBy((r) -> r.id)
 
 /// Generator for BPMN Cookbook Rule Documentation in Markdown format.
 local function staticConfigMap(rule) =
@@ -22,7 +28,7 @@ local function deprecationLines(rule) =
 
 output {
   files {
-    for (rule in Catalog.rules) {
+    for (rule in rules) {
       ["\(rule.id).md"] {
         text =
           """
@@ -70,7 +76,7 @@ output {
         This folder documents each custom rule implemented by `bpmnlint-plugin-bpmner`.
 
         ## Rules
-        \(Catalog.rules.sortBy((r) -> r.id).map((r) -> "- [\(r.id)](\(r.id).md): \(r.name)").join("\n"))
+        \(rules.sortBy((r) -> r.id).map((r) -> "- [\(r.id)](\(r.id).md): \(r.name)").join("\n"))
         """.trim() + "\n"
     }
   }

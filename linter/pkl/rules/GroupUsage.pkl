@@ -20,5 +20,3 @@ errorMessages = new {
 staticConfig = new {
   cookbookCode = "ART-01"
 }
-
-hasTsImplementation = false

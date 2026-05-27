@@ -182,7 +182,7 @@ class BpmnRepairPromptFactoryTest {
     }
 
     private object NoopLintingPort : BpmnLintingPort {
-        override fun lint(bpmnXml: String): List<LintIssue> = emptyList()
+        override fun lint(definition: BpmnDefinition): List<LintIssue> = emptyList()
 
         override fun autoFix(
             bpmnXml: String,

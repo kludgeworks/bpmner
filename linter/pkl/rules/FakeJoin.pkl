@@ -32,8 +32,6 @@ errorMessages = new {
 
 staticConfig = new {}
 
-hasTsImplementation = true
-
 checkPrimitive = "TopologyCheck"
 checkConfig = new CheckPrimitive.TopologyCheck {
   topology = "NO_FAKE_JOIN"

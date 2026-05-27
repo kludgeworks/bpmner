@@ -26,6 +26,7 @@ import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
@@ -35,7 +36,7 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
@@ -76,7 +77,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @Suppress("TooManyFunctions")
 class RepairRoutingModuleTest {
     @MockitoBean
-    private lateinit var bpmnLintService: BpmnLintService
+    private lateinit var bpmnLintingPort: BpmnLintingPort
 
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
@@ -104,7 +105,7 @@ class RepairRoutingModuleTest {
     fun `locally fixable lint violation is repaired without any LLM invocation`(events: PublishedEvents) {
         // Post-Phase 2F (#243): local repair flows through `DeterministicTopologyRepairStrategy`
         // dispatching to Kotlin handlers keyed on `LOCAL_MODEL_FIX`. The old `LOCAL_XML_FIX`
-        // routing (bpmnlint TS auto-fix via `BpmnLintService.autoFix`) was removed.
+        // routing (bpmnlint TS auto-fix via the legacy `BpmnLintService.autoFix`) was removed.
         // `fixSentenceCase` is a deterministic handler that needs no Pkl catalog lookup and
         // produces a valid SET_NODE_NAME patch whenever the input name needs case
         // adjustment — used here to drive a real repair against `Task_1`.
@@ -124,12 +125,12 @@ class RepairRoutingModuleTest {
                 message = "Element name must not include its BPMN element type",
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
+        `when`(bpmnLintingPort.lintRuleCapabilities()).thenReturn(mapOf("name-01" to localCapability))
         // attempt 1: one local-fix issue → attempt 2 after handler patch applied: clean
-        `when`(bpmnLintService.lint(anyString()))
+        `when`(bpmnLintingPort.lint(anyDefinition()))
             .thenReturn(listOf(lintIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
+        `when`(bpmnLintingPort.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
         val context = FakeActionContext()
         // Name with miscapitalised second word so `fixSentenceCase` produces a real
@@ -151,7 +152,7 @@ class RepairRoutingModuleTest {
             events.ofType(BpmnValidationPassedEvent::class.java).toList().isNotEmpty(),
             "expected a BpmnValidationPassedEvent after local-only repair",
         )
-        verify(bpmnLintService, never()).autoFix(anyString(), anyLintIssues())
+        verify(bpmnLintingPort, never()).autoFix(anyString(), anyLintIssues())
         assertRouteSummaryLogged(
             attemptNumber = 1,
             "localAttempted=1",
@@ -179,11 +180,11 @@ class RepairRoutingModuleTest {
                 message = "End event name should describe a business outcome",
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(mapOf("name-clarity" to llmCapability))
-        `when`(bpmnLintService.lint(anyString()))
+        `when`(bpmnLintingPort.lintRuleCapabilities()).thenReturn(mapOf("name-clarity" to llmCapability))
+        `when`(bpmnLintingPort.lint(anyDefinition()))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
+        `when`(bpmnLintingPort.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
         val context =
             FakeActionContext().also {
@@ -202,7 +203,7 @@ class RepairRoutingModuleTest {
         )
 
         assertEquals(1, context.llmInvocations.size, "exactly one LLM call expected for an LLM_MODEL_PATCH rule")
-        verify(bpmnLintService, never()).autoFix(anyString(), anyLintIssues())
+        verify(bpmnLintingPort, never()).autoFix(anyString(), anyLintIssues())
         assertRouteSummaryLogged(
             attemptNumber = 1,
             "localAttempted=0",
@@ -248,18 +249,18 @@ class RepairRoutingModuleTest {
                 message = "End event name should describe a business outcome",
             )
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        `when`(bpmnLintService.lintRuleCapabilities()).thenReturn(
+        `when`(bpmnLintingPort.lintRuleCapabilities()).thenReturn(
             mapOf(
                 "name-01" to localCapability,
                 "name-clarity" to llmCapability,
             ),
         )
         // attempt 1: both → after local fix attempt 2: only LLM → after LLM rewrite: clean
-        `when`(bpmnLintService.lint(anyString()))
+        `when`(bpmnLintingPort.lint(anyDefinition()))
             .thenReturn(listOf(localIssue, llmIssue))
             .thenReturn(listOf(llmIssue))
             .thenReturn(emptyList())
-        `when`(bpmnLintService.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
+        `when`(bpmnLintingPort.ruleDocs(anyRuleNames())).thenReturn(emptyMap())
 
         val context =
             FakeActionContext().also {
@@ -342,6 +343,14 @@ class RepairRoutingModuleTest {
     }
 
     private fun anyString(): String = ArgumentMatchers.anyString()
+
+    private fun anyDefinition(): BpmnDefinition = anyNonNull()
+
+    private fun <T> anyNonNull(): T {
+        ArgumentMatchers.any<T>()
+        @Suppress("UNCHECKED_CAST")
+        return null as T
+    }
 
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 

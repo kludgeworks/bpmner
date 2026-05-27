@@ -31,7 +31,7 @@ import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnDefinitionToXmlConverter
 import dev.groknull.bpmner.repair.BpmnRefinementFailureException
 import dev.groknull.bpmner.repair.internal.domain.BpmnRefinementEngine
-import dev.groknull.bpmner.validation.BpmnLintService
+import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
 import dev.groknull.bpmner.validation.BpmnXsdValidator
@@ -59,7 +59,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 @MockitoBean(types = [AgentPlatformBpmnAgentInvoker::class])
 class RepairModuleTest {
     @MockitoBean
-    private lateinit var bpmnLintService: BpmnLintService
+    private lateinit var bpmnLintingPort: BpmnLintingPort
 
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
@@ -70,9 +70,9 @@ class RepairModuleTest {
     @Test
     fun `refinement engine publishes BpmnValidationPassedEvent when BPMN is already valid`(events: PublishedEvents) {
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        doReturn(emptyList<Any>()).`when`(bpmnLintService).lint(anyString())
-        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues())
-        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
+        doReturn(emptyList<Any>()).`when`(bpmnLintingPort).lint(anyDefinition())
+        doReturn(null).`when`(bpmnLintingPort).autoFix(anyString(), anyLintIssues())
+        doReturn(emptyMap<String, String>()).`when`(bpmnLintingPort).ruleDocs(anyRuleNames())
 
         val request = BpmnRequest(processDescription = "Make toast")
         val definition = validDefinition()
@@ -90,9 +90,9 @@ class RepairModuleTest {
     fun `refinement engine publishes BpmnValidationFailedEvent before failing on invalid BPMN`(events: PublishedEvents) {
         val lintIssue = LintIssue(id = "Task_1", rule = "start-event-required", message = "Missing start event")
         `when`(bpmnXsdValidator.validateDetailed(anyString())).thenReturn(emptyList())
-        doReturn(listOf(lintIssue)).`when`(bpmnLintService).lint(anyString())
-        doReturn(null).`when`(bpmnLintService).autoFix(anyString(), anyLintIssues())
-        doReturn(emptyMap<String, String>()).`when`(bpmnLintService).ruleDocs(anyRuleNames())
+        doReturn(listOf(lintIssue)).`when`(bpmnLintingPort).lint(anyDefinition())
+        doReturn(null).`when`(bpmnLintingPort).autoFix(anyString(), anyLintIssues())
+        doReturn(emptyMap<String, String>()).`when`(bpmnLintingPort).ruleDocs(anyRuleNames())
 
         val definition = validDefinition()
         val graph = graph(definition)
@@ -166,6 +166,14 @@ class RepairModuleTest {
     )
 
     private fun anyString(): String = ArgumentMatchers.anyString()
+
+    private fun anyDefinition(): BpmnDefinition = anyNonNull()
+
+    private fun <T> anyNonNull(): T {
+        ArgumentMatchers.any<T>()
+        @Suppress("UNCHECKED_CAST")
+        return null as T
+    }
 
     private fun anyLintIssues(): List<LintIssue> = ArgumentMatchers.anyList()
 

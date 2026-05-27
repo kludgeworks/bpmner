@@ -67,14 +67,6 @@ genrule(
 )
 
 pkl_eval(
-    name = "catalog_json",
-    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["Catalog.pkl"],
-    outs = ["linter-rules.json"],
-    entrypoints = ["Catalog.pkl"],
-    format = "json",
-)
-
-pkl_eval(
     name = "uncommon_abbreviations_fixture_json",
     srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
     outs = ["uncommon_abbreviations.json"],
@@ -85,7 +77,6 @@ pkl_eval(
 pkl_eval(
     name = "generated_docs",
     srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + [
-        "Catalog.pkl",
         "MarkdownGenerator.pkl",
     ],
     entrypoints = ["MarkdownGenerator.pkl"],
@@ -95,10 +86,8 @@ pkl_eval(
 pkl_test(
     name = "schema_test",
     srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [
-        "Catalog.pkl",
         ":rules_index_pkl",
     ] + PKL_RULE_SRCS + [
-        "test-fixtures/CatalogTest.pkl",
         "test-fixtures/GeneratedEnumsTest.pkl",
         "test-fixtures/RulesIndexTest.pkl",
         "test-fixtures/SchemaTest.pkl",
@@ -106,7 +95,6 @@ pkl_test(
     ],
     entrypoints = [
         "test-fixtures/SchemaTest.pkl",
-        "test-fixtures/CatalogTest.pkl",
         "test-fixtures/GeneratedEnumsTest.pkl",
         "test-fixtures/RulesIndexTest.pkl",
     ],

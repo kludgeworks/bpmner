@@ -8,9 +8,9 @@ package dev.groknull.bpmner.repair.internal.domain
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.repair.BpmnLocalFixSummary
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
+import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
-import dev.groknull.bpmner.validation.RuleCatalogService
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -19,20 +19,21 @@ import org.springframework.stereotype.Component
  * Applies `LOCAL_MODEL_FIX` repairs by dispatching diagnostics to their declared Kotlin handler.
  *
  * Until issue #243 closed the `LOCAL_XML_FIX` collapse, this strategy also routed
- * `LOCAL_XML_FIX`-flagged diagnostics to bpmnlint's TS auto-fixer via [BpmnLintingPort.autoFix].
- * After 2A migrated the last 6 rules to `LOCAL_MODEL_FIX`, that branch became dead code and is
- * gone. `BpmnLintingPort` itself is deprecated in #217's 2G.
+ * `LOCAL_XML_FIX`-flagged diagnostics to bpmnlint's TS auto-fixer. After 2A migrated the last
+ * 6 rules to `LOCAL_MODEL_FIX`, that branch became dead code and is gone. After #241 2G,
+ * the per-rule handler config is sourced from [RuleRegistry] (PklRuleCatalog) directly —
+ * `RuleCatalogService` and the bpmnlint JS bridge are removed.
  *
- * Per-rule handler config (e.g. `discouragedWords`, `replacementMap`) is pulled from
- * [RuleCatalogService.getRule] and projected to a [HandlerConfig] before dispatch — so the Pkl
- * rule remains the single source of truth for the handler's data inputs.
+ * Per-rule handler config (e.g. `discouragedWords`, `replacementMap`) is projected from
+ * [RuleRegistry.ruleByIdOrAlias] metadata into a [HandlerConfig] before dispatch — so the
+ * Pkl rule remains the single source of truth for the handler's data inputs.
  */
 @Service
 @Component
 internal class DeterministicTopologyRepairStrategy(
     private val modelFixHandlerRegistry: BpmnLocalModelFixHandlerRegistry,
     private val patchApplier: BpmnPatchApplicationPort,
-    private val ruleCatalogService: RuleCatalogService,
+    private val ruleRegistry: RuleRegistry,
 ) : BpmnRepairStrategy {
     private val logger = LoggerFactory.getLogger(DeterministicTopologyRepairStrategy::class.java)
 
@@ -90,28 +91,18 @@ internal class DeterministicTopologyRepairStrategy(
 
     private fun handlerConfigFor(diagnostic: BpmnDiagnostic): HandlerConfig {
         val ruleId = diagnostic.bareRuleId() ?: return HandlerConfig.EMPTY
-        val meta = ruleCatalogService.getRule(ruleId) ?: return HandlerConfig.EMPTY
-
-        val rawStaticConfig = meta.staticConfig
-
-        @Suppress("UNCHECKED_CAST")
-        val staticConfig = rawStaticConfig as? Map<String, Any>
-        if (rawStaticConfig != null && staticConfig == null) {
-            // A non-null `staticConfig` that isn't a Map silently produces an empty
-            // HandlerConfig and the handler emits no patches — looks identical to "rule
-            // satisfied" in production. Surface the misconfiguration so it can be fixed in
-            // the Pkl rule rather than chased through dispatch logs.
-            logger.warn(
-                "Rule '{}' staticConfig has unexpected type {}; handler config will be empty",
-                ruleId,
-                rawStaticConfig::class.simpleName,
-            )
-        }
+        // BpmnRuleAdapter.staticConfigFromPkl already normalises the field to Map<String, Any>?
+        // when the rule is loaded, so the previous defensive cast + type-check is unnecessary.
+        val meta = ruleRegistry.ruleByIdOrAlias(ruleId)?.metadata ?: return HandlerConfig.EMPTY
         return HandlerConfig(
-            staticConfig = staticConfig,
+            staticConfig = meta.staticConfig,
             replacementMap = meta.repair.replacementMap,
         )
     }
 
+    // Strips any legacy `bpmner/` prefix from rule ids. RuleEngine-sourced diagnostics already
+    // carry bare ids and pass through unchanged; the helper survives one more commit because
+    // it's needed for the rare case of an externally-supplied diagnostic that still carries the
+    // prefix. Dies in #241 2G commit B with BpmnLintRuleIds itself.
     private fun BpmnDiagnostic.bareRuleId(): String? = rule?.let(BpmnLintRuleIds::bareRuleId)
 }

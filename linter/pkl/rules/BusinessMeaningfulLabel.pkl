@@ -36,5 +36,3 @@ errorMessages = new {
 staticConfig = new {
   technicalTokens = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
 }
-
-hasTsImplementation = true
