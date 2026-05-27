@@ -25,6 +25,7 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.internal.domain.DefaultRuleEngine
 import dev.groknull.bpmner.rules.internal.domain.InMemoryRuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
@@ -82,6 +83,7 @@ class BpmnerParityTest {
                     DefaultFlowRule(),
                 ),
             ),
+            RuleProfile.EMPTY,
         )
 
     @Test

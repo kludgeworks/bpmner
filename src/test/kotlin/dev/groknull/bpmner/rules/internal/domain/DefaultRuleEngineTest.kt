@@ -14,16 +14,18 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * Unit tests for [DefaultRuleEngine]. Exercise the empty-registry happy path, single-rule
- * forwarding, and two-rule aggregation. The engine does not transform or filter
- * diagnostics in Phase 1 — every emitted diagnostic flows through unchanged.
+ * Unit tests for [DefaultRuleEngine]. Cover the empty-registry happy path, single-rule
+ * forwarding, two-rule aggregation, rule-exception isolation, and the Phase-2E
+ * [RuleProfile] hooks (disablement, severity override, rule-crash protection).
  */
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class DefaultRuleEngineTest {
     /** Minimal in-memory [RuleRegistry] for tests — independent of Spring DI. */
     private class TestRegistry(
@@ -81,7 +83,7 @@ class DefaultRuleEngineTest {
 
     @Test
     fun `empty registry yields a passing evaluation with no diagnostics`() {
-        val engine = DefaultRuleEngine(TestRegistry(emptyList()))
+        val engine = DefaultRuleEngine(TestRegistry(emptyList()), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -91,7 +93,7 @@ class DefaultRuleEngineTest {
 
     @Test
     fun `single rule emitting one diagnostic per node flows through untouched`() {
-        val engine = DefaultRuleEngine(TestRegistry(listOf(FlagsEveryNode("rule-flagger"))))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(FlagsEveryNode("rule-flagger"))), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -106,7 +108,7 @@ class DefaultRuleEngineTest {
         val flagSecond = FlagsEveryNode("rule-second")
         val noOp = NoOpRule("rule-no-op")
 
-        val engine = DefaultRuleEngine(TestRegistry(listOf(flagFirst, noOp, flagSecond)))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagFirst, noOp, flagSecond)), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -138,7 +140,7 @@ class DefaultRuleEngineTest {
             }
         val survivingRule = FlagsEveryNode("rule-survives")
 
-        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule, survivingRule)))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule, survivingRule)), RuleProfile.EMPTY)
 
         // No uncaught exception escapes the engine.
         val result = engine.evaluate(trivialDefinition())
@@ -159,5 +161,120 @@ class DefaultRuleEngineTest {
         val survivingDiagnostics = result.diagnostics.drop(1)
         assertEquals(2, survivingDiagnostics.size)
         assertTrue(survivingDiagnostics.all { it.ruleId == "rule-survives" })
+    }
+
+    @Test
+    fun `rule listed in disabledRuleIds emits no diagnostics`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = emptyMap(),
+            disabledRuleIds = setOf("rule-flagger"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertTrue(result.diagnostics.isEmpty(), "Disabled rule must emit nothing")
+        assertTrue(result.passed)
+    }
+
+    @Test
+    fun `severity override rewrites every diagnostic from the named rule`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-flagger" to RuleSeverity.ERROR),
+            disabledRuleIds = emptySet(),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(2, result.diagnostics.size, "Two nodes ⇒ two diagnostics")
+        assertTrue(
+            result.diagnostics.all { it.severity == RuleSeverity.ERROR },
+            "Override applies to every diagnostic the rule emits",
+        )
+    }
+
+    @Test
+    fun `override for an unknown rule id is silently ignored`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("not-a-real-rule" to RuleSeverity.ERROR),
+            disabledRuleIds = setOf("also-not-a-real-rule"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        // The real rule still emits its WARNING diagnostics untouched.
+        assertEquals(2, result.diagnostics.size)
+        assertTrue(result.diagnostics.all { it.severity == RuleSeverity.WARNING })
+    }
+
+    @Test
+    fun `EMPTY profile is the identity passthrough`() {
+        // Sanity check that the EMPTY constant doesn't accidentally filter or override anything.
+        val flagger = FlagsEveryNode("rule-flagger")
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), RuleProfile.EMPTY)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(2, result.diagnostics.size)
+        assertTrue(result.diagnostics.all { it.severity == RuleSeverity.WARNING })
+    }
+
+    @Test
+    fun `disable takes precedence over override on the same rule id`() {
+        // Defensive: if a config row mistakenly contains both a severity override and the rule
+        // is also in disabledRuleIds (impossible from the YAML parser, but possible if the
+        // profile is constructed directly), the rule is skipped — disabled wins.
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-flagger" to RuleSeverity.ERROR),
+            disabledRuleIds = setOf("rule-flagger"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertTrue(result.diagnostics.isEmpty())
+    }
+
+    @Test
+    fun `severity override never downgrades a rule-execution-failure diagnostic`() {
+        // Regression for the PR #269 review (R1): the synthetic `rule-execution-failure`
+        // diagnostic must stay at ERROR severity regardless of any user-configured override
+        // on the same rule id. Downgrading a rule crash to WARNING (or worse, INFO) would
+        // silently mask the failure — `RuleEvaluation.passed` would flip to true even though
+        // the rule itself blew up.
+        val throwingRule =
+            object : BpmnRule {
+                override val id: String = "rule-throws"
+                override val metadata: RuleMetadata = testMetadata(id)
+
+                override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = error("simulated rule crash")
+            }
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-throws" to RuleSeverity.INFO),
+            disabledRuleIds = emptySet(),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(1, result.diagnostics.size)
+        val failure = result.diagnostics.single()
+        assertEquals("rule-execution-failure", failure.diagnosticCode)
+        assertEquals(
+            RuleSeverity.ERROR,
+            failure.severity,
+            "Rule-execution-failure must stay at ERROR — override must not apply to system diagnostics",
+        )
+        // And the evaluation as a whole must NOT report passing while the rule has crashed.
+        assertTrue(
+            result.diagnostics.any { it.severity == RuleSeverity.ERROR },
+            "An evaluation with a rule crash must surface at least one blocking diagnostic",
+        )
     }
 }
