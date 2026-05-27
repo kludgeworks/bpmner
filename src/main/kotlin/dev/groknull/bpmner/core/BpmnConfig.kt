@@ -15,7 +15,6 @@ import org.springframework.boot.context.properties.ConfigurationProperties
 
 @ConfigurationProperties("bpmner")
 data class BpmnConfig(
-    val maxAttempts: Int = DEFAULT_MAX_ATTEMPTS,
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
     val repairer: Actor<Persona> = DEFAULT_REPAIRER,
     val readinessAssessor: Actor<Persona> = DEFAULT_READINESS_ASSESSOR,
@@ -37,7 +36,6 @@ data class BpmnConfig(
     val lintBatchSize: Int = DEFAULT_LINT_BATCH_SIZE,
 ) {
     companion object {
-        const val DEFAULT_MAX_ATTEMPTS = 5
         const val DEFAULT_LINT_BATCH_SIZE = 10
 
         private const val CONCISE_AND_EXACT = "concise and exact"

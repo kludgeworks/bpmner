@@ -9,7 +9,6 @@ import com.embabel.chat.Message
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import org.jmolecules.architecture.hexagonal.SecondaryPort
@@ -24,13 +23,11 @@ internal interface BpmnRepairPromptPort {
     fun patchFeedback(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
-        localOutcome: BpmnLocalRepairOutcome = BpmnLocalRepairOutcome.EMPTY,
     ): String
 
     fun fullRepairFeedback(
         attempt: BpmnRepairAttempt,
         diagnostics: List<BpmnDiagnostic> = attempt.diagnostics,
-        localOutcome: BpmnLocalRepairOutcome = BpmnLocalRepairOutcome.EMPTY,
     ): String
 
     fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor?

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
+import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
@@ -37,7 +38,13 @@ internal class AgentPlatformBpmnAgentInvoker(
                 assessment,
             )
         process.run()
-        return process.resultOfType(resultClass)
+        // Phase 4 (#219): `fromProcessStatus()` returns the goal output on COMPLETED and throws
+        // the framework's typed status exceptions (`ProcessExecutionStuckException` when the
+        // planner has no applicable action, `ProcessExecutionTerminatedException` on budget
+        // exhaustion). Replaces the prior `process.resultOfType()` which crashed silently on
+        // non-COMPLETED states and the bespoke `BpmnRefinementFailureException`.
+        val execution = AgentProcessExecution.Companion.fromProcessStatus(request, process)
+        return resultClass.cast(execution.output)
     }
 
     override fun startAsync(
