@@ -59,12 +59,13 @@ internal class GrammaticalShapeCheck(
         val tokens = nlp.tokens(text)
         if (tokens.isEmpty()) return true // pure-punctuation labels skip silently
         val leadingTag = nlp.posTags(text).first()
+        // OTHER passes every shape conservatively — see class-level KDoc. The check is meant
+        // to flag clear violations, so an unknown leading token never fires a diagnostic.
+        if (leadingTag == PosTag.OTHER) return true
         return when (shape) {
-            GrammaticalShape.STATE_LABEL ->
-                leadingTag in STATE_LIKE_TAGS || leadingTag == PosTag.OTHER
+            GrammaticalShape.STATE_LABEL -> leadingTag in STATE_LIKE_TAGS
 
-            GrammaticalShape.ACTION_LABEL ->
-                leadingTag == PosTag.VERB
+            GrammaticalShape.ACTION_LABEL -> leadingTag == PosTag.VERB
 
             GrammaticalShape.QUESTION_FORM ->
                 leadingTag == PosTag.WH || leadingTag == PosTag.AUX || text.trimEnd().endsWith("?")

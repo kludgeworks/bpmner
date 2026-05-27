@@ -205,6 +205,70 @@ class NlpPrimitivesTest {
         assertEquals(listOf("pp-not-action"), diagnostics.map { it.elementId })
     }
 
+    // -----------------------------------------------------------------------------------
+    // `PosTag.OTHER`-leading labels must pass every shape conservatively. These three
+    // regression tests pin the class-level KDoc contract — see PR #273 review G2.
+    //
+    // Each fixture leads with an `-ly` adverb. The morphological POS tagger maps adverbs
+    // to Penn `RB`, which falls through coarseTag's noun/verb/adj/wh sets to [PosTag.OTHER]
+    // — exactly the input shape Greptile's P1 finding concerns.
+
+    @Test
+    fun `GrammaticalShapeCheck STATE_LABEL passes when leading token is unknown (OTHER)`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("adv-led", "Hourly notification"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = GrammaticalShapeCheck(nlp).evaluate(
+            ctx,
+            metadata("state", "bpmn:UserTask"),
+            GrammaticalShapeCheckConfig("name", GrammaticalShape.STATE_LABEL),
+        )
+        assertTrue(diagnostics.isEmpty(), "STATE_LABEL must pass OTHER-leading labels conservatively")
+    }
+
+    @Test
+    fun `GrammaticalShapeCheck ACTION_LABEL passes when leading token is unknown (OTHER)`() {
+        // Regression for the same flaw G2 called out on QUESTION_FORM — ACTION_LABEL had
+        // identical asymmetric OTHER handling before the matchesShape refactor.
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("adv-led", "Quickly process"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = GrammaticalShapeCheck(nlp).evaluate(
+            ctx,
+            metadata("action", "bpmn:UserTask"),
+            GrammaticalShapeCheckConfig("name", GrammaticalShape.ACTION_LABEL),
+        )
+        assertTrue(diagnostics.isEmpty(), "ACTION_LABEL must pass OTHER-leading labels conservatively")
+    }
+
+    @Test
+    fun `GrammaticalShapeCheck QUESTION_FORM passes when leading token is unknown (OTHER)`() {
+        // Greptile P1 (#273): adverb-led labels on diverging gateways used to fire a
+        // spurious diagnostic because QUESTION_FORM didn't include the OTHER guard that
+        // STATE_LABEL did.
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnExclusiveGateway("adv-led", "Quickly decide"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = GrammaticalShapeCheck(nlp).evaluate(
+            ctx,
+            metadata("question", "bpmn:ExclusiveGateway"),
+            GrammaticalShapeCheckConfig("name", GrammaticalShape.QUESTION_FORM),
+        )
+        assertTrue(diagnostics.isEmpty(), "QUESTION_FORM must pass OTHER-leading labels conservatively")
+    }
+
     private fun metadata(id: String, vararg targetElements: String): RuleMetadata = RuleMetadata(
         id = id,
         name = id,
