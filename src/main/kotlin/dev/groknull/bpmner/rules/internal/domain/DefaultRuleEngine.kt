@@ -12,6 +12,7 @@ import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleEvaluation
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.rules.RuleEngine
+import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
@@ -29,24 +30,40 @@ import org.springframework.stereotype.Component
  * the engine continues with the next rule. This matches the Tier-3 plugin contract
  * where third-party rules cannot be trusted to handle every BPMN shape.
  *
- * The severity-override / profile hook is intentionally absent: Phase 1 surfaces every
- * diagnostic untouched. Phase 2 will resolve `RuleProfile.severityOverrides` and
- * `enabledDiagnosticCodes` here before returning.
+ * The engine consults [RuleProfile] in two places:
+ *  1. **Rule filtering** — rules in [RuleProfile.disabledRuleIds] are skipped before
+ *     evaluation. They consume no work and emit no diagnostics. This is the runtime
+ *     equivalent of `severity = "off"` in the pre-2G `bpmner.lint.rules` YAML.
+ *  2. **Severity override** — diagnostics whose `ruleId` matches a key in
+ *     [RuleProfile.severityOverrides] are rewritten with the new severity. The override
+ *     applies to every diagnostic the rule emits (consistent with Pkl's rule-level
+ *     `severity` field — finer granularity is a #221 concern).
+ *
+ * [RuleProfile.EMPTY] is the identity: neither hook fires, so the engine behaves exactly
+ * as the pre-Phase-2E pass-through.
  */
 @Service
 @Component
 internal class DefaultRuleEngine(
     private val registry: RuleRegistry,
+    private val profile: RuleProfile,
 ) : RuleEngine {
     private val logger = LoggerFactory.getLogger(DefaultRuleEngine::class.java)
 
     override fun evaluate(definition: BpmnDefinition): RuleEvaluation {
         val ctx = BpmnDefinitionContext(definition)
         val diagnostics =
-            registry.activeRules().flatMap { rule ->
-                runCatching { rule.evaluate(ctx) }
-                    .getOrElse { failure -> ruleFailureDiagnostic(rule, failure) }
-            }
+            registry.activeRules()
+                .filterNot { profile.isDisabled(it.id) }
+                .flatMap { rule ->
+                    runCatching { rule.evaluate(ctx) }
+                        .getOrElse { failure -> ruleFailureDiagnostic(rule, failure) }
+                }
+                .map { d ->
+                    profile.overriddenSeverity(d.ruleId)
+                        ?.let { newSeverity -> d.copy(severity = newSeverity) }
+                        ?: d
+                }
         return RuleEvaluation(diagnostics)
     }
 

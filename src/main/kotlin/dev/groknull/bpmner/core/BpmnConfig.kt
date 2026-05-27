@@ -218,4 +218,10 @@ data class BpmnRulesConfig(
     // only rules packaged with the application are loaded. Custom rules are evaluated through a
     // separate file:-scheme evaluator so runtime glob works (modulepath: is not globbable).
     val customDir: java.nio.file.Path? = null,
+    // Per-rule severity overrides. Keys are bare rule ids (e.g. `act-verb-object-name`).
+    // Values are one of `error`, `warning`, `info`, `off`. `off` filters the rule out entirely
+    // (the engine skips evaluation); the other three override the Pkl-declared severity for
+    // every diagnostic the rule emits. Unknown rule ids are logged once at INFO by
+    // RuleProfileFactory and otherwise ignored. See #242.
+    val severityOverrides: Map<String, String> = emptyMap(),
 )

@@ -14,6 +14,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -81,7 +82,7 @@ class DefaultRuleEngineTest {
 
     @Test
     fun `empty registry yields a passing evaluation with no diagnostics`() {
-        val engine = DefaultRuleEngine(TestRegistry(emptyList()))
+        val engine = DefaultRuleEngine(TestRegistry(emptyList()), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -91,7 +92,7 @@ class DefaultRuleEngineTest {
 
     @Test
     fun `single rule emitting one diagnostic per node flows through untouched`() {
-        val engine = DefaultRuleEngine(TestRegistry(listOf(FlagsEveryNode("rule-flagger"))))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(FlagsEveryNode("rule-flagger"))), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -106,7 +107,7 @@ class DefaultRuleEngineTest {
         val flagSecond = FlagsEveryNode("rule-second")
         val noOp = NoOpRule("rule-no-op")
 
-        val engine = DefaultRuleEngine(TestRegistry(listOf(flagFirst, noOp, flagSecond)))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagFirst, noOp, flagSecond)), RuleProfile.EMPTY)
 
         val result = engine.evaluate(trivialDefinition())
 
@@ -138,7 +139,7 @@ class DefaultRuleEngineTest {
             }
         val survivingRule = FlagsEveryNode("rule-survives")
 
-        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule, survivingRule)))
+        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule, survivingRule)), RuleProfile.EMPTY)
 
         // No uncaught exception escapes the engine.
         val result = engine.evaluate(trivialDefinition())
@@ -159,5 +160,83 @@ class DefaultRuleEngineTest {
         val survivingDiagnostics = result.diagnostics.drop(1)
         assertEquals(2, survivingDiagnostics.size)
         assertTrue(survivingDiagnostics.all { it.ruleId == "rule-survives" })
+    }
+
+    @Test
+    fun `rule listed in disabledRuleIds emits no diagnostics`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = emptyMap(),
+            disabledRuleIds = setOf("rule-flagger"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertTrue(result.diagnostics.isEmpty(), "Disabled rule must emit nothing")
+        assertTrue(result.passed)
+    }
+
+    @Test
+    fun `severity override rewrites every diagnostic from the named rule`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-flagger" to RuleSeverity.ERROR),
+            disabledRuleIds = emptySet(),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(2, result.diagnostics.size, "Two nodes ⇒ two diagnostics")
+        assertTrue(
+            result.diagnostics.all { it.severity == RuleSeverity.ERROR },
+            "Override applies to every diagnostic the rule emits",
+        )
+    }
+
+    @Test
+    fun `override for an unknown rule id is silently ignored`() {
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("not-a-real-rule" to RuleSeverity.ERROR),
+            disabledRuleIds = setOf("also-not-a-real-rule"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        // The real rule still emits its WARNING diagnostics untouched.
+        assertEquals(2, result.diagnostics.size)
+        assertTrue(result.diagnostics.all { it.severity == RuleSeverity.WARNING })
+    }
+
+    @Test
+    fun `EMPTY profile is the identity passthrough`() {
+        // Sanity check that the EMPTY constant doesn't accidentally filter or override anything.
+        val flagger = FlagsEveryNode("rule-flagger")
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), RuleProfile.EMPTY)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(2, result.diagnostics.size)
+        assertTrue(result.diagnostics.all { it.severity == RuleSeverity.WARNING })
+    }
+
+    @Test
+    fun `disable takes precedence over override on the same rule id`() {
+        // Defensive: if a config row mistakenly contains both a severity override and the rule
+        // is also in disabledRuleIds (impossible from the YAML parser, but possible if the
+        // profile is constructed directly), the rule is skipped — disabled wins.
+        val flagger = FlagsEveryNode("rule-flagger")
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-flagger" to RuleSeverity.ERROR),
+            disabledRuleIds = setOf("rule-flagger"),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(flagger)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertTrue(result.diagnostics.isEmpty())
     }
 }
