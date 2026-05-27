@@ -416,6 +416,160 @@ class DeterministicPrimitivesTest {
         assertTrue(TopologyCheck().evaluate(ctx, metadata("complex", "bpmn:ComplexGateway"), TopologyCheckConfig(TopologyMode.NO_SUPERFLUOUS)).isEmpty())
     }
 
+    // ---------------------------------------------------------------------------------------
+    // Phase 2H.1 top-ups — one extra @Test per primitive that previously had only one case,
+    // bringing each to ≥3 cases. See #245.
+
+    @Test
+    fun `required property fires on each blank element among many targeted instances`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("a", "Review submission"),
+                BpmnUserTask("b"),
+                BpmnUserTask("c", "Approve"),
+                BpmnUserTask("d"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = RequiredPropertyCheck().evaluate(
+            ctx,
+            metadata("name", "bpmn:UserTask"),
+            RequiredPropertyCheckConfig("name"),
+        )
+        assertEquals(listOf("b", "d"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `required property checks non-name properties via PrimitiveModelContext`() {
+        // The BPMN node mapping exposes only well-known fields; PrimitiveElement.properties
+        // is the route used when a Pkl rule names a property the mapping does not surface.
+        val model = PrimitiveModelContext(
+            elements = listOf(
+                PrimitiveElement("e1", "bpmn:Task", mapOf("description" to "Order")),
+                PrimitiveElement("e2", "bpmn:Task"),
+            ),
+        )
+        val diagnostics = RequiredPropertyCheck().evaluate(
+            model,
+            metadata("description", "bpmn:Task"),
+            RequiredPropertyCheckConfig("description"),
+        )
+        assertEquals(listOf("e2"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `vocabulary REQUIRE_LEADING fires when the leading token is not in the vocab`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("verb", "Process the order"),
+                BpmnUserTask("noun", "Order processing"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = VocabularyCheck().evaluate(
+            ctx,
+            metadata("leading-verb", "bpmn:UserTask"),
+            VocabularyCheckConfig("name", VocabularyMode.REQUIRE_LEADING, listOf("process", "approve", "send")),
+        )
+        assertEquals(listOf("noun"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `vocabulary FORBID_LEADING fires only when the leading token is in the vocab`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("role-led", "Manager approval"),
+                BpmnUserTask("verb-led", "Submit to manager"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = VocabularyCheck().evaluate(
+            ctx,
+            metadata("no-leading-role", "bpmn:UserTask"),
+            VocabularyCheckConfig("name", VocabularyMode.FORBID_LEADING, listOf("manager", "team")),
+        )
+        assertEquals(listOf("role-led"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `cardinality fires when count exceeds max`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s1", "Start 1"),
+                BpmnStartEvent("s2", "Start 2"),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        val diagnostics = CardinalityCheck().evaluate(
+            ctx,
+            metadata("at-most-one-start", "bpmn:StartEvent"),
+            CardinalityCheckConfig("bpmn:StartEvent", max = 1),
+        )
+        assertEquals(1, diagnostics.size)
+    }
+
+    @Test
+    fun `cardinality stays silent when count is inside the min and max range`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnEndEvent("e1", "End 1"),
+                BpmnEndEvent("e2", "End 2"),
+            ),
+        )
+        val diagnostics = CardinalityCheck().evaluate(
+            ctx,
+            metadata("ends-bounded", "bpmn:EndEvent"),
+            CardinalityCheckConfig("bpmn:EndEvent", min = 1, max = 3),
+        )
+        assertTrue(diagnostics.isEmpty())
+    }
+
+    @Test
+    fun `pool labels flag black-box participants without a label`() {
+        val poolAware = PrimitiveModelContext(
+            supportedCapabilities = setOf(ModelCapability.POOLS_AND_LANES),
+            elements = listOf(
+                PrimitiveElement("blank", "bpmn:Participant", mapOf("poolKind" to "BLACK_BOX", "name" to "")),
+                PrimitiveElement("named", "bpmn:Participant", mapOf("poolKind" to "BLACK_BOX", "name" to "Acme Corp")),
+            ),
+        )
+        val diagnostics = PoolLabelCheck().evaluate(
+            poolAware,
+            metadata("black-box-label", "bpmn:Participant"),
+            PoolLabelCheckConfig(PoolLabelMode.BLACK_BOX_NAMED_BY_EXTERNAL_ENTITY_OR_PROCESS),
+        )
+        assertEquals(listOf("blank"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `pool labels flag child-diagram participants whose name diverges from the process name`() {
+        val poolAware = PrimitiveModelContext(
+            supportedCapabilities = setOf(ModelCapability.POOLS_AND_LANES),
+            elements = listOf(
+                PrimitiveElement(
+                    "ok",
+                    "bpmn:Participant",
+                    mapOf("isChildDiagram" to "true", "name" to "Fulfil order", "processName" to "Fulfil order"),
+                ),
+                PrimitiveElement(
+                    "drift",
+                    "bpmn:Participant",
+                    mapOf("isChildDiagram" to "true", "name" to "Sales", "processName" to "Fulfil order"),
+                ),
+            ),
+        )
+        val diagnostics = PoolLabelCheck().evaluate(
+            poolAware,
+            metadata("child-diagram-label", "bpmn:Participant"),
+            PoolLabelCheckConfig(PoolLabelMode.CHILD_DIAGRAMS_KEEP_POOL_PROCESS_NAME),
+        )
+        assertEquals(listOf("drift"), diagnostics.map { it.elementId })
+    }
+
     private fun metadata(id: String, vararg targetElements: String): RuleMetadata = RuleMetadata(
         id = id,
         name = id,
