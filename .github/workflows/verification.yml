@@ -1,0 +1,163 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+name: Verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+    inputs:
+      debug:
+        description: 'Verbose diagnostics'
+        required: false
+        type: boolean
+        default: true
+
+concurrency:
+  group: verification-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+  statuses: write
+  actions: read
+
+jobs:
+  verification:
+    name: Verification
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@8cb04a772ab4c1eb984e9c1b493a182e96c5e425 # 0.19.0
+        with:
+          bazelisk-cache: true
+          repository-cache: true
+          external-cache: true
+          disk-cache: verification
+          cache-save: ${{ github.event_name != 'pull_request' }}
+
+      - name: Install pnpm dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run lint checks
+        run: hk check all
+
+      - name: Initialize CodeQL for Java/Kotlin
+        id: codeql-java-init
+        uses: github/codeql-action/init@v4
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Build JVM application for CodeQL
+        id: build-jvm
+        run: bazel build //src:bpmner_app
+
+      - name: Analyze CodeQL Java/Kotlin
+        id: codeql-java-analyze
+        if: always() && steps.codeql-java-init.outcome == 'success' && steps.build-jvm.outcome == 'success'
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:java-kotlin
+
+      - name: Run Bazel coverage
+        id: coverage
+        if: always()
+        run: |
+          bazel coverage //... \
+            --combined_report=lcov \
+            --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
+            --instrumentation_filter="^//src,^//web,^//layout"
+          cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage-report.xml"
+
+      - name: SonarCloud Scan - Backend
+        id: sonar-backend
+        if: >
+          always() &&
+          steps.coverage.outcome == 'success' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
+            ${{ github.event_name == 'workflow_dispatch' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+            -Dsonar.organization=kludgeworks
+            -Dsonar.projectKey=kludgeworks_bpmner_backend
+            -Dsonar.projectName=bpmner Backend
+            -Dsonar.sources=src/main/kotlin
+            -Dsonar.coverageReportPaths=${{ github.workspace }}/coverage-report.xml
+            -Dsonar.qualitygate.wait=true
+
+      - name: SonarCloud Scan - Web
+        id: sonar-web
+        if: >
+          always() &&
+          steps.coverage.outcome == 'success' &&
+          (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        uses: SonarSource/sonarqube-scan-action@7006c4492b2e0ee0f816d36501671557c97f5995 # v8.1.0
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
+            ${{ github.event_name == 'workflow_dispatch' && format('-Dsonar.branch.name={0}', github.ref_name) || '' }}
+            -Dsonar.organization=kludgeworks
+            -Dsonar.projectKey=kludgeworks_bpmner_web
+            -Dsonar.projectName=bpmner Web
+            -Dsonar.sources=web/src,layout/src
+            -Dsonar.coverageReportPaths=${{ github.workspace }}/coverage-report.xml
+            -Dsonar.qualitygate.wait=true
+
+  codeql-static:
+    name: CodeQL (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - javascript-typescript
+          - actions
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          config-file: ./.github/codeql/codeql-config.yml
+
+      - name: Analyze CodeQL
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: /language:${{ matrix.language }}
