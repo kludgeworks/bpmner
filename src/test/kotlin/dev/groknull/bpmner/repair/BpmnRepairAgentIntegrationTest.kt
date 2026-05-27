@@ -12,6 +12,7 @@ import com.embabel.agent.api.common.autonomy.ProcessExecutionStuckException
 import com.embabel.agent.api.common.autonomy.ProcessExecutionTerminatedException
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import com.embabel.chat.Message
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.contract.ContractActivity
@@ -33,11 +34,11 @@ import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertThrows
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers
 import org.mockito.ArgumentMatchers.anyString
+import org.mockito.Mockito
 import org.mockito.Mockito.doAnswer
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.`when`
@@ -126,18 +127,6 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
     }
 
     @Test
-    @Disabled(
-        "The architectural fix (dead replan-throws removed, scope-specific eligibility) is in " +
-            "place but this test still can't trigger TERMINATED end-to-end. The rewrite-repair " +
-            "LLM call via `Actor.promptRunner(...).createObject(messages, BpmnDefinition::class.java)` " +
-            "doesn't get intercepted by `EmbabelMockitoIntegrationTest.whenCreateObject({ true }, " +
-            "BpmnDefinition::class.java)` — the mock returns null regardless of predicate, so the " +
-            "rewrite throws RepairReplans.signal and the planner replans forever. The mismatch " +
-            "appears to be in how Embabel routes per-actor LLM operations vs the global " +
-            "`LlmOperations.createObject` that `whenCreateObject` mocks. Re-enable once that " +
-            "routing is understood (Embabel docs / source dive), or once a different test surface " +
-            "is available (e.g. the per-actor mock helper Embabel may add).",
-    )
     fun `TERMINATED — budget exhaustion on repeated no-progress repairs maps to ProcessExecutionTerminatedException`(
         @TempDir tempDir: Path,
     ) {
@@ -169,16 +158,24 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
         doReturn(null).`when`(bpmnLintingPort).autoFix(anyString(), anyLintIssues())
         doReturn(emptyMap<String, String>()).`when`(bpmnLintingPort).ruleDocs(anyRuleNames())
 
-        // Permissive predicate — both the generation prompt and the rewrite-repair prompt
-        // request a BpmnDefinition, and we want each call (including the rewrite path) to
-        // return a definition with a unique processName so the fingerprint guard never fires.
-        // Mockito returns the LAST matching stub when overlapping predicates match; this
-        // overrides the generation stub set up in `stubReadinessContractGenerationAlignment`.
+        // The repair-rewrite LLM call sends `repairEval.messages + UserMessage(feedback)` —
+        // multiple messages. `EmbabelMockitoIntegrationTest.whenCreateObject(...)` builds a
+        // matcher that requires `messages.size() == 1` (see `firstMessageContentSatisfiesMatcher`),
+        // so it never fires for the repair path. To intercept multi-message calls, stub the
+        // underlying `llmOperations.createObject` directly with an `argThat { size > 1 }`
+        // matcher. Single-message generation calls keep going through the `whenCreateObject`
+        // stubs set up in `stubReadinessContractGenerationAlignment` (different matcher, no overlap).
         val rewriteCalls = AtomicInteger(0)
-        whenCreateObject({ true }, BpmnDefinition::class.java).thenAnswer {
+        Mockito.doAnswer {
             val n = rewriteCalls.incrementAndGet()
             definition.copy(processName = "Make toast attempt $n")
-        }
+        }.`when`(llmOperations).createObject(
+            argThatNonNull<List<Message>> { it.size > 1 },
+            anyNonNull(),
+            argThatNonNull<Class<*>> { it == BpmnDefinition::class.java },
+            anyNonNull(),
+            anyNonNull(),
+        )
 
         assertThrows(ProcessExecutionTerminatedException::class.java) {
             bpmnAgentInvoker.generate(
@@ -307,6 +304,18 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
         evidence = emptyList(),
         rationale = "Ready",
     )
+
+    /**
+     * Generic-erased counterpart to [anyNonNull] for predicate matchers. The Mockito
+     * `argThat` API returns `T?`, but `LlmOperations.createObject` takes non-null params.
+     * Keeping `T` generic means the `null as T` cast erases to `Object` and skips Kotlin's
+     * runtime null-check (a concrete `null as List<Message>` would `checkcast` and NPE).
+     */
+    private fun <T> argThatNonNull(matcher: (T) -> Boolean): T {
+        ArgumentMatchers.argThat<T> { matcher(it) }
+        @Suppress("UNCHECKED_CAST")
+        return null as T
+    }
 
     private fun anyDefinition(): BpmnDefinition = anyNonNull()
 
