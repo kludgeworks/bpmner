@@ -17,6 +17,11 @@ on:
       reason:
         description: 'Why this manual dispatch (free-text, optional)'
         required: false
+      debug:
+        description: 'Enable SonarScanner debug logging (-X)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: sonar-${{ github.workflow }}-${{ github.ref }}
@@ -100,8 +105,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_SCANNER_DEBUG: ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
         run: |
           bazel run //:sonar -- \
+            ${SONAR_SCANNER_DEBUG:+$SONAR_SCANNER_DEBUG} \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
@@ -111,8 +118,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_SCANNER_DEBUG: ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
         run: |
           bazel run //web:sonar -- \
+            ${SONAR_SCANNER_DEBUG:+$SONAR_SCANNER_DEBUG} \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
