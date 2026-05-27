@@ -481,8 +481,8 @@ class DeterministicPrimitivesTest {
         val ctx = context(
             nodes = listOf(
                 BpmnStartEvent("s", "Start"),
-                BpmnUserTask("verb", "Manager approval"),
-                BpmnUserTask("role", "Submit to manager"),
+                BpmnUserTask("role-led", "Manager approval"),
+                BpmnUserTask("verb-led", "Submit to manager"),
                 BpmnEndEvent("e", "End"),
             ),
         )
@@ -491,7 +491,7 @@ class DeterministicPrimitivesTest {
             metadata("no-leading-role", "bpmn:UserTask"),
             VocabularyCheckConfig("name", VocabularyMode.FORBID_LEADING, listOf("manager", "team")),
         )
-        assertEquals(listOf("verb"), diagnostics.map { it.elementId })
+        assertEquals(listOf("role-led"), diagnostics.map { it.elementId })
     }
 
     @Test
