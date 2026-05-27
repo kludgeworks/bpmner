@@ -15,17 +15,19 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class CompositeCheckTest {
     private val check = CompositeCheck()
+    private val nlp = testBpmnNlp()
 
     @Test
     fun `no ops when subChecks is empty`() {
         val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t", "Task"), BpmnEndEvent("e", "End")))
-        val diagnostics = check.evaluate(ctx, compositeMetadata(), CompositeCheckConfig(subChecks = emptyList()))
+        val diagnostics = check.evaluate(ctx, compositeMetadata(), CompositeCheckConfig(subChecks = emptyList()), nlp)
         assertTrue(diagnostics.isEmpty())
     }
 
@@ -66,7 +68,7 @@ class CompositeCheckTest {
             ),
         )
 
-        val diagnostics = check.evaluate(ctx, metadata, config)
+        val diagnostics = check.evaluate(ctx, metadata, config, nlp)
 
         val codes = diagnostics.map { it.diagnosticCode to it.elementId }.toSet()
         assertEquals(
@@ -98,7 +100,7 @@ class CompositeCheckTest {
             ),
         )
 
-        val diagnostics = check.evaluate(ctx, metadata, config)
+        val diagnostics = check.evaluate(ctx, metadata, config, nlp)
 
         assertEquals(listOf("blank"), diagnostics.map { it.elementId })
     }
@@ -116,7 +118,7 @@ class CompositeCheckTest {
             ),
         )
 
-        val diagnostics = check.evaluate(ctx, metadata, config)
+        val diagnostics = check.evaluate(ctx, metadata, config, nlp)
 
         assertEquals(1, diagnostics.size)
         assertEquals("rule-config-error", diagnostics.single().diagnosticCode)
@@ -136,7 +138,7 @@ class CompositeCheckTest {
             ),
         )
 
-        val diagnostics = check.evaluate(ctx, metadata, config)
+        val diagnostics = check.evaluate(ctx, metadata, config, nlp)
 
         assertEquals("rule-config-error", diagnostics.single().diagnosticCode)
         assertTrue(diagnostics.single().message.contains("\"default\""))

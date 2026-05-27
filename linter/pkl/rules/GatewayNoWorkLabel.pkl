@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Gateway No Work Label"
@@ -31,4 +32,15 @@ repair = new {
   kind = "LOCAL_MODEL_FIX"
   safety = "SAFE_AUTOMATIC"
   handler = "clearName"
+}
+
+// Phase 3 (#218): activate via PartOfSpeechCheck. Gateway labels that lead with an action
+// verb are doing the work that belongs to an upstream activity. `workVerbStarters` above
+// is presentation metadata — every entry in that list is morphologically a verb, so the
+// generic POS check subsumes it.
+checkPrimitive = "PartOfSpeechCheck"
+checkConfig = new CheckPrimitive.PartOfSpeechCheck {
+  property = "name"
+  mode = "LEADING_MUST_NOT_BE"
+  posClass = "VERB"
 }

@@ -13,8 +13,15 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShape
+import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShapeCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.LemmaCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.LemmaMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.NlpPosTag
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
@@ -51,7 +58,12 @@ internal sealed interface MappedCheck {
     data class Llm(val config: LlmCheckRuleConfig) : MappedCheck
 }
 
+@Suppress("TooManyFunctions") // one private mode-parser per primitive — flat by design
 internal object CheckConfigMapper {
+    @Suppress(
+        "LongMethod", // one `is`-branch per Pkl primitive type — flat dispatch reads better than helper-extraction
+        "CyclomaticComplexMethod", // same — branches count, but each branch is trivial
+    )
     fun map(generated: PklCheckPrim.CheckConfig): MappedCheck = when (generated) {
         is PklCheckPrim.RequiredPropertyCheck ->
             MappedCheck.Deterministic(
@@ -137,6 +149,32 @@ internal object CheckConfigMapper {
                 ),
             )
 
+        is PklCheckPrim.PartOfSpeechCheck ->
+            MappedCheck.Deterministic(
+                PartOfSpeechCheckConfig(
+                    property = generated.property,
+                    mode = partOfSpeechMode(generated.mode),
+                    posClass = nlpPosTag(generated.posClass),
+                ),
+            )
+
+        is PklCheckPrim.LemmaCheck ->
+            MappedCheck.Deterministic(
+                LemmaCheckConfig(
+                    property = generated.property,
+                    mode = lemmaMode(generated.mode),
+                    lemmas = generated.lemmas,
+                ),
+            )
+
+        is PklCheckPrim.GrammaticalShapeCheck ->
+            MappedCheck.Deterministic(
+                GrammaticalShapeCheckConfig(
+                    property = generated.property,
+                    mode = grammaticalShape(generated.mode),
+                ),
+            )
+
         is PklCheckPrim.CompositeCheck ->
             MappedCheck.Composite(
                 CompositeCheckConfig(
@@ -165,9 +203,13 @@ internal object CheckConfigMapper {
 
     private fun vocabularyMode(raw: String): VocabularyMode = when (raw) {
         "REQUIRE" -> VocabularyMode.REQUIRE
+
         "FORBID" -> VocabularyMode.FORBID
+
         "REQUIRE_LEADING" -> VocabularyMode.REQUIRE_LEADING
+
         "FORBID_LEADING" -> VocabularyMode.FORBID_LEADING
+
         else -> error(
             "Unknown VocabularyCheck.mode '$raw' (expected REQUIRE, FORBID, REQUIRE_LEADING, or FORBID_LEADING)",
         )
@@ -208,5 +250,32 @@ internal object CheckConfigMapper {
         "PARALLEL_GATEWAY_STRUCTURE" -> ElementConstraintMode.PARALLEL_GATEWAY_STRUCTURE
         "EVENT_BASED_GATEWAY_DIRECT_EVENTS" -> ElementConstraintMode.EVENT_BASED_GATEWAY_DIRECT_EVENTS
         else -> error("Unknown ElementConstraintCheck.mode '$raw'")
+    }
+
+    private fun partOfSpeechMode(raw: String): PartOfSpeechMode = when (raw) {
+        "LEADING_MUST_BE" -> PartOfSpeechMode.LEADING_MUST_BE
+        "LEADING_MUST_NOT_BE" -> PartOfSpeechMode.LEADING_MUST_NOT_BE
+        else -> error("Unknown PartOfSpeechCheck.mode '$raw' (expected LEADING_MUST_BE or LEADING_MUST_NOT_BE)")
+    }
+
+    private fun nlpPosTag(raw: String): NlpPosTag = runCatching {
+        NlpPosTag.valueOf(raw)
+    }.getOrElse {
+        error("Unknown PartOfSpeechCheck.posClass '$raw' (expected one of ${NlpPosTag.entries.joinToString { it.name }})")
+    }
+
+    private fun lemmaMode(raw: String): LemmaMode = when (raw) {
+        "REQUIRE_LEADING_LEMMA" -> LemmaMode.REQUIRE_LEADING_LEMMA
+        "FORBID_LEADING_LEMMA" -> LemmaMode.FORBID_LEADING_LEMMA
+        "REQUIRE_ANY_LEMMA" -> LemmaMode.REQUIRE_ANY_LEMMA
+        "FORBID_ANY_LEMMA" -> LemmaMode.FORBID_ANY_LEMMA
+        else -> error("Unknown LemmaCheck.mode '$raw'")
+    }
+
+    private fun grammaticalShape(raw: String): GrammaticalShape = when (raw) {
+        "STATE_LABEL" -> GrammaticalShape.STATE_LABEL
+        "ACTION_LABEL" -> GrammaticalShape.ACTION_LABEL
+        "QUESTION_FORM" -> GrammaticalShape.QUESTION_FORM
+        else -> error("Unknown GrammaticalShapeCheck.mode '$raw'")
     }
 }

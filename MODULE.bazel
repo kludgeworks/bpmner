@@ -109,6 +109,10 @@ maven.install(
         "com.tngtech.archunit:archunit:1.4.1",
         "org.pkl-lang:pkl-config-java:" + PKL_VERSION,
         "org.pkl-lang:pkl-config-kotlin:" + PKL_VERSION,
+        # OpenNLP for Phase 3 (#218): SimpleTokenizer + DictionaryLemmatizer. POS-tagging is
+        # currently morphological (no pretrained POSModel) — keeps the build hermetic. A
+        # POSModel-backed tagger can swap in behind the BpmnNlp interface later.
+        "org.apache.opennlp:opennlp-tools:2.5.9",
     ],
     repositories = [
         "https://repo.maven.apache.org/maven2",

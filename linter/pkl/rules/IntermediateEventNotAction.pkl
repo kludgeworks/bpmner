@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Intermediate Event Not Action"
@@ -22,3 +23,11 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+// Phase 3 (#218): same primitive as EventStateName — intermediate events follow the same
+// "state, not action" convention. STATE_LABEL passes for noun-led or past-participle labels.
+checkPrimitive = "GrammaticalShapeCheck"
+checkConfig = new CheckPrimitive.GrammaticalShapeCheck {
+  property = "name"
+  mode = "STATE_LABEL"
+}
