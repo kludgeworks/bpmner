@@ -35,6 +35,10 @@ SonarScanner invocations.
   fail at the same point.
 - PR #270 rerun `26518054617` on `2026-05-27T14:36:54Z` still fails at `Load
   quality profiles` for both backend and web.
+- Manual debug run `26518741206` on `2026-05-27T14:49:09Z` added SonarScanner
+  `-X` logging. It showed SonarCloud returning HTTP `500` for:
+  - `GET https://sonarcloud.io/api/qualityprofiles/search.protobuf?projectKey=kludgeworks_bpmner_backend&organization=kludgeworks`
+  - `GET https://sonarcloud.io/api/qualityprofiles/search.protobuf?projectKey=kludgeworks_bpmner_web&organization=kludgeworks`
 
 ## Local configuration facts
 
@@ -67,21 +71,29 @@ and the current CLI line is newer than the `5.0.2.4997` bundled by
 `https://sonarcloud.io`, scanner age is not proven to be the direct cause, but it
 is a realistic compatibility risk and should be removed from the equation.
 
+The debug run also showed that `workflow_dispatch` does not get the same
+automatic branch configuration as `push` or `pull_request`: the scanner created
+the debug analysis with `branchName=null`. The workflow now passes
+`sonar.branch.name=$GITHUB_REF_NAME` for manual runs so future branch diagnostics
+are clearly attached to the selected branch.
+
 ## Recommended next steps
 
-1. Run the SonarCloud workflow manually from this branch with `debug=true`.
-   This adds SonarScanner `-X`, which the scanner explicitly requests after the
-   failure. The debug log should reveal the failing quality-profile API request
-   and HTTP response.
-2. Check SonarCloud project administration for the backend and web projects:
+1. Check SonarCloud project administration for the backend and web projects:
    verify assigned quality profiles, profile inheritance, and organization
    defaults for Kotlin, JavaScript, TypeScript, XML, and any generated languages.
-3. Upgrade or replace the scanner path so CI no longer depends on the
+   The failing API is the quality-profile search endpoint itself, and it returns
+   HTTP `500` after the scanner has authenticated, loaded project settings, and
+   created an analysis.
+2. Upgrade or replace the scanner path so CI no longer depends on the
    `bazel_sonarqube`-bundled SonarScanner CLI `5.0.2.4997`.
-4. If debug still reports only a generic server-side error, open a SonarSource
-   support/community issue with one failing run ID and the project keys. The
-   failure occurs after SonarCloud accepts the project binding and creates the
-   analysis, so SonarSource will likely need server-side request logs.
+3. Open a SonarSource support/community issue with debug run `26518741206`, the
+   two failing endpoint URLs, and the project keys. The failure occurs after
+   SonarCloud accepts the project binding and creates the analysis, so
+   SonarSource will likely need server-side request logs.
+4. Keep the manual debug toggle in the workflow until the issue is resolved. It
+   makes it possible to re-run the same analysis with `-X` without permanently
+   enabling verbose logs on every PR.
 
 ## References
 

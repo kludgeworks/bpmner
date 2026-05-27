@@ -106,9 +106,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_SCANNER_DEBUG: ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
+          SONAR_BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || '' }}
         run: |
+          sonar_args=()
+          if [[ -n "$SONAR_SCANNER_DEBUG" ]]; then
+            sonar_args+=("$SONAR_SCANNER_DEBUG")
+          fi
+          if [[ -n "$SONAR_BRANCH_NAME" ]]; then
+            sonar_args+=("-Dsonar.branch.name=$SONAR_BRANCH_NAME")
+          fi
           bazel run //:sonar -- \
-            ${SONAR_SCANNER_DEBUG:+$SONAR_SCANNER_DEBUG} \
+            "${sonar_args[@]}" \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
@@ -119,9 +127,17 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_SCANNER_DEBUG: ${{ github.event_name == 'workflow_dispatch' && inputs.debug && '-X' || '' }}
+          SONAR_BRANCH_NAME: ${{ github.event_name == 'workflow_dispatch' && github.ref_name || '' }}
         run: |
+          sonar_args=()
+          if [[ -n "$SONAR_SCANNER_DEBUG" ]]; then
+            sonar_args+=("$SONAR_SCANNER_DEBUG")
+          fi
+          if [[ -n "$SONAR_BRANCH_NAME" ]]; then
+            sonar_args+=("-Dsonar.branch.name=$SONAR_BRANCH_NAME")
+          fi
           bazel run //web:sonar -- \
-            ${SONAR_SCANNER_DEBUG:+$SONAR_SCANNER_DEBUG} \
+            "${sonar_args[@]}" \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
