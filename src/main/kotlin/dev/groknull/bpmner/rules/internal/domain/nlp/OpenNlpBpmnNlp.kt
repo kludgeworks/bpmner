@@ -16,9 +16,10 @@ import opennlp.tools.tokenize.SimpleTokenizer
  *  - Lemmatisation: OpenNLP `DictionaryLemmatizer` over [DICT_RESOURCE], a hand-curated
  *    BPMN-domain TSV. Unknown forms (the lemmatiser returns `"O"`) fall back to the
  *    [morphologicalLemma] heuristic.
- *  - POS tagging: stateless morphological heuristic in [pennPosTag] — recognises modal
- *    auxiliaries, WH-words, and the `-ing` / `-ed` / `-s` / `-ly` suffix families. Produces
- *    Penn-Treebank-style tags so they're directly consumable by the lemmatiser.
+ *  - POS tagging: stateless lookup in [pennPosTag] over (AUX/WH closed-class word sets ∪
+ *    the dictionary-derived form→tag maps), with a suffix-morphology fallback for
+ *    out-of-vocabulary tokens. Penn-Treebank tags are returned so they're consumable by
+ *    the lemmatiser.
  *
  * **Thread safety**. All three OpenNLP objects used here are read-only after construction:
  *  - `SimpleTokenizer.INSTANCE` is a stateless singleton.
@@ -31,16 +32,16 @@ import opennlp.tools.tokenize.SimpleTokenizer
  *
  * **Why a morphological POS tagger rather than `POSTaggerME`?** Apache OpenNLP 2.x stopped
  * shipping pretrained POSModels on a stable Maven coordinate, and BPMN labels are typically
- * 2–5 words long — morphology + a small curated AUX/WH/verb dictionary handles them well.
- * A model-backed implementation can replace this class entirely behind the [BpmnNlp]
+ * 2–5 words long — direct dictionary lookup plus suffix-morphology handles them well. A
+ * model-backed implementation can replace this class entirely behind the [BpmnNlp]
  * interface without touching any primitive or rule.
  */
 internal class OpenNlpBpmnNlp(
     private val lemmatizer: DictionaryLemmatizer,
-    /** Lowercased forms of known verbs, extracted from the lemmatiser dictionary. */
-    private val verbForms: Set<String>,
-    /** Lowercased forms of known nouns, extracted from the lemmatiser dictionary. */
-    private val nounForms: Set<String>,
+    /** Lowercased verb forms with their Penn tag (e.g. `sent` → `VBN`). See [BpmnNlpConfig.ParsedDict]. */
+    private val verbForms: Map<String, String>,
+    /** Lowercased noun forms with their Penn tag (e.g. `orders` → `NNS`). See [BpmnNlpConfig.ParsedDict]. */
+    private val nounForms: Map<String, String>,
 ) : BpmnNlp {
     override fun tokens(text: String): List<String> = if (text.isBlank()) {
         emptyList()
@@ -73,18 +74,44 @@ internal class OpenNlpBpmnNlp(
     }
 
     /** Maps a Penn-Treebank-style tag to the coarse [PosTag] surface. AUX override happens upstream in [posTags]. */
-    private fun coarseTag(penn: String): PosTag = when {
-        penn == "MD" -> PosTag.AUX
-        penn.startsWith("VB") -> PosTag.VERB
-        penn.startsWith("NN") -> PosTag.NOUN
-        penn.startsWith("JJ") -> PosTag.ADJ
-        penn.startsWith("W") -> PosTag.WH
+    private fun coarseTag(penn: String): PosTag = when (penn) {
+        "MD" -> PosTag.AUX
+        "VBD", "VBN" -> PosTag.VERB_STATE
+        in VERB_ACTIVE_PENN -> PosTag.VERB
+        in NOUN_PENN -> PosTag.NOUN
+        in ADJ_PENN -> PosTag.ADJ
+        in WH_PENN -> PosTag.WH
         else -> PosTag.OTHER
     }
 
     companion object {
         /** Resource path of the hand-curated lemmatiser dictionary. */
         const val DICT_RESOURCE = "/nlp/en-bpmn-lemmas.dict"
+
+        /**
+         * Suffix-stripping morphology thresholds. Each represents the minimum length a word
+         * must have BEFORE its suffix is trimmed, so that the resulting stem is itself at
+         * least two characters long (the practical floor below which a "lemma" stops being
+         * a meaningful English root). Named here rather than inlined as integer literals so
+         * detekt's MagicNumber rule passes and the cutoffs are documented in one place.
+         */
+        private const val MIN_LEN_GERUND = 4 // `-ing` → stem ≥ 2 when length > 4
+        private const val MIN_LEN_PAST_PARTICIPLE = 3 // `-ed` → stem ≥ 2 when length > 3
+        private const val MIN_LEN_PLURAL = 2 // `-s`   → stem ≥ 2 when length > 2
+        private const val MIN_LEN_IES_PLURAL = 3 // `-ies` → stem ≥ 1 when length > 3 (with `y` re-added)
+        private const val MIN_LEN_COMPARATIVE = 3 // `-er`  → stem ≥ 2 when length > 3
+        private const val MIN_LEN_SUPERLATIVE = 3 // `-est` → stem ≥ 2 when length > 3
+        private const val MIN_LEN_ADVERB = 2 // `-ly`  → stem ≥ 1 when length > 2
+
+        /** Length thresholds for [morphologicalLemma] — one above the corresponding pos-tag floor. */
+        private const val MIN_LEMMA_LEN_GERUND = 5 // `-ing` strip leaves ≥ 2 chars when length > 5
+        private const val MIN_LEMMA_LEN_PAST = 4 // `-ed`  strip leaves ≥ 2 chars when length > 4
+
+        // English suffix lengths used by the morphology fallback.
+        private const val SUFFIX_LEN_ING = 3
+        private const val SUFFIX_LEN_ED = 2
+        private const val SUFFIX_LEN_IES = 3
+        private const val SUFFIX_LEN_S = 1
 
         private val AUX_WORDS = setOf(
             "is", "are", "am", "was", "were", "be", "been", "being",
@@ -93,81 +120,102 @@ internal class OpenNlpBpmnNlp(
             "can", "could", "may", "might", "must", "shall", "should", "will", "would", "ought",
         )
 
+        // Closed-class sets for coarseTag dispatch — small and stable; the same Penn tags are
+        // referenced from multiple places so we define them once here.
+        private val VERB_ACTIVE_PENN = setOf("VB", "VBP", "VBZ", "VBG")
+        private val NOUN_PENN = setOf("NN", "NNS", "NNP", "NNPS")
+        private val ADJ_PENN = setOf("JJ", "JJR", "JJS")
+        private val WH_PENN = setOf("WP", "WP$", "WDT", "WRB")
+
         private val WH_PRONOUNS = setOf("what", "who", "whom", "whose", "which")
         private val WH_ADVERBS = setOf("where", "when", "why", "how")
 
         /**
-         * Returns a Penn-Treebank-style POS tag for [token] using morphological rules plus
-         * three dictionary-backed lookups (AUX/WH word lists, plus the verb/noun form sets
-         * extracted from the lemmatiser dict). Designed for short BPMN labels — accuracy on
-         * arbitrary English text will be much lower.
+         * Returns a Penn-Treebank-style POS tag for [token]. Lookup precedence:
+         *  1. Auxiliary / WH closed-class word sets (highest specificity).
+         *  2. Dictionary maps [verbForms] / [nounForms] — exact form→tag stored at load time,
+         *     so irregular forms like `sent` resolve to `VBN` directly without suffix-guessing.
+         *  3. Suffix morphology — [pennPosTagByMorphology] handles tokens not in the dict.
          *
-         * Lookup precedence:
-         *  1. AUX_WORDS / WH lists (highest specificity)
-         *  2. [verbForms] / [nounForms] — known forms from the BPMN lemma dict, with Penn
-         *     tag refined by morphology (`-ed` → VBN, `-ing` → VBG, `-s` → VBZ or NNS, …)
-         *  3. Pure-morphology suffix rules (`-ing` → VBG, etc.)
-         *  4. Default NN
+         * Designed for short BPMN labels; accuracy on arbitrary English text will be lower.
          */
-        @Suppress(
-            "ReturnCount", // tag-resolution funnel — each branch is an early return for clarity
-            "CyclomaticComplexMethod", // intentional flat `when`-cascade over POS tag families
-            "MagicNumber", // length thresholds are morphological cutoffs, not policy values
-        )
-        internal fun pennPosTag(token: String, verbForms: Set<String>, nounForms: Set<String>): String {
+        internal fun pennPosTag(
+            token: String,
+            verbForms: Map<String, String>,
+            nounForms: Map<String, String>,
+        ): String {
             val lower = token.lowercase()
-            if (lower in AUX_WORDS) {
-                return when (lower) {
-                    "is", "has", "does" -> "VBZ"
-                    "are", "am", "have", "do" -> "VBP"
-                    "was", "were", "had", "did" -> "VBD"
-                    "been", "done" -> "VBN"
-                    "being", "having", "doing" -> "VBG"
-                    else -> "MD" // modal: can/could/may/might/must/shall/should/will/would/ought
-                }
-            }
+            return pennPosTagForAuxOrWh(lower)
+                ?: verbForms[lower]
+                ?: nounForms[lower]
+                ?: pennPosTagByMorphology(lower)
+        }
+
+        /** Closed-class lookup for auxiliary verbs and WH words. Returns `null` if the token isn't one. */
+        private fun pennPosTagForAuxOrWh(lower: String): String? {
+            if (lower in AUX_WORDS) return pennTagForAux(lower)
             if (lower in WH_PRONOUNS) return "WP"
             if (lower in WH_ADVERBS) return "WRB"
-            // Dictionary-backed verb detection. We pick the Penn sub-tag by suffix so
-            // lemmatisation downstream gets the right form-tag pair.
-            if (lower in verbForms) {
-                return when {
-                    lower.endsWith("ing") && lower.length > 4 -> "VBG"
-                    lower.endsWith("ed") && lower.length > 3 -> "VBN"
-                    lower.endsWith("s") && !lower.endsWith("ss") && lower.length > 2 -> "VBZ"
-                    else -> "VB"
-                }
-            }
-            if (lower in nounForms) {
-                return if (lower.endsWith("s") && !lower.endsWith("ss") && lower.length > 2) "NNS" else "NN"
-            }
-            // Pure-morphology fallback. Longer suffixes first so `-ies` outranks `-s`.
-            return when {
-                lower.length > 4 && lower.endsWith("ing") -> "VBG"
-                lower.length > 3 && lower.endsWith("ed") -> "VBN"
-                lower.length > 3 && lower.endsWith("ies") -> "NNS"
-                lower.length > 2 && lower.endsWith("ly") -> "RB"
-                lower.length > 3 && lower.endsWith("er") -> "JJR"
-                lower.length > 3 && lower.endsWith("est") -> "JJS"
-                lower.length > 1 && lower.endsWith("s") && !lower.endsWith("ss") -> "NNS"
-                else -> "NN"
-            }
+            return null
+        }
+
+        /** Sub-classifier for the AUX_WORDS family — maps each form to the Penn tag the lemmatiser expects. */
+        private fun pennTagForAux(lower: String): String = when (lower) {
+            "is", "has", "does" -> "VBZ"
+            "are", "am", "have", "do" -> "VBP"
+            "was", "were", "had", "did" -> "VBD"
+            "been", "done" -> "VBN"
+            "being", "having", "doing" -> "VBG"
+            else -> "MD" // modals: can/could/may/might/must/shall/should/will/would/ought
         }
 
         /**
-         * Morphological fallback for tokens the dictionary lemmatiser doesn't know. Trims
-         * `-ing`, `-ed`, `-s`, `-ies` and returns the stem (lowercased). Conservative — when
-         * the morphology is ambiguous (e.g. `-ed` could be past-tense or past-participle of
-         * a verb but also a denominal adjective), returns the lowercased token unchanged.
+         * Suffix-only morphology used as the last resort when neither the closed-class sets
+         * nor the dictionary recognise the token. Verbal suffixes (`-ing`, `-ed`) are tested
+         * first, then nominal/adjectival/adverbial suffixes. Each predicate-helper drops
+         * one decision off this dispatcher so it stays under detekt's complexity threshold.
          */
-        @Suppress("MagicNumber") // suffix-strip lengths are morphological cutoffs, not policy values
+        private fun pennPosTagByMorphology(lower: String): String = verbalMorphology(lower)
+            ?: nominalMorphology(lower)
+            ?: "NN"
+
+        /** Recognises gerund (`-ing`) and past-participle (`-ed`) suffixes. */
+        private fun verbalMorphology(lower: String): String? = when {
+            lower.endsWith("ing") && lower.length > MIN_LEN_GERUND -> "VBG"
+            lower.endsWith("ed") && lower.length > MIN_LEN_PAST_PARTICIPLE -> "VBN"
+            else -> null
+        }
+
+        /** Recognises plural / comparative / superlative / adverb suffixes. */
+        private fun nominalMorphology(lower: String): String? = when {
+            lower.endsWith("ies") && lower.length > MIN_LEN_IES_PLURAL -> "NNS"
+            lower.endsWith("ly") && lower.length > MIN_LEN_ADVERB -> "RB"
+            lower.endsWith("er") && lower.length > MIN_LEN_COMPARATIVE -> "JJR"
+            lower.endsWith("est") && lower.length > MIN_LEN_SUPERLATIVE -> "JJS"
+            lower.endsWith("s") && !lower.endsWith("ss") && lower.length > MIN_LEN_PLURAL -> "NNS"
+            else -> null
+        }
+
+        /**
+         * Morphological fallback for tokens the dictionary lemmatiser returns `"O"` for.
+         * Trims `-ing`, `-ed`, `-s`, `-ies` and returns the stem (lowercased). Conservative:
+         * when the morphology is ambiguous, returns the lowercased token unchanged.
+         */
         internal fun morphologicalLemma(token: String, pennTag: String): String {
             val lower = token.lowercase()
             return when {
-                pennTag.startsWith("VB") && lower.endsWith("ing") && lower.length > 5 -> lower.dropLast(3)
-                pennTag.startsWith("VB") && lower.endsWith("ed") && lower.length > 4 -> lower.dropLast(2)
-                pennTag == "NNS" && lower.endsWith("ies") && lower.length > 4 -> lower.dropLast(3) + "y"
-                pennTag == "NNS" && lower.endsWith("s") && lower.length > 2 -> lower.dropLast(1)
+                pennTag.startsWith("VB") && lower.endsWith("ing") && lower.length > MIN_LEMMA_LEN_GERUND ->
+                    lower.dropLast(SUFFIX_LEN_ING)
+
+                pennTag.startsWith("VB") && lower.endsWith("ed") && lower.length > MIN_LEMMA_LEN_PAST ->
+                    lower.dropLast(SUFFIX_LEN_ED)
+
+                pennTag == "NNS" && lower.endsWith("ies") && lower.length > MIN_LEMMA_LEN_PAST ->
+                    lower.dropLast(SUFFIX_LEN_IES) + "y"
+
+                pennTag == "NNS" && lower.endsWith("s") && lower.length > MIN_LEN_PLURAL ->
+                    lower.dropLast(SUFFIX_LEN_S)
+
                 else -> lower
             }
         }

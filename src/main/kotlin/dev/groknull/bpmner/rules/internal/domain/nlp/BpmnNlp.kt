@@ -9,13 +9,27 @@ package dev.groknull.bpmner.rules.internal.domain.nlp
  * Coarse part-of-speech classes used by the NLP-aware check primitives.
  *
  * Mapped from finer-grained Penn-Treebank-style tags inside [BpmnNlp]. The seven NLP-
- * dependent rules (#218 / #196) only distinguish between verb, noun, adjective, modal
- * auxiliary, interrogative (WH-word), and "anything else" — exposing Penn tags would leak
- * a vendor-specific tag set into every rule's Pkl config.
+ * dependent rules (#218 / #196) only distinguish between active verb forms, stative verb
+ * forms (past tense / past participle), noun, adjective, modal auxiliary, interrogative
+ * (WH-word), and "anything else" — exposing Penn tags would leak a vendor-specific tag set
+ * into every rule's Pkl config.
  */
 enum class PosTag {
-    /** Action verbs in any tense, including bare infinitives, gerunds, and past participles. */
+    /**
+     * Active verb forms — bare infinitive, third-person singular, non-3rd-person present,
+     * gerund/present-participle. Penn tags: `VB`, `VBP`, `VBZ`, `VBG`. These read as
+     * actions in BPMN labels (`Process the order`, `Sending invoice`).
+     */
     VERB,
+
+    /**
+     * Stative verb forms — past tense and past participle. Penn tags: `VBD`, `VBN`. These
+     * read as states/outcomes in BPMN labels (`Order sent`, `Payment received`, `Approved`).
+     * Distinct from [VERB] because the same coarse class would otherwise lose the
+     * state-vs-action distinction that `GrammaticalShapeCheck` and the seven Phase-3 rules
+     * depend on.
+     */
+    VERB_STATE,
 
     /** Common and proper nouns, singular or plural. */
     NOUN,
@@ -30,8 +44,10 @@ enum class PosTag {
     WH,
 
     /**
-     * Unrecognised or out-of-vocabulary — primitives should treat conservatively (no match
-     * for REQUIRE, no match for FORBID).
+     * Unrecognised or out-of-vocabulary. Every primitive that branches on a specific
+     * [PosTag] MUST guard `OTHER` explicitly: it is conservative input — neither matches a
+     * positive tag-equality nor a negative one. The two `PartOfSpeechCheck` modes both
+     * include this guard so the same `OTHER`-tagged label cannot fire in both directions.
      */
     OTHER,
 }

@@ -16,18 +16,23 @@ import dev.groknull.bpmner.rules.internal.domain.nlp.PosTag
  *
  * Encodes BPMN-modelling conventions that are more expressive than a single-POS check:
  *
- *  - `STATE_LABEL`: a state or happening — leading token is a noun OR a past-participle
- *    verbal (`Order received`, `Payment failed`, `Approved`). Fires when the leading token
- *    is an action-shaped verb in any other form (`Process the order`, `Send invoice`).
- *  - `ACTION_LABEL`: an action — leading token is a verb (any form except past-participle
- *    when the rest of the label is empty). Fires when the leading token is a noun. Used
- *    by activity-name rules.
+ *  - `STATE_LABEL`: a state or happening — leading token is a noun, past tense/past-
+ *    participle verb form, or adjective (`Order received`, `Payment failed`, `Approved`,
+ *    `Customer details`). Fires when the leading token is an active verb form (`Process
+ *    the order`, `Send invoice`).
+ *  - `ACTION_LABEL`: an action — leading token is an active verb form. Fires when the
+ *    leading token is anything else (noun, past-participle, adjective, …). Used by
+ *    activity-name rules.
  *  - `QUESTION_FORM`: a question — leading token is a WH-word or modal/copular auxiliary,
  *    OR the label ends with `?`. Fires otherwise. Used by `DivergingGatewayQuestion`.
  *
- * Blank properties don't fire. Single-word labels are interpreted with the rules above —
- * `"Approved"` passes `STATE_LABEL` because its leading (only) token is a past-participle
- * verb form (`-ed` suffix); `"Approve"` fails because it's a bare infinitive.
+ * Blank properties don't fire. The state/action split delegates "past-tense recognition"
+ * to [BpmnNlp]'s [PosTag.VERB_STATE], which uses the dictionary-derived Penn tag rather
+ * than a fragile `endsWith("ed")` heuristic — so irregulars like `sent`, `made`, `broken`
+ * pass `STATE_LABEL` correctly.
+ *
+ * [PosTag.OTHER] (unknown / out-of-vocabulary) passes every shape conservatively — the
+ * check is meant to flag clear violations, not penalise unknown vocabulary.
  */
 internal class GrammaticalShapeCheck(
     private val nlp: BpmnNlp,
@@ -53,21 +58,21 @@ internal class GrammaticalShapeCheck(
     private fun matchesShape(text: String, shape: GrammaticalShape): Boolean {
         val tokens = nlp.tokens(text)
         if (tokens.isEmpty()) return true // pure-punctuation labels skip silently
-        val tags = nlp.posTags(text)
-        val leadingTag = tags.first()
-        val leading = tokens.first()
+        val leadingTag = nlp.posTags(text).first()
         return when (shape) {
             GrammaticalShape.STATE_LABEL ->
-                leadingTag == PosTag.NOUN ||
-                    (leadingTag == PosTag.VERB && leading.lowercase().endsWith("ed")) ||
-                    leadingTag == PosTag.ADJ ||
-                    leadingTag == PosTag.OTHER
+                leadingTag in STATE_LIKE_TAGS || leadingTag == PosTag.OTHER
 
             GrammaticalShape.ACTION_LABEL ->
-                leadingTag == PosTag.VERB && !leading.lowercase().endsWith("ed")
+                leadingTag == PosTag.VERB
 
             GrammaticalShape.QUESTION_FORM ->
                 leadingTag == PosTag.WH || leadingTag == PosTag.AUX || text.trimEnd().endsWith("?")
         }
+    }
+
+    private companion object {
+        /** Tags that read as states/outcomes/objects in BPMN labels — no action implied. */
+        private val STATE_LIKE_TAGS = setOf(PosTag.NOUN, PosTag.VERB_STATE, PosTag.ADJ)
     }
 }

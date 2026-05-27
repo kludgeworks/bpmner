@@ -185,7 +185,6 @@ private class DeterministicPklRule(
     )
 }
 
-@Suppress("MaxLineLength") // ktlint requires the body inline; detekt's MaxLineLength is at odds — defer to ktlint.
 private class CompositePklRule(
     override val metadata: RuleMetadata,
     private val config: CompositeCheckConfig,
@@ -193,7 +192,7 @@ private class CompositePklRule(
 ) : BpmnRule {
     override val id: String = metadata.id
 
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck().evaluate(ctx, metadata, config, nlp)
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck.evaluate(ctx, metadata, config, nlp)
 }
 
 private class LlmPklRule(

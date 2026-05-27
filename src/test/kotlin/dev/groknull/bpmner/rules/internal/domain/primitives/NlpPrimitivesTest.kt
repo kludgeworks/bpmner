@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("MaxLineLength", "TooManyFunctions")
+@file:Suppress("TooManyFunctions")
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 

@@ -35,7 +35,7 @@ import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
  * rule's `targetElements` is broad (`bpmn:FlowNode`) but its sub-checks only apply to a
  * narrower set (`bpmn:BoundaryEvent`).
  */
-internal class CompositeCheck {
+internal object CompositeCheck {
     fun evaluate(
         ctx: BpmnDefinitionContext,
         metadata: RuleMetadata,

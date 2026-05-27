@@ -21,7 +21,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class CompositeCheckTest {
-    private val check = CompositeCheck()
+    private val check = CompositeCheck
     private val nlp = testBpmnNlp()
 
     @Test

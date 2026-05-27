@@ -39,13 +39,13 @@ internal class BpmnNlpConfig {
     /**
      * Parsed view of the lemmatiser dictionary — used by both the production bean and the
      * test fixture so they share one loading path. [lemmatizer] handles `lemma()`; the
-     * `*Forms` sets feed the morphological POS tagger so it can recognise bare-infinitive
-     * verbs (`Process`, `Send`) that suffix-rules alone would mislabel as nouns.
+     * `*Forms` maps feed the POS tagger with the precise Penn-Treebank tag for each known
+     * form (e.g. `sent → VBN`), which a suffix-only heuristic cannot recover for irregulars.
      */
     internal data class ParsedDict(
         val lemmatizer: DictionaryLemmatizer,
-        val verbForms: Set<String>,
-        val nounForms: Set<String>,
+        val verbForms: Map<String, String>,
+        val nounForms: Map<String, String>,
     )
 
     companion object {
@@ -53,34 +53,72 @@ internal class BpmnNlpConfig {
         private const val TSV_COLUMN_COUNT = 3
 
         /**
-         * Loads the bundled lemmatiser dictionary. Strips blank lines and `#`-comment lines
-         * before feeding it to OpenNLP's [DictionaryLemmatizer] (which does not tolerate
-         * either). Returns the lemmatiser plus per-POS form sets extracted from the same
-         * dict — see [ParsedDict].
+         * Priority for resolving form ambiguity when a single token has multiple Penn tags
+         * in the dictionary. Lower index = higher priority. The ordering reflects what the
+         * NLP-aware rules need:
+         *
+         *  - past-participle (`VBN`) wins for state-label rules — `Order sent` is a state.
+         *  - bare infinitive (`VB`) wins over noun (`NN`) on Verb+Object activity names —
+         *    `Process` in `Process the order` should be tagged VERB even though `process` is
+         *    also a noun.
+         *  - VBG (gerund), VBD (past tense), VBZ/VBP (present) sit between VBN and VB.
+         *
+         * Tags not in this table land at the bottom (treated as ties; last-write wins).
+         */
+        private val PENN_TAG_PRIORITY: List<String> = listOf(
+            "VBN",
+            "VBG",
+            "VBD",
+            "VBZ",
+            "VBP",
+            "VB",
+            "NN",
+            "NNS",
+        )
+
+        /**
+         * Loads the bundled lemmatiser dictionary. Filters blank lines, `#`-comment lines,
+         * and any malformed TSV (≠ 3 tab-separated columns) once — the surviving lines feed
+         * BOTH the [DictionaryLemmatizer] (which crashes on malformed input) AND the
+         * per-POS form maps. Returns the parsed view as [ParsedDict].
          */
         internal fun loadDictionary(): ParsedDict {
             val stream = BpmnNlpConfig::class.java.getResourceAsStream(OpenNlpBpmnNlp.DICT_RESOURCE)
                 ?: error("Missing classpath resource: ${OpenNlpBpmnNlp.DICT_RESOURCE}")
-            val cleanLines = stream.use { input ->
+            val validLines = stream.use { input ->
                 input.bufferedReader().useLines { lines ->
-                    lines.filter { it.isNotBlank() && !it.trimStart().startsWith("#") }.toList()
+                    lines
+                        .filter { it.isNotBlank() && !it.trimStart().startsWith("#") }
+                        .filter { it.split('\t').size == TSV_COLUMN_COUNT }
+                        .toList()
                 }
             }
-            val verbForms = mutableSetOf<String>()
-            val nounForms = mutableSetOf<String>()
-            for (line in cleanLines) {
-                val parts = line.split('\t')
-                if (parts.size != TSV_COLUMN_COUNT) continue
-                val (form, tag, _) = parts
+            val verbForms = mutableMapOf<String, String>()
+            val nounForms = mutableMapOf<String, String>()
+            for (line in validLines) {
+                val (form, tag, _) = line.split('\t')
                 val lower = form.lowercase()
                 when {
-                    tag.startsWith("VB") -> verbForms += lower
-                    tag.startsWith("NN") -> nounForms += lower
+                    tag.startsWith("VB") -> verbForms[lower] = preferTag(verbForms[lower], tag)
+                    tag.startsWith("NN") -> nounForms[lower] = preferTag(nounForms[lower], tag)
                 }
             }
-            val joined = cleanLines.joinToString("\n").toByteArray(Charsets.UTF_8)
+            val joined = validLines.joinToString("\n").toByteArray(Charsets.UTF_8)
             val lemmatizer = DictionaryLemmatizer(ByteArrayInputStream(joined))
             return ParsedDict(lemmatizer, verbForms, nounForms)
+        }
+
+        /**
+         * When the same lowercased form appears with multiple Penn tags in the dictionary
+         * (e.g. `sent VBD send` + `sent VBN send`), pick the higher-priority one per
+         * [PENN_TAG_PRIORITY]. Tags absent from the priority list are treated as last and
+         * lose ties to known tags — they only win if no known tag has been seen yet.
+         */
+        private fun preferTag(existing: String?, incoming: String): String {
+            if (existing == null) return incoming
+            val existingRank = PENN_TAG_PRIORITY.indexOf(existing).let { if (it == -1) Int.MAX_VALUE else it }
+            val incomingRank = PENN_TAG_PRIORITY.indexOf(incoming).let { if (it == -1) Int.MAX_VALUE else it }
+            return if (incomingRank < existingRank) incoming else existing
         }
     }
 }
