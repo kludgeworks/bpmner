@@ -21,10 +21,11 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * Unit tests for [DefaultRuleEngine]. Exercise the empty-registry happy path, single-rule
- * forwarding, and two-rule aggregation. The engine does not transform or filter
- * diagnostics in Phase 1 — every emitted diagnostic flows through unchanged.
+ * Unit tests for [DefaultRuleEngine]. Cover the empty-registry happy path, single-rule
+ * forwarding, two-rule aggregation, rule-exception isolation, and the Phase-2E
+ * [RuleProfile] hooks (disablement, severity override, rule-crash protection).
  */
+@Suppress("TooManyFunctions") // test class — each @Test method is one function
 class DefaultRuleEngineTest {
     /** Minimal in-memory [RuleRegistry] for tests — independent of Spring DI. */
     private class TestRegistry(
@@ -238,5 +239,42 @@ class DefaultRuleEngineTest {
         val result = engine.evaluate(trivialDefinition())
 
         assertTrue(result.diagnostics.isEmpty())
+    }
+
+    @Test
+    fun `severity override never downgrades a rule-execution-failure diagnostic`() {
+        // Regression for the PR #269 review (R1): the synthetic `rule-execution-failure`
+        // diagnostic must stay at ERROR severity regardless of any user-configured override
+        // on the same rule id. Downgrading a rule crash to WARNING (or worse, INFO) would
+        // silently mask the failure — `RuleEvaluation.passed` would flip to true even though
+        // the rule itself blew up.
+        val throwingRule =
+            object : BpmnRule {
+                override val id: String = "rule-throws"
+                override val metadata: RuleMetadata = testMetadata(id)
+
+                override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = error("simulated rule crash")
+            }
+        val profile = RuleProfile(
+            severityOverrides = mapOf("rule-throws" to RuleSeverity.INFO),
+            disabledRuleIds = emptySet(),
+        )
+        val engine = DefaultRuleEngine(TestRegistry(listOf(throwingRule)), profile)
+
+        val result = engine.evaluate(trivialDefinition())
+
+        assertEquals(1, result.diagnostics.size)
+        val failure = result.diagnostics.single()
+        assertEquals("rule-execution-failure", failure.diagnosticCode)
+        assertEquals(
+            RuleSeverity.ERROR,
+            failure.severity,
+            "Rule-execution-failure must stay at ERROR — override must not apply to system diagnostics",
+        )
+        // And the evaluation as a whole must NOT report passing while the rule has crashed.
+        assertTrue(
+            result.diagnostics.any { it.severity == RuleSeverity.ERROR },
+            "An evaluation with a rule crash must surface at least one blocking diagnostic",
+        )
     }
 }

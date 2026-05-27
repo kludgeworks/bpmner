@@ -37,7 +37,10 @@ import org.springframework.stereotype.Component
  *  2. **Severity override** — diagnostics whose `ruleId` matches a key in
  *     [RuleProfile.severityOverrides] are rewritten with the new severity. The override
  *     applies to every diagnostic the rule emits (consistent with Pkl's rule-level
- *     `severity` field — finer granularity is a #221 concern).
+ *     `severity` field — finer granularity is a #221 concern). The system-emitted
+ *     `rule-execution-failure` diagnostic is **not** subject to overrides: a rule
+ *     crash is an engine-state signal that must stay at ERROR severity regardless of
+ *     how the user has tuned the crashing rule's normal diagnostics.
  *
  * [RuleProfile.EMPTY] is the identity: neither hook fires, so the engine behaves exactly
  * as the pre-Phase-2E pass-through.
@@ -60,9 +63,17 @@ internal class DefaultRuleEngine(
                         .getOrElse { failure -> ruleFailureDiagnostic(rule, failure) }
                 }
                 .map { d ->
-                    profile.overriddenSeverity(d.ruleId)
-                        ?.let { newSeverity -> d.copy(severity = newSeverity) }
-                        ?: d
+                    // System-emitted diagnostics (rule-execution-failure) must never be
+                    // overridden — they signal that the engine itself caught a crash, and
+                    // downgrading them to WARNING / INFO would silently mask rule bugs from
+                    // the pipeline. Only user-rule diagnostics participate in the override.
+                    if (d.diagnosticCode == RULE_EXECUTION_FAILURE_CODE) {
+                        d
+                    } else {
+                        profile.overriddenSeverity(d.ruleId)
+                            ?.let { newSeverity -> d.copy(severity = newSeverity) }
+                            ?: d
+                    }
                 }
         return RuleEvaluation(diagnostics)
     }

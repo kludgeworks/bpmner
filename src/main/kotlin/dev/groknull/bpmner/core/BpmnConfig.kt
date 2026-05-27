@@ -221,7 +221,10 @@ data class BpmnRulesConfig(
     // Per-rule severity overrides. Keys are bare rule ids (e.g. `act-verb-object-name`).
     // Values are one of `error`, `warning`, `info`, `off`. `off` filters the rule out entirely
     // (the engine skips evaluation); the other three override the Pkl-declared severity for
-    // every diagnostic the rule emits. Unknown rule ids are logged once at INFO by
-    // RuleProfileFactory and otherwise ignored. See #242.
-    val severityOverrides: Map<String, String> = emptyMap(),
+    // every diagnostic the rule emits. Unknown rule ids are not validated against the rule
+    // registry — they survive into the profile and silently never match anything at
+    // evaluation time. Only unrecognised severity *values* produce a log line (WARN, via
+    // RuleProfileFactory). See #242. Value is nullable so YAML entries like `some-rule:`
+    // (no value) bind cleanly rather than NPE during startup.
+    val severityOverrides: Map<String, String?> = emptyMap(),
 )

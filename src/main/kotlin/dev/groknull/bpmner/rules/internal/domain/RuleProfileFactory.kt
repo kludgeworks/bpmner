@@ -15,18 +15,19 @@ import org.springframework.context.annotation.Configuration
 /**
  * Produces the application-wide [RuleProfile] from `bpmner.rules.severity-overrides`.
  *
- * Input shape: `Map<String, String>` keyed by bare rule id (e.g. `act-verb-object-name`),
+ * Input shape: `Map<String, String?>` keyed by bare rule id (e.g. `act-verb-object-name`),
  * value is one of `error` / `warning` / `info` / `off` (case-insensitive; `warn` is accepted
  * as a synonym for `warning`). The four values are parsed into the structured profile:
  *
  *  - `off` → adds the rule id to [RuleProfile.disabledRuleIds]; the engine skips evaluation
  *  - `error` / `warning` / `info` → adds the rule id to [RuleProfile.severityOverrides]
  *
- * Unknown severity values are logged at WARN and otherwise ignored — startup is never failed
- * by a malformed config entry. Unknown rule ids (config refers to a rule that the registry
- * doesn't expose) are not validated here; they survive into the profile and silently never
- * match anything at evaluation time. This avoids a startup-order coupling between
- * `RuleRegistry` and the rule-config pipeline.
+ * **Logging contract.** Unrecognised severity values, null values, and empty-string values
+ * produce a WARN log line and are otherwise ignored — startup is never failed by a malformed
+ * config entry. **Unknown rule ids are not validated here**; they survive into the profile
+ * and silently never match anything at evaluation time. The factory deliberately does not
+ * consult [dev.groknull.bpmner.rules.RuleRegistry] so the rule-config pipeline has no
+ * startup-order dependency on rule loading.
  *
  * Phase 2E ships a single application-wide profile. Phase 6 (#221) introduces named profiles
  * (`recommended` / `strict`) and richer selection; this factory is the canonical extension
@@ -41,7 +42,13 @@ internal class RuleProfileFactory {
         val severityOverrides = mutableMapOf<String, RuleSeverity>()
         val disabledRuleIds = mutableSetOf<String>()
         for ((ruleId, raw) in config.rules.severityOverrides) {
-            when (raw.trim().lowercase()) {
+            when (val normalised = raw?.trim()?.lowercase()) {
+                null, "" -> logger.warn(
+                    "bpmner.rules.severity-overrides['{}'] has a null or empty value; ignored. " +
+                        "Expected one of: error, warning, info, off.",
+                    ruleId,
+                )
+
                 "off" -> disabledRuleIds += ruleId
 
                 "error" -> severityOverrides[ruleId] = RuleSeverity.ERROR
@@ -54,7 +61,7 @@ internal class RuleProfileFactory {
                     "bpmner.rules.severity-overrides['{}'] = '{}' — unrecognised severity; " +
                         "ignored. Expected one of: error, warning, info, off.",
                     ruleId,
-                    raw,
+                    normalised,
                 )
             }
         }
