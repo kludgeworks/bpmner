@@ -29,12 +29,8 @@ import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
-import dev.groknull.bpmner.generation.PhasePlan
-import dev.groknull.bpmner.generation.PhasePlanSet
 import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
-import dev.groknull.bpmner.generation.ValidatedPhasePlan
-import dev.groknull.bpmner.generation.ValidatedPhasePlanSet
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -57,15 +53,24 @@ internal class BpmnGeneratorAgent(
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
     private val contractPromptFactory = BpmnContractGenerationPromptFactory(contractRenderer)
 
+    /**
+     * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
+     *
+     * Phase 5 (#220) collapsed the previous two-action shape (`createProcessOutline` + `validateOutline`)
+     * because the LLM call and its deterministic post-validation are one logical step. The
+     * `?: error("Outline generator failed…")` defense that lived on the prior `createObject` call is
+     * gone with the inline — `createObject` returns non-null by Embabel's contract and throws
+     * `InvalidLlmReturnFormatException` on failure (see [Embabel `LlmOperations.createObject`]).
+     */
     @Action(
         description =
-        "Create a high-level process outline and initial typed BPMN artifact from a validated process contract",
+        "Create and validate a process outline from a validated process contract",
     )
-    fun createProcessOutline(
+    fun createOutline(
         request: BpmnRequest,
         validatedContract: ValidatedProcessContract,
         context: OperationContext,
-    ): ProcessOutline {
+    ): ValidatedOutline {
         if (!validatedContract.isValid) {
             val issues =
                 validatedContract.report.issues
@@ -74,15 +79,13 @@ internal class BpmnGeneratorAgent(
         }
         val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
-        val rawDefinition =
-            promptRunner.createObject(prompt, BpmnDefinition::class.java)
-                ?: error("Outline generator failed to produce a structured outline.")
+        val rawDefinition = promptRunner.createObject(prompt, BpmnDefinition::class.java)
         // Stamp isDefault on outbound flows from EXCLUSIVE_GATEWAY nodes that the contract
         // marks as DefaultBranch. The LLM is unreliable on this attribute, so we
-        // deterministically apply it here BEFORE validateOutline runs the contract-fidelity
-        // check (which fires DEFAULT_FLOW_MISSING as ERROR and would abort the pipeline).
-        // The repair engine also re-runs DefaultFlowAssigner on every repair candidate as a
-        // second line of defence against LLM drift during refinement iterations.
+        // deterministically apply it here BEFORE the fidelity check runs (which fires
+        // DEFAULT_FLOW_MISSING as ERROR and would abort the pipeline). The repair engine
+        // also re-runs DefaultFlowAssigner on every repair candidate as a second line of
+        // defence against LLM drift during refinement iterations.
         val definitionWithDefaults = defaultFlowAssigner.assign(validatedContract.contract, rawDefinition)
         val outline =
             ProcessOutline(
@@ -99,33 +102,8 @@ internal class BpmnGeneratorAgent(
             outline.metrics.subprocessCount,
         )
         logArtifactDump("process-outline", outline)
-        return outline
-    }
 
-    @Action(description = "Validate the generated process outline before phase-level processing")
-    fun validateOutline(
-        outline: ProcessOutline,
-        validatedContract: ValidatedProcessContract,
-    ): ValidatedOutline {
-        val diagnostics = mutableListOf<BpmnDiagnostic>()
-        if (outline.definition.processId.isBlank()) {
-            diagnostics +=
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.GRAPH,
-                    message = "outline must define a non-blank processId",
-                    objectRef = "process",
-                    repairScope = BpmnRepairScope.OUTLINE,
-                )
-        }
-        if (outline.definition.processName.isBlank()) {
-            diagnostics +=
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.GRAPH,
-                    message = "outline must define a non-blank processName",
-                    objectRef = "process",
-                    repairScope = BpmnRepairScope.OUTLINE,
-                )
-        }
+        val diagnostics = outlineDiagnostics(outline)
         if (diagnostics.isNotEmpty()) {
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
@@ -145,88 +123,63 @@ internal class BpmnGeneratorAgent(
         return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
     }
 
-    @Action(description = "Generate local phase plans from the validated process outline")
-    fun generatePhasePlans(outline: ValidatedOutline): PhasePlanSet {
-        val phasePlans =
-            listOf(
-                PhasePlan(
-                    phaseId = MAIN_PHASE_OWNER,
-                    ownerRef = MAIN_PHASE_OWNER,
-                    definition = outline.definition,
-                ),
-            )
-        logger.info("Phase generation summary: generated {} phase(s), 0 failed local validation", phasePlans.size)
-        return PhasePlanSet(outline = outline, phasePlans = phasePlans)
-    }
+    /**
+     * Single deterministic action: outline → composed graph + ownership + layout → [LaidOutProcessGraph].
+     *
+     * Phase 5 (#220) collapsed the previous four-action chain
+     * (`generatePhasePlans` + `validatePhasePlans` + `composeProcessGraph` + `assignOwnership` + `assignLayout`)
+     * because each step was a deterministic structural derivation of the previous one. The
+     * intermediate types [ComposedProcessGraph] and [OwnedElementGraph] survive — they are the
+     * repair-agent's inbound contract surface (PR #274) — but they no longer cross an action
+     * boundary. Only [LaidOutProcessGraph] does. Repair still reads `OwnedElementGraph` via
+     * `LaidOutProcessGraph.ownedGraph`.
+     */
+    @Action(description = "Compose the validated outline into a fully laid-out process graph")
+    fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
+        val definition = outline.definition
 
-    @Action(description = "Validate phase plans independently before composition")
-    fun validatePhasePlans(phasePlans: PhasePlanSet): ValidatedPhasePlanSet {
-        val validatedPlans =
-            phasePlans.phasePlans.map { phasePlan ->
-                ValidatedPhasePlan(
-                    phaseId = phasePlan.phaseId,
-                    ownerRef = phasePlan.ownerRef,
-                    definition = phasePlan.definition,
-                    diagnostics = emptyList(),
-                )
-            }
-        val failedPlans = validatedPlans.count { it.diagnostics.isNotEmpty() }
-        logger.info(
-            "Phase validation summary: generated {} phase(s), {} failed local validation",
-            validatedPlans.size,
-            failedPlans,
-        )
-        return ValidatedPhasePlanSet(outline = phasePlans.outline, phasePlans = validatedPlans)
-    }
-
-    @Action(description = "Compose validated phase plans into a process graph")
-    fun composeProcessGraph(validatedPhasePlans: ValidatedPhasePlanSet): ComposedProcessGraph {
-        val definition = validatedPhasePlans.definition
-        val phaseOwner = validatedPhasePlans.phasePlans.single().ownerRef
+        // composeProcessGraph: object-ref ownership map (single-phase pipeline → one owner).
         val objectOwners =
             buildMap {
-                put("process", phaseOwner)
-                definition.nodes.forEach { put("nodes[id=${it.id}]", phaseOwner) }
-                definition.sequences.forEach { put("sequences[id=${it.id}]", phaseOwner) }
+                put("process", MAIN_PHASE_OWNER)
+                definition.nodes.forEach { put("nodes[id=${it.id}]", MAIN_PHASE_OWNER) }
+                definition.sequences.forEach { put("sequences[id=${it.id}]", MAIN_PHASE_OWNER) }
             }
+        val composed =
+            ComposedProcessGraph(
+                definition = definition,
+                objectOwnersByObjectRef = objectOwners,
+            )
         logger.info(
             "Composition summary: nodes={}, edges={}, subprocesses={}",
             definition.nodes.size,
             definition.sequences.size,
-            validatedPhasePlans.outline.outline.metrics.subprocessCount,
+            outline.outline.metrics.subprocessCount,
         )
-        return ComposedProcessGraph(
-            definition = definition,
-            objectOwnersByObjectRef = objectOwners,
-        )
-    }
 
-    @Action(description = "Assign stable ownership metadata to the composed process graph")
-    fun assignOwnership(graph: ComposedProcessGraph): OwnedElementGraph {
+        // assignOwnership: element-id ownership map (mirrors objectOwners plus `_di` diagram-element IDs).
         val elementOwners =
             buildMap {
-                put(graph.definition.processId, graph.objectOwnersByObjectRef["process"] ?: MAIN_PHASE_OWNER)
-                graph.definition.nodes.forEach { node ->
-                    put(node.id, graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
-                    put("${node.id}_di", graph.objectOwnersByObjectRef["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
+                put(definition.processId, objectOwners["process"] ?: MAIN_PHASE_OWNER)
+                definition.nodes.forEach { node ->
+                    put(node.id, objectOwners["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
+                    put("${node.id}_di", objectOwners["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
                 }
-                graph.definition.sequences.forEach { edge ->
-                    put(edge.id, graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
-                    put("${edge.id}_di", graph.objectOwnersByObjectRef["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
+                definition.sequences.forEach { edge ->
+                    put(edge.id, objectOwners["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
+                    put("${edge.id}_di", objectOwners["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
                 }
             }
-        return OwnedElementGraph(
-            composedGraph = graph,
-            elementOwnersByElementId = elementOwners,
-            objectOwnersByObjectRef = graph.objectOwnersByObjectRef,
-        )
-    }
+        val owned =
+            OwnedElementGraph(
+                composedGraph = composed,
+                elementOwnersByElementId = elementOwners,
+                objectOwnersByObjectRef = objectOwners,
+            )
 
-    @Action(description = "Assign deterministic layout to the process graph")
-    fun assignLayout(graph: OwnedElementGraph): LaidOutProcessGraph = LaidOutProcessGraph(
-        ownedGraph = graph,
-        definition = graph.definition,
-    )
+        // assignLayout: trivial wrap.
+        return LaidOutProcessGraph(ownedGraph = owned, definition = definition)
+    }
 
     @Action(description = "Render a laid out BPMN process graph into BPMN 2.0 XML with stable element linkage")
     fun renderBpmnXml(
@@ -273,6 +226,29 @@ internal class BpmnGeneratorAgent(
             xml = bpmn.xml,
             alignmentReport = bpmn.alignmentReport,
         )
+    }
+
+    private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {
+        if (outline.definition.processId.isBlank()) {
+            add(
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.GRAPH,
+                    message = "outline must define a non-blank processId",
+                    objectRef = "process",
+                    repairScope = BpmnRepairScope.OUTLINE,
+                ),
+            )
+        }
+        if (outline.definition.processName.isBlank()) {
+            add(
+                BpmnDiagnostic(
+                    source = BpmnDiagnosticSource.GRAPH,
+                    message = "outline must define a non-blank processName",
+                    objectRef = "process",
+                    repairScope = BpmnRepairScope.OUTLINE,
+                ),
+            )
+        }
     }
 
     private fun logArtifactDump(

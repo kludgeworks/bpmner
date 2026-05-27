@@ -10,17 +10,20 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.core.ActionRetryPolicy
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
+import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
@@ -64,25 +67,7 @@ internal class BpmnAlignmentAgent(
             config.alignmentValidator
                 .promptRunner(context)
                 .withPromptContributor(request)
-
-        // When the LLM fails to return a structured AlignmentFindings, inject a synthetic
-        // UNSUPPORTED issue so PostChecker's policy returns FAILED. Without this, the
-        // fail-safe inherited from the pre-redesign code (`verdict = FAILED` on null
-        // response) would be lost — empty issues + default policy yields ALIGNED.
-        val findings =
-            promptRunner.createObject(
-                promptFactory.prompt(request, contract.contract, summary),
-                AlignmentFindings::class.java,
-            ) ?: AlignmentFindings(
-                issues =
-                listOf(
-                    AlignmentIssue(
-                        elementId = MODEL_FAILURE_ELEMENT_ID,
-                        classification = AlignmentClassification.UNSUPPORTED,
-                    ),
-                ),
-                rationale = "Alignment model failed to produce a structured report.",
-            )
+        val findings = requestAlignmentFindings(promptRunner, request, contract.contract, summary)
 
         val report = postChecker.apply(findings, summary)
         eventPublisher.publishEvent(BpmnAlignmentCheckedEvent(request, report))
@@ -97,9 +82,35 @@ internal class BpmnAlignmentAgent(
         return AlignedBpmnXml(xml = bpmn.xml, alignmentReport = report)
     }
 
-    companion object {
-        // Synthetic element id used when the LLM fails to return a structured AlignmentFindings.
-        // The leading underscore makes it impossible to collide with a real generator-produced id.
-        internal const val MODEL_FAILURE_ELEMENT_ID = "_model_failure"
+    /**
+     * Phase 5 (#220): `createObject` returns non-null per Embabel's contract; null-defences here
+     * previously smuggled "model didn't respond" through a synthetic AlignmentIssue. Translate the
+     * framework's typed exceptions at this seam so the failure type stays legible —
+     * [BpmnAlignmentException] with `report = null` means "the alignment model failed," not
+     * "the model examined the BPMN and found problems." Extracted from [checkAlignment] so detekt's
+     * `ThrowsCount` discipline holds at the action method.
+     */
+    private fun requestAlignmentFindings(
+        promptRunner: PromptRunner,
+        request: BpmnRequest,
+        contract: ProcessContract,
+        summary: BpmnDefinitionSummary,
+    ): AlignmentFindings = try {
+        promptRunner.createObject(
+            promptFactory.prompt(request, contract, summary),
+            AlignmentFindings::class.java,
+        )
+    } catch (e: InvalidLlmReturnFormatException) {
+        throw BpmnAlignmentException(
+            message = "Alignment model failed to produce a structured report: ${e.message}",
+            report = null,
+            cause = e,
+        )
+    } catch (e: InvalidLlmReturnTypeException) {
+        throw BpmnAlignmentException(
+            message = "Alignment model returned an invalid AlignmentFindings: ${e.message}",
+            report = null,
+            cause = e,
+        )
     }
 }

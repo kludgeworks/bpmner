@@ -6,6 +6,7 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
+import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
@@ -117,7 +118,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
                         outputFile = outputFile.toString(),
                     ),
                     BpmnResult::class.java,
-                    ProcessOptions(),
+                    // Mirrors `AgentPlatformBpmnAgentInvoker.syncGenerationProcessOptions()`:
+                    // exercise the real budget so a regression that pushes generation past
+                    // 100 actions surfaces here rather than only in production.
+                    ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
                 )
 
         assertEquals(outputFile.toString(), result.outputFile)

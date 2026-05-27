@@ -10,6 +10,7 @@ package dev.groknull.bpmner.repair
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.api.common.autonomy.ProcessExecutionStuckException
 import com.embabel.agent.api.common.autonomy.ProcessExecutionTerminatedException
+import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import com.embabel.chat.Message
@@ -118,7 +119,8 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
                 .transform(
                     BpmnRequest(processDescription = "Make toast", outputFile = outputFile.toString()),
                     BpmnResult::class.java,
-                    ProcessOptions(),
+                    // Mirrors `AgentPlatformBpmnAgentInvoker.syncGenerationProcessOptions()`.
+                    ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
                 )
 
         assertNotNull(result, "happy-path pipeline must produce a BpmnResult")

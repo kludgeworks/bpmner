@@ -240,15 +240,17 @@ internal class BpmnRepairAgent(
         val feedback = promptFactory.fullRepairFeedback(repairEval.toAttempt(), candidates)
         val runner = promptRunner(repairEval, context, config.rewriteRepairer)
         // `createObject` (not `createObjectIfPossible`) routes through `LlmOperations.createObject`,
-        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. If the LLM
-        // genuinely produces no structured result, `createObject` throws — we catch and replan.
+        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. The contract is
+        // non-null + throws-on-failure; we catch the throw and translate it into a planner-visible
+        // replan signal. Phase 5 (#220) tightened from `runCatching { ... }.getOrNull() ?: throw`
+        // because `getOrNull` collapsed "threw" and "returned null" into one path, but only "threw"
+        // is reachable per the framework contract.
         val repaired: BpmnDefinition = runCatching {
             runner.createObject(
                 repairEval.messages + UserMessage(feedback),
                 BpmnDefinition::class.java,
             )
-        }.getOrNull()
-            ?: throw RepairReplans.signal("LLM rewrite returned no structured definition")
+        }.getOrElse { throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${it.message}") }
         return revalidateAndAdvance(
             prior = repairEval,
             repaired = repaired,
@@ -462,8 +464,7 @@ internal class BpmnRepairAgent(
                 repairEval.messages + UserMessage(feedback),
                 BpmnRepairPatch::class.java,
             )
-        }.getOrNull()
-            ?: throw RepairReplans.signal("$patchTypeName returned no structured patch")
+        }.getOrElse { throw RepairReplans.signal("$patchTypeName failed to produce a structured patch: ${it.message}") }
         val application = patchApplier.apply(repairEval.definition, patch)
         val success = patchSuccessOrReplan(application, patchTypeName)
         return revalidateAndAdvance(

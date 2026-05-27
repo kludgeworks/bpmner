@@ -64,25 +64,27 @@ class BpmnProgressProjectionObserver(
     }
 
     private fun mapActionToLabel(actionName: String): String? = when (actionName) {
-        "createProcessOutline" -> "Generating BPMN structure"
+        // Generator (Phase 5, 4 actions)
+        "createOutline" -> "Generating BPMN structure"
 
-        "validateOutline" -> "Validating outline"
-
-        "generatePhasePlans" -> "Planning phase details"
-
-        // not explicitly in ticket list but makes sense
-        "composeProcessGraph" -> "Composing process graph"
-
-        "assignOwnership" -> "Applying XML fixes"
-
-        // approximation based on what it does
-        "assignLayout" -> "Laying out diagram"
+        "composeGraph" -> "Composing process graph"
 
         "renderBpmnXml" -> "Rendering BPMN XML"
 
-        "refine" -> "Validating and repairing"
-
         "finalizeBpmn" -> "Finalizing BPMN output"
+
+        // Repair (Phase 4 GOAP, 5 actions + finalize)
+        "validate" -> "Validating BPMN"
+
+        "applyDeterministicFixes" -> "Applying deterministic fixes"
+
+        "applyLlmLabelPatch" -> "Repairing labels"
+
+        "applyLlmStructuralPatch" -> "Repairing structure"
+
+        "applyFullLlmRewrite" -> "Rewriting BPMN"
+
+        "finalize" -> "Finalizing repair"
 
         else -> null // Unknown events do not create noisy entries
     }

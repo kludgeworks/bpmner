@@ -57,11 +57,13 @@ internal class BpmnContractAgent(
                 .promptRunner(context)
                 .withPromptContributor(request)
 
+        // Phase 5 (#220): `createObject` returns non-null per Embabel's contract; it throws on
+        // failure. Let the typed exception propagate to the planner — no defense needed here.
         val contract =
             promptRunner.createObject(
                 promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
                 ProcessContract::class.java,
-            ) ?: error("Contract extractor failed to produce a structured contract.")
+            )
 
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
         val report = validator.validate(contract)

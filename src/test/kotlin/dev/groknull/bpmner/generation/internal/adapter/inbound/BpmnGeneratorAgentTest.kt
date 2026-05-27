@@ -33,14 +33,14 @@ import kotlin.test.assertTrue
 
 class BpmnGeneratorAgentTest {
     @Test
-    fun `createProcessOutline sends a contract-first prompt and returns outline metrics`() {
+    fun `createOutline sends a contract-first prompt and returns validated outline metrics`() {
         val context = FakeOperationContext()
         val definition = testBpmnDefinition(processName = "Handle claim")
         context.expectResponse(definition)
         val agent = agent()
 
-        val outline =
-            agent.createProcessOutline(
+        val validated =
+            agent.createOutline(
                 BpmnRequest(
                     processDescription = "Raw prose kept for traceability.",
                     styleGuide = "Use sentence case names.",
@@ -49,8 +49,8 @@ class BpmnGeneratorAgentTest {
                 context,
             )
 
-        assertEquals(definition, outline.definition)
-        assertEquals(1, outline.metrics.phaseCount)
+        assertEquals(definition, validated.definition)
+        assertEquals(1, validated.outline.metrics.phaseCount)
         assertEquals(1, context.llmInvocations.size)
         val prompt = context.llmInvocations.single().prompt
         assertTrue(prompt.contains("Primary validated ProcessContract:"))
@@ -64,7 +64,7 @@ class BpmnGeneratorAgentTest {
     }
 
     @Test
-    fun `createProcessOutline fails before LLM generation for invalid contracts`() {
+    fun `createOutline fails before LLM generation for invalid contracts`() {
         val context = FakeOperationContext()
         val agent = agent()
         val invalid =
@@ -85,7 +85,7 @@ class BpmnGeneratorAgentTest {
 
         val error =
             assertFailsWith<IllegalStateException> {
-                agent.createProcessOutline(BpmnRequest("Generate this"), invalid, context)
+                agent.createOutline(BpmnRequest("Generate this"), invalid, context)
             }
 
         assertTrue(error.message.orEmpty().contains("invalid process contract"))
