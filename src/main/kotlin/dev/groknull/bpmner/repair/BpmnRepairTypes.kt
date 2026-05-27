@@ -58,8 +58,3 @@ data class BpmnAttemptRecord(
         "xsd=$xsdDiagnostics,lint=$lintDiagnostics,diag=$diagnosticFingerprint," +
         "def=$definitionFingerprint,prompt=${repairPromptFingerprint ?: "-"})"
 }
-
-class BpmnRefinementFailureException(
-    message: String,
-    val summary: String,
-) : IllegalStateException(message)

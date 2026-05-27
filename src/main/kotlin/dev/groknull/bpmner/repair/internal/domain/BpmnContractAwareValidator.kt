@@ -18,6 +18,8 @@ import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnValidator
 import dev.groknull.bpmner.validation.GlobalDiagnostics
+import org.jmolecules.ddd.annotation.Service
+import org.springframework.stereotype.Component
 
 /**
  * Contract-aware validator wrapper that composes the structural [BpmnValidator] (XSD, lint,
@@ -35,6 +37,8 @@ import dev.groknull.bpmner.validation.GlobalDiagnostics
  * Fidelity checks are only run when the base evaluation has no blocking diagnostics —
  * there is no value checking contract fidelity when the BPMN is structurally invalid.
  */
+@Service
+@Component
 internal class BpmnContractAwareValidator(
     private val pipeline: BpmnValidator,
     private val fidelityChecker: BpmnContractFidelityChecker,

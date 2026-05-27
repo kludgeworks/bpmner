@@ -16,8 +16,6 @@ import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.OwnedElementGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.repair.BpmnLocalFixFailure
-import dev.groknull.bpmner.repair.BpmnLocalRepairOutcome
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
@@ -37,53 +35,63 @@ import kotlin.test.assertTrue
 
 class BpmnRepairPromptFactoryTest {
     @Test
-    fun `patchFeedback annotates failed-local diagnostics and includes LLM diagnostics`() {
+    fun `patchFeedback renders LLM diagnostics in the prompt`() {
+        // Phase 4 (#219): the prior local-fix-failure suffix was removed when
+        // BpmnLocalRepairOutcome was deleted — GOAP's cost ordering + fingerprint cycle
+        // delivers the escalation that the prior `failedLocally` flag tracked manually.
         val factory = factory()
         val definition = sampleDefinition()
         val llmDiag = lintDiagnostic("bpmner/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
-        val localFailedDiag = lintDiagnostic("bpmner/name-01", "Task_2", "Strip type word", RepairKind.LOCAL_XML_FIX)
-        val outcome =
-            BpmnLocalRepairOutcome(
-                listOf(BpmnLocalFixFailure(rule = "bpmner/name-01", elementId = "Task_2", reason = "handler boom")),
-            )
 
-        val prompt = factory.patchFeedback(definition, listOf(llmDiag, localFailedDiag), outcome)
+        val prompt = factory.patchFeedback(definition, listOf(llmDiag))
 
         assertTrue(prompt.contains("rule=bpmner/name-02"), "expected LLM diagnostic in prompt")
-        assertTrue(prompt.contains("rule=bpmner/name-01"), "expected failed-local diagnostic in prompt")
-        assertTrue(
-            prompt.contains("[local-fix-failed: handler boom]"),
-            "expected failed-local annotation, got: $prompt",
+        assertFalse(
+            prompt.contains("local-fix-failed"),
+            "post-Phase-4 prompt must not include the legacy local-fix-failed marker",
         )
     }
 
     @Test
-    fun `patchFeedback without local outcome renders diagnostics without local-fix marker`() {
+    fun `patchFeedback groups diagnostics by severity with the ERROR or WARNING guidance preamble`() {
         val factory = factory()
-        val diag = lintDiagnostic("bpmner/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
+        val errorDiag = lintDiagnostic(
+            rule = "bpmner/name-02",
+            elementId = "Task_1",
+            message = "Use action verb",
+            kind = RepairKind.LLM_MODEL_PATCH,
+            severity = BpmnDiagnosticSeverity.ERROR,
+        )
+        val warningDiag = lintDiagnostic(
+            rule = "bpmner/name-03",
+            elementId = "Task_2",
+            message = "Prefer sentence case",
+            kind = RepairKind.LLM_MODEL_PATCH,
+            severity = BpmnDiagnosticSeverity.WARNING,
+        )
 
-        val prompt = factory.patchFeedback(sampleDefinition(), listOf(diag), BpmnLocalRepairOutcome.EMPTY)
+        val prompt = factory.patchFeedback(sampleDefinition(), listOf(errorDiag, warningDiag))
 
-        assertTrue(prompt.contains("rule=bpmner/name-02"))
-        assertFalse(prompt.contains("local-fix-failed"))
+        assertTrue(prompt.contains("ERRORs — MUST be fixed"), "ERROR guidance preamble missing")
+        assertTrue(prompt.contains("WARNINGs / INFO — advisory only"), "WARNING guidance preamble missing")
+        // ERROR row precedes the WARNING row.
+        val errorIdx = prompt.indexOf("rule=bpmner/name-02")
+        val warningIdx = prompt.indexOf("rule=bpmner/name-03")
+        assertTrue(errorIdx in 0 until warningIdx, "expected ERROR diagnostic before WARNING")
     }
 
     @Test
-    fun `fullRepairFeedback annotates failed-local diagnostics`() {
+    fun `fullRepairFeedback embeds the rendered XML for LLM context`() {
         val factory = factory()
         val definition = sampleDefinition()
         val attempt = attempt(definition, diagnostics = emptyList())
         val llmDiag = lintDiagnostic("bpmner/name-02", "Task_1", "Use action verb", RepairKind.LLM_MODEL_PATCH)
-        val localFailedDiag = lintDiagnostic("bpmner/name-01", "Task_2", "Strip type word", RepairKind.LOCAL_XML_FIX)
-        val outcome =
-            BpmnLocalRepairOutcome(
-                listOf(BpmnLocalFixFailure(rule = "bpmner/name-01", elementId = "Task_2", reason = "xsd invalid")),
-            )
 
-        val prompt = factory.fullRepairFeedback(attempt, listOf(llmDiag, localFailedDiag), outcome)
+        val prompt = factory.fullRepairFeedback(attempt, listOf(llmDiag))
 
+        assertTrue(prompt.contains("Rendered BPMN XML:"), "expected rendered-XML section in full-repair prompt")
         assertTrue(prompt.contains("rule=bpmner/name-02"))
-        assertTrue(prompt.contains("[local-fix-failed: xsd invalid]"))
+        assertFalse(prompt.contains("local-fix-failed"))
     }
 
     private fun factory(): BpmnRepairPromptFactory {
@@ -96,11 +104,12 @@ class BpmnRepairPromptFactoryTest {
         elementId: String?,
         message: String,
         kind: RepairKind,
+        severity: BpmnDiagnosticSeverity = BpmnDiagnosticSeverity.ERROR,
     ) = BpmnDiagnostic(
         source = BpmnDiagnosticSource.LINT,
         message = message,
         rule = rule,
-        severity = BpmnDiagnosticSeverity.ERROR,
+        severity = severity,
         elementId = elementId,
         kind = kind,
         repairScope = BpmnRepairScope.PHASE,
