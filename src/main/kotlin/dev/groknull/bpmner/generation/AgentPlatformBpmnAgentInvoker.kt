@@ -43,7 +43,7 @@ internal class AgentPlatformBpmnAgentInvoker(
         // planner has no applicable action, `ProcessExecutionTerminatedException` on budget
         // exhaustion). Replaces the prior `process.resultOfType()` which crashed silently on
         // non-COMPLETED states and the bespoke `BpmnRefinementFailureException`.
-        val execution = AgentProcessExecution.Companion.fromProcessStatus(request, process)
+        val execution = AgentProcessExecution.fromProcessStatus(request, process)
         return resultClass.cast(execution.output)
     }
 

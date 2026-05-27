@@ -16,6 +16,7 @@ import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnEvaluation
+import dev.groknull.bpmner.validation.BpmnRepairScope
 
 /**
  * The shared blackboard threaded through every `@Action` of [BpmnRepairAgent] via
@@ -65,6 +66,21 @@ internal data class BpmnRepairEvaluation(
 
     val hasLlmEligible: Boolean
         get() = diagnostics.any { it.kind != RepairKind.UNFIXABLE }
+
+    /**
+     * Phase 4 review G1: scope-specific eligibility splits so the planner distinguishes
+     * `applyLlmLabelPatch` and `applyLlmStructuralPatch` at plan time. Without this, A*
+     * picks the cheaper label action on structural-only repairs, immediately throws
+     * `ReplanRequestedException`, and burns a budget action per iteration.
+     */
+    val hasLlmLabelEligible: Boolean
+        get() = diagnostics.any { it.kind != RepairKind.UNFIXABLE && it.repairScope == BpmnRepairScope.LABEL }
+
+    val hasLlmStructuralEligible: Boolean
+        get() = diagnostics.any { d ->
+            d.kind != RepairKind.UNFIXABLE &&
+                (d.repairScope == BpmnRepairScope.OUTLINE || d.repairScope == BpmnRepairScope.PHASE)
+        }
 
     /**
      * Project the blackboard into a [BpmnRepairAttempt] — the existing prompt/patch surface
