@@ -30,7 +30,7 @@ internal class BpmnRuleAdapterTest {
     fun `rule with checkPrimitive produces metadata and mapped check`() {
         val generated = newGenerated(
             checkPrimitive = PklCheckPrim.Primitive.PROPERTY_PATTERN_CHECK,
-            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", "sentence case"),
+            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", "sentence case", null, null),
         )
 
         val adapted = BpmnRuleAdapter.adapt(generated)
@@ -66,7 +66,7 @@ internal class BpmnRuleAdapterTest {
     fun `severity=OFF rule is skipped`() {
         val generated = newGenerated(
             checkPrimitive = PklCheckPrim.Primitive.PROPERTY_PATTERN_CHECK,
-            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null),
+            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null, null, null),
             severity = PklBpmnRule.Severity.OFF,
         )
 
@@ -81,7 +81,7 @@ internal class BpmnRuleAdapterTest {
         )
         val generated = newGenerated(
             checkPrimitive = PklCheckPrim.Primitive.PROPERTY_PATTERN_CHECK,
-            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null),
+            checkConfig = PklCheckPrim.PropertyPatternCheck("name", "^.*$", null, null, null),
             staticConfig = staticConfig,
         )
 

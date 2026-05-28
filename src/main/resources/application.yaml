@@ -60,3 +60,4 @@ bpmner:
       "act-verb-object-name": "off"              # #168 — business-verb allowlist too narrow; LLM cycles on camelCase composites
       "act-activity-label-capitalization": "off" # #170 — generator emits id-as-name (PascalCase); rule fires on every task
       "name-no-element-type-words": "off"        # #170 — same root cause; this one is `error` severity, so re-enabling can block production
+      "name-uncommon-abbreviations": "off"       # opt-in rule; ships disabled by default. Operators flip to warning/error via their own override

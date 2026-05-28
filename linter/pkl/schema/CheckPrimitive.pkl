@@ -67,6 +67,20 @@ class PropertyPatternCheck extends CheckConfig {
   /// message (e.g. `"sentence case"`). Optional because some rules use a self-explanatory
   /// pattern. Local to this primitive — see the file-level doc comment.
   patternDescription: String? = null
+
+  /// Optional case-insensitive word-boundary blocklist applied in addition to [pattern]. If
+  /// the property value contains any of these tokens (matched on `\b...\b`), the element is
+  /// flagged. Rules whose source-of-truth list lives in `staticConfig` should reference it
+  /// here so the Pkl file remains the single source of truth — e.g.
+  /// `forbiddenVocabulary = staticConfig.technicalTokens`.
+  forbiddenVocabulary: List<NonEmptyString>? = null
+
+  /// Optional case-sensitive word-boundary allowlist that exempts substrings from [pattern]
+  /// evaluation. Conceptually the value is "scrubbed" of allowed tokens before [pattern] is
+  /// checked, so patterns can be written as "no all-caps run" while specific acronyms
+  /// (`BPMN`, `ACME`, ...) pass. Does NOT affect [forbiddenVocabulary] — forbidden hits are
+  /// absolute.
+  allowedVocabulary: List<NonEmptyString>? = null
 }
 
 class VocabularyCheck extends CheckConfig {

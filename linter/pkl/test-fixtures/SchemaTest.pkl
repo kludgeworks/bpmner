@@ -23,7 +23,10 @@ facts {
   }
 
   ["NAME-02 carries linter and repair metadata"] {
-    Rule.severity == "off"
+    // `severity = "warning"` so the rule stays in the registry; opt-out happens via the
+    // `application.yaml` `bpmner.rules.severity-overrides` entry (`#283` will move the
+    // "off" filter to eval-time and let this revert to `"off"`).
+    Rule.severity == "warning"
     Rule.targetElements.contains("bpmn:Task")
     Rule.errorMessages["default"]
       == "Avoid uncommon abbreviations in labels or explain them via annotation/glossary"
