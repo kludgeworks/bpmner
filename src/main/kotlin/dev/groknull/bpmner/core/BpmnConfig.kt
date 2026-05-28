@@ -234,17 +234,21 @@ data class BpmnBudgetConfig(
 )
 
 data class BpmnRulesConfig(
-    // Filesystem directory scanned at startup for custom .pkl rule modules. When unset (default),
-    // only rules packaged with the application are loaded. Custom rules are evaluated through a
-    // separate file:-scheme evaluator so runtime glob works (modulepath: is not globbable).
-    val customDir: java.nio.file.Path? = null,
-    // Per-rule severity overrides. Keys are bare rule ids (e.g. `act-verb-object-name`).
-    // Values are one of `error`, `warning`, `info`, `off`. `off` filters the rule out entirely
-    // (the engine skips evaluation); the other three override the Pkl-declared severity for
-    // every diagnostic the rule emits. Unknown rule ids are not validated against the rule
-    // registry — they survive into the profile and silently never match anything at
-    // evaluation time. Only unrecognised severity *values* produce a log line (WARN, via
-    // RuleProfileFactory). See #242. Value is nullable so YAML entries like `some-rule:`
-    // (no value) bind cleanly rather than NPE during startup.
+    // Named rule profile loaded at startup from `linter/pkl/profiles/{Name}Profile.pkl`. Phase 6
+    // (#221) ships `recommended` (default — declared severities) and `strict` (warnings→errors).
+    // Unknown names fail startup with the list of available profiles. New profiles are added by
+    // dropping a `{Name}Profile.pkl` file under `linter/pkl/profiles/` that amends
+    // `BpmnRuleProfile.pkl` — no Kotlin change required.
+    val profile: String = "recommended",
+    // Per-rule severity overrides applied ON TOP of the active profile. User entries always win
+    // over the profile's overrides — the profile is the baseline, this map is the escape hatch.
+    // Keys are bare rule ids (e.g. `act-verb-object-name`). Values are one of `error`,
+    // `warning`, `info`, `off`. `off` filters the rule out entirely (the engine skips
+    // evaluation); the other three override the Pkl-declared severity for every diagnostic the
+    // rule emits. Unknown rule ids are not validated against the rule registry — they survive
+    // into the profile and silently never match anything at evaluation time. Only unrecognised
+    // severity *values* produce a log line (WARN, via RuleProfileFactory). See #242. Value is
+    // nullable so YAML entries like `some-rule:` (no value) bind cleanly rather than NPE during
+    // startup.
     val severityOverrides: Map<String, String?> = emptyMap(),
 )

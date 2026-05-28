@@ -98,7 +98,7 @@ interface BpmnValidator {
 }
 ```
 
-`BpmnValidator` is the **only** thing other modules import from `validation`. The `repair` module's `BpmnRefinementEngine` depends on `BpmnValidator`, not on `BpmnEvaluationPipeline` or any internal type.
+`BpmnValidator` is the **only** thing other modules import from `validation`. The `repair` module's `BpmnRepairAgent` depends on `BpmnContractAwareValidator` (an internal wrapper around `BpmnValidator`), not on `BpmnEvaluationPipeline` or any other internal type.
 
 ### Secondary port — what `validation` needs
 

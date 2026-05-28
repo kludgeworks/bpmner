@@ -16,6 +16,8 @@ PKL_GENERATED_SCHEMA_SRCS = [
 
 PKL_RULE_SRCS = glob(["rules/*.pkl"])
 
+PKL_PROFILE_SRCS = glob(["profiles/*.pkl"])
+
 pkl_library(
     name = "schema",
     srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS,
@@ -30,6 +32,14 @@ rules_index(
 pkl_library(
     name = "rules_index",
     srcs = [":rules_index_pkl"] + PKL_RULE_SRCS + PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS,
+)
+
+# Profile modules (recommended / strict + future) and their schema. Bundled as runtime
+# resources so the Kotlin `RuleProfileFactory` can load them via
+# `modulepath:/linter/pkl/profiles/{name}.pkl` at startup.
+pkl_library(
+    name = "profiles",
+    srcs = PKL_PROFILE_SRCS + PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [":rules_index_pkl"] + PKL_RULE_SRCS,
 )
 
 # Generates Java POJOs from the rule schema for runtime consumption by PklRuleCatalog (2D-b).
@@ -51,7 +61,7 @@ pkl_java_library(
 # resource_strip_prefix) so the in-Pkl relative imports resolve correctly.
 java_library(
     name = "pkl_runtime_resources",
-    resources = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + PKL_RULE_SRCS + [":rules_index_pkl"],
+    resources = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + PKL_RULE_SRCS + PKL_PROFILE_SRCS + [":rules_index_pkl"],
     visibility = ["//src:__subpackages__"],
 )
 

@@ -1,0 +1,9 @@
+/// Default rule profile: use each rule's declared severity, disable nothing.
+///
+/// Selected when `bpmner.rules.profile` is unset or set to `recommended` (the default). New
+/// profiles should prefer amending this module over amending the bare schema, so the inheritance
+/// chain stays Recommended → custom.
+amends "../schema/BpmnRuleProfile.pkl"
+
+id = "recommended"
+description = "Use each rule's declared severity. Disable nothing."

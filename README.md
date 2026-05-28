@@ -87,7 +87,7 @@ Kotlin code is checked by three complementary tools:
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
-- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), and [Repair Architecture](docs/repair-architecture.md).
+- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), the [GOAP Lifecycle + Repair Architecture](docs/goap-lifecycle.md), the [Operator Guide](docs/operator-guide.md), and the [Agent Overview](docs/agents.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
 
 ## Contributing
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
