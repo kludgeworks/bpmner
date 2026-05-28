@@ -2,7 +2,7 @@
 
 `bpmner` turns a plain-language business-process description into validated BPMN 2.0 XML by chaining three Embabel agents — generation, repair, layout — over a sequence of strongly-typed domain objects. Each stage narrows the failure mode: the LLM owns *what* the process means; deterministic Kotlin code owns *how* it is structured, laid out, and validated.
 
-This document maps the end-to-end pipeline. The repair sub-system has its own deeper dive in [`linter/docs/repair-architecture.md`](../linter/docs/repair-architecture.md).
+This document maps the end-to-end pipeline. The Embabel GOAP planner — how actions are chained, how the repair loop iterates, how failure modes surface as typed exceptions — has its own deeper dive in [`goap-lifecycle.md`](./goap-lifecycle.md). The Pkl repair contract (RepairKind, RepairSafety, handler registration) is documented there too.
 
 ## Module map
 
@@ -15,7 +15,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `contract/` | Guardrail 2: Extraction of source-grounded process contracts, multi-source evidence tracking. | `BpmnContractAgent`, `ProcessContract`, `ValidatedProcessContract`. |
 | `generation/` | LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGeneratorAgent`, `BpmnRenderer` (port), `BpmnGeneratedEvent`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
-| `repair/` | Local-first deterministic repair, LLM patch / rewrite strategies, refinement loop with stuck-state detection. | `BpmnRepairAgent`, `BpmnRefinementEngine` (internal), `BpmnLocalFixSummary`. |
+| `repair/` | Local-first deterministic repair, LLM patch / rewrite via Embabel GOAP planner. Six actions chained via `outputBinding = "repairEval"`; cost ordering picks the cheapest applicable tier each iteration. See [`goap-lifecycle.md`](./goap-lifecycle.md). | `BpmnRepairAgent`, `BpmnRepairEvaluation`, `RepairKind`. |
 | `layout/` | Bounded pre-layout XML cleanup, deterministic auto-layout, final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort`. |
 | `alignment/` | Guardrail 3: Semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAlignmentAgent`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`. |
@@ -52,27 +52,14 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
                            ▼
             ┌─────────────────────────────────────────────────────────┐
             │           BpmnGeneratorAgent  (generation/)             │
+            │           4 actions                                     │
             │                                                         │
-            │  createProcessOutline  ── LLM ──► BpmnDefinition        │
-            │              │                                          │
+            │  createOutline   LLM + DefaultFlowAssigner + fidelity   │
+            │              │   check (inline)                         │
             │              ▼                                          │
-            │       ProcessOutline ─► validateOutline                 │
-            │              │                                          │
-            │              ▼                                          │
-            │       ValidatedOutline ─► generatePhasePlans            │
-            │              │                                          │
-            │              ▼                                          │
-            │       PhasePlanSet ─► validatePhasePlans                │
-            │              │                                          │
-            │              ▼                                          │
-            │       ValidatedPhasePlanSet ─► composeProcessGraph      │
-            │              │                                          │
-            │              ▼                                          │
-            │       ComposedProcessGraph ─► assignOwnership           │
-            │              │                                          │
-            │              ▼                                          │
-            │       OwnedElementGraph ─► assignLayout                 │
-            │              │                                          │
+            │       ValidatedOutline ─► composeGraph                  │
+            │              │           deterministic — compose,       │
+            │              │           ownership, layout (inline)     │
             │              ▼                                          │
             │       LaidOutProcessGraph ─► renderBpmnXml              │
             │              │                                          │
@@ -82,24 +69,20 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
                            ▼
             ┌─────────────────────────────────────────────────────────┐
             │            BpmnRepairAgent  (repair/)                   │
+            │            GOAP loop — 6 actions                        │
             │                                                         │
-            │  refine ── BpmnRefinementEngine ──────────────►         │
-            │              loop  (≤ maxAttempts)                      │
-            │              ├─ evaluate  (validation/)                 │
-            │              │    │ definition checks                   │
-            │              │    │ ownership checks                    │
-            │              │    │ XSD validation                      │
-            │              │    │ rule-engine (semantic)              │
-            │              │    │ normalize + stamp RepairKind        │
-            │              │    ▼                                     │
-            │              ├─ repair strategies, in @Order:           │
-            │              │    LintLocalRepairStrategy        (75)   │
-            │              │    LlmPatchRepairStrategy         (200)  │
-            │              │    FullLlmRewriteRepairStrategy   (300)  │
-            │              │                                          │
-            │              ├─ per-attempt route-summary log line      │
-            │              ├─ stuck/unchanged diagnostic detection    │
-            │              └─ publish BpmnValidationPassed/Failed     │
+            │  validate                  cost 0   (always first)      │
+            │  applyDeterministicFixes   cost 0.1                     │
+            │  applyLlmLabelPatch        cost 0.5                     │
+            │  applyLlmStructuralPatch   cost 0.7                     │
+            │  applyFullLlmRewrite       cost 0.9                     │
+            │  finalize                  pre: diagnosticsResolved     │
+            │                                                         │
+            │  Embabel planner picks cheapest applicable action       │
+            │  each iteration. `BpmnRepairEvaluation` threads through │
+            │  via outputBinding = "repairEval" + @RequireNameMatch.  │
+            │  See [`goap-lifecycle.md`](./goap-lifecycle.md) for     │
+            │  cost ordering, replan semantics, STUCK vs TERMINATED.  │
             │                                                         │
             │                ──► ValidatedBpmnXml                     │
             └──────────────┬──────────────────────────────────────────┘
@@ -117,7 +100,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │            BpmnLayoutAgent  (layout/)                   │
             │                                                         │
             │  autoFixBpmnXml                                         │
-            │     │ pre-layout cleanup limited to LOCAL_XML_FIX       │
+            │     │ bounded pre-layout cleanup                        │
             │     │ XSD-validates output; falls back on rejection     │
             │     ▼                                                   │
             │  AutoFixedBpmnXml ─► layoutBpmnXml                      │
@@ -141,19 +124,14 @@ The arrows between domain types are exact: each agent action declares its input 
 
 ## Stage 1 — Generation (`generation/`)
 
-`BpmnGeneratorAgent` deliberately splits "ask the LLM" from "structure the result." Only `createProcessOutline` calls the model; everything after it is deterministic code operating on the typed `BpmnDefinition` the model returned.
+`BpmnGeneratorAgent` deliberately splits "ask the LLM" from "structure the result." Only `createOutline` calls the model; everything after it is deterministic code operating on the typed `BpmnDefinition` the model returned. The four-action shape inlines the ownership and layout derivations into `composeGraph` so intermediate types don't cross action boundaries unnecessarily.
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `createProcessOutline` | `BpmnRequest → ProcessOutline` | Builds a generator prompt from `BpmnRequest.generationPrompt()`, attaches the request as a prompt contributor (rules + optional style guide), calls `promptRunner.createObject(BpmnDefinition::class.java)`. Returns the `BpmnDefinition` plus `OutlineMetrics` (phase / branch / loop / subprocess counts). |
-| `validateOutline` | `ProcessOutline → ValidatedOutline` | Cheap structural sanity check: non-blank `processId` and `processName`. Failures become `BpmnDiagnostic`s with `repairScope = OUTLINE`. |
-| `generatePhasePlans` | `ValidatedOutline → PhasePlanSet` | Currently emits a single `phase:main` plan covering the whole process. Reserved for future multi-phase decomposition. |
-| `validatePhasePlans` | `PhasePlanSet → ValidatedPhasePlanSet` | Per-phase validation hook; today a no-op pass-through with empty diagnostics. |
-| `composeProcessGraph` | `ValidatedPhasePlanSet → ComposedProcessGraph` | Builds the `objectOwnersByObjectRef` map: every node and sequence gets stamped with its owning phase. This is the foundation for `repairScope` inference downstream. |
-| `assignOwnership` | `ComposedProcessGraph → OwnedElementGraph` | Mirrors the object-ref ownership into an `elementOwnersByElementId` map. The diagnostic normalizer uses this to resolve `ownerRef` from `elementId`. |
-| `assignLayout` | `OwnedElementGraph → LaidOutProcessGraph` | Passes through. Layout coordinates are not part of the semantic model; they are assigned downstream in the layout stage by `yet-another-bpmn-auto-layout`. |
-| `renderBpmnXml` | `(BpmnRequest, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds semantic XML (no BPMNDI) and a `BpmnElementIndex` mapping element ids to render objects. Emits `BpmnGeneratedEvent`. |
-| `writeBpmn` (final step) | `(BpmnRequest, FinalValidatedBpmnXml) → BpmnResult` | UTF-8 writes the final XML to the requested output file. Carries `@AchievesGoal` for the agent platform's planner. |
+| `createOutline` | `(BpmnRequest, ValidatedProcessContract) → ValidatedOutline` | Builds a generator prompt, calls `promptRunner.createObject(BpmnDefinition::class.java)`, applies `DefaultFlowAssigner` to stamp default outgoing flows on exclusive gateways, runs the inline fidelity check (`processId`/`processName` non-blank, `BpmnContractFidelityChecker`). Emits a `ValidatedOutline` containing the `BpmnDefinition`, the request, computed `OutlineMetrics`, and any non-blocking diagnostics. |
+| `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | Single deterministic action that absorbed five Phase-pre-5 actions. Builds the `objectOwnersByObjectRef` map (every node and sequence stamped with the main phase), derives the `elementOwnersByElementId` map (mirrors object ownership plus `_di` diagram-element ids), and wraps the whole thing in `LaidOutProcessGraph`. The intermediate types `ComposedProcessGraph` and `OwnedElementGraph` still exist internally (the repair agent reads `OwnedElementGraph` via `LaidOutProcessGraph.ownedGraph`) but they no longer cross an action boundary. |
+| `renderBpmnXml` | `(BpmnRequest, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds semantic XML (no BPMNDI — layout coordinates come later) and a `BpmnElementIndex` mapping element ids to render objects. Emits `BpmnGeneratedEvent`. |
+| `finalizeBpmn` | `(BpmnRequest, AlignedBpmnXml) → BpmnResult` | UTF-8 writes the final XML to the requested output file if one is configured, returns the result. Carries `@AchievesGoal(name = "generateBpmn")` — this is the top-level goal the Embabel planner is trying to reach. |
 
 ### Why a typed `BpmnDefinition`, not raw XML
 
@@ -161,55 +139,55 @@ The LLM produces an object with explicit semantic fields (nodes, sequences). Thi
 
 ## Stage 2 — Repair (`repair/`)
 
-`BpmnRepairAgent` is a thin facade over `BpmnRefinementEngine`, the orchestration loop.
+`BpmnRepairAgent` is a six-action Embabel GOAP agent. The planner picks the cheapest applicable action each iteration; a `BpmnRepairEvaluation` blackboard threads through every action via `outputBinding = "repairEval"` + `@RequireNameMatch("repairEval")` so the loop accumulates state across iterations.
 
 ```
-RenderedBpmn ──► BpmnRefinementEngine.refine ──► ValidatedBpmnXml
-                          │
-                          ▼
-                 BpmnEvaluationPipeline.evaluate(...)
-                          │
-              ┌───────────┴───────────────┐
-              │  BpmnDefinitionValidator  │   structural sanity
-              │  graph.validateOwnership  │   ownership integrity
-              │  BpmnXsdValidationPort    │   schema compliance
-              │  BpmnLintingPort.lint     │   rule-engine diagnostics
-              │  BpmnDiagnosticNormalizer │   stamps RepairKind on each
-              └───────────────────────────┘
-                          │
-                          ▼
-                 if successful → ValidatedBpmnXml
-                 else  →  pick first applicable strategy
-                          │
-                          ▼
-              ┌───────────────────────────────────────────┐
-              │  LintLocalRepairStrategy       (Order 75) │
-              │   LOCAL_MODEL_FIX → Kotlin model patcher  │
-              │   LOCAL_XML_FIX   → TS auto-fix engine    │
-              │   records BpmnLocalFixSummary             │
-              ├───────────────────────────────────────────┤
-              │  LlmPatchRepairStrategy        (Order 200)│
-              │   prompts LLM for BpmnRepairPatch         │
-              │   excludes locally-resolved diagnostics   │
-              │   annotates locally-failed ones           │
-              ├───────────────────────────────────────────┤
-              │  FullLlmRewriteRepairStrategy  (Order 300)│
-              │   prompts LLM for whole BpmnDefinition    │
-              └───────────────────────────────────────────┘
-                          │
-                          ▼
-              re-render → re-evaluate → next attempt
-              (≤ maxAttempts; fingerprint-based stuck detection)
+RenderedBpmn ──► validate (cost 0) ──► BpmnRepairEvaluation ──► repairEval blackboard
+                                                │
+                                                ▼
+                                      BpmnContractAwareValidator.evaluate
+                                                │
+                              ┌─────────────────┴─────────────────┐
+                              │  BpmnDefinitionValidator           │ structural sanity
+                              │  graph.validateOwnership           │ ownership integrity
+                              │  BpmnXsdValidationPort             │ schema compliance
+                              │  BpmnLintingPort.lint              │ rule-engine diagnostics
+                              │  BpmnDiagnosticNormalizer          │ stamps RepairKind on each
+                              └────────────────────────────────────┘
+                                                │
+                                                ▼
+                              planner picks cheapest applicable action:
+                                                │
+              ┌─────────────────────────────────┴─────────────────────────────┐
+              │  applyDeterministicFixes        (cost 0.1)                    │
+              │   eligible when: hasLocalFixable (any LOCAL_MODEL_FIX)        │
+              │   dispatches to registered Kotlin handler — no LLM call       │
+              ├───────────────────────────────────────────────────────────────┤
+              │  applyLlmLabelPatch             (cost 0.5)                    │
+              │   eligible when: hasLlmLabelEligible (LABEL-scope diagnostic) │
+              │   prompts LLM for a label-only BpmnRepairPatch                │
+              ├───────────────────────────────────────────────────────────────┤
+              │  applyLlmStructuralPatch        (cost 0.7)                    │
+              │   eligible when: hasLlmStructuralEligible (OUTLINE/PHASE)     │
+              │   prompts LLM for a structural BpmnRepairPatch                │
+              ├───────────────────────────────────────────────────────────────┤
+              │  applyFullLlmRewrite            (cost 0.9)                    │
+              │   eligible when: hasLlmEligible (any kind != UNFIXABLE)       │
+              │   prompts LLM for the whole BpmnDefinition                    │
+              └───────────────────────────────────────────────────────────────┘
+                                                │
+                                                ▼  diagnosticsResolved
+                                          finalize ──► ValidatedBpmnXml
 ```
 
-Key invariants enforced by the loop:
+Key invariants enforced by the planner + agent:
 
-- **Local-first.** Strategies execute in `@Order`. Deterministic local fixes always run before any LLM call; the LLM only sees diagnostics that local routes either declined (kind ∈ `{LLM_MODEL_PATCH, LLM_XML_REWRITE, null}`) or failed to fix.
-- **No re-asking the LLM about resolved issues.** A locally-applied fix is removed from the next attempt's diagnostic pool by re-linting; the prompt never contains it.
-- **Fail loud on stuck states.** Each attempt produces a `BpmnAttemptRecord` with a diagnostic fingerprint; two consecutive identical fingerprints abort the loop with a structured failure summary rather than burning the budget.
-- **Audit per attempt.** `BpmnRefinementEngine` logs `Repair attempt N route summary: total=… localAttempted=… localApplied=… localFailed=… llmRouted=… unfixable=…` so routing decisions are visible in normal logs.
+- **Cost-based local-first.** The planner always picks the cheapest applicable action. Deterministic local fixes (0.1) run before any LLM call (0.5–0.9). The LLM tiers escalate by repair scope: label patches before structural patches before full rewrites.
+- **No re-asking the LLM about resolved issues.** The agent's `revalidateAndAdvance` helper re-validates after each repair action; resolved diagnostics drop off the evaluation and never reach the next prompt.
+- **Fail loud on stuck states.** Three guards in `revalidateAndAdvance` throw `ReplanRequestedException` via `RepairReplans.signal(...)`: no-progress (definition fingerprint unchanged), repeated-fingerprint, and stuck-blocking (blocking diagnostic fingerprint repeats). The planner blacklists the action for the next cycle, forcing a different repair tier. See [`goap-lifecycle.md`](./goap-lifecycle.md) for the precise semantics (and the gotcha: `ReplanRequestedException` does NOT consume a budget action).
+- **Typed failure modes.** Budget exhaustion surfaces as `ProcessExecutionTerminatedException` from `AgentProcessExecution.fromProcessStatus()`. No-applicable-action surfaces as `ProcessExecutionStuckException`. Both flow up through `AgentPlatformBpmnAgentInvoker.generate()`.
 
-The repair contract itself — what each `RepairKind` means, where capabilities come from, how Pkl → Bazel → JVM/TS feeds the loop — is documented in [`linter/docs/repair-architecture.md`](../linter/docs/repair-architecture.md).
+The Pkl repair contract — what each `RepairKind` means, how rules declare their `Repair` block, how handlers are registered — is documented in [`goap-lifecycle.md`](./goap-lifecycle.md#the-pkl-side-repair-contract).
 
 ## Stage 3 — Layout (`layout/`)
 
@@ -217,7 +195,7 @@ The repair contract itself — what each `RepairKind` means, where capabilities 
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout cleanup. Re-lints, filters issues to those whose capability `kind` is `LOCAL_XML_FIX`, applies the TS auto-fix bundle, XSD-validates the result. If the auto-fixed XML is XSD-invalid, the original validated XML is kept. |
+| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout XML cleanup via the GraalJS-hosted `BpmnLayoutPort` cleanup pass. XSD-validates the result; if the cleaned XML is XSD-invalid, the original validated XML is kept. This stage does only narrow structural cleanup, not rule-driven fixes — those run earlier inside `BpmnRepairAgent`. |
 | `layoutBpmnXml` | `AutoFixedBpmnXml → LayoutedBpmnXml` | `BpmnLayoutPort` runs the embedded `bpmn-auto-layout` JS bundle in GraalJS to assign deterministic diagram coordinates (waypoints, shape bounds). |
 | `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | XSD-validates the layouted XML against the Camunda BPMN schema. Semantic lint rules already ran pre-layout and don't repeat here. XSD failure throws `BpmnLayoutCorruptionException` — the agent does **not** re-enter repair. |
 
@@ -231,12 +209,11 @@ Final validation is intentionally narrow: it catches structural corruption from 
 - `BpmnXsdValidator` — strict BPMN 2.0 XSD compliance.
 - `RuleEngineLintingAdapter` — implements `BpmnLintingPort` by delegating to the
   `rules` module's `RuleEngine` and projecting `RuleRegistry` metadata into
-  `LintIssue` / `BpmnLintRuleCapability` shapes. Replaced the GraalJS-hosted
-  `BpmnLintService` in #241 phase 2G.
+  `LintIssue` / `BpmnLintRuleCapability` shapes.
 - `BpmnDiagnosticNormalizer` — looks up the Pkl-declared capability and stamps
   each diagnostic with `kind`, `repairSafety`, and `fixHandler`; infers
   `repairScope` from ownership context.
-- `BpmnLocalRepairCapabilityValidator` — startup guard: any `LOCAL_*_FIX`
+- `BpmnLocalRepairCapabilityValidator` — startup guard: any `LOCAL_MODEL_FIX`
   capability whose handler isn't registered fails the Spring context refresh.
 
 The `validation` module emits `BpmnValidationPassedEvent` and `BpmnValidationFailedEvent`; `observability/` listeners turn those into log lines and per-run summaries.
@@ -245,16 +222,19 @@ The `validation` module emits `BpmnValidationPassedEvent` and `BpmnValidationFai
 
 `BpmnConfig` (`@ConfigurationProperties("bpmner")`) controls the pipeline at runtime:
 
+For the full configuration reference (every `bpmner.*` YAML key, defaults, ranges, and when to tune) see [`operator-guide.md`](./operator-guide.md). The high-level surface:
+
 | Property | Default | Effect |
 | --- | --- | --- |
-| `bpmner.max-attempts` | `5` | Hard cap on repair iterations (initial evaluation + repairs). |
-| `bpmner.generator` | `BPMN Designer` persona; `LlmOptions.withLlmForRole("generator")` | Persona + model role for outline generation. |
-| `bpmner.repairer` | `BPMN Repair Specialist` persona; `LlmOptions.withLlmForRole("repairer")` | Persona + model role for repair prompts. |
+| `bpmner.budget.generation` | `100` | `Budget(actions = N)` ceiling for the generation goal. Generation + repair share this budget per process. |
+| `bpmner.budget.readiness` | `20` | Tighter budget for the readiness agent (no repair loop). |
+| `bpmner.rules.profile` | `recommended` | Named rule profile loaded at startup. `strict` bumps every WARNING-default rule to ERROR. |
+| `bpmner.rules.severity-overrides` | `{}` | Per-rule severity escape hatch applied on top of the active profile. |
+| `bpmner.generator` / `bpmner.repairer` / etc. | role-based personas | Each agent has a `Persona` + `LlmOptions.withLlmForRole(...)` slot. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, emits truncated previews of every intermediate artifact at DEBUG. |
-| `bpmner.logging.artifact-preview-length` | `8000` | Cap on the dumped preview. |
-| `bpmner.repair.abbreviations` | `{}` | Replacement map fed into the abbreviation auto-fix handler. |
+| `bpmner.repair.abbreviations` | `{}` | Replacement map fed into the abbreviation local-fix handler. |
 
-Model role bindings (`generator`, `repairer`) are resolved by the active Spring profile — `anth` for Anthropic, `gh` for GitHub Models / OpenAI-compatible. See the top-level `README.md` for invocation.
+Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile — `anth` for Anthropic, `gh` for GitHub Models / OpenAI-compatible. See the top-level `README.md` for invocation.
 
 ## Observability surface
 
@@ -262,7 +242,7 @@ Three layers, increasing in granularity:
 
 - **`BpmnerRunSummaryListener`** — one line per agent process completion: total time, action count, models used, total cost, prompt/completion tokens, plus a per-action timing breakdown.
 - **`BpmnPipelineObserver`** — listens on `BpmnValidationFailedEvent` / `BpmnValidationPassedEvent`. Per-attempt summary of source-grouped diagnostic counts.
-- **`BpmnRefinementEngine`** — single structured line per repair attempt with the route summary (`localAttempted` / `localApplied` / `localFailed` / `llmRouted` / `unfixable`). Plus an `error` summary on terminal failure with the stuck fingerprint(s) and top diagnostics.
+- **`BpmnRepairAgent`** — single structured INFO line per repair attempt (`Validation summary: graph=… xsd=… lint=… repairScope=… accepted=… repairs=…`). Per-action progress events flow through `BpmnProgressProjectionObserver` for SSE consumers.
 
 All three use SLF4J at INFO with bracketed parameter placeholders, so they are queryable with grep or log aggregation without per-call string formatting.
 
@@ -273,14 +253,15 @@ For someone reading this doc to find the test that proves an invariant:
 | Invariant | Verified by |
 | --- | --- |
 | Generator outputs a typed `BpmnDefinition`, not raw XML. | `BpmnGenerationServiceTest`, `BpmnGeneratorRunnerTest`. |
-| Phase composition preserves ownership. | `BpmnOwnershipTest`, `BpmnRefinementEngineTest`. |
-| Validation pipeline normalises rule prefixes and stamps `kind`. | `BpmnDiagnosticNormalizerTest`, `BpmnValidationIntegrationTest`. |
-| Local-first repair runs before any LLM call. | `BpmnRefinementEngineTest`, `RepairRoutingModuleTest`. |
+| Phase composition preserves ownership. | `BpmnOwnershipTest`. |
+| Validation pipeline normalises rule prefixes and stamps `kind`. | `BpmnDiagnosticNormalizerTest`. |
+| Cost-based repair runs cheaper actions before LLM tiers. | `BpmnRepairAgentIntegrationTest` (chain wiring), `RepairRoutingModuleTest`. |
 | LLM prompts only contain unresolved diagnostics. | `BpmnRepairPromptFactoryTest`, `RepairRoutingModuleTest`. |
 | Startup fails when a declared-local rule has no handler. | `BpmnLocalRepairCapabilityValidatorTest`, `RepairStartupValidationTest`. |
 | Layout agent does not re-enter the repair loop. | `BpmnLayoutAgentTest`. |
 | Final-validation failures throw rather than retry. | `BpmnLayoutAgentTest`, `BpmnAgentFlowSystemTest`. |
 | End-to-end flow writes the requested file. | `BpmnAgentFlowSystemTest`. |
+| GOAP failure modes surface as typed exceptions. | `BpmnRepairAgentIntegrationTest` (STUCK, TERMINATED), `BpmnAlignmentFailureIntegrationTest`. |
 
 ## Adding a new pipeline stage
 

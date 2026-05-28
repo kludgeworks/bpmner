@@ -15,7 +15,7 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 ### 2. Technical Quality (XSD & Pkl rule engine)
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
-- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; the legacy GraalJS-hosted `bpmnlint` bridge was retired in #241 phase 2G.
+- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; GraalJS is used only for the diagram auto-layout pass.
 
 ### 3. Deterministic Repair
 When validation fails, `bpmner` doesn't just "try again." It uses a **local-first repair loop** that attempts to fix technical issues (like ID mismatches or simple naming violations) using deterministic Kotlin handlers before falling back to the LLM for more complex semantic refactoring.
@@ -87,7 +87,7 @@ Kotlin code is checked by three complementary tools:
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
-- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), and [Repair Architecture](docs/repair-architecture.md).
+- `docs/`: In-depth documentation on [Pipeline Architecture](docs/pipeline-architecture.md), [Hexagonal Design](docs/hexagonal-architecture.md), the [GOAP Lifecycle + Repair Architecture](docs/goap-lifecycle.md), the [Operator Guide](docs/operator-guide.md), and the [Agent Overview](docs/agents.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
 
 ## Contributing
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.

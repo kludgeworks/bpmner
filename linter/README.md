@@ -9,9 +9,8 @@ build evaluates them at compile time and generates Java types that
 loads at startup; the in-process [`RuleEngine`](../src/main/kotlin/dev/groknull/bpmner/rules/RuleEngine.kt)
 then evaluates each rule against the `BpmnDefinition` directly.
 
-The previous TypeScript/`bpmnlint` codebase (rule implementations, GraalJS bundle,
-static-rule registry) was removed in #241 phase 2G. GraalJS now only lives inside
-the [`layout`](../layout/) module (auto-layout JS bundle).
+GraalJS is used only by the [`layout`](../layout/) module's auto-layout JS bundle.
+Rule evaluation is entirely JVM-native.
 
 ## Layout
 

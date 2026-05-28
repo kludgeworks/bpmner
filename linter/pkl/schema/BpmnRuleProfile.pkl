@@ -1,0 +1,34 @@
+/// Schema for a named rule profile.
+///
+/// A profile is a named bundle of severity overrides + disabled rules. The active profile is
+/// selected at startup via `bpmner.rules.profile` (defaults to `recommended`); the user's
+/// `bpmner.rules.severity-overrides` YAML map is then merged ON TOP of the profile, with the
+/// user's entries always winning.
+///
+/// Built-in profiles:
+///  - `RecommendedProfile.pkl` — empty maps; each rule's declared `severity` wins.
+///  - `StrictProfile.pkl` — amends Recommended, bumps every WARNING-default rule to ERROR.
+///
+/// New profiles can be added by amending `RecommendedProfile.pkl` (preferred) or this schema
+/// directly. Pkl's amend chain is the inheritance mechanism — no Kotlin code change is
+/// required to introduce a new profile.
+module dev.groknull.bpmner.pkl.BpmnRuleProfile
+
+import "BpmnRule.pkl"
+
+typealias NonEmptyString = String(!isEmpty)
+
+/// Profile identifier, matched against `bpmner.rules.profile` at startup.
+id: NonEmptyString
+
+/// One-line description surfaced in startup logs.
+description: NonEmptyString
+
+/// Severity overrides keyed by bare rule id (e.g. `act-verb-object-name`). `"off"` is permitted
+/// as a Severity value and disables the rule entirely (mirrors `severity-overrides`'s `off`).
+severityOverrides: Mapping<NonEmptyString, BpmnRule.Severity> = new {}
+
+/// Rule ids disabled by the profile (in addition to any entries with severity `"off"` in
+/// [severityOverrides]). Both shapes are accepted; this slot exists for profiles that want to
+/// disable rules without giving them a severity opinion.
+disabledRuleIds: Listing<NonEmptyString> = new {}
