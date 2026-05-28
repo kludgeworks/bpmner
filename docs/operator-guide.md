@@ -62,12 +62,6 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, every intermediate artifact (outline JSON, rendered XML, repair attempts) is logged at DEBUG with a length cap. Off for production. Override via env: `BPMNER_LOGGING_DUMP_ARTIFACTS=true`. |
 | `bpmner.logging.artifact-preview-length` | `8000` | Truncation cap for dumped artifacts (characters). |
 
-### Repair tuning
-
-| Key | Default | Effect |
-|---|---|---|
-| `bpmner.repair.abbreviations` | small built-in map | Expansion map for the abbreviation auto-fix handler (e.g. `PNR → booking reference`). Add domain-specific entries; do NOT remove the bundled defaults unless you know the rule won't fire in your domain. |
-
 ## Reading diagnostics
 
 A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on. Every field matters:

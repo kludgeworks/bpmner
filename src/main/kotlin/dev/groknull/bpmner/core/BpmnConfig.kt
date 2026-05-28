@@ -31,7 +31,6 @@ data class BpmnConfig(
     @field:Valid
     val alignment: BpmnAlignmentConfig = BpmnAlignmentConfig(),
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
-    val repair: BpmnRepairConfig = BpmnRepairConfig(),
     val rules: BpmnRulesConfig = BpmnRulesConfig(),
     @field:Valid
     val budget: BpmnBudgetConfig = BpmnBudgetConfig(),
@@ -213,10 +212,6 @@ data class BpmnLoggingConfig(
         const val DEFAULT_ARTIFACT_PREVIEW_LENGTH = 8000
     }
 }
-
-data class BpmnRepairConfig(
-    val abbreviations: Map<String, String> = emptyMap(),
-)
 
 /**
  * GOAP action budgets per Embabel [ProcessOptions]. Generation and repair share a single budget
