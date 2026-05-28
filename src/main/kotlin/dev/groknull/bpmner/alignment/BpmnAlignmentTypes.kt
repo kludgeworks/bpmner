@@ -112,5 +112,10 @@ data class BpmnAlignmentReport(
 
 class BpmnAlignmentException(
     message: String,
-    val report: BpmnAlignmentReport,
-) : RuntimeException(message)
+    // `null` when the alignment model itself failed to produce a structured response (the LLM
+    // call threw, not "the LLM examined the BPMN and found a problem"). Phase 5 (#220) lets
+    // the exception convey the failure-type distinction without smuggling it through a synthetic
+    // AlignmentIssue.
+    val report: BpmnAlignmentReport?,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

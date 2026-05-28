@@ -153,21 +153,30 @@ internal class BpmnGenerationService(
         val alignmentEx = findAlignmentException(e)
         if (alignmentEx != null) {
             val report = alignmentEx.report
-            val unsupportedCount =
-                report.issues.count { it.classification == AlignmentClassification.UNSUPPORTED }
-            val missingCount =
-                report.issues.count { it.classification == AlignmentClassification.MISSING }
-            val assumptionCount =
-                report.issues.count { it.classification == AlignmentClassification.ASSUMED }
-
-            logger.warn(
-                "BPMN generation blocked by semantic alignment guard. " +
-                    "rationale={}, unsupported={}, missing={}, assumptions={}",
-                report.rationale,
-                unsupportedCount,
-                missingCount,
-                assumptionCount,
-            )
+            if (report != null) {
+                val unsupportedCount =
+                    report.issues.count { it.classification == AlignmentClassification.UNSUPPORTED }
+                val missingCount =
+                    report.issues.count { it.classification == AlignmentClassification.MISSING }
+                val assumptionCount =
+                    report.issues.count { it.classification == AlignmentClassification.ASSUMED }
+                logger.warn(
+                    "BPMN generation blocked by semantic alignment guard. " +
+                        "rationale={}, unsupported={}, missing={}, assumptions={}",
+                    report.rationale,
+                    unsupportedCount,
+                    missingCount,
+                    assumptionCount,
+                )
+            } else {
+                // Phase 5 (#220): null report means the alignment model itself failed (LLM threw),
+                // not that the model returned a FAILED verdict. The exception message carries the
+                // detail; there is no per-classification breakdown to log.
+                logger.warn(
+                    "BPMN generation blocked: alignment model failed to produce a report ({}).",
+                    alignmentEx.message,
+                )
+            }
             return BpmnResult(
                 outputFile = request.outputFile,
                 status = BpmnGenerationStatus.ALIGNMENT_FAILED,

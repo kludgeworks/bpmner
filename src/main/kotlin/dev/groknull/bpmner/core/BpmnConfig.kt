@@ -12,7 +12,14 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.validation.annotation.Validated
 
+// `@Validated` is REQUIRED for `@ConfigurationProperties` to honour `@field:Valid` / `@Min` /
+// `@Max` constraints — without it, Spring Boot binds values but silently skips JSR-380
+// validation at startup. Pre-Phase-5 this class had constraints declared since day one
+// (`@field:Min` on `lintBatchSize`, `@field:Valid` on `readiness`/`alignment`) that were
+// never actually enforced.
+@Validated
 @ConfigurationProperties("bpmner")
 data class BpmnConfig(
     val generator: Actor<Persona> = DEFAULT_GENERATOR,
@@ -28,6 +35,8 @@ data class BpmnConfig(
     val logging: BpmnLoggingConfig = BpmnLoggingConfig(),
     val repair: BpmnRepairConfig = BpmnRepairConfig(),
     val rules: BpmnRulesConfig = BpmnRulesConfig(),
+    @field:Valid
+    val budget: BpmnBudgetConfig = BpmnBudgetConfig(),
     val labelRepairer: Actor<Persona> = DEFAULT_LABEL_REPAIRER,
     val patchRepairer: Actor<Persona> = DEFAULT_PATCH_REPAIRER,
     val rewriteRepairer: Actor<Persona> = DEFAULT_REWRITE_REPAIRER,
@@ -209,6 +218,19 @@ data class BpmnLoggingConfig(
 
 data class BpmnRepairConfig(
     val abbreviations: Map<String, String> = emptyMap(),
+)
+
+/**
+ * GOAP action budgets per Embabel [ProcessOptions]. Generation and repair share a single budget
+ * because Phase 4 wires them into one GOAP plan; lowering [generation] below today's ceiling
+ * risks budget exhaustion on inputs that need substantial repair before reaching the
+ * `generateBpmn` goal. Readiness is a separate, much smaller pipeline (no repair loop).
+ */
+data class BpmnBudgetConfig(
+    @field:Min(1)
+    val generation: Int = 100,
+    @field:Min(1)
+    val readiness: Int = 20,
 )
 
 data class BpmnRulesConfig(

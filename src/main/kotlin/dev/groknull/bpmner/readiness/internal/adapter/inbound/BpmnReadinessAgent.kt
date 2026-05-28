@@ -37,11 +37,13 @@ internal class BpmnReadinessAgent(
         context: OperationContext,
     ): ProcessInputAssessment {
         val promptRunner = config.readinessAssessor.promptRunner(context).withPromptContributor(request)
+        // Phase 5 (#220): `createObject` returns non-null per Embabel's contract; it throws on
+        // failure. Let the typed exception propagate to the planner.
         val modelAssessment =
             promptRunner.createObject(
                 promptFactory.prompt(request),
                 ProcessInputAssessment::class.java,
-            ) ?: error("Readiness model failed to produce a structured assessment.")
+            )
         val assessment = postChecker.apply(request, modelAssessment)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment

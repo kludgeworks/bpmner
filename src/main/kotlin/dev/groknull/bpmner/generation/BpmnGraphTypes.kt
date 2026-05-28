@@ -36,31 +36,3 @@ data class ValidatedOutline(
     val definition: BpmnDefinition
         get() = outline.definition
 }
-
-data class PhasePlan(
-    val phaseId: String,
-    val ownerRef: String,
-    @field:Valid
-    val definition: BpmnDefinition,
-)
-
-data class PhasePlanSet(
-    val outline: ValidatedOutline,
-    val phasePlans: List<PhasePlan>,
-)
-
-data class ValidatedPhasePlan(
-    val phaseId: String,
-    val ownerRef: String,
-    @field:Valid
-    val definition: BpmnDefinition,
-    val diagnostics: List<BpmnDiagnostic> = emptyList(),
-)
-
-data class ValidatedPhasePlanSet(
-    val outline: ValidatedOutline,
-    val phasePlans: List<ValidatedPhasePlan>,
-) {
-    val definition: BpmnDefinition
-        get() = phasePlans.single().definition
-}

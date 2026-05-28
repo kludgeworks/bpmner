@@ -6,6 +6,7 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
+import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
@@ -94,12 +95,16 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
                             outputFile = "ignored.bpmn",
                         ),
                         BpmnResult::class.java,
-                        ProcessOptions(),
+                        // Mirrors `AgentPlatformBpmnAgentInvoker.syncGenerationProcessOptions()`
+                        // so the test exercises the real budget.
+                        ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
                     )
             }
 
         assertTrue(error.message!!.contains("Generated BPMN does not align with process contract"))
-        assertEquals(AlignmentVerdict.FAILED, error.report.verdict)
+        // `report` is non-null on the "FAILED verdict" path; null is only used when the alignment
+        // model itself failed to produce a structured response (a separate test would cover that).
+        assertEquals(AlignmentVerdict.FAILED, error.report!!.verdict)
     }
 
     private fun anyDefinition(): BpmnDefinition = anyNonNull()

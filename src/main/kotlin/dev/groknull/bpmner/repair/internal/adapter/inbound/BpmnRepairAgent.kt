@@ -15,6 +15,8 @@ import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
@@ -240,15 +242,11 @@ internal class BpmnRepairAgent(
         val feedback = promptFactory.fullRepairFeedback(repairEval.toAttempt(), candidates)
         val runner = promptRunner(repairEval, context, config.rewriteRepairer)
         // `createObject` (not `createObjectIfPossible`) routes through `LlmOperations.createObject`,
-        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. If the LLM
-        // genuinely produces no structured result, `createObject` throws — we catch and replan.
-        val repaired: BpmnDefinition = runCatching {
-            runner.createObject(
-                repairEval.messages + UserMessage(feedback),
-                BpmnDefinition::class.java,
-            )
-        }.getOrNull()
-            ?: throw RepairReplans.signal("LLM rewrite returned no structured definition")
+        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. The contract is
+        // non-null + throws-on-failure with two specific framework exceptions; let everything else
+        // propagate so a real infrastructure failure (auth, timeout, OOM) doesn't get silently
+        // converted to a planner replan that burns the budget hiding the root cause.
+        val repaired: BpmnDefinition = requestLlmDefinition(runner, repairEval.messages + UserMessage(feedback))
         return revalidateAndAdvance(
             prior = repairEval,
             repaired = repaired,
@@ -457,13 +455,11 @@ internal class BpmnRepairAgent(
         val runner = promptRunner(repairEval, operationContext, actor)
         // See applyFullLlmRewrite for why this uses `createObject` rather than
         // `createObjectIfPossible` — alignment with what `whenCreateObject` mocks.
-        val patch: BpmnRepairPatch = runCatching {
-            runner.createObject(
-                repairEval.messages + UserMessage(feedback),
-                BpmnRepairPatch::class.java,
-            )
-        }.getOrNull()
-            ?: throw RepairReplans.signal("$patchTypeName returned no structured patch")
+        val patch: BpmnRepairPatch = requestLlmPatch(
+            runner,
+            repairEval.messages + UserMessage(feedback),
+            patchTypeName,
+        )
         val application = patchApplier.apply(repairEval.definition, patch)
         val success = patchSuccessOrReplan(application, patchTypeName)
         return revalidateAndAdvance(
@@ -560,6 +556,35 @@ internal class BpmnRepairAgent(
         return if (docsPrompt != null) baseRunner.withPromptContributor(docsPrompt) else baseRunner
     }
 
+    /**
+     * Translate the two framework-level LLM exceptions into a planner-visible replan signal.
+     * Anything else (auth failure, OOM, timeout, transient infra exception) propagates so the
+     * real cause stays diagnosable instead of being masked by a stream of budget-burning replans.
+     */
+    private fun requestLlmDefinition(
+        runner: PromptRunner,
+        messages: List<com.embabel.chat.Message>,
+    ): BpmnDefinition = try {
+        runner.createObject(messages, BpmnDefinition::class.java)
+    } catch (e: InvalidLlmReturnFormatException) {
+        throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
+    } catch (e: InvalidLlmReturnTypeException) {
+        throw RepairReplans.signal("LLM rewrite returned a definition that failed validation: ${e.message}", e)
+    }
+
+    /** Sibling of [requestLlmDefinition] for the patch-shaped LLM calls. */
+    private fun requestLlmPatch(
+        runner: PromptRunner,
+        messages: List<com.embabel.chat.Message>,
+        patchTypeName: String,
+    ): BpmnRepairPatch = try {
+        runner.createObject(messages, BpmnRepairPatch::class.java)
+    } catch (e: InvalidLlmReturnFormatException) {
+        throw RepairReplans.signal("$patchTypeName failed to produce a structured patch: ${e.message}", e)
+    } catch (e: InvalidLlmReturnTypeException) {
+        throw RepairReplans.signal("$patchTypeName returned a patch that failed validation: ${e.message}", e)
+    }
+
     private fun publishAttemptEvent(repairEval: BpmnRepairEvaluation) {
         contractAwareValidator.logDiagnosticSummary(repairEval.evaluation.globalDiagnostics.diagnostics)
         eventPublisher.publishEvent(
@@ -602,5 +627,12 @@ internal class BpmnRepairAgent(
  * different applicable action next iteration.
  */
 private object RepairReplans {
-    fun signal(reason: String): RuntimeException = com.embabel.agent.core.ReplanRequestedException(reason)
+    // `ReplanRequestedException` doesn't expose a cause slot in its constructor, so chain via
+    // `initCause`. Preserving the cause lets a downstream operator trace the framework exception
+    // (`InvalidLlmReturnFormatException` etc.) without grepping logs.
+    fun signal(reason: String, cause: Throwable? = null): RuntimeException {
+        val ex = com.embabel.agent.core.ReplanRequestedException(reason)
+        if (cause != null) ex.initCause(cause)
+        return ex
+    }
 }

@@ -6,12 +6,14 @@
 package dev.groknull.bpmner.generation
 
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
+import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.Goal
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.spi.common.Constants
+import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.internal.domain.BpmnAgentInvoker
@@ -23,6 +25,10 @@ import org.springframework.stereotype.Component
 @Component
 internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
+    private val config: BpmnConfig,
+    // Spring auto-collects every AgenticEventListener bean into this list. Empty if no
+    // listener is registered — the framework treats an empty list as "no observers."
+    private val listeners: List<AgenticEventListener>,
 ) : BpmnAgentInvoker {
     override fun generate(
         request: BpmnRequest,
@@ -43,6 +49,11 @@ internal class AgentPlatformBpmnAgentInvoker(
         // planner has no applicable action, `ProcessExecutionTerminatedException` on budget
         // exhaustion). Replaces the prior `process.resultOfType()` which crashed silently on
         // non-COMPLETED states and the bespoke `BpmnRefinementFailureException`.
+        //
+        // Phase 5 (#220) deliberately did NOT migrate to `AgentPlatformTypedOps.transform()`
+        // because that path uses the older `process.resultOfType()` and would lose the typed
+        // exception surface above. The TypedOps consolidation can revisit when/if Embabel
+        // changes TypedOps to use `fromProcessStatus()` internally.
         val execution = AgentProcessExecution.fromProcessStatus(request, process)
         return resultClass.cast(execution.output)
     }
@@ -79,16 +90,23 @@ internal class AgentPlatformBpmnAgentInvoker(
             ),
         )
 
+    // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
+    // is short-lived and never queried for status — Phase 5 (#220) made this explicit.
+    private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
+        budget = Budget(actions = config.budget.generation),
+        ephemeral = true,
+        listeners = listeners,
+    )
+
+    // Async web generation: returns the process id immediately; callers poll for status, so the
+    // process must be persisted — `ephemeral = false`.
+    private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
+        budget = Budget(actions = config.budget.generation),
+        ephemeral = false,
+        listeners = listeners,
+    )
+
     companion object {
         private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"
-
-        private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
-            budget = Budget(actions = 100),
-            ephemeral = true,
-        )
-
-        private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
-            budget = Budget(actions = 100),
-        )
     }
 }

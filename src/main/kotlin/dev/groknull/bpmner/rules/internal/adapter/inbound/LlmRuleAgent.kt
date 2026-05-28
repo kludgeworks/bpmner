@@ -95,11 +95,11 @@ internal class LlmRuleAgent(
         batch: List<LlmRuleSpec>,
     ): List<RuleDiagnostic> {
         val prompt = buildBatchPrompt(definitionJson, batch)
+        // Phase 5 (#220): `createObject` returns non-null per Embabel's contract. If the LLM call
+        // fails, an `InvalidLlmReturnFormatException` propagates here and `DefaultRuleEngine` wraps
+        // it into a typed `rule-execution-failure` diagnostic via its outer `runCatching` —
+        // observable failure beats silent "no issues found."
         val response = runner.createObject(prompt, LlmEvaluationResponse::class.java)
-        if (response == null) {
-            logger.warn("LLM produced no structured response for batch of {} rule(s)", batch.size)
-            return emptyList()
-        }
         val byRuleId = batch.associateBy { it.metadata.id }
         return response.violations.mapNotNull { violation ->
             val spec = byRuleId[violation.ruleId] ?: return@mapNotNull run {
