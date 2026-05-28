@@ -34,7 +34,6 @@ import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.Mockito.doReturn
@@ -147,15 +146,6 @@ class BpmnGuardrailSystemTest(
     }
 
     @Test
-    @Disabled(
-        "Blocked by #126: the Embabel GOAP planner cannot construct a full " +
-            "BpmnRequest+ProcessInputAssessment → BpmnResult plan across the current " +
-            "side-agent architecture (missing @AchievesGoal on readiness/contract/layout/" +
-            "repair agents, and no action produces a bare ProcessContract to bridge to " +
-            "checkAlignment). Unit-level alignment-failure coverage exists in " +
-            "BpmnGenerationServiceTest.`blocks generation when alignment failure occurs`. " +
-            "Re-enable once #126 lands.",
-    )
     fun `blocks generation when alignment fails`(
         @TempDir tempDir: Path,
     ) {
@@ -168,13 +158,13 @@ class BpmnGuardrailSystemTest(
 
         // 1. Assessment passes
         whenCreateObject(
-            { it.contains("Return only a structured ProcessInputAssessment object.") },
+            { it.contains("Assess whether the source text describes a workflow") },
             ProcessInputAssessment::class.java,
         ).thenReturn(validAssessment())
 
         // 2. Contract extraction passes
         whenCreateObject(
-            { it.contains("Return only a structured ProcessContract object.") },
+            { it.contains("Extract a source-grounded process contract") },
             ProcessContract::class.java,
         ).thenReturn(validContract())
 

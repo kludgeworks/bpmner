@@ -1,6 +1,6 @@
 # GOAP Lifecycle & Repair Architecture
 
-This document describes how bpmner's agent pipeline executes — how Embabel's planner chooses actions, how diagnostics flow through the repair loop, how the framework surfaces failure modes — and the contract that Pkl rules use to declare their repair capability. It supersedes the older `linter/docs/repair-architecture.md` (which described the pre-Phase-2G TypeScript bundle and the pre-Phase-4 imperative refinement engine).
+This document describes how bpmner's agent pipeline executes — how Embabel's planner chooses actions, how diagnostics flow through the repair loop, how the framework surfaces failure modes — and the contract that Pkl rules use to declare their repair capability.
 
 ## What is GOAP, in this codebase
 
@@ -12,7 +12,7 @@ Three signals shape execution:
 
 - **`ReplanRequestedException`** — an action can request that the planner replan from the current blackboard, skipping this action for the next cycle (Embabel's "blacklist for replan" rule). Used by the repair agent's no-progress guards.
 - **`ProcessExecutionStuckException`** — no applicable action exists for the goal. Thrown when the planner can't find a viable path forward (e.g. every remaining diagnostic is `UNFIXABLE`).
-- **`ProcessExecutionTerminatedException`** — `Budget(actions = N)` exhausted before a goal was reached. Both are surfaced from `AgentProcessExecution.fromProcessStatus()`, the Phase 4 (#219) entry-point that produces typed exceptions on non-COMPLETED process states.
+- **`ProcessExecutionTerminatedException`** — `Budget(actions = N)` exhausted before a goal was reached. Both are surfaced from `AgentProcessExecution.fromProcessStatus()`, the entry-point that produces typed exceptions on non-COMPLETED process states.
 
 ## Agent inventory
 
@@ -52,7 +52,7 @@ The pipeline that runs end-to-end for a `BpmnRequest → BpmnResult` traversal s
                                  │
                                  ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │ BpmnGeneratorAgent  (Phase 5 — 4 actions)                            │
+   │ BpmnGeneratorAgent  (4 actions)                                      │
    │                                                                       │
    │   createOutline      LLM + DefaultFlowAssigner + fidelity check       │
    │       ↓ ValidatedOutline                                              │
@@ -65,7 +65,7 @@ The pipeline that runs end-to-end for a `BpmnRequest → BpmnResult` traversal s
                                  │  RenderedBpmn enters the repair loop
                                  ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │ BpmnRepairAgent  (Phase 4 GOAP loop — 6 actions, 6 conditions)        │
+   │ BpmnRepairAgent  (GOAP loop — 6 actions, 6 conditions)                │
    │   validate                  cost 0   (always picked first)            │
    │   applyDeterministicFixes   cost 0.1                                  │
    │   applyLlmLabelPatch        cost 0.5                                  │
@@ -123,7 +123,7 @@ fun applyLlmLabelPatch(
 - **`outputBinding = "repairEval"`** publishes the return value to the named slot `repairEval` on the blackboard.
 - **`@RequireNameMatch("repairEval")`** on every input parameter says "give me the value bound at `repairEval`, not just any `BpmnRepairEvaluation`."
 
-That pair is the Phase 4 (#219) trick. The planner threads a single evolving evaluation through the repair loop instead of accumulating sibling instances.
+That pair is how the planner threads a single evolving evaluation through the repair loop instead of accumulating sibling instances.
 
 ### Cost ordering
 
@@ -169,7 +169,7 @@ Common cause:                         Common cause:
   action is eligible.                   each one counted as one action.
 ```
 
-Both are produced by `AgentProcessExecution.fromProcessStatus(request, process)`. `AgentPlatformBpmnAgentInvoker.generate()` (Phase 4 contract — see `generation/AgentPlatformBpmnAgentInvoker.kt`) uses this entry point specifically to surface the typed exceptions. The older `process.resultOfType()` path (still used inside `AgentPlatformTypedOps.transform()`) collapses both into a generic `IllegalArgumentException`.
+Both are produced by `AgentProcessExecution.fromProcessStatus(request, process)`. `AgentPlatformBpmnAgentInvoker.generate()` (`generation/AgentPlatformBpmnAgentInvoker.kt`) uses this entry point specifically to surface the typed exceptions. The alternative `process.resultOfType()` path (used inside `AgentPlatformTypedOps.transform()`) would collapse both into a generic `IllegalArgumentException`, which is why the invoker stays on `fromProcessStatus`.
 
 ## The Pkl-side repair contract
 
@@ -204,7 +204,7 @@ typealias RepairKind = "LOCAL_MODEL_FIX" | "LLM_MODEL_PATCH" | "LLM_XML_REWRITE"
 | `LLM_XML_REWRITE` | LLM rewrites the entire BPMN model. Last-resort tier. | `applyFullLlmRewrite` |
 | `UNFIXABLE` | No fix is offered. The diagnostic surfaces to the user; `hasLlmEligible` returns false for this kind, so no repair action becomes applicable. | (none — surfaces as STUCK) |
 
-> The `LOCAL_XML_FIX` enum value also exists in `RepairKind.kt` but is `@Deprecated` (it was the TypeScript-bundle auto-fix path retired in Phase 2G #241; the value is kept temporarily until `PklRuleCapabilityAdapter` is reworked). Treat it as a synonym for `LOCAL_MODEL_FIX` in new rules.
+> The `LOCAL_XML_FIX` enum value also exists in `RepairKind.kt` but is `@Deprecated`. Treat it as a synonym for `LOCAL_MODEL_FIX` in new rules.
 
 ### `RepairSafety`
 
@@ -231,13 +231,13 @@ Trace a single repair tick. The agent enters with a `RenderedBpmn` whose validat
 
 If step 5 had failed (LLM returns yet another invalid definition), step 5 repeats. Each iteration is one action against `Budget(actions = 100)`. After 100 such iterations, `ProcessExecutionTerminatedException` surfaces from `fromProcessStatus()`.
 
-## Why the indirection?
+## Why the GOAP shape?
 
-Phase 4 (#219) replaced an imperative `BpmnRefinementEngine` while-loop with this GOAP shape because the planner gives us things the engine couldn't:
+A hand-rolled while-loop over a strategy chain could in principle do the same work. The planner gives us things that would otherwise be open-coded:
 
-- **Cost-based escalation**: the planner naturally prefers cheap repairs (local Kotlin handlers) over expensive ones (full LLM rewrite). The engine had to encode this as a strategy chain order.
-- **Observable failure modes**: STUCK and TERMINATED are typed and operationally distinct. The engine had a single `BpmnRefinementFailureException` that conflated them.
-- **Per-action retry policy**: actions can declare `actionRetryPolicy = FIRE_ONCE` (the alignment agent does this — a model failure on alignment is not retried), or rely on the planner's cost ordering to pick a different action. The engine had no equivalent.
+- **Cost-based escalation**: the planner naturally prefers cheap repairs (local Kotlin handlers) over expensive ones (full LLM rewrite). A while-loop would have to encode this as a strategy-chain order.
+- **Observable failure modes**: STUCK and TERMINATED are typed and operationally distinct. A single bespoke exception would conflate them.
+- **Per-action retry policy**: actions can declare `actionRetryPolicy = FIRE_ONCE` (the alignment agent does this — a model failure on alignment is not retried), or rely on the planner's cost ordering to pick a different action. A loop has no equivalent.
 - **Cross-agent composition**: the repair agent doesn't know about layout or alignment, but the planner threads them by type. New post-repair stages can be added by declaring an action that consumes `ValidatedBpmnXml`; no orchestrator change.
 
 ## Cross-references

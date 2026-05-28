@@ -52,7 +52,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
                            ▼
             ┌─────────────────────────────────────────────────────────┐
             │           BpmnGeneratorAgent  (generation/)             │
-            │           Phase 5 (#220) collapsed shape — 4 actions    │
+            │           4 actions                                     │
             │                                                         │
             │  createOutline   LLM + DefaultFlowAssigner + fidelity   │
             │              │   check (inline)                         │
@@ -69,7 +69,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
                            ▼
             ┌─────────────────────────────────────────────────────────┐
             │            BpmnRepairAgent  (repair/)                   │
-            │            Phase 4 (#219) GOAP loop — 6 actions         │
+            │            GOAP loop — 6 actions                        │
             │                                                         │
             │  validate                  cost 0   (always first)      │
             │  applyDeterministicFixes   cost 0.1                     │
@@ -124,7 +124,7 @@ The arrows between domain types are exact: each agent action declares its input 
 
 ## Stage 1 — Generation (`generation/`)
 
-`BpmnGeneratorAgent` deliberately splits "ask the LLM" from "structure the result." Only `createOutline` calls the model; everything after it is deterministic code operating on the typed `BpmnDefinition` the model returned. Phase 5 (#220) collapsed the previous nine-action shape to four — the intermediate phase-plan types were pass-throughs and the ownership / layout derivations were deterministic enough to inline.
+`BpmnGeneratorAgent` deliberately splits "ask the LLM" from "structure the result." Only `createOutline` calls the model; everything after it is deterministic code operating on the typed `BpmnDefinition` the model returned. The four-action shape inlines the ownership and layout derivations into `composeGraph` so intermediate types don't cross action boundaries unnecessarily.
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
@@ -139,7 +139,7 @@ The LLM produces an object with explicit semantic fields (nodes, sequences). Thi
 
 ## Stage 2 — Repair (`repair/`)
 
-`BpmnRepairAgent` is a six-action Embabel GOAP agent (Phase 4 #219). The planner picks the cheapest applicable action each iteration; a `BpmnRepairEvaluation` blackboard threads through every action via `outputBinding = "repairEval"` + `@RequireNameMatch("repairEval")` so the loop accumulates state across iterations.
+`BpmnRepairAgent` is a six-action Embabel GOAP agent. The planner picks the cheapest applicable action each iteration; a `BpmnRepairEvaluation` blackboard threads through every action via `outputBinding = "repairEval"` + `@RequireNameMatch("repairEval")` so the loop accumulates state across iterations.
 
 ```
 RenderedBpmn ──► validate (cost 0) ──► BpmnRepairEvaluation ──► repairEval blackboard
@@ -195,7 +195,7 @@ The Pkl repair contract — what each `RepairKind` means, how rules declare thei
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout XML cleanup via the GraalJS-hosted `BpmnLayoutPort` cleanup pass. XSD-validates the result; if the cleaned XML is XSD-invalid, the original validated XML is kept. (Phase 2G #241 retired the TS-bundle `LOCAL_XML_FIX` auto-fix path; this stage now does only narrow structural cleanup, no rule-driven fixes.) |
+| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout XML cleanup via the GraalJS-hosted `BpmnLayoutPort` cleanup pass. XSD-validates the result; if the cleaned XML is XSD-invalid, the original validated XML is kept. This stage does only narrow structural cleanup, not rule-driven fixes — those run earlier inside `BpmnRepairAgent`. |
 | `layoutBpmnXml` | `AutoFixedBpmnXml → LayoutedBpmnXml` | `BpmnLayoutPort` runs the embedded `bpmn-auto-layout` JS bundle in GraalJS to assign deterministic diagram coordinates (waypoints, shape bounds). |
 | `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | XSD-validates the layouted XML against the Camunda BPMN schema. Semantic lint rules already ran pre-layout and don't repeat here. XSD failure throws `BpmnLayoutCorruptionException` — the agent does **not** re-enter repair. |
 
@@ -209,8 +209,7 @@ Final validation is intentionally narrow: it catches structural corruption from 
 - `BpmnXsdValidator` — strict BPMN 2.0 XSD compliance.
 - `RuleEngineLintingAdapter` — implements `BpmnLintingPort` by delegating to the
   `rules` module's `RuleEngine` and projecting `RuleRegistry` metadata into
-  `LintIssue` / `BpmnLintRuleCapability` shapes. Replaced the GraalJS-hosted
-  `BpmnLintService` in #241 phase 2G.
+  `LintIssue` / `BpmnLintRuleCapability` shapes.
 - `BpmnDiagnosticNormalizer` — looks up the Pkl-declared capability and stamps
   each diagnostic with `kind`, `repairSafety`, and `fixHandler`; infers
   `repairScope` from ownership context.

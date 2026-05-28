@@ -5,7 +5,7 @@
 /// `bpmner.rules.severity-overrides` YAML map is then merged ON TOP of the profile, with the
 /// user's entries always winning.
 ///
-/// Phase 6 (#221) ships two profiles:
+/// Built-in profiles:
 ///  - `RecommendedProfile.pkl` — empty maps; each rule's declared `severity` wins.
 ///  - `StrictProfile.pkl` — amends Recommended, bumps every WARNING-default rule to ERROR.
 ///

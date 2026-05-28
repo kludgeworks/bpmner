@@ -1,9 +1,9 @@
 /// Strict rule profile: treat every WARNING-default rule as an ERROR.
 ///
-/// Composed from [RecommendedProfile.pkl] (the Pkl `amends` chain demonstrates profile
-/// inheritance — see #221) plus a computed override map derived from [RulesIndex.pkl] at
-/// evaluation time. Adding a new rule with `severity = "warning"` will automatically be
-/// covered by this profile without manual maintenance.
+/// Composed from [RecommendedProfile.pkl] (the Pkl `amends` chain is the inheritance mechanism)
+/// plus a computed override map derived from [RulesIndex.pkl] at evaluation time. Adding a new
+/// rule with `severity = "warning"` will automatically be covered by this profile without manual
+/// maintenance.
 amends "RecommendedProfile.pkl"
 
 import "../RulesIndex.pkl"

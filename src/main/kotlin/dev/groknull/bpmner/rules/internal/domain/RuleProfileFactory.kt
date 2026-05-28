@@ -12,18 +12,21 @@ import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin
 import org.pkl.config.kotlin.to
 import org.pkl.core.ModuleSource
+import org.pkl.core.PklException
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver
+import java.io.IOException
 import java.net.URI
 
 /**
  * Produces the application-wide [RuleProfile] by composing two layers:
  *
  *  1. **Named profile baseline** — loaded from `linter/pkl/profiles/{Name}Profile.pkl` based on
- *     `bpmner.rules.profile` (defaults to `recommended`). Phase 6 (#221) ships `recommended`
- *     (each rule's declared severity wins, nothing disabled) and `strict` (every WARNING-default
- *     rule bumped to ERROR via the Pkl `amends` chain in [StrictProfile.pkl][]).
+ *     `bpmner.rules.profile` (defaults to `recommended`). `RecommendedProfile.pkl` is the
+ *     identity profile; `StrictProfile.pkl` bumps every WARNING-default rule to ERROR via the
+ *     Pkl `amends` chain.
  *  2. **User overrides** — parsed from `bpmner.rules.severity-overrides`. **User entries always
  *     win** over the profile's entries; the profile is the baseline, the YAML map is the escape
  *     hatch. Unknown rule ids survive into the profile and silently never match anything at
@@ -34,18 +37,34 @@ import java.net.URI
  * `off` (case-insensitive; `warn` is accepted as a synonym for `warning`). `off` adds the rule
  * id to [RuleProfile.disabledRuleIds]; the other three add to [RuleProfile.severityOverrides].
  *
- * **Failure modes.** An unknown profile name fails startup with the list of available profiles
- * (loud configuration errors are better than silent fallbacks). A malformed entry in the user's
- * severity-overrides map produces a WARN log line and is otherwise ignored — startup is never
- * failed by a typo in one map entry.
+ * **Failure modes** (both loud, both fail startup):
+ *  - **Unknown profile name.** The configured profile name doesn't match any
+ *    `linter/pkl/profiles/{Name}Profile.pkl` resource on the classpath. The error message lists
+ *    every discoverable profile.
+ *  - **Malformed profile module.** The profile resource exists but Pkl can't evaluate it
+ *    (syntax error, missing import, type-constraint violation). The underlying [PklException]
+ *    is chained as the cause; the message names the URI and the offending profile.
+ *
+ * A malformed entry in the user's severity-overrides map produces a WARN log line and is
+ * otherwise ignored — startup is never failed by a typo in one map entry. Profile-file errors
+ * are stricter because the catalog itself is structurally wrong, not just one entry.
  */
 @Configuration
 internal class RuleProfileFactory {
     private val logger = LoggerFactory.getLogger(RuleProfileFactory::class.java)
+    private val resourceResolver = PathMatchingResourcePatternResolver(javaClass.classLoader)
 
     @Bean
     fun ruleProfile(config: BpmnConfig): RuleProfile {
         val profileName = config.rules.profile.trim()
+        val available = discoverAvailableProfiles()
+        if (profileName !in available) {
+            throw IllegalStateException(
+                "Unknown rule profile '$profileName'. Available profiles: " +
+                    "${available.sorted().joinToString(", ")}. " +
+                    "Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one.",
+            )
+        }
         val baseline = loadNamedProfile(profileName)
         val (userOverrides, userDisabled) = parseUserOverrides(config.rules.severityOverrides)
 
@@ -65,18 +84,40 @@ internal class RuleProfileFactory {
         return RuleProfile(severityOverrides = mergedOverrides, disabledRuleIds = mergedDisabled)
     }
 
+    // Walks the classpath for `linter/pkl/profiles/{Name}Profile.pkl` resources and returns the
+    // set of available profile names — the filename's stem with the `Profile.pkl` suffix stripped
+    // and the first letter lowercased. Replaces a hand-maintained list that would silently
+    // diverge from the Bazel `profiles/*.pkl` glob.
+    private fun discoverAvailableProfiles(): Set<String> {
+        val resources = try {
+            resourceResolver.getResources("classpath*:$PROFILE_RESOURCE_PATTERN")
+        } catch (e: IOException) {
+            logger.warn("Could not enumerate profile resources on the classpath", e)
+            return emptySet()
+        }
+        return resources
+            .mapNotNull { it.filename }
+            .filter { it.endsWith(PROFILE_FILENAME_SUFFIX) }
+            .map { it.removeSuffix(PROFILE_FILENAME_SUFFIX).replaceFirstChar { c -> c.lowercase() } }
+            .filter { it.isNotBlank() }
+            .toSet()
+    }
+
     private fun loadNamedProfile(name: String): RuleProfile {
+        // Existence has already been verified by `discoverAvailableProfiles` in `ruleProfile`.
+        // Any failure here is a real evaluation problem — surface the Pkl detail, do NOT mask
+        // it as "unknown profile" (which would send a developer chasing a name typo when the
+        // real cause is a syntax error or bad import inside the module).
         val uri = profileUri(name)
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
                 evaluator.evaluate(ModuleSource.uri(URI.create(uri)))
             }
-        } catch (e: org.pkl.core.PklException) {
-            // The Pkl runtime reports an unresolved module with a specific message; treat any
-            // load failure as "unknown profile" — that's the failure mode operators will hit.
+        } catch (e: PklException) {
             throw IllegalStateException(
-                "Unknown rule profile '$name'. Available profiles: ${availableProfiles().joinToString(", ")}. " +
-                    "Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one.",
+                "Failed to evaluate rule profile '$name' from $uri. The module is on the classpath " +
+                    "but could not be parsed or evaluated. Inspect the file for syntax errors, " +
+                    "missing imports, or type-constraint violations.",
                 e,
             )
         }
@@ -134,16 +175,10 @@ internal class RuleProfileFactory {
     }
 
     companion object {
+        private const val PROFILE_RESOURCE_PATTERN = "linter/pkl/profiles/*Profile.pkl"
+        private const val PROFILE_FILENAME_SUFFIX = "Profile.pkl"
         private const val PROFILE_URI_TEMPLATE = "modulepath:/linter/pkl/profiles/%sProfile.pkl"
 
         private fun profileUri(name: String): String = PROFILE_URI_TEMPLATE.format(name.replaceFirstChar { it.titlecase() })
-
-        // Phase 6 (#221) ships two profiles. New profiles added via {Name}Profile.pkl files in
-        // linter/pkl/profiles/ should also be listed here so the failure-mode message stays
-        // accurate. Kept hand-maintained on purpose — Pkl module discovery from the classpath
-        // at runtime is not portable across all launchers, and the list is short.
-        internal val KNOWN_PROFILES: List<String> = listOf("recommended", "strict")
-
-        internal fun availableProfiles(): List<String> = KNOWN_PROFILES
     }
 }

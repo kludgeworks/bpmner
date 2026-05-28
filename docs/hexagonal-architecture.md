@@ -69,10 +69,8 @@ validation/
 
 > `BpmnLintingPort` is misleadingly named — `RuleEngineLintingAdapter` delegates to
 > the Pkl rule catalog, not a JS linter. The port and types (`LintIssue`,
-> `BpmnLintRuleCapability`) are kept for one more cycle so consumers don't churn;
-> a rename pass is scheduled for a follow-up phase. The legacy GraalJS-hosted
-> `bpmnlint` bridge (`BpmnLintService`, `BpmnLintJsEngine`, `RuleCatalogService`,
-> `PklRuleCapabilityAdapter`) was retired in #241 phase 2G.
+> `BpmnLintRuleCapability`) are kept for now so consumers don't churn; renaming
+> them is tracked separately.
 
 ### Primary port — the module's API
 

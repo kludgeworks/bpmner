@@ -182,7 +182,7 @@ Definitions live in `linter/pkl/schema/CheckPrimitive.pkl`. The Kotlin-side disp
 
 ### Filesystem-deployed Pkl rules (not yet supported)
 
-The original Phase 1 design proposed a `bpmner.rules.custom-dir` setting that would let operators drop external `.pkl` files into a directory for runtime discovery. This was removed in Phase 6 (#221) as undelivered scaffolding; the field is gone from `BpmnRulesConfig`. A dedicated follow-up issue will re-introduce it with the implementation. Today, Tier 2 rules ship in the bpmner JAR.
+A `bpmner.rules.custom-dir` setting for filesystem rule discovery is tracked separately and is not currently wired. Today, Tier 2 rules ship in the bpmner JAR.
 
 ## Tier 3 — Plugin JARs (designed, not yet deployed)
 

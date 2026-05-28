@@ -15,7 +15,7 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 ### 2. Technical Quality (XSD & Pkl rule engine)
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
-- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; the legacy GraalJS-hosted `bpmnlint` bridge was retired in #241 phase 2G.
+- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; GraalJS is used only for the diagram auto-layout pass.
 
 ### 3. Deterministic Repair
 When validation fails, `bpmner` doesn't just "try again." It uses a **local-first repair loop** that attempts to fix technical issues (like ID mismatches or simple naming violations) using deterministic Kotlin handlers before falling back to the LLM for more complex semantic refactoring.

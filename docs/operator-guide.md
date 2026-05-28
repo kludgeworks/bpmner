@@ -19,7 +19,7 @@ Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](..
 
 | Key | Default | Effect |
 |---|---|---|
-| `bpmner.rules.profile` | `recommended` | Named profile loaded at startup. Phase 6 (#221) ships `recommended` (declared severities, nothing disabled) and `strict` (every WARNING-default rule bumped to ERROR). Unknown profile name fails startup with the list of available profiles. |
+| `bpmner.rules.profile` | `recommended` | Named profile loaded at startup. Built-in profiles: `recommended` (declared severities, nothing disabled) and `strict` (every WARNING-default rule bumped to ERROR). Unknown profile name fails startup with the list of available profiles. |
 | `bpmner.rules.severity-overrides` | `{}` | Per-rule escape hatch applied **on top of** the active profile. User entries always win — the profile is the baseline, this map is per-deployment surgery. Keys are bare rule ids (e.g. `act-verb-object-name`); values are one of `error`, `warning`, `info`, `off`. |
 
 Worked example — strict on a known-quiet rule, with a few escape-hatch carveouts:
@@ -180,12 +180,4 @@ The error message lists every available profile. Either fix the YAML or add a ne
 
 ### YAML config-binding errors at startup
 
-Spring Boot's `@ConfigurationProperties` validation is now wired (`@Validated` on `BpmnConfig`). A malformed value (e.g. negative budget) will fail startup with a clear `ConstraintViolationException`. Check the offending field — `@field:Min`/`@field:Max` are declared next to each constrained property.
-
-## When to upgrade
-
-- **Phase 4 typed exceptions surface via `AgentProcessExecution.fromProcessStatus()`** — landed in PR #274. If you're seeing generic `IllegalArgumentException("Cannot get result … Status=STUCK")` instead of `ProcessExecutionStuckException`, you're on a pre-Phase-4 build or someone migrated the invoker to `AgentPlatformTypedOps.transform()` (which uses the older path). The current invoker (`AgentPlatformBpmnAgentInvoker.generate`) is intentionally NOT using TypedOps for this reason.
-
-- **Per-call-site `ProcessOptions`** — landed in PR #276 (Phase 5). Older builds hardcoded `Budget(actions = 100)` in two places; current builds read from `bpmner.budget.*`.
-
-- **Named profiles** — Phase 6 (#221). Older builds only honoured `bpmner.rules.severity-overrides`; setting `bpmner.rules.profile` on a pre-Phase-6 binary is silently ignored.
+Spring Boot's `@ConfigurationProperties` validation is wired via `@Validated` on `BpmnConfig`. A malformed value (e.g. a negative budget) fails startup with a clear `ConstraintViolationException`. Check the offending field — `@field:Min` / `@field:Max` are declared next to each constrained property.

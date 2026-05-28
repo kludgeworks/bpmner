@@ -19,14 +19,13 @@ import dev.groknull.bpmner.api.RuleSeverity
  *  2. Applies severity overrides per emitted diagnostic — every diagnostic whose `ruleId`
  *     matches a key in [severityOverrides] is rewritten with the new severity.
  *
- * Per-rule (not per-diagnostic-code) granularity is intentional for Phase 2E. A rule that
- * emits multiple [dev.groknull.bpmner.api.DiagnosticCode]s gets a single override for all
- * of them, matching the Pkl-side `severity: Severity` field which is also per-rule. The
- * per-diagnostic-code escape hatch is deferred to #221 (Phase 6 named profiles).
+ * Granularity is per-rule, not per-diagnostic-code. A rule that emits multiple
+ * [dev.groknull.bpmner.api.DiagnosticCode]s gets a single override for all of them, matching
+ * the Pkl-side `severity: Severity` field which is also per-rule.
  *
  * Use [EMPTY] in tests and in any code path that constructs a [RuleEngine] without a real
  * config — both [isDisabled] and [overriddenSeverity] return their identity values, so the
- * engine behaves identically to the pre-Phase-2E pass-through.
+ * engine becomes a pass-through.
  */
 data class RuleProfile(
     val severityOverrides: Map<String, RuleSeverity>,
