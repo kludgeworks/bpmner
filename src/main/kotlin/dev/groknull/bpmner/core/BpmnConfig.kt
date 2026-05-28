@@ -12,7 +12,14 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.validation.annotation.Validated
 
+// `@Validated` is REQUIRED for `@ConfigurationProperties` to honour `@field:Valid` / `@Min` /
+// `@Max` constraints — without it, Spring Boot binds values but silently skips JSR-380
+// validation at startup. Pre-Phase-5 this class had constraints declared since day one
+// (`@field:Min` on `lintBatchSize`, `@field:Valid` on `readiness`/`alignment`) that were
+// never actually enforced.
+@Validated
 @ConfigurationProperties("bpmner")
 data class BpmnConfig(
     val generator: Actor<Persona> = DEFAULT_GENERATOR,

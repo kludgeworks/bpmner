@@ -63,29 +63,36 @@ class BpmnProgressProjectionObserver(
         }
     }
 
-    private fun mapActionToLabel(actionName: String): String? = when (actionName) {
-        // Generator (Phase 5, 4 actions)
-        "createOutline" -> "Generating BPMN structure"
+    private fun mapActionToLabel(actionName: String): String? = ACTION_LABELS[actionName]
 
-        "composeGraph" -> "Composing process graph"
-
-        "renderBpmnXml" -> "Rendering BPMN XML"
-
-        "finalizeBpmn" -> "Finalizing BPMN output"
-
-        // Repair (Phase 4 GOAP, 5 actions + finalize)
-        "validate" -> "Validating BPMN"
-
-        "applyDeterministicFixes" -> "Applying deterministic fixes"
-
-        "applyLlmLabelPatch" -> "Repairing labels"
-
-        "applyLlmStructuralPatch" -> "Repairing structure"
-
-        "applyFullLlmRewrite" -> "Rewriting BPMN"
-
-        "finalize" -> "Finalizing repair"
-
-        else -> null // Unknown events do not create noisy entries
+    companion object {
+        // Maps every `@Action` method name in the codebase to a user-facing progress string. Keep
+        // this exhaustive — silent gaps (a missing entry) mean the UI stalls on "unknown step"
+        // for the duration of an action's execution. If you add a new `@Action`, add it here.
+        private val ACTION_LABELS: Map<String, String> = mapOf(
+            // Input side (BpmnReadinessAgent + BpmnContractAgent)
+            "assessReadiness" to "Assessing input readiness",
+            "extractProcessContract" to "Extracting process contract",
+            // Generator (BpmnGeneratorAgent, Phase 5, 4 actions)
+            "createOutline" to "Generating BPMN structure",
+            "composeGraph" to "Composing process graph",
+            "renderBpmnXml" to "Rendering BPMN XML",
+            "finalizeBpmn" to "Finalizing BPMN output",
+            // Repair (BpmnRepairAgent, Phase 4 GOAP, 5 actions + finalize)
+            "validate" to "Validating BPMN",
+            "applyDeterministicFixes" to "Applying deterministic fixes",
+            "applyLlmLabelPatch" to "Repairing labels",
+            "applyLlmStructuralPatch" to "Repairing structure",
+            "applyFullLlmRewrite" to "Rewriting BPMN",
+            "finalize" to "Finalizing repair",
+            // Layout (BpmnLayoutAgent)
+            "layoutBpmnXml" to "Laying out diagram",
+            "autoFixBpmnXml" to "Auto-fixing diagram XML",
+            "validateFinalBpmnXml" to "Validating final BPMN",
+            // Alignment (BpmnAlignmentAgent)
+            "checkAlignment" to "Verifying semantic alignment",
+            // Rule evaluation (LlmRuleAgent — called from inside the repair loop)
+            "evaluateLlmRules" to "Evaluating LLM rules",
+        )
     }
 }

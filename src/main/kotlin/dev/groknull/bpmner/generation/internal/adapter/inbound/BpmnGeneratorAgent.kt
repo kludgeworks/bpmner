@@ -126,7 +126,7 @@ internal class BpmnGeneratorAgent(
     /**
      * Single deterministic action: outline → composed graph + ownership + layout → [LaidOutProcessGraph].
      *
-     * Phase 5 (#220) collapsed the previous four-action chain
+     * Phase 5 (#220) collapsed the previous five-action chain
      * (`generatePhasePlans` + `validatePhasePlans` + `composeProcessGraph` + `assignOwnership` + `assignLayout`)
      * because each step was a deterministic structural derivation of the previous one. The
      * intermediate types [ComposedProcessGraph] and [OwnedElementGraph] survive — they are the
@@ -158,16 +158,21 @@ internal class BpmnGeneratorAgent(
         )
 
         // assignOwnership: element-id ownership map (mirrors objectOwners plus `_di` diagram-element IDs).
+        // `getValue` not `[...] ?: MAIN_PHASE_OWNER` — `objectOwners` was just populated above with
+        // every key we look up here, so a missing entry would mean a logic bug in this function
+        // and should fail loudly with NoSuchElementException rather than silently substitute.
         val elementOwners =
             buildMap {
-                put(definition.processId, objectOwners["process"] ?: MAIN_PHASE_OWNER)
+                put(definition.processId, objectOwners.getValue("process"))
                 definition.nodes.forEach { node ->
-                    put(node.id, objectOwners["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
-                    put("${node.id}_di", objectOwners["nodes[id=${node.id}]"] ?: MAIN_PHASE_OWNER)
+                    val owner = objectOwners.getValue("nodes[id=${node.id}]")
+                    put(node.id, owner)
+                    put("${node.id}_di", owner)
                 }
                 definition.sequences.forEach { edge ->
-                    put(edge.id, objectOwners["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
-                    put("${edge.id}_di", objectOwners["sequences[id=${edge.id}]"] ?: MAIN_PHASE_OWNER)
+                    val owner = objectOwners.getValue("sequences[id=${edge.id}]")
+                    put(edge.id, owner)
+                    put("${edge.id}_di", owner)
                 }
             }
         val owned =
