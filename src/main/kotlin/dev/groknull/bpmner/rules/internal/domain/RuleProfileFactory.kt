@@ -92,8 +92,15 @@ internal class RuleProfileFactory {
         val resources = try {
             resourceResolver.getResources("classpath*:$PROFILE_RESOURCE_PATTERN")
         } catch (e: IOException) {
-            logger.warn("Could not enumerate profile resources on the classpath", e)
-            return emptySet()
+            // Don't swallow — an empty set here causes `ruleProfile()` to emit a misleading
+            // "Unknown rule profile 'recommended'. Available profiles: ." error that blames
+            // the operator's YAML config when the real cause is a classpath I/O failure
+            // (e.g. shaded JAR, broken classloader). Surface the real cause.
+            throw IllegalStateException(
+                "Failed to enumerate rule-profile resources from the classpath. " +
+                    "Check that linter/pkl/profiles/ is packaged in the application JAR.",
+                e,
+            )
         }
         return resources
             .mapNotNull { it.filename }
