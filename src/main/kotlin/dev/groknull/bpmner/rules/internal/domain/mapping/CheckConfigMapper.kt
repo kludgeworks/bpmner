@@ -79,7 +79,13 @@ private fun PklCheckPrim.CheckConfig.toDeterministicConfig(): DeterministicCheck
 private fun PklCheckPrim.CheckConfig.toStructuralConfig(): DeterministicCheckConfig? = when (this) {
     is PklCheckPrim.RequiredPropertyCheck -> RequiredPropertyCheckConfig(property)
 
-    is PklCheckPrim.PropertyPatternCheck -> PropertyPatternCheckConfig(property, pattern, patternDescription)
+    is PklCheckPrim.PropertyPatternCheck -> PropertyPatternCheckConfig(
+        property = property,
+        pattern = pattern,
+        patternDescription = patternDescription,
+        forbiddenVocabulary = forbiddenVocabulary,
+        allowedVocabulary = allowedVocabulary,
+    )
 
     is PklCheckPrim.VocabularyCheck -> VocabularyCheckConfig(
         property = property,

@@ -177,8 +177,53 @@ Definitions live in `linter/pkl/schema/CheckPrimitive.pkl`. The Kotlin-side disp
 
 1. Create `linter/pkl/rules/<PascalName>.pkl` amending `BpmnRule.pkl`.
 2. Re-run `bazel build //linter/pkl:rules_index_pkl` — the `rules_index` macro regenerates `RulesIndex.pkl` from the glob. No hand-listing.
-3. Add tests under `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/`. The `DeterministicPrimitivesTest`, `CompositeCheckTest`, and `NlpPrimitivesTest` patterns cover the three families.
+3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/<PascalName>Test.kt` (see next section).
 4. If the rule is `severity = "warning"` and you ship to the `strict` profile, no action — `StrictProfile.pkl` auto-includes it via a Pkl for-comprehension over `RulesIndex.rules`.
+
+### Writing a per-rule test
+
+Every active Pkl rule should have a dedicated test class under `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/`. The class uses `PklRuleTestSupport` to load the **production** rule from the live `PklRuleCatalog` — no synthetic configuration, no hand-built primitive instance. This is the consistency point: every test exercises what production exercises.
+
+Worked examples shipped with the codebase:
+
+- `ActivityLabelCapitalizationTest.kt` — single `PropertyPatternCheck` rule (regex-only)
+- `BusinessMeaningfulLabelTest.kt` — `PropertyPatternCheck` with `forbiddenVocabulary`
+- `UncommonAbbreviationsTest.kt` — `PropertyPatternCheck` with `allowedVocabulary` + repair-metadata round-trip
+- `VerbObjectNameTest.kt` — `CompositeCheck` binding two sub-checks (`tooShort` + `missingVerb`)
+
+The canonical shape:
+
+```kotlin
+internal class MyRuleTest {
+    private val rule = loadRule("<rule-id>")
+
+    @Test
+    fun `clean case passes`() {
+        assertSilent(rule, context(nodes = listOf(BpmnUserTask("t", "Submit form"))))
+    }
+
+    @Test
+    fun `violation flags`() {
+        assertFires(
+            rule,
+            context(nodes = listOf(BpmnUserTask("t", "Submit_form"))),
+            expectedElementIds = listOf("t"),
+        )
+    }
+}
+```
+
+Helpers available on `PklRuleTestSupport`:
+
+| Helper | Purpose |
+|---|---|
+| `loadRule(ruleId)` | Returns the production `BpmnRule`. Fails fast if the id isn't in the registry — usually because the rule is deferred (`checkPrimitive == null`) or `severity = "off"`. |
+| `context(nodes, edges?)` | Builds a `BpmnDefinitionContext`. When `edges` is null, nodes are chained in order. |
+| `assertFires(rule, ctx, expectedElementIds, expectedDiagnosticCode?)` | Asserts the rule fires on exactly the listed elements (order-insensitive). Optionally pins the diagnostic code (needed for composite rules). |
+| `assertSilent(rule, ctx)` | Asserts the rule emits no diagnostics. |
+| `evaluate(rule, ctx)` | Returns the raw diagnostic list for custom inspection (e.g. message substrings, repair metadata). |
+
+Cover positive (rule fires) and negative (rule doesn't fire) cases per detection category. Use **single-fault inputs** — one violation kind per test method — so the failure message points directly at which detection broke.
 
 ### Filesystem-deployed Pkl rules (not yet supported)
 

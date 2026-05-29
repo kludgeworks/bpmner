@@ -41,21 +41,8 @@ class DeterministicPrimitivesTest {
         )
     }
 
-    @Test
-    fun `property pattern skips blank values and flags non-matching values`() {
-        val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("bad", "approve request"), BpmnEndEvent("e")))
-        val check = PropertyPatternCheck()
-
-        assertEquals(
-            listOf("bad"),
-            check.evaluate(
-                ctx,
-                metadata("pattern", "bpmn:UserTask"),
-                PropertyPatternCheckConfig("name", "^[A-Z].*", "sentence case"),
-            ).map { it.elementId },
-        )
-        assertTrue(check.evaluate(ctx, metadata("blank", "bpmn:EndEvent"), PropertyPatternCheckConfig("name", "^[A-Z].*")).isEmpty())
-    }
+    // PropertyPatternCheck coverage lives in `PropertyPatternCheckTest` — extracted per the
+    // existing per-primitive pattern (`CompositeCheckTest`, `NlpPrimitivesTest`).
 
     @Test
     fun `vocabulary supports require and forbid modes case-insensitively`() {

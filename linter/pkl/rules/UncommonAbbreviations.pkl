@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Uncommon Abbreviations"
@@ -28,14 +29,35 @@ targetElements =
     "bpmn:DataStoreReference",
   )
 
-// TEMP: disabled pending kludgeworks/bpmner#147. Re-enable when per-diagnostic dispositions land.
-severity = "off"
+// Ships as `warning` so operators can opt in by removing the `off` entry from
+// `bpmner.rules.severity-overrides`. The default `application.yaml` disables it; the rule
+// stays in the registry either way so a per-deployment override can re-enable it. (The
+// underlying load-time vs eval-time filter for `severity = "off"` is tracked separately.)
+severity = "warning"
 errorMessages = new {
   ["default"] = "Avoid uncommon abbreviations in labels or explain them via annotation/glossary"
 }
 
+// Single-source-of-truth allowlist referenced both in `staticConfig` (introspectable by
+// tools and docs) and in `checkConfig.allowedVocabulary` (consumed by the runtime). The
+// `local` identifier is deliberately different from the `staticConfig` field name to avoid a
+// Pkl self-reference (`x = x`) at the field initialiser.
+local commonAcronymList: List<String> = List("BPMN", "ACME", "SLA", "API", "IT")
+
 staticConfig = new {
-  commonAcronyms = List("BPMN", "ACME", "SLA", "API", "IT")
+  commonAcronyms = commonAcronymList
+}
+
+checkPrimitive = "PropertyPatternCheck"
+// Reject any all-caps run of length >= 2 (a likely abbreviation). The `allowedVocabulary`
+// list is scrubbed from the label before the regex runs, so labels like `Submit BPMN form`
+// pass even though they contain an all-caps run. Labels like `Submit XYZ form` flag because
+// `XYZ` isn't in the allowlist.
+checkConfig = new CheckPrimitive.PropertyPatternCheck {
+  property = "name"
+  pattern = "^(?!.*\\b[A-Z]{2,}\\b).+$"
+  patternDescription = "labels should not contain uncommon uppercase abbreviations"
+  allowedVocabulary = commonAcronymList
 }
 
 repair = new {

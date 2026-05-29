@@ -41,9 +41,9 @@ internal class CheckConfigMapperTest {
     }
 
     @Test
-    fun `PropertyPatternCheck preserves all three fields including nullable description`() {
+    fun `PropertyPatternCheck mapping preserves the regex-only baseline`() {
         val mapped = CheckConfigMapper.map(
-            PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", "sentence case"),
+            PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", "sentence case", null, null),
         )
 
         assertEquals(
@@ -52,6 +52,32 @@ internal class CheckConfigMapperTest {
                     property = "name",
                     pattern = "^[A-Z].*$",
                     patternDescription = "sentence case",
+                ),
+            ),
+            mapped,
+        )
+    }
+
+    @Test
+    fun `PropertyPatternCheck preserves forbiddenVocabulary and allowedVocabulary lists`() {
+        val mapped = CheckConfigMapper.map(
+            PklCheckPrim.PropertyPatternCheck(
+                "name",
+                ".+",
+                "no technical tokens",
+                listOf("api", "svc"),
+                listOf("BPMN", "ACME"),
+            ),
+        )
+
+        assertEquals(
+            MappedCheck.Deterministic(
+                PropertyPatternCheckConfig(
+                    property = "name",
+                    pattern = ".+",
+                    patternDescription = "no technical tokens",
+                    forbiddenVocabulary = listOf("api", "svc"),
+                    allowedVocabulary = listOf("BPMN", "ACME"),
                 ),
             ),
             mapped,
@@ -213,7 +239,7 @@ internal class CheckConfigMapperTest {
     fun `CompositeCheck recursively maps sub-checks to deterministic configs`() {
         val sub = PklCheckPrim.SubCheck(
             "labelCase",
-            PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", null),
+            PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", null, null, null),
         )
         val mapped = CheckConfigMapper.map(
             PklCheckPrim.CompositeCheck(listOf("bpmn:Task"), listOf(sub)),

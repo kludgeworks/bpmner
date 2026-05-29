@@ -41,6 +41,8 @@ internal data class PropertyPatternCheckConfig(
     val property: String,
     val pattern: String,
     val patternDescription: String? = null,
+    val forbiddenVocabulary: List<String>? = null,
+    val allowedVocabulary: List<String>? = null,
 ) : DeterministicCheckConfig
 
 internal data class VocabularyCheckConfig(
