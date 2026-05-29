@@ -69,8 +69,8 @@ class BpmnEmployeeOnboardingE2eTest {
                     )
             }.onFailure { failure ->
                 Assumptions.assumeTrue(
-                    !isRateLimited(failure),
-                    "GitHub Models rate limit hit; skipping. Cause: ${failure.message}",
+                    !isGitHubModelsTierLimit(failure),
+                    "GitHub Models free-tier limit hit; skipping. Cause: ${failure.message}",
                 )
                 throw failure
             }.getOrThrow()
@@ -88,10 +88,20 @@ class BpmnEmployeeOnboardingE2eTest {
         return Paths.get(testSrcDir, testWorkspace, "samples", name).readText()
     }
 
-    private fun isRateLimited(failure: Throwable): Boolean {
+    /**
+     * GitHub Models' free tier enforces both throughput limits (429 / "Too Many Requests")
+     * and a per-request input cap (413 / "tokens_limit_reached"). Both are policy responses
+     * from the endpoint, not bpmner bugs, so the e2e test treats them as skips rather than
+     * failures.
+     */
+    private fun isGitHubModelsTierLimit(failure: Throwable): Boolean {
         return generateSequence(failure as Throwable?) { it.cause }.any { cause ->
             val message = cause.message.orEmpty()
-            "429" in message || "Too Many Requests" in message || "rate limit" in message.lowercase()
+            "429" in message ||
+                "Too Many Requests" in message ||
+                "rate limit" in message.lowercase() ||
+                "413" in message ||
+                "tokens_limit_reached" in message
         }
     }
 }
