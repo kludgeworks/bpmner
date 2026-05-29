@@ -39,9 +39,13 @@ internal object BpmnUnrecognizedElementScanner {
             if (node is BpmnUnrecognizedNode) {
                 add(UnrecognizedFinding.Node(id = node.id, bpmnType = node.bpmnType))
             }
-            if (node is BpmnEvent && node.eventDefinition is BpmnUnrecognizedEventDefinition) {
-                val ed = node.eventDefinition as BpmnUnrecognizedEventDefinition
-                add(UnrecognizedFinding.EventDefinition(eventId = node.id, typeName = ed.typeName))
+            if (node is BpmnEvent) {
+                // Capture into a local so the `is` check smart-casts. `node.eventDefinition`
+                // is a property on a non-final interface and can't smart-cast in place.
+                val eventDefinition = node.eventDefinition
+                if (eventDefinition is BpmnUnrecognizedEventDefinition) {
+                    add(UnrecognizedFinding.EventDefinition(eventId = node.id, typeName = eventDefinition.typeName))
+                }
             }
         }
     }

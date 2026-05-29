@@ -119,8 +119,6 @@ internal class BpmnRepairAgent(
         validatedContract: ValidatedProcessContract,
     ): BpmnRepairEvaluation {
         val contract = validatedContract.contract
-        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
-        val normalisedRendered = rendered.copy(definition = normalisedDefinition)
 
         // Pre-flight: #287 — surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,
         // `BpmnUnrecognizedEventDefinition`) as typed UNFIXABLE diagnostics before any code
@@ -128,12 +126,15 @@ internal class BpmnRepairAgent(
         // (`promptFactory.initialMessages`, `contractAwareValidator.evaluate` →
         // `BpmnEvaluationPipeline.logArtifactsIfEnabled` in debug mode, and
         // `attemptRecordFactory.toRecord` → `definitionFingerprint`) all serialise; the
-        // short-circuit return below skips all three.
-        val unrecognized = BpmnUnrecognizedElementScanner.scan(normalisedDefinition)
+        // short-circuit return below skips all three. Scanning the original definition is
+        // sufficient because `defaultFlowAssigner.assign` only rewrites `sequences`.
+        val unrecognized = BpmnUnrecognizedElementScanner.scan(rendered.definition)
         if (unrecognized.isNotEmpty()) {
-            return shortCircuitUnrecognized(request, graph, normalisedRendered, contract, unrecognized)
+            return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
         }
 
+        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
+        val normalisedRendered = rendered.copy(definition = normalisedDefinition)
         val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
         val evaluation = contractAwareValidator.evaluate(
             graph = graph,
@@ -643,7 +644,7 @@ internal class BpmnRepairAgent(
     private fun shortCircuitUnrecognized(
         request: BpmnRequest,
         graph: LaidOutProcessGraph,
-        normalisedRendered: RenderedBpmn,
+        rendered: RenderedBpmn,
         contract: ProcessContract,
         findings: List<UnrecognizedFinding>,
     ): BpmnRepairEvaluation {
@@ -653,8 +654,8 @@ internal class BpmnRepairAgent(
             findings.size,
         )
         val evaluation = BpmnEvaluation(
-            definition = normalisedRendered.definition,
-            rendered = normalisedRendered,
+            definition = rendered.definition,
+            rendered = rendered,
             diagnostics = diagnostics,
             globalDiagnostics = GlobalDiagnostics(diagnostics),
             validatedXml = null,
@@ -662,7 +663,7 @@ internal class BpmnRepairAgent(
         return BpmnRepairEvaluation(
             request = request,
             graph = graph,
-            rendered = normalisedRendered,
+            rendered = rendered,
             evaluation = evaluation,
             messages = emptyList(),
             history = BpmnAttemptHistory(),

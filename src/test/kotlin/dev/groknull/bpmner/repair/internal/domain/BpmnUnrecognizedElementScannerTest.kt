@@ -107,6 +107,7 @@ internal class BpmnUnrecognizedElementScannerTest {
         assertEquals(RepairKind.UNFIXABLE, diag.kind)
         assertTrue(diag.message.contains("bpmn:CompensateEventDefinition"))
         assertTrue(diag.message.contains("ic1"))
+        assertNull(diag.repairScope)
     }
 
     private fun definitionOf(vararg nodes: BpmnNode): BpmnDefinition = BpmnDefinition(
