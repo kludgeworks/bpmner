@@ -57,4 +57,17 @@ internal class EventStatePatternTest {
             expectedElementIds = listOf("e"),
         )
     }
+
+    @Test
+    fun `blank or empty name is silent`() {
+        // GrammaticalShapeCheck.evaluate skips blank values via isNullOrBlank.
+        assertSilent(rule, context(nodes = listOf(BpmnStartEvent("e", ""))))
+        assertSilent(rule, context(nodes = listOf(BpmnStartEvent("e", "   "))))
+    }
+
+    @Test
+    fun `pure punctuation is silent`() {
+        // matchesShape short-circuits to true when the tokenizer returns no tokens.
+        assertSilent(rule, context(nodes = listOf(BpmnStartEvent("e", "!!!"))))
+    }
 }
