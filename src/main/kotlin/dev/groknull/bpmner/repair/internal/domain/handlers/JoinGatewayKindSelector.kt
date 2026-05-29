@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
+import dev.groknull.bpmner.api.BpmnGateway
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
 
@@ -17,11 +19,13 @@ import dev.groknull.bpmner.core.BpmnParallelGateway
  * The original (pre-PR-184) repair handlers always synthesized exclusive joins, which is
  * wrong for parallel forks: if the LLM emits a parallel topology that's missing its join,
  * an exclusive merge would silently change "wait for all branches" into "first branch wins".
+ * The same risk applies to inclusive forks: an exclusive merge below an OR-fork would turn
+ * "wait for whichever branches activated" into "first branch wins".
  *
  * Heuristic: walk back through every incoming edge until the nearest gateway ancestor is
- * found on each path. If every path leads back to *the same* parallel gateway with no
- * intervening exclusive gateway, the missing join must be parallel. Otherwise default
- * to exclusive — which preserves the historical behaviour for non-parallel cases.
+ * found on each path. If every path leads back to *the same* parallel (or inclusive) gateway
+ * with no intervening exclusive gateway, the missing join must match. Otherwise default to
+ * exclusive — which preserves the historical behaviour for non-fork cases.
  */
 internal object JoinGatewayKindSelector {
     fun newJoinGateway(
@@ -36,11 +40,17 @@ internal object JoinGatewayKindSelector {
             } else {
                 null
             }
-        return if (sharedParallelFork != null) {
-            BpmnParallelGateway(id = joinId, name = null)
-        } else {
-            BpmnExclusiveGateway(id = joinId, name = null)
-        }
+        if (sharedParallelFork != null) return BpmnParallelGateway(id = joinId, name = null)
+
+        val sharedInclusiveFork: BpmnInclusiveGateway? =
+            if (ancestors.all { it is BpmnInclusiveGateway }) {
+                ancestors.filterIsInstance<BpmnInclusiveGateway>().distinctBy { it.id }.singleOrNull()
+            } else {
+                null
+            }
+        if (sharedInclusiveFork != null) return BpmnInclusiveGateway(id = joinId, name = null)
+
+        return BpmnExclusiveGateway(id = joinId, name = null)
     }
 
     /**
@@ -80,7 +90,7 @@ internal object JoinGatewayKindSelector {
                 null
             }
 
-            node is BpmnExclusiveGateway || node is BpmnParallelGateway -> {
+            node is BpmnGateway -> {
                 node
             }
 

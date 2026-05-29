@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -95,6 +96,49 @@ class BpmnXmlToDefinitionConverterTest {
         val manual = parsed.nodes.single { it.id == "act-inspect" }
         assertIs<BpmnManualTask>(manual)
         assertEquals(2, parsed.messages.size)
+    }
+
+    @Test
+    fun `inclusiveGateway xml round-trips with default flow preserved`() {
+        // Fork and join both end up as BpmnInclusiveGateway after a full round-trip; the
+        // default-flow marker on the diverging gateway's outbound flow survives the trip.
+        val original =
+            BpmnDefinition(
+                processId = "Process_RT_Incl",
+                processName = "Round-trip inclusive",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnInclusiveGateway("dec-extras", "Which add-ons?"),
+                    BpmnUserTask("act-wrap", "Wrap"),
+                    BpmnUserTask("act-insert", "Insert"),
+                    BpmnUserTask("act-skip", "Skip"),
+                    BpmnInclusiveGateway("Gateway_join", null),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "dec-extras"),
+                    BpmnEdge("F2", "dec-extras", "act-wrap", conditionExpression = "wrap?"),
+                    BpmnEdge("F3", "dec-extras", "act-insert", conditionExpression = "insert?"),
+                    BpmnEdge("F4", "dec-extras", "act-skip", isDefault = true),
+                    BpmnEdge("F5", "act-wrap", "Gateway_join"),
+                    BpmnEdge("F6", "act-insert", "Gateway_join"),
+                    BpmnEdge("F7", "act-skip", "Gateway_join"),
+                    BpmnEdge("F8", "Gateway_join", "EndEvent_1"),
+                ),
+            )
+
+        val xml = forward.render(original).xml
+        val parsed = reverse.parse(xml)
+
+        val fork = parsed.nodes.first { it.id == "dec-extras" }
+        val join = parsed.nodes.first { it.id == "Gateway_join" }
+        assertIs<BpmnInclusiveGateway>(fork, "fork should round-trip as BpmnInclusiveGateway")
+        assertIs<BpmnInclusiveGateway>(join, "join should round-trip as BpmnInclusiveGateway")
+
+        val defaultFlow = parsed.sequences.first { it.id == "F4" }
+        assertTrue(defaultFlow.isDefault, "default flow on inclusive gateway should round-trip with isDefault=true")
     }
 
     @Test

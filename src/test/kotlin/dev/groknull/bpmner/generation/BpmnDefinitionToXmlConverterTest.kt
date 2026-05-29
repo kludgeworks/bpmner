@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -35,6 +36,50 @@ import kotlin.test.assertFalse
 
 class BpmnDefinitionToXmlConverterTest {
     private val converter = BpmnDefinitionToXmlConverter()
+
+    @Test
+    fun `converter emits inclusiveGateway for BpmnInclusiveGateway nodes with default flow`() {
+        // OR-fork mirroring the fulfilment-with-optional-extras sample: two optional add-on
+        // branches with conditions, plus a default flow that fires when neither activates.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Inclusive",
+                processName = "Fulfilment with extras",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Package ready"),
+                    BpmnInclusiveGateway("dec-extras", "Which add-ons apply?"),
+                    BpmnUserTask("act-wrap", "Apply gift wrap"),
+                    BpmnUserTask("act-insert", "Add promotional insert"),
+                    BpmnUserTask("act-skip", "Skip add-ons"),
+                    BpmnInclusiveGateway("Gateway_join_extras", null),
+                    BpmnUserTask("act-label", "Apply shipping label"),
+                    BpmnEndEvent("EndEvent_1", "Package shipped"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "dec-extras"),
+                    BpmnEdge("F2", "dec-extras", "act-wrap", conditionExpression = "gift wrap requested"),
+                    BpmnEdge("F3", "dec-extras", "act-insert", conditionExpression = "qualifies for insert"),
+                    BpmnEdge("F4", "dec-extras", "act-skip", isDefault = true),
+                    BpmnEdge("F5", "act-wrap", "Gateway_join_extras"),
+                    BpmnEdge("F6", "act-insert", "Gateway_join_extras"),
+                    BpmnEdge("F7", "act-skip", "Gateway_join_extras"),
+                    BpmnEdge("F8", "Gateway_join_extras", "act-label"),
+                    BpmnEdge("F9", "act-label", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+
+        // Camunda's writer alphabetises attributes; the diverging gateway has
+        // `default="F4"` before `id="dec-extras"` and the join gateway has only `id`.
+        assertContains(xml, "<inclusiveGateway default=\"F4\" id=\"dec-extras\"")
+        assertContains(xml, "<inclusiveGateway id=\"Gateway_join_extras\"")
+        // Conditions are present on the two conditional branches.
+        assertContains(xml, "gift wrap requested")
+        assertContains(xml, "qualifies for insert")
+    }
 
     @Test
     fun `converter emits parallelGateway for BpmnParallelGateway nodes`() {
@@ -249,7 +294,7 @@ class BpmnDefinitionToXmlConverterTest {
         require(ex != null) { "expected render to fail for isDefault on non-gateway source" }
         assertContains(
             ex.message ?: "",
-            "isDefault is only supported on exclusive-gateway sources",
+            "isDefault is only supported on exclusive- or inclusive-gateway sources",
         )
     }
 

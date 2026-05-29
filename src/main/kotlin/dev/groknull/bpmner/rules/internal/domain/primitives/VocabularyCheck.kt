@@ -28,6 +28,7 @@ internal class VocabularyCheck {
                 val matched = when (config.mode) {
                     VocabularyMode.REQUIRE, VocabularyMode.FORBID ->
                         tokens.any { it in words }
+
                     VocabularyMode.REQUIRE_LEADING, VocabularyMode.FORBID_LEADING ->
                         tokens.firstOrNull() in words
                 }

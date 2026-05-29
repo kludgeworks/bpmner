@@ -90,8 +90,11 @@ internal object BpmnRuleAdapter {
     @Suppress("UNCHECKED_CAST")
     private fun staticConfigFromPkl(ruleId: String, raw: Any?): Map<String, Any>? = when (raw) {
         null -> null
+
         is org.pkl.core.PObject -> raw.properties as Map<String, Any>
+
         is Map<*, *> -> raw as Map<String, Any>
+
         else -> error(
             "Rule '$ruleId' staticConfig must be a Pkl object/mapping, got ${raw::class.java.name}",
         )

@@ -94,9 +94,10 @@ internal class BpmnGeneratorAgent(
                 metrics = metricsCalculator.calculate(definitionWithDefaults),
             )
         logger.info(
-            "Outline summary: phases={}, xorBranches={}, parallelBranches={}, loops={}, subprocesses={}",
+            "Outline summary: phases={}, xorBranches={}, orBranches={}, parallelBranches={}, loops={}, subprocesses={}",
             outline.metrics.phaseCount,
             outline.metrics.exclusiveBranchCount,
+            outline.metrics.inclusiveBranchCount,
             outline.metrics.parallelBranchCount,
             outline.metrics.loopCount,
             outline.metrics.subprocessCount,

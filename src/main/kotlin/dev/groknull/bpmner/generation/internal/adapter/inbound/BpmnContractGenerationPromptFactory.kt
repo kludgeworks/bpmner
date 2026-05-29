@@ -224,6 +224,68 @@ internal class BpmnContractGenerationPromptFactory(
         appendLine("    - Three inbound flows to the join (one from each track's last activity).")
         appendLine("    - One outbound flow from the join to `act-orientation`.")
         appendLine()
+        appendLine("Inclusive-gateway rules:")
+        appendLine(
+            "- When a ContractDecision has `kind = INCLUSIVE`, realize the fork as ONE" +
+                " INCLUSIVE_GATEWAY node whose id equals the decision id verbatim. Each" +
+                " conditional branch becomes one CONDITIONAL outbound flow with a" +
+                " conditionExpression — just like EXCLUSIVE. The difference is semantic: the" +
+                " conditions are evaluated independently, so any subset (including all of" +
+                " them) may fire concurrently.",
+        )
+        appendLine(
+            "- Every INCLUSIVE fork MUST have a matching synchronising join: a second" +
+                " INCLUSIVE_GATEWAY node where every activated branch reconverges before" +
+                " downstream work proceeds. The join waits only for the branches that fired" +
+                " (unlike a parallel join, which waits for all branches). The join is a" +
+                " synthesised node with a stable unique id of your choosing" +
+                " (e.g. `Gateway_join_<descriptor>`) — it has no contract counterpart and no" +
+                " `name`.",
+        )
+        appendLine(
+            "- A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other" +
+                " branch's condition is true. The renderer writes the gateway's `default`" +
+                " attribute on the chosen outbound flow.",
+        )
+        appendLine(
+            "- After the join, emit a single outbound sequence flow to whatever comes next.",
+        )
+        appendLine()
+        appendLine("Worked example — fulfilment with optional gift-wrap and promotional insert:")
+        appendLine("  Contract decision `dec-extras` (kind=INCLUSIVE) has three branches:")
+        appendLine(
+            "    - {kind: CONDITIONAL, id: br-wrap,   label: \"Gift wrap\",          condition: \"gift wrap requested\",      nextRef: \"act-wrap\"}",
+        )
+        appendLine(
+            "    - {kind: CONDITIONAL, id: br-insert, label: \"Promotional insert\", condition: \"order qualifies for insert\", nextRef: \"act-insert\"}",
+        )
+        appendLine(
+            "    - {kind: DEFAULT,     id: br-none,   label: \"Skip add-ons\",       nextRef: \"act-skip\"}  // fires when both conditions are false",
+        )
+        appendLine(
+            "  The two conditional branches are evaluated independently. If both are true," +
+                " both fire concurrently; if one is true, only that one fires; if neither is true," +
+                " the DEFAULT branch fires through a `Skip add-ons` activity so the process always" +
+                " has a forward path. The matching inclusive join waits only for the branches that" +
+                " activated, then the process continues to `act-label`.",
+        )
+        appendLine(BPMN_TOPOLOGY_LABEL)
+        appendLine(
+            "    - Fork: BpmnNode(id=\"dec-extras\", type=INCLUSIVE_GATEWAY, name=\"Which add-ons apply?\")",
+        )
+        appendLine("    - Three outbound sequence flows from the fork:")
+        appendLine("        * to `act-wrap`   with condition \"gift wrap requested\"")
+        appendLine("        * to `act-insert` with condition \"order qualifies for insert\"")
+        appendLine("        * to `act-skip`   with `isDefault = true` and no condition (the renderer writes")
+        appendLine("          the gateway's `default` attribute to this flow's id)")
+        appendLine(
+            "    - Synthesised join: BpmnNode(id=\"Gateway_join_extras\", type=INCLUSIVE_GATEWAY, name=null)",
+        )
+        appendLine("    - Three inbound flows to the join — one from each branch's last activity.")
+        appendLine("      All branches (including the default) feed the join so the engine's")
+        appendLine("      token-counting waits for exactly the branches that fired.")
+        appendLine("    - One outbound flow from the join to `act-label`.")
+        appendLine()
         appendLine("Primary validated ProcessContract:")
         appendLine(contractRenderer.render(validatedContract.contract).trim())
         appendLine()

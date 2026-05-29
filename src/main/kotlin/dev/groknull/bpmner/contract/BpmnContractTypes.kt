@@ -408,6 +408,16 @@ enum class ContractGatewayKind {
     EXCLUSIVE,
 
     /**
+     * One or more branches activate based on their conditions — some-but-not-all of the
+     * conditional concurrent paths fire. Branches under INCLUSIVE decisions carry
+     * `condition` expressions like EXCLUSIVE, but unlike EXCLUSIVE the conditions are
+     * evaluated independently and any subset (including all of them) may evaluate true
+     * and fire concurrently. A matching inclusive join gateway waits for whichever
+     * branches activated before downstream work proceeds. Maps to `<bpmn:inclusiveGateway>`.
+     */
+    INCLUSIVE,
+
+    /**
      * All branches activate concurrently — a fork. Branches under PARALLEL decisions have
      * no `condition`; the gateway emits one outbound flow per branch unconditionally, and
      * a matching parallel join gateway synchronises the branches before downstream work
@@ -436,7 +446,10 @@ data class ContractDecision(
     val branches: List<ContractBranch>,
     @get:JsonPropertyDescription(
         "How the branches relate. EXCLUSIVE (default) = exactly one branch taken based on its " +
-            "condition. PARALLEL = all branches activate concurrently and reconverge at a join. " +
+            "condition. INCLUSIVE = one or more branches whose conditions are true activate " +
+            "concurrently and reconverge at a join — use when the source describes independent " +
+            "optional add-ons that may apply singly, together, or not at all ('either, both, " +
+            "or neither'). PARALLEL = all branches activate concurrently and reconverge at a join. " +
             "Use PARALLEL when the source describes concurrent / independent tracks, 'in parallel', " +
             "'all of the following must complete', etc.",
     )

@@ -103,6 +103,8 @@ interface BpmnManualTask : BpmnTask
 
 interface BpmnExclusiveGateway : BpmnGateway
 
+interface BpmnInclusiveGateway : BpmnGateway
+
 interface BpmnParallelGateway : BpmnGateway
 
 /**
@@ -219,6 +221,7 @@ val BpmnNode.typeName: String
             is BpmnReceiveTask -> "RECEIVE_TASK"
             is BpmnManualTask -> "MANUAL_TASK"
             is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
+            is BpmnInclusiveGateway -> "INCLUSIVE_GATEWAY"
             is BpmnParallelGateway -> "PARALLEL_GATEWAY"
             is BpmnIntermediateCatchEvent -> "INTERMEDIATE_CATCH_EVENT"
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"

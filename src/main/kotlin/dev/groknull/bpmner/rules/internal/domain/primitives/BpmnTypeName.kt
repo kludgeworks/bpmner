@@ -27,6 +27,7 @@ internal object BpmnTypeName {
     const val RECEIVE_TASK = "bpmn:ReceiveTask"
     const val MANUAL_TASK = "bpmn:ManualTask"
     const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
+    const val INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
 
     // BPMN DI diagram typename. The parser surfaces its document-level count on

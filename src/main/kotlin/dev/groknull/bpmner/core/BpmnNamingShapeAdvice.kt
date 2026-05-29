@@ -64,6 +64,8 @@ internal object BpmnNamingShapeAdvice {
 
         is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
 
+        is BpmnInclusiveGateway -> INCLUSIVE_GATEWAY_ADVICE
+
         is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
 
         is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
@@ -99,6 +101,7 @@ internal object BpmnNamingShapeAdvice {
         RECEIVE_TASK_ADVICE,
         MANUAL_TASK_ADVICE,
         EXCLUSIVE_GATEWAY_ADVICE,
+        INCLUSIVE_GATEWAY_ADVICE,
         PARALLEL_GATEWAY_ADVICE,
     )
 
@@ -163,6 +166,22 @@ internal object BpmnNamingShapeAdvice {
                 " not the routing mechanism. Converging joins are unnamed (policy).",
             examples = listOf("Is the score above 750?", "Which credit tier?", "Did validation pass?"),
             antiExamples = listOf("Routing", "Decision", "Branch on score"),
+        )
+
+    private val INCLUSIVE_GATEWAY_ADVICE =
+        Advice(
+            kind = "INCLUSIVE_GATEWAY (diverging)",
+            shape =
+            "Question form ending in '?'. Names the inclusive choice — typically 'which" +
+                " of these apply?' shapes — not the routing mechanism. Converging joins are" +
+                " unnamed (policy).",
+            examples =
+            listOf(
+                "Which add-on services apply?",
+                "Which notification channels should fire?",
+                "Which optional checks are required?",
+            ),
+            antiExamples = listOf("OR-split", "Inclusive routing", "Optional branches"),
         )
 
     private val PARALLEL_GATEWAY_ADVICE =
