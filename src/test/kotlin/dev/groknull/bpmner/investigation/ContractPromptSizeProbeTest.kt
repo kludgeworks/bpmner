@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnContractConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
 import java.nio.file.Paths
 import kotlin.io.path.readText
@@ -68,8 +69,14 @@ class ContractPromptSizeProbeTest {
     }
 
     private fun loadSample(name: String): String {
-        val testSrcDir = System.getenv("TEST_SRCDIR") ?: error("TEST_SRCDIR not set (run via Bazel)")
-        val testWorkspace = System.getenv("TEST_WORKSPACE") ?: error("TEST_WORKSPACE not set (run via Bazel)")
+        val testSrcDir = System.getenv("TEST_SRCDIR")
+        val testWorkspace = System.getenv("TEST_WORKSPACE")
+        // Skip rather than crash when invoked outside Bazel (IDE runners,
+        // raw gradle, etc.) — these env vars are Bazel-specific.
+        Assumptions.assumeTrue(
+            testSrcDir != null && testWorkspace != null,
+            "Bazel runfiles env (TEST_SRCDIR / TEST_WORKSPACE) not present; skipping. Run via `bazel test`.",
+        )
         return Paths.get(testSrcDir, testWorkspace, "samples", name).readText()
     }
 }

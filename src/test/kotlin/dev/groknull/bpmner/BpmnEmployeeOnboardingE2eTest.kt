@@ -13,7 +13,6 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Test
@@ -56,35 +55,40 @@ class BpmnEmployeeOnboardingE2eTest {
         val prose = loadSample("employee-onboarding.prose.md")
         val outputFile = tempDir.resolve("employee-onboarding.bpmn")
 
-        val result =
-            runCatching {
-                AgentPlatformTypedOps(agentPlatform)
-                    .transform(
-                        BpmnRequest(
-                            processDescription = prose,
-                            outputFile = outputFile.toString(),
-                        ),
-                        BpmnResult::class.java,
-                        ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
-                    )
-            }.onFailure { failure ->
-                Assumptions.assumeTrue(
-                    !isGitHubModelsTierLimit(failure),
-                    "GitHub Models free-tier limit hit; skipping. Cause: ${failure.message}",
+        val result = try {
+            AgentPlatformTypedOps(agentPlatform)
+                .transform(
+                    BpmnRequest(
+                        processDescription = prose,
+                        outputFile = outputFile.toString(),
+                    ),
+                    BpmnResult::class.java,
+                    ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
                 )
-                throw failure
-            }.getOrThrow()
+        } catch (failure: Exception) {
+            Assumptions.assumeFalse(
+                isGitHubModelsTierLimit(failure),
+                "GitHub Models free-tier limit hit; skipping. Cause: ${failure.message}",
+            )
+            throw failure
+        }
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
-        assertNotNull(result.xml, "Expected BPMN XML for GENERATED status")
-        assertTrue(result.xml!!.contains("<process"), "Expected XML to contain <process tag")
+        val xml = requireNotNull(result.xml) { "Expected BPMN XML for GENERATED status" }
+        assertTrue(xml.contains("<process"), "Expected XML to contain <process tag")
         assertEquals(outputFile.toString(), result.outputFile)
-        assertEquals(result.xml, outputFile.readText())
+        assertEquals(xml, outputFile.readText())
     }
 
     private fun loadSample(name: String): String {
-        val testSrcDir = System.getenv("TEST_SRCDIR") ?: error("TEST_SRCDIR not set (run via Bazel)")
-        val testWorkspace = System.getenv("TEST_WORKSPACE") ?: error("TEST_WORKSPACE not set (run via Bazel)")
+        val testSrcDir = System.getenv("TEST_SRCDIR")
+        val testWorkspace = System.getenv("TEST_WORKSPACE")
+        // Skip rather than crash when invoked outside Bazel (IDE runners,
+        // raw gradle, etc.) — these env vars are Bazel-specific.
+        Assumptions.assumeTrue(
+            testSrcDir != null && testWorkspace != null,
+            "Bazel runfiles env (TEST_SRCDIR / TEST_WORKSPACE) not present; skipping. Run via `bazel test`.",
+        )
         return Paths.get(testSrcDir, testWorkspace, "samples", name).readText()
     }
 
@@ -95,7 +99,7 @@ class BpmnEmployeeOnboardingE2eTest {
      * failures.
      */
     private fun isGitHubModelsTierLimit(failure: Throwable): Boolean {
-        return generateSequence(failure as Throwable?) { it.cause }.any { cause ->
+        return generateSequence(failure) { it.cause }.any { cause ->
             val message = cause.message.orEmpty()
             "429" in message ||
                 "Too Many Requests" in message ||

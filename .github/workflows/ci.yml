@@ -71,7 +71,10 @@ jobs:
         run: bazel test //...
 
       - name: Run e2e smoke tests (real LLM)
-        run: bazel test --test_tag_filters=e2e //src/test/...
+        # --test_env forwards GITHUB_TOKEN through Bazel's sandbox; required
+        # because `.bazelrc` sets `--incompatible_strict_action_env`. Without
+        # this flag the test sees the token as unset and silently skips via
+        # @EnabledIfEnvironmentVariable.
+        run: bazel test --test_tag_filters=e2e --test_env=GITHUB_TOKEN //src/test/...
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true

@@ -29,7 +29,6 @@ kt_jvm_library(
     name = "bpmner_tests_lib",
     srcs = glob(["kotlin/**/*.kt"]),
     associates = ["//src:bpmner_core"],
-    data = ["//samples:prose_samples"],
     plugins = spring_allopen_plugins(),
     resources = glob(["resources/**"]),
     deps = [
@@ -61,6 +60,9 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     timeout = (
         "long" if "GuardrailSystemTest" in f or "E2eTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
     ),
+    # Only tests that load prose samples need them at runtime: the e2e test and
+    # the offline contract-prompt size probe under investigation/.
+    data = ["//samples:prose_samples"] if "E2eTest" in f or "/investigation/" in f else [],
     tags = ["e2e"] if "E2eTest" in f else ["integration"] if "IntegrationTest" in f else [],
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
     visibility = ["//visibility:public"],
