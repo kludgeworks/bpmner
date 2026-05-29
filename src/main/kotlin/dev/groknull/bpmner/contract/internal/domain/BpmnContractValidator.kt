@@ -186,7 +186,7 @@ internal class BpmnContractValidator {
                 errorIssue(
                     code = ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL,
                     message = "branch '${branch.id}' is DEFAULT but decision '${decision.id}'" +
-                        " is PARALLEL — default branches are valid only on EXCLUSIVE decisions",
+                        " is PARALLEL — default branches are valid only on EXCLUSIVE or INCLUSIVE decisions",
                     targetId = branch.id,
                 ),
             )

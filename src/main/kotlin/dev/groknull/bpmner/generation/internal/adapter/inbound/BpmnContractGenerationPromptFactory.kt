@@ -252,25 +252,38 @@ internal class BpmnContractGenerationPromptFactory(
         )
         appendLine()
         appendLine("Worked example — fulfilment with optional gift-wrap and promotional insert:")
-        appendLine("  Contract decision `dec-extras` (kind=INCLUSIVE) has two branches:")
+        appendLine("  Contract decision `dec-extras` (kind=INCLUSIVE) has three branches:")
         appendLine(
             "    - {kind: CONDITIONAL, id: br-wrap,   label: \"Gift wrap\",          condition: \"gift wrap requested\",      nextRef: \"act-wrap\"}",
         )
         appendLine(
             "    - {kind: CONDITIONAL, id: br-insert, label: \"Promotional insert\", condition: \"order qualifies for insert\", nextRef: \"act-insert\"}",
         )
-        appendLine("  Either, both, or neither of the conditions may fire. After whichever activated has completed, the process continues to `act-label`.")
+        appendLine(
+            "    - {kind: DEFAULT,     id: br-none,   label: \"Skip add-ons\",       nextRef: \"act-skip\"}  // fires when both conditions are false",
+        )
+        appendLine(
+            "  The two conditional branches are evaluated independently. If both are true," +
+                " both fire concurrently; if one is true, only that one fires; if neither is true," +
+                " the DEFAULT branch fires through a `Skip add-ons` activity so the process always" +
+                " has a forward path. The matching inclusive join waits only for the branches that" +
+                " activated, then the process continues to `act-label`.",
+        )
         appendLine(BPMN_TOPOLOGY_LABEL)
         appendLine(
             "    - Fork: BpmnNode(id=\"dec-extras\", type=INCLUSIVE_GATEWAY, name=\"Which add-ons apply?\")",
         )
-        appendLine("    - Two conditional outbound flows from the fork:")
+        appendLine("    - Three outbound sequence flows from the fork:")
         appendLine("        * to `act-wrap`   with condition \"gift wrap requested\"")
         appendLine("        * to `act-insert` with condition \"order qualifies for insert\"")
+        appendLine("        * to `act-skip`   with `isDefault = true` and no condition (the renderer writes")
+        appendLine("          the gateway's `default` attribute to this flow's id)")
         appendLine(
             "    - Synthesised join: BpmnNode(id=\"Gateway_join_extras\", type=INCLUSIVE_GATEWAY, name=null)",
         )
-        appendLine("    - Two inbound flows to the join (one from each station's last activity).")
+        appendLine("    - Three inbound flows to the join — one from each branch's last activity.")
+        appendLine("      All branches (including the default) feed the join so the engine's")
+        appendLine("      token-counting waits for exactly the branches that fired.")
         appendLine("    - One outbound flow from the join to `act-label`.")
         appendLine()
         appendLine("Primary validated ProcessContract:")

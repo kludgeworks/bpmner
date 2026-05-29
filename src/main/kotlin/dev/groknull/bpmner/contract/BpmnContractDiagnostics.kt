@@ -24,7 +24,7 @@ enum class ContractValidationCode {
     /** A decision has more than one DefaultBranch. At most one is allowed. */
     DECISION_MULTIPLE_DEFAULTS,
 
-    /** A DefaultBranch appeared under a PARALLEL decision (defaults are EXCLUSIVE-only). */
+    /** A DefaultBranch appeared under a PARALLEL decision (defaults are EXCLUSIVE- or INCLUSIVE-only). */
     DEFAULT_BRANCH_ON_PARALLEL,
 
     /** An EXCLUSIVE decision has a DefaultBranch but no ConditionalBranch alongside it. */
