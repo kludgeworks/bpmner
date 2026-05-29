@@ -232,7 +232,6 @@ For the full configuration reference (every `bpmner.*` YAML key, defaults, range
 | `bpmner.rules.severity-overrides` | `{}` | Per-rule severity escape hatch applied on top of the active profile. |
 | `bpmner.generator` / `bpmner.repairer` / etc. | role-based personas | Each agent has a `Persona` + `LlmOptions.withLlmForRole(...)` slot. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, emits truncated previews of every intermediate artifact at DEBUG. |
-| `bpmner.repair.abbreviations` | `{}` | Replacement map fed into the abbreviation local-fix handler. |
 
 Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile — `anth` for Anthropic, `gh` for GitHub Models / OpenAI-compatible. See the top-level `README.md` for invocation.
 

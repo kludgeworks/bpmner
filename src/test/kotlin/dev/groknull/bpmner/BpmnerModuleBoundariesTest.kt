@@ -83,7 +83,6 @@ class BpmnerModuleBoundariesTest {
                 "BpmnAlignmentConfig",
                 "BpmnContractConfig",
                 "BpmnReadinessConfig",
-                "BpmnRepairConfig",
                 "ClarificationExchange",
             )
 

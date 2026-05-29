@@ -38,11 +38,6 @@ bpmner:
     # Default off. Override via env (`BPMNER_LOGGING_DUMP_ARTIFACTS=true`) or a dev/diagnostic
     # profile when investigating a failing run — intermediate XML is verbose at production scale.
     dump-artifacts: ${BPMNER_LOGGING_DUMP_ARTIFACTS:false}
-  repair:
-    abbreviations:
-      ITBL: ineligible-to-board list
-      PNR: booking reference
-      FFP: frequent flyer programme
   rules:
     # Per-rule severity overrides. Keys are bare rule ids; values are one of
     # `error`, `warning`, `info`, `off`. See `RuleProfileFactory` (#242).
