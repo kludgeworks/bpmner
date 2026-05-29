@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "BPMN Subset"
@@ -11,7 +12,11 @@ forModellers =
 forAI =
   "Detect discouraged BPMN types that are outside the supported subset and propose supported replacements."
 
-targetElements =
+// Single-source-of-truth list referenced both in `staticConfig` (for tools/docs introspection)
+// and in `targetElements` (the rule's element scope). The `local` identifier is deliberately
+// different from the `staticConfig` field name to avoid a Pkl self-reference (`x = x`) at the
+// field initialiser.
+local discouragedTypeList: List<String> =
   List(
     "bpmn:Choreography",
     "bpmn:ChoreographyTask",
@@ -25,28 +30,31 @@ targetElements =
     "bpmn:EscalationEventDefinition",
   )
 
+targetElements = discouragedTypeList
+
 severity = "error"
 errorMessages = new {
   ["default"] = "Element type is outside the supported BPMN subset"
 }
 
 staticConfig = new {
-  discouragedTypes =
-    List(
-      "bpmn:Choreography",
-      "bpmn:ChoreographyTask",
-      "bpmn:SubChoreography",
-      "bpmn:CallChoreography",
-      "bpmn:Conversation",
-      "bpmn:ConversationLink",
-      "bpmn:ConversationAssociation",
-      "bpmn:Transaction",
-      "bpmn:CompensateEventDefinition",
-      "bpmn:EscalationEventDefinition",
-    )
+  discouragedTypes = discouragedTypeList
 }
 
-// BpmnSubset stays on the legacy JS path until pkl-config-java can convert Pkl Lists into
-// the Mapping<String, Any> value slot — the codegen target field is java.lang.Object and
-// no built-in converter handles `pkl.base#List` -> `java.lang.Object`. Revisit once 2G
-// retires the JS path or the codegen converter chain is extended.
+checkPrimitive = "ElementConstraintCheck"
+// `targetElements` scopes the scan to exactly the 10 discouraged types, so every
+// `targetedElement` is by definition outside the supported subset. The empty
+// `constraints["allowed"]` means "no exceptions": every match fires. The `allowed` knob
+// exists for rules where some target types are acceptable; `BpmnSubset` has none.
+checkConfig = new CheckPrimitive.ElementConstraintCheck {
+  element = "bpmn:FlowElement"
+  mode = "ALLOWED_ELEMENT_SUBSET"
+  // `pkl-config-java` has no built-in `pkl.base#List → java.lang.Object` converter for the
+  // `Mapping<String, Any>` value slot, so the allowed list arrives as a comma-separated
+  // string. `ElementConstraintCheck.allowedSubset` accepts either a `List<String>` or a
+  // `String` (CSV-split). An empty string means "no allowed types"; every `targetedElement`
+  // fires.
+  constraints = new Mapping<String, Any> {
+    ["allowed"] = ""
+  }
+}

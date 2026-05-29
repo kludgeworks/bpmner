@@ -58,6 +58,7 @@ internal object PklRuleTestSupport {
     fun context(
         nodes: List<BpmnNode>,
         edges: List<BpmnEdge>? = null,
+        diagramCount: Int = 0,
     ): BpmnDefinitionContext {
         val actualEdges = edges ?: defaultEdges(nodes)
         return BpmnDefinitionContext(
@@ -66,6 +67,7 @@ internal object PklRuleTestSupport {
                 processName = "Process",
                 nodes = nodes,
                 sequences = actualEdges,
+                diagramCount = diagramCount,
             ),
         )
     }

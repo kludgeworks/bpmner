@@ -21,10 +21,13 @@ internal class CardinalityCheck {
         metadata: RuleMetadata,
         config: CardinalityCheckConfig,
     ): List<RuleDiagnostic> {
-        // Skip rules targeting types the production model can't produce (e.g. `bpmn:InclusiveGateway`).
-        // Otherwise a `min` constraint would fire on every evaluation, since the count is always
-        // zero for unsupported types.
-        if (!BpmnTypeMatcher.isSupportedProductionType(config.element)) return emptyList()
+        // Skip `min` rules targeting types the production model can't produce (e.g.
+        // `bpmn:InclusiveGateway`); a `min` constraint on a never-produced type would fire
+        // on every evaluation. The guard is asymmetric: only `min` can false-positive on
+        // unmodeled types — for a `max`-only rule, count = 0 trivially satisfies `count <= max ≥ 0`,
+        // and types whose elements are injected synthetically (e.g. `bpmndi:BPMNDiagram` from
+        // `PrimitiveModelMapping`) need the `max`-only path to reach `model.elements`.
+        if (config.min != null && !BpmnTypeMatcher.isSupportedProductionType(config.element)) return emptyList()
         val count = model.elements.count { BpmnTypeMatcher.matches(it.typeName, config.element) }
         val tooFew = config.min?.let { count < it } ?: false
         val tooMany = config.max?.let { count > it } ?: false

@@ -25,9 +25,10 @@ package dev.groknull.bpmner.core
  *   - Diverging gateways ask a yes/no or which-of question ending in `?`.
  *   - Converging gateways are unnamed (handled by [BpmnNodeNamingPolicy]).
  *
- * The `when (node)` is exhaustive over [BpmnNode], so any new sealed subtype added by the
- * vocabulary-extension epic (#196) — typed start/end events, intermediate events, boundary
- * events, subprocesses, etc. — forces a compile-time decision about its naming shape.
+ * The `when (node)` covers every canonical [BpmnNode] subtype plus [BpmnUnrecognizedNode];
+ * any other implementation of the non-sealed [BpmnNode] interface falls through to the safe
+ * default (no advice). Add an explicit `is` arm above the `else` when introducing a new
+ * canonical subtype.
  */
 internal object BpmnNamingShapeAdvice {
     data class Advice(
@@ -44,19 +45,40 @@ internal object BpmnNamingShapeAdvice {
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
     fun adviceFor(node: BpmnNode): Advice? = when (node) {
         is BpmnStartEvent -> START_EVENT_ADVICE
+
         is BpmnEndEvent -> END_EVENT_ADVICE
+
         is BpmnUserTask -> USER_TASK_ADVICE
+
         is BpmnServiceTask -> SERVICE_TASK_ADVICE
+
         is BpmnScriptTask -> SCRIPT_TASK_ADVICE
+
         is BpmnBusinessRuleTask -> BUSINESS_RULE_TASK_ADVICE
+
         is BpmnSendTask -> SEND_TASK_ADVICE
+
         is BpmnReceiveTask -> RECEIVE_TASK_ADVICE
+
         is BpmnManualTask -> MANUAL_TASK_ADVICE
+
         is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
+
         is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
+
         is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
+
         is BpmnIntermediateThrowEvent -> INTERMEDIATE_THROW_EVENT_ADVICE
+
         is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
+
+        // Fallback for elements without a typed Kotlin class. No naming-shape advice — no
+        // sensible convention for a type we don't model.
+        is BpmnUnrecognizedNode -> null
+
+        // Safe default for any other (non-canonical) `BpmnNode` implementation. The
+        // interface is non-sealed, so the compiler cannot enforce exhaustiveness here.
+        else -> null
     }
 
     /**

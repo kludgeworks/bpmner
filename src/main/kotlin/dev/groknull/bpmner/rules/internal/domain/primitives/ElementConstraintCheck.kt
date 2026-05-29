@@ -33,7 +33,17 @@ internal class ElementConstraintCheck {
         metadata: RuleMetadata,
         config: ElementConstraintCheckConfig,
     ): List<RuleDiagnostic> {
-        val allowed = (config.constraints["allowed"] as? List<*>)?.filterIsInstance<String>().orEmpty()
+        // The `allowed` constraint accepts either a `List<String>` or a comma-separated
+        // `String`. The `String` path is the workaround for a `pkl-config-java` codegen gap:
+        // a Pkl `List` value inside a `Mapping<String, Any>` slot codegens as a
+        // `java.lang.Object` field and no built-in converter handles `pkl.base#List → Object`.
+        // Either path is acceptable; an empty result means "no exceptions — every
+        // `targetedElement` fires".
+        val allowed = when (val raw = config.constraints["allowed"]) {
+            is List<*> -> raw.filterIsInstance<String>()
+            is String -> raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            else -> emptyList()
+        }
         return metadata.targetedElements(model)
             .filter { element -> allowed.none { BpmnTypeMatcher.matches(element.typeName, it) } }
             .map { metadata.diagnostic(it.id, it.typeName) }

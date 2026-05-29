@@ -225,6 +225,18 @@ Helpers available on `PklRuleTestSupport`:
 
 Cover positive (rule fires) and negative (rule doesn't fire) cases per detection category. Use **single-fault inputs** — one violation kind per test method — so the failure message points directly at which detection broke.
 
+#### Surfacing parser-level signals
+
+Some rules check document-level metadata that the XML parser surfaces *outside* the per-node walk:
+
+| Signal | Source | Helper argument | Worked example |
+|---|---|---|---|
+| BPMNDI diagram count | `BpmnDefinition.diagramCount` | `context(nodes, diagramCount = N)` | `NoDuplicateDiagramsTest` (#282) |
+| Unrecognized BPMN element types (Choreography, Conversation, Transaction, etc.) | `BpmnUnrecognizedNode` in `nodes` | Pass `BpmnUnrecognizedNode("id", null, "bpmn:<Type>")` directly in the `nodes` list | `BpmnSubsetTest` (#282) |
+| Unrecognized event-definition types (e.g. `bpmn:CompensateEventDefinition`) | `BpmnUnrecognizedEventDefinition` carried by a `BpmnEvent` | `BpmnStartEvent(eventDefinition = BpmnUnrecognizedEventDefinition("bpmn:<Type>"))` | `BpmnSubsetTest` (#282) |
+
+The parser-as-structure / rule-as-policy refactor (#282) means **every type the parser sees flows through the same path** — typed nodes go into `nodes`, unrecognized ones go in via `BpmnUnrecognizedNode`, and the rule engine treats them uniformly. Tests don't need helper extensions for new exotic types; construct the appropriate sealed subtype directly.
+
 ### Filesystem-deployed Pkl rules (not yet supported)
 
 A `bpmner.rules.custom-dir` setting for filesystem rule discovery is tracked separately and is not currently wired. Today, Tier 2 rules ship in the bpmner JAR.

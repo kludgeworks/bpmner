@@ -134,8 +134,11 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
-    fun `parse rejects xml containing bpmndi elements`() {
-        val xmlWithDi =
+    fun `parse surfaces bpmndi diagram count on BpmnDefinition`() {
+        // The parser counts `<bpmndi:BPMNDiagram>` elements and exposes the count on
+        // `BpmnDefinition.diagramCount`. DI content is dropped from the semantic model; the
+        // `NoDuplicateDiagrams` rule enforces the one-diagram policy via `CardinalityCheck`.
+        val xmlWithTwoDiagrams =
             """
             <?xml version="1.0" encoding="UTF-8"?>
             <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -147,24 +150,19 @@ class BpmnXmlToDefinitionConverterTest {
                 <sequenceFlow id="f" sourceRef="s" targetRef="e"/>
                 <endEvent id="e"/>
               </process>
-              <bpmndi:BPMNDiagram id="d">
-                <bpmndi:BPMNPlane id="plane" bpmnElement="p1">
-                  <bpmndi:BPMNShape id="s_di" bpmnElement="s">
-                    <dc:Bounds x="0" y="0" width="36" height="36"/>
-                  </bpmndi:BPMNShape>
-                </bpmndi:BPMNPlane>
+              <bpmndi:BPMNDiagram id="d1">
+                <bpmndi:BPMNPlane id="plane1" bpmnElement="p1"/>
+              </bpmndi:BPMNDiagram>
+              <bpmndi:BPMNDiagram id="d2">
+                <bpmndi:BPMNPlane id="plane2" bpmnElement="p1"/>
               </bpmndi:BPMNDiagram>
             </definitions>
             """.trimIndent()
 
-        val err =
-            assertFailsWith<IllegalArgumentException> {
-                reverse.parse(xmlWithDi)
-            }
-        assertTrue(
-            err.message!!.contains("BPMNDI input rejected"),
-            "rejection message should explain the strict-parse rule",
-        )
+        val parsed = reverse.parse(xmlWithTwoDiagrams)
+        assertEquals(2, parsed.diagramCount, "parser should surface the BPMNDI diagram count")
+        // DI content is still dropped from the semantic model — only the count survives.
+        assertEquals(setOf("s", "e"), parsed.nodes.map { it.id }.toSet())
     }
 
     @Test

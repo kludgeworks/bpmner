@@ -25,6 +25,12 @@ interface BpmnDefinition {
     val signals: List<BpmnSignalRef>
     val errors: List<BpmnErrorRef>
     val escalations: List<BpmnEscalationRef>
+
+    // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
+    // model does not carry DI content; the count is the only signal that survives. The
+    // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
+    // injected by `PrimitiveModelMapping`.
+    val diagramCount: Int get() = 0
 }
 
 /**
@@ -99,6 +105,19 @@ interface BpmnExclusiveGateway : BpmnGateway
 
 interface BpmnParallelGateway : BpmnGateway
 
+/**
+ * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
+ * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
+ * `targetElements` matching on [bpmnType].
+ *
+ * Not round-trippable: the generator (`BpmnDefinitionToXmlConverter` /
+ * `BpmnModelFactory.newFlowNode`) errors if one reaches it. Callers serializing to LLM JSON
+ * also fail because `BpmnUnrecognizedNode` is intentionally absent from `@JsonSubTypes`.
+ */
+interface BpmnUnrecognizedNode : BpmnNode {
+    val bpmnType: String
+}
+
 /** A directed sequence-flow edge between two nodes. */
 interface BpmnEdge {
     val id: String
@@ -170,6 +189,15 @@ interface BpmnEscalationEventDefinition : BpmnEventDefinition {
 interface BpmnTerminateEventDefinition : BpmnEventDefinition
 
 /**
+ * Fallback for any event definition the parser sees but doesn't have a typed Kotlin class for
+ * (e.g. `bpmn:CompensateEventDefinition`). Carries the source XML typename so the rule engine
+ * can flag specific definitions via `targetElements`.
+ */
+interface BpmnUnrecognizedEventDefinition : BpmnEventDefinition {
+    val typeName: String
+}
+
+/**
  * The discriminator string for [this] node, matching the `@JsonSubTypes` names on the
  * concrete `core` data classes. Kept as a property extension to preserve the existing
  * `node.typeName` call-site syntax across the codebase.
@@ -196,6 +224,7 @@ val BpmnNode.typeName: String
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
+            is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
             else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }
 

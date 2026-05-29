@@ -47,6 +47,11 @@ object BpmnNodeNamingPolicy {
             is BpmnManualTask,
             -> true
 
+            // Fallback for elements without a typed Kotlin class. No naming requirement —
+            // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
+            // complaint on top would be noise.
+            is BpmnUnrecognizedNode -> false
+
             // BpmnNode is non-sealed (see KDoc on BpmnNode) — the arms above cover every
             // canonical subtype. A hand-rolled BpmnNode impl outside the marker hierarchy
             // is treated as "requires a name" by default; safer than silently allowing blanks.

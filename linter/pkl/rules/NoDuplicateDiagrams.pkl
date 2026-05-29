@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "No Duplicate Diagrams"
@@ -21,3 +22,13 @@ errorMessages = new {
 staticConfig = new {}
 
 aliases = List("gen-02-no-duplicate-diagrams")
+
+checkPrimitive = "CardinalityCheck"
+// `BpmnXmlToDefinitionConverter` surfaces the DI diagram count as
+// `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` injects that many synthetic
+// `bpmndi:BPMNDiagram` elements into the primitive model so `CardinalityCheck` can count
+// them. `max = 1` flags multi-diagram documents.
+checkConfig = new CheckPrimitive.CardinalityCheck {
+  element = "bpmndi:BPMNDiagram"
+  max = 1
+}
