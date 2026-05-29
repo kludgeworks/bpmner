@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Event State Pattern"
@@ -39,4 +40,10 @@ staticConfig = new {
       "resolved",
       "closed",
     )
+}
+
+checkPrimitive = "GrammaticalShapeCheck"
+checkConfig = new CheckPrimitive.GrammaticalShapeCheck {
+  property = "name"
+  mode = "STATE_LABEL"
 }
