@@ -55,54 +55,44 @@ internal class BpmnContractPromptFactory(
         )
         appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
         appendLine()
-        appendLine("Activity kind (sealed type with a `kind` discriminator):")
+        appendLine("Activity kind (sealed type with a `kind` discriminator); SERVICE is the default:")
+        appendLine("- SERVICE — Example: `{kind: \"SERVICE\", id: \"act-charge-card\", name: \"Charge card\"}`.")
         appendLine(
-            "- SERVICE (default) — external/system automation: a backend service call, a job run by" +
-                " the system. Example: `{kind: \"SERVICE\", id: \"act-charge-card\", name: \"Charge card\"}`.",
-        )
-        appendLine(
-            "- USER — human work performed through a system UI (a form, a queue, a review screen)." +
+            "- USER — through a form, queue, or review screen." +
                 " Example: `{kind: \"USER\", id: \"act-approve\", name: \"Approve loan\"}`.",
         )
         appendLine(
-            "- SCRIPT — engine-evaluated computation or transformation, no external service call." +
-                " Recognise from phrases like \"the system computes\", \"normalises\", \"transforms\"," +
-                " \"calculates\", \"runs a script\". Example:" +
+            "- SCRIPT — Recognise from phrases like \"the system computes\", \"normalises\"," +
+                " \"transforms\", \"calculates\", \"runs a script\". Example:" +
                 " `{kind: \"SCRIPT\", id: \"act-normalise\", name: \"Normalise address\"}`.",
         )
         appendLine(
-            "- BUSINESS_RULE — a call to a decision model / rule set / decision table. Recognise" +
-                " from phrases like \"evaluates the rule set\", \"applies the credit policy\"," +
-                " \"decision table\", \"DMN decision\", \"rules engine\". Carries `decisionName`" +
-                " (human-readable name of the rule set the LLM identified). Example:" +
+            "- BUSINESS_RULE — Recognise from phrases like \"evaluates the rule set\"," +
+                " \"applies the credit policy\", \"decision table\", \"DMN decision\", \"rules engine\"." +
+                " Carries `decisionName`. Example:" +
                 " `{kind: \"BUSINESS_RULE\", id: \"act-credit\", name: \"Evaluate credit policy\"," +
                 " decisionName: \"credit policy\"}`.",
         )
         appendLine(
-            "- SEND — fire-and-forget outbound message. The workflow does NOT wait for an" +
-                " acknowledgement. Recognise from phrases like \"sends a notification\", \"notifies\"," +
-                " \"publishes\", \"emits\". Carries `messageName` (human-readable name of the message)." +
-                " Example: `{kind: \"SEND\", id: \"act-decline\", name: \"Send decline notification\"," +
-                " messageName: \"decline notification\"}`.",
+            "- SEND — The workflow does NOT wait for an acknowledgement. Recognise from phrases" +
+                " like \"sends a notification\", \"notifies\", \"publishes\", \"emits\". Carries" +
+                " `messageName`. Example: `{kind: \"SEND\", id: \"act-decline\"," +
+                " name: \"Send decline notification\", messageName: \"decline notification\"}`.",
         )
         appendLine(
-            "- RECEIVE — wait for an inbound message; the flow BLOCKS until it arrives. Recognise" +
-                " from phrases like \"waits for X message\", \"blocks until X is received\", \"the" +
-                " customer must confirm\". Name with past-participle (\"X received\"). Carries" +
-                " `messageName`. Example: `{kind: \"RECEIVE\", id: \"act-await-ack\"," +
+            "- RECEIVE — the flow BLOCKS until the message arrives. Recognise from phrases like" +
+                " \"waits for X message\", \"blocks until X is received\", \"the customer must" +
+                " confirm\". Name with past-participle (\"X received\"). Carries `messageName`." +
+                " Example: `{kind: \"RECEIVE\", id: \"act-await-ack\"," +
                 " name: \"Customer acknowledgement received\", messageName: \"customer acknowledgement\"}`.",
         )
         appendLine(
-            "- MANUAL — human work performed WITHOUT system support (paper, in-person, off-system)." +
-                " Recognise from phrases like \"manually visits\", \"works with paper notes\"," +
-                " \"off-system\". Example: `{kind: \"MANUAL\", id: \"act-inspect\", name: \"Inspect" +
-                " property condition\"}`.",
+            "- MANUAL — paper, in-person, or off-system. Recognise from phrases like" +
+                " \"manually visits\", \"works with paper notes\", \"off-system\". Example:" +
+                " `{kind: \"MANUAL\", id: \"act-inspect\", name: \"Inspect property condition\"}`.",
         )
         appendLine()
-        appendLine("End-state kind (sealed type with a `kind` discriminator):")
-        appendLine(
-            "- NORMAL (default) — vanilla path completion; nothing special happens at the end.",
-        )
+        appendLine("End-state kind (sealed type with a `kind` discriminator); NORMAL is the default:")
         appendLine(
             "- TERMINATE — recognise prose like \"process terminates immediately\", \"every" +
                 " in-flight track stops\", \"abandons all work\", \"the entire workflow ends\"." +
@@ -118,44 +108,38 @@ internal class BpmnContractPromptFactory(
         )
         appendLine(
             "- MESSAGE — recognise prose like \"sends X on completion\", \"wraps up by sending\"," +
-                " \"fires X webhook at the end\". Point-to-point send to one recipient." +
-                " `messageName` is the human-readable message name from the prose. Example:" +
+                " \"fires X webhook at the end\". Example:" +
                 " `{kind: \"MESSAGE\", id: \"end-confirmed\", name: \"Shipment confirmation sent\"," +
                 " messageName: \"shipment confirmation\"}`.",
         )
         appendLine(
             "- SIGNAL — recognise prose like \"broadcasts X\", \"notifies all subscribers\"," +
-                " \"one-to-many notification\". Differs from MESSAGE by being broadcast." +
-                " `signalName` is the broadcast name from the prose. Example:" +
+                " \"one-to-many notification\". Example:" +
                 " `{kind: \"SIGNAL\", id: \"end-settled\", name: \"Settlement complete signal\"," +
                 " signalName: \"settlement complete\"}`.",
         )
         appendLine(
             "- ESCALATION — recognise prose like \"escalates\", \"notifies the manager\"," +
-                " \"flagged for follow-up\". Distinct from ERROR: work isn't broken, it just" +
-                " needs intervention. `escalationCode` is the stable business code. Example:" +
+                " \"flagged for follow-up\". Example:" +
                 " `{kind: \"ESCALATION\", id: \"end-overdue\", name: \"Approval overdue escalation\"," +
                 " escalationCode: \"APPROVAL_OVERDUE\"}`.",
         )
         appendLine()
         appendLine("Branch kind (sealed type with a `kind` discriminator):")
         appendLine(
-            "- CONDITIONAL — the default kind for branches of an EXCLUSIVE decision. Carries a" +
-                " non-blank `condition` expression that selects it. Example:" +
+            "- CONDITIONAL — the default branch kind on EXCLUSIVE decisions. Example:" +
                 " `{kind: \"CONDITIONAL\", id: \"br-yes\", label: \"Eligible\", condition: \"score >= 750\"}`.",
         )
         appendLine(
-            "- DEFAULT — the catch-all branch of an EXCLUSIVE decision, taken when no other" +
-                " branch's condition matched. Set this when the source prose uses catch-all" +
-                " phrasing — \"otherwise\", \"for every other case\", \"the catch-all\", \"anything else\"," +
-                " \"for all remaining cases\". A DEFAULT branch carries NO condition; the label" +
-                " still describes the destination (e.g. \"Manual review\"). Example:" +
+            "- DEFAULT — set this when the source prose uses catch-all phrasing — \"otherwise\"," +
+                " \"for every other case\", \"the catch-all\", \"anything else\", \"for all remaining" +
+                " cases\". Carries NO condition; the label still describes the destination" +
+                " (e.g. \"Manual review\"). Example:" +
                 " `{kind: \"DEFAULT\", id: \"br-fallback\", label: \"Manual review\"}`. At most one" +
                 " DEFAULT branch per decision.",
         )
         appendLine(
-            "- UNCONDITIONAL — the kind for branches of a PARALLEL decision. Every branch fires" +
-                " concurrently; no condition. Example:" +
+            "- UNCONDITIONAL — Example:" +
                 " `{kind: \"UNCONDITIONAL\", id: \"br-track-a\", label: \"IT prep\"}`.",
         )
         appendLine(
@@ -182,28 +166,21 @@ internal class BpmnContractPromptFactory(
                 " lead to the next sequential element.",
         )
         appendLine()
-        appendLine("Decision kind (exclusive vs inclusive vs parallel):")
+        appendLine("Decision kind (exclusive vs inclusive vs parallel); EXCLUSIVE is the default:")
         appendLine(
-            "- `ContractDecision.kind` defaults to EXCLUSIVE — exactly one branch is taken based" +
-                " on its `condition`. Use this for any branching where the source describes a choice," +
-                " a check, or alternative paths where only one option is taken at a time.",
+            "- EXCLUSIVE — use for any branching where the source describes a choice, a check," +
+                " or alternative paths where only one option is taken at a time.",
         )
         appendLine(
-            "- Set `kind = INCLUSIVE` when the source describes independent optional add-ons that" +
-                " may apply singly, together, or not at all — 'may apply', 'either, both, or" +
-                " neither', 'any of the following can fire', 'optional gift wrap AND/OR optional" +
-                " promotional insert', 'each is evaluated independently'. INCLUSIVE branches carry" +
-                " `condition` expressions like EXCLUSIVE; the conditions are evaluated" +
-                " independently and any subset (including all of them) may evaluate true. The" +
-                " matching join waits for whichever branches activated and is materialised" +
-                " downstream — declare the fork only.",
+            "- INCLUSIVE — recognise from phrases like 'any of the following can fire', 'optional" +
+                " gift wrap AND/OR optional promotional insert', 'each is evaluated independently'." +
+                " INCLUSIVE branches carry `condition` expressions like EXCLUSIVE; the conditions" +
+                " are evaluated independently and any subset (including all of them) may evaluate" +
+                " true. Declare the fork only; the matching join is materialised downstream.",
         )
         appendLine(
-            "- Set `kind = PARALLEL` when the source describes concurrent / independent tracks," +
-                " 'in parallel', 'simultaneously', 'all of the following must complete', or any" +
-                " split where every branch must execute, not just one. PARALLEL branches have no" +
-                " `condition`; leave it null. The matching join (synchronisation) is implicit and" +
-                " materialised in the downstream BPMN — declare the fork only.",
+            "- PARALLEL branches have no `condition`; leave it null. Declare the fork only;" +
+                " the matching join (synchronisation) is implicit and materialised downstream.",
         )
         appendLine(
             "- Do NOT use PARALLEL for sequential steps that happen to share an actor or context;" +

@@ -65,53 +65,49 @@ internal class BpmnContractGenerationPromptFactory(
                 " `Gateway_join_1`).",
         )
         appendLine()
-        appendLine("Activity-kind → BPMN task-type mapping (each ContractActivity carries a `kind` discriminator):")
-        appendLine("- ContractActivity.Service       → BpmnServiceTask        (type=SERVICE_TASK)")
-        appendLine("- ContractActivity.User          → BpmnUserTask           (type=USER_TASK)")
-        appendLine("- ContractActivity.Script        → BpmnScriptTask         (type=SCRIPT_TASK)")
+        appendLine("Activity-kind → BPMN node `type` (each ContractActivity carries a `kind` discriminator):")
+        appendLine("- Service       → SERVICE_TASK")
+        appendLine("- User          → USER_TASK")
+        appendLine("- Script        → SCRIPT_TASK")
         appendLine(
-            "- ContractActivity.BusinessRule  → BpmnBusinessRuleTask   (type=BUSINESS_RULE_TASK)" +
-                " — copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.",
+            "- BusinessRule  → BUSINESS_RULE_TASK — copy `decisionName` from the contract verbatim" +
+                " into `decisionRef` on the BPMN node.",
         )
         appendLine(
-            "- ContractActivity.Send          → BpmnSendTask           (type=SEND_TASK) — declare" +
-                " one BpmnMessageRef in `definition.messages` whose `name` matches the contract's" +
-                " `messageName`; set `messageRef` on the task to that catalogue entry's id.",
+            "- Send          → SEND_TASK — declare one BpmnMessageRef in `definition.messages`" +
+                " whose `name` matches the contract's `messageName`; set `messageRef` on the task" +
+                " to that catalogue entry's id.",
         )
-        appendLine(
-            "- ContractActivity.Receive       → BpmnReceiveTask        (type=RECEIVE_TASK) — same" +
-                " catalogue convention as SendTask.",
-        )
-        appendLine("- ContractActivity.Manual        → BpmnManualTask         (type=MANUAL_TASK)")
+        appendLine("- Receive       → RECEIVE_TASK — same catalogue convention as Send.")
+        appendLine("- Manual        → MANUAL_TASK")
         appendLine(
             "- Catalogue convention: one BpmnMessageRef per distinct messageName the contract" +
                 " mentions. Pick stable ids like `Message_DeclineNotification` from the messageName.",
         )
         appendLine()
-        appendLine("End-state-kind → BpmnEndEvent mapping (each ContractEndState carries a `kind` discriminator):")
-        appendLine("- ContractEndState.Normal      → BpmnEndEvent with BpmnNoneEventDefinition (default)")
         appendLine(
-            "- ContractEndState.Terminate   → BpmnEndEvent with BpmnTerminateEventDefinition" +
-                " (a data object — no payload)",
+            "End-state-kind → BpmnEndEvent's `eventDefinition` (each ContractEndState carries a `kind`" +
+                " discriminator); NORMAL → BpmnNoneEventDefinition is the default:",
+        )
+        appendLine("- Terminate   → BpmnTerminateEventDefinition (a data object — no payload)")
+        appendLine(
+            "- Error       → BpmnErrorEventDefinition(errorRef) plus a matching BpmnErrorRef in" +
+                " `definition.errors` whose `code = errorCode`. Pick stable ids like" +
+                " `Error_CreditRejected` from the errorCode.",
         )
         appendLine(
-            "- ContractEndState.Error       → BpmnEndEvent with BpmnErrorEventDefinition(errorRef)" +
-                " plus a matching BpmnErrorRef in `definition.errors` whose `code = errorCode`." +
-                " Pick stable ids like `Error_CreditRejected` from the errorCode.",
+            "- Message     → BpmnMessageEventDefinition(messageRef) plus a matching BpmnMessageRef" +
+                " whose `name = messageName`. If the same messageName also appears on a Send/Receive" +
+                " task, REUSE the catalogue entry — one ref per distinct name.",
         )
         appendLine(
-            "- ContractEndState.Message     → BpmnEndEvent with BpmnMessageEventDefinition(messageRef)" +
-                " plus a matching BpmnMessageRef whose `name = messageName`. If the same messageName" +
-                " also appears on a Send/Receive task, REUSE the catalogue entry — one ref per distinct name.",
+            "- Signal      → BpmnSignalEventDefinition(signalRef) plus a matching BpmnSignalRef in" +
+                " `definition.signals` whose `name = signalName`. Pick stable ids like" +
+                " `Signal_SettlementComplete` from the signalName.",
         )
         appendLine(
-            "- ContractEndState.Signal      → BpmnEndEvent with BpmnSignalEventDefinition(signalRef)" +
-                " plus a matching BpmnSignalRef in `definition.signals` whose `name = signalName`." +
-                " Pick stable ids like `Signal_SettlementComplete` from the signalName.",
-        )
-        appendLine(
-            "- ContractEndState.Escalation  → BpmnEndEvent with BpmnEscalationEventDefinition(escalationRef)" +
-                " plus a matching BpmnEscalationRef in `definition.escalations` whose `code = escalationCode`." +
+            "- Escalation  → BpmnEscalationEventDefinition(escalationRef) plus a matching" +
+                " BpmnEscalationRef in `definition.escalations` whose `code = escalationCode`." +
                 " Pick stable ids like `Escalation_ApprovalOverdue` from the escalationCode.",
         )
         appendLine(
