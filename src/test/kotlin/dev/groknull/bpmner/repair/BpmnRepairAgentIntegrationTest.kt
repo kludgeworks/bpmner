@@ -230,6 +230,16 @@ class BpmnRepairAgentIntegrationTest : EmbabelMockitoIntegrationTest() {
         }
     }
 
+    // NOTE on #287 coverage: the pre-flight check in `BpmnRepairAgent.validate` for
+    // `BpmnUnrecognizedNode` / `BpmnUnrecognizedEventDefinition` is defense-in-depth — no
+    // production path today hands a parsed-XML `BpmnDefinition` to this agent. The generation
+    // pipeline (the only inbound route) cannot produce these subtypes because they are absent
+    // from `@JsonSubTypes`, and the renderer (`BpmnModelFactory.newFlowNode`) hard-errors on
+    // them ahead of repair. The pre-flight behaviour is pinned by unit tests:
+    // `BpmnUnrecognizedElementScannerTest` (scanner shape) and `BpmnRepairPromptFactoryTest`
+    // (belt-and-braces guard at the LLM-serialisation boundary). When a future XML-ingest
+    // agent lands, an integration test exercising that real entry point belongs with it.
+
     private fun stubReadinessContractGenerationAlignment(definition: BpmnDefinition) {
         whenCreateObject(
             { it.contains("Assess whether the source text describes a workflow") },

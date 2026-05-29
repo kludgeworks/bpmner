@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.generationPrompt
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
+import dev.groknull.bpmner.repair.internal.domain.BpmnUnrecognizedElementScanner
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation
@@ -35,41 +36,50 @@ internal class BpmnRepairPromptFactory(
     override fun initialMessages(
         request: BpmnRequest,
         definition: BpmnDefinition,
-    ): List<Message> = listOf(
-        UserMessage(request.generationPrompt()),
-        AssistantMessage(fingerprints.serializeDefinition(definition)),
-    )
+    ): List<Message> {
+        requireRecognized(definition)
+        return listOf(
+            UserMessage(request.generationPrompt()),
+            AssistantMessage(fingerprints.serializeDefinition(definition)),
+        )
+    }
 
     override fun patchFeedback(
         definition: BpmnDefinition,
         diagnostics: List<BpmnDiagnostic>,
-    ): String = buildString {
-        appendLine("The following diagnostics can be fixed with targeted name or label patches.")
-        appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
-        appendLine(
-            "Do not rewrite the whole graph — only include operations that " +
-                "directly address the listed diagnostics.",
-        )
-        appendLine()
-        val guidance = ruleGuidance.getLlmRuleGuidance()
-        if (guidance.isNotEmpty()) {
-            appendLine(guidance)
+    ): String {
+        requireRecognized(definition)
+        return buildString {
+            appendLine("The following diagnostics can be fixed with targeted name or label patches.")
+            appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
+            appendLine(
+                "Do not rewrite the whole graph — only include operations that " +
+                    "directly address the listed diagnostics.",
+            )
             appendLine()
+            val guidance = ruleGuidance.getLlmRuleGuidance()
+            if (guidance.isNotEmpty()) {
+                appendLine(guidance)
+                appendLine()
+            }
+            appendLine("Current canonical BpmnDefinition JSON:")
+            appendLine(fingerprints.serializeDefinition(definition))
+            appendLine()
+            appendDiagnosticBlock(diagnostics)
         }
-        appendLine("Current canonical BpmnDefinition JSON:")
-        appendLine(fingerprints.serializeDefinition(definition))
-        appendLine()
-        appendDiagnosticBlock(diagnostics)
     }
 
     override fun fullRepairFeedback(
         attempt: BpmnRepairAttempt,
         diagnostics: List<BpmnDiagnostic>,
-    ): String = fullRepairFeedback(
-        definition = attempt.definition,
-        renderedXml = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation),
-        diagnostics = diagnostics,
-    )
+    ): String {
+        requireRecognized(attempt.definition)
+        return fullRepairFeedback(
+            definition = attempt.definition,
+            renderedXml = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation),
+            diagnostics = diagnostics,
+        )
+    }
 
     override fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor? {
         val lintRules =
@@ -190,5 +200,18 @@ internal class BpmnRepairPromptFactory(
     private fun renderFailureContext(evaluation: BpmnEvaluation): String = buildString {
         appendLine("<render failed>")
         evaluation.renderFailureMessage?.let { appendLine(it) }
+    }
+
+    /**
+     * Belt-and-braces guard for #287. Pre-flight in `BpmnRepairAgent.validate` short-circuits
+     * before these prompt-building methods run; if that pre-flight is ever bypassed, fail
+     * here with a named precondition rather than propagating an opaque Jackson
+     * `InvalidDefinitionException` from `fingerprints.serializeDefinition`.
+     */
+    private fun requireRecognized(definition: BpmnDefinition) {
+        check(BpmnUnrecognizedElementScanner.scan(definition).isEmpty()) {
+            "BpmnRepairPromptFactory invoked on definition containing unrecognized elements; " +
+                "pre-flight in BpmnRepairAgent.validate should have rejected this."
+        }
     }
 }
