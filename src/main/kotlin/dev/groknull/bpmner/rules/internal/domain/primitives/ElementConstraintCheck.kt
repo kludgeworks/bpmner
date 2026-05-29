@@ -33,7 +33,17 @@ internal class ElementConstraintCheck {
         metadata: RuleMetadata,
         config: ElementConstraintCheckConfig,
     ): List<RuleDiagnostic> {
-        val allowed = (config.constraints["allowed"] as? List<*>)?.filterIsInstance<String>().orEmpty()
+        // The `allowed` constraint accepts either a `List<String>` (when the Pkl→Java
+        // codegen path supports it) OR a comma-separated `String` (the #282 workaround for
+        // the `Mapping<String, Any>` value-slot codegen gap: `pkl-config-java` has no
+        // built-in `pkl.base#List → java.lang.Object` converter, so the BpmnSubset rule
+        // smuggles its allowed list as a CSV). Either path; empty means "no exceptions —
+        // every targetedElement fires".
+        val allowed = when (val raw = config.constraints["allowed"]) {
+            is List<*> -> raw.filterIsInstance<String>()
+            is String -> raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }
+            else -> emptyList()
+        }
         return metadata.targetedElements(model)
             .filter { element -> allowed.none { BpmnTypeMatcher.matches(element.typeName, it) } }
             .map { metadata.diagnostic(it.id, it.typeName) }

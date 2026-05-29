@@ -60,4 +60,8 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
     is BpmnIntermediateCatchEvent, is BpmnIntermediateThrowEvent, is BpmnBoundaryEvent -> {
         false
     }
+
+    // Parser fallback for elements without a typed Kotlin class (#282). Never transparent —
+    // we don't know enough about an unrecognized node to treat it as a routing-only pass-through.
+    is BpmnUnrecognizedNode -> false
 }

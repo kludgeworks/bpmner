@@ -44,19 +44,36 @@ internal object BpmnNamingShapeAdvice {
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
     fun adviceFor(node: BpmnNode): Advice? = when (node) {
         is BpmnStartEvent -> START_EVENT_ADVICE
+
         is BpmnEndEvent -> END_EVENT_ADVICE
+
         is BpmnUserTask -> USER_TASK_ADVICE
+
         is BpmnServiceTask -> SERVICE_TASK_ADVICE
+
         is BpmnScriptTask -> SCRIPT_TASK_ADVICE
+
         is BpmnBusinessRuleTask -> BUSINESS_RULE_TASK_ADVICE
+
         is BpmnSendTask -> SEND_TASK_ADVICE
+
         is BpmnReceiveTask -> RECEIVE_TASK_ADVICE
+
         is BpmnManualTask -> MANUAL_TASK_ADVICE
+
         is BpmnExclusiveGateway -> EXCLUSIVE_GATEWAY_ADVICE
+
         is BpmnParallelGateway -> PARALLEL_GATEWAY_ADVICE
+
         is BpmnIntermediateCatchEvent -> INTERMEDIATE_CATCH_EVENT_ADVICE
+
         is BpmnIntermediateThrowEvent -> INTERMEDIATE_THROW_EVENT_ADVICE
+
         is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
+
+        // Parser fallback for elements without a typed Kotlin class (#282). No naming-shape
+        // advice — we can't infer a sensible convention for a type we don't model.
+        is BpmnUnrecognizedNode -> null
     }
 
     /**

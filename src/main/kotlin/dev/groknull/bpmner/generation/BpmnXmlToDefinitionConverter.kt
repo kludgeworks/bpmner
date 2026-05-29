@@ -34,6 +34,8 @@ import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
@@ -80,12 +82,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
+
+        // BPMN top-level constructs that aren't FlowNodes (so the Camunda model walks miss
+        // them) and that the parser doesn't translate into typed Kotlin nodes. We surface
+        // them via DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them
+        // through `BpmnSubset`'s `targetElements` list. The parser doesn't decide what's
+        // "discouraged" — it surfaces all such elements; the Pkl rule decides policy.
+        private val EXOTIC_TOP_LEVEL_LOCAL_NAMES = listOf(
+            "choreography",
+            "choreographyTask",
+            "subChoreography",
+            "callChoreography",
+            "conversation",
+            "conversationLink",
+            "conversationAssociation",
+        )
     }
 
     override fun parse(xml: String): BpmnDefinition {
         val document = parseDocument(xml)
         val model: BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        rejectIfHasDiagramInterchange(model)
+
+        // #282: surface BPMNDI diagram count as document-level metadata (was: hard-rejected
+        // via `require(...)`). The Pkl rule `NoDuplicateDiagrams` does the policy check.
+        val diagramCount = model.getModelElementsByType(BpmnDiagram::class.java).size
 
         val process =
             model.getModelElementsByType(Process::class.java).firstOrNull()
@@ -93,7 +113,19 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         val eventMetadata = eventMetadataFrom(document)
         val taskMetadata = taskMetadataFrom(document)
-        val nodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
+        val typedNodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
+        // #282: surface top-level exotic constructs (Choreography, Conversation, etc.) that
+        // aren't FlowNodes and so miss the typed scan. The Pkl rule `BpmnSubset` flags them
+        // via `targetElements`; the parser stays free of any "discouraged" enumeration.
+        val unrecognizedTopLevel = EXOTIC_TOP_LEVEL_LOCAL_NAMES.flatMap { localName ->
+            document.bpmnElements(localName).map { element ->
+                BpmnUnrecognizedNode(
+                    id = element.getAttribute("id").ifBlank { "${localName}_${element.hashCode()}" },
+                    name = element.getAttribute("name").takeIf { it.isNotBlank() },
+                    bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
+                )
+            }.toList()
+        }
 
         val sequences =
             model.getModelElementsByType(SequenceFlow::class.java).map { flow ->
@@ -110,12 +142,13 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
-            nodes = nodes,
+            nodes = typedNodes + unrecognizedTopLevel,
             sequences = sequences,
             messages = eventMetadata.messages,
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
+            diagramCount = diagramCount,
         )
     }
 
@@ -132,13 +165,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             it.isExpandEntityReferences = false
         }.newDocumentBuilder()
         .parse(org.xml.sax.InputSource(StringReader(xml)))
-
-    private fun rejectIfHasDiagramInterchange(model: BpmnModelInstance) {
-        require(model.getModelElementsByType(BpmnDiagram::class.java).isEmpty()) {
-            "BPMNDI input rejected — semantic-only XML required. " +
-                "Strip <bpmndi:BPMNDiagram> elements before parsing."
-        }
-    }
 
     @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun FlowNode.toBpmnNode(
@@ -238,8 +264,16 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
+            // #282: previously this hard-errored on any FlowNode subtype we don't translate
+            // (Transaction, CallActivity, SubProcess, ad hoc subprocesses…). That was policy
+            // enforcement leaking into the parser. Now we surface them as `BpmnUnrecognizedNode`
+            // and let the rule engine flag them via `BpmnSubset`.
             else -> {
-                error("Unsupported BPMN flow node type for id='$id': ${this::class.simpleName}")
+                BpmnUnrecognizedNode(
+                    id = id,
+                    name = normalisedName,
+                    bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
+                )
             }
         }
     }
@@ -353,12 +387,23 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 ?: return BpmnNoneEventDefinition
         return when (child.localName) {
             "timerEventDefinition" -> child.timerEventDefinition(getAttribute("id"))
+
             "messageEventDefinition" -> BpmnMessageEventDefinition(child.getAttribute("messageRef"))
+
             "signalEventDefinition" -> BpmnSignalEventDefinition(child.getAttribute("signalRef"))
+
             "errorEventDefinition" -> BpmnErrorEventDefinition(child.getAttribute("errorRef"))
+
             "escalationEventDefinition" -> BpmnEscalationEventDefinition(child.getAttribute("escalationRef"))
+
             "terminateEventDefinition" -> BpmnTerminateEventDefinition
-            else -> BpmnNoneEventDefinition
+
+            // #282: previously any other event-def localName silently fell through to NONE.
+            // Surface the typename so `BpmnSubset` can flag rules like compensate / cancel
+            // event definitions explicitly.
+            else -> BpmnUnrecognizedEventDefinition(
+                typeName = "bpmn:${child.localName.replaceFirstChar { it.uppercase() }}",
+            )
         }
     }
 

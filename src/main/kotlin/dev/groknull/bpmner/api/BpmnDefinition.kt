@@ -25,6 +25,11 @@ interface BpmnDefinition {
     val signals: List<BpmnSignalRef>
     val errors: List<BpmnErrorRef>
     val escalations: List<BpmnEscalationRef>
+
+    // Document-level diagram count surfaced by the XML parser (BPMN DI layer is otherwise
+    // stripped from the semantic model). The `NoDuplicateDiagrams` rule reads this via a
+    // synthetic `bpmndi:BPMNDiagram` element injection in `PrimitiveModelMapping`.
+    val diagramCount: Int get() = 0
 }
 
 /**
@@ -99,6 +104,18 @@ interface BpmnExclusiveGateway : BpmnGateway
 
 interface BpmnParallelGateway : BpmnGateway
 
+/**
+ * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
+ * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). Lets the rule engine see + flag these via
+ * `targetElements` matching on [bpmnType] instead of the parser hard-erroring at the door.
+ *
+ * The generator pipeline filters these out before XML emission — round-tripping is not
+ * supported for elements without typed classes.
+ */
+interface BpmnUnrecognizedNode : BpmnNode {
+    val bpmnType: String
+}
+
 /** A directed sequence-flow edge between two nodes. */
 interface BpmnEdge {
     val id: String
@@ -170,6 +187,15 @@ interface BpmnEscalationEventDefinition : BpmnEventDefinition {
 interface BpmnTerminateEventDefinition : BpmnEventDefinition
 
 /**
+ * Fallback for any event definition the parser sees but doesn't have a typed Kotlin class for
+ * (e.g. `bpmn:CompensateEventDefinition`). Replaces the historical `else -> "UNKNOWN"` smell
+ * in `PrimitiveModelMapping.eventDefinitionProperties` with a typed, sealed-exhaustive case.
+ */
+interface BpmnUnrecognizedEventDefinition : BpmnEventDefinition {
+    val typeName: String
+}
+
+/**
  * The discriminator string for [this] node, matching the `@JsonSubTypes` names on the
  * concrete `core` data classes. Kept as a property extension to preserve the existing
  * `node.typeName` call-site syntax across the codebase.
@@ -196,6 +222,7 @@ val BpmnNode.typeName: String
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
+            is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
             else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }
 

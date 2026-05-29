@@ -56,18 +56,36 @@ interface BpmnNodeVisitor<T> {
 @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
 fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
     is BpmnStartEvent -> visitor.visitStartEvent(this)
+
     is BpmnUserTask -> visitor.visitUserTask(this)
+
     is BpmnServiceTask -> visitor.visitServiceTask(this)
+
     is BpmnScriptTask -> visitor.visitScriptTask(this)
+
     is BpmnBusinessRuleTask -> visitor.visitBusinessRuleTask(this)
+
     is BpmnSendTask -> visitor.visitSendTask(this)
+
     is BpmnReceiveTask -> visitor.visitReceiveTask(this)
+
     is BpmnManualTask -> visitor.visitManualTask(this)
+
     is BpmnExclusiveGateway -> visitor.visitExclusiveGateway(this)
+
     is BpmnParallelGateway -> visitor.visitParallelGateway(this)
+
     is BpmnIntermediateCatchEvent -> visitor.visitIntermediateCatchEvent(this)
+
     is BpmnIntermediateThrowEvent -> visitor.visitIntermediateThrowEvent(this)
+
     is BpmnBoundaryEvent -> visitor.visitBoundaryEvent(this)
+
     is BpmnEndEvent -> visitor.visitEndEvent(this)
+
+    // Parser fallback for elements without a typed Kotlin class (#282). No visitor hook —
+    // visitors are typed against the canonical subtypes; unrecognized nodes return null.
+    is BpmnUnrecognizedNode -> null
+
     else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode
 }

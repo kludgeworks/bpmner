@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
 package dev.groknull.bpmner.rules.internal.domain.compiled
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
@@ -9,6 +14,7 @@ import dev.groknull.bpmner.api.BpmnNoneEventDefinition
 import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition
+import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ERROR_REF
@@ -24,11 +30,21 @@ internal class EventDefinitionValidator(
         is BpmnNoneEventDefinition,
         is BpmnTerminateEventDefinition,
         -> emptyList()
+
         is BpmnTimerEventDefinition -> validateTimerEventDefinition(nodeId, eventDefinition)
+
         is BpmnMessageEventDefinition -> validateMessageEventDefinition(nodeId, eventDefinition)
+
         is BpmnSignalEventDefinition -> validateSignalEventDefinition(nodeId, eventDefinition)
+
         is BpmnErrorEventDefinition -> validateErrorEventDefinition(nodeId, eventDefinition)
+
         is BpmnEscalationEventDefinition -> validateEscalationEventDefinition(nodeId, eventDefinition)
+
+        // Parser fallback for unsupported event-definition typenames (#282). Validator has
+        // nothing to check — the rule engine flags these via BpmnSubset, not here.
+        is BpmnUnrecognizedEventDefinition -> emptyList()
+
         else -> emptyList()
     }
 
@@ -141,7 +157,9 @@ internal class EventDefinitionValidator(
                 eventDiagnostic(
                     diagnosticCode = DEF_INVALID_ESCALATION_REF,
                     nodeId = nodeId,
-                    message = "event $nodeId escalationRef '${eventDefinition.escalationRef}' does not match any escalation catalog id",
+                    message =
+                    "event $nodeId escalationRef '${eventDefinition.escalationRef}' " +
+                        "does not match any escalation catalog id",
                 ),
             )
         } else {

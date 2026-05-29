@@ -24,6 +24,7 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -437,6 +438,16 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
                 is BpmnNoneEventDefinition -> {
                     error("none event definition must not render XML")
+                }
+
+                // Parser fallback for unsupported event-definition typenames (#282). The
+                // generator pipeline must filter these out before reaching XML emission —
+                // they have no Camunda equivalent and don't round-trip.
+                is BpmnUnrecognizedEventDefinition -> {
+                    error(
+                        "BpmnUnrecognizedEventDefinition (${definition.typeName}) cannot be rendered to XML. " +
+                            "The generator must filter unrecognized event definitions before reaching this point.",
+                    )
                 }
             },
         )

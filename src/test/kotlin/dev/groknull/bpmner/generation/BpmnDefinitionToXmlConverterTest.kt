@@ -352,6 +352,29 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "xmlns:bpmner=\"https://groknull.dev/bpmner/ext\"")
     }
 
+    @Test
+    fun `generator drops diagramCount and BpmnUnrecognizedNode entries (#282 round-trip safety)`() {
+        // #282 contract: the generator emits semantic-only XML — it never round-trips DI
+        // (BpmnDefinition.diagramCount) or unrecognized elements (`BpmnUnrecognizedNode`,
+        // `BpmnUnrecognizedEventDefinition`). Pinning this here so future generator changes
+        // don't accidentally start emitting what the now-permissive parser accepts.
+        val definition = BpmnDefinition(
+            processId = "p1",
+            processName = "Round-trip safety",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnEndEvent("e", "End"),
+            ),
+            sequences = listOf(BpmnEdge("f", "s", "e")),
+            diagramCount = 3,
+        )
+
+        val xml = converter.toXml(definition)
+        // No DI emitted regardless of diagramCount.
+        assertFalse(xml.contains("bpmndi:"), "generator must not emit BPMNDI elements: $xml")
+        assertFalse(xml.contains("BPMNDiagram"), "generator must not emit BPMNDiagram references: $xml")
+    }
+
     private fun minimalDefinition(
         start: BpmnStartEvent,
         messages: List<BpmnMessageRef> = emptyList(),

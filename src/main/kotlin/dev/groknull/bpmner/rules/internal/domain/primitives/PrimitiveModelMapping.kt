@@ -13,6 +13,7 @@ import dev.groknull.bpmner.api.BpmnEndEvent
 import dev.groknull.bpmner.api.BpmnErrorEventDefinition
 import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEvent
+import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
@@ -29,10 +30,43 @@ import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition
+import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.api.BpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask
 
 internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelContext {
     val sequenceFlows = definition.sequences.map { it.toPrimitiveFlow() }
+    // #282: synthesize one PrimitiveElement per BPMNDI diagram. The element typename matches
+    // what `NoDuplicateDiagrams.pkl`'s `checkConfig.element` searches for; the id is null
+    // because diagrams have no element-level id in the semantic model.
+    val diagramElements = List(definition.diagramCount) {
+        PrimitiveElement(id = null, typeName = BpmnTypeName.DIAGRAM)
+    }
+    // #282: each event's event-definition gets its own PrimitiveElement so rules like
+    // `BpmnSubset` can `targetElements` against typenames like `bpmn:CompensateEventDefinition`
+    // and `bpmn:EscalationEventDefinition`. Existing rules that read event defs via the parent
+    // event's properties are unchanged — the new elements are invisible to any rule whose
+    // `targetElements` doesn't list event-def typenames.
+    val eventDefinitionElements = definition.nodes.flatMap { node ->
+        if (node is BpmnEvent) {
+            val typeName = node.eventDefinition.bpmnTypeName()
+            // Skip NONE event definitions — they aren't real BPMN constructs in the document,
+            // just our placeholder for "no event definition child". No diagnostic value.
+            if (typeName != null) {
+                listOf(
+                    PrimitiveElement(
+                        id = "${node.id}.eventDefinition",
+                        typeName = typeName,
+                        properties = mapOf("parentEventId" to node.id),
+                    ),
+                )
+            } else {
+                emptyList()
+            }
+        } else {
+            emptyList()
+        }
+    }
     return PrimitiveModelContext(
         elements =
         listOf(
@@ -47,10 +81,24 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
                 properties = mapOf("id" to definition.processId, "name" to definition.processName),
             ),
         ) +
+            diagramElements +
             definition.nodes.map { it.toPrimitiveElement() } +
+            eventDefinitionElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
     )
+}
+
+private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {
+    is BpmnNoneEventDefinition -> null
+    is BpmnTimerEventDefinition -> "bpmn:TimerEventDefinition"
+    is BpmnMessageEventDefinition -> "bpmn:MessageEventDefinition"
+    is BpmnSignalEventDefinition -> "bpmn:SignalEventDefinition"
+    is BpmnErrorEventDefinition -> "bpmn:ErrorEventDefinition"
+    is BpmnEscalationEventDefinition -> "bpmn:EscalationEventDefinition"
+    is BpmnTerminateEventDefinition -> "bpmn:TerminateEventDefinition"
+    is BpmnUnrecognizedEventDefinition -> typeName
+    else -> null
 }
 
 internal fun BpmnNode.toPrimitiveElement(): PrimitiveElement = PrimitiveElement(
@@ -80,24 +128,44 @@ internal fun BpmnEdge.toPrimitiveFlow(): PrimitiveFlow = PrimitiveFlow(
     conditionExpression = conditionExpression,
 )
 
+@Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
 private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnStartEvent -> BpmnTypeName.START_EVENT
+
     is BpmnEndEvent -> BpmnTypeName.END_EVENT
+
     is BpmnIntermediateCatchEvent -> BpmnTypeName.INTERMEDIATE_CATCH_EVENT
+
     is BpmnIntermediateThrowEvent -> BpmnTypeName.INTERMEDIATE_THROW_EVENT
+
     is BpmnBoundaryEvent -> BpmnTypeName.BOUNDARY_EVENT
+
     is BpmnUserTask -> BpmnTypeName.USER_TASK
+
     is BpmnServiceTask -> BpmnTypeName.SERVICE_TASK
+
     is BpmnScriptTask -> BpmnTypeName.SCRIPT_TASK
+
     is BpmnBusinessRuleTask -> BpmnTypeName.BUSINESS_RULE_TASK
+
     is BpmnSendTask -> BpmnTypeName.SEND_TASK
+
     is BpmnReceiveTask -> BpmnTypeName.RECEIVE_TASK
+
     is BpmnManualTask -> BpmnTypeName.MANUAL_TASK
+
     is BpmnExclusiveGateway -> BpmnTypeName.EXCLUSIVE_GATEWAY
+
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
+
+    // #282: parser fallback elements (Choreography, Transaction, etc.) carry their BPMN
+    // typename verbatim — that's exactly the string `BpmnSubset`'s `targetElements` matches on.
+    is BpmnUnrecognizedNode -> bpmnType
+
     else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
 }
 
+@Suppress("CyclomaticComplexMethod") // one arm per sealed BpmnEventDefinition subtype — the count IS the safety property
 private fun eventDefinitionProperties(
     eventDefinition: dev.groknull.bpmner.api.BpmnEventDefinition,
 ): Map<String, String?> = buildMap {
@@ -105,12 +173,24 @@ private fun eventDefinitionProperties(
         "eventDefinition",
         when (eventDefinition) {
             is BpmnNoneEventDefinition -> "NONE"
+
             is BpmnTimerEventDefinition -> "TIMER"
+
             is BpmnMessageEventDefinition -> "MESSAGE"
+
             is BpmnSignalEventDefinition -> "SIGNAL"
+
             is BpmnErrorEventDefinition -> "ERROR"
+
             is BpmnEscalationEventDefinition -> "ESCALATION"
+
             is BpmnTerminateEventDefinition -> "TERMINATE"
+
+            // #282: parser fallback for unsupported event-definition typenames. Surface as
+            // a descriptive token so existing consumers (LLM prompt context, logging) get a
+            // useful string; the rule engine flags these via `BpmnSubset` independently.
+            is BpmnUnrecognizedEventDefinition -> "UNRECOGNIZED:${eventDefinition.typeName}"
+
             else -> "UNKNOWN"
         },
     )

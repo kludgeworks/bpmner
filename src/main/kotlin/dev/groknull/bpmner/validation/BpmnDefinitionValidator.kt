@@ -26,6 +26,7 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
@@ -144,7 +145,9 @@ internal class BpmnDefinitionValidator {
         definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
+
                 is BpmnEndEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
+
                 is BpmnIntermediateCatchEvent -> {
                     validateRequiredEventDefinition(
                         "intermediate catch event",
@@ -154,6 +157,7 @@ internal class BpmnDefinitionValidator {
                     )
                     validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
+
                 is BpmnIntermediateThrowEvent -> {
                     validateRequiredEventDefinition(
                         "intermediate throw event",
@@ -163,7 +167,9 @@ internal class BpmnDefinitionValidator {
                     )
                     validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
+
                 is BpmnBoundaryEvent -> validateBoundaryEvent(node, context, errors)
+
                 else -> Unit
             }
         }
@@ -269,6 +275,12 @@ internal class BpmnDefinitionValidator {
             }
 
             is BpmnTerminateEventDefinition -> {
+                Unit
+            }
+
+            // Parser fallback for unsupported event-definition typenames (#282). The
+            // structural validator skips them — the rule engine flags them via BpmnSubset.
+            is BpmnUnrecognizedEventDefinition -> {
                 Unit
             }
         }

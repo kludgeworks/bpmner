@@ -45,6 +45,8 @@ import dev.groknull.bpmner.api.BpmnSignalRef as ApiBpmnSignalRef
 import dev.groknull.bpmner.api.BpmnStartEvent as ApiBpmnStartEvent
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition as ApiBpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition as ApiBpmnTimerEventDefinition
+import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition as ApiBpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.api.BpmnUnrecognizedNode as ApiBpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask as ApiBpmnUserTask
 
 data class BpmnRequest(
@@ -131,6 +133,11 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
     override val escalations: List<BpmnEscalationRef> = emptyList(),
+    // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
+    // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
+    // benign extra field on serialize and an unknown field on deserialize (skipped).
+    @field:com.fasterxml.jackson.annotation.JsonIgnore
+    override val diagramCount: Int = 0,
 ) : ApiBpmnDefinition
 
 data class BpmnMessageRef(
@@ -215,6 +222,17 @@ data class BpmnEscalationEventDefinition(
 data object BpmnTerminateEventDefinition :
     BpmnEventDefinition,
     ApiBpmnTerminateEventDefinition
+
+/**
+ * Fallback for any event-definition typename the parser sees but doesn't have a typed class
+ * for (today: only `bpmn:CompensateEventDefinition`). Deliberately NOT registered with
+ * `@JsonSubTypes` above — Jackson will fail to serialize one, which is the safety contract:
+ * LLM round-trip never sees unrecognized nodes.
+ */
+data class BpmnUnrecognizedEventDefinition(
+    override val typeName: String,
+) : BpmnEventDefinition,
+    ApiBpmnUnrecognizedEventDefinition
 
 /**
  * Sealed BPMN node hierarchy. Each subtype corresponds to one BPMN element kind.
@@ -464,6 +482,22 @@ data class BpmnEndEvent(
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
 ) : BpmnNode,
     ApiBpmnEndEvent {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+/**
+ * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
+ * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees these like any other
+ * node and can flag them via `targetElements` matching on [bpmnType]. Deliberately NOT
+ * registered with `@JsonSubTypes` above — Jackson will fail to serialize one, which is the
+ * safety contract: LLM round-trip never sees unrecognized nodes.
+ */
+data class BpmnUnrecognizedNode(
+    override val id: String,
+    override val name: String? = null,
+    override val bpmnType: String,
+) : BpmnNode,
+    ApiBpmnUnrecognizedNode {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
