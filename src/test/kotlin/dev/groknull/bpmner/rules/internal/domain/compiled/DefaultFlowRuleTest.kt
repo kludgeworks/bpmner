@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -48,7 +49,11 @@ class DefaultFlowRuleTest {
         assertEquals("def-default-flow-non-gateway", diag.diagnosticCode)
         assertEquals("def-default-flows", diag.ruleId)
         assertEquals(RuleSeverity.ERROR, diag.severity)
-        assertEquals("edge f-default isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY", diag.message)
+        assertEquals(
+            "edge f-default isDefault is only valid when sourceRef points to an" +
+                " EXCLUSIVE_GATEWAY or INCLUSIVE_GATEWAY",
+            diag.message,
+        )
         assertEquals("f-default", diag.elementId)
     }
 
@@ -70,6 +75,39 @@ class DefaultFlowRuleTest {
 
         val diag = rule.evaluate(ctx).single { it.diagnosticCode == "def-default-flow-non-gateway" }
         assertEquals("f-orphan", diag.elementId)
+    }
+
+    @Test
+    fun `default flow on an inclusive gateway emits no diagnostic`() {
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s"),
+                        BpmnInclusiveGateway(id = "igw", name = "Which add-ons?"),
+                        BpmnUserTask(id = "a", name = "Wrap"),
+                        BpmnUserTask(id = "b", name = "Skip"),
+                        BpmnEndEvent(id = "e"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "igw"),
+                        BpmnEdge(id = "fa", sourceRef = "igw", targetRef = "a", conditionExpression = "wrap?"),
+                        BpmnEdge(id = "fb", sourceRef = "igw", targetRef = "b", isDefault = true),
+                        BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
+                        BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
+                    ),
+                ),
+            )
+
+        val diagnostics = rule.evaluate(ctx)
+        assertTrue(
+            diagnostics.none { it.diagnosticCode == "def-default-flow-non-gateway" },
+            "default flow on inclusive gateway should not fire def-default-flow-non-gateway; got $diagnostics",
+        )
     }
 
     @Test

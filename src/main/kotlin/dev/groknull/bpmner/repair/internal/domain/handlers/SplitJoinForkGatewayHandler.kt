@@ -8,6 +8,7 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
@@ -37,6 +38,7 @@ internal class SplitJoinForkGatewayHandler : BpmnLocalModelFixHandler {
         val joinGw =
             when (gateway) {
                 is BpmnParallelGateway -> BpmnParallelGateway(id = joinId, name = null)
+                is BpmnInclusiveGateway -> BpmnInclusiveGateway(id = joinId, name = null)
                 else -> BpmnExclusiveGateway(id = joinId, name = null)
             }
         val joinToFork =

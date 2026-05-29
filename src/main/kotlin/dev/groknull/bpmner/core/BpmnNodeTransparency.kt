@@ -27,7 +27,7 @@ package dev.groknull.bpmner.core
  *   outbound criterion. Callers typically build this once and pass it through.
  */
 internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, List<BpmnEdge>>): Boolean = when (this) {
-    is BpmnExclusiveGateway, is BpmnParallelGateway -> {
+    is BpmnExclusiveGateway, is BpmnInclusiveGateway, is BpmnParallelGateway -> {
         name.isNullOrBlank() && outgoingBySource[id].orEmpty().size == 1
     }
 

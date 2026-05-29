@@ -35,6 +35,7 @@ import org.camunda.bpm.model.bpmn.instance.ConditionExpression
 import org.camunda.bpm.model.bpmn.instance.Definitions
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
@@ -175,13 +176,16 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
             if (edge.isDefault) {
-                val gateway =
-                    source as? ExclusiveGateway
-                        ?: error(
-                            "edge ${edge.id}: isDefault is only supported on exclusive-gateway sources, " +
-                                "got ${source::class.simpleName}",
-                        )
-                gateway.default = sequenceFlow
+                when (source) {
+                    is ExclusiveGateway -> source.default = sequenceFlow
+
+                    is InclusiveGateway -> source.default = sequenceFlow
+
+                    else -> error(
+                        "edge ${edge.id}: isDefault is only supported on exclusive- or inclusive-gateway " +
+                            "sources, got ${source::class.simpleName}",
+                    )
+                }
             }
         }
     }

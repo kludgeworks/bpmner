@@ -422,7 +422,7 @@ class BpmnerParityTest {
                 // is intentionally absent because the typed decision catalogue itself
                 // doesn't exist yet — tracked in #196.
                 Regex("^businessRuleTask \\S+ is missing the required decisionRef attribute$") to "def-missing-decision-ref",
-                Regex("^edge .* isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY$")
+                Regex("^edge .* isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY or INCLUSIVE_GATEWAY$")
                     to "def-default-flow-non-gateway",
                 Regex("^node \\S+ has \\d+ default flows .*at most one is allowed$") to "def-multiple-default-flows",
             )

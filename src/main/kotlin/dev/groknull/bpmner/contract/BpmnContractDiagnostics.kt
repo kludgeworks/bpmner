@@ -36,6 +36,9 @@ enum class ContractValidationCode {
     /** An UnconditionalBranch appeared under an EXCLUSIVE decision (exclusive branches are conditional). */
     UNCONDITIONAL_BRANCH_ON_EXCLUSIVE,
 
+    /** An UnconditionalBranch appeared under an INCLUSIVE decision (inclusive branches are conditional). */
+    UNCONDITIONAL_BRANCH_ON_INCLUSIVE,
+
     ASSUMPTION_WITHOUT_TRACE,
     CONTRACT_ITEM_WITHOUT_TRACE,
 }

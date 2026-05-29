@@ -89,7 +89,24 @@ internal class BpmnContractValidator {
             addAll(validateDecisionDefaults(decision, defaults))
 
             when (decision.kind) {
-                ContractGatewayKind.EXCLUSIVE -> addAll(validateExclusiveDecision(decision, defaults))
+                ContractGatewayKind.EXCLUSIVE -> addAll(
+                    validateConditionalDecision(
+                        decision,
+                        defaults,
+                        ContractValidationCode.UNCONDITIONAL_BRANCH_ON_EXCLUSIVE,
+                        kindLabel = "EXCLUSIVE",
+                    ),
+                )
+
+                ContractGatewayKind.INCLUSIVE -> addAll(
+                    validateConditionalDecision(
+                        decision,
+                        defaults,
+                        ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE,
+                        kindLabel = "INCLUSIVE",
+                    ),
+                )
+
                 ContractGatewayKind.PARALLEL -> addAll(validateParallelDecision(decision, defaults))
             }
         }
@@ -127,17 +144,23 @@ internal class BpmnContractValidator {
         }
     }
 
-    private fun validateExclusiveDecision(
+    // EXCLUSIVE and INCLUSIVE share an identical validation body: each branch carries a
+    // `condition`, unconditional branches are wrong (use PARALLEL instead), and a default
+    // branch needs at least one conditional alongside it. The only difference is the
+    // diagnostic code/kind label, which the caller passes in.
+    private fun validateConditionalDecision(
         decision: ContractDecision,
         defaults: List<DefaultBranch>,
+        unconditionalCode: ContractValidationCode,
+        kindLabel: String,
     ): List<ContractValidationIssue> = buildList {
         val unconditional = decision.branches.filterIsInstance<UnconditionalBranch>()
         unconditional.forEach { branch ->
             add(
                 errorIssue(
-                    code = ContractValidationCode.UNCONDITIONAL_BRANCH_ON_EXCLUSIVE,
+                    code = unconditionalCode,
                     message = "branch '${branch.id}' is UNCONDITIONAL but decision" +
-                        " '${decision.id}' is EXCLUSIVE — use a ConditionalBranch with a condition",
+                        " '${decision.id}' is $kindLabel — use a ConditionalBranch with a condition",
                     targetId = branch.id,
                 ),
             )

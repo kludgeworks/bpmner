@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.api.BpmnGateway
 import dev.groknull.bpmner.api.typeName
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -21,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
@@ -141,6 +143,7 @@ internal class BpmnContractFidelityChecker {
                         contractElementId = decision.id,
                     )
             }
+
             !gateway.isGateway() -> {
                 issues +=
                     BpmnFidelityIssue(
@@ -153,6 +156,7 @@ internal class BpmnContractFidelityChecker {
                         bpmnElementId = gateway.id,
                     )
             }
+
             !decision.kind.matchesGatewayType(gateway) -> {
                 issues +=
                     BpmnFidelityIssue(
@@ -387,15 +391,17 @@ internal class BpmnContractFidelityChecker {
     }
 }
 
-private fun BpmnNode.isGateway(): Boolean = this is BpmnExclusiveGateway || this is BpmnParallelGateway
+private fun BpmnNode.isGateway(): Boolean = this is BpmnGateway
 
 private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean = when (this) {
     ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
+    ContractGatewayKind.INCLUSIVE -> node is BpmnInclusiveGateway
     ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
 }
 
 private fun kindDescription(kind: ContractGatewayKind): String = when (kind) {
     ContractGatewayKind.EXCLUSIVE -> "pick one branch"
+    ContractGatewayKind.INCLUSIVE -> "take any branch whose condition is true"
     ContractGatewayKind.PARALLEL -> "take all branches concurrently"
 }
 

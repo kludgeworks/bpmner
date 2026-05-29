@@ -182,11 +182,21 @@ internal class BpmnContractPromptFactory(
                 " lead to the next sequential element.",
         )
         appendLine()
-        appendLine("Decision kind (exclusive vs parallel):")
+        appendLine("Decision kind (exclusive vs inclusive vs parallel):")
         appendLine(
             "- `ContractDecision.kind` defaults to EXCLUSIVE — exactly one branch is taken based" +
                 " on its `condition`. Use this for any branching where the source describes a choice," +
-                " a check, or alternative paths.",
+                " a check, or alternative paths where only one option is taken at a time.",
+        )
+        appendLine(
+            "- Set `kind = INCLUSIVE` when the source describes independent optional add-ons that" +
+                " may apply singly, together, or not at all — 'may apply', 'either, both, or" +
+                " neither', 'any of the following can fire', 'optional gift wrap AND/OR optional" +
+                " promotional insert', 'each is evaluated independently'. INCLUSIVE branches carry" +
+                " `condition` expressions like EXCLUSIVE; the conditions are evaluated" +
+                " independently and any subset (including all of them) may evaluate true. The" +
+                " matching join waits for whichever branches activated and is materialised" +
+                " downstream — declare the fork only.",
         )
         appendLine(
             "- Set `kind = PARALLEL` when the source describes concurrent / independent tracks," +
@@ -198,6 +208,13 @@ internal class BpmnContractPromptFactory(
         appendLine(
             "- Do NOT use PARALLEL for sequential steps that happen to share an actor or context;" +
                 " parallel means truly concurrent, with no fixed ordering between the tracks.",
+        )
+        appendLine(
+            "- INCLUSIVE vs PARALLEL: PARALLEL fires every branch unconditionally; INCLUSIVE fires" +
+                " each branch only if its condition is true (some, all, or none may fire). If every" +
+                " branch in the source description always fires regardless of conditions, use" +
+                " PARALLEL. If the source distinguishes which conditions apply per case, use" +
+                " INCLUSIVE.",
         )
         appendLine()
         appendLine("Readiness assessment rationale:")

@@ -13,7 +13,7 @@ package dev.groknull.bpmner.api
  * is no `visitUnknown` fallback. Adding a new BPMN subtype forces an addition both here and
  * in [accept].
  */
-@Suppress("TooManyFunctions") // 14 visit methods — one per BpmnNode subtype, intentional
+@Suppress("TooManyFunctions") // 15 visit methods — one per BpmnNode subtype, intentional
 interface BpmnNodeVisitor<T> {
     fun visitStartEvent(node: BpmnStartEvent): T? = null
 
@@ -32,6 +32,8 @@ interface BpmnNodeVisitor<T> {
     fun visitManualTask(node: BpmnManualTask): T? = null
 
     fun visitExclusiveGateway(node: BpmnExclusiveGateway): T? = null
+
+    fun visitInclusiveGateway(node: BpmnInclusiveGateway): T? = null
 
     fun visitParallelGateway(node: BpmnParallelGateway): T? = null
 
@@ -73,6 +75,8 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
 
     is BpmnExclusiveGateway -> visitor.visitExclusiveGateway(this)
 
+    is BpmnInclusiveGateway -> visitor.visitInclusiveGateway(this)
+
     is BpmnParallelGateway -> visitor.visitParallelGateway(this)
 
     is BpmnIntermediateCatchEvent -> visitor.visitIntermediateCatchEvent(this)
@@ -87,5 +91,5 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
     // canonical subtypes; unrecognized nodes have no hook and return null.
     is BpmnUnrecognizedNode -> null
 
-    else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode
+    else -> null // unreachable for the canonical 15-subtype hierarchy; see KDoc on BpmnNode
 }

@@ -32,6 +32,11 @@ object BpmnNodeNamingPolicy {
 
             is BpmnExclusiveGateway -> outgoingCount > 1
 
+            // Inclusive (diverging) gateways pose a question — "which of these conditions
+            // are true?" — so a name is required on the fork. Converging inclusive joins
+            // are barriers like parallel joins, so no name is required there.
+            is BpmnInclusiveGateway -> outgoingCount > 1
+
             // Parallel gateways have no question to ask: fork is unconditional,
             // join is a barrier. Labels would be noise; keep them optional.
             is BpmnParallelGateway -> false

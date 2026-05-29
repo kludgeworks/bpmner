@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
@@ -351,12 +352,13 @@ internal class BpmnDefinitionValidator {
             val source = nodesById[sourceId]
             // An orphan isDefault edge (sourceRef points to no node) is also invalid here.
             // The separate validateEdges pass surfaces the missing-sourceRef issue too, but
-            // this rule still owns the "isDefault is only valid on EXCLUSIVE_GATEWAY" guarantee
-            // and must fire on the orphan case to be complete.
-            if (source == null || source !is BpmnExclusiveGateway) {
+            // this rule still owns the "isDefault is only valid on EXCLUSIVE_GATEWAY or
+            // INCLUSIVE_GATEWAY" guarantee and must fire on the orphan case to be complete.
+            if (source == null || (source !is BpmnExclusiveGateway && source !is BpmnInclusiveGateway)) {
                 defaults.forEach { edge ->
                     errors.add(
-                        "edge ${edge.id} isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY",
+                        "edge ${edge.id} isDefault is only valid when sourceRef points to an" +
+                            " EXCLUSIVE_GATEWAY or INCLUSIVE_GATEWAY",
                     )
                 }
             }

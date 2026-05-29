@@ -15,6 +15,7 @@ import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEvent
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
+import dev.groknull.bpmner.api.BpmnInclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.api.BpmnManualTask
@@ -155,6 +156,8 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnManualTask -> BpmnTypeName.MANUAL_TASK
 
     is BpmnExclusiveGateway -> BpmnTypeName.EXCLUSIVE_GATEWAY
+
+    is BpmnInclusiveGateway -> BpmnTypeName.INCLUSIVE_GATEWAY
 
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
 

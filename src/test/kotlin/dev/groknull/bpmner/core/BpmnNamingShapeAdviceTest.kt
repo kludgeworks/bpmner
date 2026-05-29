@@ -64,11 +64,11 @@ class BpmnNamingShapeAdviceTest {
     @Test
     fun `allAdvice returns every advice entry`() {
         val all = BpmnNamingShapeAdvice.allAdvice()
-        // 14 = start, intermediate-catch, intermediate-throw, boundary, end, user-task,
+        // 15 = start, intermediate-catch, intermediate-throw, boundary, end, user-task,
         // service-task, script-task, business-rule-task, send-task, receive-task, manual-task,
-        // exclusive-gateway, parallel-gateway. Covers every current BpmnNode subtype that
-        // has a naming-shape opinion.
-        assertEquals(14, all.size)
+        // exclusive-gateway, inclusive-gateway, parallel-gateway. Covers every current
+        // BpmnNode subtype that has a naming-shape opinion.
+        assertEquals(15, all.size)
         assertTrue(all.any { it.kind == "START_EVENT" })
         assertTrue(all.any { it.kind == "END_EVENT" })
         assertTrue(all.any { it.kind == "INTERMEDIATE_CATCH_EVENT" })
@@ -80,6 +80,7 @@ class BpmnNamingShapeAdviceTest {
         assertTrue(all.any { it.kind == "RECEIVE_TASK" })
         assertTrue(all.any { it.kind == "MANUAL_TASK" })
         assertTrue(all.any { it.kind.startsWith("EXCLUSIVE_GATEWAY") })
+        assertTrue(all.any { it.kind.startsWith("INCLUSIVE_GATEWAY") })
     }
 
     @Test

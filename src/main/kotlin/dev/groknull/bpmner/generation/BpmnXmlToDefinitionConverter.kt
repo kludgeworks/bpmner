@@ -17,6 +17,7 @@ import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
@@ -45,6 +46,7 @@ import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.IntermediateCatchEvent
 import org.camunda.bpm.model.bpmn.instance.IntermediateThrowEvent
 import org.camunda.bpm.model.bpmn.instance.ManualTask
@@ -140,7 +142,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     targetRef = flow.target.id,
                     name = flow.name?.takeIf { it.isNotBlank() },
                     conditionExpression = flow.conditionExpression?.textContent?.takeIf { it.isNotBlank() },
-                    isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id,
+                    isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id ||
+                        (flow.source as? InclusiveGateway)?.default?.id == flow.id,
                 )
             }
 
@@ -229,6 +232,10 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             is ExclusiveGateway -> {
                 BpmnExclusiveGateway(id = id, name = normalisedName)
+            }
+
+            is InclusiveGateway -> {
+                BpmnInclusiveGateway(id = id, name = normalisedName)
             }
 
             is ParallelGateway -> {

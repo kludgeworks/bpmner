@@ -23,6 +23,7 @@ data class ProcessOutline(
 data class OutlineMetrics(
     val phaseCount: Int,
     val exclusiveBranchCount: Int,
+    val inclusiveBranchCount: Int,
     val parallelBranchCount: Int,
     val loopCount: Int,
     val subprocessCount: Int,

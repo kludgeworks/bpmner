@@ -219,6 +219,50 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `unconditional branch on inclusive decision flags UNCONDITIONAL_BRANCH_ON_INCLUSIVE`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.INCLUSIVE,
+                branches =
+                listOf(
+                    ConditionalBranch(id = "br-wrap", label = "Wrap", condition = "wrap?"),
+                    UnconditionalBranch(id = "br-misplaced", label = "Always"),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE))
+    }
+
+    @Test
+    fun `inclusive decision with conditional branches and default branch is valid`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val decision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.INCLUSIVE,
+                branches =
+                listOf(
+                    ConditionalBranch(id = "br-wrap", label = "Wrap", condition = "gift wrap requested"),
+                    ConditionalBranch(id = "br-insert", label = "Insert", condition = "qualifies for insert"),
+                    DefaultBranch(id = "br-none", label = "Skip add-ons"),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(decision))
+        val report = validator.validate(contract)
+        // No INCLUSIVE-specific error codes should fire — default flows are valid on
+        // inclusive decisions, and conditional branches are the expected branch shape.
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.UNCONDITIONAL_BRANCH_ON_INCLUSIVE },
+        )
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL },
+        )
+    }
+
+    @Test
     fun `trigger without trace links produces an error`() {
         val contract = linearContract().copy(start = ContractStart(ContractTrigger.None("Applicant submits an application")))
         val report = validator.validate(contract)

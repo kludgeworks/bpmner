@@ -46,6 +46,7 @@ internal object BpmnTypeMatcher {
 
     private val gatewayTypeNames = setOf(
         BpmnTypeName.EXCLUSIVE_GATEWAY,
+        BpmnTypeName.INCLUSIVE_GATEWAY,
         BpmnTypeName.PARALLEL_GATEWAY,
     )
 
