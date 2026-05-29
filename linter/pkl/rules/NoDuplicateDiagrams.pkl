@@ -25,9 +25,9 @@ aliases = List("gen-02-no-duplicate-diagrams")
 
 checkPrimitive = "CardinalityCheck"
 // `BpmnXmlToDefinitionConverter` surfaces the DI diagram count as
-// `BpmnDefinition.diagramCount` (#282 parser-as-structure refactor); `PrimitiveModelMapping`
-// injects that many synthetic `bpmndi:BPMNDiagram` elements into the primitive model so this
-// rule's `CardinalityCheck` can count them. `max = 1` flags multi-diagram documents.
+// `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` injects that many synthetic
+// `bpmndi:BPMNDiagram` elements into the primitive model so `CardinalityCheck` can count
+// them. `max = 1` flags multi-diagram documents.
 checkConfig = new CheckPrimitive.CardinalityCheck {
   element = "bpmndi:BPMNDiagram"
   max = 1

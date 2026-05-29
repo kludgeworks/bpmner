@@ -29,14 +29,14 @@ internal object BpmnTypeName {
     const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
 
-    // BPMN DI diagram element. Surfaced by the parser as document-level metadata
-    // (`BpmnDefinition.diagramCount`) and projected into the primitive model as N synthetic
-    // `PrimitiveElement` entries so `CardinalityCheck` can count them.
+    // BPMN DI diagram typename. The parser surfaces its document-level count on
+    // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
+    // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can
+    // count them.
     //
-    // NOTE: deliberately NOT added to `BpmnTypeMatcher.supportedTypeNames` — that set's
-    // semantic is "types the domain model represents as typed `BpmnNode` subtypes". DI is
-    // metadata, not a node. The `CardinalityCheck` guard skips `isSupportedProductionType`
-    // when `config.min == null`, which is what lets the max-only `NoDuplicateDiagrams` rule
-    // fire on this typename.
+    // Not added to `BpmnTypeMatcher.supportedTypeNames` — that set is "types the domain
+    // model represents as typed `BpmnNode` subtypes". DI is metadata, not a node. The
+    // `CardinalityCheck` guard skips `isSupportedProductionType` for `max`-only rules,
+    // which is the path the `NoDuplicateDiagrams` rule takes on this typename.
     const val DIAGRAM = "bpmndi:BPMNDiagram"
 }

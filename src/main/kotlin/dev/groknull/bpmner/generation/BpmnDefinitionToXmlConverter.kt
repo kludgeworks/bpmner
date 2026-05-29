@@ -440,9 +440,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                     error("none event definition must not render XML")
                 }
 
-                // Parser fallback for unsupported event-definition typenames (#282). The
-                // generator pipeline must filter these out before reaching XML emission —
-                // they have no Camunda equivalent and don't round-trip.
+                // Unrecognized event definitions have no Camunda equivalent and cannot
+                // round-trip. The generator pipeline is expected to filter them out before
+                // reaching XML emission; reaching here is a contract violation.
                 is BpmnUnrecognizedEventDefinition -> {
                     error(
                         "BpmnUnrecognizedEventDefinition (${definition.typeName}) cannot be rendered to XML. " +

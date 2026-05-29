@@ -47,9 +47,9 @@ object BpmnNodeNamingPolicy {
             is BpmnManualTask,
             -> true
 
-            // Parser fallback for elements without a typed Kotlin class (#282). No naming
-            // requirement — the BpmnSubset rule will already flag the unrecognized element
-            // wholesale; piling a name complaint on top would be noise.
+            // Fallback for elements without a typed Kotlin class. No naming requirement —
+            // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
+            // complaint on top would be noise.
             is BpmnUnrecognizedNode -> false
 
             // BpmnNode is non-sealed (see KDoc on BpmnNode) — the arms above cover every

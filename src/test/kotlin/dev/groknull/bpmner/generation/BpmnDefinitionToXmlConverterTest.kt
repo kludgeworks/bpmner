@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions") // one @Test per scenario; the count IS the safety property
+
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
@@ -23,10 +25,12 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 
 class BpmnDefinitionToXmlConverterTest {
@@ -353,11 +357,10 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
-    fun `generator drops diagramCount and BpmnUnrecognizedNode entries (#282 round-trip safety)`() {
-        // #282 contract: the generator emits semantic-only XML — it never round-trips DI
-        // (BpmnDefinition.diagramCount) or unrecognized elements (`BpmnUnrecognizedNode`,
-        // `BpmnUnrecognizedEventDefinition`). Pinning this here so future generator changes
-        // don't accidentally start emitting what the now-permissive parser accepts.
+    fun `generator emits semantic-only XML regardless of diagramCount`() {
+        // BpmnDefinition.diagramCount is a parser-side counter for input documents that
+        // carried BPMNDI elements. The generator emits semantic-only XML; this contract
+        // ensures no future change starts re-emitting BPMNDI from the count.
         val definition = BpmnDefinition(
             processId = "p1",
             processName = "Round-trip safety",
@@ -370,9 +373,27 @@ class BpmnDefinitionToXmlConverterTest {
         )
 
         val xml = converter.toXml(definition)
-        // No DI emitted regardless of diagramCount.
         assertFalse(xml.contains("bpmndi:"), "generator must not emit BPMNDI elements: $xml")
         assertFalse(xml.contains("BPMNDiagram"), "generator must not emit BPMNDiagram references: $xml")
+    }
+
+    @Test
+    fun `generator fails loudly when BpmnUnrecognizedNode reaches it`() {
+        // BpmnUnrecognizedNode carries no Camunda model class and cannot round-trip. The
+        // generator is the last line of defense: any pipeline that lets one through is a
+        // contract bug, so BpmnModelFactory errors instead of silently dropping.
+        val definition = BpmnDefinition(
+            processId = "p1",
+            processName = "Unrecognized contract",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUnrecognizedNode(id = "tx1", name = null, bpmnType = "bpmn:Transaction"),
+                BpmnEndEvent("e", "End"),
+            ),
+            sequences = listOf(BpmnEdge("f", "s", "e")),
+        )
+
+        assertFailsWith<IllegalStateException> { converter.toXml(definition) }
     }
 
     private fun minimalDefinition(

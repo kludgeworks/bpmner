@@ -25,9 +25,10 @@ package dev.groknull.bpmner.core
  *   - Diverging gateways ask a yes/no or which-of question ending in `?`.
  *   - Converging gateways are unnamed (handled by [BpmnNodeNamingPolicy]).
  *
- * The `when (node)` is exhaustive over [BpmnNode], so any new sealed subtype added by the
- * vocabulary-extension epic (#196) — typed start/end events, intermediate events, boundary
- * events, subprocesses, etc. — forces a compile-time decision about its naming shape.
+ * The `when (node)` covers every canonical [BpmnNode] subtype plus [BpmnUnrecognizedNode];
+ * any other implementation of the non-sealed [BpmnNode] interface falls through to the safe
+ * default (no advice). Add an explicit `is` arm above the `else` when introducing a new
+ * canonical subtype.
  */
 internal object BpmnNamingShapeAdvice {
     data class Advice(
@@ -71,9 +72,13 @@ internal object BpmnNamingShapeAdvice {
 
         is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
 
-        // Parser fallback for elements without a typed Kotlin class (#282). No naming-shape
-        // advice — we can't infer a sensible convention for a type we don't model.
+        // Fallback for elements without a typed Kotlin class. No naming-shape advice — no
+        // sensible convention for a type we don't model.
         is BpmnUnrecognizedNode -> null
+
+        // Safe default for any other (non-canonical) `BpmnNode` implementation. The
+        // interface is non-sealed, so the compiler cannot enforce exhaustiveness here.
+        else -> null
     }
 
     /**

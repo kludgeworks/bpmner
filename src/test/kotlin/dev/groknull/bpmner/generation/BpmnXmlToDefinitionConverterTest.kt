@@ -134,11 +134,10 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
-    fun `parse surfaces bpmndi diagram count on BpmnDefinition (#282)`() {
-        // #282: previously the parser rejected any BPMNDI-bearing input via a hard
-        // `require(...)`. That conflated "structural parsing" with "policy enforcement". The
-        // parser now counts diagrams and surfaces the count on `BpmnDefinition.diagramCount`;
-        // the `NoDuplicateDiagrams` Pkl rule does the policy check via `CardinalityCheck`.
+    fun `parse surfaces bpmndi diagram count on BpmnDefinition`() {
+        // The parser counts `<bpmndi:BPMNDiagram>` elements and exposes the count on
+        // `BpmnDefinition.diagramCount`. DI content is dropped from the semantic model; the
+        // `NoDuplicateDiagrams` rule enforces the one-diagram policy via `CardinalityCheck`.
         val xmlWithTwoDiagrams =
             """
             <?xml version="1.0" encoding="UTF-8"?>

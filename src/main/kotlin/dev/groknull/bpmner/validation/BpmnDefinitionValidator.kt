@@ -278,8 +278,8 @@ internal class BpmnDefinitionValidator {
                 Unit
             }
 
-            // Parser fallback for unsupported event-definition typenames (#282). The
-            // structural validator skips them — the rule engine flags them via BpmnSubset.
+            // Unrecognized event definitions have no fields this structural validator can
+            // check; the `BpmnSubset` rule flags them.
             is BpmnUnrecognizedEventDefinition -> {
                 Unit
             }

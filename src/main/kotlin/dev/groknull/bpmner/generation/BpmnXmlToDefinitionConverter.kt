@@ -83,12 +83,14 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
 
-        // BPMN top-level constructs that aren't FlowNodes (so the Camunda model walks miss
-        // them) and that the parser doesn't translate into typed Kotlin nodes. We surface
-        // them via DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them
-        // through `BpmnSubset`'s `targetElements` list. The parser doesn't decide what's
-        // "discouraged" — it surfaces all such elements; the Pkl rule decides policy.
-        private val EXOTIC_TOP_LEVEL_LOCAL_NAMES = listOf(
+        // BPMN element local names that aren't `FlowNode`s (so the Camunda model walk misses
+        // them) and that the parser doesn't translate into typed Kotlin nodes. Surfaced via
+        // DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them through
+        // `BpmnSubset`'s `targetElements`. The parser surfaces all such elements; the Pkl
+        // rule decides what's discouraged. Includes both top-level constructs (Choreography,
+        // Conversation) and their child element types (e.g. choreographyTask), all picked up
+        // by `getElementsByTagNameNS` regardless of nesting.
+        private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
             "choreography",
             "choreographyTask",
             "subChoreography",
@@ -103,8 +105,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val document = parseDocument(xml)
         val model: BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
 
-        // #282: surface BPMNDI diagram count as document-level metadata (was: hard-rejected
-        // via `require(...)`). The Pkl rule `NoDuplicateDiagrams` does the policy check.
+        // Counts `<bpmndi:BPMNDiagram>` elements. The semantic model carries no DI; the count
+        // is surfaced on `BpmnDefinition` so the `NoDuplicateDiagrams` rule can enforce the
+        // policy (one diagram per document).
         val diagramCount = model.getModelElementsByType(BpmnDiagram::class.java).size
 
         val process =
@@ -114,13 +117,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val eventMetadata = eventMetadataFrom(document)
         val taskMetadata = taskMetadataFrom(document)
         val typedNodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
-        // #282: surface top-level exotic constructs (Choreography, Conversation, etc.) that
-        // aren't FlowNodes and so miss the typed scan. The Pkl rule `BpmnSubset` flags them
-        // via `targetElements`; the parser stays free of any "discouraged" enumeration.
-        val unrecognizedTopLevel = EXOTIC_TOP_LEVEL_LOCAL_NAMES.flatMap { localName ->
-            document.bpmnElements(localName).map { element ->
+        // Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
+        // typed scan above. Surface them as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can
+        // flag them via `targetElements`. The parser surfaces all such elements; the rule
+        // decides what's discouraged. Fallback ids are deterministic per-document so two parses
+        // of the same XML produce the same `elementId`s.
+        val unrecognizedExotics = EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
+            document.bpmnElements(localName).mapIndexed { elemIndex, element ->
                 BpmnUnrecognizedNode(
-                    id = element.getAttribute("id").ifBlank { "${localName}_${element.hashCode()}" },
+                    id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
                     name = element.getAttribute("name").takeIf { it.isNotBlank() },
                     bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
                 )
@@ -142,7 +147,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
-            nodes = typedNodes + unrecognizedTopLevel,
+            nodes = typedNodes + unrecognizedExotics,
             sequences = sequences,
             messages = eventMetadata.messages,
             signals = eventMetadata.signals,
@@ -264,10 +269,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
-            // #282: previously this hard-errored on any FlowNode subtype we don't translate
-            // (Transaction, CallActivity, SubProcess, ad hoc subprocesses…). That was policy
-            // enforcement leaking into the parser. Now we surface them as `BpmnUnrecognizedNode`
-            // and let the rule engine flag them via `BpmnSubset`.
+            // FlowNode subtypes the parser doesn't translate (Transaction, CallActivity,
+            // SubProcess, etc.) are surfaced as `BpmnUnrecognizedNode` so the `BpmnSubset`
+            // rule can flag them. Policy stays in the rule engine.
             else -> {
                 BpmnUnrecognizedNode(
                     id = id,
@@ -398,9 +402,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             "terminateEventDefinition" -> BpmnTerminateEventDefinition
 
-            // #282: previously any other event-def localName silently fell through to NONE.
-            // Surface the typename so `BpmnSubset` can flag rules like compensate / cancel
-            // event definitions explicitly.
+            // Event-definition typenames without a typed Kotlin class (e.g. compensate,
+            // cancel) surface as `BpmnUnrecognizedEventDefinition`. The `BpmnSubset` rule
+            // matches on the carried typename via `targetElements`.
             else -> BpmnUnrecognizedEventDefinition(
                 typeName = "bpmn:${child.localName.replaceFirstChar { it.uppercase() }}",
             )

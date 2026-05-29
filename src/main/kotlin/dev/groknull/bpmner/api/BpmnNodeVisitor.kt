@@ -83,8 +83,8 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
 
     is BpmnEndEvent -> visitor.visitEndEvent(this)
 
-    // Parser fallback for elements without a typed Kotlin class (#282). No visitor hook —
-    // visitors are typed against the canonical subtypes; unrecognized nodes return null.
+    // Fallback for elements without a typed Kotlin class. Visitors are typed against the
+    // canonical subtypes; unrecognized nodes have no hook and return null.
     is BpmnUnrecognizedNode -> null
 
     else -> null // unreachable for the canonical 14-subtype hierarchy; see KDoc on BpmnNode

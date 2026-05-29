@@ -36,22 +36,22 @@ import dev.groknull.bpmner.api.BpmnUserTask
 
 internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelContext {
     val sequenceFlows = definition.sequences.map { it.toPrimitiveFlow() }
-    // #282: synthesize one PrimitiveElement per BPMNDI diagram. The element typename matches
-    // what `NoDuplicateDiagrams.pkl`'s `checkConfig.element` searches for; the id is null
+    // One synthetic `bpmndi:BPMNDiagram` element per counted diagram so `CardinalityCheck`
+    // (driving `NoDuplicateDiagrams`) can count them via `model.elements`. The id is null
     // because diagrams have no element-level id in the semantic model.
     val diagramElements = List(definition.diagramCount) {
         PrimitiveElement(id = null, typeName = BpmnTypeName.DIAGRAM)
     }
-    // #282: each event's event-definition gets its own PrimitiveElement so rules like
-    // `BpmnSubset` can `targetElements` against typenames like `bpmn:CompensateEventDefinition`
-    // and `bpmn:EscalationEventDefinition`. Existing rules that read event defs via the parent
-    // event's properties are unchanged — the new elements are invisible to any rule whose
+    // Each event's event-definition is also emitted as its own `PrimitiveElement` so rules
+    // like `BpmnSubset` can target typenames such as `bpmn:CompensateEventDefinition` or
+    // `bpmn:EscalationEventDefinition`. Rules that read event defs through the parent event's
+    // properties are unaffected — these extra elements are invisible to any rule whose
     // `targetElements` doesn't list event-def typenames.
     val eventDefinitionElements = definition.nodes.flatMap { node ->
         if (node is BpmnEvent) {
             val typeName = node.eventDefinition.bpmnTypeName()
-            // Skip NONE event definitions — they aren't real BPMN constructs in the document,
-            // just our placeholder for "no event definition child". No diagnostic value.
+            // `NONE` is a placeholder for "no event-definition child"; skip it (no element
+            // to surface).
             if (typeName != null) {
                 listOf(
                     PrimitiveElement(
@@ -158,8 +158,8 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
 
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
 
-    // #282: parser fallback elements (Choreography, Transaction, etc.) carry their BPMN
-    // typename verbatim — that's exactly the string `BpmnSubset`'s `targetElements` matches on.
+    // Unrecognized nodes (Choreography, Transaction, etc.) carry their BPMN typename
+    // verbatim — exactly what `BpmnSubset`'s `targetElements` matches on.
     is BpmnUnrecognizedNode -> bpmnType
 
     else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
@@ -186,9 +186,9 @@ private fun eventDefinitionProperties(
 
             is BpmnTerminateEventDefinition -> "TERMINATE"
 
-            // #282: parser fallback for unsupported event-definition typenames. Surface as
-            // a descriptive token so existing consumers (LLM prompt context, logging) get a
-            // useful string; the rule engine flags these via `BpmnSubset` independently.
+            // Surface unrecognized event-definition typenames as a descriptive token so
+            // LLM-prompt and logging consumers get a useful string. The rule engine flags
+            // these independently via `BpmnSubset`.
             is BpmnUnrecognizedEventDefinition -> "UNRECOGNIZED:${eventDefinition.typeName}"
 
             else -> "UNKNOWN"

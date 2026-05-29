@@ -225,9 +225,10 @@ data object BpmnTerminateEventDefinition :
 
 /**
  * Fallback for any event-definition typename the parser sees but doesn't have a typed class
- * for (today: only `bpmn:CompensateEventDefinition`). Deliberately NOT registered with
- * `@JsonSubTypes` above — Jackson will fail to serialize one, which is the safety contract:
- * LLM round-trip never sees unrecognized nodes.
+ * for (today: only `bpmn:CompensateEventDefinition`). Absent from the `@JsonSubTypes`
+ * registration above: Jackson serialization fails on an instance, so the LLM round-trip
+ * cannot accidentally see one. Callers that need to serialize a definition must filter these
+ * out first.
  */
 data class BpmnUnrecognizedEventDefinition(
     override val typeName: String,
@@ -488,9 +489,10 @@ data class BpmnEndEvent(
 /**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
  * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees these like any other
- * node and can flag them via `targetElements` matching on [bpmnType]. Deliberately NOT
- * registered with `@JsonSubTypes` above — Jackson will fail to serialize one, which is the
- * safety contract: LLM round-trip never sees unrecognized nodes.
+ * node and can flag them via `targetElements` matching on [bpmnType]. Absent from the
+ * `@JsonSubTypes` registration above: Jackson serialization fails on an instance, so the LLM
+ * round-trip cannot accidentally see one. Callers that need to serialize a definition must
+ * filter these out first.
  */
 data class BpmnUnrecognizedNode(
     override val id: String,

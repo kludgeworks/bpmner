@@ -22,19 +22,17 @@ import org.junit.jupiter.api.Test
  * one of the 10 discouraged types in `targetElements` (Choreography, Conversation, Transaction
  * variants, and exotic event-definition typenames).
  *
- * #282 reframe: previously the parser hard-errored on these types
- * (`BpmnXmlToDefinitionConverter.toBpmnNode()` had `else -> error(...)`). They now flow
- * through the model as `BpmnUnrecognizedNode` / `BpmnUnrecognizedEventDefinition`, and this
- * rule does the policy enforcement. The three test branches exercise the three pathways the
- * parser surfaces exotic types via:
+ * The three fires-cases below exercise the three pathways the parser uses to surface exotic
+ * types into `BpmnDefinition.nodes` and the primitive model:
  *
- *  - **FlowNode else-branch**: `bpmn:Transaction` (a SubProcess subtype that misses the
- *    `when (this)` arms in `toBpmnNode`).
- *  - **DOM scan for top-level constructs**: `bpmn:Choreography` (not a FlowNode; surfaced
- *    via the namespaced DOM lookup in `exoticTopLevelNodes`).
- *  - **DOM scan for event definitions**: `bpmn:CompensateEventDefinition` (attached to an
- *    event, surfaced via `Element.eventDefinition()` and emitted as a separate
- *    `PrimitiveElement` keyed off the parent event's id).
+ *  - **FlowNode `else` arm**: `bpmn:Transaction` is a SubProcess subtype that
+ *    `BpmnXmlToDefinitionConverter.toBpmnNode()` doesn't translate into a typed class; it
+ *    becomes a `BpmnUnrecognizedNode`.
+ *  - **DOM scan**: `bpmn:Choreography` isn't a FlowNode and is picked up by the namespaced
+ *    DOM scan in the converter; it also becomes a `BpmnUnrecognizedNode`.
+ *  - **Event-definition emission**: `bpmn:CompensateEventDefinition` is attached to an event
+ *    as a `BpmnUnrecognizedEventDefinition`; `PrimitiveModelMapping` emits a separate
+ *    `PrimitiveElement` keyed `<eventId>.eventDefinition` so the rule can target it.
  */
 internal class BpmnSubsetTest {
     private val rule = loadRule("gen-bpmn-subset")

@@ -42,23 +42,18 @@ staticConfig = new {
 }
 
 checkPrimitive = "ElementConstraintCheck"
-// `targetElements` already scopes the scan to exactly the 10 discouraged types, so every
-// targetedElement is by definition outside the supported subset. `constraints["allowed"]`
-// is empty — no exceptions; every match fires. The `allowed` knob exists for rules where
-// some target types are acceptable, which BpmnSubset has none of.
-//
-// #282 reframe: the parser previously rejected these types at parse time
-// (`BpmnXmlToDefinitionConverter` would `error("Unsupported BPMN flow node type")`). It now
-// surfaces them as `BpmnUnrecognizedNode` / `BpmnUnrecognizedEventDefinition`, and the rule
-// engine — driven by this Pkl rule — does the policy enforcement.
+// `targetElements` scopes the scan to exactly the 10 discouraged types, so every
+// `targetedElement` is by definition outside the supported subset. The empty
+// `constraints["allowed"]` means "no exceptions": every match fires. The `allowed` knob
+// exists for rules where some target types are acceptable; `BpmnSubset` has none.
 checkConfig = new CheckPrimitive.ElementConstraintCheck {
   element = "bpmn:FlowElement"
   mode = "ALLOWED_ELEMENT_SUBSET"
-  // The `Mapping<String, Any>` value slot codegens as `java.lang.Object` and
-  // `pkl-config-java` has no built-in `pkl.base#List → java.lang.Object` converter, so we
-  // smuggle the allowed list as a comma-separated string. The Kotlin side
-  // (`ElementConstraintCheck.allowedSubset`) accepts both `List<String>` and `String`
-  // (CSV-split). Empty string == "no allowed types" == every targetedElement fires.
+  // `pkl-config-java` has no built-in `pkl.base#List → java.lang.Object` converter for the
+  // `Mapping<String, Any>` value slot, so the allowed list arrives as a comma-separated
+  // string. `ElementConstraintCheck.allowedSubset` accepts either a `List<String>` or a
+  // `String` (CSV-split). An empty string means "no allowed types"; every `targetedElement`
+  // fires.
   constraints = new Mapping<String, Any> {
     ["allowed"] = ""
   }

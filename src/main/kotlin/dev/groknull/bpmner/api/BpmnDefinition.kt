@@ -26,9 +26,10 @@ interface BpmnDefinition {
     val errors: List<BpmnErrorRef>
     val escalations: List<BpmnEscalationRef>
 
-    // Document-level diagram count surfaced by the XML parser (BPMN DI layer is otherwise
-    // stripped from the semantic model). The `NoDuplicateDiagrams` rule reads this via a
-    // synthetic `bpmndi:BPMNDiagram` element injection in `PrimitiveModelMapping`.
+    // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
+    // model does not carry DI content; the count is the only signal that survives. The
+    // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
+    // injected by `PrimitiveModelMapping`.
     val diagramCount: Int get() = 0
 }
 
@@ -106,11 +107,12 @@ interface BpmnParallelGateway : BpmnGateway
 
 /**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
- * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). Lets the rule engine see + flag these via
- * `targetElements` matching on [bpmnType] instead of the parser hard-erroring at the door.
+ * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
+ * `targetElements` matching on [bpmnType].
  *
- * The generator pipeline filters these out before XML emission — round-tripping is not
- * supported for elements without typed classes.
+ * Not round-trippable: the generator (`BpmnDefinitionToXmlConverter` /
+ * `BpmnModelFactory.newFlowNode`) errors if one reaches it. Callers serializing to LLM JSON
+ * also fail because `BpmnUnrecognizedNode` is intentionally absent from `@JsonSubTypes`.
  */
 interface BpmnUnrecognizedNode : BpmnNode {
     val bpmnType: String
@@ -188,8 +190,8 @@ interface BpmnTerminateEventDefinition : BpmnEventDefinition
 
 /**
  * Fallback for any event definition the parser sees but doesn't have a typed Kotlin class for
- * (e.g. `bpmn:CompensateEventDefinition`). Replaces the historical `else -> "UNKNOWN"` smell
- * in `PrimitiveModelMapping.eventDefinitionProperties` with a typed, sealed-exhaustive case.
+ * (e.g. `bpmn:CompensateEventDefinition`). Carries the source XML typename so the rule engine
+ * can flag specific definitions via `targetElements`.
  */
 interface BpmnUnrecognizedEventDefinition : BpmnEventDefinition {
     val typeName: String

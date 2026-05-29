@@ -75,8 +75,9 @@ internal object BpmnModelFactory {
 
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
 
-                // Parser fallback elements (#282) carry no Camunda model class — caller must
-                // filter them out before reaching the generator. Reaching here is a contract bug.
+                // Unrecognized nodes carry no Camunda model class. Callers are expected to
+                // filter them out before reaching the generator; reaching here is a contract
+                // violation.
                 is BpmnUnrecognizedNode -> error(
                     "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) cannot be converted to a Camunda FlowNode. " +
                         "The generator pipeline must filter unrecognized nodes before reaching BpmnModelFactory.",

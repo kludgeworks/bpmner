@@ -41,8 +41,8 @@ internal class EventDefinitionValidator(
 
         is BpmnEscalationEventDefinition -> validateEscalationEventDefinition(nodeId, eventDefinition)
 
-        // Parser fallback for unsupported event-definition typenames (#282). Validator has
-        // nothing to check — the rule engine flags these via BpmnSubset, not here.
+        // Unrecognized event definitions have no fields this validator can check; the
+        // `BpmnSubset` rule flags them.
         is BpmnUnrecognizedEventDefinition -> emptyList()
 
         else -> emptyList()

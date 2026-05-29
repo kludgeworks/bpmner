@@ -21,11 +21,8 @@ import kotlin.test.assertNull
  * more than one `bpmndi:BPMNDiagram` element. The source of truth is the document-level
  * `BpmnDefinition.diagramCount` field surfaced by `BpmnXmlToDefinitionConverter`; the rule's
  * `CardinalityCheck` reads it via the synthetic `bpmndi:BPMNDiagram` `PrimitiveElement`
- * entries injected by `PrimitiveModelMapping`.
- *
- * #282 reframe: this rule (and its substrate) was previously enforced in the parser via a
- * hard `require(model.getModelElementsByType(BpmnDiagram::class.java).isEmpty())`. Moving
- * enforcement here means operators can override the policy via `severity-overrides`.
+ * entries injected by `PrimitiveModelMapping`. Operators can override the policy via
+ * `bpmner.rules.severity-overrides`.
  */
 internal class NoDuplicateDiagramsTest {
     private val rule = loadRule("gen-no-duplicate-diagrams")
@@ -37,7 +34,7 @@ internal class NoDuplicateDiagramsTest {
 
     @Test
     fun `silent when document has zero diagrams`() {
-        // Normal bpmner pipeline (semantic-only XML in / out) — diagramCount = 0.
+        // Semantic-only XML carries no DI elements, so `diagramCount = 0` is the normal case.
         assertSilent(rule, context(nodes = nodes, diagramCount = 0))
     }
 
