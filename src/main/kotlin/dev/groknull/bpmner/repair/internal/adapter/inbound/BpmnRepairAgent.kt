@@ -21,6 +21,7 @@ import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -40,15 +41,19 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnPatchApplicationPort
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairEvaluation
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
+import dev.groknull.bpmner.repair.internal.domain.BpmnUnrecognizedElementScanner
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
+import dev.groknull.bpmner.repair.internal.domain.UnrecognizedFinding
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic
+import dev.groknull.bpmner.validation.BpmnEvaluation
 import dev.groknull.bpmner.validation.BpmnFingerprintService
 import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
+import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
@@ -114,6 +119,20 @@ internal class BpmnRepairAgent(
         validatedContract: ValidatedProcessContract,
     ): BpmnRepairEvaluation {
         val contract = validatedContract.contract
+
+        // Pre-flight: #287 — surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,
+        // `BpmnUnrecognizedEventDefinition`) as typed UNFIXABLE diagnostics before any code
+        // path serialises the definition through Jackson. The downstream calls in this method
+        // (`promptFactory.initialMessages`, `contractAwareValidator.evaluate` →
+        // `BpmnEvaluationPipeline.logArtifactsIfEnabled` in debug mode, and
+        // `attemptRecordFactory.toRecord` → `definitionFingerprint`) all serialise; the
+        // short-circuit return below skips all three. Scanning the original definition is
+        // sufficient because `defaultFlowAssigner.assign` only rewrites `sequences`.
+        val unrecognized = BpmnUnrecognizedElementScanner.scan(rendered.definition)
+        if (unrecognized.isNotEmpty()) {
+            return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
+        }
+
         val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
         val normalisedRendered = rendered.copy(definition = normalisedDefinition)
         val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
@@ -611,6 +630,47 @@ internal class BpmnRepairAgent(
 
     /** Sole post-Phase-2 LLM eligibility predicate — cost ordering and the fingerprint guard handle priority. */
     private fun eligibleForLlm(diagnostic: BpmnDiagnostic): Boolean = diagnostic.kind != RepairKind.UNFIXABLE
+
+    /**
+     * #287 short-circuit for definitions containing parser fallback subtypes
+     * (`BpmnUnrecognizedNode` / `BpmnUnrecognizedEventDefinition`). Returns a blackboard
+     * carrying one UNFIXABLE blocking diagnostic per finding. Skips every Jackson-touching
+     * call (`promptFactory.initialMessages`, `contractAwareValidator.evaluate`,
+     * `attemptRecordFactory.toRecord`). The resulting evaluation drives GOAP into the
+     * existing UNFIXABLE-only / STUCK contract — no repair action's preconditions hold and
+     * `finalize`'s `diagnosticsResolved` precondition is false, so the planner surfaces a
+     * `ProcessExecutionStuckException` with the diagnostics intact.
+     */
+    private fun shortCircuitUnrecognized(
+        request: BpmnRequest,
+        graph: LaidOutProcessGraph,
+        rendered: RenderedBpmn,
+        contract: ProcessContract,
+        findings: List<UnrecognizedFinding>,
+    ): BpmnRepairEvaluation {
+        val diagnostics = findings.map { it.toDiagnostic() }
+        logger.warn(
+            "Repair short-circuited: {} unrecognized element(s) found pre-flight; LLM not invoked",
+            findings.size,
+        )
+        val evaluation = BpmnEvaluation(
+            definition = rendered.definition,
+            rendered = rendered,
+            diagnostics = diagnostics,
+            globalDiagnostics = GlobalDiagnostics(diagnostics),
+            validatedXml = null,
+        )
+        return BpmnRepairEvaluation(
+            request = request,
+            graph = graph,
+            rendered = rendered,
+            evaluation = evaluation,
+            messages = emptyList(),
+            history = BpmnAttemptHistory(),
+            contract = contract,
+            repairAttempts = 0,
+        )
+    }
 
     private companion object {
         const val COST_DETERMINISTIC = 0.1

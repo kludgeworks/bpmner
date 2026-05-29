@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions") // @Test methods + fixture builders for each scenario
+
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.api.RepairKind
@@ -10,7 +12,11 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -30,6 +36,7 @@ import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
 import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.LintIssue
 import kotlin.test.Test
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -93,6 +100,66 @@ class BpmnRepairPromptFactoryTest {
         assertTrue(prompt.contains("rule=bpmner/name-02"))
         assertFalse(prompt.contains("local-fix-failed"))
     }
+
+    @Test
+    fun `initialMessages refuses definition carrying BpmnUnrecognizedNode`() {
+        val factory = factory()
+        val definition = definitionWithUnrecognizedNode()
+        val request = BpmnRequest(processDescription = "demo")
+        val error = assertFailsWith<IllegalStateException> { factory.initialMessages(request, definition) }
+        assertTrue(
+            error.message.orEmpty().contains("pre-flight"),
+            "expected guard message to name the pre-flight contract; got: ${error.message}",
+        )
+    }
+
+    @Test
+    fun `patchFeedback refuses definition carrying BpmnUnrecognizedNode`() {
+        val factory = factory()
+        val definition = definitionWithUnrecognizedNode()
+        assertFailsWith<IllegalStateException> { factory.patchFeedback(definition, emptyList()) }
+    }
+
+    @Test
+    fun `fullRepairFeedback refuses attempt whose definition carries BpmnUnrecognizedEventDefinition`() {
+        val factory = factory()
+        val definition = definitionWithUnrecognizedEventDefinition()
+        assertFailsWith<IllegalStateException> {
+            factory.fullRepairFeedback(attempt(definition, emptyList()), emptyList())
+        }
+    }
+
+    private fun definitionWithUnrecognizedNode() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Sample",
+        nodes = listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnUnrecognizedNode(id = "ch1", bpmnType = "bpmn:Choreography"),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "ch1"),
+            BpmnEdge("Flow_2", "ch1", "End_1"),
+        ),
+    )
+
+    private fun definitionWithUnrecognizedEventDefinition() = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Sample",
+        nodes = listOf(
+            BpmnStartEvent("Start_1", "Start"),
+            BpmnIntermediateCatchEvent(
+                id = "ic1",
+                name = "Await compensate",
+                eventDefinition = BpmnUnrecognizedEventDefinition(typeName = "bpmn:CompensateEventDefinition"),
+            ),
+            BpmnEndEvent("End_1", "End"),
+        ),
+        sequences = listOf(
+            BpmnEdge("Flow_1", "Start_1", "ic1"),
+            BpmnEdge("Flow_2", "ic1", "End_1"),
+        ),
+    )
 
     private fun factory(): BpmnRepairPromptFactory {
         val fingerprints = BpmnFingerprintService()
