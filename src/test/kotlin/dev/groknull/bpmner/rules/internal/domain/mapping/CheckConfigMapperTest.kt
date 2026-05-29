@@ -41,7 +41,7 @@ internal class CheckConfigMapperTest {
     }
 
     @Test
-    fun `PropertyPatternCheck preserves all three fields including nullable description`() {
+    fun `PropertyPatternCheck mapping preserves the regex-only baseline`() {
         val mapped = CheckConfigMapper.map(
             PklCheckPrim.PropertyPatternCheck("name", "^[A-Z].*$", "sentence case", null, null),
         )
