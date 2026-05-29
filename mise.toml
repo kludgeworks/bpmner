@@ -47,8 +47,11 @@ LICENSE_HOLDER = "The Project Contributors"
 experimental = true
 lockfile = true
 
+[deps.pnpm]
+auto = true
+
 [task_config]
 includes = [".mise/tasks.toml", "tasks.toml"]
 
 [hooks]
-postinstall = "hk install --mise && vale sync"
+postinstall = "hk install --mise && vale sync && mise deps install"
