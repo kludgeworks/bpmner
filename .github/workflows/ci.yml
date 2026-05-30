@@ -22,6 +22,9 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      models: read   # GitHub Models access for the e2e smoke step (#293)
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
@@ -60,11 +63,18 @@ jobs:
       - name: Run hk lint checks
         run: hk check all
 
-      # Run every test discoverable in the build graph. Integration tests are gated
-      # out by the `.bazelrc` policy (`test --test_tag_filters=-integration`) and run
-      # separately with `bazel test --test_tag_filters=integration //src/test/...`.
-      # This matches the canonical Bazel pattern (`rules_pkl/.github/workflows/build.yml`)
-      # and removes the allowlist-drift class of bug that hid `RepairRoutingModuleTest`
-      # failures on main between Phase 2F (#243) and PR #249.
+      # Run every test discoverable in the build graph. e2e tests are gated out by
+      # the `.bazelrc` policy (`test --test_tag_filters=-e2e`) and run in the next
+      # step against the real GitHub Models LLM. Integration tests (mocked LLM) are
+      # not filtered and run here on every push.
       - name: Build and run all tests
         run: bazel test //...
+
+      - name: Run e2e smoke tests (real LLM)
+        # --test_env forwards GITHUB_TOKEN through Bazel's sandbox; required
+        # because `.bazelrc` sets `--incompatible_strict_action_env`. Without
+        # this flag the test sees the token as unset and silently skips via
+        # @EnabledIfEnvironmentVariable.
+        run: bazel test --test_tag_filters=e2e --test_env=GITHUB_TOKEN //src/test/...
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
