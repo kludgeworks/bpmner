@@ -50,27 +50,6 @@ Loop and back-edge rules:
 - When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's gateway to the node with that id. If `nextRef` points to an earlier activity, this is the loop back-edge.
 - For multi-exit loops (e.g. pass / no-progress / exhausted), emit ONE XOR gateway after the loop body with one outbound flow per branch — including the back-edge — not separate gateways per exit.
 
-Worked example — iterative repair loop with three exit conditions:
-  Contract decision `dec-validate` (kind=EXCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-pass, label: "Validation passed", condition: "validation passed", nextRef: "end-success"}
-    - {kind: CONDITIONAL, id: br-no-progress, label: "No progress", condition: "no progress", nextRef: "end-no-progress"}
-    - {kind: CONDITIONAL, id: br-retry, label: "Continue", condition: "continue", nextRef: "act-strategy-1"}  // back-edge
-  BPMN topology:
-    - The decision is realized as ONE EXCLUSIVE_GATEWAY node:
-        BpmnNode(id="dec-validate", type=EXCLUSIVE_GATEWAY, name="Did validation pass?")
-    - Three outbound sequence flows from that gateway with the conditions above.
-
-Worked example — exclusive decision with a default branch:
-  Contract decision `dec-tier` (kind=EXCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-fast, label: "Fast-track", condition: "score >= 750", nextRef: "act-fast"}
-    - {kind: CONDITIONAL, id: br-standard, label: "Standard", condition: "score in 600..749", nextRef: "act-standard"}
-    - {kind: DEFAULT, id: br-manual, label: "Manual review", nextRef: "act-manual"}
-  BPMN topology:
-    - One EXCLUSIVE_GATEWAY node `dec-tier`.
-    - Three outbound flows from `dec-tier`. The flow targeting `act-manual` has
-      `isDefault = true` and no conditionExpression; the renderer writes the
-      gateway's `default="Flow_manual"` attribute.
-
 Parallel-gateway rules:
 - When a ContractDecision has `kind = PARALLEL`, realize the fork as ONE PARALLEL_GATEWAY node whose id equals the decision id verbatim. Each branch becomes one unconditional outbound flow — DO NOT add a conditionExpression.
 - Every PARALLEL fork MUST have a matching synchronising join: a second PARALLEL_GATEWAY node where every branch reconverges before downstream work proceeds. The join is a synthesised node with a stable unique id of your choosing (e.g. `Gateway_join_<descriptor>`) — it has no contract counterpart. The join has no `name` (parallel joins do not ask a question).

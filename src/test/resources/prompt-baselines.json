@@ -13,14 +13,14 @@
 			"reason": "Rendered extract_contract.jinja concatenated with FlatProcessContract schema-format text (FilteringJacksonOutputConverter.format)."
 		},
 		"generationPrompt": {
-			"chars": 16988,
-			"updatedBy": "#300",
-			"reason": "bpmner/generate_bpmn.jinja. Includes a blank line after the naming-shape-advice loop per review feedback."
+			"chars": 15522,
+			"updatedBy": "#310",
+			"reason": "Cut worked examples 4→2: kept parallel-join (non-obvious synchronisation) and inclusive-default (non-obvious default-under-inclusive semantics); deleted iterative-repair-loop and exclusive-decision-with-default (patterns the LLM gets right from training)."
 		},
 		"generationFullPayload": {
-			"chars": 25935,
-			"updatedBy": "#302",
-			"reason": "Rendered generate_bpmn.jinja concatenated with FlatBpmnDefinition schema-format text."
+			"chars": 24469,
+			"updatedBy": "#310",
+			"reason": "Tracks generationPrompt trim; schema-format portion unchanged."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
