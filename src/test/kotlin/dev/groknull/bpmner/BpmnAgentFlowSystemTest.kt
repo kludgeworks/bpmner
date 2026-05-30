@@ -20,11 +20,11 @@ import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.FlatBpmnNode
+import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.validation.BpmnLintingPort
@@ -68,7 +68,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     fun `planner resolves request through definition render validation and write`(
         @TempDir tempDir: Path,
     ) {
-        val definition = validDefinition()
+        val flatDefinition = validFlatDefinition()
         val outputFile = tempDir.resolve("process.bpmn")
 
         // 1. Mock Readiness
@@ -94,8 +94,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         // 3. Mock Generation
         whenCreateObject(
             { it.contains("Generate a BPMN definition object from the validated process contract") },
-            BpmnDefinition::class.java,
-        ).thenReturn(definition)
+            FlatBpmnDefinition::class.java,
+        ).thenReturn(flatDefinition)
 
         // 4. Mock Alignment
         whenCreateObject(
@@ -138,17 +138,15 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         verify(bpmnLintingPort, times(1)).lint(anyDefinition())
     }
 
-    private fun validDefinition() = BpmnDefinition(
+    private fun validFlatDefinition() = FlatBpmnDefinition(
         processId = "Process_MakeToast",
         processName = "Make Toast",
-        nodes =
-        listOf(
-            BpmnStartEvent(id = "start", name = "Start"),
-            BpmnUserTask(id = "task1", name = "Toast bread"),
-            BpmnEndEvent(id = "end", name = "End"),
+        nodes = listOf(
+            FlatBpmnNode(id = "start", type = FlatBpmnNodeKind.START_EVENT, name = "Start"),
+            FlatBpmnNode(id = "task1", type = FlatBpmnNodeKind.USER_TASK, name = "Toast bread"),
+            FlatBpmnNode(id = "end", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
         ),
-        sequences =
-        listOf(
+        sequences = listOf(
             BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
             BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
         ),

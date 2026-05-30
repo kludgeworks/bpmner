@@ -31,6 +31,8 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
@@ -600,7 +602,7 @@ internal class BpmnRepairAgent(
         runner: PromptRunner,
         messages: List<com.embabel.chat.Message>,
     ): BpmnDefinition = try {
-        runner.createObject(messages, BpmnDefinition::class.java)
+        runner.createObject(messages, FlatBpmnDefinition::class.java).toSealed()
     } catch (e: InvalidLlmReturnFormatException) {
         throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
     } catch (e: InvalidLlmReturnTypeException) {

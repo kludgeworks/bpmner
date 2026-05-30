@@ -18,6 +18,7 @@ import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnElementIndex
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -25,6 +26,9 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.FlatBpmnNode
+import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -35,8 +39,9 @@ class BpmnGeneratorAgentTest {
     @Test
     fun `createOutline sends a contract-first prompt and returns validated outline metrics`() {
         val context = FakeOperationContext()
+        val flatDefinition = flatTestDefinition(processName = "Handle claim")
         val definition = testBpmnDefinition(processName = "Handle claim")
-        context.expectResponse(definition)
+        context.expectResponse(flatDefinition)
         val agent = agent()
 
         val validated =
@@ -92,6 +97,21 @@ class BpmnGeneratorAgentTest {
         assertTrue(error.message.orEmpty().contains("insufficient_activities"))
         assertTrue(context.llmInvocations.isEmpty())
     }
+
+    // Mirrors TestBpmnFixtures.testBpmnDefinition so flatTestDefinition(...).toSealed() equals it.
+    private fun flatTestDefinition(processName: String) = FlatBpmnDefinition(
+        processId = "Process_MakeToast",
+        processName = processName,
+        nodes = listOf(
+            FlatBpmnNode(id = "StartEvent_1", type = FlatBpmnNodeKind.START_EVENT, name = "Order received"),
+            FlatBpmnNode(id = "Task_1", type = FlatBpmnNodeKind.SERVICE_TASK, name = "Toast bread"),
+            FlatBpmnNode(id = "EndEvent_1", type = FlatBpmnNodeKind.END_EVENT, name = "Toast served"),
+        ),
+        sequences = listOf(
+            BpmnEdge(id = "Flow_1", sourceRef = "StartEvent_1", targetRef = "Task_1"),
+            BpmnEdge(id = "Flow_2", sourceRef = "Task_1", targetRef = "EndEvent_1"),
+        ),
+    )
 
     private fun agent() = BpmnGeneratorAgent(
         config = BpmnConfig(),
