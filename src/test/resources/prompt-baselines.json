@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7745,
-			"updatedBy": "#300",
-			"reason": "bpmner/extract_contract.jinja + element includes. Includes restored section-separator blank lines per review feedback."
+			"chars": 6954,
+			"updatedBy": "#310",
+			"reason": "Compressed recognition-heuristic prose in element includes (activity_kinds, decision_kinds, branch_kinds, end_state_kinds) from `Recognise from phrases like \"X\", \"Y\"` to flat `keywords: X, Y` form. Inline JSON examples retained as few-shot priming. topology_rules.jinja was already concise."
 		},
 		"contractFullPayload": {
-			"chars": 21563,
-			"updatedBy": "#302",
-			"reason": "Rendered extract_contract.jinja concatenated with FlatProcessContract schema-format text (FilteringJacksonOutputConverter.format)."
+			"chars": 20772,
+			"updatedBy": "#310",
+			"reason": "Tracks contractPrompt trim; schema-format portion unchanged."
 		},
 		"generationPrompt": {
 			"chars": 13807,
