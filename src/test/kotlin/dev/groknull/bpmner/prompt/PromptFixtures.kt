@@ -25,8 +25,6 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -184,8 +182,6 @@ internal object PromptFixtures {
     fun readinessModel(): Map<String, Any> = mapOf(
         "readyThreshold" to config.readiness.readyThreshold,
         "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
-        "dimensions" to ReadinessDimension.entries.map { it.name },
-        "missingAreas" to MissingProcessArea.entries.map { it.name },
         "processDescription" to canonicalRequest.processDescription,
         "clarificationHistory" to canonicalRequest.clarificationHistory.map {
             mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)

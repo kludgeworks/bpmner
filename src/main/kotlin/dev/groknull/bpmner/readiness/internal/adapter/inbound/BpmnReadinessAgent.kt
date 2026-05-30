@@ -12,8 +12,6 @@ import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
@@ -49,8 +47,6 @@ internal class BpmnReadinessAgent(
     private fun templateModel(request: BpmnRequest): Map<String, Any> = mapOf(
         "readyThreshold" to config.readiness.readyThreshold,
         "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
-        "dimensions" to ReadinessDimension.entries.map { it.name },
-        "missingAreas" to MissingProcessArea.entries.map { it.name },
         "processDescription" to request.processDescription,
         "clarificationHistory" to request.clarificationHistory.map {
             mapOf(

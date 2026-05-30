@@ -35,10 +35,6 @@ Verdict rules:
 - NEEDS_CLARIFICATION also covers inputs with no workflow signal at all;
   never penalise a workflow solely for being automated, technical, or non-business.
 
-Score every readiness dimension:
-{% for d in dimensions %}- {{ d }}
-{% endfor %}
-
 Per-dimension guidance:
 - BPMN_SUITABILITY: A workflow qualifies if it has trigger, ordered activities, and
   end state. Automated, technical, and operational pipelines qualify. Score low only
@@ -48,10 +44,6 @@ Per-dimension guidance:
 - SCOPE_CLARITY: A technical pipeline or service flow is a valid scope.
 - TRACEABILITY_TO_SOURCE: Self-referential text (a document describing its own system)
   is still valid source — traceability is about evidence in the text, not externality.
-
-Use missing process areas only from this vocabulary:
-{% for a in missingAreas %}- {{ a }}
-{% endfor %}
 
 Clarification questions:
 - Ask at most {{ maxClarificationQuestions }} questions.
