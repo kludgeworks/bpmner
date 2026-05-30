@@ -23,14 +23,14 @@
 			"reason": "Rendered generate_bpmn.jinja concatenated with FlatBpmnDefinition schema-format text."
 		},
 		"alignmentPrompt": {
-			"chars": 3245,
-			"updatedBy": "#300",
-			"reason": "bpmner/check_alignment.jinja. Includes section-separator blank lines around Semantic Elements / Sequence Flows / Unreachable Elements / Alignment Task."
+			"chars": 2474,
+			"updatedBy": "#310",
+			"reason": "Removed Output-shape (AlignmentFindings) prose block and classification enum listing (now carried by @JsonClassDescription / @JsonPropertyDescription). Cut worked examples from 2 to 1 (kept misaligned)."
 		},
 		"alignmentFullPayload": {
-			"chars": 5111,
-			"updatedBy": "#302",
-			"reason": "Rendered check_alignment.jinja concatenated with AlignmentFindings schema-format text."
+			"chars": 4340,
+			"updatedBy": "#310",
+			"reason": "Tracks alignmentPrompt trim; schema-format portion unchanged."
 		},
 		"readinessPrompt": {
 			"chars": 3766,
