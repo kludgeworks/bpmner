@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_shell//shell:sh_test.bzl", "sh_test")
@@ -45,6 +46,13 @@ kt_jvm_library(
         "@maven//:org_springframework_modulith_spring_modulith_starter_test",
         "@rules_java//java/runfiles",
     ],
+)
+
+java_binary(
+    name = "update_prompt_baselines",
+    main_class = "dev.groknull.bpmner.prompt.UpdatePromptBaselinesKt",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":bpmner_tests_lib"],
 )
 
 filegroup(
