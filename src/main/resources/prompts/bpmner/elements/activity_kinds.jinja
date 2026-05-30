@@ -1,0 +1,8 @@
+Activity kind (`kind` discriminator); SERVICE is the default:
+- SERVICE — Example: `{kind: "SERVICE", id: "act-charge-card", name: "Charge card"}`.
+- USER — through a form, queue, or review screen. Example: `{kind: "USER", id: "act-approve", name: "Approve loan"}`.
+- SCRIPT — Recognise from phrases like "the system computes", "normalises", "transforms", "calculates", "runs a script". Example: `{kind: "SCRIPT", id: "act-normalise", name: "Normalise address"}`.
+- BUSINESS_RULE — Recognise from phrases like "evaluates the rule set", "applies the credit policy", "decision table", "DMN decision", "rules engine". Carries `decisionName`. Example: `{kind: "BUSINESS_RULE", id: "act-credit", name: "Evaluate credit policy", decisionName: "credit policy"}`.
+- SEND — The workflow does NOT wait for an acknowledgement. Recognise from phrases like "sends a notification", "notifies", "publishes", "emits". Carries `messageName`. Example: `{kind: "SEND", id: "act-decline", name: "Send decline notification", messageName: "decline notification"}`.
+- RECEIVE — the flow BLOCKS until the message arrives. Recognise from phrases like "waits for X message", "blocks until X is received", "the customer must confirm". Name with past-participle ("X received"). Carries `messageName`. Example: `{kind: "RECEIVE", id: "act-await-ack", name: "Customer acknowledgement received", messageName: "customer acknowledgement"}`.
+- MANUAL — paper, in-person, or off-system. Recognise from phrases like "manually visits", "works with paper notes", "off-system". Example: `{kind: "MANUAL", id: "act-inspect", name: "Inspect property condition"}`.

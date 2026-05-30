@@ -1,30 +1,30 @@
 {
 	"version": 1,
-	"_doc": "Char-count baselines for each LLM prompt factory. PromptSizeProbeTest reads this file and asserts each factory's prompt stays below its ceiling. When a prompt shrinks by >15% the test logs a warning prompting the developer to update the baseline to lock in the gain. When updating, set 'chars' to the new measured value, 'ceiling' to ~chars * 1.15 (≈15% headroom for additive future tweaks), fill 'updatedBy' with the issue or PR number, and explain the change in 'reason'.",
+	"_doc": "Char-count baselines for each LLM prompt template. PromptSizeProbeTest reads this file and asserts each template's rendered prompt stays below its ceiling. When a prompt shrinks by >15% the test logs a warning prompting the developer to update the baseline to lock in the gain. When updating, set 'chars' to the new measured value, 'ceiling' to ~chars * 1.15 (≈15% headroom for additive future tweaks), fill 'updatedBy' with the issue or PR number, and explain the change in 'reason'.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7774,
+			"chars": 7737,
 			"ceiling": 8750,
-			"updatedBy": "#297",
-			"reason": "Trimmed definitional duplication from activity, end-state, branch, and decision-kind sections. PARALLEL recognition phrases restored after PR review (#301) for symmetry with EXCLUSIVE/INCLUSIVE bullets — ~170 chars above the immediate post-trim low (#297)."
+			"updatedBy": "#300",
+			"reason": "Re-baselined after migrating BpmnContractPromptFactory to bpmner/extract_contract.jinja + element includes. Char delta -37 (-0.48%) from the previous appendLine output."
 		},
 		"generationPrompt": {
-			"chars": 16989,
+			"chars": 16987,
 			"ceiling": 19550,
-			"updatedBy": "#297",
-			"reason": "Initial baseline after conservatively collapsing activity-kind and end-state-kind mapping tables (#297). The branch-kind mapping table and worked examples are load-bearing and stayed intact."
+			"updatedBy": "#300",
+			"reason": "Re-baselined after migrating BpmnContractGenerationPromptFactory to bpmner/generate_bpmn.jinja. Char delta -2 (-0.01%); template renders byte-near-identical to the appendLine output."
 		},
 		"alignmentPrompt": {
-			"chars": 3246,
+			"chars": 3242,
 			"ceiling": 3750,
-			"updatedBy": "#297",
-			"reason": "Initial baseline. Not trimmed in #297 because AlignmentClassification enum carries no @JsonClassDescription per-value, so the prompt's classification definitions are load-bearing."
+			"updatedBy": "#300",
+			"reason": "Re-baselined after migrating BpmnAlignmentPromptFactory to bpmner/check_alignment.jinja. Char delta -4 (-0.12%)."
 		},
 		"readinessPrompt": {
-			"chars": 3766,
+			"chars": 3764,
 			"ceiling": 4350,
-			"updatedBy": "#297",
-			"reason": "Initial baseline. Not trimmed in #297 because ReadinessDimension and MissingProcessArea enums carry no @JsonClassDescription per-value, so per-dimension guidance in the prompt is load-bearing."
+			"updatedBy": "#300",
+			"reason": "Re-baselined after migrating BpmnReadinessPromptFactory to bpmner/assess_readiness.jinja. Char delta -2 (-0.04%)."
 		}
 	}
 }

@@ -28,7 +28,6 @@ internal class BpmnContractAgent(
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
 ) {
-    private val promptFactory = BpmnContractPromptFactory(config.contract)
     private val logger = LoggerFactory.getLogger(BpmnContractAgent::class.java)
 
     @AchievesGoal(
@@ -56,10 +55,9 @@ internal class BpmnContractAgent(
                 .promptRunner(context)
                 .withPromptContributor(request)
 
-        val flat = promptRunner.createObject(
-            promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
-            FlatProcessContract::class.java,
-        )
+        val flat = promptRunner
+            .creating(FlatProcessContract::class.java)
+            .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
         val contract = flat.toSealed()
 
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
@@ -74,4 +72,25 @@ internal class BpmnContractAgent(
         }
         return ValidatedProcessContract(contract = contract, report = report)
     }
+
+    private fun templateModel(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): Map<String, Any> = mapOf(
+        "maxAssumptions" to config.contract.maxAssumptions,
+        "rationale" to assessment.rationale,
+        "missingAreas" to assessment.missingAreas.map { it.name },
+        "evidence" to assessment.evidence.map {
+            mapOf("id" to it.id, "text" to it.text)
+        },
+        "clarificationHistory" to request.clarificationHistory.map {
+            mapOf(
+                "questionId" to it.questionId,
+                "questionText" to it.questionText,
+                "answerText" to it.answerText,
+            )
+        },
+        "styleGuide" to (request.styleGuide ?: ""),
+        "processDescription" to request.processDescription,
+    )
 }

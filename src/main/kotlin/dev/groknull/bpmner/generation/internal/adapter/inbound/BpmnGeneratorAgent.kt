@@ -16,6 +16,7 @@ import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -50,10 +51,9 @@ internal class BpmnGeneratorAgent(
     private val fidelityChecker: BpmnContractFidelityChecker,
     private val defaultFlowAssigner: DefaultFlowAssigner,
     private val eventPublisher: ApplicationEventPublisher,
-    contractRenderer: ProcessContractMarkdownRenderer,
+    private val contractRenderer: ProcessContractMarkdownRenderer,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
-    private val contractPromptFactory = BpmnContractGenerationPromptFactory(contractRenderer)
 
     /**
      * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
@@ -80,8 +80,9 @@ internal class BpmnGeneratorAgent(
             error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
         val promptRunner = config.generator.promptRunner(context)
-        val prompt = contractPromptFactory.prompt(request, validatedContract)
-        val flat = promptRunner.createObject(prompt, FlatBpmnDefinition::class.java)
+        val flat = promptRunner
+            .creating(FlatBpmnDefinition::class.java)
+            .fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {
@@ -279,4 +280,18 @@ internal class BpmnGeneratorAgent(
         val payload = artifact.toString().take(config.logging.artifactPreviewLength)
         logger.debug("Artifact dump [{}]: {}", label, payload)
     }
+
+    private fun templateModel(
+        request: BpmnRequest,
+        validatedContract: ValidatedProcessContract,
+    ): Map<String, Any> = mapOf(
+        "contractMarkdown" to contractRenderer.render(validatedContract.contract).trim(),
+        "processDescription" to request.processDescription,
+        "styleGuide" to (request.styleGuide ?: ""),
+        "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
+            val examples = advice.examples.joinToString(", ") { "\"$it\"" }
+            val avoid = advice.antiExamples.joinToString(", ") { "\"$it\"" }
+            "- ${advice.kind}: ${advice.shape}\n    examples: $examples\n    avoid:    $avoid"
+        },
+    )
 }

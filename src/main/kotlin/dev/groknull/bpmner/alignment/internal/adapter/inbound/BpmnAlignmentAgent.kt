@@ -23,6 +23,7 @@ import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
 import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
@@ -36,7 +37,7 @@ internal class BpmnAlignmentAgent(
     private val config: BpmnConfig,
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
-    private val promptFactory: BpmnAlignmentPromptFactory,
+    private val contractRenderer: ProcessContractMarkdownRenderer,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     @AchievesGoal(
@@ -96,10 +97,9 @@ internal class BpmnAlignmentAgent(
         contract: ProcessContract,
         summary: BpmnDefinitionSummary,
     ): AlignmentFindings = try {
-        promptRunner.createObject(
-            promptFactory.prompt(request, contract, summary),
-            AlignmentFindings::class.java,
-        )
+        promptRunner
+            .creating(AlignmentFindings::class.java)
+            .fromTemplate("bpmner/check_alignment", templateModel(request, contract, summary))
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnAlignmentException(
             message = "Alignment model failed to produce a structured report: ${e.message}",
@@ -113,4 +113,24 @@ internal class BpmnAlignmentAgent(
             cause = e,
         )
     }
+
+    private fun templateModel(
+        request: BpmnRequest,
+        contract: ProcessContract,
+        summary: BpmnDefinitionSummary,
+    ): Map<String, Any> = mapOf(
+        "contractMarkdown" to contractRenderer.render(contract).trim(),
+        "processId" to summary.processId,
+        "processName" to summary.processName,
+        "elementLines" to summary.elements.map { element ->
+            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
+        },
+        "flowLines" to summary.flows.map { flow ->
+            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
+            val name = flow.name?.let { " ($it)" } ?: ""
+            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
+        },
+        "unreachableElementIds" to summary.unreachableElementIds,
+        "processDescription" to request.processDescription,
+    )
 }

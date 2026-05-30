@@ -3,31 +3,31 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions")
+
 package dev.groknull.bpmner.prompt
 
+import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
-import dev.groknull.bpmner.alignment.internal.adapter.inbound.BpmnAlignmentPromptFactory
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.contract.internal.adapter.inbound.BpmnContractPromptFactory
 import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.EvidenceSourceType
+import dev.groknull.bpmner.core.MissingProcessArea
+import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
-import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnContractGenerationPromptFactory
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessPromptFactory
 import org.slf4j.LoggerFactory
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -35,9 +35,9 @@ import kotlin.test.assertTrue
 /**
  * Ratchet test for the size of LLM-facing prompts.
  *
- * Reads baselines from `src/test/resources/prompt-baselines.json`. Fails if any factory's prompt
- * grows past its ceiling; logs a warning if it shrinks more than 15% below the recorded baseline,
- * so the developer can lock in the gain by updating the baseline file.
+ * Reads baselines from `src/test/resources/prompt-baselines.json`. Fails if any template's rendered
+ * prompt grows past its ceiling; logs a warning if it shrinks more than 15% below the recorded
+ * baseline, so the developer can lock in the gain by updating the baseline file.
  *
  * The baselines file is the canonical, reviewable record of prompt size targets — much more
  * visible in PR diffs than constants buried in test code.
@@ -45,37 +45,30 @@ import kotlin.test.assertTrue
 class PromptSizeProbeTest {
     private val baselines: JsonNode = loadBaselines()
     private val config = BpmnConfig()
+    private val renderer = JinjavaTemplateRenderer()
     private val markdownRenderer = ProcessContractMarkdownRenderer()
 
     @Test
     fun `contract extraction prompt stays within budget`() {
-        val factory = BpmnContractPromptFactory(config.contract)
-        val prompt = factory.prompt(canonicalRequest, canonicalAssessment, clarificationHistory = emptyList())
+        val prompt = renderer.renderLoadedTemplate("bpmner/extract_contract", contractExtractionModel())
         checkBaseline("contractPrompt", prompt.length)
     }
 
     @Test
     fun `bpmn generation prompt stays within budget`() {
-        val factory = BpmnContractGenerationPromptFactory(markdownRenderer)
-        val prompt =
-            factory.prompt(
-                canonicalRequest,
-                ValidatedProcessContract(canonicalContract, ContractValidationReport(emptyList())),
-            )
+        val prompt = renderer.renderLoadedTemplate("bpmner/generate_bpmn", bpmnGenerationModel())
         checkBaseline("generationPrompt", prompt.length)
     }
 
     @Test
     fun `alignment prompt stays within budget`() {
-        val factory = BpmnAlignmentPromptFactory(markdownRenderer)
-        val prompt = factory.prompt(canonicalRequest, canonicalContract, canonicalBpmnSummary)
+        val prompt = renderer.renderLoadedTemplate("bpmner/check_alignment", alignmentModel())
         checkBaseline("alignmentPrompt", prompt.length)
     }
 
     @Test
     fun `readiness prompt stays within budget`() {
-        val factory = BpmnReadinessPromptFactory(config.readiness)
-        val prompt = factory.prompt(canonicalRequest)
+        val prompt = renderer.renderLoadedTemplate("bpmner/assess_readiness", readinessModel())
         checkBaseline("readinessPrompt", prompt.length)
     }
 
@@ -106,6 +99,56 @@ class PromptSizeProbeTest {
         }
     }
 
+    private fun contractExtractionModel(): Map<String, Any> = mapOf(
+        "maxAssumptions" to config.contract.maxAssumptions,
+        "rationale" to canonicalAssessment.rationale,
+        "missingAreas" to canonicalAssessment.missingAreas.map { it.name },
+        "evidence" to canonicalAssessment.evidence.map { mapOf("id" to it.id, "text" to it.text) },
+        "clarificationHistory" to canonicalRequest.clarificationHistory.map {
+            mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)
+        },
+        "styleGuide" to (canonicalRequest.styleGuide ?: ""),
+        "processDescription" to canonicalRequest.processDescription,
+    )
+
+    private fun bpmnGenerationModel(): Map<String, Any> = mapOf(
+        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
+        "processDescription" to canonicalRequest.processDescription,
+        "styleGuide" to (canonicalRequest.styleGuide ?: ""),
+        "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
+            val examples = advice.examples.joinToString(", ") { "\"$it\"" }
+            val avoid = advice.antiExamples.joinToString(", ") { "\"$it\"" }
+            "- ${advice.kind}: ${advice.shape}\n    examples: $examples\n    avoid:    $avoid"
+        },
+    )
+
+    private fun alignmentModel(): Map<String, Any> = mapOf(
+        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
+        "processId" to canonicalBpmnSummary.processId,
+        "processName" to canonicalBpmnSummary.processName,
+        "elementLines" to canonicalBpmnSummary.elements.map { element ->
+            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
+        },
+        "flowLines" to canonicalBpmnSummary.flows.map { flow ->
+            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
+            val name = flow.name?.let { " ($it)" } ?: ""
+            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
+        },
+        "unreachableElementIds" to canonicalBpmnSummary.unreachableElementIds,
+        "processDescription" to canonicalRequest.processDescription,
+    )
+
+    private fun readinessModel(): Map<String, Any> = mapOf(
+        "readyThreshold" to config.readiness.readyThreshold,
+        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
+        "dimensions" to ReadinessDimension.entries.map { it.name },
+        "missingAreas" to MissingProcessArea.entries.map { it.name },
+        "processDescription" to canonicalRequest.processDescription,
+        "clarificationHistory" to canonicalRequest.clarificationHistory.map {
+            mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)
+        },
+    )
+
     private fun loadBaselines(): JsonNode {
         val stream =
             javaClass.classLoader.getResourceAsStream("prompt-baselines.json")
@@ -116,7 +159,7 @@ class PromptSizeProbeTest {
     private companion object {
         private val logger = LoggerFactory.getLogger(PromptSizeProbeTest::class.java)
 
-        // Canonical inputs reused across the four factory probes. Realistic enough to exercise
+        // Canonical inputs reused across the four template probes. Realistic enough to exercise
         // every conditional section (assessment evidence, missing areas, contract activities and
         // decisions, BPMN summary), so the measured size reflects production-shaped prompts.
 

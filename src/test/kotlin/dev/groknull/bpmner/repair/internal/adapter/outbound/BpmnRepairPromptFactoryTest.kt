@@ -7,6 +7,7 @@
 
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
+import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -163,7 +164,12 @@ class BpmnRepairPromptFactoryTest {
 
     private fun factory(): BpmnRepairPromptFactory {
         val fingerprints = BpmnFingerprintService()
-        return BpmnRepairPromptFactory(NoopLintingPort, fingerprints, NoopRuleGuidancePort)
+        return BpmnRepairPromptFactory(
+            NoopLintingPort,
+            fingerprints,
+            NoopRuleGuidancePort,
+            JinjavaTemplateRenderer(),
+        )
     }
 
     private fun lintDiagnostic(

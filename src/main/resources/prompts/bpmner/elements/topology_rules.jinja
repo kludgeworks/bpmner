@@ -1,0 +1,5 @@
+Loop and topology rules:
+- When the source describes an iterative process (retry / repair / poll / until / while), set the branch's `nextRef` to the id of the activity that the iteration loops back to.
+- When a decision has multiple exit conditions (e.g. pass, no-progress, exhausted), declare each as a separate branch with its own condition. Set `nextRef` on the looping branch; leave it null on the exiting branches.
+- Branch ids referenced via `nextRef` must exist elsewhere in `activities`, `decisions`, or `endStates`.
+- For sequential (non-looping) flow, leave `nextRef` null; the branch is assumed to lead to the next sequential element.

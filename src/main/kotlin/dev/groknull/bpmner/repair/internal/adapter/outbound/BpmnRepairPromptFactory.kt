@@ -9,6 +9,7 @@ import com.embabel.chat.AssistantMessage
 import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
+import com.embabel.common.textio.template.TemplateRenderer
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
@@ -32,6 +33,7 @@ internal class BpmnRepairPromptFactory(
     private val bpmnLintingPort: BpmnLintingPort,
     private val fingerprints: BpmnFingerprintService,
     private val ruleGuidance: BpmnRuleGuidancePort,
+    private val templateRenderer: TemplateRenderer,
 ) : BpmnRepairPromptPort {
     override fun initialMessages(
         request: BpmnRequest,
@@ -49,24 +51,14 @@ internal class BpmnRepairPromptFactory(
         diagnostics: List<BpmnDiagnostic>,
     ): String {
         requireRecognized(definition)
-        return buildString {
-            appendLine("The following diagnostics can be fixed with targeted name or label patches.")
-            appendLine("Return a BpmnRepairPatch with the minimum operations needed to fix these issues.")
-            appendLine(
-                "Do not rewrite the whole graph — only include operations that " +
-                    "directly address the listed diagnostics.",
-            )
-            appendLine()
-            val guidance = ruleGuidance.getLlmRuleGuidance()
-            if (guidance.isNotEmpty()) {
-                appendLine(guidance)
-                appendLine()
-            }
-            appendLine("Current canonical BpmnDefinition JSON:")
-            appendLine(fingerprints.serializeDefinition(definition))
-            appendLine()
-            appendDiagnosticBlock(diagnostics)
-        }
+        return templateRenderer.renderLoadedTemplate(
+            "bpmner/repair/patch_feedback",
+            mapOf(
+                "guidance" to ruleGuidance.getLlmRuleGuidance(),
+                "canonicalJson" to fingerprints.serializeDefinition(definition),
+                "diagnosticBlock" to diagnosticBlock(diagnostics),
+            ),
+        )
     }
 
     override fun fullRepairFeedback(
@@ -74,10 +66,15 @@ internal class BpmnRepairPromptFactory(
         diagnostics: List<BpmnDiagnostic>,
     ): String {
         requireRecognized(attempt.definition)
-        return fullRepairFeedback(
-            definition = attempt.definition,
-            renderedXml = attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation),
-            diagnostics = diagnostics,
+        return templateRenderer.renderLoadedTemplate(
+            "bpmner/repair/full_feedback",
+            mapOf(
+                "guidance" to ruleGuidance.getLlmRuleGuidance(),
+                "canonicalJson" to fingerprints.serializeDefinition(attempt.definition),
+                "renderedXml" to (attempt.evaluation.rendered?.xml ?: renderFailureContext(attempt.evaluation)),
+                "scopeBlock" to scopeBlock(diagnostics),
+                "diagnosticBlock" to diagnosticBlock(diagnostics),
+            ),
         )
     }
 
@@ -109,62 +106,12 @@ internal class BpmnRepairPromptFactory(
         return if (content.isBlank()) null else PromptContributor.fixed(content)
     }
 
-    private fun fullRepairFeedback(
-        definition: BpmnDefinition,
-        renderedXml: String,
-        diagnostics: List<BpmnDiagnostic>,
-    ): String = buildString {
-        appendLine("The BPMN definition needs repair. Return the full corrected BpmnDefinition object.")
-        appendLine()
-        val guidance = ruleGuidance.getLlmRuleGuidance()
-        if (guidance.isNotEmpty()) {
-            appendLine(guidance)
-            appendLine()
-        }
-        appendLine("Use the typed BPMN definition as the canonical edit surface.")
-        appendLine(
-            "Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.",
-        )
-        appendLine()
-        appendLine(
-            "Preserve `isDefault = true` on sequence flows that carry the default branch marker. " +
-                "Do not add a conditionExpression to a default flow. The `default` attribute on an " +
-                "exclusive gateway is set by exactly one outbound flow with isDefault=true.",
-        )
-        appendLine()
-        appendLine("Current canonical BpmnDefinition JSON:")
-        appendLine(fingerprints.serializeDefinition(definition))
-        appendLine()
-        appendLine("Rendered BPMN XML:")
-        appendLine(renderedXml)
-        appendLine()
-        val scopes = diagnostics.mapNotNull { it.repairScope }.distinct()
-        if (scopes.isNotEmpty()) {
-            appendLine("Repair scope:")
-            scopes.forEach { scope ->
-                val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
-                appendLine(
-                    "- ${scope.name.lowercase()} owners=" +
-                        owners.ifEmpty { listOf("unscoped") }.joinToString(","),
-                )
-            }
-            appendLine()
-        }
-        appendDiagnosticBlock(diagnostics)
-    }
-
     /**
-     * Render the diagnostic list grouped by severity (errors first), with a single sentence
-     * teaching the LLM the contract: ERRORs must be fixed; WARNINGs are advisory. Without
-     * this guidance the repair LLM treats warnings as forcing functions and may invent
-     * structural changes to satisfy them — which is exactly the failure mode that produced
-     * the credit-tier run's conditional-flow regressions.
-     *
-     * Phase 4 (#219) dropped the local-fix-failure suffix because GOAP's cost ordering +
-     * fingerprint cycle delivers the escalation that the prior `failedLocally` flag tracked
-     * manually — the LLM no longer needs the per-diagnostic local-outcome context.
+     * Render the diagnostic list grouped by severity (errors first). The contract teaches
+     * the LLM that ERRORs must be fixed and WARNINGs are advisory — without this guidance
+     * the repair LLM may invent structural changes to satisfy warnings.
      */
-    private fun StringBuilder.appendDiagnosticBlock(diagnostics: List<BpmnDiagnostic>) {
+    private fun diagnosticBlock(diagnostics: List<BpmnDiagnostic>): String = buildString {
         val errors = diagnostics.filter { it.isBlocking }
         val advisories = diagnostics.filterNot { it.isBlocking }
         if (errors.isNotEmpty()) {
@@ -179,13 +126,28 @@ internal class BpmnRepairPromptFactory(
             )
             advisories.forEach { d -> appendLine(formatDiagnostic(d)) }
         }
+    }.trimEnd()
+
+    private fun scopeBlock(diagnostics: List<BpmnDiagnostic>): String {
+        val scopes = diagnostics.mapNotNull { it.repairScope }.distinct()
+        if (scopes.isEmpty()) return ""
+        return buildString {
+            appendLine("Repair scope:")
+            scopes.forEach { scope ->
+                val owners = diagnostics.filter { it.repairScope == scope }.mapNotNull { it.ownerRef }.distinct()
+                appendLine(
+                    "- ${scope.name.lowercase()} owners=" +
+                        owners.ifEmpty { listOf("unscoped") }.joinToString(","),
+                )
+            }
+        }.trimEnd()
     }
 
     private fun formatDiagnostic(diagnostic: BpmnDiagnostic): String {
         val base = "- ${diagnostic.format()}"
-        // For known naming-rule violations, append a kind-specific shape recommendation so
-        // the LLM has concrete examples of compliant names — addresses the failure mode where
-        // the repair LLM produces a rename that still violates the rule's wink-NLP detector.
+        // Append a kind-specific shape recommendation for naming-rule violations so the LLM
+        // has concrete examples of compliant names. Addresses repair LLM producing renames
+        // that still violate the rule's wink-NLP detector.
         val shapeHintSuffix =
             diagnostic.rule
                 ?.let { BpmnNamingShapeAdvice.adviceForRule(it) }
@@ -203,10 +165,11 @@ internal class BpmnRepairPromptFactory(
     }
 
     /**
-     * Belt-and-braces guard for #287. Pre-flight in `BpmnRepairAgent.validate` short-circuits
-     * before these prompt-building methods run; if that pre-flight is ever bypassed, fail
-     * here with a named precondition rather than propagating an opaque Jackson
-     * `InvalidDefinitionException` from `fingerprints.serializeDefinition`.
+     * Belt-and-braces guard for the unrecognized-element scanner. Pre-flight in
+     * BpmnRepairAgent.validate short-circuits before these prompt-building methods run;
+     * if that pre-flight is ever bypassed, fail here with a named precondition rather than
+     * propagating an opaque Jackson InvalidDefinitionException from
+     * fingerprints.serializeDefinition.
      */
     private fun requireRecognized(definition: BpmnDefinition) {
         check(BpmnUnrecognizedElementScanner.scan(definition).isEmpty()) {

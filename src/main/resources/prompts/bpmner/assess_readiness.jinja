@@ -1,0 +1,67 @@
+Return only a structured ProcessInputAssessment object.
+
+JSON formatting: when any string field (especially evidence.text) needs to mention a quoted term from the source, escape every inner double quote as \" or use single quotes or backticks. Never let an unescaped " appear inside a JSON string value.
+
+Assess whether the source text describes a workflow that is ready for BPMN modelling.
+
+What counts as a workflow:
+- A workflow is any repeatable, ordered sequence of activities with a clear start and end.
+- Domain is irrelevant. Valid workflows include, but are not limited to:
+  * business processes (orders, approvals, claims, onboarding)
+  * automated or service pipelines (data ingest, ETL, CI/CD, request handling)
+  * technical or operational procedures (incident response, deployment, repair loops)
+  * scientific or clinical procedures (lab protocols, triage)
+  * personal or domestic routines (cooking, travel, study)
+- Actors may be human roles, organisations, software agents, services, or systems.
+  Software agents and automated services are valid BPMN actors/lanes — do not penalise
+  inputs for lacking human participants.
+- BPMN 2.0 explicitly supports service tasks, send/receive tasks, and system lanes.
+  An automated or technical pipeline is BPMN-suitable whenever it has the structural
+  elements (trigger, ordered activities, decisions where present, end state).
+
+Evaluate substance, not framing:
+- The source text may include commentary, instructions, headings, or meta-prose.
+- Score based on whether a sequenced workflow can be extracted from the substantive
+  content, not on whether the document is shaped as a process description.
+
+Grounding rules (these stay strict):
+- Do not invent actors, triggers, end states, exceptions, artifacts, or activities.
+- Mark unsupported facts as missing rather than filling gaps from assumptions.
+- Ground evidence only in exact or narrowly paraphrased source text.
+
+Verdict rules:
+- READY when overallScore >= {{ readyThreshold }}.
+- NEEDS_CLARIFICATION when overallScore < {{ readyThreshold }}.
+- NEEDS_CLARIFICATION also covers inputs with no workflow signal at all;
+  never penalise a workflow solely for being automated, technical, or non-business.
+
+Score every readiness dimension:
+{% for d in dimensions %}- {{ d }}
+{% endfor %}
+Per-dimension guidance:
+- BPMN_SUITABILITY: A workflow qualifies if it has trigger, ordered activities, and
+  end state. Automated, technical, and operational pipelines qualify. Score low only
+  when no sequenced workflow exists (e.g. static descriptions, opinions, UI specs).
+- ACTORS_ROLES: Software agents, services, systems, and named components count as
+  valid actors. Do not score low just because actors are non-human.
+- SCOPE_CLARITY: A technical pipeline or service flow is a valid scope.
+- TRACEABILITY_TO_SOURCE: Self-referential text (a document describing its own system)
+  is still valid source — traceability is about evidence in the text, not externality.
+
+Use missing process areas only from this vocabulary:
+{% for a in missingAreas %}- {{ a }}
+{% endfor %}
+Clarification questions:
+- Ask at most {{ maxClarificationQuestions }} questions.
+- Make each question specific and answerable.
+- Tie every question to relatedDimensions and relatedMissingAreas.
+
+Original BPMN request text:
+{{ processDescription }}
+{% if clarificationHistory %}
+Prior clarification answers:
+{% for c in clarificationHistory %}- [{{ c.questionId }}] Q: {{ c.questionText }}
+  A: {{ c.answerText }}
+{% endfor %}
+Re-assess readiness using both the original text and clarification answers.
+{% endif %}

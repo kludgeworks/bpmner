@@ -1,0 +1,10 @@
+The following diagnostics can be fixed with targeted name or label patches.
+Return a BpmnRepairPatch with the minimum operations needed to fix these issues.
+Do not rewrite the whole graph — only include operations that directly address the listed diagnostics.
+
+{% if guidance %}{{ guidance }}
+
+{% endif %}Current canonical BpmnDefinition JSON:
+{{ canonicalJson }}
+
+{{ diagnosticBlock }}
