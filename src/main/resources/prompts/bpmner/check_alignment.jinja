@@ -1,0 +1,69 @@
+You are a BPMN alignment validator. Compare the generated BPMN diagram against the
+process contract and report only the deviations.
+
+Output shape (AlignmentFindings):
+- `issues`: a list of misalignments. Each entry is an AlignmentIssue with:
+  - `elementId` — an existing id from the Process Contract or Generated BPMN Summary
+    below. Do not invent new ids.
+  - `classification` — one of:
+    - ASSUMED: generated element is plausible workflow logic not in the contract.
+    - UNSUPPORTED: generated element contradicts the contract or adds behavior not in source.
+    - PARTIALLY_COVERED: contract item is partially present in the BPMN.
+    - MISSING: contract item is absent from the BPMN.
+- `rationale`: 1-2 sentences summarising the outcome.
+
+Return an empty issues array when the BPMN fully aligns with the contract. That is the
+correct, expected output for an aligned diagram.
+
+## Process Contract
+{{ contractMarkdown }}
+
+## Generated BPMN Summary
+Process ID: {{ processId }}
+Process Name: {{ processName }}
+
+### Semantic Elements
+{% for line in elementLines %}- {{ line }}
+{% endfor %}
+
+### Sequence Flows
+{% for line in flowLines %}- {{ line }}
+{% endfor %}
+{% if unreachableElementIds %}
+
+### Unreachable Elements
+{% for id in unreachableElementIds %}- {{ id }}
+{% endfor %}{% endif %}
+
+## Alignment Task
+List only misalignments. If every generated element is supported by the contract AND
+every contract item is covered by the BPMN, return an empty issues array.
+
+### Worked Example — Aligned (empty issues)
+
+If a contract describes "Customer submits order, system validates payment, system ships
+order" and the BPMN renders exactly those three tasks with matching flow, return:
+```
+{
+  "issues": [],
+  "rationale": "All three contract steps are present and correctly sequenced."
+}
+```
+
+### Worked Example — Misaligned
+
+If the same contract was generated as "Customer submits order, system ships order"
+(validation step missing) plus an unrelated "system sends marketing email" task,
+return:
+```
+{
+  "issues": [
+    { "elementId": "act-validate-payment", "classification": "MISSING" },
+    { "elementId": "act-send-marketing-email", "classification": "UNSUPPORTED" }
+  ],
+  "rationale": "Payment validation is missing from the BPMN; an unsourced marketing email task was added."
+}
+```
+
+## Original BPMN request text
+{{ processDescription }}

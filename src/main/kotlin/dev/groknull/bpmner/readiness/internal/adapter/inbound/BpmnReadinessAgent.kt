@@ -12,6 +12,8 @@ import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.MissingProcessArea
+import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
@@ -24,7 +26,6 @@ internal class BpmnReadinessAgent(
     private val config: BpmnConfig,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    private val promptFactory = BpmnReadinessPromptFactory(config.readiness)
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
 
     @AchievesGoal(
@@ -37,15 +38,26 @@ internal class BpmnReadinessAgent(
         context: OperationContext,
     ): ProcessInputAssessment {
         val promptRunner = config.readinessAssessor.promptRunner(context).withPromptContributor(request)
-        // Phase 5 (#220): `createObject` returns non-null per Embabel's contract; it throws on
-        // failure. Let the typed exception propagate to the planner.
-        val modelAssessment =
-            promptRunner.createObject(
-                promptFactory.prompt(request),
-                ProcessInputAssessment::class.java,
-            )
+        val modelAssessment = promptRunner
+            .creating(ProcessInputAssessment::class.java)
+            .fromTemplate("bpmner/assess_readiness", templateModel(request))
         val assessment = postChecker.apply(request, modelAssessment)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment
     }
+
+    private fun templateModel(request: BpmnRequest): Map<String, Any> = mapOf(
+        "readyThreshold" to config.readiness.readyThreshold,
+        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
+        "dimensions" to ReadinessDimension.entries.map { it.name },
+        "missingAreas" to MissingProcessArea.entries.map { it.name },
+        "processDescription" to request.processDescription,
+        "clarificationHistory" to request.clarificationHistory.map {
+            mapOf(
+                "questionId" to it.questionId,
+                "questionText" to it.questionText,
+                "answerText" to it.answerText,
+            )
+        },
+    )
 }

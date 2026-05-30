@@ -1,0 +1,53 @@
+Return only a structured FlatProcessContract object.
+
+Extract a source-grounded process contract from the supplied inputs.
+Do not invent actors, triggers, end states, decisions, branches, or artifacts.
+If a fact required for a complete contract is not present in the source text or clarification answers, record it as a ContractAssumption with at least one sourceId.
+Cap assumptions at {{ maxAssumptions }}.
+
+Source grounding (provenance):
+- Every ContractActivity, ContractDecision, ContractEndState, and ContractAssumption must list at least one entry in its `sourceIds` field.
+- A source id is an assessment evidence id, a clarification questionId, or a literal input-text marker.
+- Return the process start in `start` with a `trigger` object and `sourceIds`.
+- `start.sourceIds` must list at least one source id grounding the trigger.
+- Schedule language (dates, delays, cycles, cron-like intervals): set `trigger.type` = TIMER and populate `timerKind` + `expression` + `description`.
+- Webhook/API/event-bus triggers intended for one process/listener: set `trigger.type` = MESSAGE and populate `messageName` + `description`.
+- Broadcast or multi-listener triggers: set `trigger.type` = SIGNAL and populate `signalName` + `description`.
+- Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
+
+{% include "bpmner/elements/activity_kinds" %}
+
+{% include "bpmner/elements/end_state_kinds" %}
+
+{% include "bpmner/elements/branch_kinds" %}
+
+{% include "bpmner/elements/topology_rules" %}
+
+{% include "bpmner/elements/decision_kinds" %}
+
+Readiness assessment rationale:
+{{ rationale }}
+{% if missingAreas %}
+
+Missing process areas to surface as assumptions or clarifications:
+{% for area in missingAreas %}- {{ area }}
+{% endfor %}{% endif %}
+{% if evidence %}
+
+Assessment evidence ids available for use in `sourceIds`:
+{% for e in evidence %}- {{ e.id }}: {{ e.text }}
+{% endfor %}{% endif %}
+{% if clarificationHistory %}
+
+Clarification answers (in order). Use questionId in `sourceIds` when relevant:
+{% for c in clarificationHistory %}- [{{ c.questionId }}] Q: {{ c.questionText }}
+  A: {{ c.answerText }}
+{% endfor %}{% endif %}
+{% if styleGuide %}
+
+Style guide (constraints on naming and structure):
+{{ styleGuide }}
+{% endif %}
+
+Original BPMN request text:
+{{ processDescription }}

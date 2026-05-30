@@ -1,0 +1,18 @@
+The BPMN definition needs repair. Return the full corrected FlatBpmnDefinition object.
+
+{% if guidance %}{{ guidance }}
+
+{% endif %}Use the typed BPMN definition as the canonical edit surface.
+Use the rendered BPMN XML only as supporting context when diagnostics refer to rendered elements.
+
+Preserve `isDefault = true` on sequence flows that carry the default branch marker. Do not add a conditionExpression to a default flow. The `default` attribute on an exclusive gateway is set by exactly one outbound flow with isDefault=true.
+
+Current canonical FlatBpmnDefinition JSON:
+{{ canonicalJson }}
+
+Rendered BPMN XML:
+{{ renderedXml }}
+
+{% if scopeBlock %}{{ scopeBlock }}
+
+{% endif %}{{ diagnosticBlock }}
