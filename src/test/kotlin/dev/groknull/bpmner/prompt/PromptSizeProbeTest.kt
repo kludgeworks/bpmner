@@ -3,12 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("TooManyFunctions") // one @Test per probe — 4 prompt + 4 full-payload + 2 repair (= 10 @Test functions)
-
 package dev.groknull.bpmner.prompt
 
 import dev.groknull.bpmner.repair.internal.adapter.outbound.RepairFixtures
-import kotlin.test.Test
+import org.junit.jupiter.api.DynamicTest
+import org.junit.jupiter.api.TestFactory
 import kotlin.test.fail
 
 /**
@@ -18,63 +17,32 @@ import kotlin.test.fail
  * The ratchet derives ceiling as `chars × 1.15`; growth past ceiling fails, shrinkage below
  * baseline also fails (pointing the dev at `bazel run //src/test:update_prompt_baselines`).
  *
+ * Each probe surfaces as a `DynamicTest` named `"<key> stays within budget"`, so a failing
+ * probe still reports a self-describing name in the test output without a dedicated `@Test`
+ * method per call-site.
+ *
  * Canonical inputs live in [PromptFixtures] and [RepairFixtures] so the update binary and the
  * behaviour test can reuse them.
  */
 class PromptSizeProbeTest {
     private val ratchet = PromptBaselineRatchet.fromClasspath()
 
-    @Test
-    fun `contract extraction prompt stays within budget`() {
-        checkBaseline("contractPrompt", PromptFixtures.contract.render().length)
-    }
-
-    @Test
-    fun `bpmn generation prompt stays within budget`() {
-        checkBaseline("generationPrompt", PromptFixtures.generation.render().length)
-    }
-
-    @Test
-    fun `alignment prompt stays within budget`() {
-        checkBaseline("alignmentPrompt", PromptFixtures.alignment.render().length)
-    }
-
-    @Test
-    fun `readiness prompt stays within budget`() {
-        checkBaseline("readinessPrompt", PromptFixtures.readiness.render().length)
-    }
-
-    @Test
-    fun `contract extraction full payload stays within budget`() {
-        checkBaseline("contractFullPayload", PromptFixtures.contract.fullPayload().length)
-    }
-
-    @Test
-    fun `bpmn generation full payload stays within budget`() {
-        checkBaseline("generationFullPayload", PromptFixtures.generation.fullPayload().length)
-    }
-
-    @Test
-    fun `alignment full payload stays within budget`() {
-        checkBaseline("alignmentFullPayload", PromptFixtures.alignment.fullPayload().length)
-    }
-
-    @Test
-    fun `readiness full payload stays within budget`() {
-        checkBaseline("readinessFullPayload", PromptFixtures.readiness.fullPayload().length)
-    }
-
-    @Test
-    fun `repair patch feedback prompt stays within budget`() {
-        checkBaseline("repairPatchPrompt", RepairFixtures.renderPatchFeedback().length)
-    }
-
-    @Test
-    fun `repair full feedback prompt stays within budget`() {
-        checkBaseline("repairFullPrompt", RepairFixtures.renderFullFeedback().length)
-    }
-
-    private fun checkBaseline(key: String, actual: Int) {
-        ratchet.check(key, actual)?.let { fail(it) }
+    @TestFactory
+    fun `probe stays within budget`(): List<DynamicTest> {
+        fun probe(key: String, measure: () -> Int): DynamicTest = DynamicTest.dynamicTest("$key stays within budget") {
+            ratchet.check(key, measure())?.let { fail(it) }
+        }
+        return listOf(
+            probe("contractPrompt") { PromptFixtures.contract.render().length },
+            probe("contractFullPayload") { PromptFixtures.contract.fullPayload().length },
+            probe("generationPrompt") { PromptFixtures.generation.render().length },
+            probe("generationFullPayload") { PromptFixtures.generation.fullPayload().length },
+            probe("alignmentPrompt") { PromptFixtures.alignment.render().length },
+            probe("alignmentFullPayload") { PromptFixtures.alignment.fullPayload().length },
+            probe("readinessPrompt") { PromptFixtures.readiness.render().length },
+            probe("readinessFullPayload") { PromptFixtures.readiness.fullPayload().length },
+            probe("repairPatchPrompt") { RepairFixtures.renderPatchFeedback().length },
+            probe("repairFullPrompt") { RepairFixtures.renderFullFeedback().length },
+        )
     }
 }
