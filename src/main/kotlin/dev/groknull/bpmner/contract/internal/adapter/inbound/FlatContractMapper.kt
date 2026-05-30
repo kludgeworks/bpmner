@@ -176,6 +176,10 @@ public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
     sourceIds = sourceIds,
 )
 
-private fun <T : Any> requireField(value: T?, kind: Enum<*>, fieldName: String, owningId: String): T {
-    return requireNotNull(value) { "$kind at id=$owningId requires $fieldName" }
+private fun <T : Any> requireField(value: T?, kind: Enum<*>, fieldName: String, context: String): T {
+    val nonNull = requireNotNull(value) { "$kind ($context) requires $fieldName" }
+    if (nonNull is CharSequence) {
+        require(nonNull.isNotBlank()) { "$kind ($context) requires non-blank $fieldName" }
+    }
+    return nonNull
 }

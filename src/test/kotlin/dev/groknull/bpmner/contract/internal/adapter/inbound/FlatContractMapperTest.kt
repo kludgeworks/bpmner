@@ -123,6 +123,30 @@ class FlatContractMapperTest {
     }
 
     @Test
+    fun `kind-required CharSequence fields reject blank values, not just null`() {
+        // Blank decisionName on a BUSINESS_RULE activity must be rejected — Jakarta @NotBlank
+        // on the sealed constructor is schema-only and would let a blank "" through.
+        val flatActivity = flatActivity(
+            FlatActivityKind.BUSINESS_RULE,
+            id = "a-br",
+            decisionName = "   ",
+        )
+        val activityEx = assertFailsWith<IllegalArgumentException> { flatActivity.toSealed() }
+        assertTrue("a-br" in activityEx.message.orEmpty())
+        assertTrue("decisionName" in activityEx.message.orEmpty())
+
+        // Same guarantee for trigger fields, which use description (not id) as the error context.
+        val flatTrigger = FlatContractTrigger(
+            type = FlatTriggerKind.MESSAGE,
+            description = "order webhook",
+            messageName = "",
+        )
+        val triggerEx = assertFailsWith<IllegalArgumentException> { flatTrigger.toSealed() }
+        assertTrue("order webhook" in triggerEx.message.orEmpty())
+        assertTrue("messageName" in triggerEx.message.orEmpty())
+    }
+
+    @Test
     fun `every FlatContractBranch kind round-trips to the matching sealed subtype`() {
         val conditional = FlatContractBranch(
             id = "b-c",

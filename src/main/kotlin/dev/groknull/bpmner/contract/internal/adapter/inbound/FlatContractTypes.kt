@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractGatewayKind
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -295,12 +296,13 @@ public data class FlatContractDecision(
     val branches: List<FlatContractBranch>,
     @get:JsonPropertyDescription(
         "How the branches relate. EXCLUSIVE (default) = exactly one branch taken based on its " +
-            "condition. PARALLEL = all branches activate concurrently and reconverge at a join. " +
-            "Use PARALLEL when the source describes concurrent / independent tracks, 'in parallel', " +
-            "'all of the following must complete', etc.",
+            "condition. INCLUSIVE = one or more branches whose conditions are true activate " +
+            "concurrently — use when the source describes independent optional add-ons that may " +
+            "apply singly, together, or not at all. PARALLEL = all branches activate concurrently " +
+            "regardless of conditions and reconverge at a join — use for 'in parallel' / " +
+            "'all of the following must complete'.",
     )
-    val kind: dev.groknull.bpmner.contract.ContractGatewayKind =
-        dev.groknull.bpmner.contract.ContractGatewayKind.EXCLUSIVE,
+    val kind: ContractGatewayKind = ContractGatewayKind.EXCLUSIVE,
     @field:Size(max = 10)
     @get:JsonPropertyDescription("Source ids grounding this decision in evidence.")
     val sourceIds: List<String> = emptyList(),
