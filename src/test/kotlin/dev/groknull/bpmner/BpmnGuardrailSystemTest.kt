@@ -17,11 +17,7 @@ import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.ReadinessDimension
@@ -29,6 +25,9 @@ import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnGenerationUseCase
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.FlatBpmnNode
+import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -176,8 +175,8 @@ class BpmnGuardrailSystemTest(
         // 3. Generation produces a definition
         whenCreateObject(
             { it.contains("Generate a BPMN definition object") },
-            BpmnDefinition::class.java,
-        ).thenReturn(validDefinition())
+            FlatBpmnDefinition::class.java,
+        ).thenReturn(validFlatDefinition())
 
         // 4. Validation passes (XSD + Lint)
         `when`(bpmnXsdValidator.validateDetailed(anyNonNull())).thenReturn(emptyList())
@@ -261,27 +260,17 @@ class BpmnGuardrailSystemTest(
         ),
     )
 
-    private fun validDefinition() = BpmnDefinition(
+    private fun validFlatDefinition() = FlatBpmnDefinition(
         processId = "P1",
         processName = "Order",
-        nodes =
-        listOf(
-            BpmnStartEvent("S1", "Start"),
-            BpmnUserTask("T1", "Review"),
-            BpmnEndEvent("E1", "End"),
+        nodes = listOf(
+            FlatBpmnNode(id = "S1", type = FlatBpmnNodeKind.START_EVENT, name = "Start"),
+            FlatBpmnNode(id = "T1", type = FlatBpmnNodeKind.USER_TASK, name = "Review"),
+            FlatBpmnNode(id = "E1", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
         ),
-        sequences =
-        listOf(
-            BpmnEdge(
-                "F1",
-                "S1",
-                "T1",
-            ),
-            BpmnEdge(
-                "F2",
-                "T1",
-                "E1",
-            ),
+        sequences = listOf(
+            BpmnEdge(id = "F1", sourceRef = "S1", targetRef = "T1"),
+            BpmnEdge(id = "F2", sourceRef = "T1", targetRef = "E1"),
         ),
     )
 }

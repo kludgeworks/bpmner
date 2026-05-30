@@ -13,19 +13,25 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
-import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.FlatBpmnNode
+import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -66,10 +72,12 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             { it.contains("Return only a structured ProcessInputAssessment object.") },
             ProcessInputAssessment::class.java,
         ).thenReturn(validAssessment())
-        whenCreateObject({ it.contains("Return only a structured ProcessContract object.") }, ProcessContract::class.java)
-            .thenReturn(validContract())
-        whenCreateObject({ it.contains("Generate a BPMN definition object") }, BpmnDefinition::class.java)
-            .thenReturn(validDefinition())
+        whenCreateObject(
+            { it.contains("Extract a source-grounded process contract") },
+            FlatProcessContract::class.java,
+        ).thenReturn(validFlatContract())
+        whenCreateObject({ it.contains("Generate a BPMN definition object") }, FlatBpmnDefinition::class.java)
+            .thenReturn(validFlatDefinition())
 
         // Mock alignment failure
         whenCreateObject({ true }, AlignmentFindings::class.java)
@@ -126,34 +134,30 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
         rationale = "Ready",
     )
 
-    private fun validContract() = ProcessContract(
+    private fun validFlatContract() = FlatProcessContract(
         id = "contract-1",
         processName = "Dummy",
         summary = "Summary",
-        trigger = "Trigger",
-        triggerSourceIds = listOf("ev1"),
-        activities =
-        listOf(
-            ContractActivity("a1", "A1", sourceIds = listOf("ev1")),
-            ContractActivity("a2", "A2", sourceIds = listOf("ev1")),
+        start = FlatContractStart(
+            trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Trigger"),
+            sourceIds = listOf("ev1"),
         ),
-        endStates =
-        listOf(
-            ContractEndState("e1", "E1", sourceIds = listOf("ev1")),
+        activities = listOf(
+            FlatContractActivity(id = "a1", name = "A1", kind = FlatActivityKind.SERVICE, sourceIds = listOf("ev1")),
+            FlatContractActivity(id = "a2", name = "A2", kind = FlatActivityKind.SERVICE, sourceIds = listOf("ev1")),
+        ),
+        endStates = listOf(
+            FlatContractEndState(id = "e1", name = "E1", kind = FlatEndStateKind.NORMAL, sourceIds = listOf("ev1")),
         ),
     )
 
-    private fun validDefinition() = BpmnDefinition(
+    private fun validFlatDefinition() = FlatBpmnDefinition(
         processId = "Process_1",
         processName = "Dummy",
-        nodes =
-        listOf(
-            BpmnStartEvent("start", "Start"),
-            BpmnEndEvent("end", "End"),
+        nodes = listOf(
+            FlatBpmnNode(id = "start", type = FlatBpmnNodeKind.START_EVENT, name = "Start"),
+            FlatBpmnNode(id = "end", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
         ),
-        sequences =
-        listOf(
-            BpmnEdge("flow1", "start", "end"),
-        ),
+        sequences = listOf(BpmnEdge(id = "flow1", sourceRef = "start", targetRef = "end")),
     )
 }

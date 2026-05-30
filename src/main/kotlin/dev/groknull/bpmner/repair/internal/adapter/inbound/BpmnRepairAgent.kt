@@ -31,6 +31,8 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.core.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
+import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
@@ -600,11 +602,16 @@ internal class BpmnRepairAgent(
         runner: PromptRunner,
         messages: List<com.embabel.chat.Message>,
     ): BpmnDefinition = try {
-        runner.createObject(messages, BpmnDefinition::class.java)
+        runner.createObject(messages, FlatBpmnDefinition::class.java).toSealed()
     } catch (e: InvalidLlmReturnFormatException) {
         throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
     } catch (e: InvalidLlmReturnTypeException) {
         throw RepairReplans.signal("LLM rewrite returned a definition that failed validation: ${e.message}", e)
+    } catch (e: IllegalArgumentException) {
+        // FlatBpmnDefinition.toSealed() throws when the LLM emits a structurally
+        // incomplete node (e.g. BUSINESS_RULE_TASK with no decisionRef). Surface it as
+        // a replan signal so the planner retries instead of aborting the repair loop.
+        throw RepairReplans.signal("LLM rewrite produced a structurally incomplete definition: ${e.message}", e)
     }
 
     /**
