@@ -1,5 +1,5 @@
 Branch kind (`kind` discriminator):
-- CONDITIONAL — the default branch kind on EXCLUSIVE decisions. Example: `{kind: "CONDITIONAL", id: "br-yes", label: "Eligible", condition: "score >= 750"}`.
-- DEFAULT — set this when the source prose uses catch-all phrasing — "otherwise", "for every other case", "the catch-all", "anything else", "for all remaining cases". Carries NO condition; the label still describes the destination (e.g. "Manual review"). Example: `{kind: "DEFAULT", id: "br-fallback", label: "Manual review"}`. At most one DEFAULT branch per decision.
+- CONDITIONAL — default branch kind on EXCLUSIVE decisions. Example: `{kind: "CONDITIONAL", id: "br-yes", label: "Eligible", condition: "score >= 750"}`.
+- DEFAULT — keywords: otherwise, for every other case, catch-all, anything else, for all remaining cases. NO condition; label describes the destination. Example: `{kind: "DEFAULT", id: "br-fallback", label: "Manual review"}`. At most one DEFAULT per decision.
 - UNCONDITIONAL — Example: `{kind: "UNCONDITIONAL", id: "br-track-a", label: "IT prep"}`.
 - Kind/decision matching is strict: CONDITIONAL and DEFAULT only on EXCLUSIVE decisions; UNCONDITIONAL only on PARALLEL decisions.

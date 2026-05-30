@@ -3,44 +3,44 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7745,
-			"updatedBy": "#300",
-			"reason": "bpmner/extract_contract.jinja + element includes. Includes restored section-separator blank lines per review feedback."
+			"chars": 6954,
+			"updatedBy": "#310",
+			"reason": "Compressed recognition-heuristic prose in element includes (activity_kinds, decision_kinds, branch_kinds, end_state_kinds) from `Recognise from phrases like \"X\", \"Y\"` to flat `keywords: X, Y` form. Inline JSON examples retained as few-shot priming. topology_rules.jinja was already concise."
 		},
 		"contractFullPayload": {
-			"chars": 21563,
-			"updatedBy": "#302",
-			"reason": "Rendered extract_contract.jinja concatenated with FlatProcessContract schema-format text (FilteringJacksonOutputConverter.format)."
+			"chars": 20772,
+			"updatedBy": "#310",
+			"reason": "Tracks contractPrompt trim; schema-format portion unchanged."
 		},
 		"generationPrompt": {
-			"chars": 16988,
-			"updatedBy": "#300",
-			"reason": "bpmner/generate_bpmn.jinja. Includes a blank line after the naming-shape-advice loop per review feedback."
+			"chars": 13807,
+			"updatedBy": "#310",
+			"reason": "Deleted identity-rule prose (duplicates NODE_ID_DESCRIPTION on FlatBpmnNode), catalogue-reuse paragraph (duplicates BpmnErrorRef/BpmnMessageRef/BpmnSignalRef/BpmnEscalationRef @JsonClassDescriptions), and rephrased Parallel/Inclusive-gateway prose down to wiring/topology only."
 		},
 		"generationFullPayload": {
-			"chars": 25935,
-			"updatedBy": "#302",
-			"reason": "Rendered generate_bpmn.jinja concatenated with FlatBpmnDefinition schema-format text."
+			"chars": 22754,
+			"updatedBy": "#310",
+			"reason": "Tracks generationPrompt trim; schema-format portion unchanged."
 		},
 		"alignmentPrompt": {
-			"chars": 3245,
-			"updatedBy": "#300",
-			"reason": "bpmner/check_alignment.jinja. Includes section-separator blank lines around Semantic Elements / Sequence Flows / Unreachable Elements / Alignment Task."
+			"chars": 2474,
+			"updatedBy": "#310",
+			"reason": "Removed Output-shape (AlignmentFindings) prose block and classification enum listing (now carried by @JsonClassDescription / @JsonPropertyDescription). Cut worked examples from 2 to 1 (kept misaligned)."
 		},
 		"alignmentFullPayload": {
-			"chars": 5111,
-			"updatedBy": "#302",
-			"reason": "Rendered check_alignment.jinja concatenated with AlignmentFindings schema-format text."
+			"chars": 4340,
+			"updatedBy": "#310",
+			"reason": "Tracks alignmentPrompt trim; schema-format portion unchanged."
 		},
 		"readinessPrompt": {
-			"chars": 3766,
-			"updatedBy": "#300",
-			"reason": "bpmner/assess_readiness.jinja. Includes section-separator blank lines after the dimensions list, missing-areas list, and before the clarification-history block."
+			"chars": 3249,
+			"updatedBy": "#310",
+			"reason": "Removed `dimensions` and `missingAreas` enum listings; their canonical names reach the LLM via the JSON-schema enum values. Kept the per-dimension calibration paragraph (load-bearing guidance)."
 		},
 		"readinessFullPayload": {
-			"chars": 9526,
-			"updatedBy": "#302",
-			"reason": "Rendered assess_readiness.jinja concatenated with ProcessInputAssessment schema-format text."
+			"chars": 9009,
+			"updatedBy": "#310",
+			"reason": "Tracks readinessPrompt trim; schema-format portion unchanged."
 		},
 		"repairPatchPrompt": {
 			"chars": 1606,

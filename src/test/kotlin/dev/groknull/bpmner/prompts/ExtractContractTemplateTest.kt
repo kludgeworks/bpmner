@@ -74,9 +74,9 @@ class ExtractContractTemplateTest {
         assertTrue(prompt.contains("{kind: \"DEFAULT\""))
         assertTrue(prompt.contains("{kind: \"UNCONDITIONAL\""))
         assertTrue(prompt.contains("otherwise"))
-        assertTrue(prompt.contains("the catch-all"))
+        assertTrue(prompt.contains("catch-all"))
         assertTrue(prompt.contains("for every other case"))
-        assertTrue(prompt.contains("At most one DEFAULT branch per decision"))
+        assertTrue(prompt.contains("At most one DEFAULT per decision"))
         assertTrue(prompt.contains("CONDITIONAL and DEFAULT only on EXCLUSIVE decisions"))
         assertTrue(prompt.contains("UNCONDITIONAL only on PARALLEL decisions"))
     }
