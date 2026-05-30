@@ -3,10 +3,10 @@
 	"_doc": "Char-count baselines for each LLM prompt factory. PromptSizeProbeTest reads this file and asserts each factory's prompt stays below its ceiling. When a prompt shrinks by >15% the test logs a warning prompting the developer to update the baseline to lock in the gain. When updating, set 'chars' to the new measured value, 'ceiling' to ~chars * 1.15 (≈15% headroom for additive future tweaks), fill 'updatedBy' with the issue or PR number, and explain the change in 'reason'.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7604,
+			"chars": 7774,
 			"ceiling": 8750,
 			"updatedBy": "#297",
-			"reason": "Initial baseline after trimming definitional duplication from activity, end-state, branch, and decision-kind sections (#297)"
+			"reason": "Trimmed definitional duplication from activity, end-state, branch, and decision-kind sections. PARALLEL recognition phrases restored after PR review (#301) for symmetry with EXCLUSIVE/INCLUSIVE bullets — ~170 chars above the immediate post-trim low (#297)."
 		},
 		"generationPrompt": {
 			"chars": 16989,

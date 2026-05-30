@@ -89,7 +89,7 @@ class PromptSizeProbeTest {
         logger.info("PromptSizeProbe[$key]: actual={} chars (baseline={}, ceiling={})", actual, baseline, ceiling)
 
         assertTrue(
-            actual < ceiling,
+            actual <= ceiling,
             "$key prompt exceeded ceiling of $ceiling chars (was $actual). " +
                 "If intentional, raise the ceiling in src/test/resources/prompt-baselines.json " +
                 "and explain the change in the 'reason' field.",

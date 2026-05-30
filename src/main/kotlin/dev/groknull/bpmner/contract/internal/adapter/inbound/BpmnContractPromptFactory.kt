@@ -179,8 +179,10 @@ internal class BpmnContractPromptFactory(
                 " true. Declare the fork only; the matching join is materialised downstream.",
         )
         appendLine(
-            "- PARALLEL branches have no `condition`; leave it null. Declare the fork only;" +
-                " the matching join (synchronisation) is implicit and materialised downstream.",
+            "- PARALLEL — recognise from phrases like 'in parallel', 'simultaneously', 'all of" +
+                " the following must complete', or any split where every branch must execute, not" +
+                " just one. PARALLEL branches have no `condition`; leave it null. Declare the fork" +
+                " only; the matching join (synchronisation) is implicit and materialised downstream.",
         )
         appendLine(
             "- Do NOT use PARALLEL for sequential steps that happen to share an actor or context;" +
