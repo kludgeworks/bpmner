@@ -10,9 +10,14 @@ import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -83,8 +88,8 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         // 2. Mock Contract
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            ProcessContract::class.java,
-        ).thenReturn(sampleContract())
+            FlatProcessContract::class.java,
+        ).thenReturn(sampleFlatContract())
 
         // 3. Mock Generation
         whenCreateObject(
@@ -149,22 +154,37 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         ),
     )
 
-    private fun sampleContract(): ProcessContract {
+    private fun sampleFlatContract(): FlatProcessContract {
         val sources = listOf("s1")
-        return ProcessContract(
+        return FlatProcessContract(
             id = "contract-1",
             processName = "Make Toast",
             summary = "Toast making process",
-            trigger = "Hunger",
-            triggerSourceIds = sources,
-            activities =
-            listOf(
-                ContractActivity(id = "a1", name = "Get bread", sourceIds = sources),
-                ContractActivity(id = "a2", name = "Toast bread", sourceIds = sources),
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Hunger"),
+                sourceIds = sources,
             ),
-            endStates =
-            listOf(
-                ContractEndState(id = "e1", name = "Toast ready", sourceIds = sources),
+            activities = listOf(
+                FlatContractActivity(
+                    id = "a1",
+                    name = "Get bread",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = sources,
+                ),
+                FlatContractActivity(
+                    id = "a2",
+                    name = "Toast bread",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = sources,
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = "e1",
+                    name = "Toast ready",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = sources,
+                ),
             ),
         )
     }

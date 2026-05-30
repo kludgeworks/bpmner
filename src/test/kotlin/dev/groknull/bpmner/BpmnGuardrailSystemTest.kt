@@ -8,9 +8,14 @@ package dev.groknull.bpmner
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
-import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -165,8 +170,8 @@ class BpmnGuardrailSystemTest(
         // 2. Contract extraction passes
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            ProcessContract::class.java,
-        ).thenReturn(validContract())
+            FlatProcessContract::class.java,
+        ).thenReturn(validFlatContract())
 
         // 3. Generation produces a definition
         whenCreateObject(
@@ -224,20 +229,35 @@ class BpmnGuardrailSystemTest(
         rationale = "Input is ready.",
     )
 
-    private fun validContract() = ProcessContract(
+    private fun validFlatContract() = FlatProcessContract(
         id = "c1",
         processName = "Order",
         summary = "Handle order.",
-        trigger = "Order submitted",
-        triggerSourceIds = listOf("ev1"),
-        activities =
-        listOf(
-            ContractActivity("a1", "Review", sourceIds = listOf("ev1")),
-            ContractActivity("a2", "Ship", sourceIds = listOf("ev1")),
+        start = FlatContractStart(
+            trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Order submitted"),
+            sourceIds = listOf("ev1"),
         ),
-        endStates =
-        listOf(
-            ContractEndState("e1", "Shipped", sourceIds = listOf("ev1")),
+        activities = listOf(
+            FlatContractActivity(
+                id = "a1",
+                name = "Review",
+                kind = FlatActivityKind.SERVICE,
+                sourceIds = listOf("ev1"),
+            ),
+            FlatContractActivity(
+                id = "a2",
+                name = "Ship",
+                kind = FlatActivityKind.SERVICE,
+                sourceIds = listOf("ev1"),
+            ),
+        ),
+        endStates = listOf(
+            FlatContractEndState(
+                id = "e1",
+                name = "Shipped",
+                kind = FlatEndStateKind.NORMAL,
+                sourceIds = listOf("ev1"),
+            ),
         ),
     )
 

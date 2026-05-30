@@ -6,11 +6,6 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractStart
-import dev.groknull.bpmner.contract.ContractTrigger
-import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.BpmnConfig
@@ -28,13 +23,13 @@ class BpmnContractAgentTest {
     @Test
     fun `extractProcessContract wraps a valid LLM response in a passing report`() {
         val context = FakeOperationContext()
-        val expected = sampleContract()
-        context.expectResponse(expected)
+        val flat = sampleFlatContract()
+        context.expectResponse(flat)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
         val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
 
-        assertEquals(expected, result.contract)
+        assertEquals(flat.toSealed(), result.contract)
         assertTrue(result.isValid, "expected sample contract to pass validation, got ${result.report.issues}")
         assertEquals(1, context.llmInvocations.size)
     }
@@ -42,13 +37,21 @@ class BpmnContractAgentTest {
     @Test
     fun `extractProcessContract surfaces validation errors instead of swallowing them`() {
         val context = FakeOperationContext()
-        val invalid = sampleContract().copy(start = ContractStart(ContractTrigger.None("An order is submitted")))
+        // Trigger TRIGGER_WITHOUT_TRACE by dropping sourceIds from the start.
+        val invalid = sampleFlatContract().copy(
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "An order is submitted",
+                ),
+            ),
+        )
         context.expectResponse(invalid)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
         val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
 
-        assertEquals(invalid, result.contract)
+        assertEquals(invalid.toSealed(), result.contract)
         assertTrue(!result.isValid)
         assertTrue(result.report.issues.any { it.code.name == "TRIGGER_WITHOUT_TRACE" })
     }
@@ -56,7 +59,7 @@ class BpmnContractAgentTest {
     @Test
     fun `prompt sent to the LLM grounds the model in the supplied inputs`() {
         val context = FakeOperationContext()
-        context.expectResponse(sampleContract())
+        context.expectResponse(sampleFlatContract())
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
         agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
@@ -71,7 +74,7 @@ class BpmnContractAgentTest {
     @Test
     fun `prompt sent to the LLM includes request clarification history`() {
         val context = FakeOperationContext()
-        context.expectResponse(sampleContract())
+        context.expectResponse(sampleFlatContract())
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
         agent.extractProcessContract(
@@ -111,22 +114,40 @@ class BpmnContractAgentTest {
         rationale = "One actor responsibility is underspecified.",
     )
 
-    private fun sampleContract(): ProcessContract {
+    private fun sampleFlatContract(): FlatProcessContract {
         val sources = listOf("ev1")
-        return ProcessContract(
+        return FlatProcessContract(
             id = "contract-1",
             processName = "Ship order",
             summary = "Approved orders are packed and shipped.",
-            trigger = "An order is submitted",
-            triggerSourceIds = sources,
-            activities =
-            listOf(
-                ContractActivity(id = "a-pack", name = "Pack order", sourceIds = sources),
-                ContractActivity(id = "a-ship", name = "Ship order", sourceIds = sources),
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "An order is submitted",
+                ),
+                sourceIds = sources,
             ),
-            endStates =
-            listOf(
-                ContractEndState(id = "end-shipped", name = "Order shipped", sourceIds = sources),
+            activities = listOf(
+                FlatContractActivity(
+                    id = "a-pack",
+                    name = "Pack order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = sources,
+                ),
+                FlatContractActivity(
+                    id = "a-ship",
+                    name = "Ship order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = sources,
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = "end-shipped",
+                    name = "Order shipped",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = sources,
+                ),
             ),
         )
     }

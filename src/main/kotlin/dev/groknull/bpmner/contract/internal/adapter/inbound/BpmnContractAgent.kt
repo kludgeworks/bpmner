@@ -11,7 +11,6 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.contract.ContractIssueSeverity
-import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
@@ -57,13 +56,11 @@ internal class BpmnContractAgent(
                 .promptRunner(context)
                 .withPromptContributor(request)
 
-        // Phase 5 (#220): `createObject` returns non-null per Embabel's contract; it throws on
-        // failure. Let the typed exception propagate to the planner — no defense needed here.
-        val contract =
-            promptRunner.createObject(
-                promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
-                ProcessContract::class.java,
-            )
+        val flat = promptRunner.createObject(
+            promptFactory.prompt(request, assessment, clarificationHistory = request.clarificationHistory),
+            FlatProcessContract::class.java,
+        )
+        val contract = flat.toSealed()
 
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
         val report = validator.validate(contract)

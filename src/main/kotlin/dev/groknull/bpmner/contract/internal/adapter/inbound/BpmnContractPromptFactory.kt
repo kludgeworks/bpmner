@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.core.BpmnContractConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
@@ -20,7 +19,7 @@ internal class BpmnContractPromptFactory(
         assessment: ProcessInputAssessment,
         clarificationHistory: List<ClarificationExchange>,
     ): String = buildString {
-        appendLine("Return only a structured ${ProcessContract::class.simpleName} object.")
+        appendLine("Return only a structured ${FlatProcessContract::class.simpleName} object.")
         appendLine()
         appendLine("Extract a source-grounded process contract from the supplied inputs.")
         appendLine("Do not invent actors, triggers, end states, decisions, branches, or artifacts.")
@@ -39,23 +38,23 @@ internal class BpmnContractPromptFactory(
             "- A source id is an assessment evidence id, a clarification questionId, or a literal" +
                 " input-text marker.",
         )
-        appendLine("- The process start must be returned in `start` as `ContractStart(trigger, sourceIds)`.")
+        appendLine("- Return the process start in `start` with a `trigger` object and `sourceIds`.")
         appendLine("- `start.sourceIds` must list at least one source id grounding the trigger.")
         appendLine(
-            "- Extract schedule language (dates, delays, cycles, cron-like intervals) as" +
-                " `ContractTrigger.Timer(timerKind, expression, description)`.",
+            "- Schedule language (dates, delays, cycles, cron-like intervals): set" +
+                " `trigger.type` = TIMER and populate `timerKind` + `expression` + `description`.",
         )
         appendLine(
-            "- Extract webhook/API/event-bus triggers intended for one process/listener as" +
-                " `ContractTrigger.Message(messageName, description)`.",
+            "- Webhook/API/event-bus triggers intended for one process/listener: set" +
+                " `trigger.type` = MESSAGE and populate `messageName` + `description`.",
         )
         appendLine(
-            "- Extract broadcast or multi-listener triggers as" +
-                " `ContractTrigger.Signal(signalName, description)`.",
+            "- Broadcast or multi-listener triggers: set `trigger.type` = SIGNAL and populate" +
+                " `signalName` + `description`.",
         )
-        appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
+        appendLine("- Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.")
         appendLine()
-        appendLine("Activity kind (sealed type with a `kind` discriminator); SERVICE is the default:")
+        appendLine("Activity kind (`kind` discriminator); SERVICE is the default:")
         appendLine("- SERVICE — Example: `{kind: \"SERVICE\", id: \"act-charge-card\", name: \"Charge card\"}`.")
         appendLine(
             "- USER — through a form, queue, or review screen." +
@@ -92,7 +91,7 @@ internal class BpmnContractPromptFactory(
                 " `{kind: \"MANUAL\", id: \"act-inspect\", name: \"Inspect property condition\"}`.",
         )
         appendLine()
-        appendLine("End-state kind (sealed type with a `kind` discriminator); NORMAL is the default:")
+        appendLine("End-state kind (`kind` discriminator); NORMAL is the default:")
         appendLine(
             "- TERMINATE — recognise prose like \"process terminates immediately\", \"every" +
                 " in-flight track stops\", \"abandons all work\", \"the entire workflow ends\"." +
@@ -125,7 +124,7 @@ internal class BpmnContractPromptFactory(
                 " escalationCode: \"APPROVAL_OVERDUE\"}`.",
         )
         appendLine()
-        appendLine("Branch kind (sealed type with a `kind` discriminator):")
+        appendLine("Branch kind (`kind` discriminator):")
         appendLine(
             "- CONDITIONAL — the default branch kind on EXCLUSIVE decisions. Example:" +
                 " `{kind: \"CONDITIONAL\", id: \"br-yes\", label: \"Eligible\", condition: \"score >= 750\"}`.",
@@ -150,12 +149,12 @@ internal class BpmnContractPromptFactory(
         appendLine("Loop and topology rules:")
         appendLine(
             "- When the source describes an iterative process (retry / repair / poll / until / while)," +
-                " set `ContractBranch.nextRef` to the id of the activity that the iteration loops back to.",
+                " set the branch's `nextRef` to the id of the activity that the iteration loops back to.",
         )
         appendLine(
             "- When a decision has multiple exit conditions (e.g. pass, no-progress, exhausted)," +
-                " declare each as a separate ContractBranch with its own condition. Set `nextRef`" +
-                " on the looping branch; leave it null on the exiting branches.",
+                " declare each as a separate branch with its own condition. Set `nextRef` on the" +
+                " looping branch; leave it null on the exiting branches.",
         )
         appendLine(
             "- Branch ids referenced via `nextRef` must exist elsewhere in `activities`," +

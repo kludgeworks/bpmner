@@ -23,7 +23,7 @@ class BpmnContractPromptFactoryTest {
     fun `prompt includes structured output and no-invention instructions`() {
         val prompt = factory.prompt(request(), assessment(), clarificationHistory = emptyList())
 
-        assertTrue(prompt.contains("Return only a structured ProcessContract object."))
+        assertTrue(prompt.contains("Return only a structured FlatProcessContract object."))
         assertTrue(prompt.contains("Do not invent actors"))
         assertTrue(prompt.contains("must list at least one entry in its `sourceIds` field"))
         assertTrue(prompt.contains("ContractAssumption"))
