@@ -607,6 +607,11 @@ internal class BpmnRepairAgent(
         throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
     } catch (e: InvalidLlmReturnTypeException) {
         throw RepairReplans.signal("LLM rewrite returned a definition that failed validation: ${e.message}", e)
+    } catch (e: IllegalArgumentException) {
+        // FlatBpmnDefinition.toSealed() throws when the LLM emits a structurally
+        // incomplete node (e.g. BUSINESS_RULE_TASK with no decisionRef). Surface it as
+        // a replan signal so the planner retries instead of aborting the repair loop.
+        throw RepairReplans.signal("LLM rewrite produced a structurally incomplete definition: ${e.message}", e)
     }
 
     /**

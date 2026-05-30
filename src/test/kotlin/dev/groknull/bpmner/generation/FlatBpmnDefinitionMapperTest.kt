@@ -18,6 +18,7 @@ import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
@@ -50,6 +51,10 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(
             BpmnExclusiveGateway("g1", "Gate"),
             flatNode(FlatBpmnNodeKind.EXCLUSIVE_GATEWAY, "g1", "Gate").toSealed(),
+        )
+        assertEquals(
+            BpmnInclusiveGateway("i1", "Incl"),
+            flatNode(FlatBpmnNodeKind.INCLUSIVE_GATEWAY, "i1", "Incl").toSealed(),
         )
         assertEquals(
             BpmnParallelGateway("p1", "Fork"),

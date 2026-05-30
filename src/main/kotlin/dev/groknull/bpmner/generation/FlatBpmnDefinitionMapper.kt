@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
@@ -41,10 +42,6 @@ import dev.groknull.bpmner.core.BpmnUserTask
  *
  * Mappers tolerate extra nulls / fields set on the wrong kind — the LLM may emit
  * `decisionRef` on a USER_TASK and we ignore rather than reject.
- *
- * NOTE: The requireField helper is duplicated from
- * contract/internal/adapter/inbound/FlatContractMapper.kt. With two callers the
- * duplication is preferred over a shared util; revisit if a third flat mapper appears.
  */
 
 public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
@@ -76,6 +73,7 @@ private val TASK_KINDS: Set<FlatBpmnNodeKind> = setOf(
 
 private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY,
+    FlatBpmnNodeKind.INCLUSIVE_GATEWAY,
     FlatBpmnNodeKind.PARALLEL_GATEWAY,
 )
 
@@ -104,6 +102,7 @@ private fun FlatBpmnNode.toTaskNode(): BpmnNode = when (type) {
 
 private fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY -> BpmnExclusiveGateway(id = id, name = name)
+    FlatBpmnNodeKind.INCLUSIVE_GATEWAY -> BpmnInclusiveGateway(id = id, name = name)
     FlatBpmnNodeKind.PARALLEL_GATEWAY -> BpmnParallelGateway(id = id, name = name)
     else -> error("toGatewayNode called with non-gateway kind $type")
 }
