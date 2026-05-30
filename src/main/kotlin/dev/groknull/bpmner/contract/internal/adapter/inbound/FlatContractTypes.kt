@@ -1,0 +1,320 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.contract.internal.adapter.inbound
+
+import com.fasterxml.jackson.annotation.JsonClassDescription
+import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.contract.ContractActor
+import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractAssumption
+import dev.groknull.bpmner.contract.ContractGatewayKind
+import jakarta.validation.Valid
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Size
+
+/*
+ * Flat wire-format types that the LLM is asked to produce, deliberately not sealed.
+ * Each former sealed hierarchy collapses to a single data class with an enum `kind`
+ * discriminator and nullable kind-specific fields. This eliminates the `anyOf`
+ * base-property repetition that Jackson/victools generates for sealed hierarchies
+ * (see issue #296: ~83% of the prior schema was duplicate base properties).
+ *
+ * These types are an LLM-adapter implementation detail. Downstream packages keep
+ * using the sealed ProcessContract from contract/BpmnContractTypes.kt; conversion
+ * happens in FlatContractMapper.kt at the agent boundary.
+ */
+
+public enum class FlatActivityKind {
+    SERVICE,
+    USER,
+    SCRIPT,
+    BUSINESS_RULE,
+    SEND,
+    RECEIVE,
+    MANUAL,
+}
+
+public enum class FlatEndStateKind {
+    NORMAL,
+    TERMINATE,
+    ERROR,
+    MESSAGE,
+    SIGNAL,
+    ESCALATION,
+}
+
+public enum class FlatBranchKind {
+    CONDITIONAL,
+    DEFAULT,
+    UNCONDITIONAL,
+}
+
+public enum class FlatTriggerKind {
+    NONE,
+    TIMER,
+    MESSAGE,
+    SIGNAL,
+}
+
+@JsonClassDescription(
+    "Activity required by the extracted process contract. Set `kind` and populate the matching " +
+        "kind-specific field: BUSINESS_RULE → decisionName, SEND/RECEIVE → messageName. Other kinds " +
+        "leave the kind-specific fields null.",
+)
+public data class FlatContractActivity(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(ACTIVITY_ID_DESCRIPTION)
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(ACTIVITY_NAME_DESCRIPTION)
+    val name: String,
+    @get:JsonPropertyDescription(
+        "Activity kind. SERVICE (external/system automation, default), USER (human work via UI), " +
+            "SCRIPT (engine-evaluated computation), BUSINESS_RULE (decision-table / rule-set; " +
+            "populate decisionName), SEND (fire-and-forget outbound; populate messageName), " +
+            "RECEIVE (block on inbound; populate messageName), MANUAL (human work without system support).",
+    )
+    val kind: FlatActivityKind,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
+    val actorId: String? = null,
+    @field:Size(max = 10)
+    @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
+    val sourceIds: List<String> = emptyList(),
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=BUSINESS_RULE. Human-readable name of the decision / rule set the LLM " +
+            "identified in the prose (e.g. \"credit policy\"). Downstream generator maps this to a " +
+            "stable BpmnBusinessRuleTask.decisionRef id.",
+    )
+    val decisionName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=SEND or RECEIVE. Human-readable name of the message (e.g. \"decline " +
+            "notification\"). Downstream generator maps this to a stable BpmnMessageRef catalogue id.",
+    )
+    val messageName: String? = null,
+)
+
+@JsonClassDescription(
+    "Required end state. Set `kind` and populate the matching code/name field: ERROR → errorCode, " +
+        "MESSAGE → messageName, SIGNAL → signalName, ESCALATION → escalationCode. NORMAL and " +
+        "TERMINATE leave them null.",
+)
+public data class FlatContractEndState(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(END_STATE_ID_DESCRIPTION)
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(END_STATE_NAME_DESCRIPTION)
+    val name: String,
+    @get:JsonPropertyDescription(
+        "End-state kind. NORMAL (vanilla completion, default), TERMINATE (kills all parallel " +
+            "tokens), ERROR (propagates to boundary catcher; populate errorCode), MESSAGE " +
+            "(point-to-point send on completion; populate messageName), SIGNAL (broadcast; populate " +
+            "signalName), ESCALATION (notification, not failure; populate escalationCode).",
+    )
+    val kind: FlatEndStateKind,
+    @field:Size(max = 10)
+    @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
+    val sourceIds: List<String> = emptyList(),
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ERROR. Stable business error code that boundary catchers match " +
+            "(e.g. \"CREDIT_REJECTED\"). NOT a user-facing message.",
+    )
+    val errorCode: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=MESSAGE. Human-readable message name (e.g. \"shipment confirmation\").",
+    )
+    val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=SIGNAL. Human-readable broadcast name (e.g. \"settlement complete\").",
+    )
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=ESCALATION. Stable business escalation code (e.g. \"APPROVAL_OVERDUE\").",
+    )
+    val escalationCode: String? = null,
+)
+
+@JsonClassDescription(
+    "Branch out of a contract decision. Set `kind` to CONDITIONAL (populate condition) for " +
+        "branches of EXCLUSIVE decisions, DEFAULT for the catch-all of an EXCLUSIVE decision, " +
+        "or UNCONDITIONAL for branches of a PARALLEL decision.",
+)
+public data class FlatContractBranch(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable branch id")
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Branch label. For DEFAULT branches it still describes the destination (e.g. \"Manual " +
+            "review\"); the catch-all intent is expressed by kind=DEFAULT, not by inventing a condition.",
+    )
+    val label: String,
+    @get:JsonPropertyDescription(
+        "Branch kind. CONDITIONAL (default on EXCLUSIVE; populate condition), DEFAULT (catch-all " +
+            "on EXCLUSIVE; no condition; at most one per decision), UNCONDITIONAL (on PARALLEL; no " +
+            "condition; every branch fires concurrently). Kind/decision matching is strict.",
+    )
+    val kind: FlatBranchKind,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription(
+        "Required when kind=CONDITIONAL. Condition expression that selects this branch.",
+    )
+    val condition: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Optional id of the next activity, decision, or end state this branch leads to. Omit for " +
+            "sequential continuation. Use to express loop back-edges and multi-exit topologies.",
+    )
+    val nextRef: String? = null,
+)
+
+@JsonClassDescription(
+    "Typed process trigger. Set `type` and populate the matching kind-specific fields: TIMER → " +
+        "timerKind + expression, MESSAGE → messageName, SIGNAL → signalName. NONE leaves them null.",
+)
+public data class FlatContractTrigger(
+    @get:JsonPropertyDescription(
+        "Trigger type. NONE (ordinary untyped start), TIMER (schedule language; populate timerKind " +
+            "+ expression), MESSAGE (webhook/API/event-bus intended for one process; populate " +
+            "messageName), SIGNAL (broadcast / multi-listener; populate signalName).",
+    )
+    val type: FlatTriggerKind,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Human-readable description of the trigger from the source prose.")
+    val description: String,
+    @get:JsonPropertyDescription("Required when type=TIMER. The BpmnTimerKind discriminator (DATE/DURATION/CYCLE).")
+    val timerKind: BpmnTimerKind? = null,
+    @get:JsonPropertyDescription(
+        "Required when type=TIMER. The schedule expression (ISO-8601 date, duration, or cron-like).",
+    )
+    val expression: String? = null,
+    @get:JsonPropertyDescription(
+        "Required when type=MESSAGE. Human-readable name of the inbound message (e.g. \"order.submitted\").",
+    )
+    val messageName: String? = null,
+    @get:JsonPropertyDescription(
+        "Required when type=SIGNAL. Human-readable name of the broadcast signal.",
+    )
+    val signalName: String? = null,
+)
+
+@JsonClassDescription("Source-grounded process start declaration")
+public data class FlatContractStart(
+    @field:Valid
+    @get:JsonPropertyDescription("Typed start trigger semantics")
+    val trigger: FlatContractTrigger,
+    @field:Size(max = 20)
+    @get:JsonPropertyDescription("Source ids grounding the trigger in source evidence")
+    val sourceIds: List<String> = emptyList(),
+)
+
+@JsonClassDescription(
+    "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
+        "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +
+        "kind-specific fields. The agent maps this to the internal sealed ProcessContract before " +
+        "validation and downstream BPMN generation.",
+)
+public data class FlatProcessContract(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable contract id")
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Human-readable process name")
+    val processName: String,
+    @field:NotBlank
+    @field:Size(max = 1000)
+    @get:JsonPropertyDescription("Concise process summary")
+    val summary: String,
+    @field:Valid
+    @get:JsonPropertyDescription("Typed process start derived from the source input")
+    val start: FlatContractStart,
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Activities required by the process contract")
+    val activities: List<FlatContractActivity>,
+    @field:Valid
+    @field:Size(max = 100)
+    @get:JsonPropertyDescription("Decisions and branch points required by the process contract")
+    val decisions: List<FlatContractDecision> = emptyList(),
+    @field:Valid
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription("Actors referenced by the process contract")
+    val actors: List<ContractActor> = emptyList(),
+    @field:Valid
+    @field:Size(max = 100)
+    @get:JsonPropertyDescription("Artifacts referenced by the process contract")
+    val artifacts: List<ContractArtifact> = emptyList(),
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription("Required process end states")
+    val endStates: List<FlatContractEndState>,
+    @field:Valid
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription("Assumptions made while extracting the contract")
+    val assumptions: List<ContractAssumption> = emptyList(),
+)
+
+@JsonClassDescription("Decision required by the extracted process contract")
+public data class FlatContractDecision(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable decision id")
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription(
+        "Decision question from the workflow. For PARALLEL decisions this still names the split " +
+            "(e.g. 'Run all preparation tracks') even though there is no conditional choice.",
+    )
+    val question: String,
+    @field:NotEmpty
+    @field:Valid
+    @field:Size(max = 20)
+    @get:JsonPropertyDescription("Branches that can be taken from this decision")
+    val branches: List<FlatContractBranch>,
+    @get:JsonPropertyDescription(
+        "How the branches relate. EXCLUSIVE (default) = exactly one branch taken based on its " +
+            "condition. INCLUSIVE = one or more branches whose conditions are true activate " +
+            "concurrently — use when the source describes independent optional add-ons that may " +
+            "apply singly, together, or not at all. PARALLEL = all branches activate concurrently " +
+            "regardless of conditions and reconverge at a join — use for 'in parallel' / " +
+            "'all of the following must complete'.",
+    )
+    val kind: ContractGatewayKind = ContractGatewayKind.EXCLUSIVE,
+    @field:Size(max = 10)
+    @get:JsonPropertyDescription("Source ids grounding this decision in evidence.")
+    val sourceIds: List<String> = emptyList(),
+)
+
+private const val ACTIVITY_ID_DESCRIPTION: String = "Stable activity id"
+private const val ACTIVITY_NAME_DESCRIPTION: String = "Activity name from the workflow"
+private const val ACTIVITY_ACTOR_ID_DESCRIPTION: String = "Optional actor id responsible for the activity"
+private const val ACTIVITY_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this activity in evidence. Each is an assessment evidence id, " +
+        "a clarification questionId, or a literal input-text marker."
+private const val END_STATE_ID_DESCRIPTION: String = "Stable end-state id"
+private const val END_STATE_NAME_DESCRIPTION: String = "End-state name"
+private const val END_STATE_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this end state in evidence."
