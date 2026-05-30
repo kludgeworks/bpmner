@@ -63,7 +63,8 @@ public enum class FlatBpmnEventDefinitionKind {
 @JsonClassDescription(
     "BPMN node with semantic type. Set `type` and populate the matching kind-specific fields: " +
         "BUSINESS_RULE_TASK → decisionRef; SEND_TASK / RECEIVE_TASK → messageRef; " +
-        "START_EVENT / END_EVENT / INTERMEDIATE_* → optional eventDefinition (defaults to NONE); " +
+        "START_EVENT / END_EVENT → optional eventDefinition (defaults to NONE); " +
+        "INTERMEDIATE_CATCH_EVENT / INTERMEDIATE_THROW_EVENT → required eventDefinition; " +
         "BOUNDARY_EVENT → attachedToRef + eventDefinition (cancelActivity defaults true); " +
         "START_EVENT additionally accepts isInterrupting (defaults true).",
 )

@@ -10,6 +10,7 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -81,7 +82,18 @@ internal class BpmnGeneratorAgent(
         val promptRunner = config.generator.promptRunner(context)
         val prompt = contractPromptFactory.prompt(request, validatedContract)
         val flat = promptRunner.createObject(prompt, FlatBpmnDefinition::class.java)
-        val rawDefinition = flat.toSealed()
+        val rawDefinition = try {
+            flat.toSealed()
+        } catch (e: IllegalArgumentException) {
+            // FlatBpmnDefinition.toSealed() throws when the LLM emits a structurally
+            // incomplete node. Re-throw as the framework's typed format exception so the
+            // planner's outline-retry path engages instead of the process hard-aborting.
+            throw InvalidLlmReturnFormatException(
+                llmReturn = flat.toString(),
+                expectedType = FlatBpmnDefinition::class.java,
+                cause = e,
+            )
+        }
         // Stamp isDefault on outbound flows from EXCLUSIVE_GATEWAY nodes that the contract
         // marks as DefaultBranch. The LLM is unreliable on this attribute, so we
         // deterministically apply it here BEFORE the fidelity check runs (which fires
