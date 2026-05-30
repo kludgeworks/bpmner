@@ -255,11 +255,7 @@ sealed interface ContractActivity {
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription(
-            "Human-readable name of the decision / rule set the LLM identified in the prose " +
-                "(e.g. \"credit policy\", \"premium tier\"). The downstream BPMN generator maps " +
-                "this to a stable BpmnBusinessRuleTask.decisionRef id.",
-        )
+        @get:JsonPropertyDescription("Rule-set name from the prose. Required for BUSINESS_RULE kind.")
         val decisionName: String,
         @field:Size(max = 200)
         @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
@@ -281,10 +277,7 @@ sealed interface ContractActivity {
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription(
-            "Human-readable name of the message being sent (e.g. \"decline notification\"). " +
-                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
-        )
+        @get:JsonPropertyDescription("Message name from the prose. Required for SEND kind.")
         val messageName: String,
         @field:Size(max = 200)
         @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
@@ -308,10 +301,7 @@ sealed interface ContractActivity {
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription(
-            "Human-readable name of the awaited message (e.g. \"customer acknowledgement\"). " +
-                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
-        )
+        @get:JsonPropertyDescription("Awaited message name from the prose. Required for RECEIVE kind.")
         val messageName: String,
         @field:Size(max = 200)
         @get:JsonPropertyDescription(ACTIVITY_ACTOR_ID_DESCRIPTION)
@@ -689,9 +679,8 @@ sealed interface ContractEndState {
         @field:NotBlank
         @field:Size(max = 200)
         @get:JsonPropertyDescription(
-            "Stable business error code that boundary catchers match against (e.g. " +
-                "\"CREDIT_REJECTED\"). The downstream BPMN generator creates a BpmnErrorRef " +
-                "whose `code` equals this value and points the end event's `errorRef` at its id.",
+            "Stable business error code that boundary catchers match (e.g. \"CREDIT_REJECTED\"). " +
+                "Required for ERROR kind.",
         )
         val errorCode: String,
         @field:Size(max = 10)
@@ -714,10 +703,7 @@ sealed interface ContractEndState {
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription(
-            "Human-readable name of the message sent on completion (e.g. \"shipment confirmation\"). " +
-                "The downstream BPMN generator maps this to a stable BpmnMessageRef catalogue id.",
-        )
+        @get:JsonPropertyDescription("Message name sent on completion. Required for MESSAGE kind.")
         val messageName: String,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
@@ -739,10 +725,7 @@ sealed interface ContractEndState {
         override val name: String,
         @field:NotBlank
         @field:Size(max = 200)
-        @get:JsonPropertyDescription(
-            "Human-readable name of the broadcast signal (e.g. \"settlement complete\"). The " +
-                "downstream BPMN generator maps this to a stable BpmnSignalRef catalogue id.",
-        )
+        @get:JsonPropertyDescription("Broadcast signal name. Required for SIGNAL kind.")
         val signalName: String,
         @field:Size(max = 10)
         @get:JsonPropertyDescription(END_STATE_SOURCE_IDS_DESCRIPTION)
@@ -767,8 +750,7 @@ sealed interface ContractEndState {
         @field:Size(max = 200)
         @get:JsonPropertyDescription(
             "Stable business escalation code matched by escalation catchers (e.g. " +
-                "\"APPROVAL_OVERDUE\"). The downstream BPMN generator creates a BpmnEscalationRef " +
-                "whose `code` equals this value and points the end event's `escalationRef` at its id.",
+                "\"APPROVAL_OVERDUE\"). Required for ESCALATION kind.",
         )
         val escalationCode: String,
         @field:Size(max = 10)

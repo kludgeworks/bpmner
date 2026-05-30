@@ -60,13 +60,18 @@ class BpmnContractPromptFactoryTest {
     fun `prompt explains the three branch kinds with worked examples`() {
         val prompt = factory.prompt(request(), assessment(), clarificationHistory = emptyList())
 
-        assertTrue(prompt.contains("CONDITIONAL — the default kind for branches of an EXCLUSIVE decision"))
-        assertTrue(prompt.contains("DEFAULT — the catch-all branch of an EXCLUSIVE decision"))
-        assertTrue(prompt.contains("UNCONDITIONAL — the kind for branches of a PARALLEL decision"))
+        assertTrue(prompt.contains("CONDITIONAL"))
+        assertTrue(prompt.contains("DEFAULT"))
+        assertTrue(prompt.contains("UNCONDITIONAL"))
+        assertTrue(prompt.contains("{kind: \"CONDITIONAL\""))
+        assertTrue(prompt.contains("{kind: \"DEFAULT\""))
+        assertTrue(prompt.contains("{kind: \"UNCONDITIONAL\""))
         assertTrue(prompt.contains("otherwise"))
         assertTrue(prompt.contains("the catch-all"))
         assertTrue(prompt.contains("for every other case"))
         assertTrue(prompt.contains("At most one DEFAULT branch per decision"))
+        assertTrue(prompt.contains("CONDITIONAL and DEFAULT only on EXCLUSIVE decisions"))
+        assertTrue(prompt.contains("UNCONDITIONAL only on PARALLEL decisions"))
     }
 
     @Test
