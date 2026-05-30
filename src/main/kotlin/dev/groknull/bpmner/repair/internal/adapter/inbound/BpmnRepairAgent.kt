@@ -211,7 +211,14 @@ internal class BpmnRepairAgent(
             eligibleForLlm(it) && it.repairScope == BpmnRepairScope.LABEL
         }
         val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
-        return applyLlmPatch(repairEval, context, config.labelRepairer, feedback, "LLM label patch")
+        return applyLlmPatch(
+            repairEval = repairEval,
+            operationContext = context,
+            actor = config.labelRepairer,
+            feedback = feedback,
+            patchTypeName = "LLM label patch",
+            labelOnly = true,
+        )
     }
 
     /**
@@ -236,7 +243,14 @@ internal class BpmnRepairAgent(
             eligibleForLlm(it) && (it.repairScope == BpmnRepairScope.OUTLINE || it.repairScope == BpmnRepairScope.PHASE)
         }
         val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
-        return applyLlmPatch(repairEval, context, config.patchRepairer, feedback, "LLM structural patch")
+        return applyLlmPatch(
+            repairEval = repairEval,
+            operationContext = context,
+            actor = config.patchRepairer,
+            feedback = feedback,
+            patchTypeName = "LLM structural patch",
+            labelOnly = false,
+        )
     }
 
     /**
@@ -470,14 +484,16 @@ internal class BpmnRepairAgent(
         actor: Actor<Persona>,
         feedback: String,
         patchTypeName: String,
+        labelOnly: Boolean,
     ): BpmnRepairEvaluation {
         val runner = promptRunner(repairEval, operationContext, actor)
         // See applyFullLlmRewrite for why this uses `createObject` rather than
         // `createObjectIfPossible` — alignment with what `whenCreateObject` mocks.
         val patch: BpmnRepairPatch = requestLlmPatch(
-            runner,
-            repairEval.messages + UserMessage(feedback),
-            patchTypeName,
+            runner = runner,
+            messages = repairEval.messages + UserMessage(feedback),
+            patchTypeName = patchTypeName,
+            labelOnly = labelOnly,
         )
         val application = patchApplier.apply(repairEval.definition, patch)
         val success = patchSuccessOrReplan(application, patchTypeName)
@@ -591,13 +607,31 @@ internal class BpmnRepairAgent(
         throw RepairReplans.signal("LLM rewrite returned a definition that failed validation: ${e.message}", e)
     }
 
-    /** Sibling of [requestLlmDefinition] for the patch-shaped LLM calls. */
+    /**
+     * Sibling of [requestLlmDefinition] for the patch-shaped LLM calls.
+     *
+     * When [labelOnly] is true the `node` and `edge` fields are stripped from the JSON
+     * schema sent to the LLM, removing the full `BpmnNode` sealed hierarchy from each
+     * repair-iteration schema. Label-scope patches only ever produce SET_NODE_NAME /
+     * SET_EDGE_LABEL operations, which use `nodeId` / `edgeId` / `name` / `label` and never
+     * populate `node` or `edge`. The fluent builder still routes through
+     * `LlmOperations.createObject` under the hood, so existing `whenCreateObject` mocks keep
+     * intercepting label-patch calls.
+     */
     private fun requestLlmPatch(
         runner: PromptRunner,
         messages: List<com.embabel.chat.Message>,
         patchTypeName: String,
+        labelOnly: Boolean,
     ): BpmnRepairPatch = try {
-        runner.createObject(messages, BpmnRepairPatch::class.java)
+        if (labelOnly) {
+            runner
+                .creating(BpmnRepairPatch::class.java)
+                .withoutProperties("node", "edge")
+                .fromMessages(messages)
+        } else {
+            runner.createObject(messages, BpmnRepairPatch::class.java)
+        }
     } catch (e: InvalidLlmReturnFormatException) {
         throw RepairReplans.signal("$patchTypeName failed to produce a structured patch: ${e.message}", e)
     } catch (e: InvalidLlmReturnTypeException) {
