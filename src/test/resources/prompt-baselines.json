@@ -33,14 +33,14 @@
 			"reason": "Tracks alignmentPrompt trim; schema-format portion unchanged."
 		},
 		"readinessPrompt": {
-			"chars": 3766,
-			"updatedBy": "#300",
-			"reason": "bpmner/assess_readiness.jinja. Includes section-separator blank lines after the dimensions list, missing-areas list, and before the clarification-history block."
+			"chars": 3249,
+			"updatedBy": "#310",
+			"reason": "Removed `dimensions` and `missingAreas` enum listings; their canonical names reach the LLM via the JSON-schema enum values. Kept the per-dimension calibration paragraph (load-bearing guidance)."
 		},
 		"readinessFullPayload": {
-			"chars": 9526,
-			"updatedBy": "#302",
-			"reason": "Rendered assess_readiness.jinja concatenated with ProcessInputAssessment schema-format text."
+			"chars": 9009,
+			"updatedBy": "#310",
+			"reason": "Tracks readinessPrompt trim; schema-format portion unchanged."
 		},
 		"repairPatchPrompt": {
 			"chars": 1606,
