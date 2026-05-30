@@ -44,6 +44,7 @@ Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discrimin
 Naming shape rules — follow these on your first emission to avoid lint repair rounds:
 {% for block in namingShapeAdvice %}{{ block }}
 {% endfor %}
+
 Loop and back-edge rules:
 - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier elements (a different `targetRef` that the process has already visited) are valid and required when the contract describes an iterative process.
 - When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's gateway to the node with that id. If `nextRef` points to an earlier activity, this is the loop back-edge.

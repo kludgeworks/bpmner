@@ -25,14 +25,16 @@ Process Name: {{ processName }}
 ### Semantic Elements
 {% for line in elementLines %}- {{ line }}
 {% endfor %}
+
 ### Sequence Flows
 {% for line in flowLines %}- {{ line }}
 {% endfor %}
 {% if unreachableElementIds %}
+
 ### Unreachable Elements
 {% for id in unreachableElementIds %}- {{ id }}
-{% endfor %}
-{% endif %}
+{% endfor %}{% endif %}
+
 ## Alignment Task
 List only misalignments. If every generated element is supported by the contract AND
 every contract item is covered by the BPMN, return an empty issues array.

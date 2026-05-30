@@ -16,31 +16,38 @@ Source grounding (provenance):
 - Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
 
 {% include "bpmner/elements/activity_kinds" %}
+
 {% include "bpmner/elements/end_state_kinds" %}
+
 {% include "bpmner/elements/branch_kinds" %}
+
 {% include "bpmner/elements/topology_rules" %}
+
 {% include "bpmner/elements/decision_kinds" %}
+
 Readiness assessment rationale:
 {{ rationale }}
 {% if missingAreas %}
+
 Missing process areas to surface as assumptions or clarifications:
 {% for area in missingAreas %}- {{ area }}
-{% endfor %}
-{% endif %}
+{% endfor %}{% endif %}
 {% if evidence %}
+
 Assessment evidence ids available for use in `sourceIds`:
 {% for e in evidence %}- {{ e.id }}: {{ e.text }}
-{% endfor %}
-{% endif %}
+{% endfor %}{% endif %}
 {% if clarificationHistory %}
+
 Clarification answers (in order). Use questionId in `sourceIds` when relevant:
 {% for c in clarificationHistory %}- [{{ c.questionId }}] Q: {{ c.questionText }}
   A: {{ c.answerText }}
-{% endfor %}
-{% endif %}
+{% endfor %}{% endif %}
 {% if styleGuide %}
+
 Style guide (constraints on naming and structure):
 {{ styleGuide }}
 {% endif %}
+
 Original BPMN request text:
 {{ processDescription }}

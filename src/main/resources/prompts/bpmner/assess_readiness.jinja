@@ -38,6 +38,7 @@ Verdict rules:
 Score every readiness dimension:
 {% for d in dimensions %}- {{ d }}
 {% endfor %}
+
 Per-dimension guidance:
 - BPMN_SUITABILITY: A workflow qualifies if it has trigger, ordered activities, and
   end state. Automated, technical, and operational pipelines qualify. Score low only
@@ -51,6 +52,7 @@ Per-dimension guidance:
 Use missing process areas only from this vocabulary:
 {% for a in missingAreas %}- {{ a }}
 {% endfor %}
+
 Clarification questions:
 - Ask at most {{ maxClarificationQuestions }} questions.
 - Make each question specific and answerable.
@@ -59,6 +61,7 @@ Clarification questions:
 Original BPMN request text:
 {{ processDescription }}
 {% if clarificationHistory %}
+
 Prior clarification answers:
 {% for c in clarificationHistory %}- [{{ c.questionId }}] Q: {{ c.questionText }}
   A: {{ c.answerText }}

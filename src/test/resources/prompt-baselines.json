@@ -3,28 +3,28 @@
 	"_doc": "Char-count baselines for each LLM prompt template. PromptSizeProbeTest reads this file and asserts each template's rendered prompt stays below its ceiling. When a prompt shrinks by >15% the test logs a warning prompting the developer to update the baseline to lock in the gain. When updating, set 'chars' to the new measured value, 'ceiling' to ~chars * 1.15 (≈15% headroom for additive future tweaks), fill 'updatedBy' with the issue or PR number, and explain the change in 'reason'.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7737,
+			"chars": 7745,
 			"ceiling": 8750,
 			"updatedBy": "#300",
-			"reason": "Re-baselined after migrating BpmnContractPromptFactory to bpmner/extract_contract.jinja + element includes. Char delta -37 (-0.48%) from the previous appendLine output."
+			"reason": "bpmner/extract_contract.jinja + element includes. Includes restored section-separator blank lines per review feedback."
 		},
 		"generationPrompt": {
-			"chars": 16987,
+			"chars": 16988,
 			"ceiling": 19550,
 			"updatedBy": "#300",
-			"reason": "Re-baselined after migrating BpmnContractGenerationPromptFactory to bpmner/generate_bpmn.jinja. Char delta -2 (-0.01%); template renders byte-near-identical to the appendLine output."
+			"reason": "bpmner/generate_bpmn.jinja. Includes a blank line after the naming-shape-advice loop per review feedback."
 		},
 		"alignmentPrompt": {
-			"chars": 3242,
+			"chars": 3245,
 			"ceiling": 3750,
 			"updatedBy": "#300",
-			"reason": "Re-baselined after migrating BpmnAlignmentPromptFactory to bpmner/check_alignment.jinja. Char delta -4 (-0.12%)."
+			"reason": "bpmner/check_alignment.jinja. Includes section-separator blank lines around Semantic Elements / Sequence Flows / Unreachable Elements / Alignment Task."
 		},
 		"readinessPrompt": {
-			"chars": 3764,
+			"chars": 3766,
 			"ceiling": 4350,
 			"updatedBy": "#300",
-			"reason": "Re-baselined after migrating BpmnReadinessPromptFactory to bpmner/assess_readiness.jinja. Char delta -2 (-0.04%)."
+			"reason": "bpmner/assess_readiness.jinja. Includes section-separator blank lines after the dimensions list, missing-areas list, and before the clarification-history block."
 		}
 	}
 }
