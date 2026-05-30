@@ -41,26 +41,14 @@ private const val DOC =
         "changes, leaving you to refine those fields before committing."
 
 private val MEASUREMENTS: Map<String, () -> Int> = linkedMapOf(
-    "contractPrompt" to { PromptFixtures.renderContractPrompt().length },
-    "contractFullPayload" to {
-        val prompt = PromptFixtures.renderContractPrompt()
-        (prompt + PromptFixtures.contractSchemaFormat()).length
-    },
-    "generationPrompt" to { PromptFixtures.renderGenerationPrompt().length },
-    "generationFullPayload" to {
-        val prompt = PromptFixtures.renderGenerationPrompt()
-        (prompt + PromptFixtures.generationSchemaFormat()).length
-    },
-    "alignmentPrompt" to { PromptFixtures.renderAlignmentPrompt().length },
-    "alignmentFullPayload" to {
-        val prompt = PromptFixtures.renderAlignmentPrompt()
-        (prompt + PromptFixtures.alignmentSchemaFormat()).length
-    },
-    "readinessPrompt" to { PromptFixtures.renderReadinessPrompt().length },
-    "readinessFullPayload" to {
-        val prompt = PromptFixtures.renderReadinessPrompt()
-        (prompt + PromptFixtures.readinessSchemaFormat()).length
-    },
+    "contractPrompt" to { PromptFixtures.contract.render().length },
+    "contractFullPayload" to { PromptFixtures.contract.fullPayload().length },
+    "generationPrompt" to { PromptFixtures.generation.render().length },
+    "generationFullPayload" to { PromptFixtures.generation.fullPayload().length },
+    "alignmentPrompt" to { PromptFixtures.alignment.render().length },
+    "alignmentFullPayload" to { PromptFixtures.alignment.fullPayload().length },
+    "readinessPrompt" to { PromptFixtures.readiness.render().length },
+    "readinessFullPayload" to { PromptFixtures.readiness.fullPayload().length },
     "repairPatchPrompt" to { RepairFixtures.renderPatchFeedback().length },
     "repairFullPrompt" to { RepairFixtures.renderFullFeedback().length },
 )

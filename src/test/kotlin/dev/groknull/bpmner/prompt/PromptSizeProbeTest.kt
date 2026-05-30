@@ -26,46 +26,42 @@ class PromptSizeProbeTest {
 
     @Test
     fun `contract extraction prompt stays within budget`() {
-        checkBaseline("contractPrompt", PromptFixtures.renderContractPrompt().length)
+        checkBaseline("contractPrompt", PromptFixtures.contract.render().length)
     }
 
     @Test
     fun `bpmn generation prompt stays within budget`() {
-        checkBaseline("generationPrompt", PromptFixtures.renderGenerationPrompt().length)
+        checkBaseline("generationPrompt", PromptFixtures.generation.render().length)
     }
 
     @Test
     fun `alignment prompt stays within budget`() {
-        checkBaseline("alignmentPrompt", PromptFixtures.renderAlignmentPrompt().length)
+        checkBaseline("alignmentPrompt", PromptFixtures.alignment.render().length)
     }
 
     @Test
     fun `readiness prompt stays within budget`() {
-        checkBaseline("readinessPrompt", PromptFixtures.renderReadinessPrompt().length)
+        checkBaseline("readinessPrompt", PromptFixtures.readiness.render().length)
     }
 
     @Test
     fun `contract extraction full payload stays within budget`() {
-        val payload = PromptFixtures.renderContractPrompt() + PromptFixtures.contractSchemaFormat()
-        checkBaseline("contractFullPayload", payload.length)
+        checkBaseline("contractFullPayload", PromptFixtures.contract.fullPayload().length)
     }
 
     @Test
     fun `bpmn generation full payload stays within budget`() {
-        val payload = PromptFixtures.renderGenerationPrompt() + PromptFixtures.generationSchemaFormat()
-        checkBaseline("generationFullPayload", payload.length)
+        checkBaseline("generationFullPayload", PromptFixtures.generation.fullPayload().length)
     }
 
     @Test
     fun `alignment full payload stays within budget`() {
-        val payload = PromptFixtures.renderAlignmentPrompt() + PromptFixtures.alignmentSchemaFormat()
-        checkBaseline("alignmentFullPayload", payload.length)
+        checkBaseline("alignmentFullPayload", PromptFixtures.alignment.fullPayload().length)
     }
 
     @Test
     fun `readiness full payload stays within budget`() {
-        val payload = PromptFixtures.renderReadinessPrompt() + PromptFixtures.readinessSchemaFormat()
-        checkBaseline("readinessFullPayload", payload.length)
+        checkBaseline("readinessFullPayload", PromptFixtures.readiness.fullPayload().length)
     }
 
     @Test
