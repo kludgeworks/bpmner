@@ -15,6 +15,7 @@ import dev.groknull.bpmner.repair.internal.adapter.outbound.RepairFixtures
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
+import java.time.ZoneOffset
 
 /**
  * Regenerate `src/test/resources/prompt-baselines.json` from the canonical fixtures.
@@ -42,19 +43,23 @@ private const val DOC =
 private val MEASUREMENTS: Map<String, () -> Int> = linkedMapOf(
     "contractPrompt" to { PromptFixtures.renderContractPrompt().length },
     "contractFullPayload" to {
-        (PromptFixtures.renderContractPrompt() + PromptFixtures.contractSchemaFormat()).length
+        val prompt = PromptFixtures.renderContractPrompt()
+        (prompt + PromptFixtures.contractSchemaFormat()).length
     },
     "generationPrompt" to { PromptFixtures.renderGenerationPrompt().length },
     "generationFullPayload" to {
-        (PromptFixtures.renderGenerationPrompt() + PromptFixtures.generationSchemaFormat()).length
+        val prompt = PromptFixtures.renderGenerationPrompt()
+        (prompt + PromptFixtures.generationSchemaFormat()).length
     },
     "alignmentPrompt" to { PromptFixtures.renderAlignmentPrompt().length },
     "alignmentFullPayload" to {
-        (PromptFixtures.renderAlignmentPrompt() + PromptFixtures.alignmentSchemaFormat()).length
+        val prompt = PromptFixtures.renderAlignmentPrompt()
+        (prompt + PromptFixtures.alignmentSchemaFormat()).length
     },
     "readinessPrompt" to { PromptFixtures.renderReadinessPrompt().length },
     "readinessFullPayload" to {
-        (PromptFixtures.renderReadinessPrompt() + PromptFixtures.readinessSchemaFormat()).length
+        val prompt = PromptFixtures.renderReadinessPrompt()
+        (prompt + PromptFixtures.readinessSchemaFormat()).length
     },
     "repairPatchPrompt" to { RepairFixtures.renderPatchFeedback().length },
     "repairFullPrompt" to { RepairFixtures.renderFullFeedback().length },
@@ -85,7 +90,8 @@ private fun readBaselines(path: Path, mapper: ObjectMapper): ObjectNode {
 
 private fun mergeBaselines(oldBaselines: ObjectNode, mapper: ObjectMapper): Pair<ObjectNode, Int> {
     val newBaselines = mapper.createObjectNode()
-    val today = LocalDate.now().toString()
+    // UTC so the "regenerated <date>" reason stamp doesn't differ across dev / CI timezones.
+    val today = LocalDate.now(ZoneOffset.UTC).toString()
     var changes = 0
     for ((key, measure) in MEASUREMENTS) {
         val entry = updatedEntry(key, measure(), oldBaselines, mapper, today)

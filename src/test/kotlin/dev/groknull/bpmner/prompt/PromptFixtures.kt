@@ -40,9 +40,8 @@ import java.util.function.Predicate
  * BPMN summary), so the measured size reflects production-shaped prompts.
  */
 internal object PromptFixtures {
-    val renderer = JinjavaTemplateRenderer()
-    val objectMapper = jacksonObjectMapper()
-
+    private val renderer = JinjavaTemplateRenderer()
+    private val objectMapper = jacksonObjectMapper()
     private val config = BpmnConfig()
     private val markdownRenderer = ProcessContractMarkdownRenderer()
 

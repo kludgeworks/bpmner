@@ -37,12 +37,18 @@ import dev.groknull.bpmner.validation.LintIssue
  * `update_prompt_baselines` binary.
  */
 internal object RepairFixtures {
-    fun factory(): BpmnRepairPromptFactory = BpmnRepairPromptFactory(
+    // Cache one factory per JVM: BpmnRepairPromptFactory + JinjavaTemplateRenderer +
+    // BpmnFingerprintService are all stateless (the latter holds only an immutable
+    // ObjectMapper). Tests across this JVM share the instance, saving the non-trivial
+    // Jinjava init cost per call.
+    private val factoryInstance: BpmnRepairPromptFactory = BpmnRepairPromptFactory(
         NoopLintingPort,
         BpmnFingerprintService(),
         NoopRuleGuidancePort,
         JinjavaTemplateRenderer(),
     )
+
+    fun factory(): BpmnRepairPromptFactory = factoryInstance
 
     fun sampleDefinition(): BpmnDefinition = BpmnDefinition(
         processId = "Process_1",
@@ -163,7 +169,7 @@ internal object RepairFixtures {
         return factory().fullRepairFeedback(attempt(definition, emptyList()), listOf(canonicalDiagnostic()))
     }
 
-    object NoopLintingPort : BpmnLintingPort {
+    private object NoopLintingPort : BpmnLintingPort {
         override fun lint(definition: BpmnDefinition): List<LintIssue> = emptyList()
 
         override fun autoFix(
@@ -176,7 +182,7 @@ internal object RepairFixtures {
         override fun lintRuleCapabilities(): Map<String, BpmnLintRuleCapability> = emptyMap()
     }
 
-    object NoopRuleGuidancePort : BpmnRuleGuidancePort {
+    private object NoopRuleGuidancePort : BpmnRuleGuidancePort {
         override fun getLlmRuleGuidance(): String = ""
     }
 }

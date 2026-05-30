@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-@file:Suppress("TooManyFunctions") // one @Test per probe — 4 prompt + 4 full-payload + 2 repair + checkBaseline
+@file:Suppress("TooManyFunctions") // one @Test per probe — 4 prompt + 4 full-payload + 2 repair (= 10 @Test functions)
 
 package dev.groknull.bpmner.prompt
 

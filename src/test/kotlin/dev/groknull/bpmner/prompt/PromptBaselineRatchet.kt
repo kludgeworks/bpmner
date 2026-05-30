@@ -38,7 +38,7 @@ internal class PromptBaselineRatchet(private val baselines: JsonNode) {
         return when {
             actual > ceiling ->
                 "$key grew past ceiling $ceiling (was $actual). " +
-                    "Trim the prompt or raise the baseline."
+                    "Trim the prompt or run `bazel run //src/test:update_prompt_baselines` to raise the baseline, then commit."
             actual < baseline ->
                 "$key shrank to $actual chars (baseline $baseline). " +
                     "Run `bazel run //src/test:update_prompt_baselines` to lock in the gain, then commit."
@@ -52,8 +52,10 @@ internal class PromptBaselineRatchet(private val baselines: JsonNode) {
 
         /** Load the ratchet from the classpath copy of `prompt-baselines.json`. */
         fun fromClasspath(): PromptBaselineRatchet {
+            // Leading slash + Class.getResourceAsStream so we don't NPE when loaded by the
+            // bootstrap class loader (which has no `classLoader`).
             val stream =
-                PromptBaselineRatchet::class.java.classLoader.getResourceAsStream("prompt-baselines.json")
+                PromptBaselineRatchet::class.java.getResourceAsStream("/prompt-baselines.json")
                     ?: error("prompt-baselines.json not found on the test classpath")
             return stream.use { PromptBaselineRatchet(jacksonObjectMapper().readTree(it)) }
         }
