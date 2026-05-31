@@ -93,9 +93,9 @@ bazel test //...
 ```
 
 ### Live LLM Smoke Tests
-To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite:
+To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite. Use the `--test_output=streamed` flag to display live execution logs, token usage, and model cost details in the terminal:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... bazel test //src/test:ContractVocabularySmokeTest
+ANTHROPIC_API_KEY=sk-ant-... bazel test //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
 These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocations during standard builds.
 

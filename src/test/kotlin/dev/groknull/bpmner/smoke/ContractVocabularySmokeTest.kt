@@ -211,7 +211,7 @@ class ContractVocabularySmokeTest {
     fun `message end`() {
         val c = extractContract(
             """
-            The process begins when started. When everything is done, the process completes by sending a final invoice message.
+            The process begins when started. When everything is done, the process wraps up by sending a final invoice.
             """,
         )
         c.assertHasEndState<ContractEndState.Message>()
@@ -279,7 +279,7 @@ class ContractVocabularySmokeTest {
     fun `inclusive gateway`() {
         val c = extractContract(
             """
-            The process starts. Depending on the application, we may send a notification to either the customer, the manager, or both, or neither.
+            The process starts. Depending on the application, we may send a notification to the customer AND/OR a notification to the manager, where each notification is evaluated independently.
             Then the process ends.
             """,
         )
