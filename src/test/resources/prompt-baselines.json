@@ -8,9 +8,9 @@
 			"reason": "Compressed recognition-heuristic prose in element includes (activity_kinds, decision_kinds, branch_kinds, end_state_kinds) from `Recognise from phrases like \"X\", \"Y\"` to flat `keywords: X, Y` form. Inline JSON examples retained as few-shot priming. topology_rules.jinja was already concise."
 		},
 		"contractFullPayload": {
-			"chars": 22640,
-			"updatedBy": "#305",
-			"reason": "Now includes BpmnRequest.contribution() (the system-message PromptContributor the contract agent attaches via withPromptContributor) alongside template + schema, correcting a prior understatement. #310's contribution() trim will drop this."
+			"chars": 20821,
+			"updatedBy": "#310",
+			"reason": "BpmnRequest.contribution() scoped to style-guide-only — the ~1.8k chars of BPMN generation rules (schema/validator/template-covered) no longer ship on this call. Residual is the per-request style guide."
 		},
 		"generationPrompt": {
 			"chars": 13807,
@@ -28,9 +28,9 @@
 			"reason": "Removed Output-shape (AlignmentFindings) prose block and classification enum listing (now carried by @JsonClassDescription / @JsonPropertyDescription). Cut worked examples from 2 to 1 (kept misaligned)."
 		},
 		"alignmentFullPayload": {
-			"chars": 6208,
-			"updatedBy": "#305",
-			"reason": "Now includes BpmnRequest.contribution() (system-message PromptContributor the alignment agent attaches) alongside template + schema, correcting a prior understatement. #310's contribution() trim will drop this."
+			"chars": 4389,
+			"updatedBy": "#310",
+			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the alignment call."
 		},
 		"readinessPrompt": {
 			"chars": 3249,
@@ -38,9 +38,9 @@
 			"reason": "Removed `dimensions` and `missingAreas` enum listings; their canonical names reach the LLM via the JSON-schema enum values. Kept the per-dimension calibration paragraph (load-bearing guidance)."
 		},
 		"readinessFullPayload": {
-			"chars": 10877,
-			"updatedBy": "#305",
-			"reason": "Now includes BpmnRequest.contribution() (system-message PromptContributor the readiness agent attaches) alongside template + schema, correcting a prior understatement. #310's contribution() trim will drop this."
+			"chars": 9058,
+			"updatedBy": "#310",
+			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
 			"chars": 1606,
