@@ -279,7 +279,7 @@ class ContractVocabularySmokeTest {
     fun `inclusive gateway`() {
         val c = extractContract(
             """
-            The process starts. Depending on the application, we may send a notification to the customer AND/OR a notification to the manager, where each notification is evaluated independently.
+            The process starts. Depending on the application, we may send an optional customer notification AND/OR an optional manager notification.
             Then the process ends.
             """,
         )
