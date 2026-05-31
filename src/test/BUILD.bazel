@@ -70,7 +70,9 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     ),
     env_inherit = [
         "ANTHROPIC_API_KEY",
+        "GITHUB_TOKEN",
         "OPENAI_API_KEY",
+        "SPRING_PROFILES_ACTIVE",
     ] if "SmokeTest" in f else [],
     tags = [
         "live-llm",

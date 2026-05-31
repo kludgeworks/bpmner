@@ -21,25 +21,24 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import java.util.concurrent.TimeUnit
 
 @Suppress("TooManyFunctions")
 @Tag("live-llm")
-@EnabledIfEnvironmentVariable(named = "ANTHROPIC_API_KEY", matches = ".+")
-@ExtendWith(ContractVocabularySmokeTestSummaryExtension::class)
+@ExtendWith(
+    ActiveLiveLlmProfileCondition::class,
+    ContractVocabularySmokeTestSummaryExtension::class,
+)
 @SpringBootTest
-@ActiveProfiles("anth")
 @Timeout(120, unit = TimeUnit.SECONDS)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
-        "embabel.agent.platform.models.openai.api-key=\${OPENAI_API_KEY:}",
+        "embabel.agent.platform.models.github.api-key=\${GITHUB_TOKEN:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
     ],

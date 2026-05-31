@@ -24,3 +24,10 @@ embabel:
       models:
         github:
           api-key: ${GITHUB_TOKEN}
+          # Register the model IDs referenced in the role map above.
+          # `GitHubProperties.models` defaults to `[openai/gpt-4o]` only; without
+          # this list, the LLM lookup for `openai/gpt-4.1` (etc.) fails at startup.
+          models:
+            - openai/gpt-4.1
+            - openai/gpt-4.1-mini
+            - openai/gpt-4.1-nano

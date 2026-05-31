@@ -93,10 +93,20 @@ bazel test //...
 ```
 
 ### Live LLM Smoke Tests
-To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite. Use the `--test_output=streamed` flag to display live execution logs, token usage, and model cost details in the terminal:
+To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite with one supported live provider profile. Use the `--test_output=streamed` flag to display live execution logs, token usage, and model cost details in the terminal:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... bazel test //src/test:ContractVocabularySmokeTest --test_output=streamed
+ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anth \
+  bazel test --test_tag_filters=manual,live-llm \
+  --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
+  //src/test:ContractVocabularySmokeTest --test_output=streamed
+
+GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
+  bazel test --test_tag_filters=manual,live-llm \
+  --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
+  //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
+The `anth` profile expands to `anthropic`, and `gh` expands to `github`, through the Spring profile groups in `application.yaml`. This vocabulary suite covers contract extraction behavior; full-pipeline GitHub E2E smoke coverage remains separate.
+
 These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocations during standard builds.
 
 ## Project Structure
