@@ -84,6 +84,21 @@ Kotlin code is checked by three complementary tools:
 - **detekt** and **ktlint** run on every PR via `bazel test //...` — fast, style/complexity-focused, configured in `detekt.yml` and `.editorconfig`.
 - **SonarCloud** runs on every PR as a required check. It performs deep code analysis for the backend, linter, and web sub-projects, and pushes results into the [SonarCloud dashboard](https://sonarcloud.io/).
 
+## Testing
+
+### Automated Tests
+Run all unit and integration tests (excluding live LLM tests):
+```bash
+bazel test //...
+```
+
+### Live LLM Smoke Tests
+To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite:
+```bash
+ANTHROPIC_API_KEY=sk-ant-... bazel test //src/test:ContractVocabularySmokeTest
+```
+These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocations during standard builds.
+
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
