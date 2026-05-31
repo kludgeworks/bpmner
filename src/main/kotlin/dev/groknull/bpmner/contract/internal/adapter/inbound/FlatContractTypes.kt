@@ -296,11 +296,16 @@ public data class FlatContractDecision(
     val branches: List<FlatContractBranch>,
     @get:JsonPropertyDescription(
         "How the branches relate. EXCLUSIVE (default) = exactly one branch taken based on its " +
-            "condition. INCLUSIVE = one or more branches whose conditions are true activate " +
-            "concurrently — use when the source describes independent optional add-ons that may " +
-            "apply singly, together, or not at all. PARALLEL = all branches activate concurrently " +
-            "regardless of conditions and reconverge at a join — use for 'in parallel' / " +
-            "'all of the following must complete'.",
+            "condition (a choice, check, or alternative paths where only one option is taken). " +
+            "INCLUSIVE = one or more branches whose conditions are true activate concurrently — " +
+            "keywords: 'any of the following can fire', 'either, both, or neither', 'each evaluated " +
+            "independently'; use for independent optional add-ons that may apply singly, together, " +
+            "or not at all. PARALLEL = all branches activate concurrently regardless of conditions " +
+            "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'all of the " +
+            "following must complete'. Differentiator: if every branch fires regardless of " +
+            "conditions use PARALLEL; if each fires only when its condition holds use INCLUSIVE. " +
+            "Do NOT use PARALLEL for sequential steps that merely share an actor or context — " +
+            "parallel means truly concurrent, with no fixed ordering.",
     )
     val kind: ContractGatewayKind = ContractGatewayKind.EXCLUSIVE,
     @field:Size(max = 10)

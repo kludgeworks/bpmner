@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 6954,
+			"chars": 5931,
 			"updatedBy": "#310",
-			"reason": "Compressed recognition-heuristic prose in element includes (activity_kinds, decision_kinds, branch_kinds, end_state_kinds) from `Recognise from phrases like \"X\", \"Y\"` to flat `keywords: X, Y` form. Inline JSON examples retained as few-shot priming. topology_rules.jinja was already concise."
+			"reason": "Deleted decision_kinds.jinja include; its recognition heuristics (INCLUSIVE/PARALLEL keywords + differentiator + anti-pattern) folded into FlatContractDecision.kind's @JsonPropertyDescription so they still ship via the schema."
 		},
 		"contractFullPayload": {
-			"chars": 20821,
+			"chars": 20243,
 			"updatedBy": "#310",
-			"reason": "BpmnRequest.contribution() scoped to style-guide-only — the ~1.8k chars of BPMN generation rules (schema/validator/template-covered) no longer ship on this call. Residual is the per-request style guide."
+			"reason": "Net of the decision_kinds fold: -1023 prompt, +445 schema (heuristics relocated into FlatContractDecision.kind description); ~578 net full-payload saving, no steering lost."
 		},
 		"generationPrompt": {
 			"chars": 12840,

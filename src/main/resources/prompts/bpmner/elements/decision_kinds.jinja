@@ -1,6 +1,0 @@
-Decision kind (exclusive vs inclusive vs parallel); EXCLUSIVE is the default:
-- EXCLUSIVE — branching where only one option is taken at a time (choice, check, alternative paths).
-- INCLUSIVE — keywords: any of the following can fire, AND/OR, each is evaluated independently. Branches carry `condition` like EXCLUSIVE; conditions are evaluated independently and any subset may fire. Declare the fork only; the matching join is materialised downstream.
-- PARALLEL — keywords: in parallel, simultaneously, all of the following must complete. Branches have no `condition` (leave null). Declare the fork only; the matching join (synchronisation) is implicit and materialised downstream.
-- Do NOT use PARALLEL for sequential steps that happen to share an actor or context; parallel means truly concurrent, with no fixed ordering.
-- INCLUSIVE vs PARALLEL: PARALLEL fires every branch unconditionally; INCLUSIVE fires each branch only if its condition is true. If every branch always fires regardless of conditions, use PARALLEL.
