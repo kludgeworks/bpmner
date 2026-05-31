@@ -29,15 +29,16 @@ class CheckAlignmentTemplateTest {
     private val contractRenderer = ProcessContractMarkdownRenderer()
 
     @Test
-    fun `template includes system instructions and classification taxonomy`() {
+    fun `template includes system instructions and the misaligned worked example`() {
         val prompt = render(sampleSummary())
 
+        // AlignmentFindings shape + classification enum descriptions live in the JSON-schema
+        // annotations on AlignmentFindings / AlignmentIssue / AlignmentClassification. The template
+        // carries only the role, the dynamic context, and one worked example.
         assertTrue(prompt.contains("You are a BPMN alignment validator"))
-        assertTrue(prompt.contains("AlignmentFindings"))
-        assertTrue(prompt.contains("ASSUMED:"))
-        assertTrue(prompt.contains("UNSUPPORTED:"))
-        assertTrue(prompt.contains("PARTIALLY_COVERED:"))
-        assertTrue(prompt.contains("MISSING:"))
+        assertTrue(prompt.contains("Worked Example — Misaligned"))
+        assertTrue(prompt.contains("\"classification\": \"MISSING\""))
+        assertTrue(prompt.contains("\"classification\": \"UNSUPPORTED\""))
     }
 
     @Test

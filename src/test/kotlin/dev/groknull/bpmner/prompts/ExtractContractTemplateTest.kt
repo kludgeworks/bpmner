@@ -7,7 +7,10 @@
 
 package dev.groknull.bpmner.prompts
 
+import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
@@ -16,7 +19,9 @@ import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import java.util.function.Predicate
 import kotlin.test.Test
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
@@ -74,11 +79,37 @@ class ExtractContractTemplateTest {
         assertTrue(prompt.contains("{kind: \"DEFAULT\""))
         assertTrue(prompt.contains("{kind: \"UNCONDITIONAL\""))
         assertTrue(prompt.contains("otherwise"))
-        assertTrue(prompt.contains("the catch-all"))
+        assertTrue(prompt.contains("catch-all"))
         assertTrue(prompt.contains("for every other case"))
-        assertTrue(prompt.contains("At most one DEFAULT branch per decision"))
+        assertTrue(prompt.contains("At most one DEFAULT per decision"))
         assertTrue(prompt.contains("CONDITIONAL and DEFAULT only on EXCLUSIVE decisions"))
         assertTrue(prompt.contains("UNCONDITIONAL only on PARALLEL decisions"))
+    }
+
+    @Test
+    fun `decision-kind recognition heuristics move from the template into the shipped schema`() {
+        // Decision-kind recognition heuristics live in FlatContractDecision.kind's
+        // @JsonPropertyDescription, not the rendered template. Guard both halves: the prose is
+        // absent from the template, and present in the schema the LLM sees.
+        val prompt = render(request(), assessment(), clarificationHistory = emptyList())
+        assertFalse(
+            prompt.contains("Decision kind (exclusive vs inclusive vs parallel)"),
+            "decision-kind prose is not rendered into the template",
+        )
+
+        val schema = FilteringJacksonOutputConverter(
+            FlatProcessContract::class.java,
+            jacksonObjectMapper(),
+            Predicate { true },
+        ).format
+        assertTrue(
+            schema.contains("if every branch fires regardless of conditions"),
+            "the PARALLEL-vs-INCLUSIVE differentiator must ship in the FlatProcessContract schema",
+        )
+        assertTrue(
+            schema.contains("truly concurrent"),
+            "the 'do not use PARALLEL for steps that merely share an actor' anti-pattern must ship in the schema",
+        )
     }
 
     @Test

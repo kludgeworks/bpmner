@@ -69,6 +69,29 @@ class BpmnGeneratorAgentTest {
     }
 
     @Test
+    fun `createOutline attaches the parallel and inclusive few-shot examples`() {
+        // The two non-obvious topologies are supplied as typed Creating.withExample(...) few-shot
+        // examples; confirm they reach the LLM as prompt contributors (rendered into the prompt the
+        // FakeOperationContext captures).
+        val context = FakeOperationContext()
+        context.expectResponse(flatTestDefinition(processName = "Handle claim"))
+
+        agent().createOutline(
+            BpmnRequest(processDescription = "Raw prose kept for traceability."),
+            validContract(),
+            context,
+        )
+
+        val invocation = context.llmInvocations.single()
+        val contributed = invocation.interaction.promptContributors.joinToString("\n") { it.contribution() }
+        val seen = invocation.prompt + "\n" + contributed
+        // Distinctive node ids from each typed example confirm both shipped.
+        assertTrue(seen.contains("dec-prep-tracks"), "parallel fork/join example should reach the LLM")
+        assertTrue(seen.contains("Gateway_join_prep"), "parallel synthesised join should reach the LLM")
+        assertTrue(seen.contains("dec-extras"), "inclusive-with-default example should reach the LLM")
+    }
+
+    @Test
     fun `createOutline fails before LLM generation for invalid contracts`() {
         val context = FakeOperationContext()
         val agent = agent()

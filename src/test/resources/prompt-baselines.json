@@ -3,44 +3,44 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7745,
-			"updatedBy": "#300",
-			"reason": "bpmner/extract_contract.jinja + element includes. Includes restored section-separator blank lines per review feedback."
+			"chars": 5931,
+			"updatedBy": "#310",
+			"reason": "Deleted decision_kinds.jinja include; its recognition heuristics (INCLUSIVE/PARALLEL keywords + differentiator + anti-pattern) folded into FlatContractDecision.kind's @JsonPropertyDescription so they still ship via the schema."
 		},
 		"contractFullPayload": {
-			"chars": 21563,
-			"updatedBy": "#302",
-			"reason": "Rendered extract_contract.jinja concatenated with FlatProcessContract schema-format text (FilteringJacksonOutputConverter.format)."
+			"chars": 20243,
+			"updatedBy": "#310",
+			"reason": "Net of the decision_kinds fold: -1023 prompt, +445 schema (heuristics relocated into FlatContractDecision.kind description); ~578 net full-payload saving, no steering lost."
 		},
 		"generationPrompt": {
-			"chars": 16988,
-			"updatedBy": "#300",
-			"reason": "bpmner/generate_bpmn.jinja. Includes a blank line after the naming-shape-advice loop per review feedback."
+			"chars": 9644,
+			"updatedBy": "#310",
+			"reason": "Rendered generate_bpmn.jinja: contract-to-BPMN wiring only. The kind→type/eventDefinition mappings and the catalogue dedup/reuse rules live in the FlatBpmnDefinition schema; worked examples are typed withExample few-shot values, not template text."
 		},
 		"generationFullPayload": {
-			"chars": 25935,
-			"updatedBy": "#302",
-			"reason": "Rendered generate_bpmn.jinja concatenated with FlatBpmnDefinition schema-format text."
+			"chars": 19161,
+			"updatedBy": "#310",
+			"reason": "generate_bpmn.jinja + FlatBpmnDefinition schema. Catalogue one-per-distinct-name/code reuse rules live in the message/signal/error/escalation field descriptions (single source of truth), so the prompt no longer restates them."
 		},
 		"alignmentPrompt": {
-			"chars": 3245,
-			"updatedBy": "#300",
-			"reason": "bpmner/check_alignment.jinja. Includes section-separator blank lines around Semantic Elements / Sequence Flows / Unreachable Elements / Alignment Task."
+			"chars": 2474,
+			"updatedBy": "#310",
+			"reason": "Removed Output-shape (AlignmentFindings) prose block and classification enum listing (now carried by @JsonClassDescription / @JsonPropertyDescription). Cut worked examples from 2 to 1 (kept misaligned)."
 		},
 		"alignmentFullPayload": {
-			"chars": 5111,
-			"updatedBy": "#302",
-			"reason": "Rendered check_alignment.jinja concatenated with AlignmentFindings schema-format text."
+			"chars": 4389,
+			"updatedBy": "#310",
+			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the alignment call."
 		},
 		"readinessPrompt": {
-			"chars": 3766,
-			"updatedBy": "#300",
-			"reason": "bpmner/assess_readiness.jinja. Includes section-separator blank lines after the dimensions list, missing-areas list, and before the clarification-history block."
+			"chars": 3249,
+			"updatedBy": "#310",
+			"reason": "Removed `dimensions` and `missingAreas` enum listings; their canonical names reach the LLM via the JSON-schema enum values. Kept the per-dimension calibration paragraph (load-bearing guidance)."
 		},
 		"readinessFullPayload": {
-			"chars": 9526,
-			"updatedBy": "#302",
-			"reason": "Rendered assess_readiness.jinja concatenated with ProcessInputAssessment schema-format text."
+			"chars": 9058,
+			"updatedBy": "#310",
+			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
 			"chars": 1606,

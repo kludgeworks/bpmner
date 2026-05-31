@@ -167,16 +167,31 @@ public data class FlatBpmnDefinition(
     @get:JsonPropertyDescription("Directed sequence-flow edges connecting node ids")
     val sequences: List<BpmnEdge>,
     @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN message declarations referenced by message event definitions")
+    @get:JsonPropertyDescription(
+        "Process-level message catalogue: declare one BpmnMessageRef per distinct message name. " +
+            "Every send/receive task and message event that uses that name references the same entry " +
+            "by id — never duplicate. Use a stable id derived from the name, e.g. Message_OrderConfirmed.",
+    )
     val messages: List<BpmnMessageRef> = emptyList(),
     @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN signal declarations referenced by signal event definitions")
+    @get:JsonPropertyDescription(
+        "Process-level signal catalogue: declare one BpmnSignalRef per distinct signal name; every " +
+            "signal event that uses that name references the same entry by id. Stable id e.g. " +
+            "Signal_SettlementComplete.",
+    )
     val signals: List<BpmnSignalRef> = emptyList(),
     @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN error declarations referenced by error event definitions")
+    @get:JsonPropertyDescription(
+        "Process-level error catalogue: declare one BpmnErrorRef per distinct error code; every error " +
+            "event that uses that code references the same entry by id. Stable id e.g. Error_CreditRejected.",
+    )
     val errors: List<BpmnErrorRef> = emptyList(),
     @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
+    @get:JsonPropertyDescription(
+        "Process-level escalation catalogue: declare one BpmnEscalationRef per distinct escalation code; " +
+            "every escalation event that uses that code references the same entry by id. Stable id e.g. " +
+            "Escalation_ApprovalOverdue.",
+    )
     val escalations: List<BpmnEscalationRef> = emptyList(),
 )
 

@@ -9,8 +9,6 @@ import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
@@ -29,7 +27,10 @@ class AssessReadinessTemplateTest {
         assertTrue(prompt.contains("Return only a structured ProcessInputAssessment object."))
         assertTrue(prompt.contains("Do not invent actors"))
         assertTrue(prompt.contains("Mark unsupported facts as missing"))
-        assertTrue(prompt.contains(ReadinessDimension.START_TRIGGER.name))
+        // ReadinessDimension / MissingProcessArea enum names reach the LLM via the JSON schema, not
+        // the prompt prose. The per-dimension calibration paragraph stays — anchor on the
+        // most-misjudged dimension name.
+        assertTrue(prompt.contains("BPMN_SUITABILITY"))
     }
 
     @Test
@@ -91,8 +92,6 @@ class AssessReadinessTemplateTest {
     private fun model(request: BpmnRequest): Map<String, Any> = mapOf(
         "readyThreshold" to config.readyThreshold,
         "maxClarificationQuestions" to config.maxClarificationQuestions,
-        "dimensions" to ReadinessDimension.entries.map { it.name },
-        "missingAreas" to MissingProcessArea.entries.map { it.name },
         "processDescription" to request.processDescription,
         "clarificationHistory" to request.clarificationHistory.map {
             mapOf(

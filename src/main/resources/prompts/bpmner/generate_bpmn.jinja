@@ -13,33 +13,13 @@ Contract-driven generation rules:
 - You may infer sequence flows and routing-only converging gateways needed for valid BPMN.
 - Leave routing-only converging gateways unnamed.
 
-Identity rules:
-- When a BPMN node realizes a ContractActivity / ContractDecision / ContractEndState, use the contract element's id verbatim as the BPMN node id. e.g. `act-extract-contract`, `dec-readiness`, `end-aborted-repair`.
-- The BPMN element kind goes in the `type` field (USER_TASK / SERVICE_TASK / SCRIPT_TASK / BUSINESS_RULE_TASK / SEND_TASK / RECEIVE_TASK / MANUAL_TASK / EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode element type as a `Task_` / `Gateway_` / `EndEvent_` prefix in the id.
-- Synthesized routing nodes (the process start event, converging join gateways, etc.) have no contract id. Use stable unique ids of your choosing (e.g. `StartEvent_1`, `Gateway_join_1`).
+Contract-to-BPMN wiring (the schema covers each `kind` → BPMN `type`/`eventDefinition` mapping and the catalogue dedup rules; these are the contract links it can't express):
+- BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
+- Send / Receive: point the task's `messageRef` at a `definition.messages` entry whose `name` is the contract's `messageName`.
+- Error / Message / Signal / Escalation end states: point the event definition's ref at a matching entry in the process-level `definition.errors` / `.messages` / `.signals` / `.escalations` catalogue whose `code`/`name` is the contract's.
 
-Activity-kind → BPMN node `type` (each ContractActivity carries a `kind` discriminator):
-- Service       → SERVICE_TASK
-- User          → USER_TASK
-- Script        → SCRIPT_TASK
-- BusinessRule  → BUSINESS_RULE_TASK — copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
-- Send          → SEND_TASK — declare one BpmnMessageRef in `definition.messages` whose `name` matches the contract's `messageName`; set `messageRef` on the task to that catalogue entry's id.
-- Receive       → RECEIVE_TASK — same catalogue convention as Send.
-- Manual        → MANUAL_TASK
-- Catalogue convention: one BpmnMessageRef per distinct messageName the contract mentions. Pick stable ids like `Message_DeclineNotification` from the messageName.
-
-End-state-kind → BpmnEndEvent's `eventDefinition` (each ContractEndState carries a `kind` discriminator); NORMAL → BpmnNoneEventDefinition is the default:
-- Terminate   → BpmnTerminateEventDefinition (a data object — no payload)
-- Error       → BpmnErrorEventDefinition(errorRef) plus a matching BpmnErrorRef in `definition.errors` whose `code = errorCode`. Pick stable ids like `Error_CreditRejected` from the errorCode.
-- Message     → BpmnMessageEventDefinition(messageRef) plus a matching BpmnMessageRef whose `name = messageName`. If the same messageName also appears on a Send/Receive task, REUSE the catalogue entry — one ref per distinct name.
-- Signal      → BpmnSignalEventDefinition(signalRef) plus a matching BpmnSignalRef in `definition.signals` whose `name = signalName`. Pick stable ids like `Signal_SettlementComplete` from the signalName.
-- Escalation  → BpmnEscalationEventDefinition(escalationRef) plus a matching BpmnEscalationRef in `definition.escalations` whose `code = escalationCode`. Pick stable ids like `Escalation_ApprovalOverdue` from the escalationCode.
-- Catalogue reuse: a single `BpmnErrorRef` / `BpmnMessageRef` / `BpmnSignalRef` / `BpmnEscalationRef` can be referenced by multiple end events (and intermediate catch / throw events when those land); only declare each distinct code/name once.
-
-Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discriminator):
-- CONDITIONAL (ConditionalBranch) → BpmnEdge with `conditionExpression = branch.condition`. The default kind for EXCLUSIVE decisions.
-- DEFAULT (DefaultBranch) → emit an outbound BpmnEdge with `conditionExpression = null` (no condition). You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets `isDefault = true` from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. Valid only on EXCLUSIVE decisions. NEVER invent placeholder conditions like "otherwise" or "all other cases".
-- UNCONDITIONAL (UnconditionalBranch) → BpmnEdge with neither condition nor isDefault. The kind for PARALLEL fork branches.
+Branch wiring (the `kind` → BpmnEdge shape is in each ContractBranch subtype's schema, and `conditionExpression`/`isDefault` carry their own field descriptions):
+- DEFAULT: emit the outbound edge with no `conditionExpression`. You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets it from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. NEVER invent placeholder conditions like "otherwise" or "all other cases".
 
 Naming shape rules — follow these on your first emission to avoid lint repair rounds:
 {% for block in namingShapeAdvice %}{{ block }}
@@ -50,72 +30,17 @@ Loop and back-edge rules:
 - When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's gateway to the node with that id. If `nextRef` points to an earlier activity, this is the loop back-edge.
 - For multi-exit loops (e.g. pass / no-progress / exhausted), emit ONE XOR gateway after the loop body with one outbound flow per branch — including the back-edge — not separate gateways per exit.
 
-Worked example — iterative repair loop with three exit conditions:
-  Contract decision `dec-validate` (kind=EXCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-pass, label: "Validation passed", condition: "validation passed", nextRef: "end-success"}
-    - {kind: CONDITIONAL, id: br-no-progress, label: "No progress", condition: "no progress", nextRef: "end-no-progress"}
-    - {kind: CONDITIONAL, id: br-retry, label: "Continue", condition: "continue", nextRef: "act-strategy-1"}  // back-edge
-  BPMN topology:
-    - The decision is realized as ONE EXCLUSIVE_GATEWAY node:
-        BpmnNode(id="dec-validate", type=EXCLUSIVE_GATEWAY, name="Did validation pass?")
-    - Three outbound sequence flows from that gateway with the conditions above.
+Parallel-gateway topology:
+- Every PARALLEL fork MUST have a matching synchronising join: a second PARALLEL_GATEWAY node where every branch reconverges before downstream work proceeds. The join is a synthesised node with a stable unique id (e.g. `Gateway_join_<descriptor>`) and no `name`.
+- After the join, emit a single outbound sequence flow to whatever comes next.
 
-Worked example — exclusive decision with a default branch:
-  Contract decision `dec-tier` (kind=EXCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-fast, label: "Fast-track", condition: "score >= 750", nextRef: "act-fast"}
-    - {kind: CONDITIONAL, id: br-standard, label: "Standard", condition: "score in 600..749", nextRef: "act-standard"}
-    - {kind: DEFAULT, id: br-manual, label: "Manual review", nextRef: "act-manual"}
-  BPMN topology:
-    - One EXCLUSIVE_GATEWAY node `dec-tier`.
-    - Three outbound flows from `dec-tier`. The flow targeting `act-manual` has
-      `isDefault = true` and no conditionExpression; the renderer writes the
-      gateway's `default="Flow_manual"` attribute.
-
-Parallel-gateway rules:
-- When a ContractDecision has `kind = PARALLEL`, realize the fork as ONE PARALLEL_GATEWAY node whose id equals the decision id verbatim. Each branch becomes one unconditional outbound flow — DO NOT add a conditionExpression.
-- Every PARALLEL fork MUST have a matching synchronising join: a second PARALLEL_GATEWAY node where every branch reconverges before downstream work proceeds. The join is a synthesised node with a stable unique id of your choosing (e.g. `Gateway_join_<descriptor>`) — it has no contract counterpart. The join has no `name` (parallel joins do not ask a question).
-- After the join, emit a single outbound sequence flow to whatever comes next in the process (an activity, another decision, or an end event).
-
-Worked example — three concurrent preparation tracks rejoining:
-  Contract decision `dec-prep-tracks` (kind=PARALLEL) has three branches:
-    - {kind: UNCONDITIONAL, id: br-it,         label: "IT prep",         nextRef: "act-prep-it"}
-    - {kind: UNCONDITIONAL, id: br-facilities, label: "Facilities prep", nextRef: "act-prep-facilities"}
-    - {kind: UNCONDITIONAL, id: br-manager,    label: "Manager prep",    nextRef: "act-prep-manager"}
-  After all three complete, the process continues to `act-orientation`.
-  BPMN topology:
-    - Fork: BpmnNode(id="dec-prep-tracks", type=PARALLEL_GATEWAY, name="Run preparation tracks")
-    - Three unconditional outbound flows from the fork:
-        * to `act-prep-it`        (no condition)
-        * to `act-prep-facilities` (no condition)
-        * to `act-prep-manager`    (no condition)
-    - Synthesised join: BpmnNode(id="Gateway_join_prep", type=PARALLEL_GATEWAY, name=null)
-    - Three inbound flows to the join (one from each track's last activity).
-    - One outbound flow from the join to `act-orientation`.
-
-Inclusive-gateway rules:
-- When a ContractDecision has `kind = INCLUSIVE`, realize the fork as ONE INCLUSIVE_GATEWAY node whose id equals the decision id verbatim. Each conditional branch becomes one CONDITIONAL outbound flow with a conditionExpression — just like EXCLUSIVE. The difference is semantic: the conditions are evaluated independently, so any subset (including all of them) may fire concurrently.
-- Every INCLUSIVE fork MUST have a matching synchronising join: a second INCLUSIVE_GATEWAY node where every activated branch reconverges before downstream work proceeds. The join waits only for the branches that fired (unlike a parallel join, which waits for all branches). The join is a synthesised node with a stable unique id of your choosing (e.g. `Gateway_join_<descriptor>`) — it has no contract counterpart and no `name`.
+Inclusive-gateway topology:
+- INCLUSIVE conditions are evaluated independently — any subset (including all) may fire concurrently. (Same `conditionExpression` shape as EXCLUSIVE, different semantics.)
+- Every INCLUSIVE fork MUST have a matching synchronising join: a second INCLUSIVE_GATEWAY node. The join waits only for the branches that fired (unlike a parallel join, which waits for all branches). It's a synthesised node with a stable unique id and no `name`.
 - A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other branch's condition is true. The renderer writes the gateway's `default` attribute on the chosen outbound flow.
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
-Worked example — fulfilment with optional gift-wrap and promotional insert:
-  Contract decision `dec-extras` (kind=INCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-wrap,   label: "Gift wrap",          condition: "gift wrap requested",      nextRef: "act-wrap"}
-    - {kind: CONDITIONAL, id: br-insert, label: "Promotional insert", condition: "order qualifies for insert", nextRef: "act-insert"}
-    - {kind: DEFAULT,     id: br-none,   label: "Skip add-ons",       nextRef: "act-skip"}  // fires when both conditions are false
-  The two conditional branches are evaluated independently. If both are true, both fire concurrently; if one is true, only that one fires; if neither is true, the DEFAULT branch fires through a `Skip add-ons` activity so the process always has a forward path. The matching inclusive join waits only for the branches that activated, then the process continues to `act-label`.
-  BPMN topology:
-    - Fork: BpmnNode(id="dec-extras", type=INCLUSIVE_GATEWAY, name="Which add-ons apply?")
-    - Three outbound sequence flows from the fork:
-        * to `act-wrap`   with condition "gift wrap requested"
-        * to `act-insert` with condition "order qualifies for insert"
-        * to `act-skip`   with `isDefault = true` and no condition (the renderer writes
-          the gateway's `default` attribute to this flow's id)
-    - Synthesised join: BpmnNode(id="Gateway_join_extras", type=INCLUSIVE_GATEWAY, name=null)
-    - Three inbound flows to the join — one from each branch's last activity.
-      All branches (including the default) feed the join so the engine's
-      token-counting waits for exactly the branches that fired.
-    - One outbound flow from the join to `act-label`.
+The provided worked examples show both topologies end-to-end — follow their fork/join wiring.
 
 Primary validated ProcessContract:
 {{ contractMarkdown }}

@@ -63,47 +63,12 @@ data class BpmnRequest(
     override val clarificationHistory: List<ClarificationExchange> = emptyList(),
 ) : ApiBpmnRequest,
     PromptContributor {
-    override fun contribution(): String = buildString {
-        appendLine(
-            """
-                You are a BPMN process design expert. Given a workflow description — business, automated,
-                technical, scientific, or personal — generate a typed BPMN process definition object that
-                can be converted to valid BPMN 2.0 XML.
-
-                Rules:
-                - Return a single process definition object with processId, processName, nodes, and sequences.
-                - Every node id and sequence id must be unique.
-                - Every sequence sourceRef and targetRef must reference an existing node id.
-                - Include at least one START_EVENT and one END_EVENT.
-                - Use clear, descriptive names on tasks and events that faithfully reflect the source workflow.
-                - Name diverging gateways as decision questions; leave converging gateways unnamed.
-                - **Identity rule:** when a BPMN node realizes a ContractActivity / ContractDecision /
-                  ContractEndState from the source ProcessContract, use the contract element's id verbatim
-                  as the BPMN node id (e.g. `act-extract-contract`, `dec-readiness`, `end-aborted-repair`).
-                  Synthesized nodes that do not realize a contract element (routing-only converging joins,
-                  the process start event, intermediate routing nodes) use stable unique ids of your choosing
-                  (e.g. `StartEvent_1`, `Gateway_join_1`).
-                - The BPMN node type is carried by the `type` field (USER_TASK / SERVICE_TASK /
-                  EXCLUSIVE_GATEWAY / PARALLEL_GATEWAY / END_EVENT / …). Do not re-encode element
-                  type as a prefix in the id.
-                - Keep process topology coherent with no dangling references.
-                - A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier
-                  elements (different sourceRef and targetRef where the target has already been visited)
-                  are valid and required to encode iterative loops.
-                - Use conditionExpression on conditional gateway branches when needed.
-
-                If you receive validation errors, fix them and return the full corrected object.
-            """.trimIndent(),
-        )
-        if (styleGuide != null) {
-            appendLine()
-            appendLine("---")
-            appendLine()
-            appendLine("## Style guide")
-            appendLine()
-            appendLine(styleGuide)
-        }
-    }
+    // Contributes only the per-request style guide. BPMN generation rules are owned elsewhere:
+    // node-id / type-prefix conventions by NODE_ID_DESCRIPTION on FlatBpmnNode; id-uniqueness,
+    // reference resolution, and the >=1 START/END requirement by BpmnDefinitionValidator;
+    // sourceRef!=targetRef and conditionExpression guidance by generate_bpmn.jinja. Each template
+    // states its own role, so no system-level role framing is added here.
+    override fun contribution(): String = styleGuide?.let { "## Style guide\n\n$it" } ?: ""
 }
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")

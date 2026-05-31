@@ -46,6 +46,34 @@ class BpmnRequestTest {
     }
 
     @Test
+    fun `contribution is empty without a style guide and carries only the style guide with one`() {
+        // contribution() carries only the style guide. BPMN generation rules are owned by schema
+        // annotations (NODE_ID_DESCRIPTION), BpmnDefinitionValidator, and generate_bpmn.jinja, so
+        // they must not appear in the system-message contribution.
+        assertTrue(
+            BpmnRequest(processDescription = "Ship the order").contribution().isEmpty(),
+            "contribution should be empty when no style guide is supplied",
+        )
+
+        val withGuide =
+            BpmnRequest(
+                processDescription = "Ship the order",
+                styleGuide = "Use sentence case for task names.",
+            ).contribution()
+
+        assertTrue(withGuide.contains("Use sentence case for task names."), "style guide should be carried")
+        assertFalse(
+            withGuide.contains("BPMN process design expert"),
+            "the BPMN-expert framing must not appear in the contribution",
+        )
+        assertFalse(withGuide.contains("Identity rule"), "identity rule now lives in NODE_ID_DESCRIPTION, not here")
+        assertFalse(
+            withGuide.contains("at least one START_EVENT"),
+            "START/END requirement is enforced by BpmnDefinitionValidator, not prompt prose",
+        )
+    }
+
+    @Test
     fun `generationPrompt includes clarification history for the generator agent`() {
         val request =
             BpmnRequest(
