@@ -72,7 +72,10 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
         "ANTHROPIC_API_KEY",
         "OPENAI_API_KEY",
     ] if "SmokeTest" in f else [],
-    tags = ["live-llm"] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else [],
+    tags = [
+        "live-llm",
+        "manual",
+    ] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else [],
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
     visibility = ["//visibility:public"],
     runtime_deps = [

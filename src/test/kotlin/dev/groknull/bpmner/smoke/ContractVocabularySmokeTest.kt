@@ -94,7 +94,7 @@ class ContractVocabularySmokeTest {
         }
     }
 
-    // Task Kinds (#193)
+    // Task Kinds
 
     @Test
     fun `script task`() {
@@ -102,7 +102,7 @@ class ContractVocabularySmokeTest {
             """
             When a mortgage application arrives, the system runs a formatting script to clean up the fields.
             Then the application process finishes.
-            """.trimIndent(),
+            """,
         )
         c.assertHasActivity<ContractActivity.Script>()
     }
@@ -113,7 +113,7 @@ class ContractVocabularySmokeTest {
             """
             The process begins when an order is placed. The system then evaluates the pricing rules
             using the order discount table to determine the final price. Finally, the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasActivity<ContractActivity.BusinessRule>()
     }
@@ -124,7 +124,7 @@ class ContractVocabularySmokeTest {
             """
             When the registration is complete, the application sends a confirmation email to the user.
             Then the process completes.
-            """.trimIndent(),
+            """,
         )
         c.assertHasActivity<ContractActivity.Send>()
     }
@@ -135,7 +135,7 @@ class ContractVocabularySmokeTest {
             """
             The process starts when requested. After submitting the form, the system waits for the signature message to arrive.
             Then the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasActivity<ContractActivity.Receive>()
     }
@@ -146,19 +146,19 @@ class ContractVocabularySmokeTest {
             """
             When a sample is delivered, the doctor manually inspects the physical test tube for color changes.
             Afterwards, the test is complete.
-            """.trimIndent(),
+            """,
         )
         c.assertHasActivity<ContractActivity.Manual>()
     }
 
-    // Typed Start Events (#185)
+    // Typed Start Events
 
     @Test
     fun `timer start`() {
         val c = extractContract(
             """
             Every Friday at 5 PM, the system generates a weekly sales summary report and the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertTriggerType<ContractTrigger.Timer>()
     }
@@ -169,7 +169,7 @@ class ContractVocabularySmokeTest {
             """
             When a 'New User Registered' message is received, the onboarding process is initiated,
             an account is provisioned, and the process completes.
-            """.trimIndent(),
+            """,
         )
         c.assertTriggerType<ContractTrigger.Message>()
     }
@@ -180,19 +180,19 @@ class ContractVocabularySmokeTest {
             """
             The process starts when the system broadcasts a 'Global System Shutdown' signal.
             Once started, it records the shutdown log and ends.
-            """.trimIndent(),
+            """,
         )
         c.assertTriggerType<ContractTrigger.Signal>()
     }
 
-    // Typed End Events (#186)
+    // Typed End Events
 
     @Test
     fun `terminate end`() {
         val c = extractContract(
             """
             The process begins when started. If the emergency stop button is pressed, the process terminates all active operations immediately.
-            """.trimIndent(),
+            """,
         )
         c.assertHasEndState<ContractEndState.Terminate>()
     }
@@ -202,7 +202,7 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process begins when started. We validate the application. If validation fails, the process ends with a validation error.
-            """.trimIndent(),
+            """,
         )
         c.assertHasEndState<ContractEndState.Error>()
     }
@@ -212,7 +212,7 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process begins when started. When everything is done, the process completes by sending a final invoice message.
-            """.trimIndent(),
+            """,
         )
         c.assertHasEndState<ContractEndState.Message>()
     }
@@ -222,7 +222,7 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process begins when started. Upon successful completion of the process, a signal is broadcast to all subsystems.
-            """.trimIndent(),
+            """,
         )
         c.assertHasEndState<ContractEndState.Signal>()
     }
@@ -232,7 +232,7 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process begins when started. If the approval is overdue, we trigger a manager escalation.
-            """.trimIndent(),
+            """,
         )
         c.assertHasEndState<ContractEndState.Escalation>()
     }
@@ -245,7 +245,7 @@ class ContractVocabularySmokeTest {
             """
             The process starts when an invoice is received. If the amount is over 1000, we route to supervisor approval.
             Otherwise, we auto-approve the request. Then the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.EXCLUSIVE)
     }
@@ -256,7 +256,7 @@ class ContractVocabularySmokeTest {
             """
             The process starts when a customer applies. If the customer is premium, we apply a 10% discount.
             Otherwise, by default, we apply no discount. Then the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.EXCLUSIVE)
         c.assertHasBranchType<DefaultBranch>()
@@ -268,12 +268,12 @@ class ContractVocabularySmokeTest {
             """
             The process starts. We execute both the background check and the credit check concurrently.
             Both must complete before we finalize the account. Then the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.PARALLEL)
     }
 
-    // Inclusive gateway (#182)
+    // Inclusive gateway
 
     @Test
     fun `inclusive gateway`() {
@@ -281,7 +281,7 @@ class ContractVocabularySmokeTest {
             """
             The process starts. Depending on the application, we may send a notification to either the customer, the manager, or both, or neither.
             Then the process ends.
-            """.trimIndent(),
+            """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.INCLUSIVE)
     }
