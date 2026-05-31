@@ -105,7 +105,15 @@ GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
-The `anth` profile expands to `anthropic`, and `gh` expands to `github`, through the Spring profile groups in `application.yaml`. This vocabulary suite covers contract extraction behavior; full-pipeline GitHub E2E smoke coverage remains separate.
+The `anth` profile expands to `anthropic`, and `gh` expands to `github`, through the Spring profile groups in `application.yaml`.
+
+To manually verify the full BPMN pipeline against GitHub Models, run:
+```bash
+GITHUB_TOKEN=github_pat_... bazel test --test_tag_filters=manual,live-llm \
+  --test_env=GITHUB_TOKEN //src/test:GitHubModelsFullPipelineSmokeTest \
+  --test_output=streamed
+```
+This full-pipeline smoke test exercises the employee-onboarding sample end to end and is kept separate from the contract-vocabulary suite.
 
 These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocations during standard builds.
 
