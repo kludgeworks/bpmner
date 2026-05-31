@@ -88,13 +88,13 @@ class ExtractContractTemplateTest {
 
     @Test
     fun `decision-kind recognition heuristics move from the template into the shipped schema`() {
-        // #310: decision_kinds.jinja was deleted; its INCLUSIVE/PARALLEL recognition heuristics
-        // were folded into FlatContractDecision.kind's @JsonPropertyDescription. Guard both halves:
-        // the prose is gone from the rendered template, and it survives in the schema the LLM sees.
+        // Decision-kind recognition heuristics live in FlatContractDecision.kind's
+        // @JsonPropertyDescription, not the rendered template. Guard both halves: the prose is
+        // absent from the template, and present in the schema the LLM sees.
         val prompt = render(request(), assessment(), clarificationHistory = emptyList())
         assertFalse(
             prompt.contains("Decision kind (exclusive vs inclusive vs parallel)"),
-            "decision_kinds prose should no longer be rendered into the template",
+            "decision-kind prose is not rendered into the template",
         )
 
         val schema = FilteringJacksonOutputConverter(

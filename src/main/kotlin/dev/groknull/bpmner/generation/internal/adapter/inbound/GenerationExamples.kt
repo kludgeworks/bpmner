@@ -12,15 +12,14 @@ import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 
 /**
  * Typed few-shot examples attached to the BPMN-generation call via
- * `Creating<FlatBpmnDefinition>.withExample(...)` (#309 follow-up to #300). These replace the two
- * inline JSON worked examples that previously lived in `generate_bpmn.jinja`: they teach the two
- * non-obvious topologies the LLM does not reliably reproduce from training — the PARALLEL
- * fork/join (every branch fires, the synthesised join waits for all) and the INCLUSIVE fork with
- * a DEFAULT branch (independent conditions, the join waits only for activated branches).
+ * `Creating<FlatBpmnDefinition>.withExample(...)`. They teach the two non-obvious topologies the
+ * LLM does not reliably reproduce from training: the PARALLEL fork/join (every branch fires; the
+ * synthesised join waits for all of them) and the INCLUSIVE fork with a DEFAULT branch
+ * (independent conditions; the join waits only for the branches that fired).
  *
- * Keeping them as typed values (rather than prompt prose) means the compiler guarantees they stay
- * structurally valid as the schema evolves, and the framework renders them into the prompt in the
- * same JSON shape the LLM must emit.
+ * As typed values the compiler keeps them structurally valid as the schema evolves, and the
+ * framework renders them into the prompt in the same JSON shape the LLM must emit. Node ids are
+ * named constants so each edge endpoint resolves to a declared node — a typo is a compile error.
  */
 internal object GenerationExamples {
     const val PARALLEL_LABEL: String =
@@ -29,31 +28,49 @@ internal object GenerationExamples {
     const val INCLUSIVE_LABEL: String =
         "INCLUSIVE fork with a DEFAULT branch: conditions are independent; the join waits only for the branches that fired"
 
+    private const val START = "StartEvent_1"
+
+    private const val PREP_FORK = "dec-prep-tracks"
+    private const val PREP_IT = "act-prep-it"
+    private const val PREP_FACILITIES = "act-prep-facilities"
+    private const val PREP_MANAGER = "act-prep-manager"
+    private const val PREP_JOIN = "Gateway_join_prep"
+    private const val ORIENTATION = "act-orientation"
+    private const val ONBOARDED = "end-onboarded"
+
+    private const val EXTRAS_FORK = "dec-extras"
+    private const val WRAP = "act-wrap"
+    private const val INSERT = "act-insert"
+    private const val SKIP = "act-skip"
+    private const val EXTRAS_JOIN = "Gateway_join_extras"
+    private const val LABEL = "act-label"
+    private const val PACKED = "end-packed"
+
     val parallelForkJoin: FlatBpmnDefinition =
         FlatBpmnDefinition(
             processId = "Process_onboarding",
             processName = "Employee onboarding",
             nodes = listOf(
-                FlatBpmnNode("StartEvent_1", FlatBpmnNodeKind.START_EVENT, "Onboarding started"),
-                FlatBpmnNode("dec-prep-tracks", FlatBpmnNodeKind.PARALLEL_GATEWAY, "Run preparation tracks"),
-                FlatBpmnNode("act-prep-it", FlatBpmnNodeKind.USER_TASK, "Prepare IT equipment"),
-                FlatBpmnNode("act-prep-facilities", FlatBpmnNodeKind.USER_TASK, "Prepare desk space"),
-                FlatBpmnNode("act-prep-manager", FlatBpmnNodeKind.USER_TASK, "Brief the manager"),
-                // Synthesised converging join — no name (converging gateways are unnamed).
-                FlatBpmnNode("Gateway_join_prep", FlatBpmnNodeKind.PARALLEL_GATEWAY),
-                FlatBpmnNode("act-orientation", FlatBpmnNodeKind.USER_TASK, "Run orientation"),
-                FlatBpmnNode("end-onboarded", FlatBpmnNodeKind.END_EVENT, "Employee onboarded"),
+                FlatBpmnNode(START, FlatBpmnNodeKind.START_EVENT, "Onboarding started"),
+                FlatBpmnNode(PREP_FORK, FlatBpmnNodeKind.PARALLEL_GATEWAY, "Run preparation tracks"),
+                FlatBpmnNode(PREP_IT, FlatBpmnNodeKind.USER_TASK, "Prepare IT equipment"),
+                FlatBpmnNode(PREP_FACILITIES, FlatBpmnNodeKind.USER_TASK, "Prepare desk space"),
+                FlatBpmnNode(PREP_MANAGER, FlatBpmnNodeKind.USER_TASK, "Brief the manager"),
+                // Converging join carries no name.
+                FlatBpmnNode(PREP_JOIN, FlatBpmnNodeKind.PARALLEL_GATEWAY),
+                FlatBpmnNode(ORIENTATION, FlatBpmnNodeKind.USER_TASK, "Run orientation"),
+                FlatBpmnNode(ONBOARDED, FlatBpmnNodeKind.END_EVENT, "Employee onboarded"),
             ),
             sequences = listOf(
-                BpmnEdge("Flow_1", "StartEvent_1", "dec-prep-tracks"),
-                BpmnEdge("Flow_2", "dec-prep-tracks", "act-prep-it"),
-                BpmnEdge("Flow_3", "dec-prep-tracks", "act-prep-facilities"),
-                BpmnEdge("Flow_4", "dec-prep-tracks", "act-prep-manager"),
-                BpmnEdge("Flow_5", "act-prep-it", "Gateway_join_prep"),
-                BpmnEdge("Flow_6", "act-prep-facilities", "Gateway_join_prep"),
-                BpmnEdge("Flow_7", "act-prep-manager", "Gateway_join_prep"),
-                BpmnEdge("Flow_8", "Gateway_join_prep", "act-orientation"),
-                BpmnEdge("Flow_9", "act-orientation", "end-onboarded"),
+                BpmnEdge("Flow_1", START, PREP_FORK),
+                BpmnEdge("Flow_2", PREP_FORK, PREP_IT),
+                BpmnEdge("Flow_3", PREP_FORK, PREP_FACILITIES),
+                BpmnEdge("Flow_4", PREP_FORK, PREP_MANAGER),
+                BpmnEdge("Flow_5", PREP_IT, PREP_JOIN),
+                BpmnEdge("Flow_6", PREP_FACILITIES, PREP_JOIN),
+                BpmnEdge("Flow_7", PREP_MANAGER, PREP_JOIN),
+                BpmnEdge("Flow_8", PREP_JOIN, ORIENTATION),
+                BpmnEdge("Flow_9", ORIENTATION, ONBOARDED),
             ),
         )
 
@@ -62,26 +79,26 @@ internal object GenerationExamples {
             processId = "Process_fulfilment",
             processName = "Order fulfilment add-ons",
             nodes = listOf(
-                FlatBpmnNode("StartEvent_1", FlatBpmnNodeKind.START_EVENT, "Order ready to pack"),
-                FlatBpmnNode("dec-extras", FlatBpmnNodeKind.INCLUSIVE_GATEWAY, "Which add-ons apply?"),
-                FlatBpmnNode("act-wrap", FlatBpmnNodeKind.USER_TASK, "Add gift wrap"),
-                FlatBpmnNode("act-insert", FlatBpmnNodeKind.USER_TASK, "Add promotional insert"),
-                FlatBpmnNode("act-skip", FlatBpmnNodeKind.SERVICE_TASK, "Skip add-ons"),
-                FlatBpmnNode("Gateway_join_extras", FlatBpmnNodeKind.INCLUSIVE_GATEWAY),
-                FlatBpmnNode("act-label", FlatBpmnNodeKind.SERVICE_TASK, "Print shipping label"),
-                FlatBpmnNode("end-packed", FlatBpmnNodeKind.END_EVENT, "Order packed"),
+                FlatBpmnNode(START, FlatBpmnNodeKind.START_EVENT, "Order ready to pack"),
+                FlatBpmnNode(EXTRAS_FORK, FlatBpmnNodeKind.INCLUSIVE_GATEWAY, "Which add-ons apply?"),
+                FlatBpmnNode(WRAP, FlatBpmnNodeKind.USER_TASK, "Add gift wrap"),
+                FlatBpmnNode(INSERT, FlatBpmnNodeKind.USER_TASK, "Add promotional insert"),
+                FlatBpmnNode(SKIP, FlatBpmnNodeKind.SERVICE_TASK, "Skip add-ons"),
+                FlatBpmnNode(EXTRAS_JOIN, FlatBpmnNodeKind.INCLUSIVE_GATEWAY),
+                FlatBpmnNode(LABEL, FlatBpmnNodeKind.SERVICE_TASK, "Print shipping label"),
+                FlatBpmnNode(PACKED, FlatBpmnNodeKind.END_EVENT, "Order packed"),
             ),
             sequences = listOf(
-                BpmnEdge("Flow_1", "StartEvent_1", "dec-extras"),
-                BpmnEdge("Flow_2", "dec-extras", "act-wrap", conditionExpression = "gift wrap requested"),
-                BpmnEdge("Flow_3", "dec-extras", "act-insert", conditionExpression = "order qualifies for insert"),
-                // DEFAULT branch: no condition, isDefault=true (the renderer writes the gateway's `default`).
-                BpmnEdge("Flow_4", "dec-extras", "act-skip", isDefault = true),
-                BpmnEdge("Flow_5", "act-wrap", "Gateway_join_extras"),
-                BpmnEdge("Flow_6", "act-insert", "Gateway_join_extras"),
-                BpmnEdge("Flow_7", "act-skip", "Gateway_join_extras"),
-                BpmnEdge("Flow_8", "Gateway_join_extras", "act-label"),
-                BpmnEdge("Flow_9", "act-label", "end-packed"),
+                BpmnEdge("Flow_1", START, EXTRAS_FORK),
+                BpmnEdge("Flow_2", EXTRAS_FORK, WRAP, conditionExpression = "gift wrap requested"),
+                BpmnEdge("Flow_3", EXTRAS_FORK, INSERT, conditionExpression = "order qualifies for insert"),
+                // DEFAULT branch: no condition, isDefault = true; the renderer writes the gateway's `default`.
+                BpmnEdge("Flow_4", EXTRAS_FORK, SKIP, isDefault = true),
+                BpmnEdge("Flow_5", WRAP, EXTRAS_JOIN),
+                BpmnEdge("Flow_6", INSERT, EXTRAS_JOIN),
+                BpmnEdge("Flow_7", SKIP, EXTRAS_JOIN),
+                BpmnEdge("Flow_8", EXTRAS_JOIN, LABEL),
+                BpmnEdge("Flow_9", LABEL, PACKED),
             ),
         )
 }

@@ -63,12 +63,11 @@ data class BpmnRequest(
     override val clarificationHistory: List<ClarificationExchange> = emptyList(),
 ) : ApiBpmnRequest,
     PromptContributor {
-    // #310: the BPMN generation rules that used to live here were redundant on every call that
-    // carries this contributor (readiness, contract, alignment, repair). Identity/type-prefix rules
-    // duplicate NODE_ID_DESCRIPTION on FlatBpmnNode; id-uniqueness, ref resolution, and the
-    // ≥1 START/END requirement are enforced by BpmnDefinitionValidator; the sourceRef≠targetRef and
-    // conditionExpression guidance lives in generate_bpmn.jinja. Each template also opens with its
-    // own role line, so the "BPMN expert" framing was noise. Only the per-request style guide remains.
+    // Contributes only the per-request style guide. BPMN generation rules are owned elsewhere:
+    // node-id / type-prefix conventions by NODE_ID_DESCRIPTION on FlatBpmnNode; id-uniqueness,
+    // reference resolution, and the >=1 START/END requirement by BpmnDefinitionValidator;
+    // sourceRef!=targetRef and conditionExpression guidance by generate_bpmn.jinja. Each template
+    // states its own role, so no system-level role framing is added here.
     override fun contribution(): String = styleGuide?.let { "## Style guide\n\n$it" } ?: ""
 }
 

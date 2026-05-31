@@ -91,13 +91,13 @@ class GenerateBpmnTemplateTest {
             contract = creditTierContract(),
         )
 
-        // #310: the bare kind -> BpmnEdge mappings moved to the ContractBranch subtype schema +
-        // the conditionExpression/isDefault field descriptions. The template keeps only the
-        // wiring the schema can't express: the DefaultFlowAssigner hand-off + anti-pattern.
+        // The bare kind -> BpmnEdge mappings live in the ContractBranch subtype schema and the
+        // conditionExpression/isDefault field descriptions. The template keeps only what the schema
+        // can't express: the DefaultFlowAssigner hand-off + the anti-pattern.
         assertTrue(prompt.contains("Branch wiring"))
         assertTrue(prompt.contains("downstream DefaultFlowAssigner"))
         assertTrue(prompt.contains("NEVER invent"))
-        // The per-kind class mapping should no longer be restated in prose.
+        // The per-kind class mapping is not restated in prose.
         assertTrue(
             !prompt.contains("(ConditionalBranch) → BpmnEdge"),
             "schema-covered kind->edge mapping should not be restated in the template",

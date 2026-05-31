@@ -45,13 +45,13 @@ data class BpmnConfig(
     companion object {
         const val DEFAULT_LINT_BATCH_SIZE = 10
 
-        // #305: enable Anthropic prompt caching on every role. The pipeline's system message
+        // Enable Anthropic prompt caching on every role. The pipeline's system message
         // (persona + request contribution + JSON schema) is stable across a run, and the repair
         // loop re-issues a near-identical system prompt every iteration — both ideal cache targets
         // (reads cost 10% of input tokens). systemPrompt caches the stable system prefix; tools
-        // caches the JSON schema (the largest single block). TTL is left at the 5-minute default,
-        // which covers a full pipeline run plus its repair iterations; 1-hour is a one-line upgrade
-        // if cross-run reuse within an interactive session proves common.
+        // caches the JSON schema (the largest single block). TTL is the 5-minute default, which
+        // covers a full pipeline run plus its repair iterations; raise to 1 hour if cross-run reuse
+        // within an interactive session proves common.
         //
         // Unconditional by design: the caching config rides on LlmOptions and is read only by
         // Anthropic's options converter, so it is inert under the github/OpenAI profile (gpt-4o) —

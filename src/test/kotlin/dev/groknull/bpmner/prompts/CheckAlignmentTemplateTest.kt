@@ -32,9 +32,9 @@ class CheckAlignmentTemplateTest {
     fun `template includes system instructions and the misaligned worked example`() {
         val prompt = render(sampleSummary())
 
-        // After #310: AlignmentFindings shape + classification enum descriptions live in the
-        // JSON-schema annotations on AlignmentFindings / AlignmentIssue / AlignmentClassification.
-        // The template just carries the role, the dynamic context, and one worked example.
+        // AlignmentFindings shape + classification enum descriptions live in the JSON-schema
+        // annotations on AlignmentFindings / AlignmentIssue / AlignmentClassification. The template
+        // carries only the role, the dynamic context, and one worked example.
         assertTrue(prompt.contains("You are a BPMN alignment validator"))
         assertTrue(prompt.contains("Worked Example — Misaligned"))
         assertTrue(prompt.contains("\"classification\": \"MISSING\""))

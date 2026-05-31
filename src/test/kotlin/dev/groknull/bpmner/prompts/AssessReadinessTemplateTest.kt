@@ -27,9 +27,9 @@ class AssessReadinessTemplateTest {
         assertTrue(prompt.contains("Return only a structured ProcessInputAssessment object."))
         assertTrue(prompt.contains("Do not invent actors"))
         assertTrue(prompt.contains("Mark unsupported facts as missing"))
-        // ReadinessDimension / MissingProcessArea enum names reach the LLM via the JSON schema
-        // (#310): they are no longer listed in the prompt prose. Keep the per-dimension
-        // calibration paragraph though — anchor on the most-misjudged dimension name.
+        // ReadinessDimension / MissingProcessArea enum names reach the LLM via the JSON schema, not
+        // the prompt prose. The per-dimension calibration paragraph stays — anchor on the
+        // most-misjudged dimension name.
         assertTrue(prompt.contains("BPMN_SUITABILITY"))
     }
 

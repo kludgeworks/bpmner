@@ -12,7 +12,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * #305: every pipeline role's LlmOptions must carry the Anthropic prompt-caching extension
+ * Every pipeline role's LlmOptions carries the Anthropic prompt-caching extension
  * (systemPrompt + tools). Caching itself is a runtime concern only exercisable against a real
  * Anthropic endpoint, so this guards the one thing that IS unit-testable: that the config rides
  * on each role's LlmOptions. Under the github/OpenAI profile the extension is inert (read only by

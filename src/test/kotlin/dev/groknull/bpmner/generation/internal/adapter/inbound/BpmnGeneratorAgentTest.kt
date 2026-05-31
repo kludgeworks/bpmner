@@ -70,9 +70,9 @@ class BpmnGeneratorAgentTest {
 
     @Test
     fun `createOutline attaches the parallel and inclusive few-shot examples`() {
-        // #309 follow-up: the two non-obvious topologies moved from inline JSON in
-        // generate_bpmn.jinja to typed Creating.withExample(...). Confirm they reach the LLM as
-        // prompt contributors (rendered into the prompt the FakeOperationContext captures).
+        // The two non-obvious topologies are supplied as typed Creating.withExample(...) few-shot
+        // examples; confirm they reach the LLM as prompt contributors (rendered into the prompt the
+        // FakeOperationContext captures).
         val context = FakeOperationContext()
         context.expectResponse(flatTestDefinition(processName = "Handle claim"))
 
