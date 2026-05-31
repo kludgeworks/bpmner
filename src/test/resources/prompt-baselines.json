@@ -13,14 +13,14 @@
 			"reason": "Net of the decision_kinds fold: -1023 prompt, +445 schema (heuristics relocated into FlatContractDecision.kind description); ~578 net full-payload saving, no steering lost."
 		},
 		"generationPrompt": {
-			"chars": 10149,
-			"updatedBy": "#309",
-			"reason": "Migrated the parallel-join + inclusive-default worked examples from inline template JSON to typed Creating.withExample(...). The examples still ship (as prompt contributors, verified in BpmnGeneratorAgentTest) but sit outside this template-render probe by design — they're typed code, not free-text prompt drift."
+			"chars": 9644,
+			"updatedBy": "#310",
+			"reason": "Rendered generate_bpmn.jinja: contract-to-BPMN wiring only. The kind→type/eventDefinition mappings and the catalogue dedup/reuse rules live in the FlatBpmnDefinition schema; worked examples are typed withExample few-shot values, not template text."
 		},
 		"generationFullPayload": {
-			"chars": 19096,
-			"updatedBy": "#309",
-			"reason": "Tracks generationPrompt; the withExample few-shot examples are not part of render()+schema so are not measured here (see generationPrompt note)."
+			"chars": 19161,
+			"updatedBy": "#310",
+			"reason": "generate_bpmn.jinja + FlatBpmnDefinition schema. Catalogue one-per-distinct-name/code reuse rules live in the message/signal/error/escalation field descriptions (single source of truth), so the prompt no longer restates them."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
