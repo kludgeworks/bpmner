@@ -82,6 +82,10 @@ internal class BpmnGeneratorAgent(
         val promptRunner = config.generator.promptRunner(context)
         val flat = promptRunner
             .creating(FlatBpmnDefinition::class.java)
+            // Typed few-shot examples (#309 follow-up): the two non-obvious topologies that used to
+            // be inline JSON worked examples in generate_bpmn.jinja.
+            .withExample(GenerationExamples.PARALLEL_LABEL, GenerationExamples.parallelForkJoin)
+            .withExample(GenerationExamples.INCLUSIVE_LABEL, GenerationExamples.inclusiveWithDefault)
             .fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()

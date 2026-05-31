@@ -13,14 +13,14 @@
 			"reason": "Net of the decision_kinds fold: -1023 prompt, +445 schema (heuristics relocated into FlatContractDecision.kind description); ~578 net full-payload saving, no steering lost."
 		},
 		"generationPrompt": {
-			"chars": 12840,
-			"updatedBy": "#310",
-			"reason": "Trimmed activity/end-state/branch mapping tables to wiring-only — the per-kind → BPMN-class mappings are carried by each Contract* subtype's @JsonClassDescription (\"Maps to BpmnXxxTask\"). Kept catalogue id/reuse wiring, DefaultFlowAssigner hand-off, and the anti-pattern note."
+			"chars": 10149,
+			"updatedBy": "#309",
+			"reason": "Migrated the parallel-join + inclusive-default worked examples from inline template JSON to typed Creating.withExample(...). The examples still ship (as prompt contributors, verified in BpmnGeneratorAgentTest) but sit outside this template-render probe by design — they're typed code, not free-text prompt drift."
 		},
 		"generationFullPayload": {
-			"chars": 21787,
-			"updatedBy": "#310",
-			"reason": "Tracks generationPrompt mapping-table trim; schema-format portion unchanged."
+			"chars": 19096,
+			"updatedBy": "#309",
+			"reason": "Tracks generationPrompt; the withExample few-shot examples are not part of render()+schema so are not measured here (see generationPrompt note)."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,

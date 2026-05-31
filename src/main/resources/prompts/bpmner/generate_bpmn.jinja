@@ -37,46 +37,13 @@ Parallel-gateway topology:
 - Every PARALLEL fork MUST have a matching synchronising join: a second PARALLEL_GATEWAY node where every branch reconverges before downstream work proceeds. The join is a synthesised node with a stable unique id (e.g. `Gateway_join_<descriptor>`) and no `name`.
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
-Worked example — three concurrent preparation tracks rejoining:
-  Contract decision `dec-prep-tracks` (kind=PARALLEL) has three branches:
-    - {kind: UNCONDITIONAL, id: br-it,         label: "IT prep",         nextRef: "act-prep-it"}
-    - {kind: UNCONDITIONAL, id: br-facilities, label: "Facilities prep", nextRef: "act-prep-facilities"}
-    - {kind: UNCONDITIONAL, id: br-manager,    label: "Manager prep",    nextRef: "act-prep-manager"}
-  After all three complete, the process continues to `act-orientation`.
-  BPMN topology:
-    - Fork: BpmnNode(id="dec-prep-tracks", type=PARALLEL_GATEWAY, name="Run preparation tracks")
-    - Three unconditional outbound flows from the fork:
-        * to `act-prep-it`        (no condition)
-        * to `act-prep-facilities` (no condition)
-        * to `act-prep-manager`    (no condition)
-    - Synthesised join: BpmnNode(id="Gateway_join_prep", type=PARALLEL_GATEWAY, name=null)
-    - Three inbound flows to the join (one from each track's last activity).
-    - One outbound flow from the join to `act-orientation`.
-
 Inclusive-gateway topology:
 - INCLUSIVE conditions are evaluated independently — any subset (including all) may fire concurrently. (Same `conditionExpression` shape as EXCLUSIVE, different semantics.)
 - Every INCLUSIVE fork MUST have a matching synchronising join: a second INCLUSIVE_GATEWAY node. The join waits only for the branches that fired (unlike a parallel join, which waits for all branches). It's a synthesised node with a stable unique id and no `name`.
 - A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other branch's condition is true. The renderer writes the gateway's `default` attribute on the chosen outbound flow.
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
-Worked example — fulfilment with optional gift-wrap and promotional insert:
-  Contract decision `dec-extras` (kind=INCLUSIVE) has three branches:
-    - {kind: CONDITIONAL, id: br-wrap,   label: "Gift wrap",          condition: "gift wrap requested",      nextRef: "act-wrap"}
-    - {kind: CONDITIONAL, id: br-insert, label: "Promotional insert", condition: "order qualifies for insert", nextRef: "act-insert"}
-    - {kind: DEFAULT,     id: br-none,   label: "Skip add-ons",       nextRef: "act-skip"}  // fires when both conditions are false
-  The two conditional branches are evaluated independently. If both are true, both fire concurrently; if one is true, only that one fires; if neither is true, the DEFAULT branch fires through a `Skip add-ons` activity so the process always has a forward path. The matching inclusive join waits only for the branches that activated, then the process continues to `act-label`.
-  BPMN topology:
-    - Fork: BpmnNode(id="dec-extras", type=INCLUSIVE_GATEWAY, name="Which add-ons apply?")
-    - Three outbound sequence flows from the fork:
-        * to `act-wrap`   with condition "gift wrap requested"
-        * to `act-insert` with condition "order qualifies for insert"
-        * to `act-skip`   with `isDefault = true` and no condition (the renderer writes
-          the gateway's `default` attribute to this flow's id)
-    - Synthesised join: BpmnNode(id="Gateway_join_extras", type=INCLUSIVE_GATEWAY, name=null)
-    - Three inbound flows to the join — one from each branch's last activity.
-      All branches (including the default) feed the join so the engine's
-      token-counting waits for exactly the branches that fired.
-    - One outbound flow from the join to `act-label`.
+The provided worked examples show both topologies end-to-end — follow their fork/join wiring.
 
 Primary validated ProcessContract:
 {{ contractMarkdown }}
