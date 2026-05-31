@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.core
 
 import com.embabel.agent.api.common.Actor
+import com.embabel.agent.config.models.anthropic.withAnthropicCaching
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.LlmOptions
 import jakarta.validation.Valid
@@ -44,6 +45,20 @@ data class BpmnConfig(
     companion object {
         const val DEFAULT_LINT_BATCH_SIZE = 10
 
+        // #305: enable Anthropic prompt caching on every role. The pipeline's system message
+        // (persona + request contribution + JSON schema) is stable across a run, and the repair
+        // loop re-issues a near-identical system prompt every iteration — both ideal cache targets
+        // (reads cost 10% of input tokens). systemPrompt caches the stable system prefix; tools
+        // caches the JSON schema (the largest single block). TTL is left at the 5-minute default,
+        // which covers a full pipeline run plus its repair iterations; 1-hour is a one-line upgrade
+        // if cross-run reuse within an interactive session proves common.
+        //
+        // Unconditional by design: the caching config rides on LlmOptions and is read only by
+        // Anthropic's options converter, so it is inert under the github/OpenAI profile (gpt-4o) —
+        // no provider gate needed.
+        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
+            .withAnthropicCaching(systemPrompt = true, tools = true)
+
         private const val CONCISE_AND_EXACT = "concise and exact"
         private const val SOURCE_GROUNDED_VOICE = "specific and evidence-grounded"
 
@@ -57,7 +72,7 @@ data class BpmnConfig(
                     "Create a valid, well-structured BPMN process definition from a workflow description",
                     voice = "precise and thorough",
                 ),
-                llm = LlmOptions.withLlmForRole("generator"),
+                llm = cachingLlm("generator"),
             )
 
         val DEFAULT_LABEL_REPAIRER =
@@ -70,7 +85,7 @@ data class BpmnConfig(
                     "Fix naming and label capitalization rules by providing targeted node and edge patches",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = LlmOptions.withLlmForRole("repair-label"),
+                llm = cachingLlm("repair-label"),
             )
 
         val DEFAULT_PATCH_REPAIRER =
@@ -84,7 +99,7 @@ data class BpmnConfig(
                         " specific elements without rewriting the whole definition",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = LlmOptions.withLlmForRole("repair-patch"),
+                llm = cachingLlm("repair-patch"),
             )
 
         val DEFAULT_REWRITE_REPAIRER =
@@ -97,7 +112,7 @@ data class BpmnConfig(
                     "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = LlmOptions.withLlmForRole("repair-rewrite"),
+                llm = cachingLlm("repair-rewrite"),
             )
 
         val DEFAULT_REPAIRER =
@@ -111,7 +126,7 @@ data class BpmnConfig(
                         " and return the complete corrected object",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = LlmOptions.withLlmForRole("repairer"),
+                llm = cachingLlm("repairer"),
             )
         val DEFAULT_READINESS_ASSESSOR =
             Actor(
@@ -127,7 +142,7 @@ data class BpmnConfig(
                         " for BPMN generation without inventing missing facts",
                     voice = SOURCE_GROUNDED_VOICE,
                 ),
-                llm = LlmOptions.withLlmForRole("readiness-assessor"),
+                llm = cachingLlm("readiness-assessor"),
             )
         val DEFAULT_CONTRACT_EXTRACTOR =
             Actor(
@@ -144,7 +159,7 @@ data class BpmnConfig(
                         " assumption; never invent facts that are not grounded",
                     voice = SOURCE_GROUNDED_VOICE,
                 ),
-                llm = LlmOptions.withLlmForRole("contract-extractor"),
+                llm = cachingLlm("contract-extractor"),
             )
         val DEFAULT_ALIGNMENT_VALIDATOR =
             Actor(
@@ -157,7 +172,7 @@ data class BpmnConfig(
                         " flag any invented tasks, missing branches, or unsupported end states",
                     voice = "critical and precise",
                 ),
-                llm = LlmOptions.withLlmForRole("alignment-validator"),
+                llm = cachingLlm("alignment-validator"),
             )
         val DEFAULT_LINTER =
             Actor(
@@ -173,7 +188,7 @@ data class BpmnConfig(
                         " skip rules that apply",
                     voice = SOURCE_GROUNDED_VOICE,
                 ),
-                llm = LlmOptions.withLlmForRole("lint"),
+                llm = cachingLlm("lint"),
             )
     }
 }
