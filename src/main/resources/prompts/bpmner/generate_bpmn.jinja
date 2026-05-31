@@ -13,27 +13,16 @@ Contract-driven generation rules:
 - You may infer sequence flows and routing-only converging gateways needed for valid BPMN.
 - Leave routing-only converging gateways unnamed.
 
-Activity-kind → BPMN node `type` (each ContractActivity carries a `kind` discriminator):
-- Service       → SERVICE_TASK
-- User          → USER_TASK
-- Script        → SCRIPT_TASK
-- BusinessRule  → BUSINESS_RULE_TASK — copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
-- Send          → SEND_TASK — declare one BpmnMessageRef in `definition.messages` whose `name` matches the contract's `messageName`; set `messageRef` on the task to that catalogue entry's id.
-- Receive       → RECEIVE_TASK — same catalogue convention as Send.
-- Manual        → MANUAL_TASK
-- Catalogue convention: one BpmnMessageRef per distinct messageName the contract mentions. Pick stable ids like `Message_DeclineNotification` from the messageName.
+Activity-kind catalogue wiring (the `kind` → BPMN task `type` mapping is in each ContractActivity subtype's schema; these are the cross-object bits the schema can't express):
+- BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
+- Send / Receive: declare one BpmnMessageRef in `definition.messages` whose `name` matches the contract's `messageName`, and point the task's `messageRef` at that entry's id. One BpmnMessageRef per distinct messageName; pick stable ids like `Message_DeclineNotification`.
 
-End-state-kind → BpmnEndEvent's `eventDefinition` (each ContractEndState carries a `kind` discriminator); NORMAL → BpmnNoneEventDefinition is the default:
-- Terminate   → BpmnTerminateEventDefinition (a data object — no payload)
-- Error       → BpmnErrorEventDefinition(errorRef) plus a matching BpmnErrorRef in `definition.errors` whose `code = errorCode`. Pick stable ids like `Error_CreditRejected` from the errorCode.
-- Message     → BpmnMessageEventDefinition(messageRef) plus a matching BpmnMessageRef whose `name = messageName`. If the same messageName also appears on a Send/Receive task, REUSE the catalogue entry — one ref per distinct name.
-- Signal      → BpmnSignalEventDefinition(signalRef) plus a matching BpmnSignalRef in `definition.signals` whose `name = signalName`. Pick stable ids like `Signal_SettlementComplete` from the signalName.
-- Escalation  → BpmnEscalationEventDefinition(escalationRef) plus a matching BpmnEscalationRef in `definition.escalations` whose `code = escalationCode`. Pick stable ids like `Escalation_ApprovalOverdue` from the escalationCode.
+End-state catalogue wiring (the `kind` → `eventDefinition` mapping is in each ContractEndState subtype's schema; these are the catalogue bits the schema can't express):
+- Error / Signal / Escalation: declare a matching BpmnErrorRef / BpmnSignalRef / BpmnEscalationRef in `definition.errors` / `.signals` / `.escalations` whose `code`/`name` matches the contract; pick stable ids like `Error_CreditRejected`.
+- Message: declare a matching BpmnMessageRef whose `name = messageName`. If that messageName also appears on a Send/Receive task, REUSE the one catalogue entry — one ref per distinct name.
 
-Branch-kind → BpmnEdge mapping (each ContractBranch carries a `kind` discriminator):
-- CONDITIONAL (ConditionalBranch) → BpmnEdge with `conditionExpression = branch.condition`. The default kind for EXCLUSIVE decisions.
-- DEFAULT (DefaultBranch) → emit an outbound BpmnEdge with `conditionExpression = null` (no condition). You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets `isDefault = true` from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. Valid only on EXCLUSIVE decisions. NEVER invent placeholder conditions like "otherwise" or "all other cases".
-- UNCONDITIONAL (UnconditionalBranch) → BpmnEdge with neither condition nor isDefault. The kind for PARALLEL fork branches.
+Branch wiring (the `kind` → BpmnEdge shape is in each ContractBranch subtype's schema, and `conditionExpression`/`isDefault` carry their own field descriptions):
+- DEFAULT: emit the outbound edge with no `conditionExpression`. You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets it from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. NEVER invent placeholder conditions like "otherwise" or "all other cases".
 
 Naming shape rules — follow these on your first emission to avoid lint repair rounds:
 {% for block in namingShapeAdvice %}{{ block }}

@@ -85,15 +85,23 @@ class GenerateBpmnTemplateTest {
     }
 
     @Test
-    fun `template teaches the LLM the branch-kind to BpmnEdge mapping`() {
+    fun `template teaches the load-bearing branch wiring not the schema-covered kind mapping`() {
         val prompt = render(
             request = BpmnRequest(processDescription = "Route credit applications by score."),
             contract = creditTierContract(),
         )
 
-        assertTrue(prompt.contains("CONDITIONAL (ConditionalBranch) → BpmnEdge with `conditionExpression = branch.condition`"))
-        assertTrue(prompt.contains("DEFAULT (DefaultBranch) → emit an outbound BpmnEdge with `conditionExpression = null`"))
-        assertTrue(prompt.contains("UNCONDITIONAL (UnconditionalBranch) → BpmnEdge with neither condition nor isDefault"))
+        // #310: the bare kind -> BpmnEdge mappings moved to the ContractBranch subtype schema +
+        // the conditionExpression/isDefault field descriptions. The template keeps only the
+        // wiring the schema can't express: the DefaultFlowAssigner hand-off + anti-pattern.
+        assertTrue(prompt.contains("Branch wiring"))
+        assertTrue(prompt.contains("downstream DefaultFlowAssigner"))
+        assertTrue(prompt.contains("NEVER invent"))
+        // The per-kind class mapping should no longer be restated in prose.
+        assertTrue(
+            !prompt.contains("(ConditionalBranch) → BpmnEdge"),
+            "schema-covered kind->edge mapping should not be restated in the template",
+        )
         assertTrue(
             prompt.contains("- b-manual → \"Manual review\" [default]"),
             "rendered decision branches should mark the default with [default]; got:\n$prompt",

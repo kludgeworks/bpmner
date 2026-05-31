@@ -13,14 +13,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only — the ~1.8k chars of BPMN generation rules (schema/validator/template-covered) no longer ship on this call. Residual is the per-request style guide."
 		},
 		"generationPrompt": {
-			"chars": 13807,
+			"chars": 12840,
 			"updatedBy": "#310",
-			"reason": "Deleted identity-rule prose (duplicates NODE_ID_DESCRIPTION on FlatBpmnNode), catalogue-reuse paragraph (duplicates BpmnErrorRef/BpmnMessageRef/BpmnSignalRef/BpmnEscalationRef @JsonClassDescriptions), and rephrased Parallel/Inclusive-gateway prose down to wiring/topology only."
+			"reason": "Trimmed activity/end-state/branch mapping tables to wiring-only — the per-kind → BPMN-class mappings are carried by each Contract* subtype's @JsonClassDescription (\"Maps to BpmnXxxTask\"). Kept catalogue id/reuse wiring, DefaultFlowAssigner hand-off, and the anti-pattern note."
 		},
 		"generationFullPayload": {
-			"chars": 22754,
+			"chars": 21787,
 			"updatedBy": "#310",
-			"reason": "Tracks generationPrompt trim; schema-format portion unchanged."
+			"reason": "Tracks generationPrompt mapping-table trim; schema-format portion unchanged."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
