@@ -53,7 +53,7 @@ class ContractVocabularySmokeTest {
         return AgentPlatformTypedOps(agentPlatform).transform(
             request,
             ValidatedProcessContract::class.java,
-            ProcessOptions(),
+            ProcessOptions(listeners = listOf(SuiteCostCapturer)),
         ).contract
     }
 

@@ -58,12 +58,10 @@ internal class RuleProfileFactory {
     fun ruleProfile(config: BpmnConfig): RuleProfile {
         val profileName = config.rules.profile.trim()
         val available = discoverAvailableProfiles()
-        if (profileName !in available) {
-            throw IllegalStateException(
-                "Unknown rule profile '$profileName'. Available profiles: " +
-                    "${available.sorted().joinToString(", ")}. " +
-                    "Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one.",
-            )
+        check(profileName in available) {
+            "Unknown rule profile '$profileName'. Available profiles: " +
+                "${available.sorted().joinToString(", ")}. " +
+                "Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one."
         }
         val baseline = loadNamedProfile(profileName)
         val (userOverrides, userDisabled) = parseUserOverrides(config.rules.severityOverrides)

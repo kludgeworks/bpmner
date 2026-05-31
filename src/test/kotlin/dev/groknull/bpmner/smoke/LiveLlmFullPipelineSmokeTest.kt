@@ -61,7 +61,11 @@ class LiveLlmFullPipelineSmokeTest {
                         outputFile = outputFile.toString(),
                     ),
                     BpmnResult::class.java,
-                    ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
+                    ProcessOptions(
+                        budget = Budget(actions = 100),
+                        ephemeral = true,
+                        listeners = listOf(SuiteCostCapturer),
+                    ),
                 )
         } catch (failure: Exception) {
             Assumptions.assumeFalse(
