@@ -125,7 +125,7 @@ class TopologyCheck extends CheckConfig {
 }
 
 class ConnectivityCheck extends CheckConfig {
-  mode: "NO_INCOMING" | "FLOWS_NAMED" | "WITHIN_POOL" | "ACROSS_POOLS"
+  mode: "NO_INCOMING" | "FLOWS_NAMED" | "OUTGOING_FLOWS_NAMED" | "WITHIN_POOL" | "ACROSS_POOLS"
   sourceTypes: List<NonEmptyString> = List()
   targetTypes: List<NonEmptyString> = List()
 }
