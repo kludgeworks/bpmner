@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "MI Task Annotation"
@@ -19,10 +20,43 @@ targetElements =
 
 severity = "error"
 errorMessages = new {
+  ["missingAnnotation"] =
+    "Multi-instance activity must be linked to a text annotation via an association"
+  ["missingIterationWord"] =
+    "Multi-instance activity's annotation must name the item set with each, every, or per"
   ["default"] =
     "Multi-instance activity is missing a linked text annotation expressing iteration-set intent"
 }
 
 staticConfig = new {
   iterationQuantifiers = List("each", "every", "per")
+}
+
+// Two deterministic sub-checks, both narrowed to multi-instance tasks via `appliesWhenProperty`
+// (so ordinary tasks are never flagged): (1) the task must have an association to a text
+// annotation; (2) that annotation's text must contain an iteration quantifier. The
+// `multiInstanceLoopCharacteristics` / `annotationText` properties are projected by
+// `PrimitiveModelMapping`.
+checkPrimitive = "CompositeCheck"
+checkConfig = new CheckPrimitive.CompositeCheck {
+  subChecks =
+    List(
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "missingAnnotation"
+        config = new CheckPrimitive.RequiredAssociationCheck {
+          association = "bpmn:Association"
+          targetTypes = List("bpmn:TextAnnotation")
+          appliesWhenProperty = "multiInstanceLoopCharacteristics"
+        }
+      },
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "missingIterationWord"
+        config = new CheckPrimitive.VocabularyCheck {
+          property = "annotationText"
+          mode = "REQUIRE"
+          words = staticConfig.iterationQuantifiers
+          appliesWhenProperty = "multiInstanceLoopCharacteristics"
+        }
+      },
+    )
 }

@@ -49,6 +49,10 @@ internal data class VocabularyCheckConfig(
     val property: String,
     val mode: VocabularyMode,
     val words: List<String>,
+    // When set, the check only applies to elements that carry this property (presence test);
+    // elements lacking it pass silently. Lets a vocabulary check scope to a subset (e.g. only
+    // multi-instance tasks) without re-typing the element. No-op when null.
+    val appliesWhenProperty: String? = null,
 ) : DeterministicCheckConfig
 
 internal enum class VocabularyMode {
@@ -62,7 +66,19 @@ internal data class RequiredAssociationCheckConfig(
     val association: String,
     val sourceTypes: List<String> = emptyList(),
     val targetTypes: List<String> = emptyList(),
+    // OUTBOUND: the targeted element must be the association's sourceRef (e.g. a task linking
+    // out to its annotation). INBOUND: the targeted element must be the targetRef (e.g. an
+    // annotation that must be referenced by some element). BPMN models the element→annotation
+    // association with sourceRef=element, so annotation-side checks need INBOUND.
+    val direction: AssociationDirection = AssociationDirection.OUTBOUND,
+    // Presence-test narrowing — see [VocabularyCheckConfig.appliesWhenProperty]. No-op when null.
+    val appliesWhenProperty: String? = null,
 ) : DeterministicCheckConfig
+
+internal enum class AssociationDirection {
+    OUTBOUND,
+    INBOUND,
+}
 
 internal data class TopologyCheckConfig(
     val topology: TopologyMode,

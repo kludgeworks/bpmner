@@ -23,6 +23,7 @@ internal class VocabularyCheck {
     ): List<RuleDiagnostic> {
         val words = config.words.map { it.lowercase() }.toSet()
         return metadata.targetedElements(model)
+            .filter { config.appliesWhenProperty == null || it.property(config.appliesWhenProperty) != null }
             .filter { element ->
                 val tokens = element.property(config.property).tokens()
                 val matched = when (config.mode) {

@@ -87,7 +87,7 @@ internal class CheckConfigMapperTest {
     @Test
     fun `VocabularyCheck converts string mode to enum`() {
         val mapped = CheckConfigMapper.map(
-            PklCheckPrim.VocabularyCheck("name", "FORBID", listOf("manage", "handle")),
+            PklCheckPrim.VocabularyCheck("name", "FORBID", listOf("manage", "handle"), null),
         )
 
         assertEquals(
@@ -105,7 +105,7 @@ internal class CheckConfigMapperTest {
     @Test
     fun `VocabularyCheck rejects unknown mode`() {
         val failure = assertFailsWith<IllegalStateException> {
-            CheckConfigMapper.map(PklCheckPrim.VocabularyCheck("name", "WHATEVER", emptyList()))
+            CheckConfigMapper.map(PklCheckPrim.VocabularyCheck("name", "WHATEVER", emptyList(), null))
         }
         assertEquals(true, failure.message?.contains("WHATEVER"))
     }
@@ -117,6 +117,8 @@ internal class CheckConfigMapperTest {
                 "bpmn:Association",
                 listOf("bpmn:TextAnnotation"),
                 listOf("bpmn:Task"),
+                "OUTBOUND",
+                null,
             ),
         )
 

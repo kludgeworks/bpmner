@@ -26,6 +26,12 @@ interface BpmnDefinition {
     val errors: List<BpmnErrorRef>
     val escalations: List<BpmnEscalationRef>
 
+    /** Free-text annotations attached to elements via [associations]. */
+    val annotations: List<BpmnTextAnnotation> get() = emptyList()
+
+    /** Association edges linking annotations (and other artifacts) to flow elements. */
+    val associations: List<BpmnAssociation> get() = emptyList()
+
     // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
     // model does not carry DI content; the count is the only signal that survives. The
     // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
@@ -50,7 +56,27 @@ interface BpmnNode {
 }
 
 /** Grouping marker for activity-position nodes; supports `BpmnNode.isTask()` dispatch. */
-sealed interface BpmnTask : BpmnNode
+sealed interface BpmnTask : BpmnNode {
+    /**
+     * Multi-instance loop characteristics, or `null` for an ordinary single-run activity.
+     * Present when the activity runs once per item in a collection. Cross-cutting across all
+     * task kinds; events and gateways never carry it. Declared here so callers and the rule
+     * engine read it polymorphically over any task without an exhaustive `when`.
+     */
+    val multiInstance: MultiInstanceLoopCharacteristics?
+}
+
+/**
+ * Multi-instance loop characteristics attached to a [BpmnTask]. Annotation-free api view;
+ * the concrete data class (with Jackson / Jakarta annotations) lives in `core/BpmnDomain.kt`
+ * and renders to `<bpmn:multiInstanceLoopCharacteristics>` on the task element.
+ */
+interface MultiInstanceLoopCharacteristics {
+    val mode: MultiInstanceMode
+    val collectionDescription: String
+    val loopCardinality: Int?
+    val completionCondition: String?
+}
 
 /** Grouping marker for gateway nodes. */
 sealed interface BpmnGateway : BpmnNode
@@ -128,6 +154,26 @@ interface BpmnEdge {
     val name: String?
     val conditionExpression: String?
     val isDefault: Boolean
+}
+
+/**
+ * A BPMN text annotation: free-text commentary on the diagram. Carries no flow semantics;
+ * linked to the element it explains by a [BpmnAssociation]. Renders to `<bpmn:textAnnotation>`.
+ */
+interface BpmnTextAnnotation {
+    val id: String
+    val text: String
+}
+
+/**
+ * A BPMN association edge linking a [BpmnTextAnnotation] (the source) to the flow element it
+ * annotates (the target). Distinct from [BpmnEdge] (sequence flow): associations carry no
+ * token flow. Renders to `<bpmn:association>`.
+ */
+interface BpmnAssociation {
+    val id: String
+    val sourceRef: String
+    val targetRef: String
 }
 
 /** Process-level message catalog entry, referenced by message event definitions and tasks. */

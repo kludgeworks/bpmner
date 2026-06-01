@@ -7,12 +7,16 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractStart
+import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
@@ -29,6 +33,7 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -50,6 +55,75 @@ class BpmnContractFidelityCheckerTest {
 
         assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
     }
+
+    @Test
+    fun `matching multi-instance activity passes`() {
+        val report =
+            checker.check(
+                miContract(MultiInstanceMode.PARALLEL),
+                miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each reviewer")),
+            )
+
+        assertTrue(report.isValid, "expected valid; got ${report.issues}")
+    }
+
+    @Test
+    fun `multi-instance contract realised without the marker flagged`() {
+        val report = checker.check(miContract(MultiInstanceMode.PARALLEL), miDefinition(multiInstance = null))
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_ITERATION_MODE_MISMATCH },
+            "expected ACTIVITY_ITERATION_MODE_MISMATCH; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `multi-instance mode disagreement flagged`() {
+        val report =
+            checker.check(
+                miContract(MultiInstanceMode.PARALLEL),
+                miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.SEQUENTIAL, "each reviewer")),
+            )
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_ITERATION_MODE_MISMATCH },
+            "expected ACTIVITY_ITERATION_MODE_MISMATCH; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    private fun miContract(mode: MultiInstanceMode): ProcessContract = ProcessContract(
+        id = "c-mi",
+        processName = "MI",
+        summary = "Peer review panel",
+        start = ContractStart(ContractTrigger.None("manuscript submitted")),
+        activities =
+        listOf(
+            ContractActivity.User(
+                id = "act-review",
+                name = "Review manuscript",
+                iteration = ContractIteration(mode = mode, collectionDescription = "each reviewer on the panel"),
+            ),
+        ),
+        endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Verdict sent")),
+    )
+
+    private fun miDefinition(multiInstance: MultiInstanceLoopCharacteristics?): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "MI",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Submitted"),
+            BpmnUserTask("act-review", "Review manuscript", multiInstance = multiInstance),
+            BpmnEndEvent("end-done", "Verdict sent"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("F1", "StartEvent_1", "act-review"),
+            BpmnEdge("F2", "act-review", "end-done"),
+        ),
+    )
 
     @Test
     fun `missing branch flow flagged as BRANCH_FLOW_MISSING`() {

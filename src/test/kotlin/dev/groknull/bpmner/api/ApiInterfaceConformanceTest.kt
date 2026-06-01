@@ -182,6 +182,25 @@ class ApiInterfaceConformanceTest {
     }
 
     @Test
+    fun `multi-instance, text annotation, and association types implement their api counterparts`() {
+        val coreMi = dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics(
+            mode = MultiInstanceMode.PARALLEL,
+            collectionDescription = "each reviewer",
+        )
+        assertTrue(coreMi as Any is MultiInstanceLoopCharacteristics)
+
+        val annotation = dev.groknull.bpmner.core.BpmnTextAnnotation(id = "ta", text = "note")
+        assertTrue(annotation as Any is BpmnTextAnnotation)
+
+        val association = dev.groknull.bpmner.core.BpmnAssociation(id = "as", sourceRef = "a", targetRef = "ta")
+        assertTrue(association as Any is BpmnAssociation)
+
+        // The cross-cutting `multiInstance` field is reachable through the api BpmnTask marker.
+        val task: ApiBpmnTask = BpmnUserTask(id = "u", multiInstance = coreMi)
+        assertTrue(task.multiInstance is MultiInstanceLoopCharacteristics)
+    }
+
+    @Test
     fun `BpmnRequest and ClarificationExchange implement their api counterparts`() {
         val request = BpmnRequest(processDescription = "ship the order")
         assertTrue(request as Any is ApiBpmnRequest)

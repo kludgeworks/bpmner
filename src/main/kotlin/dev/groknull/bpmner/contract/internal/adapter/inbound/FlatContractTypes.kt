@@ -8,6 +8,7 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption
@@ -107,6 +108,35 @@ public data class FlatContractActivity(
             "notification\"). Downstream generator maps this to a stable BpmnMessageRef catalogue id.",
     )
     val messageName: String? = null,
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Set when the activity runs once per item in a collection (\"for each …\"). Use SEQUENTIAL " +
+            "when the source says items are handled one at a time / in order, PARALLEL when they run " +
+            "concurrently / independently. Leave null for an ordinary single-run activity. This is a " +
+            "per-item iteration marker, distinct from a retry/poll loop or a parallel gateway fork.",
+    )
+    val iteration: FlatContractIteration? = null,
+)
+
+@JsonClassDescription(
+    "Per-item iteration marker for an activity that repeats over a collection (multi-instance).",
+)
+public data class FlatContractIteration(
+    @get:JsonPropertyDescription(
+        "SEQUENTIAL = items handled one at a time / in order; PARALLEL = items handled concurrently.",
+    )
+    val mode: MultiInstanceMode,
+    @field:NotBlank
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription(
+        "Human-readable description of the collection iterated over, e.g. \"each reviewer on the panel\".",
+    )
+    val collectionDescription: String,
+    @get:JsonPropertyDescription("Optional fixed iteration count when the source states a fixed number")
+    val loopCardinality: Int? = null,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Optional early-exit condition that stops iteration before all items are done")
+    val completionCondition: String? = null,
 )
 
 @JsonClassDescription(

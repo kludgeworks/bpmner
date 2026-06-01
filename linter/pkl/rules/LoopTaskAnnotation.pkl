@@ -40,3 +40,9 @@ staticConfig = new {
     )
   conditionWords = List("until", "while", "unless", "till")
 }
+
+// Intentionally left DORMANT (no checkPrimitive / checkConfig): the domain model does not yet
+// represent `bpmn:StandardLoopCharacteristics`, only multi-instance (see #188). When standard
+// loop support lands, wire this as a CompositeCheck mirroring MiTaskAnnotation — sub-checks
+// narrowed via `appliesWhenProperty = "standardLoopCharacteristics"`, with the VocabularyCheck
+// requiring a loopWord plus a conditionWord in the linked annotation text.

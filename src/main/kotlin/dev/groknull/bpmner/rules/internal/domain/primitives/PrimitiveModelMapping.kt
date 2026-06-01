@@ -29,7 +29,9 @@ import dev.groknull.bpmner.api.BpmnSendTask
 import dev.groknull.bpmner.api.BpmnServiceTask
 import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
+import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.api.BpmnTextAnnotation
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedNode
@@ -68,6 +70,17 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             emptyList()
         }
     }
+    // Resolve each annotated element id → the text of its linked annotation, so a task's
+    // associated annotation wording is readable as a property (see `toPrimitiveElement`). BPMN
+    // models the link as sourceRef = annotated element, targetRef = annotation.
+    val annotationTextById = definition.annotations.associate { it.id to it.text }
+    val annotationTextByElementId = definition.associations
+        .mapNotNull { association -> annotationTextById[association.targetRef]?.let { association.sourceRef to it } }
+        .toMap()
+    val annotationElements = annotationElementsOf(definition.annotations)
+    val associations = definition.associations.map { association ->
+        PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
+    }
     return PrimitiveModelContext(
         elements =
         listOf(
@@ -83,10 +96,23 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             ),
         ) +
             diagramElements +
-            definition.nodes.map { it.toPrimitiveElement() } +
+            definition.nodes.map { it.toPrimitiveElement(annotationTextByElementId) } +
             eventDefinitionElements +
+            annotationElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
+        associations = associations,
+        // The model now always carries annotations/associations, so the capability is on; the
+        // loop/MI rules narrow to relevant elements via `appliesWhenProperty`.
+        supportedCapabilities = setOf(ModelCapability.ASSOCIATIONS),
+    )
+}
+
+private fun annotationElementsOf(annotations: List<BpmnTextAnnotation>): List<PrimitiveElement> = annotations.map {
+    PrimitiveElement(
+        id = it.id,
+        typeName = BpmnTypeName.TEXT_ANNOTATION,
+        properties = mapOf("id" to it.id, "text" to it.text),
     )
 }
 
@@ -102,7 +128,9 @@ private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {
     else -> null
 }
 
-internal fun BpmnNode.toPrimitiveElement(): PrimitiveElement = PrimitiveElement(
+internal fun BpmnNode.toPrimitiveElement(
+    annotationTextByElementId: Map<String, String> = emptyMap(),
+): PrimitiveElement = PrimitiveElement(
     id = id,
     typeName = bpmnTypeName(),
     properties = buildMap {
@@ -115,6 +143,14 @@ internal fun BpmnNode.toPrimitiveElement(): PrimitiveElement = PrimitiveElement(
             put("attachedToRef", attachedToRef)
             put("cancelActivity", cancelActivity.toString())
         }
+        // Presence flag the loop/MI rules narrow on via `appliesWhenProperty`. Only set on tasks
+        // that actually carry a multi-instance marker, so ordinary tasks stay out of scope.
+        if (this@toPrimitiveElement is BpmnTask && multiInstance != null) {
+            put("multiInstanceLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
+        }
+        // Text of the annotation linked to this element (if any), letting vocabulary checks read
+        // the annotation's wording without re-typing the element.
+        annotationTextByElementId[id]?.let { put("annotationText", it) }
         if (this@toPrimitiveElement is BpmnEvent) {
             putAll(eventDefinitionProperties(eventDefinition))
         }

@@ -26,17 +26,30 @@ internal class RequiredAssociationCheck {
         // a false positive on every run. Return empty until the capability flips on.
         if (!model.supports(ModelCapability.ASSOCIATIONS)) return emptyList()
         return metadata.targetedElements(model)
-            .filter { source ->
-                val sourceId = source.id ?: return@filter false
-                val associations = model.associations.filter {
-                    it.typeName == config.association && it.sourceRef == sourceId
+            .filter { config.appliesWhenProperty == null || it.property(config.appliesWhenProperty) != null }
+            .filter { element ->
+                val elementId = element.id ?: return@filter false
+                // OUTBOUND matches associations whose sourceRef is this element; INBOUND matches
+                // those whose targetRef is — then we check the OTHER end's type against targetTypes.
+                val associations = model.associations.filter { association ->
+                    association.typeName == config.association && association.endFor(config.direction) == elementId
                 }
                 associations.none { association ->
-                    val target = model.elementsById[association.targetRef] ?: return@none false
+                    val otherEnd = model.elementsById[association.otherEndFor(config.direction)] ?: return@none false
                     config.targetTypes.isEmpty() ||
-                        config.targetTypes.any { BpmnTypeMatcher.matches(target.typeName, it) }
+                        config.targetTypes.any { BpmnTypeMatcher.matches(otherEnd.typeName, it) }
                 }
             }
             .map { metadata.diagnostic(it.id, config.association) }
+    }
+
+    private fun PrimitiveAssociation.endFor(direction: AssociationDirection): String = when (direction) {
+        AssociationDirection.OUTBOUND -> sourceRef
+        AssociationDirection.INBOUND -> targetRef
+    }
+
+    private fun PrimitiveAssociation.otherEndFor(direction: AssociationDirection): String = when (direction) {
+        AssociationDirection.OUTBOUND -> targetRef
+        AssociationDirection.INBOUND -> sourceRef
     }
 }

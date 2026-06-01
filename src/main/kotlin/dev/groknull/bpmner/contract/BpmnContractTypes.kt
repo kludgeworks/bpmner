@@ -11,6 +11,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -193,6 +194,13 @@ sealed interface ContractActivity {
     val actorId: String?
     val sourceIds: List<String>
 
+    /**
+     * Per-item iteration marker, or `null` for an ordinary single-run activity. Cross-cutting
+     * across all activity kinds — declared here so the fidelity checker reads it polymorphically
+     * without a `when` over the subtypes. Realized as a BPMN multi-instance task downstream.
+     */
+    val iteration: ContractIteration?
+
     @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
     data class Service(
         @field:NotBlank
@@ -209,6 +217,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
@@ -227,6 +238,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
@@ -245,6 +259,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -269,6 +286,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
@@ -291,6 +311,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -315,6 +338,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
@@ -333,6 +359,9 @@ sealed interface ContractActivity {
         @field:Size(max = 10)
         @get:JsonPropertyDescription(ACTIVITY_SOURCE_IDS_DESCRIPTION)
         override val sourceIds: List<String> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
+        override val iteration: ContractIteration? = null,
     ) : ContractActivity
 
     companion object {
@@ -357,6 +386,33 @@ private const val ACTIVITY_ACTOR_ID_DESCRIPTION: String = "Optional actor id res
 private const val ACTIVITY_SOURCE_IDS_DESCRIPTION: String =
     "Source ids grounding this activity in evidence. Each is an assessment evidence id, " +
         "a clarification questionId, or a literal input-text marker."
+
+private const val ACTIVITY_ITERATION_DESCRIPTION: String =
+    "Per-item iteration marker. Set only when the source says the activity repeats over a " +
+        "collection (a 'for each …' loop); null for an ordinary single-run activity. Distinct " +
+        "from a retry/poll loop-back and from a parallel gateway fork."
+
+@JsonClassDescription(
+    "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
+        "either one at a time (SEQUENTIAL) or concurrently (PARALLEL).",
+)
+data class ContractIteration(
+    @get:JsonPropertyDescription(
+        "SEQUENTIAL = items handled one at a time / in order; PARALLEL = items handled concurrently.",
+    )
+    val mode: MultiInstanceMode,
+    @field:NotBlank
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription(
+        "Human-readable description of the collection iterated over, e.g. \"each reviewer on the panel\".",
+    )
+    val collectionDescription: String,
+    @get:JsonPropertyDescription("Optional fixed iteration count when the source states a fixed number")
+    val loopCardinality: Int? = null,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Optional early-exit condition that stops iteration before all items are done")
+    val completionCondition: String? = null,
+)
 
 /**
  * The discriminator string for [activity], matching the `kind` field in the LLM JSON output

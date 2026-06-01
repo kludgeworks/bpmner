@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Text Annotation Usage"
@@ -20,4 +21,14 @@ errorMessages = new {
 
 staticConfig = new {
   cookbookCode = "ART-02"
+}
+
+// Every text annotation must be referenced by at least one association. BPMN models the link
+// with sourceRef = annotated element and targetRef = annotation, so the annotation is the
+// association's TARGET — hence INBOUND. No `appliesWhenProperty`: the rule applies to all
+// text annotations. `targetTypes` is empty so the other end may be any element.
+checkPrimitive = "RequiredAssociationCheck"
+checkConfig = new CheckPrimitive.RequiredAssociationCheck {
+  association = "bpmn:Association"
+  direction = "INBOUND"
 }

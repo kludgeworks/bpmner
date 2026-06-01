@@ -11,6 +11,7 @@ import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -55,6 +56,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.USER -> ContractActivity.User(
@@ -62,6 +64,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.SCRIPT -> ContractActivity.Script(
@@ -69,6 +72,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.BUSINESS_RULE -> ContractActivity.BusinessRule(
@@ -77,6 +81,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         decisionName = requireField(decisionName, kind, "decisionName", id),
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.SEND -> ContractActivity.Send(
@@ -85,6 +90,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         messageName = requireField(messageName, kind, "messageName", id),
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.RECEIVE -> ContractActivity.Receive(
@@ -93,6 +99,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         messageName = requireField(messageName, kind, "messageName", id),
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 
     FlatActivityKind.MANUAL -> ContractActivity.Manual(
@@ -100,8 +107,16 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
     )
 }
+
+private fun FlatContractIteration.toSealed(): ContractIteration = ContractIteration(
+    mode = mode,
+    collectionDescription = requireField(collectionDescription, mode, "collectionDescription", "iteration"),
+    loopCardinality = loopCardinality,
+    completionCondition = completionCondition,
+)
 
 public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
     FlatEndStateKind.NORMAL -> ContractEndState.Normal(id = id, name = name, sourceIds = sourceIds)

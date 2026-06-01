@@ -17,6 +17,7 @@ Contract-driven generation rules:
 Contract-to-BPMN wiring (the schema covers each `kind` → BPMN `type`/`eventDefinition` mapping and the catalogue dedup rules; these are the contract links it can't express):
 - BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
 - Send / Receive: point the task's `messageRef` at a `definition.messages` entry whose `name` is the contract's `messageName`.
+- Iteration → multi-instance: when a contract activity carries `iteration`, set `multiInstance` on its BPMN task — `mode` = the contract's `iteration.mode` (SEQUENTIAL renders `isSequential=true`, PARALLEL renders `isSequential=false`), `collectionDescription` = the contract's verbatim. ALSO emit, for that task: (1) a `definition.annotations` text annotation whose text names the item set using "each"/"every"/"per" (e.g. "For each line item on the slip"), and (2) a `definition.associations` edge with `sourceRef` = the task id and `targetRef` = that annotation's id. Every multi-instance task MUST have this linked annotation.
 - Error / Message / Signal / Escalation end states: point the event definition's ref at a matching entry in the process-level `definition.errors` / `.messages` / `.signals` / `.escalations` catalogue whose `code`/`name` is the contract's.
 - Message / Signal / Escalation intermediate throws: point the event definition's ref at a matching entry in the process-level `definition.messages` / `.signals` / `.escalations` catalogue whose `name`/`code` is the contract's.
 
