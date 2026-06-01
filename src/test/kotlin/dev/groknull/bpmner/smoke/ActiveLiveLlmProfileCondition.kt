@@ -7,89 +7,89 @@ package dev.groknull.bpmner.smoke
 
 import org.junit.jupiter.api.extension.ConditionEvaluationResult
 import org.junit.jupiter.api.extension.ExecutionCondition
+import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.extension.ExtensionContext
+import org.springframework.core.env.AbstractEnvironment
+import org.springframework.core.env.StandardEnvironment
+
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+@ExtendWith(ActiveLiveLlmProfileCondition::class)
+internal annotation class EnabledForLiveLlmProfile
 
 internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
     override fun evaluateExecutionCondition(context: ExtensionContext): ConditionEvaluationResult {
         return evaluate(
-            profileProperty = System.getProperty(SPRING_PROFILES_ACTIVE_PROPERTY),
-            profileEnvironment = System.getenv(SPRING_PROFILES_ACTIVE_ENV),
+            activeProfiles = StandardEnvironment().getProperty(AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME),
             env = System::getenv,
         ).toConditionEvaluationResult()
     }
 
     companion object {
-        private const val SPRING_PROFILES_ACTIVE_PROPERTY = "spring.profiles.active"
-        private const val SPRING_PROFILES_ACTIVE_ENV = "SPRING_PROFILES_ACTIVE"
         private const val ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY"
         private const val GITHUB_TOKEN = "GITHUB_TOKEN"
 
-        private val anthropicProfiles = setOf("anth", "anthropic")
-        private val githubProfiles = setOf("gh", "github")
         private val profileSplitter = Regex("[,\\s]+")
+        private val providers = listOf(
+            LiveLlmProvider(
+                displayName = "Anthropic",
+                profiles = setOf("anth", "anthropic"),
+                tokenName = ANTHROPIC_API_KEY,
+            ),
+            LiveLlmProvider(
+                displayName = "GitHub",
+                profiles = setOf("gh", "github"),
+                tokenName = GITHUB_TOKEN,
+            ),
+        )
 
         internal fun evaluate(
-            profileProperty: String?,
-            profileEnvironment: String?,
+            activeProfiles: String?,
             env: (String) -> String?,
         ): Evaluation {
-            val source = activeProfileSource(profileProperty, profileEnvironment)
-            val profiles = source.value
+            val profiles = activeProfiles
                 .orEmpty()
                 .split(profileSplitter)
                 .map { it.trim().lowercase() }
                 .filter { it.isNotEmpty() }
                 .toSet()
+            val activeProviders = providers.filter { provider ->
+                profiles.any { it in provider.profiles }
+            }
 
-            val hasAnthropicProfile = profiles.any { it in anthropicProfiles }
-            val hasGitHubProfile = profiles.any { it in githubProfiles }
-
-            return when {
-                hasAnthropicProfile && hasGitHubProfile ->
+            return when (activeProviders.size) {
+                0 ->
                     Evaluation.disabled(
-                        "both Anthropic and GitHub live LLM profile families are active in ${source.name}; " +
-                            "select exactly one of anth/anthropic or gh/github",
+                        "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
+                            "set one of anth/anthropic or gh/github",
                     )
 
-                hasAnthropicProfile ->
-                    requireToken(
-                        providerProfiles = "anth/anthropic",
-                        tokenName = ANTHROPIC_API_KEY,
-                        env = env,
-                    )
-
-                hasGitHubProfile ->
-                    requireToken(
-                        providerProfiles = "gh/github",
-                        tokenName = GITHUB_TOKEN,
-                        env = env,
-                    )
+                1 ->
+                    activeProviders.single().requireToken(env)
 
                 else ->
                     Evaluation.disabled(
-                        "no supported live LLM profile is active in ${source.name}; " +
-                            "set one of anth/anthropic or gh/github",
+                        "multiple live LLM profile families are active in " +
+                            "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
+                            activeProviders.joinToString { it.displayName } +
+                            "; select exactly one of anth/anthropic or gh/github",
                     )
             }
         }
 
-        private fun activeProfileSource(
-            profileProperty: String?,
-            profileEnvironment: String?,
-        ): ProfileSource = if (!profileProperty.isNullOrBlank()) {
-            ProfileSource(SPRING_PROFILES_ACTIVE_PROPERTY, profileProperty)
-        } else {
-            ProfileSource(SPRING_PROFILES_ACTIVE_ENV, profileEnvironment)
-        }
-
-        private fun requireToken(
-            providerProfiles: String,
-            tokenName: String,
-            env: (String) -> String?,
-        ): Evaluation = if (env(tokenName).isNullOrBlank()) {
-            Evaluation.disabled("active live LLM profile $providerProfiles requires $tokenName")
-        } else {
-            Evaluation.enabled("active live LLM profile $providerProfiles has $tokenName")
+        private data class LiveLlmProvider(
+            val displayName: String,
+            val profiles: Set<String>,
+            val tokenName: String,
+        ) {
+            fun requireToken(env: (String) -> String?): Evaluation {
+                val profileNames = profiles.sorted().joinToString("/")
+                return if (env(tokenName).isNullOrBlank()) {
+                    Evaluation.disabled("active live LLM profile $profileNames requires $tokenName")
+                } else {
+                    Evaluation.enabled("active live LLM profile $profileNames has $tokenName")
+                }
+            }
         }
     }
 
@@ -109,9 +109,4 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
             fun disabled(reason: String): Evaluation = Evaluation(enabled = false, reason = reason)
         }
     }
-
-    private data class ProfileSource(
-        val name: String,
-        val value: String?,
-    )
 }

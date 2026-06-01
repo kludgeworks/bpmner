@@ -28,10 +28,8 @@ import kotlin.io.path.readText
 
 @Tag("manual")
 @Tag("live-llm")
-@ExtendWith(
-    ActiveLiveLlmProfileCondition::class,
-    ContractVocabularySmokeTestSummaryExtension::class,
-)
+@EnabledForLiveLlmProfile
+@ExtendWith(SmokeTestSummaryExtension::class)
 @SpringBootTest
 @TestPropertySource(
     properties = [

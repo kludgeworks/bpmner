@@ -29,9 +29,9 @@ import java.util.concurrent.TimeUnit
 
 @Suppress("TooManyFunctions")
 @Tag("live-llm")
+@EnabledForLiveLlmProfile
 @ExtendWith(
-    ActiveLiveLlmProfileCondition::class,
-    ContractVocabularySmokeTestSummaryExtension::class,
+    SmokeTestSummaryExtension::class,
 )
 @SpringBootTest
 @Timeout(120, unit = TimeUnit.SECONDS)

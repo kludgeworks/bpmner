@@ -11,8 +11,8 @@ import org.junit.jupiter.api.extension.ExtensionContext
 import org.slf4j.LoggerFactory
 import org.springframework.test.context.junit.jupiter.SpringExtension
 
-class ContractVocabularySmokeTestSummaryExtension : AfterAllCallback {
-    private val logger = LoggerFactory.getLogger(ContractVocabularySmokeTestSummaryExtension::class.java)
+class SmokeTestSummaryExtension : AfterAllCallback {
+    private val logger = LoggerFactory.getLogger(SmokeTestSummaryExtension::class.java)
 
     override fun afterAll(context: ExtensionContext) {
         val applicationContext = SpringExtension.getApplicationContext(context)
