@@ -798,19 +798,11 @@ val ContractEndState.kindName: String
             is ContractEndState.Escalation -> "ESCALATION"
         }
 
-@JsonClassDescription("Intermediate throw event required by the extracted process contract")
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "kind")
-@JsonSubTypes(
-    JsonSubTypes.Type(value = ContractIntermediateThrow.Message::class, name = "MESSAGE"),
-    JsonSubTypes.Type(value = ContractIntermediateThrow.Signal::class, name = "SIGNAL"),
-    JsonSubTypes.Type(value = ContractIntermediateThrow.Escalation::class, name = "ESCALATION"),
-)
 sealed interface ContractIntermediateThrow {
     val id: String
     val name: String
     val sourceIds: List<String>
 
-    @JsonClassDescription("Message throw — point-to-point message sent while the process continues.")
     data class Message(
         @field:NotBlank
         @field:Size(max = 200)
@@ -829,7 +821,6 @@ sealed interface ContractIntermediateThrow {
         override val sourceIds: List<String> = emptyList(),
     ) : ContractIntermediateThrow
 
-    @JsonClassDescription("Signal throw — broadcast notification emitted while the process continues.")
     data class Signal(
         @field:NotBlank
         @field:Size(max = 200)
@@ -848,7 +839,6 @@ sealed interface ContractIntermediateThrow {
         override val sourceIds: List<String> = emptyList(),
     ) : ContractIntermediateThrow
 
-    @JsonClassDescription("Escalation throw — non-interrupting escalation notification emitted mid-flow.")
     data class Escalation(
         @field:NotBlank
         @field:Size(max = 200)

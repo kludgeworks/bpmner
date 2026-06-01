@@ -250,19 +250,35 @@ class ContractVocabularySmokeTest {
     }
 
     @Test
-    fun `intermediate throw events`() {
+    fun `intermediate message throw`() {
         val c = extractContract(
             """
-            The process starts when a purchase request arrives. The system reviews the request,
-            then sends an invoice-ready message to billing without ending the process. It then
-            broadcasts an inventory-updated signal to listening systems. If manager approval is
-            overdue, it raises a non-interrupting approval overdue escalation and continues to
-            archive the request before ending normally.
+            The process starts when requested. The system sends a confirmation message to billing
+            without ending the process. Then the process completes normally.
             """,
         )
-
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
+    }
+
+    @Test
+    fun `intermediate signal throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. After updating inventory, it broadcasts
+            an inventory-updated signal to listening systems. Then the process ends.
+            """,
+        )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
+    }
+
+    @Test
+    fun `intermediate escalation throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. If approval is overdue, a non-interrupting
+            escalation is raised and the process continues to archive the request before ending normally.
+            """,
+        )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()
     }
 

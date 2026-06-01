@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 5931,
-			"updatedBy": "#310",
-			"reason": "Deleted decision_kinds.jinja include; its recognition heuristics (INCLUSIVE/PARALLEL keywords + differentiator + anti-pattern) folded into FlatContractDecision.kind's @JsonPropertyDescription so they still ship via the schema."
+			"chars": 6224,
+			"updatedBy": "#321",
+			"reason": "extract_contract.jinja: +3 lines for mid-flow throw identification guidance."
 		},
 		"contractFullPayload": {
-			"chars": 20243,
-			"updatedBy": "#310",
-			"reason": "Net of the decision_kinds fold: -1023 prompt, +445 schema (heuristics relocated into FlatContractDecision.kind description); ~578 net full-payload saving, no steering lost."
+			"chars": 22314,
+			"updatedBy": "#321",
+			"reason": "FlatContractIntermediateThrow (id, name, kind, sourceIds, messageName?, signalName?, escalationCode?) added to FlatProcessContract schema; extract_contract.jinja +3 lines of throw-steering guidance."
 		},
 		"generationPrompt": {
-			"chars": 9644,
-			"updatedBy": "#310",
-			"reason": "Rendered generate_bpmn.jinja: contract-to-BPMN wiring only. The kind→type/eventDefinition mappings and the catalogue dedup/reuse rules live in the FlatBpmnDefinition schema; worked examples are typed withExample few-shot values, not template text."
+			"chars": 10213,
+			"updatedBy": "#321",
+			"reason": "generate_bpmn.jinja: +2 lines mapping ContractIntermediateThrow → INTERMEDIATE_THROW_EVENT."
 		},
 		"generationFullPayload": {
-			"chars": 19161,
-			"updatedBy": "#310",
-			"reason": "generate_bpmn.jinja + FlatBpmnDefinition schema. Catalogue one-per-distinct-name/code reuse rules live in the message/signal/error/escalation field descriptions (single source of truth), so the prompt no longer restates them."
+			"chars": 19730,
+			"updatedBy": "#321",
+			"reason": "generate_bpmn.jinja: +2 lines mapping ContractIntermediateThrow → INTERMEDIATE_THROW_EVENT."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
