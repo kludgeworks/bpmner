@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7436,
-			"updatedBy": "#188",
-			"reason": "Added multi-instance iteration guidance to the activity_kinds prompt fragment (for-each detection, SEQUENTIAL vs PARALLEL)."
+			"chars": 7468,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-01"
 		},
 		"contractFullPayload": {
-			"chars": 25170,
-			"updatedBy": "#188",
-			"reason": "FlatContractActivity gained the optional `iteration` field (FlatContractIteration) plus the prompt-fragment iteration guidance."
+			"chars": 25202,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-01"
 		},
 		"generationPrompt": {
 			"chars": 10844,
