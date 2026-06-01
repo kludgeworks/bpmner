@@ -21,9 +21,9 @@ internal class RequiredAssociationCheck {
         metadata: RuleMetadata,
         config: RequiredAssociationCheckConfig,
     ): List<RuleDiagnostic> {
-        // Dormant in production until the BPMN model carries `bpmn:Association` edges (#196).
-        // Without the capability, "no associations found" applies to every targeted element —
-        // a false positive on every run. Return empty until the capability flips on.
+        // Skip when the model context carries no association data (e.g. a hand-built test fixture
+        // that doesn't set the capability); without it every targeted element looks unassociated,
+        // which would be a false positive on every run.
         if (!model.supports(ModelCapability.ASSOCIATIONS)) return emptyList()
         return metadata.targetedElements(model)
             .filter { config.appliesWhenProperty == null || it.property(config.appliesWhenProperty) != null }

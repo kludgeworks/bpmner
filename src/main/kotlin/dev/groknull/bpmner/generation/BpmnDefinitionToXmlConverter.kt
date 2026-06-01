@@ -75,17 +75,6 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
         private val UNUSED_DI_NAMESPACES_REGEX = Regex("\\s+xmlns:(?:bpmndi|omgdi|di|dc)=\"[^\"]*\"")
-
-        // All seven task element local names — any task kind may carry a multi-instance marker.
-        private val ALL_TASK_LOCAL_NAMES = listOf(
-            "userTask",
-            "serviceTask",
-            "scriptTask",
-            "manualTask",
-            "businessRuleTask",
-            "sendTask",
-            "receiveTask",
-        )
     }
 
     fun toXml(definition: BpmnDefinition): String = render(definition).xml
@@ -381,7 +370,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
     // Every task kind may carry a multi-instance marker, so this index spans all seven task
     // element names (unlike `taskElementsById`, which is scoped to attribute-payload tasks).
-    private fun Document.allTaskElementsById(): Map<String, Element> = ALL_TASK_LOCAL_NAMES
+    private fun Document.allTaskElementsById(): Map<String, Element> = BPMN_TASK_LOCAL_NAMES
         .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
         .associateBy { it.getAttribute("id") }
         .filterKeys { it.isNotBlank() }

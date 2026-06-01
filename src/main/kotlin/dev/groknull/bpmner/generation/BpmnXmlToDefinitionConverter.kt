@@ -96,17 +96,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         // rule decides what's discouraged. Includes both top-level constructs (Choreography,
         // Conversation) and their child element types (e.g. choreographyTask), all picked up
         // by `getElementsByTagNameNS` regardless of nesting.
-        // All seven task element local names — any task kind may carry a multi-instance marker.
-        private val TASK_LOCAL_NAMES = listOf(
-            "userTask",
-            "serviceTask",
-            "scriptTask",
-            "manualTask",
-            "businessRuleTask",
-            "sendTask",
-            "receiveTask",
-        )
-
         private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
             "choreography",
             "choreographyTask",
@@ -376,7 +365,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .associate { it.getAttribute("id") to it.getAttributeNS(BPMNER_EXT_NS, "decisionRef") }
                 .filter { (id, ref) -> id.isNotBlank() && ref.isNotBlank() }
         val multiInstance =
-            TASK_LOCAL_NAMES
+            BPMN_TASK_LOCAL_NAMES
                 .flatMap { document.bpmnElements(it).toList() }
                 .mapNotNull { task -> task.multiInstanceOrNull()?.let { task.getAttribute("id") to it } }
                 .filter { (id, _) -> id.isNotBlank() }
