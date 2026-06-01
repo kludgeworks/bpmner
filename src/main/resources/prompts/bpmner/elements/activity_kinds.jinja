@@ -13,3 +13,8 @@ Iteration (optional `iteration` object, valid on ANY activity kind): set ONLY wh
 - `iteration.collectionDescription` — the "for each …" phrase naming the item set, e.g. "each line item on the slip".
 - Example (parallel): `{kind: "USER", id: "act-review", name: "Review manuscript", iteration: {mode: "PARALLEL", collectionDescription: "each reviewer on the panel"}}`.
 - Example (sequential): `{kind: "USER", id: "act-pick", name: "Pick line item", iteration: {mode: "SEQUENTIAL", collectionDescription: "each line item on the packing slip"}}`.
+
+Boundary events (optional `boundaryEvents` list, valid on ANY activity kind): set when the source says something can interrupt the activity and divert the flow — a deadline, a caught business error, or an escalation. Each entry has `kind` (TIMER | ERROR | ESCALATION), `label`, `nextRef` (id of the activity / decision / end state the exception path leads to), optional `cancelActivity` (default true; ERROR must stay true), and optional `detail`. NOT a normal decision branch off the activity's outcome.
+- TIMER — keywords: "if it takes longer than …", "after N hours/days without …", "times out". `detail` = ISO-8601 duration. Example: `{kind: "TIMER", label: "24h timeout", nextRef: "act-escalate", detail: "PT24H"}`.
+- ERROR — keywords: "if X fails / throws / raises the … error", a named failure routed to handling. `detail` = error code. Example: `{kind: "ERROR", label: "Chargeback raised", nextRef: "act-dispute", detail: "CHARGEBACK"}`.
+- ESCALATION — keywords: "if X must be escalated", a non-failure escalation. `detail` = escalation code. Example: `{kind: "ESCALATION", label: "Approval overdue", nextRef: "act-notify", detail: "APPROVAL_OVERDUE"}`.

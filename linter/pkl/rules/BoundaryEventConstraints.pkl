@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Boundary Event Constraints"
@@ -23,3 +24,37 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+checkPrimitive = "CompositeCheck"
+checkConfig = new CheckPrimitive.CompositeCheck {
+  subChecks =
+    List(
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "detached"
+        config = new CheckPrimitive.ElementConstraintCheck {
+          element = "bpmn:BoundaryEvent"
+          mode = "BOUNDARY_ATTACHED"
+        }
+      },
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "incoming"
+        config = new CheckPrimitive.ConnectivityCheck {
+          mode = "NO_INCOMING"
+        }
+      },
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "outgoing"
+        config = new CheckPrimitive.ElementConstraintCheck {
+          element = "bpmn:BoundaryEvent"
+          mode = "BOUNDARY_SINGLE_OUTGOING"
+        }
+      },
+      new CheckPrimitive.SubCheck {
+        diagnosticCode = "errorInterrupting"
+        config = new CheckPrimitive.ElementConstraintCheck {
+          element = "bpmn:BoundaryEvent"
+          mode = "BOUNDARY_ERROR_INTERRUPTING"
+        }
+      },
+    )
+}

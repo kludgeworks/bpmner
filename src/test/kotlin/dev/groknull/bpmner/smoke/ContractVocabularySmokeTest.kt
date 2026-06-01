@@ -8,6 +8,7 @@ package dev.groknull.bpmner.smoke
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
@@ -112,6 +113,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasIteration) {
             "Expected an activity with iteration mode $mode, but found: " +
                 activities.joinToString { "${it.name}(iteration=${it.iteration})" }
+        }
+    }
+
+    private fun ProcessContract.assertHasBoundaryEvent(kind: BoundaryEventKind) {
+        val hasBoundary = activities.any { a -> a.boundaryEvents.any { it.kind == kind } }
+        assertTrue(hasBoundary) {
+            "Expected an activity carrying a $kind boundary event, but found: " +
+                activities.joinToString { "${it.name}(boundaryEvents=${it.boundaryEvents})" }
         }
     }
 
@@ -351,6 +360,20 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.PARALLEL)
+    }
+
+    // Boundary events
+
+    @Test
+    fun `timer boundary event`() {
+        val c = extractContract(
+            """
+            The process starts when a claim is filed. An adjuster reviews the claim. If that review
+            takes longer than 48 hours, the claim is escalated to a senior adjuster for handling.
+            Either way, once a decision is recorded the process ends.
+            """,
+        )
+        c.assertHasBoundaryEvent(BoundaryEventKind.TIMER)
     }
 
     // Inclusive gateway

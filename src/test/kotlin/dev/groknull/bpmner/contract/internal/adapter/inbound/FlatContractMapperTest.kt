@@ -7,10 +7,12 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
@@ -100,6 +102,35 @@ class FlatContractMapperTest {
         assertEquals(
             ContractIteration(MultiInstanceMode.SEQUENTIAL, "each line item on the slip"),
             flat.toSealed().iteration,
+        )
+    }
+
+    @Test
+    fun `activity boundary events round-trip to ContractBoundaryEvent`() {
+        val flat = FlatContractActivity(
+            id = "act-pay",
+            name = "Run payment",
+            kind = FlatActivityKind.SERVICE,
+            boundaryEvents = listOf(
+                FlatContractBoundaryEvent(
+                    kind = BoundaryEventKind.ERROR,
+                    label = "Chargeback raised",
+                    nextRef = "act-dispute",
+                    detail = "CHARGEBACK",
+                ),
+            ),
+        )
+
+        assertEquals(
+            listOf(
+                ContractBoundaryEvent(
+                    kind = BoundaryEventKind.ERROR,
+                    label = "Chargeback raised",
+                    nextRef = "act-dispute",
+                    detail = "CHARGEBACK",
+                ),
+            ),
+            flat.toSealed().boundaryEvents,
         )
     }
 

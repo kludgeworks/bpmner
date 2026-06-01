@@ -7,6 +7,7 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActor
@@ -116,6 +117,14 @@ public data class FlatContractActivity(
             "per-item iteration marker, distinct from a retry/poll loop or a parallel gateway fork.",
     )
     val iteration: FlatContractIteration? = null,
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Boundary events on this activity — timeouts, caught errors, or escalations that interrupt " +
+            "it and route elsewhere (e.g. \"if approval takes longer than 24h, escalate\"; \"if the " +
+            "payment subprocess raises a chargeback error, route to dispute handling\"). Leave empty " +
+            "for ordinary activities. Distinct from a normal decision branch off the activity's outcome.",
+    )
+    val boundaryEvents: List<FlatContractBoundaryEvent> = emptyList(),
 )
 
 @JsonClassDescription(
@@ -137,6 +146,39 @@ public data class FlatContractIteration(
     @field:Size(max = 500)
     @get:JsonPropertyDescription("Optional early-exit condition that stops iteration before all items are done")
     val completionCondition: String? = null,
+)
+
+@JsonClassDescription(
+    "A boundary event on an activity: a timeout (TIMER), caught business error (ERROR), or raised " +
+        "escalation (ESCALATION) that interrupts the activity and routes the flow to `nextRef`.",
+)
+public data class FlatContractBoundaryEvent(
+    @get:JsonPropertyDescription(
+        "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
+            "business error), ESCALATION (the activity raises a business escalation).",
+    )
+    val kind: BoundaryEventKind,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Short label for the event, e.g. \"24h timeout\" or \"chargeback raised\".")
+    val label: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
+    )
+    val nextRef: String,
+    @get:JsonPropertyDescription(
+        "Whether firing interrupts (cancels) the attached activity. Default true. ERROR boundary " +
+            "events must be interrupting; TIMER/ESCALATION may be non-interrupting.",
+    )
+    val cancelActivity: Boolean = true,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
+            "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
+    )
+    val detail: String? = null,
 )
 
 @JsonClassDescription(

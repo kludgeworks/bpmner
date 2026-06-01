@@ -7,6 +7,7 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -35,7 +36,7 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     id = id,
     processName = processName,
     summary = summary,
-    start = start.toSealed(),
+    start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds),
     activities = activities.map { it.toSealed() },
     decisions = decisions.map { it.toSealed() },
     actors = actors,
@@ -45,11 +46,6 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     assumptions = assumptions,
 )
 
-public fun FlatContractStart.toSealed(): ContractStart = ContractStart(
-    trigger = trigger.toSealed(),
-    sourceIds = sourceIds,
-)
-
 public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
     FlatActivityKind.SERVICE -> ContractActivity.Service(
         id = id,
@@ -57,6 +53,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
     FlatActivityKind.USER -> ContractActivity.User(
@@ -65,6 +62,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
     FlatActivityKind.SCRIPT -> ContractActivity.Script(
@@ -73,8 +71,24 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
+    FlatActivityKind.MANUAL -> ContractActivity.Manual(
+        id = id,
+        name = name,
+        actorId = actorId,
+        sourceIds = sourceIds,
+        iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
+    )
+
+    // The three kinds carrying a required payload field (decisionName / messageName) are split out
+    // to keep this dispatcher within detekt's per-method length limit.
+    FlatActivityKind.BUSINESS_RULE, FlatActivityKind.SEND, FlatActivityKind.RECEIVE -> toPayloadActivity()
+}
+
+private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
     FlatActivityKind.BUSINESS_RULE -> ContractActivity.BusinessRule(
         id = id,
         name = name,
@@ -82,6 +96,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
     FlatActivityKind.SEND -> ContractActivity.Send(
@@ -91,6 +106,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
     FlatActivityKind.RECEIVE -> ContractActivity.Receive(
@@ -100,15 +116,10 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         actorId = actorId,
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
+        boundaryEvents = boundaryEvents.map { it.toSealed() },
     )
 
-    FlatActivityKind.MANUAL -> ContractActivity.Manual(
-        id = id,
-        name = name,
-        actorId = actorId,
-        sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-    )
+    else -> error("toPayloadActivity called with non-payload kind: $kind")
 }
 
 private fun FlatContractIteration.toSealed(): ContractIteration = ContractIteration(
@@ -116,6 +127,14 @@ private fun FlatContractIteration.toSealed(): ContractIteration = ContractIterat
     collectionDescription = requireField(collectionDescription, mode, "collectionDescription", "iteration"),
     loopCardinality = loopCardinality,
     completionCondition = completionCondition,
+)
+
+private fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = ContractBoundaryEvent(
+    kind = kind,
+    label = label,
+    nextRef = nextRef,
+    cancelActivity = cancelActivity,
+    detail = detail,
 )
 
 public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
@@ -215,11 +234,3 @@ public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
     kind = kind,
     sourceIds = sourceIds,
 )
-
-private fun <T : Any> requireField(value: T?, kind: Enum<*>, fieldName: String, context: String): T {
-    val nonNull = requireNotNull(value) { "$kind ($context) requires $fieldName" }
-    if (nonNull is CharSequence) {
-        require(nonNull.isNotBlank()) { "$kind ($context) requires non-blank $fieldName" }
-    }
-    return nonNull
-}

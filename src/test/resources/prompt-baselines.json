@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7436,
-			"updatedBy": "#188",
-			"reason": "Added multi-instance iteration guidance to the activity_kinds prompt fragment (for-each detection, SEQUENTIAL vs PARALLEL)."
+			"chars": 8599,
+			"updatedBy": "#183",
+			"reason": "activity_kinds.jinja gains the boundary-events detection block (TIMER/ERROR/ESCALATION)."
 		},
 		"contractFullPayload": {
-			"chars": 25170,
-			"updatedBy": "#188",
-			"reason": "FlatContractActivity gained the optional `iteration` field (FlatContractIteration) plus the prompt-fragment iteration guidance."
+			"chars": 28504,
+			"updatedBy": "#183",
+			"reason": "Boundary-events detection prose plus the FlatContractActivity.boundaryEvents / FlatContractBoundaryEvent schema fields."
 		},
 		"generationPrompt": {
-			"chars": 10844,
-			"updatedBy": "#188",
-			"reason": "Added the contract-iteration → multi-instance wiring rule (emit multiInstance + linked text annotation/association) to generate_bpmn."
+			"chars": 11627,
+			"updatedBy": "#183",
+			"reason": "generate_bpmn.jinja gains the boundary-events to BpmnBoundaryEvent wiring rule."
 		},
 		"generationFullPayload": {
-			"chars": 23615,
-			"updatedBy": "#188",
-			"reason": "FlatBpmnNode gained `multiInstance` (FlatMultiInstanceLoopCharacteristics) and FlatBpmnDefinition gained annotations/associations, plus the generation wiring rule."
+			"chars": 24398,
+			"updatedBy": "#183",
+			"reason": "Boundary-events wiring prose in generate_bpmn.jinja."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
