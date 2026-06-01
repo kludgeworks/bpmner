@@ -82,7 +82,7 @@ jobs:
           PROVIDERS=("openai" "anthropic")
           SELECTED=${PROVIDERS[$RANDOM % 2]}
           echo "Selected provider for this run: $SELECTED"
-          echo "SPRING_PROFILES_ACTIVE=$SELECTED" >> $GITHUB_ENV
+          echo "SPRING_PROFILES_ACTIVE=$SELECTED" >> "$GITHUB_ENV"
 
       - name: Run Smoke Tests
         env:
