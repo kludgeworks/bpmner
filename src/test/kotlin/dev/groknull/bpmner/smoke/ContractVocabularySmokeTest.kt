@@ -258,7 +258,8 @@ class ContractVocabularySmokeTest {
     fun `message end`() {
         val c = extractContract(
             """
-            The process begins when started. When everything is done, the process wraps up by sending a final invoice.
+            The process begins when started. The order is validated.
+            The process then terminates by dispatching the final invoice as an outbound message to the customer.
             """,
         )
         c.assertHasEndState<ContractEndState.Message>()
