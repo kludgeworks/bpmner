@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
@@ -131,10 +132,10 @@ private fun FlatContractIteration.toSealed(): ContractIteration = ContractIterat
 
 private fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = ContractBoundaryEvent(
     kind = kind,
-    label = label,
-    nextRef = nextRef,
+    label = requireField(label, kind, "label", "boundaryEvent"),
+    nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
     cancelActivity = cancelActivity,
-    detail = detail,
+    detail = if (kind == BoundaryEventKind.TIMER) requireField(detail, kind, "detail", "boundaryEvent") else detail,
 )
 
 public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {

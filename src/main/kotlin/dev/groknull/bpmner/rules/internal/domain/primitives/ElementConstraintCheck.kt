@@ -109,8 +109,8 @@ internal class ElementConstraintCheck {
         .map { metadata.diagnostic(it.id) }
 
     // detached — a boundary event's `attachedToRef` must resolve to an activity in the model.
-    // Activities today are the seven task kinds; subprocess attachment lands with #191 (which will
-    // extend `isTask()`/this check), so an unresolved or non-task target means the event is detached.
+    // Activities are the seven task kinds; an unresolved or non-task target means the event is detached.
+    // TODO(#191): extend `isTask()` to cover subprocess attachment.
     private fun boundaryAttached(
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
@@ -134,6 +134,6 @@ internal class ElementConstraintCheck {
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
     ): List<RuleDiagnostic> = metadata.targetedElements(model)
-        .filter { it.property("eventDefinition") == "ERROR" && it.property("cancelActivity") != true.toString() }
+        .filter { it.property("eventDefinition") == "ERROR" && it.property("cancelActivity") == "false" }
         .map { metadata.diagnostic(it.id) }
 }

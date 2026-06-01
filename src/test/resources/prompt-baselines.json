@@ -3,22 +3,22 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 8599,
+			"chars": 8633,
 			"updatedBy": "#183",
-			"reason": "activity_kinds.jinja gains the boundary-events detection block (TIMER/ERROR/ESCALATION)."
+			"reason": "Boundary-events detection block in activity_kinds.jinja (reworded per #330 review to drop emphatic-negation prose)."
 		},
 		"contractFullPayload": {
-			"chars": 28504,
+			"chars": 28538,
 			"updatedBy": "#183",
 			"reason": "Boundary-events detection prose plus the FlatContractActivity.boundaryEvents / FlatContractBoundaryEvent schema fields."
 		},
 		"generationPrompt": {
-			"chars": 11627,
+			"chars": 11609,
 			"updatedBy": "#183",
-			"reason": "generate_bpmn.jinja gains the boundary-events to BpmnBoundaryEvent wiring rule."
+			"reason": "Boundary-events wiring rule in generate_bpmn.jinja (reworded per #330 review)."
 		},
 		"generationFullPayload": {
-			"chars": 24398,
+			"chars": 24380,
 			"updatedBy": "#183",
 			"reason": "Boundary-events wiring prose in generate_bpmn.jinja."
 		},

@@ -150,7 +150,7 @@ internal enum class ElementConstraintMode {
     PARALLEL_GATEWAY_STRUCTURE,
     EVENT_BASED_GATEWAY_DIRECT_EVENTS,
 
-    // Boundary-event structural constraints (#183). Each targets bpmn:BoundaryEvent and owns one
+    // Boundary-event structural constraints. Each targets bpmn:BoundaryEvent and owns one
     // sub-check of the BoundaryEventConstraints composite rule.
     BOUNDARY_ATTACHED,
     BOUNDARY_SINGLE_OUTGOING,
