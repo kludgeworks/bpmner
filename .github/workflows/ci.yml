@@ -72,6 +72,10 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-latest
     needs: ci
+    # OP_SERVICE_ACCOUNT_TOKEN is unavailable on fork PRs — GitHub does not expose
+    # organisation secrets to workflows triggered by external contributors. Skip the
+    # job rather than failing it immediately before any test runs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
