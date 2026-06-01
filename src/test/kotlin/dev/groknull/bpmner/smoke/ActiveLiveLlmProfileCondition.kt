@@ -41,6 +41,11 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 profiles = setOf("gh", "github"),
                 tokenName = GITHUB_TOKEN,
             ),
+            LiveLlmProvider(
+                displayName = "OpenAI",
+                profiles = setOf("openai"),
+                tokenName = "OPENAI_API_KEY",
+            ),
         )
 
         internal fun evaluate(
@@ -61,7 +66,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 0 ->
                     Evaluation.disabled(
                         "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
-                            "set one of anth/anthropic or gh/github",
+                            "set one of anth/anthropic, gh/github, or openai",
                     )
 
                 1 ->
@@ -72,7 +77,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                         "multiple live LLM profile families are active in " +
                             "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
                             activeProviders.joinToString { it.displayName } +
-                            "; select exactly one of anth/anthropic or gh/github",
+                            "; select exactly one of anth/anthropic, gh/github, or openai",
                     )
             }
         }
