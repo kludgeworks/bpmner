@@ -330,7 +330,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         val allTaskElementsById = document.allTaskElementsById()
         definition.nodes.filterIsInstance<BpmnTask>().forEach { task ->
             task.multiInstance?.let { mi ->
-                allTaskElementsById[task.id]?.appendMultiInstance(document, mi)
+                val element = allTaskElementsById[task.id]
+                    ?: error("Task '${task.id}' has a multi-instance marker but no task element was rendered for it")
+                element.appendMultiInstance(document, mi)
                 // appendMultiInstance carries collectionDescription in our extension namespace.
                 bpmnerNamespaceUsed = true
             }

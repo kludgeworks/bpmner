@@ -350,8 +350,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         // Local helper (kept off the class surface) parsing one task's multi-instance marker.
         fun Element.multiInstanceOrNull(): MultiInstanceLoopCharacteristics? {
             val loop = childElements().firstOrNull { it.localName == "multiInstanceLoopCharacteristics" } ?: return null
-            val mode =
-                if (loop.getAttribute("isSequential").toBoolean()) MultiInstanceMode.SEQUENTIAL else MultiInstanceMode.PARALLEL
+            // xsd:boolean admits "true"/"false" and "1"/"0"; honour both rather than only "true".
+            val isSequential = loop.getAttribute("isSequential").let { it.equals("true", ignoreCase = true) || it == "1" }
+            val mode = if (isSequential) MultiInstanceMode.SEQUENTIAL else MultiInstanceMode.PARALLEL
             return MultiInstanceLoopCharacteristics(
                 mode = mode,
                 // collectionDescription rides our extension attribute (see the writer); foreign BPMN

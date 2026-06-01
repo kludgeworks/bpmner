@@ -166,9 +166,10 @@ interface BpmnTextAnnotation {
 }
 
 /**
- * A BPMN association edge linking a [BpmnTextAnnotation] (the source) to the flow element it
- * annotates (the target). Distinct from [BpmnEdge] (sequence flow): associations carry no
- * token flow. Renders to `<bpmn:association>`.
+ * A BPMN association edge linking the flow element it annotates (the source) to a
+ * [BpmnTextAnnotation] (the target). Per BPMN convention `sourceRef` is the annotated element
+ * and `targetRef` is the annotation. Distinct from [BpmnEdge] (sequence flow): associations
+ * carry no token flow. Renders to `<bpmn:association>`.
  */
 interface BpmnAssociation {
     val id: String

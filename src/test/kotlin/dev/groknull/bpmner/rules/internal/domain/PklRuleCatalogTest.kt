@@ -315,7 +315,7 @@ internal class PklRuleCatalogTest {
     }
 
     // -------------------------------------------------------------------------------------
-    // #188 multi-instance / annotation rules. Each proves the `appliesWhenProperty` narrowing
+    // Multi-instance / annotation rules. Each proves the `appliesWhenProperty` narrowing
     // (ordinary tasks are never flagged) and, for TextAnnotationUsage, the INBOUND direction.
 
     @Test

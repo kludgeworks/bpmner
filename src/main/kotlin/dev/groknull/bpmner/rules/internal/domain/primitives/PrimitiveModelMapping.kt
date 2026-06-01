@@ -74,9 +74,12 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
     // associated annotation wording is readable as a property (see `toPrimitiveElement`). BPMN
     // models the link as sourceRef = annotated element, targetRef = annotation.
     val annotationTextById = definition.annotations.associate { it.id to it.text }
+    // Join (don't overwrite) when an element has several annotations, so a general note can't
+    // hide the iteration-word annotation the vocabulary checks look for.
     val annotationTextByElementId = definition.associations
         .mapNotNull { association -> annotationTextById[association.targetRef]?.let { association.sourceRef to it } }
-        .toMap()
+        .groupBy({ it.first }, { it.second })
+        .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)

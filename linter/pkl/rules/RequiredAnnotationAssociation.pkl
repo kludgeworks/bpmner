@@ -30,8 +30,7 @@ staticConfig = new {
 }
 
 // Each multi-instance task must have an outbound association to a text annotation.
-// `appliesWhenProperty` narrows to multi-instance tasks (projected by PrimitiveModelMapping);
-// when standard-loop characteristics are modelled, extend the narrowing to cover them too.
+// `appliesWhenProperty` narrows to multi-instance tasks (projected by PrimitiveModelMapping).
 checkPrimitive = "RequiredAssociationCheck"
 checkConfig = new CheckPrimitive.RequiredAssociationCheck {
   association = "bpmn:Association"

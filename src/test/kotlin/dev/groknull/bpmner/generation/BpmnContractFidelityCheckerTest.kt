@@ -93,6 +93,30 @@ class BpmnContractFidelityCheckerTest {
         )
     }
 
+    @Test
+    fun `single-run activity rendered with a multi-instance marker is flagged`() {
+        val contract = ProcessContract(
+            id = "c-mi",
+            processName = "MI",
+            summary = "Single-run review",
+            start = ContractStart(ContractTrigger.None("manuscript submitted")),
+            activities = listOf(ContractActivity.User(id = "act-review", name = "Review manuscript")),
+            endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Verdict sent")),
+        )
+
+        val report =
+            checker.check(
+                contract,
+                miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each reviewer")),
+            )
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_ITERATION_MODE_MISMATCH },
+            "expected ACTIVITY_ITERATION_MODE_MISMATCH for the unexpected marker; got ${report.issues.map { it.code }}",
+        )
+    }
+
     private fun miContract(mode: MultiInstanceMode): ProcessContract = ProcessContract(
         id = "c-mi",
         processName = "MI",
