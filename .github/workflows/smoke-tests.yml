@@ -1,0 +1,88 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+name: Smoke Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Job 1: Find all smoke test targets and build a JSON matrix
+  setup-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      targets: ${{ steps.set-targets.outputs.targets }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazelisk
+          key: bazel-${{ runner.os }}-query
+      - name: Query Smoke Test Targets
+        id: set-targets
+        run: |
+          TARGETS=$(bazel query 'attr(tags, "live-llm", //src/test/...)' --output=label)
+          JSON_ARRAY=$(echo "$TARGETS" | jq -R -s -c 'split("\n")[:-1]')
+          echo "targets=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
+
+  # Job 2: Run a separate runner for each target
+  smoke-tests:
+    needs: setup-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        test_target: ${{ fromJson(needs.setup-matrix.outputs.targets) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ~/.local/share/pnpm/store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            pnpm-${{ runner.os }}-
+
+      - name: Cache Bazel
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazelisk
+          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
+
+      - name: Run Smoke Test
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SPRING_PROFILES_ACTIVE: gh
+        run: |
+          bazel test \
+            --test_tag_filters=manual,live-llm \
+            --test_env=GITHUB_TOKEN \
+            --test_env=SPRING_PROFILES_ACTIVE \
+            ${{ matrix.test_target }} \
+            --test_output=errors
