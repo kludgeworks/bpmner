@@ -20,10 +20,16 @@ type AgentProcessEvent = {
 	type: "AgentProcessFinishedEvent" | "AgentProcessFailedEvent"
 }
 
+type BpmnRunCostEvent = {
+	type: "BpmnRunCostEvent"
+	costSummary: string
+}
+
 type ServerEvent =
 	| ProgressUpdateEvent
 	| BpmnSnapshotEvent
 	| AgentProcessEvent
+	| BpmnRunCostEvent
 	| { type?: string }
 
 type Diagnostic = {
@@ -78,6 +84,13 @@ let eventSource: EventSource | null = null
 let currentXml = ""
 let currentDownloadUrl: string | null = null
 let snapshotCount = 0
+let sawFinish = false
+let sawCost = false
+let closeTimer: number | null = null
+
+// The run-cost event arrives just after the terminal finished event, so keep the stream open
+// briefly past completion to receive it; close anyway after this grace period if it never comes.
+const COST_EVENT_GRACE_MS = 4000
 
 generateBtn.addEventListener("click", async () => {
 	const desc = descriptionEl.value.trim()
@@ -86,10 +99,19 @@ generateBtn.addEventListener("click", async () => {
 	generateBtn.disabled = true
 	progressContainer.classList.remove("hidden")
 	progressList.innerHTML = ""
+	progressContainer.querySelectorAll("pre.run-cost").forEach((el) => {
+		el.remove()
+	})
 	diagnosticsContainer.classList.add("hidden")
 	downloadContainer.classList.add("hidden")
 	currentXml = ""
 	snapshotCount = 0
+	sawFinish = false
+	sawCost = false
+	if (closeTimer !== null) {
+		clearTimeout(closeTimer)
+		closeTimer = null
+	}
 	viewer.clear()
 
 	if (eventSource) {
@@ -140,20 +162,49 @@ function connectSse(url: string) {
 				addProgress("No BPMN XML was generated.")
 			}
 			generateBtn.disabled = false
-			eventSource?.close()
+			sawFinish = true
+			if (closeTimer === null) {
+				closeTimer = window.setTimeout(closeStream, COST_EVENT_GRACE_MS)
+			}
+			closeWhenSettled()
+		} else if (event.type === "BpmnRunCostEvent" && "costSummary" in event) {
+			renderCostSummary((event as BpmnRunCostEvent).costSummary)
+			sawCost = true
+			closeWhenSettled()
 		} else if (event.type === "AgentProcessFailedEvent") {
 			addProgress("Process failed.")
 			generateBtn.disabled = false
-			eventSource?.close()
+			closeStream()
 		}
 	}
 
 	eventSource.onerror = (e) => {
 		console.error("SSE Error", e)
-		eventSource?.close()
+		closeStream()
 		generateBtn.disabled = false
 		addProgress("Connection lost.")
 	}
+}
+
+function closeStream() {
+	if (closeTimer !== null) {
+		clearTimeout(closeTimer)
+		closeTimer = null
+	}
+	eventSource?.close()
+}
+
+function closeWhenSettled() {
+	if (sawFinish && sawCost) {
+		closeStream()
+	}
+}
+
+function renderCostSummary(summary: string) {
+	const pre = document.createElement("pre")
+	pre.className = "run-cost"
+	pre.textContent = summary
+	progressContainer.appendChild(pre)
 }
 
 function addProgress(msg: string) {
