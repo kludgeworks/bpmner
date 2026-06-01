@@ -299,8 +299,8 @@ internal class PklRuleCatalogTest {
     }
 
     // -------------------------------------------------------------------------------------
-    // #327 diverging-flow rules: OUTGOING_FLOWS_NAMED flags the gateway (not the flow) when any
-    // of its outgoing branches is unnamed, and ignores incoming flows on converging gateways.
+    // Diverging-flow rules: OUTGOING_FLOWS_NAMED flags a diverging gateway (not the flow) when any
+    // of its outgoing branches is unnamed; it ignores converging gateways and incoming flows.
 
     @Test
     fun `round-trip - DivergingFlowNames fires on a gateway with an unnamed outgoing branch`() {
@@ -317,8 +317,8 @@ internal class PklRuleCatalogTest {
     @Test
     fun `round-trip - DivergingFlowNames ignores unnamed incoming flows on a converging gateway`() {
         val rule = activeRuleEndingWith("diverging-flow-names")
-        // Two unnamed flows converge into g; g's single outgoing flow is named — OUTGOING_FLOWS_NAMED
-        // scopes to outgoing branches only, so it must not fire.
+        // A converging gateway has a single outgoing flow, so it is not diverging — it must not fire
+        // even when that lone outgoing flow (and the incoming ones) are unnamed.
         val ctx = BpmnDefinitionContext(
             BpmnDefinition(
                 processId = "P",
@@ -332,7 +332,7 @@ internal class PklRuleCatalogTest {
                 sequences = listOf(
                     BpmnEdge("f1", "s1", "g"),
                     BpmnEdge("f2", "s2", "g"),
-                    BpmnEdge("f3", "g", "e", name = "Done"),
+                    BpmnEdge("f3", "g", "e"),
                 ),
             ),
         )
