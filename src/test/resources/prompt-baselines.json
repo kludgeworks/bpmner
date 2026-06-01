@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7436,
-			"updatedBy": "#188",
-			"reason": "Added multi-instance iteration guidance to the activity_kinds prompt fragment (for-each detection, SEQUENTIAL vs PARALLEL)."
+			"chars": 7837,
+			"updatedBy": "#181",
+			"reason": "EVENT_BASED decision-kind recognition + EVENT_GATEWAY branch teaching (branch_kinds.jinja + FlatContractDecision.kind)."
 		},
 		"contractFullPayload": {
-			"chars": 25170,
-			"updatedBy": "#188",
-			"reason": "FlatContractActivity gained the optional `iteration` field (FlatContractIteration) plus the prompt-fragment iteration guidance."
+			"chars": 26481,
+			"updatedBy": "#181",
+			"reason": "Event-based decision/branch prose plus the FlatContractBranch.triggerKind / triggerDetail schema fields."
 		},
 		"generationPrompt": {
-			"chars": 10844,
-			"updatedBy": "#188",
-			"reason": "Added the contract-iteration → multi-instance wiring rule (emit multiInstance + linked text annotation/association) to generate_bpmn."
+			"chars": 11695,
+			"updatedBy": "#181",
+			"reason": "Event-based-gateway topology wiring rule in generate_bpmn.jinja."
 		},
 		"generationFullPayload": {
-			"chars": 23615,
-			"updatedBy": "#188",
-			"reason": "FlatBpmnNode gained `multiInstance` (FlatMultiInstanceLoopCharacteristics) and FlatBpmnDefinition gained annotations/associations, plus the generation wiring rule."
+			"chars": 24489,
+			"updatedBy": "#181",
+			"reason": "Event-based-gateway wiring prose plus the FlatBpmnNode EVENT_BASED_GATEWAY discriminator."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,

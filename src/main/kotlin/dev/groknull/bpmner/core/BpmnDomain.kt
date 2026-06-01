@@ -27,6 +27,7 @@ import dev.groknull.bpmner.api.BpmnErrorEventDefinition as ApiBpmnErrorEventDefi
 import dev.groknull.bpmner.api.BpmnErrorRef as ApiBpmnErrorRef
 import dev.groknull.bpmner.api.BpmnEscalationEventDefinition as ApiBpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEscalationRef as ApiBpmnEscalationRef
+import dev.groknull.bpmner.api.BpmnEventBasedGateway as ApiBpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition as ApiBpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway as ApiBpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnInclusiveGateway as ApiBpmnInclusiveGateway
@@ -240,6 +241,7 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnExclusiveGateway::class, name = "EXCLUSIVE_GATEWAY"),
     JsonSubTypes.Type(value = BpmnInclusiveGateway::class, name = "INCLUSIVE_GATEWAY"),
     JsonSubTypes.Type(value = BpmnParallelGateway::class, name = "PARALLEL_GATEWAY"),
+    JsonSubTypes.Type(value = BpmnEventBasedGateway::class, name = "EVENT_BASED_GATEWAY"),
     JsonSubTypes.Type(value = BpmnIntermediateCatchEvent::class, name = "INTERMEDIATE_CATCH_EVENT"),
     JsonSubTypes.Type(value = BpmnIntermediateThrowEvent::class, name = "INTERMEDIATE_THROW_EVENT"),
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
@@ -464,6 +466,17 @@ data class BpmnParallelGateway(
     override val name: String? = null,
 ) : BpmnNode,
     ApiBpmnParallelGateway {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+data class BpmnEventBasedGateway(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+) : BpmnNode,
+    ApiBpmnEventBasedGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 

@@ -43,7 +43,12 @@ Inclusive-gateway topology:
 - A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other branch's condition is true. The renderer writes the gateway's `default` attribute on the chosen outbound flow.
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
-The provided worked examples show both topologies end-to-end — follow their fork/join wiring.
+Event-based-gateway topology:
+- An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry.
+- The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.
+- The gateway is a pure wait: it has no join. Each branch proceeds independently after its event fires.
+
+The provided worked examples show the parallel and inclusive topologies end-to-end — follow their fork/join wiring.
 
 Primary validated ProcessContract:
 {{ contractMarkdown }}

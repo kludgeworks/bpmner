@@ -9,6 +9,7 @@ import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
@@ -27,6 +28,7 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.EndEvent
+import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
@@ -70,6 +72,8 @@ internal object BpmnModelFactory {
                 is BpmnInclusiveGateway -> modelInstance.newInstance(InclusiveGateway::class.java)
 
                 is BpmnParallelGateway -> modelInstance.newInstance(ParallelGateway::class.java)
+
+                is BpmnEventBasedGateway -> modelInstance.newInstance(EventBasedGateway::class.java)
 
                 is BpmnIntermediateCatchEvent -> modelInstance.newInstance(IntermediateCatchEvent::class.java)
 

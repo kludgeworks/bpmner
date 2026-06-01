@@ -22,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -501,12 +502,14 @@ private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean = wh
     ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
     ContractGatewayKind.INCLUSIVE -> node is BpmnInclusiveGateway
     ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
+    ContractGatewayKind.EVENT_BASED -> node is BpmnEventBasedGateway
 }
 
 private fun kindDescription(kind: ContractGatewayKind): String = when (kind) {
     ContractGatewayKind.EXCLUSIVE -> "pick one branch"
     ContractGatewayKind.INCLUSIVE -> "take any branch whose condition is true"
     ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+    ContractGatewayKind.EVENT_BASED -> "wait for the first of several events"
 }
 
 private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (this) {

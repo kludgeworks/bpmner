@@ -14,6 +14,7 @@ import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTextAnnotation
@@ -343,6 +344,67 @@ internal class PklRuleCatalogTest {
     fun `round-trip - DivergingFlowOutcomeLabel also fires on the same unnamed outgoing branch`() {
         val rule = activeRuleEndingWith("diverging-flow-outcome-label")
         assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    // -------------------------------------------------------------------------------------
+    // #181 makes BpmnEventBasedGateway a real node, so the already-active EventBasedDirectEvents
+    // rule now has a type to fire on: an event-based gateway must route directly to catch events.
+
+    @Test
+    fun `round-trip - EventBasedDirectEvents fires when an event-based gateway targets a task`() {
+        val rule = activeRuleEndingWith("event-based-direct-events")
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnEventBasedGateway("g", "Await response"),
+                    BpmnUserTask("t", "Handle response"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s", "g"),
+                    BpmnEdge("f2", "g", "t"),
+                    BpmnEdge("f3", "t", "e"),
+                ),
+            ),
+        )
+        assertEquals(listOf("g"), rule.evaluate(ctx).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - EventBasedDirectEvents passes when targets are intermediate catch events`() {
+        val rule = activeRuleEndingWith("event-based-direct-events")
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnEventBasedGateway("g", "Await response"),
+                    dev.groknull.bpmner.core.BpmnIntermediateCatchEvent(
+                        "c1",
+                        name = "Confirmation received",
+                        eventDefinition = dev.groknull.bpmner.core.BpmnNoneEventDefinition,
+                    ),
+                    dev.groknull.bpmner.core.BpmnIntermediateCatchEvent(
+                        "c2",
+                        name = "Timed out",
+                        eventDefinition = dev.groknull.bpmner.core.BpmnNoneEventDefinition,
+                    ),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s", "g"),
+                    BpmnEdge("f2", "g", "c1"),
+                    BpmnEdge("f3", "g", "c2"),
+                    BpmnEdge("f4", "c1", "e"),
+                    BpmnEdge("f5", "c2", "e"),
+                ),
+            ),
+        )
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
     }
 
     @Test

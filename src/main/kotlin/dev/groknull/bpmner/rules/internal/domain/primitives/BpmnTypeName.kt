@@ -29,6 +29,7 @@ internal object BpmnTypeName {
     const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
     const val INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
+    const val EVENT_BASED_GATEWAY = "bpmn:EventBasedGateway"
 
     // Artifact, not a flow node: surfaced so annotation-targeting rules (TextAnnotationUsage,
     // and the association sub-checks of MiTaskAnnotation) can match it. Deliberately absent from

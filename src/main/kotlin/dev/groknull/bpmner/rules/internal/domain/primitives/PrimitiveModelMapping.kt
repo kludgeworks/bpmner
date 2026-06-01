@@ -13,6 +13,7 @@ import dev.groknull.bpmner.api.BpmnEndEvent
 import dev.groknull.bpmner.api.BpmnErrorEventDefinition
 import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEvent
+import dev.groknull.bpmner.api.BpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnInclusiveGateway
@@ -199,6 +200,8 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnInclusiveGateway -> BpmnTypeName.INCLUSIVE_GATEWAY
 
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
+
+    is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
 
     // Unrecognized nodes (Choreography, Transaction, etc.) carry their BPMN typename
     // verbatim — exactly what `BpmnSubset`'s `targetElements` matches on.

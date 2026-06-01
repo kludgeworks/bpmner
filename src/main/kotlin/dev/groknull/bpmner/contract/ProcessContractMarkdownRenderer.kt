@@ -115,6 +115,7 @@ private fun branchSuffix(branch: ContractBranch): String = when (branch) {
     is ConditionalBranch -> " if \"${branch.condition}\""
     is DefaultBranch -> " [default]"
     is UnconditionalBranch -> ""
+    is EventGatewayBranch -> " on ${branch.triggerKind}${branch.triggerDetail?.let { " \"$it\"" } ?: ""}"
 }
 
 private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()

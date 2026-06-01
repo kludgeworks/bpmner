@@ -112,6 +112,11 @@ internal class BpmnContractValidator {
                 )
 
                 ContractGatewayKind.PARALLEL -> addAll(validateParallelDecision(decision, defaults))
+
+                // EVENT_BASED branches carry event triggers rather than conditions; their structural
+                // constraints are enforced on the rendered BPMN by the fidelity checker and the
+                // EventBasedDirectEvents rule, so there is no contract-level branch-kind check here.
+                ContractGatewayKind.EVENT_BASED -> Unit
             }
         }
     }

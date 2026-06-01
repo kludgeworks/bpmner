@@ -17,6 +17,7 @@ import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -48,6 +49,7 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.EndEvent
+import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
@@ -276,6 +278,10 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             is ParallelGateway -> {
                 BpmnParallelGateway(id = id, name = normalisedName)
+            }
+
+            is EventBasedGateway -> {
+                BpmnEventBasedGateway(id = id, name = normalisedName)
             }
 
             is IntermediateCatchEvent -> {
