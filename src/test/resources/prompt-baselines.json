@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 6224,
-			"updatedBy": "#321",
-			"reason": "extract_contract.jinja: +3 lines for mid-flow throw identification guidance."
+			"chars": 6256,
+			"updatedBy": "#325",
+			"reason": "activity_kinds.jinja: +3 keywords (emails, confirms, awaits reply) replacing CRITICAL prohibition clause."
 		},
 		"contractFullPayload": {
-			"chars": 22314,
-			"updatedBy": "#321",
-			"reason": "FlatContractIntermediateThrow (id, name, kind, sourceIds, messageName?, signalName?, escalationCode?) added to FlatProcessContract schema; extract_contract.jinja +3 lines of throw-steering guidance."
+			"chars": 22346,
+			"updatedBy": "#325",
+			"reason": "ContractExtractionExamples: 5 typed few-shot examples added via .withExample() in BpmnContractAgent; CRITICAL prompt patches reverted."
 		},
 		"generationPrompt": {
 			"chars": 10213,
