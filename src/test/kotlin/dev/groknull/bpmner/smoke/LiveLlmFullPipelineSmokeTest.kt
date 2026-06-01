@@ -33,8 +33,6 @@ import kotlin.io.path.readText
 @SpringBootTest
 @TestPropertySource(
     properties = [
-        "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
-        "embabel.agent.platform.models.github.api-key=\${GITHUB_TOKEN:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
         "embabel.agent.shell.interactive.enabled=false",

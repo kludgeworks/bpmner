@@ -1,0 +1,7 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}

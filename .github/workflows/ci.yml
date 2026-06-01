@@ -22,8 +22,6 @@ concurrency:
 jobs:
   ci:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
@@ -69,12 +67,26 @@ jobs:
       - name: Build and run all tests
         run: bazel test //...
 
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OPENAI_API_KEY: op://bpmner/openai/api-key
+          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+
+      - name: Select Random LLM Provider
+        id: pick-provider
+        run: |
+          PROVIDERS=("openai" "anthropic")
+          SELECTED=${PROVIDERS[$RANDOM % 2]}
+          echo "Selected provider for this run: $SELECTED"
+          echo "SPRING_PROFILES_ACTIVE=$SELECTED" >> $GITHUB_ENV
+
       - name: Run Smoke Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ANTHROPIC_API_KEY: ""
-          OPENAI_API_KEY: ""
-          SPRING_PROFILES_ACTIVE: gh
         run: |
           bazel test \
             --test_tag_filters=live-llm \

@@ -38,8 +38,6 @@ import java.util.concurrent.TimeUnit
 @Timeout(120, unit = TimeUnit.SECONDS)
 @TestPropertySource(
     properties = [
-        "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
-        "embabel.agent.platform.models.github.api-key=\${GITHUB_TOKEN:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
     ],

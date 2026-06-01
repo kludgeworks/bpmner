@@ -9,6 +9,9 @@ spring:
 embabel:
   agent:
     platform:
+      models:
+        anthropic:
+          api-key: ${ANTHROPIC_API_KEY:}
       llm-operations:
         prompts:
           default-timeout: PT180S
