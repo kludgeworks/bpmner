@@ -8,6 +8,8 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
@@ -28,14 +30,18 @@ import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 
 class BpmnDefinitionToXmlConverterTest {
     private val converter = BpmnDefinitionToXmlConverter()
@@ -83,6 +89,112 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "gift wrap requested")
         assertContains(xml, "qualifies for insert")
     }
+
+    @Test
+    fun `multi-instance task renders the loop marker, text annotation, and association`() {
+        val definition = miDefinition()
+
+        val xml = converter.render(definition).xml
+
+        assertContains(xml, "multiInstanceLoopCharacteristics")
+        // Peer-review panel is parallel → isSequential="false".
+        assertContains(xml, "isSequential=\"false\"")
+        // collectionDescription rides our extension namespace.
+        assertContains(xml, "each reviewer on the panel")
+        assertContains(xml, "<bpmn:textAnnotation")
+        assertContains(xml, "For each reviewer on the panel")
+        assertContains(xml, "<bpmn:association")
+        assertContains(xml, "sourceRef=\"act-review\"")
+    }
+
+    @Test
+    fun `multi-instance, annotations, and associations round-trip through render and parse`() {
+        val original = miDefinition()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
+
+        val review = parsed.nodes.single { it.id == "act-review" } as BpmnUserTask
+        val mi = assertNotNull(review.multiInstance, "expected the review task to carry a multi-instance marker")
+        assertEquals(MultiInstanceMode.PARALLEL, mi.mode)
+        assertEquals("each reviewer on the panel", mi.collectionDescription)
+
+        val pick = parsed.nodes.single { it.id == "act-pick" } as BpmnServiceTask
+        assertEquals(MultiInstanceMode.SEQUENTIAL, assertNotNull(pick.multiInstance).mode)
+
+        assertEquals(original.annotations, parsed.annotations)
+        assertEquals(original.associations, parsed.associations)
+    }
+
+    @Test
+    fun `task without multiInstance emits no loop characteristics`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Plain",
+                processName = "Plain",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnUserTask("act-plain", "Do the thing"),
+                    BpmnEndEvent("EndEvent_1", "End"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "act-plain"),
+                    BpmnEdge("F2", "act-plain", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+
+        assertFalse(xml.contains("multiInstanceLoopCharacteristics"), "plain task must not emit a loop marker")
+        val plain = BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-plain" } as BpmnUserTask
+        assertNull(plain.multiInstance)
+    }
+
+    // A two-task process: a PARALLEL multi-instance user task (peer review) and a SEQUENTIAL
+    // multi-instance service task (line-item picking), each linked to a text annotation naming
+    // its item set via an association (sourceRef = task, targetRef = annotation).
+    private fun miDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_MI",
+        processName = "Multi-instance sample",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Start"),
+            BpmnUserTask(
+                "act-review",
+                "Review manuscript",
+                multiInstance = MultiInstanceLoopCharacteristics(
+                    mode = MultiInstanceMode.PARALLEL,
+                    collectionDescription = "each reviewer on the panel",
+                ),
+            ),
+            BpmnServiceTask(
+                "act-pick",
+                "Pick line item",
+                multiInstance = MultiInstanceLoopCharacteristics(
+                    mode = MultiInstanceMode.SEQUENTIAL,
+                    collectionDescription = "each line item on the slip",
+                ),
+            ),
+            BpmnEndEvent("EndEvent_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("F1", "StartEvent_1", "act-review"),
+            BpmnEdge("F2", "act-review", "act-pick"),
+            BpmnEdge("F3", "act-pick", "EndEvent_1"),
+        ),
+        annotations =
+        listOf(
+            BpmnTextAnnotation("TextAnnotation_review", "For each reviewer on the panel"),
+            BpmnTextAnnotation("TextAnnotation_pick", "For each line item on the slip"),
+        ),
+        associations =
+        listOf(
+            BpmnAssociation("Association_review", "act-review", "TextAnnotation_review"),
+            BpmnAssociation("Association_pick", "act-pick", "TextAnnotation_pick"),
+        ),
+    )
 
     @Test
     fun `converter emits parallelGateway for BpmnParallelGateway nodes`() {

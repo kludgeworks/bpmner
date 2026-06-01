@@ -40,3 +40,7 @@ staticConfig = new {
     )
   conditionWords = List("until", "while", "unless", "till")
 }
+
+// No checkPrimitive / checkConfig: this rule is inactive and skipped at load time. The domain
+// model represents only multi-instance loop characteristics, not `bpmn:StandardLoopCharacteristics`,
+// so there is no element for a standard-loop check to target.

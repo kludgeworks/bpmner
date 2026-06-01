@@ -8,6 +8,8 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -34,8 +36,10 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -60,6 +64,40 @@ class FlatBpmnDefinitionMapperTest {
             BpmnParallelGateway("p1", "Fork"),
             flatNode(FlatBpmnNodeKind.PARALLEL_GATEWAY, "p1", "Fork").toSealed(),
         )
+    }
+
+    @Test
+    fun `task multiInstance and definition annotations associations map to sealed`() {
+        val flatTask = FlatBpmnNode(
+            id = "u1",
+            type = FlatBpmnNodeKind.USER_TASK,
+            name = "Review",
+            multiInstance = FlatMultiInstanceLoopCharacteristics(
+                mode = MultiInstanceMode.PARALLEL,
+                collectionDescription = "each reviewer",
+            ),
+        )
+
+        assertEquals(
+            BpmnUserTask(
+                "u1",
+                "Review",
+                multiInstance = MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each reviewer"),
+            ),
+            flatTask.toSealed(),
+        )
+
+        val sealed = FlatBpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes = listOf(flatTask, FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "End")),
+            sequences = listOf(BpmnEdge("f", "u1", "e")),
+            annotations = listOf(BpmnTextAnnotation("ta", "For each reviewer")),
+            associations = listOf(BpmnAssociation("as", "u1", "ta")),
+        ).toSealed()
+
+        assertEquals(listOf(BpmnTextAnnotation("ta", "For each reviewer")), sealed.annotations)
+        assertEquals(listOf(BpmnAssociation("as", "u1", "ta")), sealed.associations)
     }
 
     @Test

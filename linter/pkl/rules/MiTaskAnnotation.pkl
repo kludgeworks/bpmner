@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "MI Task Annotation"
@@ -20,9 +21,21 @@ targetElements =
 severity = "error"
 errorMessages = new {
   ["default"] =
-    "Multi-instance activity is missing a linked text annotation expressing iteration-set intent"
+    "Multi-instance activity's annotation must name the item set with each, every, or per"
 }
 
 staticConfig = new {
   iterationQuantifiers = List("each", "every", "per")
+}
+
+// The associated annotation's text must contain an iteration quantifier. Narrowed to
+// multi-instance tasks via `appliesWhenProperty` (the `multiInstanceLoopCharacteristics` /
+// `annotationText` properties are projected by `PrimitiveModelMapping`). Association presence
+// is enforced by `RequiredAnnotationAssociation`, so this rule only checks the wording.
+checkPrimitive = "VocabularyCheck"
+checkConfig = new CheckPrimitive.VocabularyCheck {
+  property = "annotationText"
+  mode = "REQUIRE"
+  words = staticConfig.iterationQuantifiers
+  appliesWhenProperty = "multiInstanceLoopCharacteristics"
 }

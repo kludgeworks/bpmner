@@ -8,10 +8,12 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
+import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -81,6 +83,24 @@ class FlatContractMapperTest {
 
         val sealed = flat.toSealed() as ContractActivity.Service
         assertEquals("a-svc", sealed.id)
+    }
+
+    @Test
+    fun `activity iteration round-trips to ContractIteration`() {
+        val flat = FlatContractActivity(
+            id = "act-mi",
+            name = "Pick line item",
+            kind = FlatActivityKind.USER,
+            iteration = FlatContractIteration(
+                mode = MultiInstanceMode.SEQUENTIAL,
+                collectionDescription = "each line item on the slip",
+            ),
+        )
+
+        assertEquals(
+            ContractIteration(MultiInstanceMode.SEQUENTIAL, "each line item on the slip"),
+            flat.toSealed().iteration,
+        )
     }
 
     @Test

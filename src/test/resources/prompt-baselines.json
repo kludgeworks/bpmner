@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 6224,
-			"updatedBy": "#321",
-			"reason": "extract_contract.jinja: +3 lines for mid-flow throw identification guidance."
+			"chars": 7436,
+			"updatedBy": "#188",
+			"reason": "Added multi-instance iteration guidance to the activity_kinds prompt fragment (for-each detection, SEQUENTIAL vs PARALLEL)."
 		},
 		"contractFullPayload": {
-			"chars": 22314,
-			"updatedBy": "#321",
-			"reason": "FlatContractIntermediateThrow (id, name, kind, sourceIds, messageName?, signalName?, escalationCode?) added to FlatProcessContract schema; extract_contract.jinja +3 lines of throw-steering guidance."
+			"chars": 25170,
+			"updatedBy": "#188",
+			"reason": "FlatContractActivity gained the optional `iteration` field (FlatContractIteration) plus the prompt-fragment iteration guidance."
 		},
 		"generationPrompt": {
-			"chars": 10213,
-			"updatedBy": "#321",
-			"reason": "generate_bpmn.jinja: +2 lines mapping ContractIntermediateThrow → INTERMEDIATE_THROW_EVENT."
+			"chars": 10844,
+			"updatedBy": "#188",
+			"reason": "Added the contract-iteration → multi-instance wiring rule (emit multiInstance + linked text annotation/association) to generate_bpmn."
 		},
 		"generationFullPayload": {
-			"chars": 19730,
-			"updatedBy": "#321",
-			"reason": "generate_bpmn.jinja: +2 lines mapping ContractIntermediateThrow → INTERMEDIATE_THROW_EVENT."
+			"chars": 23615,
+			"updatedBy": "#188",
+			"reason": "FlatBpmnNode gained `multiInstance` (FlatMultiInstanceLoopCharacteristics) and FlatBpmnDefinition gained annotations/associations, plus the generation wiring rule."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -43,14 +43,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
-			"chars": 1606,
-			"updatedBy": "#302",
-			"reason": "bpmner/repair/patch_feedback.jinja rendered via BpmnRepairPromptFactory.patchFeedback with one canonical ERROR-severity diagnostic."
+			"chars": 1709,
+			"updatedBy": "#188",
+			"reason": "Repair patch schema now carries the BPMN multiInstance / annotations / associations fields."
 		},
 		"repairFullPrompt": {
-			"chars": 1902,
-			"updatedBy": "#302",
-			"reason": "bpmner/repair/full_feedback.jinja rendered via BpmnRepairPromptFactory.fullRepairFeedback with one canonical ERROR-severity diagnostic and the sample definition."
+			"chars": 2005,
+			"updatedBy": "#188",
+			"reason": "Repair full-rewrite schema now carries the BPMN multiInstance / annotations / associations fields."
 		}
 	}
 }

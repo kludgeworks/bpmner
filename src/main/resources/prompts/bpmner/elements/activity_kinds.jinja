@@ -6,3 +6,10 @@ Activity kind (`kind` discriminator); SERVICE is the default:
 - SEND — workflow does NOT wait for an acknowledgement. Keywords: sends a notification, notifies, publishes, emits. Carries `messageName`. Example: `{kind: "SEND", id: "act-decline", name: "Send decline notification", messageName: "decline notification"}`.
 - RECEIVE — flow BLOCKS until the message arrives. Keywords: waits for X message, blocks until X is received, the customer must confirm. Name with past-participle ("X received"). Carries `messageName`. Example: `{kind: "RECEIVE", id: "act-await-ack", name: "Customer acknowledgement received", messageName: "customer acknowledgement"}`.
 - MANUAL — paper, in-person, or off-system. Keywords: manually visits, works with paper notes, off-system. Example: `{kind: "MANUAL", id: "act-inspect", name: "Inspect property condition"}`.
+
+Iteration (optional `iteration` object, valid on ANY activity kind): set ONLY when the source says the activity repeats once per item in a collection — a "for each …" loop. This is NOT a retry/poll loop (model retries as a gateway back-edge) and NOT a parallel gateway fork (that runs different branches concurrently, not the same activity over a collection).
+- `iteration.mode = SEQUENTIAL` — items handled one at a time / in order. Keywords: "for each X, in order", "one at a time", "one by one", a route or ordering constrains the sequence.
+- `iteration.mode = PARALLEL` — items handled concurrently and independently. Keywords: "each X in parallel", "every X independently", "all at once", the workers do not coordinate or wait for each other.
+- `iteration.collectionDescription` — the "for each …" phrase naming the item set, e.g. "each line item on the slip".
+- Example (parallel): `{kind: "USER", id: "act-review", name: "Review manuscript", iteration: {mode: "PARALLEL", collectionDescription: "each reviewer on the panel"}}`.
+- Example (sequential): `{kind: "USER", id: "act-pick", name: "Pick line item", iteration: {mode: "SEQUENTIAL", collectionDescription: "each line item on the packing slip"}}`.

@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Required Annotation Association"
@@ -26,4 +27,13 @@ errorMessages = new {
 staticConfig = new {
   loopCharacteristics =
     List("bpmn:StandardLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
+}
+
+// Each multi-instance task must have an outbound association to a text annotation.
+// `appliesWhenProperty` narrows to multi-instance tasks (projected by PrimitiveModelMapping).
+checkPrimitive = "RequiredAssociationCheck"
+checkConfig = new CheckPrimitive.RequiredAssociationCheck {
+  association = "bpmn:Association"
+  targetTypes = List("bpmn:TextAnnotation")
+  appliesWhenProperty = "multiInstanceLoopCharacteristics"
 }

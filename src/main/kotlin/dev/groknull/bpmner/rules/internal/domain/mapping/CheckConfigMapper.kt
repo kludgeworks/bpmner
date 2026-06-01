@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.rules.internal.domain.mapping
 
 import dev.groknull.bpmner.rules.LlmCheckRuleConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.AssociationDirection
 import dev.groknull.bpmner.rules.internal.domain.primitives.CardinalityCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityCheckConfig
@@ -91,9 +92,16 @@ private fun PklCheckPrim.CheckConfig.toStructuralConfig(): DeterministicCheckCon
         property = property,
         mode = parseMode<VocabularyMode>(mode, "VocabularyCheck.mode"),
         words = words,
+        appliesWhenProperty = appliesWhenProperty,
     )
 
-    is PklCheckPrim.RequiredAssociationCheck -> RequiredAssociationCheckConfig(association, sourceTypes, targetTypes)
+    is PklCheckPrim.RequiredAssociationCheck -> RequiredAssociationCheckConfig(
+        association = association,
+        sourceTypes = sourceTypes,
+        targetTypes = targetTypes,
+        direction = parseMode<AssociationDirection>(direction, "RequiredAssociationCheck.direction"),
+        appliesWhenProperty = appliesWhenProperty,
+    )
 
     is PklCheckPrim.TopologyCheck -> TopologyCheckConfig(
         topology = parseMode<TopologyMode>(topology, "TopologyCheck.topology"),

@@ -30,6 +30,12 @@ internal object BpmnTypeName {
     const val INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
 
+    // Artifact, not a flow node: surfaced so annotation-targeting rules (TextAnnotationUsage,
+    // and the association sub-checks of MiTaskAnnotation) can match it. Deliberately absent from
+    // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — it is not a FlowNode/FlowElement
+    // and matches only by exact type name.
+    const val TEXT_ANNOTATION = "bpmn:TextAnnotation"
+
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
     // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can

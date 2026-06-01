@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnGateway
+import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.typeName
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -85,6 +86,7 @@ internal class BpmnContractFidelityChecker {
 
         contract.activities.forEach { activity ->
             checkActivityKind(activity, nodeById, issues)
+            checkActivityIteration(activity, nodeById, issues)
         }
 
         contract.endStates.forEach { endState ->
@@ -333,6 +335,45 @@ internal class BpmnContractFidelityChecker {
                     "${node.typeName} node — expected ${activity.expectedTaskTypeName()}.",
                 contractElementId = activity.id,
                 bpmnElementId = node.id,
+            )
+    }
+
+    /**
+     * Verifies the multi-instance marker on a task agrees with its contract activity's
+     * `iteration`, in both directions: a declared iteration must be realised with the matching
+     * mode, and a single-run activity must NOT carry a multi-instance marker. Non-task
+     * realisations are left to [checkActivityKind].
+     */
+    private fun checkActivityIteration(
+        activity: ContractActivity,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val task = nodeById[activity.id] as? BpmnTask ?: return
+        val iteration = activity.iteration
+        val multiInstance = task.multiInstance
+        val message = when {
+            iteration != null && multiInstance == null ->
+                "Activity '${activity.id}' declares iteration (mode=${iteration.mode}) but its BPMN task " +
+                    "carries no multi-instance marker — the per-item semantic was dropped."
+
+            iteration == null && multiInstance != null ->
+                "Activity '${activity.id}' does not declare iteration but its BPMN task carries a " +
+                    "multi-instance marker (mode=${multiInstance.mode}) — unexpected loop characteristics."
+
+            iteration != null && multiInstance != null && multiInstance.mode != iteration.mode ->
+                "Activity '${activity.id}' declares iteration mode=${iteration.mode} but its BPMN task " +
+                    "is multi-instance mode=${multiInstance.mode} (isSequential mismatch)."
+
+            else -> return
+        }
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ACTIVITY_ITERATION_MODE_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message = message,
+                contractElementId = activity.id,
+                bpmnElementId = activity.id,
             )
     }
 

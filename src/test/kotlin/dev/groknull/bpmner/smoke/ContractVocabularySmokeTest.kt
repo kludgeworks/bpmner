@@ -8,6 +8,7 @@ package dev.groknull.bpmner.smoke
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
@@ -106,6 +107,14 @@ class ContractVocabularySmokeTest {
         }
     }
 
+    private fun ProcessContract.assertIterationMode(mode: MultiInstanceMode) {
+        val hasIteration = activities.any { it.iteration?.mode == mode }
+        assertTrue(hasIteration) {
+            "Expected an activity with iteration mode $mode, but found: " +
+                activities.joinToString { "${it.name}(iteration=${it.iteration})" }
+        }
+    }
+
     // Task Kinds
 
     @Test
@@ -128,6 +137,32 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasActivity<ContractActivity.BusinessRule>()
+    }
+
+    @Test
+    fun `sequential multi-instance activity`() {
+        val c = extractContract(
+            """
+            When a packing slip is printed, the picker walks the warehouse with the slip. For each
+            line item on the slip — one at a time, in the order they appear — the picker scans the
+            SKU and places the item in the tote. Only once every line item has been picked does the
+            picker hand the tote to the packing station, and the process ends.
+            """,
+        )
+        c.assertIterationMode(MultiInstanceMode.SEQUENTIAL)
+    }
+
+    @Test
+    fun `parallel multi-instance activity`() {
+        val c = extractContract(
+            """
+            When a research paper is submitted, the editor assigns a panel of reviewers. For each
+            reviewer on the panel, working in parallel and independently of the others, the reviewer
+            reads the manuscript and submits a review. Once every reviewer has submitted, the editor
+            decides the verdict and the process ends.
+            """,
+        )
+        c.assertIterationMode(MultiInstanceMode.PARALLEL)
     }
 
     @Test

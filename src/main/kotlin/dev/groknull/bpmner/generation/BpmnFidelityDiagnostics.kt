@@ -58,6 +58,14 @@ enum class BpmnFidelityCode {
     ACTIVITY_TASK_KIND_MISMATCH,
 
     /**
+     * A ContractActivity declares an `iteration` (per-item / multi-instance), but the BPMN
+     * task realising it either carries no `multiInstance` marker or carries one whose `mode`
+     * disagrees with the contract (`isSequential` mismatch). Catches the failure mode where the
+     * generator drops the multi-instance semantic or renders the wrong sequencing.
+     */
+    ACTIVITY_ITERATION_MODE_MISMATCH,
+
+    /**
      * A [dev.groknull.bpmner.contract.ContractDecision] has a
      * [dev.groknull.bpmner.contract.DefaultBranch] but no outbound edge from the corresponding
      * gateway has `isDefault = true`. The BPMN spec requires the gateway's `default` attribute

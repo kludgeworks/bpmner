@@ -6,6 +6,8 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -34,10 +36,12 @@ import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -147,6 +151,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
+        val (annotations, associations) = artifactsFrom(document)
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
@@ -156,8 +161,36 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
+            annotations = annotations,
+            associations = associations,
             diagramCount = diagramCount,
         )
+    }
+
+    // Text annotations and their association edges, parsed together (one helper keeps the class
+    // function count in check). BPMN models the link as sourceRef = annotated element,
+    // targetRef = annotation.
+    private fun artifactsFrom(document: Document): Pair<List<BpmnTextAnnotation>, List<BpmnAssociation>> {
+        val annotations = document
+            .bpmnElements("textAnnotation")
+            .map { el ->
+                BpmnTextAnnotation(
+                    id = el.getAttribute("id"),
+                    text = el.childElements().firstOrNull { it.localName == "text" }?.textContent?.trim().orEmpty(),
+                )
+            }.filter { it.id.isNotBlank() }
+            .toList()
+        val associations = document
+            .bpmnElements("association")
+            .map { el ->
+                BpmnAssociation(
+                    id = el.getAttribute("id"),
+                    sourceRef = el.getAttribute("sourceRef"),
+                    targetRef = el.getAttribute("targetRef"),
+                )
+            }.filter { it.id.isNotBlank() }
+            .toList()
+        return annotations to associations
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory
@@ -191,15 +224,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             }
 
             is UserTask -> {
-                BpmnUserTask(id = id, name = normalisedName)
+                BpmnUserTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
             }
 
             is ServiceTask -> {
-                BpmnServiceTask(id = id, name = normalisedName)
+                BpmnServiceTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
             }
 
             is ScriptTask -> {
-                BpmnScriptTask(id = id, name = normalisedName)
+                BpmnScriptTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
             }
 
             is BusinessRuleTask -> {
@@ -207,6 +240,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
+                    multiInstance = taskMetadata.multiInstance[id],
                 )
             }
 
@@ -215,6 +249,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
+                    multiInstance = taskMetadata.multiInstance[id],
                 )
             }
 
@@ -223,11 +258,12 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
+                    multiInstance = taskMetadata.multiInstance[id],
                 )
             }
 
             is ManualTask -> {
-                BpmnManualTask(id = id, name = normalisedName)
+                BpmnManualTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
             }
 
             is ExclusiveGateway -> {
@@ -295,9 +331,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         // `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
         // spec defines no decisionRef on tBusinessRuleTask. See [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS].
         val decisionRefs: Map<String, String>,
+        // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
+        val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,
     )
 
     private fun taskMetadataFrom(document: Document): TaskMetadata {
+        // Local helper (kept off the class surface) parsing one task's multi-instance marker.
+        fun Element.multiInstanceOrNull(): MultiInstanceLoopCharacteristics? {
+            val loop = childElements().firstOrNull { it.localName == "multiInstanceLoopCharacteristics" } ?: return null
+            // xsd:boolean admits "true"/"false" and "1"/"0"; honour both rather than only "true".
+            val isSequential = loop.getAttribute("isSequential").let { it.equals("true", ignoreCase = true) || it == "1" }
+            val mode = if (isSequential) MultiInstanceMode.SEQUENTIAL else MultiInstanceMode.PARALLEL
+            return MultiInstanceLoopCharacteristics(
+                mode = mode,
+                // collectionDescription rides our extension attribute (see the writer); foreign BPMN
+                // without it yields an empty description, which downstream validation can flag.
+                collectionDescription = loop.getAttributeNS(BPMNER_EXT_NS, "collectionDescription"),
+                loopCardinality =
+                loop.childElements().firstOrNull { it.localName == "loopCardinality" }?.textContent?.trim()?.toIntOrNull(),
+                completionCondition =
+                loop.childElements().firstOrNull { it.localName == "completionCondition" }
+                    ?.textContent
+                    ?.takeIf { it.isNotBlank() },
+            )
+        }
         val sendReceive =
             (document.bpmnElements("sendTask").toList() + document.bpmnElements("receiveTask").toList())
                 .associate { it.getAttribute("id") to it.getAttribute("messageRef") }
@@ -307,7 +364,13 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .bpmnElements("businessRuleTask")
                 .associate { it.getAttribute("id") to it.getAttributeNS(BPMNER_EXT_NS, "decisionRef") }
                 .filter { (id, ref) -> id.isNotBlank() && ref.isNotBlank() }
-        return TaskMetadata(messageRefs = sendReceive, decisionRefs = businessRule)
+        val multiInstance =
+            BPMN_TASK_LOCAL_NAMES
+                .flatMap { document.bpmnElements(it).toList() }
+                .mapNotNull { task -> task.multiInstanceOrNull()?.let { task.getAttribute("id") to it } }
+                .filter { (id, _) -> id.isNotBlank() }
+                .toMap()
+        return TaskMetadata(messageRefs = sendReceive, decisionRefs = businessRule, multiInstance = multiInstance)
     }
 
     private data class EventMetadata(

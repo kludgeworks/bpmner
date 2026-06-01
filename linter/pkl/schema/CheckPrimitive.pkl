@@ -91,12 +91,29 @@ class VocabularyCheck extends CheckConfig {
   /// semantics matched on `name.split(/\s+/)[0]`.
   mode: "REQUIRE" | "FORBID" | "REQUIRE_LEADING" | "FORBID_LEADING"
   words: List<NonEmptyString> = List()
+
+  /// When set, the check only applies to elements that carry this property (a presence test);
+  /// elements without it pass silently. Lets a vocabulary check scope to a subset — e.g. only
+  /// multi-instance tasks via `appliesWhenProperty = "multiInstanceLoopCharacteristics"` —
+  /// without re-typing the element. Omit for the legacy "all targeted elements" behaviour.
+  appliesWhenProperty: String? = null
 }
 
 class RequiredAssociationCheck extends CheckConfig {
   association: NonEmptyString
   sourceTypes: List<NonEmptyString> = List()
   targetTypes: List<NonEmptyString> = List()
+
+  /// Which end of the association the targeted element must occupy. `OUTBOUND` (default): the
+  /// element is the association's `sourceRef` (e.g. a task linking out to its annotation).
+  /// `INBOUND`: the element is the `targetRef` (e.g. an annotation that must be referenced by
+  /// some element). BPMN models the element→annotation link with `sourceRef = element`, so
+  /// annotation-side rules use `INBOUND`.
+  direction: "OUTBOUND" | "INBOUND" = "OUTBOUND"
+
+  /// Presence-test narrowing — see [VocabularyCheck.appliesWhenProperty]. Omit for the legacy
+  /// "all targeted elements" behaviour.
+  appliesWhenProperty: String? = null
 }
 
 class TopologyCheck extends CheckConfig {

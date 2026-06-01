@@ -30,6 +30,7 @@ import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 
 /*
  * Wire-format → sealed conversion at the BPMN generation + repair LLM boundary.
@@ -53,6 +54,8 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     signals = signals,
     errors = errors,
     escalations = escalations,
+    annotations = annotations,
+    associations = associations,
 )
 
 public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {
@@ -77,28 +80,41 @@ private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.PARALLEL_GATEWAY,
 )
 
-private fun FlatBpmnNode.toTaskNode(): BpmnNode = when (type) {
-    FlatBpmnNodeKind.USER_TASK -> BpmnUserTask(id = id, name = name)
-    FlatBpmnNodeKind.SERVICE_TASK -> BpmnServiceTask(id = id, name = name)
-    FlatBpmnNodeKind.SCRIPT_TASK -> BpmnScriptTask(id = id, name = name)
-    FlatBpmnNodeKind.MANUAL_TASK -> BpmnManualTask(id = id, name = name)
-    FlatBpmnNodeKind.BUSINESS_RULE_TASK -> BpmnBusinessRuleTask(
-        id = id,
-        name = name,
-        decisionRef = requireField(decisionRef, type, "decisionRef", id),
-    )
-    FlatBpmnNodeKind.SEND_TASK -> BpmnSendTask(
-        id = id,
-        name = name,
-        messageRef = requireField(messageRef, type, "messageRef", id),
-    )
-    FlatBpmnNodeKind.RECEIVE_TASK -> BpmnReceiveTask(
-        id = id,
-        name = name,
-        messageRef = requireField(messageRef, type, "messageRef", id),
-    )
-    else -> error("toTaskNode called with non-task kind $type")
+private fun FlatBpmnNode.toTaskNode(): BpmnNode {
+    val mi = multiInstance?.toSealed()
+    return when (type) {
+        FlatBpmnNodeKind.USER_TASK -> BpmnUserTask(id = id, name = name, multiInstance = mi)
+        FlatBpmnNodeKind.SERVICE_TASK -> BpmnServiceTask(id = id, name = name, multiInstance = mi)
+        FlatBpmnNodeKind.SCRIPT_TASK -> BpmnScriptTask(id = id, name = name, multiInstance = mi)
+        FlatBpmnNodeKind.MANUAL_TASK -> BpmnManualTask(id = id, name = name, multiInstance = mi)
+        FlatBpmnNodeKind.BUSINESS_RULE_TASK -> BpmnBusinessRuleTask(
+            id = id,
+            name = name,
+            decisionRef = requireField(decisionRef, type, "decisionRef", id),
+            multiInstance = mi,
+        )
+        FlatBpmnNodeKind.SEND_TASK -> BpmnSendTask(
+            id = id,
+            name = name,
+            messageRef = requireField(messageRef, type, "messageRef", id),
+            multiInstance = mi,
+        )
+        FlatBpmnNodeKind.RECEIVE_TASK -> BpmnReceiveTask(
+            id = id,
+            name = name,
+            messageRef = requireField(messageRef, type, "messageRef", id),
+            multiInstance = mi,
+        )
+        else -> error("toTaskNode called with non-task kind $type")
+    }
 }
+
+private fun FlatMultiInstanceLoopCharacteristics.toSealed(): MultiInstanceLoopCharacteristics = MultiInstanceLoopCharacteristics(
+    mode = mode,
+    collectionDescription = requireField(collectionDescription, mode, "collectionDescription", "multiInstance"),
+    loopCardinality = loopCardinality,
+    completionCondition = completionCondition,
+)
 
 private fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY -> BpmnExclusiveGateway(id = id, name = name)

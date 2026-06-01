@@ -5,7 +5,10 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -311,6 +314,39 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
         }
 
+        // Multi-instance marker applies to every task kind, so stamp it in a dedicated pass over
+        // all task elements rather than widening the attribute `when` above with seven arms.
+        val allTaskElementsById = document.allTaskElementsById()
+        definition.nodes.filterIsInstance<BpmnTask>().forEach { task ->
+            task.multiInstance?.let { mi ->
+                val element = allTaskElementsById[task.id]
+                    ?: error("Task '${task.id}' has a multi-instance marker but no task element was rendered for it")
+                element.appendMultiInstance(document, mi)
+                // appendMultiInstance carries collectionDescription in our extension namespace.
+                bpmnerNamespaceUsed = true
+            }
+        }
+
+        // Text annotations and associations are process-level artifacts (after flowElements in the
+        // tProcess XSD sequence), so append them as the last children of <process>.
+        definition.annotations.forEach { annotation ->
+            process.appendChild(
+                document.bpmnElement("textAnnotation").also { el ->
+                    el.setAttribute("id", annotation.id)
+                    el.appendChild(document.bpmnElement("text").also { it.textContent = annotation.text })
+                },
+            )
+        }
+        definition.associations.forEach { association ->
+            process.appendChild(
+                document.bpmnElement("association").also { el ->
+                    el.setAttribute("id", association.id)
+                    el.setAttribute("sourceRef", association.sourceRef)
+                    el.setAttribute("targetRef", association.targetRef)
+                },
+            )
+        }
+
         if (bpmnerNamespaceUsed) {
             root.setAttributeNS(
                 "http://www.w3.org/2000/xmlns/",
@@ -331,6 +367,41 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
         .associateBy { it.getAttribute("id") }
         .filterKeys { it.isNotBlank() }
+
+    // Every task kind may carry a multi-instance marker, so this index spans all seven task
+    // element names (unlike `taskElementsById`, which is scoped to attribute-payload tasks).
+    private fun Document.allTaskElementsById(): Map<String, Element> = BPMN_TASK_LOCAL_NAMES
+        .flatMap { getElementsByTagNameNS(BPMN_NS, it).elements().toList() }
+        .associateBy { it.getAttribute("id") }
+        .filterKeys { it.isNotBlank() }
+
+    // Appends `<bpmn:multiInstanceLoopCharacteristics>` as the last child of a task element —
+    // its position in the tActivity XSD sequence (after incoming/outgoing). isSequential=true for
+    // SEQUENTIAL, false for PARALLEL. collectionDescription has no native BPMN slot; it rides on
+    // the linked text annotation instead.
+    private fun Element.appendMultiInstance(
+        document: Document,
+        mi: MultiInstanceLoopCharacteristics,
+    ) {
+        appendChild(
+            document.bpmnElement("multiInstanceLoopCharacteristics").also { loop ->
+                loop.setAttribute("isSequential", (mi.mode == MultiInstanceMode.SEQUENTIAL).toString())
+                // collectionDescription has no BPMN-spec home, so carry it in our extension
+                // namespace (same approach as decisionRef) to round-trip the domain field.
+                loop.setAttributeNS(BPMNER_EXT_NS, "bpmner:collectionDescription", mi.collectionDescription)
+                mi.loopCardinality?.let { cardinality ->
+                    loop.appendChild(
+                        document.bpmnElement("loopCardinality").also { it.textContent = cardinality.toString() },
+                    )
+                }
+                mi.completionCondition?.takeIf { it.isNotBlank() }?.let { condition ->
+                    loop.appendChild(
+                        document.bpmnElement("completionCondition").also { it.textContent = condition },
+                    )
+                }
+            },
+        )
+    }
 
     private fun Map<String, Element>.taskElement(id: String): Element {
         return this[id] ?: error("Task element with id='$id' not found in rendered XML")

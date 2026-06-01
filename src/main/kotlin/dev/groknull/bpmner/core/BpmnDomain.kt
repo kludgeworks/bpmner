@@ -12,10 +12,12 @@ import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.PklProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import dev.groknull.bpmner.api.BpmnAssociation as ApiBpmnAssociation
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
 import dev.groknull.bpmner.api.BpmnDefinition as ApiBpmnDefinition
@@ -45,10 +47,12 @@ import dev.groknull.bpmner.api.BpmnSignalEventDefinition as ApiBpmnSignalEventDe
 import dev.groknull.bpmner.api.BpmnSignalRef as ApiBpmnSignalRef
 import dev.groknull.bpmner.api.BpmnStartEvent as ApiBpmnStartEvent
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition as ApiBpmnTerminateEventDefinition
+import dev.groknull.bpmner.api.BpmnTextAnnotation as ApiBpmnTextAnnotation
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition as ApiBpmnTimerEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition as ApiBpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedNode as ApiBpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask as ApiBpmnUserTask
+import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics as ApiMultiInstanceLoopCharacteristics
 
 data class BpmnRequest(
     @get:JsonPropertyDescription("Natural-language description of the workflow to model")
@@ -99,6 +103,12 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
     override val escalations: List<BpmnEscalationRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
+    override val annotations: List<BpmnTextAnnotation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
+    override val associations: List<BpmnAssociation> = emptyList(),
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
     // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
     // benign extra field on serialize and an unknown field on deserialize (skipped).
@@ -256,6 +266,34 @@ private const val NODE_ID_DESCRIPTION: String =
 private const val NODE_NAME_DESCRIPTION: String =
     "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways."
 
+private const val MULTI_INSTANCE_DESCRIPTION: String =
+    "Optional multi-instance marker. Set only when the activity runs once per item in a " +
+        "collection (a 'for each …' loop); leave null for an ordinary single-run task."
+
+@JsonClassDescription(
+    "Multi-instance loop characteristics: the activity executes once per item in a collection, " +
+        "either one at a time (SEQUENTIAL) or all concurrently (PARALLEL).",
+)
+data class MultiInstanceLoopCharacteristics(
+    @get:PklProperty("mode")
+    @get:JsonPropertyDescription(
+        "SEQUENTIAL = items handled one at a time (renders isSequential=true); " +
+            "PARALLEL = items handled concurrently (renders isSequential=false).",
+    )
+    override val mode: MultiInstanceMode,
+    @field:NotBlank
+    @get:PklProperty("collectionDescription")
+    @get:JsonPropertyDescription(
+        "Human-readable description of the collection iterated over, e.g. " +
+            "\"each line item on the packing slip\". The 'for each X' phrase from the source.",
+    )
+    override val collectionDescription: String,
+    @get:JsonPropertyDescription("Optional fixed iteration count when the cardinality is statically known")
+    override val loopCardinality: Int? = null,
+    @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are processed")
+    override val completionCondition: String? = null,
+) : ApiMultiInstanceLoopCharacteristics
+
 data class BpmnStartEvent(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
@@ -279,6 +317,10 @@ data class BpmnUserTask(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnUserTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -290,6 +332,10 @@ data class BpmnServiceTask(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnServiceTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -301,6 +347,10 @@ data class BpmnScriptTask(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnScriptTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -319,6 +369,10 @@ data class BpmnBusinessRuleTask(
             "Free-form string until a typed decision catalogue exists; non-blank.",
     )
     override val decisionRef: String,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnBusinessRuleTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -336,6 +390,10 @@ data class BpmnSendTask(
         "Id of the BpmnMessageRef in the process-level message catalogue that this send task emits.",
     )
     override val messageRef: String,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnSendTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -352,6 +410,10 @@ data class BpmnReceiveTask(
         "Id of the BpmnMessageRef in the process-level message catalogue that this receive task waits for.",
     )
     override val messageRef: String,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnReceiveTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -363,6 +425,10 @@ data class BpmnManualTask(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @field:Valid
+    @get:PklProperty("multiInstance")
+    @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
+    override val multiInstance: MultiInstanceLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnManualTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -509,3 +575,26 @@ data class BpmnEdge(
         }
     }
 }
+
+@JsonClassDescription("BPMN text annotation: free-text commentary linked to an element by an association")
+data class BpmnTextAnnotation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique text-annotation id, e.g. TextAnnotation_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("The annotation's free text, e.g. \"For each line item on the slip\"")
+    override val text: String,
+) : ApiBpmnTextAnnotation
+
+@JsonClassDescription("BPMN association edge linking a text annotation to the element it explains")
+data class BpmnAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique association id, e.g. Association_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Source element id (the annotated flow element, per BPMN convention)")
+    override val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Target element id (the text annotation)")
+    override val targetRef: String,
+) : ApiBpmnAssociation

@@ -7,14 +7,18 @@ package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -308,6 +312,82 @@ internal class PklRuleCatalogTest {
         assertTrue(ids.containsAll(listOf("test-r1", "test-r2")))
         assertNotNull(catalog.ruleById("test-r1"))
         assertNotNull(catalog.ruleById("test-r2"))
+    }
+
+    // -------------------------------------------------------------------------------------
+    // Multi-instance / annotation rules. Each proves the `appliesWhenProperty` narrowing
+    // (ordinary tasks are never flagged) and, for TextAnnotationUsage, the INBOUND direction.
+
+    @Test
+    fun `round-trip - MiTaskAnnotation passes a multi-instance task with an iteration-word annotation`() {
+        val rule = activeRuleEndingWith("mi-task-annotation")
+
+        val ctx = miCtx(annotationText = "For each reviewer on the panel", linked = true, includePlainTask = true)
+
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - MiTaskAnnotation fires on a multi-instance task with no annotation, ignoring plain tasks`() {
+        val rule = activeRuleEndingWith("mi-task-annotation")
+
+        val ctx = miCtx(annotationText = null, linked = false, includePlainTask = true)
+        val diagnostics = rule.evaluate(ctx)
+
+        // Only the MI task is flagged; the ordinary task is narrowed out by appliesWhenProperty.
+        assertEquals(listOf("act-mi"), diagnostics.map { it.elementId }.distinct())
+    }
+
+    @Test
+    fun `round-trip - RequiredAnnotationAssociation fires on a multi-instance task with no association`() {
+        val rule = activeRuleEndingWith("required-annotation-association")
+
+        val ctx = miCtx(annotationText = "For each item", linked = false, includePlainTask = true)
+        val diagnostics = rule.evaluate(ctx)
+
+        assertEquals(listOf("act-mi"), diagnostics.map { it.elementId }.distinct())
+    }
+
+    @Test
+    fun `round-trip - TextAnnotationUsage fires on an unlinked annotation and passes a linked one`() {
+        val rule = activeRuleEndingWith("text-annotation-usage")
+
+        val orphan = miCtx(annotationText = "Free-floating note", linked = false, includePlainTask = false)
+        assertEquals(listOf("ta-mi"), rule.evaluate(orphan).map { it.elementId })
+
+        val linked = miCtx(annotationText = "For each item", linked = true, includePlainTask = false)
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(linked))
+    }
+
+    private fun activeRuleEndingWith(idSuffix: String): BpmnRule {
+        val catalog = PklRuleCatalog(emptyList(), nlp)
+        return catalog.activeRules().firstOrNull { it.id.endsWith(idSuffix) }
+            ?: error("no active Pkl rule with id ending '$idSuffix'; check its checkPrimitive/checkConfig wiring")
+    }
+
+    // A multi-instance user task `act-mi` plus its annotation `ta-mi`. `linked` controls whether
+    // an association (act-mi → ta-mi) exists; `includePlainTask` adds an ordinary task to prove
+    // the loop/MI rules narrow to multi-instance tasks only.
+    private fun miCtx(annotationText: String?, linked: Boolean, includePlainTask: Boolean): BpmnDefinitionContext {
+        val tasks =
+            listOfNotNull(
+                BpmnUserTask(
+                    "act-mi",
+                    "Review item",
+                    multiInstance = MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each item"),
+                ),
+                if (includePlainTask) BpmnUserTask("act-plain", "Approve order") else null,
+            )
+        return BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(BpmnStartEvent("s", "Start")) + tasks + BpmnEndEvent("e", "End"),
+                sequences = listOf(BpmnEdge("f1", "s", "act-mi"), BpmnEdge("f2", "act-mi", "e")),
+                annotations = annotationText?.let { listOf(BpmnTextAnnotation("ta-mi", it)) } ?: emptyList(),
+                associations = if (linked) listOf(BpmnAssociation("assoc-mi", "act-mi", "ta-mi")) else emptyList(),
+            ),
+        )
     }
 
     private fun ctxWithUserTask(taskId: String, taskName: String): BpmnDefinitionContext = BpmnDefinitionContext(

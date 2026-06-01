@@ -8,11 +8,14 @@ package dev.groknull.bpmner.generation
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnSignalRef
+import dev.groknull.bpmner.core.BpmnTextAnnotation
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -110,6 +113,33 @@ public data class FlatBpmnNode(
             "fires. Defaults to true if omitted.",
     )
     val cancelActivity: Boolean? = null,
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Task kinds only. Set when the activity runs once per item in a collection (a 'for each …' " +
+            "loop). Pair it with a linked text annotation (see definition-level annotations / " +
+            "associations) describing the item set. Leave null for an ordinary single-run activity.",
+    )
+    val multiInstance: FlatMultiInstanceLoopCharacteristics? = null,
+)
+
+@JsonClassDescription(
+    "Multi-instance loop characteristics for a task that runs once per item in a collection.",
+)
+public data class FlatMultiInstanceLoopCharacteristics(
+    @get:JsonPropertyDescription(
+        "SEQUENTIAL = items one at a time (isSequential=true); PARALLEL = items concurrently " +
+            "(isSequential=false).",
+    )
+    val mode: MultiInstanceMode,
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Human-readable description of the collection iterated over, e.g. \"each line item on the slip\".",
+    )
+    val collectionDescription: String,
+    @get:JsonPropertyDescription("Optional fixed iteration count when statically known")
+    val loopCardinality: Int? = null,
+    @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are done")
+    val completionCondition: String? = null,
 )
 
 @JsonClassDescription(
@@ -193,6 +223,18 @@ public data class FlatBpmnDefinition(
             "Escalation_ApprovalOverdue.",
     )
     val escalations: List<BpmnEscalationRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Text annotations explaining elements. Required for every multi-instance task: emit one " +
+            "describing the item set (\"For each …\") and link it to the task with an association.",
+    )
+    val annotations: List<BpmnTextAnnotation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Association edges linking each text annotation to the element it explains. For a " +
+            "multi-instance task's annotation, set sourceRef=task id, targetRef=annotation id.",
+    )
+    val associations: List<BpmnAssociation> = emptyList(),
 )
 
 // Ported verbatim from core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than
