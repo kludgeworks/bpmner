@@ -30,6 +30,13 @@ internal class ConnectivityCheck {
             .filter { it.property("name").isNullOrBlank() }
             .map { metadata.diagnostic(it.id) }
 
+        // Flags the diverging gateway (the modeller's control point) when any of its outgoing
+        // sequence flows is unnamed — narrower than FLOWS_NAMED, which flags every unnamed flow
+        // regardless of source. Reads edgesFrom (grouped by sourceRef) keyed on the gateway id.
+        ConnectivityMode.OUTGOING_FLOWS_NAMED -> metadata.targetedElements(model)
+            .filter { gateway -> model.edgesFrom[gateway.id].orEmpty().any { it.name.isNullOrBlank() } }
+            .map { metadata.diagnostic(it.id) }
+
         // WITHIN_POOL / ACROSS_POOLS are dormant in production until participants, lanes, and
         // `sourcePool`/`targetPool` flow fields land in the BPMN model (#196). Until then,
         // production flows have null pool fields — every flow would be flagged — so we

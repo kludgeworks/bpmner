@@ -298,6 +298,53 @@ internal class PklRuleCatalogTest {
         assertEquals(listOf("bad"), diagnostics.map { it.elementId })
     }
 
+    // -------------------------------------------------------------------------------------
+    // #327 diverging-flow rules: OUTGOING_FLOWS_NAMED flags the gateway (not the flow) when any
+    // of its outgoing branches is unnamed, and ignores incoming flows on converging gateways.
+
+    @Test
+    fun `round-trip - DivergingFlowNames fires on a gateway with an unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames is silent when every outgoing branch is named`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(divergingGatewayCtx(secondBranchName = "Rejected")))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames ignores unnamed incoming flows on a converging gateway`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        // Two unnamed flows converge into g; g's single outgoing flow is named — OUTGOING_FLOWS_NAMED
+        // scopes to outgoing branches only, so it must not fire.
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s1", "Start A"),
+                    BpmnStartEvent("s2", "Start B"),
+                    BpmnExclusiveGateway("g", "Merge"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s1", "g"),
+                    BpmnEdge("f2", "s2", "g"),
+                    BpmnEdge("f3", "g", "e", name = "Done"),
+                ),
+            ),
+        )
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowOutcomeLabel also fires on the same unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-outcome-label")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
     @Test
     fun `catalog reports loaded count clearly when only compiled rules contribute`() {
         // Until 2D.7 ports rules with checkPrimitive set, the Pkl side adds nothing. The
@@ -402,6 +449,26 @@ internal class PklRuleCatalogTest {
             sequences = listOf(
                 BpmnEdge("f1", "s", taskId),
                 BpmnEdge("f2", taskId, "e"),
+            ),
+        ),
+    )
+
+    // A diverging exclusive gateway `g` with two outgoing branches: one named "Approved" and one
+    // whose name is [secondBranchName] (null = unnamed, the violation).
+    private fun divergingGatewayCtx(secondBranchName: String?): BpmnDefinitionContext = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnExclusiveGateway("g", "Is the order approved?"),
+                BpmnEndEvent("e1", "Approved"),
+                BpmnEndEvent("e2", "Other"),
+            ),
+            sequences = listOf(
+                BpmnEdge("f0", "s", "g"),
+                BpmnEdge("f1", "g", "e1", name = "Approved"),
+                BpmnEdge("f2", "g", "e2", name = secondBranchName),
             ),
         ),
     )
