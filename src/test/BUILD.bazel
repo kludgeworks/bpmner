@@ -77,9 +77,14 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
         "OPENAI_API_KEY",
         "SPRING_PROFILES_ACTIVE",
     ] if "SmokeTest" in f else [],
-    tags = [
-        "live-llm",
-    ] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else [],
+    tags = (
+        # FullPipelineSmokeTest runs the entire pipeline against long prose;
+        # it is intentionally "manual" so CI skips it via -manual filter.
+        [
+            "live-llm",
+            "manual",
+        ] if "FullPipelineSmokeTest" in f else ["live-llm"] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else []
+    ),
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
     visibility = ["//visibility:public"],
     runtime_deps = [
