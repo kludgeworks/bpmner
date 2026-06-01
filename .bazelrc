@@ -18,5 +18,5 @@ build --experimental_output_paths=strip
 build --incompatible_strict_action_env
 
 test --test_output=errors
-# Skip integration tests by default; run them with: bazel test --test_tag_filters=integration //src/test/...
-test --test_tag_filters=-integration
+# Skip integration and live-llm tests by default; run them with: bazel test --test_tag_filters=integration,live-llm //src/test/...
+test --test_tag_filters=-integration,-live-llm

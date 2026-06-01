@@ -69,14 +69,18 @@ jobs:
       - name: Build and run all tests
         run: bazel test //...
 
-      - name: Run Sharded Smoke Tests
+      - name: Run Smoke Tests
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ANTHROPIC_API_KEY: ""
+          OPENAI_API_KEY: ""
           SPRING_PROFILES_ACTIVE: gh
         run: |
           bazel test \
-            --test_tag_filters=manual,live-llm \
+            --test_tag_filters=live-llm \
             --test_env=GITHUB_TOKEN \
+            --test_env=ANTHROPIC_API_KEY \
+            --test_env=OPENAI_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
             //src/test/... \
             --test_output=errors
