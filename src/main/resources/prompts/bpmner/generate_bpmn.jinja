@@ -8,6 +8,7 @@ Contract-driven generation rules:
 - Generate exactly one START_EVENT node for `contract.start`. Put trigger semantics in that node's `eventDefinition`, not in a specialized start-event subtype.
 - `ContractTrigger.Timer` maps to `BpmnTimerEventDefinition`; `Message` maps to `BpmnMessageEventDefinition` plus a process-level `BpmnMessageRef`; `Signal` maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`.
 - `ContractTrigger.None` maps to `BpmnNoneEventDefinition`.
+- ContractIntermediateThrow entries map to `INTERMEDIATE_THROW_EVENT` nodes. `Message` maps to `BpmnMessageEventDefinition` plus a process-level `BpmnMessageRef`; `Signal` maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`; `Escalation` maps to `BpmnEscalationEventDefinition` plus a process-level `BpmnEscalationRef`.
 - Represent actors only where current BPMN DTOs allow, usually in task names.
 - Do not add unsupported tasks, decisions, branches, actors, or end states.
 - You may infer sequence flows and routing-only converging gateways needed for valid BPMN.
@@ -17,6 +18,7 @@ Contract-to-BPMN wiring (the schema covers each `kind` → BPMN `type`/`eventDef
 - BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
 - Send / Receive: point the task's `messageRef` at a `definition.messages` entry whose `name` is the contract's `messageName`.
 - Error / Message / Signal / Escalation end states: point the event definition's ref at a matching entry in the process-level `definition.errors` / `.messages` / `.signals` / `.escalations` catalogue whose `code`/`name` is the contract's.
+- Message / Signal / Escalation intermediate throws: point the event definition's ref at a matching entry in the process-level `definition.messages` / `.signals` / `.escalations` catalogue whose `name`/`code` is the contract's.
 
 Branch wiring (the `kind` → BpmnEdge shape is in each ContractBranch subtype's schema, and `conditionExpression`/`isDefault` carry their own field descriptions):
 - DEFAULT: emit the outbound edge with no `conditionExpression`. You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets it from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. NEVER invent placeholder conditions like "otherwise" or "all other cases".

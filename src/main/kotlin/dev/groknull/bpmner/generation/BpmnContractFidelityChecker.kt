@@ -11,6 +11,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.kindName
@@ -23,6 +24,7 @@ import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNode
@@ -87,6 +89,10 @@ internal class BpmnContractFidelityChecker {
 
         contract.endStates.forEach { endState ->
             checkEndStateKind(endState, nodeById, issues)
+        }
+
+        contract.intermediateThrows.forEach { intermediateThrow ->
+            checkIntermediateThrowKind(intermediateThrow, nodeById, issues)
         }
 
         contract.decisions.forEach { decision ->
@@ -388,6 +394,63 @@ internal class BpmnContractFidelityChecker {
         is ContractEndState.Message -> BpmnMessageEventDefinition::class.simpleName!!
         is ContractEndState.Signal -> BpmnSignalEventDefinition::class.simpleName!!
         is ContractEndState.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
+    }
+
+    private fun checkIntermediateThrowKind(
+        intermediateThrow: ContractIntermediateThrow,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val node = nodeById[intermediateThrow.id]
+        if (node == null) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Intermediate throw '${intermediateThrow.id}' declares kind=${intermediateThrow.kindName} " +
+                        "but has no corresponding node in the generated BPMN.",
+                    contractElementId = intermediateThrow.id,
+                )
+            return
+        }
+        if (node !is BpmnIntermediateThrowEvent) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Intermediate throw '${intermediateThrow.id}' declares kind=${intermediateThrow.kindName} " +
+                        "but is realised as a ${node.typeName} node — expected INTERMEDIATE_THROW_EVENT.",
+                    contractElementId = intermediateThrow.id,
+                    bpmnElementId = node.id,
+                )
+            return
+        }
+        if (intermediateThrow.matchesEventDefinition(node.eventDefinition)) return
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message =
+                "Intermediate throw '${intermediateThrow.id}' declares kind=${intermediateThrow.kindName} " +
+                    "but its intermediate throw event uses ${node.eventDefinition::class.simpleName} — " +
+                    "expected ${intermediateThrow.expectedEventDefinitionName()}.",
+                contractElementId = intermediateThrow.id,
+                bpmnElementId = node.id,
+            )
+    }
+
+    private fun ContractIntermediateThrow.matchesEventDefinition(eventDefinition: BpmnEventDefinition): Boolean = when (this) {
+        is ContractIntermediateThrow.Message -> eventDefinition is BpmnMessageEventDefinition
+        is ContractIntermediateThrow.Signal -> eventDefinition is BpmnSignalEventDefinition
+        is ContractIntermediateThrow.Escalation -> eventDefinition is BpmnEscalationEventDefinition
+    }
+
+    private fun ContractIntermediateThrow.expectedEventDefinitionName(): String = when (this) {
+        is ContractIntermediateThrow.Message -> BpmnMessageEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Signal -> BpmnSignalEventDefinition::class.simpleName!!
+        is ContractIntermediateThrow.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 }
 

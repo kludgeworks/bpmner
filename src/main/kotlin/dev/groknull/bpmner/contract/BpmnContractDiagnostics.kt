@@ -41,6 +41,8 @@ enum class ContractValidationCode {
 
     ASSUMPTION_WITHOUT_TRACE,
     CONTRACT_ITEM_WITHOUT_TRACE,
+    DUPLICATE_CONTRACT_ELEMENT_ID,
+    INVALID_CONTRACT_ITEM,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

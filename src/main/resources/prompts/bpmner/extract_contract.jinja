@@ -14,6 +14,9 @@ Source grounding (provenance):
 - Webhook/API/event-bus triggers intended for one process/listener: set `trigger.type` = MESSAGE and populate `messageName` + `description`.
 - Broadcast or multi-listener triggers: set `trigger.type` = SIGNAL and populate `signalName` + `description`.
 - Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
+- Mid-flow sends that do not complete the process are intermediate throws, not tasks or end states:
+  set `intermediateThrows[].kind` = MESSAGE for point-to-point messages, SIGNAL for broadcasts,
+  and ESCALATION for non-interrupting business escalations. Populate the matching payload field.
 
 {% include "bpmner/elements/activity_kinds" %}
 

@@ -12,6 +12,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
@@ -77,6 +78,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasEndState) {
             "Expected end state of type ${T::class.simpleName} in contract, but found: " +
                 endStates.joinToString { "${it.javaClass.simpleName}(${it.name})" }
+        }
+    }
+
+    private inline fun <reified T : ContractIntermediateThrow> ProcessContract.assertHasIntermediateThrow() {
+        val hasIntermediateThrow = intermediateThrows.any { it is T }
+        assertTrue(hasIntermediateThrow) {
+            "Expected intermediate throw of type ${T::class.simpleName} in contract, but found: " +
+                intermediateThrows.joinToString { "${it.javaClass.simpleName}(${it.name})" }
         }
     }
 
@@ -238,6 +247,39 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasEndState<ContractEndState.Escalation>()
+    }
+
+    @Test
+    fun `intermediate message throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. The system sends a confirmation message to billing
+            without ending the process. Then the process completes normally.
+            """,
+        )
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
+    }
+
+    @Test
+    fun `intermediate signal throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. After updating inventory, it broadcasts
+            an inventory-updated signal to listening systems. Then the process ends.
+            """,
+        )
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
+    }
+
+    @Test
+    fun `intermediate escalation throw`() {
+        val c = extractContract(
+            """
+            The process starts when requested. If approval is overdue, a non-interrupting
+            escalation is raised and the process continues to archive the request before ending normally.
+            """,
+        )
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()
     }
 
     // Gateways

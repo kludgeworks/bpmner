@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -147,6 +148,54 @@ class FlatContractMapperTest {
     }
 
     @Test
+    fun `every FlatContractIntermediateThrow kind round-trips to the matching sealed subtype`() {
+        val sourceIds = listOf("ev1")
+        val cases: List<Pair<FlatContractIntermediateThrow, ContractIntermediateThrow>> = listOf(
+            flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", payload = "invoice ready") to
+                ContractIntermediateThrow.Message(
+                    "throw-msg",
+                    "Throw",
+                    messageName = "invoice ready",
+                    sourceIds = sourceIds,
+                ),
+            flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = "stock changed") to
+                ContractIntermediateThrow.Signal(
+                    "throw-sig",
+                    "Throw",
+                    signalName = "stock changed",
+                    sourceIds = sourceIds,
+                ),
+            flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "APPROVAL_OVERDUE") to
+                ContractIntermediateThrow.Escalation(
+                    "throw-esc",
+                    "Throw",
+                    escalationCode = "APPROVAL_OVERDUE",
+                    sourceIds = sourceIds,
+                ),
+        )
+
+        cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
+    }
+
+    @Test
+    fun `FlatContractIntermediateThrow required payload fields fail with offending id`() {
+        val message = flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", payload = null)
+        val messageEx = assertFailsWith<IllegalArgumentException> { message.toSealed() }
+        assertTrue("throw-msg" in messageEx.message.orEmpty())
+        assertTrue("messageName" in messageEx.message.orEmpty())
+
+        val signal = flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = " ")
+        val signalEx = assertFailsWith<IllegalArgumentException> { signal.toSealed() }
+        assertTrue("throw-sig" in signalEx.message.orEmpty())
+        assertTrue("signalName" in signalEx.message.orEmpty())
+
+        val escalation = flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "")
+        val escalationEx = assertFailsWith<IllegalArgumentException> { escalation.toSealed() }
+        assertTrue("throw-esc" in escalationEx.message.orEmpty())
+        assertTrue("escalationCode" in escalationEx.message.orEmpty())
+    }
+
+    @Test
     fun `every FlatContractBranch kind round-trips to the matching sealed subtype`() {
         val conditional = FlatContractBranch(
             id = "b-c",
@@ -260,6 +309,7 @@ class FlatContractMapperTest {
                 ),
             ),
             endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-ok")),
+            intermediateThrows = listOf(flatThrow(FlatIntermediateThrowKind.MESSAGE, "throw-msg", "invoice ready")),
         )
 
         val sealed: ProcessContract = flat.toSealed()
@@ -272,6 +322,7 @@ class FlatContractMapperTest {
         // Non-sealed siblings reused unchanged.
         assertEquals("d-go", sealed.decisions.single().id)
         assertTrue(sealed.endStates.single() is ContractEndState.Normal)
+        assertTrue(sealed.intermediateThrows.single() is ContractIntermediateThrow.Message)
     }
 
     private fun flatActivity(
@@ -302,5 +353,19 @@ class FlatContractMapperTest {
         messageName = payload.takeIf { kind == FlatEndStateKind.MESSAGE },
         signalName = payload.takeIf { kind == FlatEndStateKind.SIGNAL },
         escalationCode = payload.takeIf { kind == FlatEndStateKind.ESCALATION },
+    )
+
+    private fun flatThrow(
+        kind: FlatIntermediateThrowKind,
+        id: String,
+        payload: String?,
+    ): FlatContractIntermediateThrow = FlatContractIntermediateThrow(
+        id = id,
+        name = "Throw",
+        kind = kind,
+        sourceIds = listOf("ev1"),
+        messageName = payload.takeIf { kind == FlatIntermediateThrowKind.MESSAGE },
+        signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
+        escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
     )
 }

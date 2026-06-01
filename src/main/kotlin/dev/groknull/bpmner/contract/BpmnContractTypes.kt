@@ -106,6 +106,10 @@ data class ProcessContract(
     val endStates: List<ContractEndState>,
     @field:Valid
     @field:Size(max = 50)
+    @get:JsonPropertyDescription("Intermediate throw events required in the middle of the process")
+    val intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
+    @field:Valid
+    @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
 ) {
@@ -133,6 +137,7 @@ data class ProcessContract(
         actors: List<ContractActor> = emptyList(),
         artifacts: List<ContractArtifact> = emptyList(),
         endStates: List<ContractEndState>,
+        intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
         assumptions: List<ContractAssumption> = emptyList(),
     ) : this(
         id = id,
@@ -144,6 +149,7 @@ data class ProcessContract(
         actors = actors,
         artifacts = artifacts,
         endStates = endStates,
+        intermediateThrows = intermediateThrows,
         assumptions = assumptions,
     )
 }
@@ -790,6 +796,81 @@ val ContractEndState.kindName: String
             is ContractEndState.Message -> "MESSAGE"
             is ContractEndState.Signal -> "SIGNAL"
             is ContractEndState.Escalation -> "ESCALATION"
+        }
+
+sealed interface ContractIntermediateThrow {
+    val id: String
+    val name: String
+    val sourceIds: List<String>
+
+    data class Message(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Message name sent by this intermediate throw. Required for MESSAGE kind.")
+        val messageName: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
+
+    data class Signal(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Broadcast signal name emitted by this intermediate throw. Required for SIGNAL kind.")
+        val signalName: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
+
+    data class Escalation(
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_ID_DESCRIPTION)
+        override val id: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_NAME_DESCRIPTION)
+        override val name: String,
+        @field:NotBlank
+        @field:Size(max = 200)
+        @get:JsonPropertyDescription("Stable business escalation code emitted by this throw. Required for ESCALATION kind.")
+        val escalationCode: String,
+        @field:Size(max = 10)
+        @get:JsonPropertyDescription(INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION)
+        override val sourceIds: List<String> = emptyList(),
+    ) : ContractIntermediateThrow
+}
+
+private const val INTERMEDIATE_THROW_ID_DESCRIPTION: String = "Stable intermediate throw id"
+
+private const val INTERMEDIATE_THROW_NAME_DESCRIPTION: String = "Intermediate throw name"
+
+private const val INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this intermediate throw in evidence."
+
+val ContractIntermediateThrow.kindName: String
+    get() =
+        when (this) {
+            is ContractIntermediateThrow.Message -> "MESSAGE"
+            is ContractIntermediateThrow.Signal -> "SIGNAL"
+            is ContractIntermediateThrow.Escalation -> "ESCALATION"
         }
 
 @JsonClassDescription("Assumption made while extracting the process contract")

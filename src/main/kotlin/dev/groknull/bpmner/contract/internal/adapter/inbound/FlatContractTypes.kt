@@ -48,6 +48,12 @@ public enum class FlatEndStateKind {
     ESCALATION,
 }
 
+public enum class FlatIntermediateThrowKind {
+    MESSAGE,
+    SIGNAL,
+    ESCALATION,
+}
+
 public enum class FlatBranchKind {
     CONDITIONAL,
     DEFAULT,
@@ -147,6 +153,39 @@ public data class FlatContractEndState(
     @get:JsonPropertyDescription(
         "Required when kind=ESCALATION. Stable business escalation code (e.g. \"APPROVAL_OVERDUE\").",
     )
+    val escalationCode: String? = null,
+)
+
+@JsonClassDescription(
+    "Intermediate throw event emitted in the middle of the process. Set `kind` and populate " +
+        "the matching payload field: MESSAGE → messageName, SIGNAL → signalName, " +
+        "ESCALATION → escalationCode.",
+)
+public data class FlatContractIntermediateThrow(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(INTERMEDIATE_THROW_ID_DESCRIPTION)
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(INTERMEDIATE_THROW_NAME_DESCRIPTION)
+    val name: String,
+    @get:JsonPropertyDescription(
+        "Intermediate throw kind. MESSAGE sends a point-to-point message mid-flow, SIGNAL broadcasts " +
+            "mid-flow, ESCALATION raises a non-interrupting business escalation mid-flow.",
+    )
+    val kind: FlatIntermediateThrowKind,
+    @field:Size(max = 10)
+    @get:JsonPropertyDescription(INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION)
+    val sourceIds: List<String> = emptyList(),
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Required when kind=MESSAGE. Human-readable message name.")
+    val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable broadcast signal name.")
+    val signalName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Required when kind=ESCALATION. Stable business escalation code.")
     val escalationCode: String? = null,
 )
 
@@ -272,6 +311,10 @@ public data class FlatProcessContract(
     val endStates: List<FlatContractEndState>,
     @field:Valid
     @field:Size(max = 50)
+    @get:JsonPropertyDescription("Intermediate throw events required in the middle of the process")
+    val intermediateThrows: List<FlatContractIntermediateThrow> = emptyList(),
+    @field:Valid
+    @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
 )
@@ -323,3 +366,7 @@ private const val END_STATE_ID_DESCRIPTION: String = "Stable end-state id"
 private const val END_STATE_NAME_DESCRIPTION: String = "End-state name"
 private const val END_STATE_SOURCE_IDS_DESCRIPTION: String =
     "Source ids grounding this end state in evidence."
+private const val INTERMEDIATE_THROW_ID_DESCRIPTION: String = "Stable intermediate throw id"
+private const val INTERMEDIATE_THROW_NAME_DESCRIPTION: String = "Intermediate throw name"
+private const val INTERMEDIATE_THROW_SOURCE_IDS_DESCRIPTION: String =
+    "Source ids grounding this intermediate throw in evidence."
