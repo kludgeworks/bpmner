@@ -12,6 +12,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
@@ -20,8 +21,11 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -36,6 +40,7 @@ import kotlin.test.assertTrue
  * are used verbatim as BPMN node ids. Element kind is carried by `BpmnNode.type`. See `BpmnDomain.kt`
  * and `BpmnContractGenerationPromptFactory.kt` for the canonical generator instructions.
  */
+@Suppress("LargeClass")
 class BpmnContractFidelityCheckerTest {
     private val checker = BpmnContractFidelityChecker()
 
@@ -291,6 +296,86 @@ class BpmnContractFidelityCheckerTest {
         )
     }
 
+    @Test
+    fun `intermediate throw with matching event definition passes fidelity`() {
+        val report =
+            checker.check(
+                typedIntermediateThrowContract(
+                    ContractIntermediateThrow.Signal("throw-stock", "Broadcast stock change", "stock changed"),
+                ),
+                typedIntermediateThrowDefinition("throw-stock", BpmnSignalEventDefinition("Signal_StockChanged")),
+            )
+
+        assertTrue(report.isValid, "expected valid report for matching intermediate throw; got: ${report.issues}")
+    }
+
+    @Test
+    fun `missing intermediate throw node flagged as INTERMEDIATE_THROW_KIND_MISMATCH`() {
+        val report =
+            checker.check(
+                typedIntermediateThrowContract(
+                    ContractIntermediateThrow.Message("throw-invoice", "Send invoice notice", "invoice ready"),
+                ),
+                typedIntermediateThrowDefinition("other-throw", BpmnMessageEventDefinition("Message_InvoiceReady")),
+            )
+
+        assertFalse(report.isValid)
+        assertTrue(report.issues.any { it.code == BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH })
+    }
+
+    @Test
+    fun `intermediate throw realized as wrong node type flagged as INTERMEDIATE_THROW_KIND_MISMATCH`() {
+        val contract =
+            typedIntermediateThrowContract(
+                ContractIntermediateThrow.Message("throw-invoice", "Send invoice notice", "invoice ready"),
+            )
+        val definition =
+            typedIntermediateThrowDefinition("throw-invoice", BpmnMessageEventDefinition("Message_InvoiceReady"))
+                .copy(
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+                        BpmnUserTask(id = "act-do", name = "Do thing"),
+                        BpmnUserTask(id = "throw-invoice", name = "Send invoice notice"),
+                        BpmnEndEvent(id = "end-done", name = "Done"),
+                    ),
+                )
+
+        val report = checker.check(contract, definition)
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH &&
+                    it.message.contains("USER_TASK") &&
+                    it.message.contains("INTERMEDIATE_THROW_EVENT")
+            },
+            "expected INTERMEDIATE_THROW_KIND_MISMATCH citing wrong node type; got: ${report.issues}",
+        )
+    }
+
+    @Test
+    fun `intermediate throw with wrong event definition flagged as INTERMEDIATE_THROW_KIND_MISMATCH`() {
+        val report =
+            checker.check(
+                typedIntermediateThrowContract(
+                    ContractIntermediateThrow.Escalation("throw-overdue", "Escalate overdue", "APPROVAL_OVERDUE"),
+                ),
+                typedIntermediateThrowDefinition("throw-overdue", BpmnSignalEventDefinition("Signal_Overdue")),
+            )
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any {
+                it.code == BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH &&
+                    it.message.contains("kind=ESCALATION") &&
+                    it.message.contains("BpmnSignalEventDefinition") &&
+                    it.message.contains("BpmnEscalationEventDefinition")
+            },
+            "expected INTERMEDIATE_THROW_KIND_MISMATCH citing wrong event definition; got: ${report.issues}",
+        )
+    }
+
     // Compact fixture builders for the three end-state-kind tests above. Single activity,
     // single end state — keeps the test focus on the END_EVENT_KIND_MISMATCH dispatch logic.
     private fun typedEndStateContract(endState: ContractEndState): ProcessContract {
@@ -332,6 +417,48 @@ class BpmnContractFidelityCheckerTest {
         listOf(
             BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
             BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = endId),
+        ),
+    )
+
+    private fun typedIntermediateThrowContract(intermediateThrow: ContractIntermediateThrow): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
+            id = "c-throw",
+            processName = "Intermediate throw fidelity",
+            summary = "single activity then typed intermediate throw",
+            trigger = "start",
+            triggerSourceIds = sources,
+            activities = listOf(ContractActivity.User(id = "act-do", name = "Do thing", sourceIds = sources)),
+            intermediateThrows =
+            listOf(
+                when (intermediateThrow) {
+                    is ContractIntermediateThrow.Message -> intermediateThrow.copy(sourceIds = sources)
+                    is ContractIntermediateThrow.Signal -> intermediateThrow.copy(sourceIds = sources)
+                    is ContractIntermediateThrow.Escalation -> intermediateThrow.copy(sourceIds = sources)
+                },
+            ),
+            endStates = listOf(ContractEndState.Normal("end-done", "Done", sourceIds = sources)),
+        )
+    }
+
+    private fun typedIntermediateThrowDefinition(
+        throwId: String,
+        eventDefinition: BpmnEventDefinition,
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Intermediate throw fidelity",
+        nodes =
+        listOf(
+            BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+            BpmnUserTask(id = "act-do", name = "Do thing"),
+            BpmnIntermediateThrowEvent(id = throwId, name = "Throw", eventDefinition = eventDefinition),
+            BpmnEndEvent(id = "end-done", name = "Done"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-do"),
+            BpmnEdge(id = "F2", sourceRef = "act-do", targetRef = throwId),
+            BpmnEdge(id = "F3", sourceRef = throwId, targetRef = "end-done"),
         ),
     )
 

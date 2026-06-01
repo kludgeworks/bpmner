@@ -12,8 +12,11 @@ import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -170,6 +173,53 @@ class BpmnDefinitionToXmlConverterTest {
         assertEquals("Process_42", rendered.elementIndex.processId)
         assertEquals("nodes[id=Gateway_1]", rendered.elementIndex.objectRefForElementId("Gateway_1"))
         assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3"))
+    }
+
+    @Test
+    fun `converter preserves intermediate message signal and escalation throw event definitions semantically`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Throws",
+                processName = "Intermediate throws",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnIntermediateThrowEvent(
+                        "Throw_message",
+                        "Notify invoice ready",
+                        BpmnMessageEventDefinition("Message_InvoiceReady"),
+                    ),
+                    BpmnIntermediateThrowEvent(
+                        "Throw_signal",
+                        "Broadcast stock change",
+                        BpmnSignalEventDefinition("Signal_StockChanged"),
+                    ),
+                    BpmnIntermediateThrowEvent(
+                        "Throw_escalation",
+                        "Escalate overdue approval",
+                        BpmnEscalationEventDefinition("Escalation_ApprovalOverdue"),
+                    ),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "Throw_message"),
+                    BpmnEdge("F2", "Throw_message", "Throw_signal"),
+                    BpmnEdge("F3", "Throw_signal", "Throw_escalation"),
+                    BpmnEdge("F4", "Throw_escalation", "EndEvent_1"),
+                ),
+                messages = listOf(BpmnMessageRef("Message_InvoiceReady", "invoice ready")),
+                signals = listOf(BpmnSignalRef("Signal_StockChanged", "stock changed")),
+                escalations = listOf(BpmnEscalationRef("Escalation_ApprovalOverdue", "APPROVAL_OVERDUE")),
+            )
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.toXml(definition))
+
+        assertEquals(definition.nodes.associateBy { it.id }, parsed.nodes.associateBy { it.id })
+        assertEquals(definition.sequences.associateBy { it.id }, parsed.sequences.associateBy { it.id })
+        assertEquals(definition.messages, parsed.messages)
+        assertEquals(definition.signals, parsed.signals)
+        assertEquals(definition.escalations, parsed.escalations)
     }
 
     @Test

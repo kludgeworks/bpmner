@@ -10,6 +10,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -39,6 +40,7 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     actors = actors,
     artifacts = artifacts,
     endStates = endStates.map { it.toSealed() },
+    intermediateThrows = intermediateThrows.map { it.toSealed() },
     assumptions = assumptions,
 )
 
@@ -128,6 +130,29 @@ public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
     )
 
     FlatEndStateKind.ESCALATION -> ContractEndState.Escalation(
+        id = id,
+        name = name,
+        escalationCode = requireField(escalationCode, kind, "escalationCode", id),
+        sourceIds = sourceIds,
+    )
+}
+
+public fun FlatContractIntermediateThrow.toSealed(): ContractIntermediateThrow = when (kind) {
+    FlatIntermediateThrowKind.MESSAGE -> ContractIntermediateThrow.Message(
+        id = id,
+        name = name,
+        messageName = requireField(messageName, kind, "messageName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatIntermediateThrowKind.SIGNAL -> ContractIntermediateThrow.Signal(
+        id = id,
+        name = name,
+        signalName = requireField(signalName, kind, "signalName", id),
+        sourceIds = sourceIds,
+    )
+
+    FlatIntermediateThrowKind.ESCALATION -> ContractIntermediateThrow.Escalation(
         id = id,
         name = name,
         escalationCode = requireField(escalationCode, kind, "escalationCode", id),

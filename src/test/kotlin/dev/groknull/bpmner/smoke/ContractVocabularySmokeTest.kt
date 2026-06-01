@@ -12,6 +12,7 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
@@ -77,6 +78,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasEndState) {
             "Expected end state of type ${T::class.simpleName} in contract, but found: " +
                 endStates.joinToString { "${it.javaClass.simpleName}(${it.name})" }
+        }
+    }
+
+    private inline fun <reified T : ContractIntermediateThrow> ProcessContract.assertHasIntermediateThrow() {
+        val hasIntermediateThrow = intermediateThrows.any { it is T }
+        assertTrue(hasIntermediateThrow) {
+            "Expected intermediate throw of type ${T::class.simpleName} in contract, but found: " +
+                intermediateThrows.joinToString { "${it.javaClass.simpleName}(${it.name})" }
         }
     }
 
@@ -238,6 +247,23 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasEndState<ContractEndState.Escalation>()
+    }
+
+    @Test
+    fun `intermediate throw events`() {
+        val c = extractContract(
+            """
+            The process starts when a purchase request arrives. The system reviews the request,
+            then sends an invoice-ready message to billing without ending the process. It then
+            broadcasts an inventory-updated signal to listening systems. If manager approval is
+            overdue, it raises a non-interrupting approval overdue escalation and continues to
+            archive the request before ending normally.
+            """,
+        )
+
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
+        c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()
     }
 
     // Gateways

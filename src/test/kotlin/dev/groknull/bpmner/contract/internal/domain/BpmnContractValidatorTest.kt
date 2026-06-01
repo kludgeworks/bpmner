@@ -11,6 +11,7 @@ import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
@@ -284,6 +285,59 @@ class BpmnContractValidatorTest {
             ContractIssueSeverity.ERROR,
             report.issues.first { it.code == ContractValidationCode.CONTRACT_ITEM_WITHOUT_TRACE }.severity,
         )
+    }
+
+    @Test
+    fun `duplicate ids across contract elements produce an error`() {
+        val contract =
+            linearContract().copy(
+                intermediateThrows =
+                listOf(
+                    ContractIntermediateThrow.Message(
+                        id = "activity-review",
+                        name = "Notify reviewer",
+                        messageName = "review notification",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+
+        val report = validator.validate(contract)
+
+        assertFalse(report.isValid)
+        assertTrue(report.issues.any { it.code == ContractValidationCode.DUPLICATE_CONTRACT_ELEMENT_ID })
+    }
+
+    @Test
+    fun `blank intermediate throw payloads produce invalid contract item errors`() {
+        val contract =
+            linearContract().copy(
+                intermediateThrows =
+                listOf(
+                    ContractIntermediateThrow.Message(
+                        id = "throw-msg",
+                        name = "Notify",
+                        messageName = " ",
+                        sourceIds = sources,
+                    ),
+                    ContractIntermediateThrow.Signal(
+                        id = "throw-sig",
+                        name = "Broadcast",
+                        signalName = "",
+                        sourceIds = sources,
+                    ),
+                    ContractIntermediateThrow.Escalation(
+                        id = "throw-esc",
+                        name = "Escalate",
+                        escalationCode = " ",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+
+        val issues = validator.validate(contract).issues
+
+        assertEquals(3, issues.count { it.code == ContractValidationCode.INVALID_CONTRACT_ITEM })
     }
 
     private val sources = listOf("ev-source")

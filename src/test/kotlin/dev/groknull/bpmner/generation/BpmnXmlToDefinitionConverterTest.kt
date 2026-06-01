@@ -11,9 +11,11 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorRef
+import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -418,6 +420,42 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
+    fun `round-trip preserves intermediate message signal and escalation throw event definitions`() {
+        val original =
+            intermediateThrowDefinition(
+                listOf(
+                    BpmnIntermediateThrowEvent(
+                        "Throw_message",
+                        "Notify invoice ready",
+                        BpmnMessageEventDefinition("Message_InvoiceReady"),
+                    ),
+                    BpmnIntermediateThrowEvent(
+                        "Throw_signal",
+                        "Broadcast stock change",
+                        BpmnSignalEventDefinition("Signal_StockChanged"),
+                    ),
+                    BpmnIntermediateThrowEvent(
+                        "Throw_escalation",
+                        "Escalate overdue approval",
+                        BpmnEscalationEventDefinition("Escalation_ApprovalOverdue"),
+                    ),
+                ),
+                messages = listOf(BpmnMessageRef("Message_InvoiceReady", "invoice ready")),
+                signals = listOf(BpmnSignalRef("Signal_StockChanged", "stock changed")),
+                escalations = listOf(BpmnEscalationRef("Escalation_ApprovalOverdue", "APPROVAL_OVERDUE")),
+            )
+
+        val parsed = reverse.parse(forward.toXml(original))
+
+        assertProcessShellEqual(original, parsed)
+        assertEquals(original.nodes.byId(), parsed.nodes.byId())
+        assertEquals(original.sequences.byId(), parsed.sequences.byId())
+        assertEquals(original.messages, parsed.messages)
+        assertEquals(original.signals, parsed.signals)
+        assertEquals(original.escalations, parsed.escalations)
+    }
+
+    @Test
     fun `round-trip preserves isDefault on exclusive-gateway default flow`() {
         val original = creditTierDefinition()
 
@@ -570,5 +608,28 @@ class BpmnXmlToDefinitionConverterTest {
         sequences = listOf(BpmnEdge("Flow_1", start.id, "End_1")),
         messages = messages,
         signals = signals,
+    )
+
+    private fun intermediateThrowDefinition(
+        throws: List<BpmnIntermediateThrowEvent>,
+        messages: List<BpmnMessageRef> = emptyList(),
+        signals: List<BpmnSignalRef> = emptyList(),
+        escalations: List<BpmnEscalationRef> = emptyList(),
+    ) = BpmnDefinition(
+        processId = "Process_intermediate_throws",
+        processName = "Intermediate throws",
+        nodes =
+        listOf(BpmnStartEvent("Start_1", "Start")) +
+            throws +
+            listOf(BpmnEndEvent("End_1", "Done")),
+        sequences =
+        listOf(BpmnEdge("Flow_1", "Start_1", throws.first().id)) +
+            throws.zipWithNext().mapIndexed { index, (source, target) ->
+                BpmnEdge("Flow_${index + 2}", source.id, target.id)
+            } +
+            listOf(BpmnEdge("Flow_${throws.size + 1}", throws.last().id, "End_1")),
+        messages = messages,
+        signals = signals,
+        escalations = escalations,
     )
 }

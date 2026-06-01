@@ -81,6 +81,13 @@ enum class BpmnFidelityCode {
      * generator LLM flattens the end-state kind discriminator away in the BPMN pass.
      */
     END_EVENT_KIND_MISMATCH,
+
+    /**
+     * A ContractIntermediateThrow is missing, realised by a non-intermediate-throw node,
+     * or realised by an intermediate throw whose `eventDefinition` shape doesn't match
+     * the declared throw kind.
+     */
+    INTERMEDIATE_THROW_KIND_MISMATCH,
 }
 
 /**

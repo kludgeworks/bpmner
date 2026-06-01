@@ -8,6 +8,7 @@ package dev.groknull.bpmner.contract.internal.domain
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ContractValidationIssue
@@ -18,13 +19,16 @@ import dev.groknull.bpmner.contract.UnconditionalBranch
 import org.springframework.stereotype.Component
 
 @Component
+@Suppress("TooManyFunctions") // per-contract-invariant private helpers keep validation rules isolated
 internal class BpmnContractValidator {
 
     fun validate(contract: ProcessContract): ContractValidationReport {
         val issues =
             validateProcessIdentity(contract) +
                 validateMinimumShape(contract) +
+                validateUniqueIds(contract) +
                 validateDecisions(contract) +
+                validateIntermediateThrows(contract) +
                 validateTraceability(contract)
 
         return ContractValidationReport(issues = issues)
@@ -110,6 +114,31 @@ internal class BpmnContractValidator {
                 ContractGatewayKind.PARALLEL -> addAll(validateParallelDecision(decision, defaults))
             }
         }
+    }
+
+    private fun validateUniqueIds(contract: ProcessContract): List<ContractValidationIssue> {
+        val ids =
+            contract.activities.map { IdEntry(it.id, "activity") } +
+                contract.decisions.map { IdEntry(it.id, "decision") } +
+                contract.decisions.flatMap { decision -> decision.branches.map { IdEntry(it.id, "branch") } } +
+                contract.actors.map { IdEntry(it.id, "actor") } +
+                contract.artifacts.map { IdEntry(it.id, "artifact") } +
+                contract.endStates.map { IdEntry(it.id, "end state") } +
+                contract.intermediateThrows.map { IdEntry(it.id, "intermediate throw") } +
+                contract.assumptions.map { IdEntry(it.id, "assumption") }
+
+        return ids
+            .groupBy { it.id.trim() }
+            .filterKeys { it.isNotEmpty() }
+            .filterValues { it.size > 1 }
+            .map { (id, duplicates) ->
+                errorIssue(
+                    code = ContractValidationCode.DUPLICATE_CONTRACT_ELEMENT_ID,
+                    message = "contract element id '$id' is duplicated across " +
+                        duplicates.joinToString { it.kind },
+                    targetId = id,
+                )
+            }
     }
 
     // Cross-cutting branch-kind invariants over the sealed ContractBranch hierarchy.
@@ -204,6 +233,21 @@ internal class BpmnContractValidator {
         }
     }
 
+    private fun validateIntermediateThrows(contract: ProcessContract): List<ContractValidationIssue> = buildList {
+        contract.intermediateThrows.forEach { intermediateThrow ->
+            val invalidField = intermediateThrow.invalidPayloadField()
+            if (invalidField != null) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.INVALID_CONTRACT_ITEM,
+                        message = "intermediate throw '${intermediateThrow.id}' requires non-blank $invalidField",
+                        targetId = intermediateThrow.id,
+                    ),
+                )
+            }
+        }
+    }
+
     private fun validateTraceability(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         contract.activities.forEach { activity ->
             if (activity.sourceIds.isEmpty()) {
@@ -238,6 +282,17 @@ internal class BpmnContractValidator {
                 )
             }
         }
+        contract.intermediateThrows.forEach { intermediateThrow ->
+            if (intermediateThrow.sourceIds.isEmpty()) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.CONTRACT_ITEM_WITHOUT_TRACE,
+                        message = "intermediate throw '${intermediateThrow.name}' must carry at least one source id",
+                        targetId = intermediateThrow.id,
+                    ),
+                )
+            }
+        }
         contract.assumptions.forEach { assumption ->
             if (assumption.sourceIds.isEmpty()) {
                 add(
@@ -266,4 +321,12 @@ internal class BpmnContractValidator {
         private const val MIN_ACTIVITIES = 2
         private const val MIN_DECISION_BRANCHES = 2
     }
+}
+
+private data class IdEntry(val id: String, val kind: String)
+
+private fun ContractIntermediateThrow.invalidPayloadField(): String? = when (this) {
+    is ContractIntermediateThrow.Message -> "messageName".takeIf { messageName.isBlank() }
+    is ContractIntermediateThrow.Signal -> "signalName".takeIf { signalName.isBlank() }
+    is ContractIntermediateThrow.Escalation -> "escalationCode".takeIf { escalationCode.isBlank() }
 }

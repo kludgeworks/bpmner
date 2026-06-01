@@ -13,6 +13,7 @@ import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -50,6 +51,9 @@ class ProcessContractMarkdownRendererTest {
 
             ## Artifacts
             - art-package: Package — Wrapped order ready to ship
+
+            ## Intermediate throws
+            - throw-invoice: Notify invoice ready [MESSAGE messageName="invoice ready"]
 
             ## End states
             - end-shipped: Order shipped
@@ -162,7 +166,47 @@ class ProcessContractMarkdownRendererTest {
         assertTrue(!markdown.contains("## Actors"))
         assertTrue(!markdown.contains("## Decisions"))
         assertTrue(!markdown.contains("## Artifacts"))
+        assertTrue(!markdown.contains("## Intermediate throws"))
         assertTrue(!markdown.contains("## Assumptions"))
+    }
+
+    @Test
+    fun `renders intermediate throws section only when non-empty`() {
+        val sources = listOf("ev1")
+        val contract =
+            fullContract().copy(
+                intermediateThrows =
+                listOf(
+                    ContractIntermediateThrow.Message(
+                        id = "throw-msg",
+                        name = "Notify customer",
+                        messageName = "customer notified",
+                        sourceIds = sources,
+                    ),
+                    ContractIntermediateThrow.Signal(
+                        id = "throw-sig",
+                        name = "Broadcast stock change",
+                        signalName = "stock changed",
+                        sourceIds = sources,
+                    ),
+                    ContractIntermediateThrow.Escalation(
+                        id = "throw-esc",
+                        name = "Escalate overdue approval",
+                        escalationCode = "APPROVAL_OVERDUE",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+
+        val markdown = renderer.render(contract)
+
+        assertTrue(markdown.contains("## Intermediate throws"))
+        assertTrue(markdown.contains("- throw-msg: Notify customer [MESSAGE messageName=\"customer notified\"]"))
+        assertTrue(markdown.contains("- throw-sig: Broadcast stock change [SIGNAL signalName=\"stock changed\"]"))
+        assertTrue(
+            markdown.contains("- throw-esc: Escalate overdue approval [ESCALATION escalationCode=\"APPROVAL_OVERDUE\"]"),
+        )
+        assertTrue(!renderer.render(contract.copy(intermediateThrows = emptyList())).contains("## Intermediate throws"))
     }
 
     @Suppress("LongMethod")
@@ -212,6 +256,15 @@ class ProcessContractMarkdownRendererTest {
                     id = "art-package",
                     name = "Package",
                     description = "Wrapped order ready to ship",
+                ),
+            ),
+            intermediateThrows =
+            listOf(
+                ContractIntermediateThrow.Message(
+                    id = "throw-invoice",
+                    name = "Notify invoice ready",
+                    messageName = "invoice ready",
+                    sourceIds = sources,
                 ),
             ),
             endStates =

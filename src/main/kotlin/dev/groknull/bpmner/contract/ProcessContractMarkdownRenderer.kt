@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions") // one helper per markdown section / suffix keeps rendering simple
+
 package dev.groknull.bpmner.contract
 
 import dev.groknull.bpmner.contract.ProcessContract
@@ -21,6 +23,7 @@ internal class ProcessContractMarkdownRenderer {
         appendActivities(contract)
         appendDecisions(contract)
         appendArtifacts(contract)
+        appendIntermediateThrows(contract)
         appendEndStates(contract)
         appendAssumptions(contract)
     }
@@ -86,6 +89,16 @@ private fun StringBuilder.appendEndStates(contract: ProcessContract) {
     }
 }
 
+private fun StringBuilder.appendIntermediateThrows(contract: ProcessContract) {
+    if (contract.intermediateThrows.isNotEmpty()) {
+        appendLine()
+        appendLine("## Intermediate throws")
+        contract.intermediateThrows.forEach { intermediateThrow ->
+            appendLine("- ${intermediateThrow.id}: ${intermediateThrow.name}${intermediateThrowSuffix(intermediateThrow)}")
+        }
+    }
+}
+
 private fun StringBuilder.appendAssumptions(contract: ProcessContract) {
     if (contract.assumptions.isNotEmpty()) {
         appendLine()
@@ -131,4 +144,10 @@ private fun endStateSuffix(endState: ContractEndState): String = when (endState)
     is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"
     is ContractEndState.Signal -> " [SIGNAL signalName=\"${endState.signalName}\"]"
     is ContractEndState.Escalation -> " [ESCALATION escalationCode=\"${endState.escalationCode}\"]"
+}
+
+private fun intermediateThrowSuffix(intermediateThrow: ContractIntermediateThrow): String = when (intermediateThrow) {
+    is ContractIntermediateThrow.Message -> " [MESSAGE messageName=\"${intermediateThrow.messageName}\"]"
+    is ContractIntermediateThrow.Signal -> " [SIGNAL signalName=\"${intermediateThrow.signalName}\"]"
+    is ContractIntermediateThrow.Escalation -> " [ESCALATION escalationCode=\"${intermediateThrow.escalationCode}\"]"
 }
