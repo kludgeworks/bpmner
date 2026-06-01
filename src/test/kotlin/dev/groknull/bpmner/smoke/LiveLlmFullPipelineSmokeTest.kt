@@ -17,12 +17,10 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable
 import org.junit.jupiter.api.extension.ExtendWith
 import org.junit.jupiter.api.io.TempDir
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -30,12 +28,15 @@ import kotlin.io.path.readText
 
 @Tag("manual")
 @Tag("live-llm")
-@EnabledIfEnvironmentVariable(named = "GITHUB_TOKEN", matches = ".+")
-@ExtendWith(ContractVocabularySmokeTestSummaryExtension::class)
+@ExtendWith(
+    ActiveLiveLlmProfileCondition::class,
+    ContractVocabularySmokeTestSummaryExtension::class,
+)
 @SpringBootTest
-@ActiveProfiles("github")
 @TestPropertySource(
     properties = [
+        "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
+        "embabel.agent.platform.models.github.api-key=\${GITHUB_TOKEN:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
         "embabel.agent.shell.interactive.enabled=false",
@@ -43,7 +44,7 @@ import kotlin.io.path.readText
         "bpmner.rules.severity-overrides.evt-event-state-pattern=off",
     ],
 )
-class GitHubModelsFullPipelineSmokeTest {
+class LiveLlmFullPipelineSmokeTest {
     @Autowired
     private lateinit var agentPlatform: AgentPlatform
 
@@ -66,8 +67,8 @@ class GitHubModelsFullPipelineSmokeTest {
                 )
         } catch (failure: Exception) {
             Assumptions.assumeFalse(
-                isGitHubModelsTierLimit(failure),
-                "GitHub Models free-tier limit hit; skipping. Cause: ${failure.message}",
+                isLiveProviderQuotaOrSizeLimit(failure),
+                "Live LLM provider quota or request-size limit hit; skipping. Cause: ${failure.message}",
             )
             throw failure
         }
@@ -89,14 +90,18 @@ class GitHubModelsFullPipelineSmokeTest {
         return Paths.get(testSrcDir, testWorkspace, "samples", name).readText()
     }
 
-    private fun isGitHubModelsTierLimit(failure: Throwable): Boolean {
+    private fun isLiveProviderQuotaOrSizeLimit(failure: Throwable): Boolean {
         return generateSequence(failure) { it.cause }.any { cause ->
             val message = cause.message.orEmpty()
+            val normalized = message.lowercase()
             "429" in message ||
                 "Too Many Requests" in message ||
-                "rate limit" in message.lowercase() ||
+                "rate limit" in normalized ||
+                "rate_limit_error" in normalized ||
+                "overloaded_error" in normalized ||
                 "413" in message ||
-                "tokens_limit_reached" in message
+                "tokens_limit_reached" in message ||
+                "context_length_exceeded" in normalized
         }
     }
 }
