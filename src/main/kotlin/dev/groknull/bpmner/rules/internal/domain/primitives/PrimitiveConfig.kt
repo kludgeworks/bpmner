@@ -104,6 +104,7 @@ internal data class ConnectivityCheckConfig(
 internal enum class ConnectivityMode {
     NO_INCOMING,
     FLOWS_NAMED,
+    OUTGOING_FLOWS_NAMED,
     WITHIN_POOL,
     ACROSS_POOLS,
 }

@@ -303,8 +303,55 @@ internal class PklRuleCatalogTest {
     }
 
     // -------------------------------------------------------------------------------------
-    // #183 BoundaryEventConstraints — one composite rule, four sub-check codes. Each context
-    // injects exactly one violation so the asserted diagnosticCode is unambiguous.
+    // Diverging-flow rules: OUTGOING_FLOWS_NAMED flags a diverging gateway (not the flow) when any
+    // of its outgoing branches is unnamed; it ignores converging gateways and incoming flows.
+
+    @Test
+    fun `round-trip - DivergingFlowNames fires on a gateway with an unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames is silent when every outgoing branch is named`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(divergingGatewayCtx(secondBranchName = "Rejected")))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames ignores unnamed incoming flows on a converging gateway`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        // A converging gateway has a single outgoing flow, so it is not diverging — it must not fire
+        // even when that lone outgoing flow (and the incoming ones) are unnamed.
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s1", "Start A"),
+                    BpmnStartEvent("s2", "Start B"),
+                    BpmnExclusiveGateway("g", "Merge"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s1", "g"),
+                    BpmnEdge("f2", "s2", "g"),
+                    BpmnEdge("f3", "g", "e"),
+                ),
+            ),
+        )
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowOutcomeLabel also fires on the same unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-outcome-label")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    // -------------------------------------------------------------------------------------
+    // BoundaryEventConstraints — one composite rule, four sub-check codes. Each context injects
+    // exactly one violation so the asserted diagnosticCode is unambiguous.
 
     @Test
     fun `round-trip - BoundaryEventConstraints passes a well-formed interrupting boundary event`() {
@@ -452,6 +499,26 @@ internal class PklRuleCatalogTest {
             sequences = listOf(
                 BpmnEdge("f1", "s", taskId),
                 BpmnEdge("f2", taskId, "e"),
+            ),
+        ),
+    )
+
+    // A diverging exclusive gateway `g` with two outgoing branches: one named "Approved" and one
+    // whose name is [secondBranchName] (null = unnamed, the violation).
+    private fun divergingGatewayCtx(secondBranchName: String?): BpmnDefinitionContext = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnExclusiveGateway("g", "Is the order approved?"),
+                BpmnEndEvent("e1", "Approved"),
+                BpmnEndEvent("e2", "Other"),
+            ),
+            sequences = listOf(
+                BpmnEdge("f0", "s", "g"),
+                BpmnEdge("f1", "g", "e1", name = "Approved"),
+                BpmnEdge("f2", "g", "e2", name = secondBranchName),
             ),
         ),
     )
