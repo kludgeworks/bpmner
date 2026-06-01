@@ -121,7 +121,7 @@ jobs:
       - name: Run smoke tests
         run: |
           bazel test \
-            --test_tag_filters=live-llm \
+            --test_tag_filters=live-llm,-manual \
             --test_env=OPENAI_API_KEY \
             --test_env=ANTHROPIC_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \

@@ -66,7 +66,9 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
 [java_junit5_test(
     name = f.split("/")[-1].replace(".kt", ""),
     timeout = (
-        "long" if "GuardrailSystemTest" in f or "SmokeTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
+        # SmokeTests involve live LLM calls; CI latency accumulates across 25+ tests.
+        # "long" (900 s) is too tight — use "eternal" (3 600 s) for the full suite.
+        "eternal" if "SmokeTest" in f else "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
     ),
     data = ["//samples:prose_samples"] if "FullPipelineSmokeTest" in f else [],
     env_inherit = [
