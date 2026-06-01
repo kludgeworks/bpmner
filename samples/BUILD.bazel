@@ -1,0 +1,8 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+filegroup(
+    name = "prose_samples",
+    srcs = glob(["*.prose.md"]),
+    visibility = ["//src/test:__pkg__"],
+)

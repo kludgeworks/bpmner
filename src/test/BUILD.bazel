@@ -68,9 +68,12 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     timeout = (
         "long" if "GuardrailSystemTest" in f or "SmokeTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
     ),
+    data = ["//samples:prose_samples"] if "FullPipelineSmokeTest" in f else [],
     env_inherit = [
         "ANTHROPIC_API_KEY",
+        "GITHUB_TOKEN",
         "OPENAI_API_KEY",
+        "SPRING_PROFILES_ACTIVE",
     ] if "SmokeTest" in f else [],
     tags = [
         "live-llm",
