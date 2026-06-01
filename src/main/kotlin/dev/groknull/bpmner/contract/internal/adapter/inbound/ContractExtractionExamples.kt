@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.contract.ContractGatewayKind
+
 /**
  * Typed few-shot examples attached to the contract-extraction call via
  * `Creating<FlatProcessContract>.withExample(...)`. They teach the five discrimination
@@ -39,6 +41,13 @@ internal object ContractExtractionExamples {
     const val SEND_THEN_NORMAL_LABEL: String =
         "SEND activity + NORMAL end: an in-flow send (SEND activity) followed by ordinary process completion (NORMAL end)"
 
+    const val INCLUSIVE_GATEWAY_LABEL: String =
+        "INCLUSIVE gateway: independent optional branches where any combination may fire — use kind=INCLUSIVE, not EXCLUSIVE"
+
+    const val BUSINESS_RULE_TASK_LABEL: String =
+        "BUSINESS_RULE activity: evaluates a decision table or rules engine —" +
+            " use kind=BUSINESS_RULE and populate decisionName, not kind=SERVICE"
+
     // ──────────────────────────────────────────────────────────────────────────
     // Shared node ids
     // ──────────────────────────────────────────────────────────────────────────
@@ -49,6 +58,7 @@ internal object ContractExtractionExamples {
     private const val ACT_PROCESS = "act-process"
     private const val ACT_SEND_CONFIRM = "act-send-confirmation"
     private const val ACT_ARCHIVE = "act-archive"
+    private const val ACT_NOTIFY_MANAGER = "act-notify-manager"
     private const val END_NORMAL = "end-complete"
     private const val END_MESSAGE = "end-invoice-sent"
     private const val END_ESCALATION = "end-overdue"
@@ -264,6 +274,127 @@ internal object ContractExtractionExamples {
                 FlatContractEndState(
                     id = END_NORMAL,
                     name = "Process complete",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+        )
+    // ──────────────────────────────────────────────────────────────────────────
+    // Example 6 — INCLUSIVE gateway
+    //
+    // Prose: "Depending on the application, we may send an optional customer
+    //          notification AND/OR an optional manager notification."
+    // Independent optional branches → INCLUSIVE gateway, not EXCLUSIVE.
+    // Keywords that trigger INCLUSIVE: AND/OR, either, both, or neither,
+    // each evaluated independently, any combination.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    val inclusiveGatewayExample: FlatProcessContract =
+        FlatProcessContract(
+            id = "contract-notifications",
+            processName = "Optional notifications process",
+            summary = "Process that independently evaluates whether to send a customer and/or manager notification.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "Application submitted",
+                ),
+                sourceIds = listOf("src-1"),
+            ),
+            activities = listOf(
+                FlatContractActivity(
+                    id = ACT_SEND_CONFIRM,
+                    name = "Send customer notification",
+                    kind = FlatActivityKind.SEND,
+                    messageName = "customer notification",
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_NOTIFY_MANAGER,
+                    name = "Send manager notification",
+                    kind = FlatActivityKind.SEND,
+                    messageName = "manager notification",
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            decisions = listOf(
+                FlatContractDecision(
+                    id = "dec-notifications",
+                    question = "Which notifications apply?",
+                    kind = ContractGatewayKind.INCLUSIVE,
+                    branches = listOf(
+                        FlatContractBranch(
+                            id = "br-customer",
+                            label = "Customer notification",
+                            kind = FlatBranchKind.CONDITIONAL,
+                            condition = "customer notification is enabled",
+                            nextRef = ACT_SEND_CONFIRM,
+                        ),
+                        FlatContractBranch(
+                            id = "br-manager",
+                            label = "Manager notification",
+                            kind = FlatBranchKind.CONDITIONAL,
+                            condition = "manager notification is enabled",
+                            nextRef = ACT_NOTIFY_MANAGER,
+                        ),
+                    ),
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = END_NORMAL,
+                    name = "Notifications complete",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+        )
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Example 7 — BUSINESS_RULE activity
+    //
+    // Prose: "The system evaluates the pricing rules using the order discount
+    //          table to determine the final price."
+    // Decision table / rules engine → kind=BUSINESS_RULE with decisionName,
+    // NOT kind=SERVICE. Keywords: evaluates the rule set, applies the policy,
+    // decision table, DMN decision, rules engine.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const val ACT_EVAL_PRICING = "act-evaluate-pricing"
+    private const val ACT_CONFIRM_ORDER = "act-confirm-order"
+
+    val businessRuleTaskExample: FlatProcessContract =
+        FlatProcessContract(
+            id = "contract-pricing",
+            processName = "Order pricing process",
+            summary = "Process that evaluates pricing rules via decision table and then confirms the order.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "Order placed",
+                ),
+                sourceIds = listOf("src-1"),
+            ),
+            activities = listOf(
+                FlatContractActivity(
+                    id = ACT_EVAL_PRICING,
+                    name = "Evaluate pricing rules",
+                    kind = FlatActivityKind.BUSINESS_RULE,
+                    decisionName = "order discount table",
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_CONFIRM_ORDER,
+                    name = "Confirm order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = END_NORMAL,
+                    name = "Order confirmed",
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),
