@@ -57,6 +57,13 @@ internal class BpmnContractAgent(
 
         val flat = promptRunner
             .creating(FlatProcessContract::class.java)
+            // Typed few-shot examples for the five discrimination boundaries GPT-4.1
+            // does not reliably reproduce from keyword descriptions alone (see ContractExtractionExamples).
+            .withExample(ContractExtractionExamples.MESSAGE_END_LABEL, ContractExtractionExamples.messageEndExample)
+            .withExample(ContractExtractionExamples.ESCALATION_END_LABEL, ContractExtractionExamples.escalationEndExample)
+            .withExample(ContractExtractionExamples.SEND_TASK_LABEL, ContractExtractionExamples.sendTaskExample)
+            .withExample(ContractExtractionExamples.INTERMEDIATE_THROW_LABEL, ContractExtractionExamples.intermediateThrowExample)
+            .withExample(ContractExtractionExamples.SEND_THEN_NORMAL_LABEL, ContractExtractionExamples.sendThenNormalExample)
             .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
         val contract = flat.toSealed()
 

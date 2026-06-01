@@ -47,7 +47,7 @@ enum class ReadinessDimension {
     @JsonAlias("EXCEPTION_HANDLING")
     EXCEPTIONS_REWORK,
 
-    @JsonAlias("INPUT_ARTIFACT", "OUTPUT_ARTIFACT")
+    @JsonAlias("INPUT_ARTIFACT", "OUTPUT_ARTIFACT", "INPUTS_ARTIFACTS", "OUTPUTS_ARTIFACTS")
     INPUTS_OUTPUTS_ARTIFACTS,
     SCOPE_CLARITY,
 
@@ -90,9 +90,10 @@ enum class MissingProcessArea {
 
     // No alias on INPUT_ARTIFACT: INPUTS_OUTPUTS_ARTIFACTS could legitimately mean either
     // input or output, so we attach it to OUTPUT_ARTIFACT (the more common gap in practice).
+    @JsonAlias("INPUTS_ARTIFACTS")
     INPUT_ARTIFACT,
 
-    @JsonAlias("INPUTS_OUTPUTS_ARTIFACTS")
+    @JsonAlias("INPUTS_OUTPUTS_ARTIFACTS", "OUTPUTS_ARTIFACTS")
     OUTPUT_ARTIFACT,
 
     @JsonAlias("BPMN_SUITABILITY")

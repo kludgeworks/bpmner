@@ -77,7 +77,6 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     ] if "SmokeTest" in f else [],
     tags = [
         "live-llm",
-        "manual",
     ] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else [],
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
     visibility = ["//visibility:public"],
