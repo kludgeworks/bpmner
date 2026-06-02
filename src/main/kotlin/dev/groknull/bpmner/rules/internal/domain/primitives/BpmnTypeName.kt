@@ -37,6 +37,12 @@ internal object BpmnTypeName {
     // and matches only by exact type name.
     const val TEXT_ANNOTATION = "bpmn:TextAnnotation"
 
+    // Data elements, not flow nodes: surfaced so the data-naming rule (NoTypeWordsInDataName) can
+    // match them by exact type name. Like TEXT_ANNOTATION, deliberately absent from
+    // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — they are not FlowNode/FlowElement.
+    const val DATA_OBJECT = "bpmn:DataObject"
+    const val DATA_STORE = "bpmn:DataStore"
+
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
     // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can

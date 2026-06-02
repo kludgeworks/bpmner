@@ -82,10 +82,11 @@ internal class BpmnGeneratorAgent(
         val promptRunner = config.generator.promptRunner(context)
         val flat = promptRunner
             .creating(FlatBpmnDefinition::class.java)
-            // Typed few-shot examples for the two non-obvious topologies (parallel fork/join,
-            // inclusive fork with a default branch).
+            // Typed few-shot examples for the non-obvious topologies (parallel fork/join, inclusive
+            // fork with a default branch, and data objects/stores with read/write associations).
             .withExample(GenerationExamples.PARALLEL_LABEL, GenerationExamples.parallelForkJoin)
             .withExample(GenerationExamples.INCLUSIVE_LABEL, GenerationExamples.inclusiveWithDefault)
+            .withExample(GenerationExamples.DATA_ARTIFACTS_LABEL, GenerationExamples.dataArtifacts)
             .fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()

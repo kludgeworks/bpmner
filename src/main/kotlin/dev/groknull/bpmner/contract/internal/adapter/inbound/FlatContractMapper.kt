@@ -54,6 +54,8 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     FlatActivityKind.USER -> ContractActivity.User(
@@ -64,6 +66,8 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     FlatActivityKind.SCRIPT -> ContractActivity.Script(
@@ -74,6 +78,8 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     FlatActivityKind.MANUAL -> ContractActivity.Manual(
@@ -84,6 +90,8 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     // The three kinds carrying a required payload field (decisionName / messageName) are split out
@@ -101,6 +109,8 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     FlatActivityKind.SEND -> ContractActivity.Send(
@@ -112,6 +122,8 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     FlatActivityKind.RECEIVE -> ContractActivity.Receive(
@@ -123,6 +135,8 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
         loop = loop?.toSealed(),
+        dataInputIds = dataInputIds,
+        dataOutputIds = dataOutputIds,
     )
 
     else -> error("toPayloadActivity called with non-payload kind: $kind")

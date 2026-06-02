@@ -58,6 +58,9 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     escalations = escalations,
     annotations = annotations,
     associations = associations,
+    dataObjects = dataObjects,
+    dataStores = dataStores,
+    dataAssociations = dataAssociations,
 )
 
 public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {

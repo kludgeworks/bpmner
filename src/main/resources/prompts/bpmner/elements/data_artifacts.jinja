@@ -1,0 +1,4 @@
+Data artifacts (the `artifacts` list plus each activity's `dataInputIds` / `dataOutputIds`):
+- Record each distinct business data item the process reads or writes as an `artifacts` entry with a `kind`: DATA_OBJECT for transient information that flows through the process (e.g. "Order", "Approval decision"); DATA_STORE for a persistent system the process reads from or writes to (e.g. "Customer database", "Order queue"). Name them as business nouns — never include the words "activity", "process", or "event".
+- On each activity, list the ids of artifacts it consumes in `dataInputIds` and the ids it produces or updates in `dataOutputIds`. Every id must match an `artifacts` entry. Leave both empty for activities that do not manipulate declared data.
+- Only record data the source text actually mentions; do not invent artifacts.

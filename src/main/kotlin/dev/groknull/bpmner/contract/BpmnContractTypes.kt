@@ -16,6 +16,7 @@ import dev.groknull.bpmner.api.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 
 @JsonClassDescription("Source-grounded process start declaration")
@@ -218,6 +219,16 @@ sealed interface ContractActivity {
      */
     val loop: ContractLoop?
 
+    /**
+     * Ids of [ProcessContract.artifacts] this activity reads. Cross-cutting like [iteration] /
+     * [boundaryEvents]; realized as READ `BpmnDataAssociation` edges from the activity to each
+     * referenced data object/store. Empty for activities that consume no declared data.
+     */
+    val dataInputIds: List<String>
+
+    /** Ids of [ProcessContract.artifacts] this activity writes — realized as WRITE data associations. */
+    val dataOutputIds: List<String>
+
     @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
     data class Service(
         @field:NotBlank
@@ -243,6 +254,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
@@ -270,6 +287,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
@@ -297,6 +320,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -330,6 +359,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
@@ -361,6 +396,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -394,6 +435,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
@@ -421,6 +468,12 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
         override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     companion object {
@@ -461,6 +514,14 @@ private const val ACTIVITY_LOOP_DESCRIPTION: String =
     "Standard-loop marker. Set only when the source says the activity repeats until a condition " +
         "is met (a while/until/retry loop, e.g. \"retry up to 3 times until it succeeds\"); null " +
         "otherwise. Distinct from a per-item iteration over a collection."
+
+private const val ACTIVITY_DATA_INPUT_IDS_DESCRIPTION: String =
+    "Ids of artifacts (data objects/stores) this activity reads. Each id must match a " +
+        "ProcessContract.artifacts entry. Empty for activities that consume no declared data."
+
+private const val ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION: String =
+    "Ids of artifacts (data objects/stores) this activity writes or updates. Each id must match a " +
+        "ProcessContract.artifacts entry. Empty for activities that produce no declared data."
 
 @JsonClassDescription(
     "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
@@ -798,7 +859,12 @@ data class ContractActor(
     val role: String? = null,
 )
 
-@JsonClassDescription("Artifact referenced by the extracted process contract")
+enum class ContractArtifactKind { DATA_OBJECT, DATA_STORE }
+
+@JsonClassDescription(
+    "Data artifact referenced by the contract: a DATA_OBJECT (transient information flowing through " +
+        "the process) or a DATA_STORE (persisted store — database, file, queue).",
+)
 data class ContractArtifact(
     @field:NotBlank
     @field:Size(max = 200)
@@ -806,8 +872,14 @@ data class ContractArtifact(
     val id: String,
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription("Artifact name")
+    @get:JsonPropertyDescription("Business name of the artifact, e.g. \"Order\" or \"Customer database\"")
     val name: String,
+    @field:NotNull
+    @get:JsonPropertyDescription(
+        "DATA_OBJECT = transient information flowing through the process; DATA_STORE = persisted " +
+            "information (database, file, queue) the process reads or writes.",
+    )
+    val kind: ContractArtifactKind,
     @field:Size(max = 500)
     @get:JsonPropertyDescription("Optional artifact description")
     val description: String? = null,

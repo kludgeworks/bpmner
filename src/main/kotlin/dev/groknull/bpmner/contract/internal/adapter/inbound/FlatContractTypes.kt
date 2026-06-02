@@ -134,6 +134,18 @@ public data class FlatContractActivity(
             "activity. Distinct from a per-item iteration over a collection.",
     )
     val loop: FlatContractLoop? = null,
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription(
+        "Ids of artifacts (data objects/stores) this activity reads. Each id must match a top-level " +
+            "artifacts entry. Empty for activities that consume no declared data.",
+    )
+    val dataInputIds: List<String> = emptyList(),
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription(
+        "Ids of artifacts (data objects/stores) this activity writes or updates. Each id must match a " +
+            "top-level artifacts entry. Empty for activities that produce no declared data.",
+    )
+    val dataOutputIds: List<String> = emptyList(),
 )
 
 @JsonClassDescription(

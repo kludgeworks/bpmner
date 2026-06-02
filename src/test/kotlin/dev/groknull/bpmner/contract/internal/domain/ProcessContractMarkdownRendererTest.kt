@@ -9,6 +9,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -50,7 +51,7 @@ class ProcessContractMarkdownRendererTest {
               - b-no → "Out of stock" if "stock == 0"
 
             ## Artifacts
-            - art-package: Package — Wrapped order ready to ship
+            - art-package: Package [DATA_OBJECT] — Wrapped order ready to ship
 
             ## Intermediate throws
             - throw-invoice: Notify invoice ready [MESSAGE messageName="invoice ready"]
@@ -255,6 +256,7 @@ class ProcessContractMarkdownRendererTest {
                 ContractArtifact(
                     id = "art-package",
                     name = "Package",
+                    kind = ContractArtifactKind.DATA_OBJECT,
                     description = "Wrapped order ready to ship",
                 ),
             ),

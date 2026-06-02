@@ -7,6 +7,8 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnDataObject
+import dev.groknull.bpmner.api.BpmnDataStore
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEdge
 import dev.groknull.bpmner.api.BpmnEndEvent
@@ -82,6 +84,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
+    val dataElements = dataElementsOf(definition.dataObjects, definition.dataStores)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
     }
@@ -103,6 +106,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             definition.nodes.map { it.toPrimitiveElement(annotationTextByElementId) } +
             eventDefinitionElements +
             annotationElements +
+            dataElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
         associations = associations,
@@ -118,6 +122,30 @@ private fun annotationElementsOf(annotations: List<BpmnTextAnnotation>): List<Pr
         typeName = BpmnTypeName.TEXT_ANNOTATION,
         properties = mapOf("id" to it.id, "text" to it.text),
     )
+}
+
+// Data objects/stores projected as their own `PrimitiveElement`s (like annotations) so the
+// data-naming rule can target `bpmn:DataObject`/`bpmn:DataStore` by exact type name. Not nodes, so
+// the sealed `when` over BpmnNode stays closed.
+private fun dataElementsOf(
+    dataObjects: List<BpmnDataObject>,
+    dataStores: List<BpmnDataStore>,
+): List<PrimitiveElement> {
+    val objects = dataObjects.map {
+        PrimitiveElement(
+            id = it.id,
+            typeName = BpmnTypeName.DATA_OBJECT,
+            properties = mapOf("id" to it.id, "name" to it.name),
+        )
+    }
+    val stores = dataStores.map {
+        PrimitiveElement(
+            id = it.id,
+            typeName = BpmnTypeName.DATA_STORE,
+            properties = mapOf("id" to it.id, "name" to it.name),
+        )
+    }
+    return objects + stores
 }
 
 private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {

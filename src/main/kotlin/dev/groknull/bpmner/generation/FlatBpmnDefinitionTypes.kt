@@ -10,6 +10,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
@@ -260,6 +263,24 @@ public data class FlatBpmnDefinition(
             "multi-instance task's annotation, set sourceRef=task id, targetRef=annotation id.",
     )
     val associations: List<BpmnAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Data objects (transient information) flowing through the process, e.g. \"Order\". Link them " +
+            "to activities via dataAssociations.",
+    )
+    val dataObjects: List<BpmnDataObject> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Data stores (persisted information: databases, files, queues) the process reads or writes, " +
+            "e.g. \"Customer database\". Link them to activities via dataAssociations.",
+    )
+    val dataStores: List<BpmnDataStore> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Read/write links between activities and data objects/stores. Set sourceRef=activity id, " +
+            "targetRef=data id, direction=READ (activity consumes) or WRITE (activity produces).",
+    )
+    val dataAssociations: List<BpmnDataAssociation> = emptyList(),
 )
 
 // Ported verbatim from core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than

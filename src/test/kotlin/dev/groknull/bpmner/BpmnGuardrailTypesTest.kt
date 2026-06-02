@@ -16,6 +16,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -213,6 +214,7 @@ class BpmnGuardrailTypesTest {
         ContractArtifact(
             id = "artifact-package",
             name = "Packed order",
+            kind = ContractArtifactKind.DATA_OBJECT,
         ),
     )
 

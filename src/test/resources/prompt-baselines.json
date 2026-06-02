@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 9944,
-			"updatedBy": "#326 (on #181 + #183)",
-			"reason": "Standard-loop detection in activity_kinds.jinja, atop event-based + boundary-event prompt (incl. #332 required-triggerDetail wording)."
+			"chars": 10778,
+			"updatedBy": "#195 (on #326)",
+			"reason": "data_artifacts.jinja (data objects/stores + activity dataInputIds/dataOutputIds), atop the merged standard-loop prompt."
 		},
 		"contractFullPayload": {
-			"chars": 32211,
-			"updatedBy": "#326 (on #181 + #183)",
-			"reason": "Loop prose + FlatContractActivity.loop / FlatContractLoop schema, atop the event-based + boundary-event fields."
+			"chars": 34196,
+			"updatedBy": "#195 (on #326)",
+			"reason": "Data-artifact prose + ContractArtifact.kind / FlatContractActivity.dataInputIds/dataOutputIds schema, atop loop fields."
 		},
 		"generationPrompt": {
-			"chars": 13152,
-			"updatedBy": "#333 review",
-			"reason": "Reworded the standard-loop wiring contrast in generate_bpmn.jinja as positive guidance while preserving loop-to-standardLoop behavior."
+			"chars": 13662,
+			"updatedBy": "#195 (on #326)",
+			"reason": "Data-artifact → dataObjects/dataStores/dataAssociations wiring (positive wording per #335 review), atop the loop wiring."
 		},
 		"generationFullPayload": {
-			"chars": 27191,
-			"updatedBy": "#333 review",
-			"reason": "Generation prompt wording changed to reserve gateway back-edges for explicit branch flows."
+			"chars": 30284,
+			"updatedBy": "#195 (on #326)",
+			"reason": "Data wiring prose + FlatBpmnDefinition data fields + data-artifacts worked example, atop the merged loop schema."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -43,14 +43,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
-			"chars": 1763,
-			"updatedBy": "#326",
-			"reason": "Repair patch schema now carries the FlatBpmnNode.standardLoop field."
+			"chars": 1836,
+			"updatedBy": "#195 (on #326)",
+			"reason": "Repair patch schema now carries the FlatBpmnDefinition data object/store/association fields (atop standardLoop)."
 		},
 		"repairFullPrompt": {
-			"chars": 2059,
-			"updatedBy": "#326",
-			"reason": "Repair full-rewrite schema now carries the FlatBpmnNode.standardLoop field."
+			"chars": 2132,
+			"updatedBy": "#195 (on #326)",
+			"reason": "Repair full-rewrite schema now carries the FlatBpmnDefinition data object/store/association fields (atop standardLoop)."
 		}
 	}
 }

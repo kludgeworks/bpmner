@@ -49,6 +49,9 @@ enum class ContractValidationCode {
     CONTRACT_ITEM_WITHOUT_TRACE,
     DUPLICATE_CONTRACT_ELEMENT_ID,
     INVALID_CONTRACT_ITEM,
+
+    /** An activity's dataInputIds/dataOutputIds references an id not present in the contract's artifacts. */
+    DATA_REF_NOT_IN_ARTIFACTS,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

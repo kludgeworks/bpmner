@@ -7,6 +7,8 @@ package dev.groknull.bpmner.contract.internal.domain
 
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -421,6 +423,47 @@ class BpmnContractValidatorTest {
     }
 
     private val sources = listOf("ev-source")
+
+    @Test
+    fun `activity referencing an undeclared data id flags DATA_REF_NOT_IN_ARTIFACTS`() {
+        val contract = linearContract().copy(
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "activity-receive",
+                    name = "Receive application",
+                    sourceIds = sources,
+                    dataInputIds = listOf("art-missing"),
+                ),
+            ),
+            artifacts = listOf(ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT)),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS))
+    }
+
+    @Test
+    fun `activity data refs that match declared artifacts pass`() {
+        val contract = linearContract().copy(
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "activity-receive",
+                    name = "Receive application",
+                    sourceIds = sources,
+                    dataInputIds = listOf("art-order"),
+                    dataOutputIds = listOf("art-decision"),
+                ),
+            ),
+            artifacts = listOf(
+                ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT),
+                ContractArtifact("art-decision", "Approval decision", ContractArtifactKind.DATA_OBJECT),
+            ),
+        )
+
+        assertFalse(
+            validator.validate(contract).issues.any { it.code == ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS },
+        )
+    }
 
     private fun linearContract(): ProcessContract = ProcessContract(
         id = "contract-linear",

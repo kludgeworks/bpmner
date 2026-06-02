@@ -6,10 +6,14 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -75,6 +79,16 @@ import java.io.ByteArrayInputStream
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+
+// The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
+// surfaces them with a single helper.
+private data class ParsedArtifacts(
+    val annotations: List<BpmnTextAnnotation>,
+    val associations: List<BpmnAssociation>,
+    val dataObjects: List<BpmnDataObject>,
+    val dataStores: List<BpmnDataStore>,
+    val dataAssociations: List<BpmnDataAssociation>,
+)
 
 @SecondaryAdapter
 @Component
@@ -154,7 +168,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
-        val (annotations, associations) = artifactsFrom(document)
+        val artifacts = artifactsAndDataFrom(document)
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
@@ -164,36 +178,54 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
-            annotations = annotations,
-            associations = associations,
+            annotations = artifacts.annotations,
+            associations = artifacts.associations,
+            dataObjects = artifacts.dataObjects,
+            dataStores = artifacts.dataStores,
+            dataAssociations = artifacts.dataAssociations,
             diagramCount = diagramCount,
         )
     }
 
-    // Text annotations and their association edges, parsed together (one helper keeps the class
-    // function count in check). BPMN models the link as sourceRef = annotated element,
-    // targetRef = annotation.
-    private fun artifactsFrom(document: Document): Pair<List<BpmnTextAnnotation>, List<BpmnAssociation>> {
-        val annotations = document
-            .bpmnElements("textAnnotation")
+    // All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
+    // text annotations + their association edges (sourceRef = annotated element, targetRef =
+    // annotation), data objects/stores, and the read/write data associations parsed from each
+    // activity's `<dataInputAssociation>` (data id in `<sourceRef>`) / `<dataOutputAssociation>`
+    // (data id in `<targetRef>`) children (the association's `sourceRef` is the parent activity id).
+    private fun artifactsAndDataFrom(document: Document): ParsedArtifacts {
+        val annotations = document.bpmnElements("textAnnotation")
             .map { el ->
                 BpmnTextAnnotation(
                     id = el.getAttribute("id"),
                     text = el.childElements().firstOrNull { it.localName == "text" }?.textContent?.trim().orEmpty(),
                 )
-            }.filter { it.id.isNotBlank() }
-            .toList()
-        val associations = document
-            .bpmnElements("association")
-            .map { el ->
-                BpmnAssociation(
-                    id = el.getAttribute("id"),
-                    sourceRef = el.getAttribute("sourceRef"),
-                    targetRef = el.getAttribute("targetRef"),
-                )
-            }.filter { it.id.isNotBlank() }
-            .toList()
-        return annotations to associations
+            }.filter { it.id.isNotBlank() }.toList()
+        val associations = document.bpmnElements("association")
+            .map { el -> BpmnAssociation(el.getAttribute("id"), el.getAttribute("sourceRef"), el.getAttribute("targetRef")) }
+            .filter { it.id.isNotBlank() }.toList()
+        val dataObjects = document.bpmnElements("dataObject")
+            .map { BpmnDataObject(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() }.toList()
+        val dataStores = document.bpmnElements("dataStore")
+            .map { BpmnDataStore(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() }.toList()
+        fun Element.toAssociation(direction: DataFlowDirection, refChild: String): BpmnDataAssociation? {
+            val activityId = (parentNode as? Element)?.getAttribute("id").orEmpty()
+            val dataId = childElements().firstOrNull { it.localName == refChild }?.textContent?.trim().orEmpty()
+            // Externally-authored BPMN may omit the association id; derive a deterministic one so the
+            // link still round-trips. Skip only when the endpoints (activity / data id) are missing.
+            val id = getAttribute("id").ifBlank { "DataAssoc_${activityId}_$dataId" }
+            return if (activityId.isBlank() || dataId.isBlank()) {
+                null
+            } else {
+                BpmnDataAssociation(id = id, sourceRef = activityId, targetRef = dataId, direction = direction)
+            }
+        }
+        val inputs = document.bpmnElements("dataInputAssociation")
+            .mapNotNull { it.toAssociation(DataFlowDirection.READ, "sourceRef") }
+        val outputs = document.bpmnElements("dataOutputAssociation")
+            .mapNotNull { it.toAssociation(DataFlowDirection.WRITE, "targetRef") }
+        return ParsedArtifacts(annotations, associations, dataObjects, dataStores, (inputs + outputs).toList())
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory

@@ -8,9 +8,13 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -127,6 +131,40 @@ class BpmnDefinitionToXmlConverterTest {
 
         assertEquals(original.annotations, parsed.annotations)
         assertEquals(original.associations, parsed.associations)
+    }
+
+    @Test
+    fun `data objects, stores, and read-write associations round-trip through render and parse`() {
+        val original = BpmnDefinition(
+            processId = "Process_data",
+            processName = "Order validation",
+            nodes = listOf(
+                BpmnStartEvent("StartEvent_1", "Order received"),
+                BpmnServiceTask("act-validate", "Validate order"),
+                BpmnEndEvent("end-done", "Order validated"),
+            ),
+            sequences = listOf(
+                BpmnEdge("F1", "StartEvent_1", "act-validate"),
+                BpmnEdge("F2", "act-validate", "end-done"),
+            ),
+            dataObjects = listOf(
+                BpmnDataObject("DataObject_order", "Order"),
+                BpmnDataObject("DataObject_validated", "Validated order"),
+            ),
+            dataStores = listOf(BpmnDataStore("DataStore_customer", "Customer database")),
+            dataAssociations = listOf(
+                BpmnDataAssociation("DA1", "act-validate", "DataObject_order", DataFlowDirection.READ),
+                BpmnDataAssociation("DA2", "act-validate", "DataStore_customer", DataFlowDirection.READ),
+                BpmnDataAssociation("DA3", "act-validate", "DataObject_validated", DataFlowDirection.WRITE),
+            ),
+        )
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
+
+        assertEquals(original.dataObjects, parsed.dataObjects)
+        assertEquals(original.dataStores, parsed.dataStores)
+        // Parse groups inputs then outputs, so compare order-independently.
+        assertEquals(original.dataAssociations.toSet(), parsed.dataAssociations.toSet())
     }
 
     @Test
