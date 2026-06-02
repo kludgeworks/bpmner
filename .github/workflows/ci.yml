@@ -61,10 +61,69 @@ jobs:
         run: hk check all
 
       # Run every test discoverable in the build graph. Integration tests are gated
-      # out by the `.bazelrc` policy (`test --test_tag_filters=-integration`) and run
+      # out by the `.bazelrc` policy (`test --test_tag_filters=-integration,-live-llm`) and run
       # separately with `bazel test --test_tag_filters=integration //src/test/...`.
       # This matches the canonical Bazel pattern (`rules_pkl/.github/workflows/build.yml`)
       # and removes the allowlist-drift class of bug that hid `RepairRoutingModuleTest`
       # failures on main between Phase 2F (#243) and PR #249.
       - name: Build and run all tests
         run: bazel test //...
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: ci
+    # OP_SERVICE_ACCOUNT_TOKEN is unavailable on fork PRs — GitHub does not expose
+    # organisation secrets to workflows triggered by external contributors. Skip the
+    # job rather than failing it immediately before any test runs.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0 # core:java does not support multi-platform locking yet
+
+      - name: Cache Bazel
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+        with:
+          path: |
+            ~/.cache/bazel
+            ~/.cache/bazelisk
+          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
+          restore-keys: |
+            bazel-${{ runner.os }}-
+
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          OPENAI_API_KEY: op://bpmner/openai/api-key
+          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+
+      - name: Select random LLM provider
+        id: pick-provider
+        run: |
+          # Array length drives the modulo — adding Gemini is a one-line change here.
+          PROVIDERS=("openai" "anthropic")
+          SELECTED=${PROVIDERS[$RANDOM % ${#PROVIDERS[@]}]}
+          echo "Selected provider for this run: $SELECTED"
+          echo "SPRING_PROFILES_ACTIVE=$SELECTED" >> "$GITHUB_ENV"
+
+      - name: Run smoke tests
+        run: |
+          bazel test \
+            --test_tag_filters=live-llm,-manual \
+            --test_env=OPENAI_API_KEY \
+            --test_env=ANTHROPIC_API_KEY \
+            --test_env=SPRING_PROFILES_ACTIVE \
+            //src/test/... \
+            --test_output=errors

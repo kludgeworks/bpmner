@@ -8,6 +8,7 @@ package dev.groknull.bpmner.smoke
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
@@ -112,6 +113,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasIteration) {
             "Expected an activity with iteration mode $mode, but found: " +
                 activities.joinToString { "${it.name}(iteration=${it.iteration})" }
+        }
+    }
+
+    private fun ProcessContract.assertHasBoundaryEvent(kind: BoundaryEventKind) {
+        val hasBoundary = activities.any { a -> a.boundaryEvents.any { it.kind == kind } }
+        assertTrue(hasBoundary) {
+            "Expected an activity carrying a $kind boundary event, but found: " +
+                activities.joinToString { "${it.name}(boundaryEvents=${it.boundaryEvents})" }
         }
     }
 
@@ -258,7 +267,8 @@ class ContractVocabularySmokeTest {
     fun `message end`() {
         val c = extractContract(
             """
-            The process begins when started. When everything is done, the process wraps up by sending a final invoice.
+            The process begins when started. The order is validated.
+            The process then terminates by dispatching the final invoice as an outbound message to the customer.
             """,
         )
         c.assertHasEndState<ContractEndState.Message>()
@@ -288,8 +298,9 @@ class ContractVocabularySmokeTest {
     fun `intermediate message throw`() {
         val c = extractContract(
             """
-            The process starts when requested. The system sends a confirmation message to billing
-            without ending the process. Then the process completes normally.
+            The process starts when requested. The system validates the request.
+            It then sends a confirmation message to billing without ending the process.
+            Then the process completes normally.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
@@ -300,7 +311,8 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process starts when requested. After updating inventory, it broadcasts
-            an inventory-updated signal to listening systems. Then the process ends.
+            an inventory-updated signal to listening systems. Then the record is archived
+            and the process ends.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
@@ -310,8 +322,9 @@ class ContractVocabularySmokeTest {
     fun `intermediate escalation throw`() {
         val c = extractContract(
             """
-            The process starts when requested. If approval is overdue, a non-interrupting
-            escalation is raised and the process continues to archive the request before ending normally.
+            The process starts when requested. The approver reviews the request.
+            If approval is overdue, a non-interrupting escalation is raised and
+            the process continues to archive the request before ending normally.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()
@@ -351,6 +364,20 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.PARALLEL)
+    }
+
+    // Boundary events
+
+    @Test
+    fun `timer boundary event`() {
+        val c = extractContract(
+            """
+            The process starts when a claim is filed. An adjuster reviews the claim. If that review
+            takes longer than 48 hours, the claim is escalated to a senior adjuster for handling.
+            Either way, once a decision is recorded the process ends.
+            """,
+        )
+        c.assertHasBoundaryEvent(BoundaryEventKind.TIMER)
     }
 
     // Inclusive gateway

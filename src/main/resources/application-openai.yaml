@@ -1,0 +1,15 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+spring:
+  ai:
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+
+embabel:
+  models:
+    default-llm: gpt-4.1-mini
+    llms:
+      readiness-assessor: gpt-4.1-mini
+      contract-extractor: gpt-4.1
+      alignment-validator: gpt-4.1

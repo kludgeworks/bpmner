@@ -26,6 +26,9 @@ internal class ElementConstraintCheck {
         ElementConstraintMode.TIMER_EXPRESSION -> timerExpression(model, metadata, config)
         ElementConstraintMode.PARALLEL_GATEWAY_STRUCTURE -> parallelGatewayStructure(model, metadata)
         ElementConstraintMode.EVENT_BASED_GATEWAY_DIRECT_EVENTS -> eventBasedGatewayDirectEvents(model, metadata)
+        ElementConstraintMode.BOUNDARY_ATTACHED -> boundaryAttached(model, metadata)
+        ElementConstraintMode.BOUNDARY_SINGLE_OUTGOING -> boundarySingleOutgoing(model, metadata)
+        ElementConstraintMode.BOUNDARY_ERROR_INTERRUPTING -> boundaryErrorInterrupting(model, metadata)
     }
 
     private fun allowedSubset(
@@ -103,5 +106,34 @@ internal class ElementConstraintCheck {
                 !target.isEvent() && target.typeName != "bpmn:ReceiveTask"
             }
         }
+        .map { metadata.diagnostic(it.id) }
+
+    // detached — a boundary event's `attachedToRef` must resolve to an activity in the model.
+    // Activities are the seven task kinds; an unresolved or non-task target means the event is detached.
+    // TODO(#191): extend `isTask()` to cover subprocess attachment.
+    private fun boundaryAttached(
+        model: PrimitiveModelContext,
+        metadata: RuleMetadata,
+    ): List<RuleDiagnostic> = metadata.targetedElements(model)
+        .filter { boundary ->
+            val target = boundary.property("attachedToRef")?.let { model.elementsById[it] }
+            target == null || !target.isTask()
+        }
+        .map { metadata.diagnostic(it.id) }
+
+    // outgoing — a boundary event routes its exception path through exactly one outgoing flow.
+    private fun boundarySingleOutgoing(
+        model: PrimitiveModelContext,
+        metadata: RuleMetadata,
+    ): List<RuleDiagnostic> = metadata.targetedElements(model)
+        .filter { (model.outgoingCounts[it.id] ?: 0) != 1 }
+        .map { metadata.diagnostic(it.id) }
+
+    // errorInterrupting — error boundary events cannot be non-interrupting (BPMN 2.0 §10.5.4).
+    private fun boundaryErrorInterrupting(
+        model: PrimitiveModelContext,
+        metadata: RuleMetadata,
+    ): List<RuleDiagnostic> = metadata.targetedElements(model)
+        .filter { it.property("eventDefinition") == "ERROR" && it.property("cancelActivity") == "false" }
         .map { metadata.diagnostic(it.id) }
 }

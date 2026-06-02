@@ -10,6 +10,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import jakarta.validation.Valid
@@ -201,6 +202,14 @@ sealed interface ContractActivity {
      */
     val iteration: ContractIteration?
 
+    /**
+     * Boundary events attached to this activity's edge — a timeout, caught error, or escalation
+     * that interrupts or supplements it and routes to another element. Empty for most activities.
+     * Cross-cutting across all kinds, like [iteration]; realized as `BpmnBoundaryEvent` nodes
+     * attached to the activity's BPMN task downstream.
+     */
+    val boundaryEvents: List<ContractBoundaryEvent>
+
     @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
     data class Service(
         @field:NotBlank
@@ -220,6 +229,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
@@ -241,6 +253,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
@@ -262,6 +277,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -289,6 +307,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
@@ -314,6 +335,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -341,6 +365,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
@@ -362,6 +389,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_ITERATION_DESCRIPTION)
         override val iteration: ContractIteration? = null,
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
+        override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     ) : ContractActivity
 
     companion object {
@@ -392,6 +422,12 @@ private const val ACTIVITY_ITERATION_DESCRIPTION: String =
         "collection (a 'for each …' loop); null for an ordinary single-run activity. Distinct " +
         "from a retry/poll loop-back and from a parallel gateway fork."
 
+private const val ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION: String =
+    "Boundary events on this activity — timeouts, caught errors, or escalations that interrupt " +
+        "it and route elsewhere (e.g. 'if approval takes longer than 24h, escalate'; 'if the " +
+        "payment subprocess raises a chargeback error, route to dispute handling'). Empty for " +
+        "ordinary activities. Distinct from a normal decision branch off the activity's outcome."
+
 @JsonClassDescription(
     "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
         "either one at a time (SEQUENTIAL) or concurrently (PARALLEL).",
@@ -412,6 +448,40 @@ data class ContractIteration(
     @field:Size(max = 500)
     @get:JsonPropertyDescription("Optional early-exit condition that stops iteration before all items are done")
     val completionCondition: String? = null,
+)
+
+@JsonClassDescription(
+    "A boundary event attached to an activity: a timeout (TIMER), caught business error (ERROR), " +
+        "or raised escalation (ESCALATION) that interrupts the activity and routes the flow to " +
+        "`nextRef`. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
+)
+data class ContractBoundaryEvent(
+    @get:JsonPropertyDescription(
+        "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
+            "business error), ESCALATION (the activity raises a business escalation).",
+    )
+    val kind: BoundaryEventKind,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Short label for the event, e.g. \"24h timeout\" or \"chargeback raised\".")
+    val label: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Id of the activity, decision, or end state the exception path routes to when this event fires.",
+    )
+    val nextRef: String,
+    @get:JsonPropertyDescription(
+        "Whether firing interrupts (cancels) the attached activity. Default true. ERROR boundary " +
+            "events must be interrupting; TIMER/ESCALATION may be non-interrupting.",
+    )
+    val cancelActivity: Boolean = true,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
+            "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
+    )
+    val detail: String? = null,
 )
 
 /**

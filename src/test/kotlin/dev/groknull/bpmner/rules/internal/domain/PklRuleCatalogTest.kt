@@ -7,17 +7,21 @@ package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnAssociation
+import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTextAnnotation
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
@@ -407,6 +411,52 @@ internal class PklRuleCatalogTest {
         assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
     }
 
+    // -------------------------------------------------------------------------------------
+    // BoundaryEventConstraints — one composite rule, four sub-check codes. Each context injects
+    // exactly one violation so the asserted diagnosticCode is unambiguous.
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints passes a well-formed interrupting boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a detached boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(attachedToRef = "ghost"), listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(listOf("detached"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a boundary event with incoming flow`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), listOf(BpmnEdge("bf", "be", "caught"), BpmnEdge("inc", "t", "be")))
+        assertEquals(listOf("incoming"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a boundary event with no outgoing flow`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), emptyList())
+        assertEquals(listOf("outgoing"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a non-interrupting error boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val errorBoundary = BpmnBoundaryEvent(
+            id = "be",
+            name = "Chargeback",
+            attachedToRef = "t",
+            cancelActivity = false,
+            eventDefinition = BpmnErrorEventDefinition("err-chargeback"),
+        )
+        val ctx = boundaryCtx(errorBoundary, listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(listOf("errorInterrupting"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
     @Test
     fun `catalog reports loaded count clearly when only compiled rules contribute`() {
         // Until 2D.7 ports rules with checkPrimitive set, the Pkl side adds nothing. The
@@ -534,6 +584,34 @@ internal class PklRuleCatalogTest {
             ),
         ),
     )
+
+    private fun timerBoundary(attachedToRef: String = "t"): BpmnBoundaryEvent = BpmnBoundaryEvent(
+        id = "be",
+        name = "Timeout",
+        attachedToRef = attachedToRef,
+        cancelActivity = true,
+        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
+    )
+
+    // A task `t` (start -> t -> end "e") plus a [boundary] event `be` and its [boundaryEdges],
+    // routing the caught path to a second end "caught". Each test passes a boundary event / edge
+    // set carrying exactly one violation.
+    private fun boundaryCtx(boundary: BpmnBoundaryEvent, boundaryEdges: List<BpmnEdge>): BpmnDefinitionContext {
+        return BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnUserTask("t", "Do the work"),
+                    boundary,
+                    BpmnEndEvent("e", "Done"),
+                    BpmnEndEvent("caught", "Handled"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "s", "t"), BpmnEdge("f2", "t", "e")) + boundaryEdges,
+            ),
+        )
+    }
 
     companion object {
         private const val ACTIVITY_LABEL_RULE_ID = "act-activity-label-capitalization"
