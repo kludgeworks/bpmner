@@ -3,12 +3,12 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 9066,
+			"chars": 9068,
 			"updatedBy": "#181 + #183",
-			"reason": "Event-based decision recognition merged with main's boundary-event contract prompt; #332 review added EVENT_GATEWAY to the FlatContractBranch kind/class descriptions."
+			"reason": "Event-based decision recognition merged with main's boundary-event contract prompt; #332 review corrected branch_kinds.jinja to mark EVENT_GATEWAY triggerDetail as required."
 		},
 		"contractFullPayload": {
-			"chars": 30059,
+			"chars": 30061,
 			"updatedBy": "#181 + #183",
 			"reason": "Event-based prose + FlatContractBranch.triggerKind/triggerDetail schema, merged with main's boundary-event fields."
 		},
