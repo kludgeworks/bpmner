@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 8665,
-			"updatedBy": "#325 + #183",
-			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
+			"chars": 9068,
+			"updatedBy": "#181 + #183",
+			"reason": "Event-based decision recognition merged with main's boundary-event contract prompt; #332 review corrected branch_kinds.jinja to mark EVENT_GATEWAY triggerDetail as required."
 		},
 		"contractFullPayload": {
-			"chars": 28570,
-			"updatedBy": "#325 + #183",
-			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
+			"chars": 30061,
+			"updatedBy": "#181 + #183",
+			"reason": "Event-based prose + FlatContractBranch.triggerKind/triggerDetail schema, merged with main's boundary-event fields."
 		},
 		"generationPrompt": {
-			"chars": 11609,
-			"updatedBy": "#183",
-			"reason": "Boundary-events wiring rule in generate_bpmn.jinja (reworded per #330 review)."
+			"chars": 12487,
+			"updatedBy": "#181 + #183",
+			"reason": "Event-based-gateway topology merged with main's boundary-event wiring; #332 review made SIGNAL catch events name their signals entry from triggerDetail."
 		},
 		"generationFullPayload": {
-			"chars": 24380,
-			"updatedBy": "#183",
-			"reason": "Boundary-events wiring prose in generate_bpmn.jinja."
+			"chars": 25281,
+			"updatedBy": "#181 + #183",
+			"reason": "Event-based-gateway wiring prose + EVENT_BASED_GATEWAY discriminator, merged with main's boundary-event prose."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,

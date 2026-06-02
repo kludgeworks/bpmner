@@ -31,6 +31,7 @@ internal object BpmnTypeMatcher {
         BpmnTypeName.MANUAL_TASK,
         BpmnTypeName.EXCLUSIVE_GATEWAY,
         BpmnTypeName.PARALLEL_GATEWAY,
+        BpmnTypeName.EVENT_BASED_GATEWAY,
         BpmnTypeName.SEQUENCE_FLOW,
     )
 
@@ -48,6 +49,7 @@ internal object BpmnTypeMatcher {
         BpmnTypeName.EXCLUSIVE_GATEWAY,
         BpmnTypeName.INCLUSIVE_GATEWAY,
         BpmnTypeName.PARALLEL_GATEWAY,
+        BpmnTypeName.EVENT_BASED_GATEWAY,
     )
 
     private val eventTypeNames = setOf(

@@ -17,6 +17,7 @@ import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
+import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 
@@ -206,6 +207,14 @@ public fun FlatContractBranch.toSealed(): ContractBranch = when (kind) {
     FlatBranchKind.DEFAULT -> DefaultBranch(id = id, label = label, nextRef = nextRef)
 
     FlatBranchKind.UNCONDITIONAL -> UnconditionalBranch(id = id, label = label, nextRef = nextRef)
+
+    FlatBranchKind.EVENT_GATEWAY -> EventGatewayBranch(
+        id = id,
+        label = label,
+        triggerKind = requireField(triggerKind, kind, "triggerKind", id),
+        triggerDetail = requireField(triggerDetail, kind, "triggerDetail", id),
+        nextRef = nextRef,
+    )
 }
 
 public fun FlatContractTrigger.toSealed(): ContractTrigger = when (type) {

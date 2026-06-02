@@ -546,6 +546,13 @@ enum class ContractGatewayKind {
      * proceeds. Maps to `<bpmn:parallelGateway>`.
      */
     PARALLEL,
+
+    /**
+     * The flow waits for one of several events; the first to fire selects its branch. Maps to
+     * `<bpmn:eventBasedGateway>`. Branches are [EventGatewayBranch] — each names the event
+     * (TIMER / MESSAGE / SIGNAL) that triggers it rather than carrying a condition.
+     */
+    EVENT_BASED,
 }
 
 @JsonClassDescription("Decision required by the extracted process contract")
@@ -603,6 +610,7 @@ data class ContractDecision(
     JsonSubTypes.Type(value = ConditionalBranch::class, name = "CONDITIONAL"),
     JsonSubTypes.Type(value = DefaultBranch::class, name = "DEFAULT"),
     JsonSubTypes.Type(value = UnconditionalBranch::class, name = "UNCONDITIONAL"),
+    JsonSubTypes.Type(value = EventGatewayBranch::class, name = "EVENT_GATEWAY"),
 )
 sealed interface ContractBranch {
     val id: String
@@ -620,6 +628,7 @@ val ContractBranch.kindName: String
             is ConditionalBranch -> "CONDITIONAL"
             is DefaultBranch -> "DEFAULT"
             is UnconditionalBranch -> "UNCONDITIONAL"
+            is EventGatewayBranch -> "EVENT_GATEWAY"
         }
 
 @JsonClassDescription("Conditional branch — taken when `condition` evaluates true")
@@ -678,6 +687,47 @@ data class UnconditionalBranch(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Branch label naming this parallel track, e.g. \"IT prep\".")
     override val label: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
+    override val nextRef: String? = null,
+) : ContractBranch
+
+/**
+ * The event that selects an [EventGatewayBranch] of an EVENT_BASED decision: a deadline elapsing
+ * (`TIMER`), a named message arriving (`MESSAGE`), or a broadcast being observed (`SIGNAL`).
+ * Realized as the intermediate catch event the event-based gateway routes to on that branch.
+ */
+enum class EventTriggerKind {
+    TIMER,
+    MESSAGE,
+    SIGNAL,
+}
+
+@JsonClassDescription(
+    "Branch of an EVENT_BASED decision — taken when its event fires first. Names the triggering " +
+        "event kind (TIMER / MESSAGE / SIGNAL) instead of a condition.",
+)
+data class EventGatewayBranch(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable branch id")
+    override val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Branch label naming the awaited event, e.g. \"Payment confirmed\".")
+    override val label: String,
+    @get:JsonPropertyDescription(
+        "The event that selects this branch: TIMER (a deadline elapses), MESSAGE (a named message " +
+            "arrives), or SIGNAL (a broadcast is observed). Realized as an intermediate catch event.",
+    )
+    val triggerKind: EventTriggerKind,
+    @field:Size(max = 200)
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Event detail naming the awaited event: an ISO-8601 duration for TIMER, or the message / " +
+            "signal name for MESSAGE / SIGNAL. Required.",
+    )
+    val triggerDetail: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
     override val nextRef: String? = null,

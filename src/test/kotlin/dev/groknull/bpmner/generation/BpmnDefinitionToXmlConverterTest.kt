@@ -16,12 +16,15 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
@@ -234,6 +237,46 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "<parallelGateway id=\"Gateway_join_prep\"")
         // No condition expressions on any of the parallel-branch flows
         assertFalse(xml.contains("<conditionExpression"), "Parallel branches must not carry conditions")
+    }
+
+    @Test
+    fun `converter round-trips an event-based gateway routing to intermediate catch events`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_EventBased",
+                processName = "Await response",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Charge submitted"),
+                    BpmnEventBasedGateway("dec-await", "Await response"),
+                    BpmnIntermediateCatchEvent(
+                        "evt-ok",
+                        name = "Confirmation received",
+                        eventDefinition = BpmnNoneEventDefinition,
+                    ),
+                    BpmnIntermediateCatchEvent(
+                        "evt-timeout",
+                        name = "Timed out",
+                        eventDefinition = BpmnNoneEventDefinition,
+                    ),
+                    BpmnEndEvent("end-ok", "Settled"),
+                    BpmnEndEvent("end-timeout", "Abandoned"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "dec-await"),
+                    BpmnEdge("F2", "dec-await", "evt-ok"),
+                    BpmnEdge("F3", "dec-await", "evt-timeout"),
+                    BpmnEdge("F4", "evt-ok", "end-ok"),
+                    BpmnEdge("F5", "evt-timeout", "end-timeout"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+        assertContains(xml, "<eventBasedGateway id=\"dec-await\"")
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.toXml(definition))
+        assertEquals("dec-await", parsed.nodes.filterIsInstance<BpmnEventBasedGateway>().single().id)
     }
 
     @Test

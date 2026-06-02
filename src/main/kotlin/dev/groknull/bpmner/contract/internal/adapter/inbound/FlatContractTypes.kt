@@ -14,6 +14,7 @@ import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.EventTriggerKind
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -60,6 +61,7 @@ public enum class FlatBranchKind {
     CONDITIONAL,
     DEFAULT,
     UNCONDITIONAL,
+    EVENT_GATEWAY,
 }
 
 public enum class FlatTriggerKind {
@@ -264,7 +266,8 @@ public data class FlatContractIntermediateThrow(
 @JsonClassDescription(
     "Branch out of a contract decision. Set `kind` to CONDITIONAL (populate condition) for " +
         "branches of EXCLUSIVE decisions, DEFAULT for the catch-all of an EXCLUSIVE decision, " +
-        "or UNCONDITIONAL for branches of a PARALLEL decision.",
+        "UNCONDITIONAL for branches of a PARALLEL decision, or EVENT_GATEWAY for branches of an " +
+        "EVENT_BASED decision (populate triggerKind + triggerDetail).",
 )
 public data class FlatContractBranch(
     @field:NotBlank
@@ -281,7 +284,8 @@ public data class FlatContractBranch(
     @get:JsonPropertyDescription(
         "Branch kind. CONDITIONAL (default on EXCLUSIVE; populate condition), DEFAULT (catch-all " +
             "on EXCLUSIVE; no condition; at most one per decision), UNCONDITIONAL (on PARALLEL; no " +
-            "condition; every branch fires concurrently). Kind/decision matching is strict.",
+            "condition; every branch fires concurrently), EVENT_GATEWAY (on EVENT_BASED; populate " +
+            "triggerKind + triggerDetail; no condition). Kind/decision matching is strict.",
     )
     val kind: FlatBranchKind,
     @field:Size(max = 500)
@@ -289,6 +293,17 @@ public data class FlatContractBranch(
         "Required when kind=CONDITIONAL. Condition expression that selects this branch.",
     )
     val condition: String? = null,
+    @get:JsonPropertyDescription(
+        "Required when kind=EVENT_GATEWAY. The event that selects this branch: TIMER (deadline), " +
+            "MESSAGE (named message arrives), or SIGNAL (broadcast observed).",
+    )
+    val triggerKind: EventTriggerKind? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=EVENT_GATEWAY. Event detail: an ISO-8601 duration for TIMER, or the " +
+            "message / signal name for MESSAGE / SIGNAL.",
+    )
+    val triggerDetail: String? = null,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional id of the next activity, decision, or end state this branch leads to. Omit for " +
@@ -417,7 +432,11 @@ public data class FlatContractDecision(
             "independently'; use for independent optional add-ons that may apply singly, together, " +
             "or not at all. PARALLEL = all branches activate concurrently regardless of conditions " +
             "and reconverge at a join — keywords: 'in parallel', 'simultaneously', 'all of the " +
-            "following must complete'. Differentiator: if every branch fires regardless of " +
+            "following must complete'. EVENT_BASED = the flow waits for several events and the " +
+            "first to fire selects its branch — keywords: 'whichever arrives first', 'if a " +
+            "confirmation arrives, or if nothing within N minutes'; its branches are EVENT_GATEWAY " +
+            "branches naming the awaited event rather than a condition. " +
+            "Differentiator: if every branch fires regardless of " +
             "conditions use PARALLEL; if each fires only when its condition holds use INCLUSIVE. " +
             "Do NOT use PARALLEL for sequential steps that merely share an actor or context — " +
             "parallel means truly concurrent, with no fixed ordering.",

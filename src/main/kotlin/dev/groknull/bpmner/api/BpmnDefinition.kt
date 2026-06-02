@@ -133,6 +133,8 @@ interface BpmnInclusiveGateway : BpmnGateway
 
 interface BpmnParallelGateway : BpmnGateway
 
+interface BpmnEventBasedGateway : BpmnGateway
+
 /**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
  * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
@@ -270,6 +272,7 @@ val BpmnNode.typeName: String
             is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
             is BpmnInclusiveGateway -> "INCLUSIVE_GATEWAY"
             is BpmnParallelGateway -> "PARALLEL_GATEWAY"
+            is BpmnEventBasedGateway -> "EVENT_BASED_GATEWAY"
             is BpmnIntermediateCatchEvent -> "INTERMEDIATE_CATCH_EVENT"
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"

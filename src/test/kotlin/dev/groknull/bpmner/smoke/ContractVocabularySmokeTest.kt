@@ -392,4 +392,18 @@ class ContractVocabularySmokeTest {
         )
         c.assertHasGatewayKind(ContractGatewayKind.INCLUSIVE)
     }
+
+    // Event-based gateway
+
+    @Test
+    fun `event-based gateway`() {
+        val c = extractContract(
+            """
+            The process starts when a card charge is submitted. The system then waits for whichever
+            of these happens first: a success confirmation arrives, a decline notification arrives,
+            or sixty seconds pass with no response. Each outcome is recorded and the process ends.
+            """,
+        )
+        c.assertHasGatewayKind(ContractGatewayKind.EVENT_BASED)
+    }
 }

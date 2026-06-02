@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -78,6 +79,7 @@ private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY,
     FlatBpmnNodeKind.INCLUSIVE_GATEWAY,
     FlatBpmnNodeKind.PARALLEL_GATEWAY,
+    FlatBpmnNodeKind.EVENT_BASED_GATEWAY,
 )
 
 private fun FlatBpmnNode.toTaskNode(): BpmnNode {
@@ -120,6 +122,7 @@ private fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY -> BpmnExclusiveGateway(id = id, name = name)
     FlatBpmnNodeKind.INCLUSIVE_GATEWAY -> BpmnInclusiveGateway(id = id, name = name)
     FlatBpmnNodeKind.PARALLEL_GATEWAY -> BpmnParallelGateway(id = id, name = name)
+    FlatBpmnNodeKind.EVENT_BASED_GATEWAY -> BpmnEventBasedGateway(id = id, name = name)
     else -> error("toGatewayNode called with non-gateway kind $type")
 }
 

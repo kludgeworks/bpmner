@@ -19,6 +19,8 @@ import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
+import dev.groknull.bpmner.contract.EventGatewayBranch
+import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import kotlin.test.Test
@@ -266,6 +268,23 @@ class FlatContractMapperTest {
         val unconditional =
             FlatContractBranch(id = "b-u", label = "IT prep", kind = FlatBranchKind.UNCONDITIONAL)
         assertEquals(UnconditionalBranch(id = "b-u", label = "IT prep"), unconditional.toSealed())
+
+        val eventGateway = FlatContractBranch(
+            id = "b-e",
+            label = "Payment confirmed",
+            kind = FlatBranchKind.EVENT_GATEWAY,
+            triggerKind = EventTriggerKind.MESSAGE,
+            triggerDetail = "payment confirmation",
+        )
+        assertEquals(
+            EventGatewayBranch(
+                id = "b-e",
+                label = "Payment confirmed",
+                triggerKind = EventTriggerKind.MESSAGE,
+                triggerDetail = "payment confirmation",
+            ),
+            eventGateway.toSealed(),
+        )
     }
 
     @Test
@@ -274,6 +293,20 @@ class FlatContractMapperTest {
         val ex = assertFailsWith<IllegalArgumentException> { flat.toSealed() }
         assertTrue("b-c" in ex.message.orEmpty())
         assertTrue("condition" in ex.message.orEmpty())
+    }
+
+    @Test
+    fun `EVENT_GATEWAY branch without triggerDetail fails with the offending id`() {
+        val flat = FlatContractBranch(
+            id = "b-e",
+            label = "Payment confirmed",
+            kind = FlatBranchKind.EVENT_GATEWAY,
+            triggerKind = EventTriggerKind.MESSAGE,
+            triggerDetail = null,
+        )
+        val ex = assertFailsWith<IllegalArgumentException> { flat.toSealed() }
+        assertTrue("b-e" in ex.message.orEmpty())
+        assertTrue("triggerDetail" in ex.message.orEmpty())
     }
 
     @Test
