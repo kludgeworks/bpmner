@@ -135,6 +135,12 @@ node.toolchain(node_version = "20.11.0")
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
+    lifecycle_hooks_execution_requirements = {
+        "@vvago/vale": [
+            "no-sandbox",
+            "requires-network",
+        ],
+    },
     pnpm_lock = "//:pnpm-lock.yaml",
     verify_node_modules_ignored = "//:.bazelignore",
 )
