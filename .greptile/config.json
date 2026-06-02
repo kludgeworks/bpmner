@@ -1,0 +1,54 @@
+{
+	"strictness": 2,
+	"commentTypes": ["logic", "syntax", "style"],
+	"triggerOnUpdates": true,
+	"triggerOnDrafts": false,
+	"statusCheck": true,
+	"statusCommentsEnabled": true,
+	"updateExistingSummaryComment": true,
+	"fixWithAI": true,
+	"excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
+	"ignorePatterns": "node_modules/**\ndist/**\ncoverage/**\nMODULE.bazel.lock\nmise.lock\npnpm-lock.yaml\nlayout/src/layout-bundle.ts\n**/*.generated.*",
+	"rules": [
+		{
+			"id": "documentation-stays-current",
+			"severity": "high",
+			"scope": [
+				"src/main/kotlin/**/*.kt",
+				"src/main/resources/**/*.yaml",
+				"src/main/resources/prompts/**/*.jinja",
+				"linter/**",
+				".github/workflows/**/*.yml"
+			],
+			"rule": "When a PR changes architecture, pipeline stages, agent actions, model roles, runtime configuration, BPMN rule behavior, build/test commands, prompt behavior, or GitHub Actions behavior, check the documentation files referenced in .greptile/files.json. Flag the PR if relevant documentation is stale, contradicted by the code, or missing an update."
+		},
+		{
+			"id": "agent-docs-track-agent-actions",
+			"severity": "high",
+			"scope": ["src/main/kotlin/**/internal/adapter/inbound/**/*.kt"],
+			"rule": "If an Embabel @Agent, @Action, @AchievesGoal, action count, role, or action chaining behavior changes, docs/agents.md must be updated in the same PR or the PR must clearly explain why no documentation update is needed."
+		},
+		{
+			"id": "pipeline-docs-track-stage-contracts",
+			"severity": "high",
+			"scope": ["src/main/kotlin/dev/groknull/bpmner/**/*.kt"],
+			"rule": "If pipeline stage order, typed handoffs, repair loop behavior, validation responsibilities, layout behavior, alignment behavior, or failure modes change, docs/pipeline-architecture.md and docs/goap-lifecycle.md must stay consistent with the implementation."
+		},
+		{
+			"id": "operator-docs-track-runtime-config",
+			"severity": "medium",
+			"scope": [
+				"src/main/resources/application*.yaml",
+				"src/main/kotlin/dev/groknull/bpmner/config/**",
+				"src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt"
+			],
+			"rule": "If model roles, Spring profiles, runtime properties, provider setup, CLI flags, run commands, or test commands change, README.md and docs/operator-guide.md must be checked and updated if affected."
+		},
+		{
+			"id": "linter-docs-track-rule-authoring",
+			"severity": "high",
+			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/rules/**"],
+			"rule": "If BPMN rule schema, Pkl profiles, primitive checks, rule metadata, repair capability mapping, or rule authoring workflow changes, linter/docs/rule-authoring-guide.md and linter/docs/toolbox.md must stay accurate."
+		}
+	]
+}
