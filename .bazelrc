@@ -32,6 +32,7 @@ test --test_tag_filters=-integration,-live-llm
 build:ci --bes_results_url=https://app.buildbuddy.io/invocation/
 build:ci --bes_backend=grpcs://remote.buildbuddy.io
 build:ci --remote_cache=grpcs://remote.buildbuddy.io
+build:ci --remote_cache_compression
 build:ci --remote_upload_local_results
 build:ci --build_metadata=ROLE=CI
 build:ci --nolegacy_important_outputs
