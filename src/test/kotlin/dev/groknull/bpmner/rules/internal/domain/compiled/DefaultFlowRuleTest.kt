@@ -112,30 +112,10 @@ class DefaultFlowRuleTest {
 
     @Test
     fun `multiple default flows on one source emit def-multiple-default-flows`() {
-        val ctx =
-            BpmnDefinitionContext(
-                BpmnDefinition(
-                    processId = "P",
-                    processName = "P",
-                    nodes =
-                    listOf(
-                        BpmnStartEvent(id = "s"),
-                        BpmnExclusiveGateway(id = "gw", name = "Q?"),
-                        BpmnUserTask(id = "a", name = "A"),
-                        BpmnUserTask(id = "b", name = "B"),
-                        BpmnEndEvent(id = "e"),
-                    ),
-                    sequences =
-                    listOf(
-                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
-                        BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
-                        BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", isDefault = true),
-                        BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
-                        BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
-                    ),
-                ),
-            )
-
+        val ctx = twoPathGatewayCtx(
+            edgeFa = BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
+            edgeFb = BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", isDefault = true),
+        )
         val diag = rule.evaluate(ctx).single { it.diagnosticCode == "def-multiple-default-flows" }
         assertEquals(RuleSeverity.ERROR, diag.severity)
         assertEquals("node gw has 2 default flows (fa, fb); at most one is allowed", diag.message)
@@ -144,30 +124,10 @@ class DefaultFlowRuleTest {
 
     @Test
     fun `single default flow on an exclusive gateway emits no diagnostic`() {
-        val ctx =
-            BpmnDefinitionContext(
-                BpmnDefinition(
-                    processId = "P",
-                    processName = "P",
-                    nodes =
-                    listOf(
-                        BpmnStartEvent(id = "s"),
-                        BpmnExclusiveGateway(id = "gw", name = "Q?"),
-                        BpmnUserTask(id = "a", name = "A"),
-                        BpmnUserTask(id = "b", name = "B"),
-                        BpmnEndEvent(id = "e"),
-                    ),
-                    sequences =
-                    listOf(
-                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
-                        BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
-                        BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", conditionExpression = "x"),
-                        BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
-                        BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
-                    ),
-                ),
-            )
-
+        val ctx = twoPathGatewayCtx(
+            edgeFa = BpmnEdge(id = "fa", sourceRef = "gw", targetRef = "a", isDefault = true),
+            edgeFb = BpmnEdge(id = "fb", sourceRef = "gw", targetRef = "b", conditionExpression = "x"),
+        )
         assertTrue(rule.evaluate(ctx).isEmpty())
     }
 
@@ -185,4 +145,34 @@ class DefaultFlowRuleTest {
 
         assertTrue(rule.evaluate(ctx).isEmpty())
     }
+
+    /**
+     * Builds a [BpmnDefinitionContext] with a simple exclusive-gateway graph:
+     * start → gw → {a, b} → end, with [edgeFa] and [edgeFb] as the outbound gateway edges.
+     */
+    private fun twoPathGatewayCtx(
+        edgeFa: BpmnEdge,
+        edgeFb: BpmnEdge,
+    ) = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes =
+            listOf(
+                BpmnStartEvent(id = "s"),
+                BpmnExclusiveGateway(id = "gw", name = "Q?"),
+                BpmnUserTask(id = "a", name = "A"),
+                BpmnUserTask(id = "b", name = "B"),
+                BpmnEndEvent(id = "e"),
+            ),
+            sequences =
+            listOf(
+                BpmnEdge(id = "f1", sourceRef = "s", targetRef = "gw"),
+                edgeFa,
+                edgeFb,
+                BpmnEdge(id = "fae", sourceRef = "a", targetRef = "e"),
+                BpmnEdge(id = "fbe", sourceRef = "b", targetRef = "e"),
+            ),
+        ),
+    )
 }

@@ -38,54 +38,23 @@ class BpmnOwnershipTest {
     // Fixtures
     // -------------------------------------------------------------------------
 
-    private fun baseGraph(): LaidOutProcessGraph {
-        val definition =
-            BpmnDefinition(
-                processId = "Process_1",
-                processName = "Test",
-                nodes =
-                listOf(
-                    BpmnStartEvent("Start_1", "Start"),
-                    BpmnUserTask("Task_1", "Do work"),
-                    BpmnEndEvent("End_1", "End"),
-                ),
-                sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "Start_1", "Task_1"),
-                    BpmnEdge("Flow_2", "Task_1", "End_1"),
-                ),
-            )
-        val objectOwners =
-            buildMap {
-                put("process", "phase:main")
-                definition.nodes.forEach { put("nodes[id=${it.id}]", "phase:main") }
-                definition.sequences.forEach { put("sequences[id=${it.id}]", "phase:main") }
-            }
-        val elementOwners =
-            buildMap {
-                put(definition.processId, "phase:main")
-                definition.nodes.forEach { node ->
-                    put(node.id, "phase:main")
-                    put("${node.id}_di", "phase:main")
-                }
-                definition.sequences.forEach { edge ->
-                    put(edge.id, "phase:main")
-                    put("${edge.id}_di", "phase:main")
-                }
-            }
-        val composedGraph =
-            ComposedProcessGraph(
-                definition = definition,
-                objectOwnersByObjectRef = objectOwners,
-            )
-        val ownedGraph =
-            OwnedElementGraph(
-                composedGraph = composedGraph,
-                elementOwnersByElementId = elementOwners,
-                objectOwnersByObjectRef = objectOwners,
-            )
-        return LaidOutProcessGraph(ownedGraph = ownedGraph, definition = definition)
-    }
+    private fun baseGraph(): LaidOutProcessGraph = graphFor(
+        BpmnDefinition(
+            processId = "Process_1",
+            processName = "Test",
+            nodes =
+            listOf(
+                BpmnStartEvent("Start_1", "Start"),
+                BpmnUserTask("Task_1", "Do work"),
+                BpmnEndEvent("End_1", "End"),
+            ),
+            sequences =
+            listOf(
+                BpmnEdge("Flow_1", "Start_1", "Task_1"),
+                BpmnEdge("Flow_2", "Task_1", "End_1"),
+            ),
+        ),
+    )
 
     // -------------------------------------------------------------------------
     // validateOwnership
@@ -271,29 +240,6 @@ class BpmnOwnershipTest {
             )
         return LaidOutProcessGraph(ownedGraph = ownedGraph, definition = definition)
     }
-
-    private fun joinForkDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Join Fork",
-        nodes =
-        listOf(
-            BpmnStartEvent("Start_1", "Start"),
-            BpmnStartEvent("Start_2", "Trigger"),
-            BpmnExclusiveGateway("Gateway_1", "Route?"),
-            BpmnUserTask("Task_1", "Handle A"),
-            BpmnUserTask("Task_2", "Handle B"),
-            BpmnEndEvent("End_1", "End"),
-        ),
-        sequences =
-        listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-            BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
-            BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
-            BpmnEdge("Flow_5", "Task_1", "End_1"),
-            BpmnEdge("Flow_6", "Task_2", "End_1"),
-        ),
-    )
 
     private fun fakeJoinDefinition() = BpmnDefinition(
         processId = "Process_1",

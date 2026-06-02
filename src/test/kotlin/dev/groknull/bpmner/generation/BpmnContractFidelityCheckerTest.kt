@@ -1238,26 +1238,14 @@ private fun defaultBranchDefinitionNoIsDefault(): BpmnDefinition = BpmnDefinitio
 )
 
 /** Same as above but with isDefault=true on the fallback edge. */
-private fun defaultBranchDefinitionWithIsDefault(): BpmnDefinition = BpmnDefinition(
-    processId = "P",
-    processName = "Approval with fallback",
-    nodes =
-    listOf(
-        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
-        BpmnUserTask(id = "act-review", name = "Review"),
-        BpmnExclusiveGateway(id = "dec-approve", name = "Approved?"),
-        BpmnUserTask(id = "act-manual", name = "Manual review"),
-        BpmnEndEvent(id = "end-done", name = "Done"),
-    ),
-    sequences =
-    listOf(
-        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-review"),
-        BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "dec-approve"),
-        BpmnEdge(id = "F3", sourceRef = "dec-approve", targetRef = "end-done", conditionExpression = "approved"),
-        BpmnEdge(id = "F4", sourceRef = "dec-approve", targetRef = "act-manual", isDefault = true),
-        BpmnEdge(id = "F5", sourceRef = "act-manual", targetRef = "end-done"),
-    ),
-)
+private fun defaultBranchDefinitionWithIsDefault(): BpmnDefinition {
+    val base = defaultBranchDefinitionNoIsDefault()
+    return base.copy(
+        sequences = base.sequences.map {
+            if (it.id == "F4") it.copy(isDefault = true) else it
+        },
+    )
+}
 
 /** Gateway missing entirely — DECISION_GATEWAY_MISSING should fire, not DEFAULT_FLOW_MISSING. */
 private fun defaultBranchDefinitionNoGateway(): BpmnDefinition = BpmnDefinition(

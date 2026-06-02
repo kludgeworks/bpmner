@@ -7,11 +7,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
@@ -281,21 +278,4 @@ class NlpPrimitivesTest {
         errorMessages = mapOf("default" to "$id violation"),
         severity = RuleSeverity.WARNING,
     )
-
-    private fun context(
-        nodes: List<dev.groknull.bpmner.core.BpmnNode>,
-        edges: List<BpmnEdge>? = null,
-    ): BpmnDefinitionContext {
-        val actualEdges = edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->
-            BpmnEdge("f${index + 1}", source.id, target.id)
-        }
-        return BpmnDefinitionContext(
-            BpmnDefinition(
-                processId = "P",
-                processName = "Process",
-                nodes = nodes,
-                sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
-            ),
-        )
-    }
 }
