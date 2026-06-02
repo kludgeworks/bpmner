@@ -32,6 +32,7 @@ import dev.groknull.bpmner.api.BpmnSendTask
 import dev.groknull.bpmner.api.BpmnServiceTask
 import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
+import dev.groknull.bpmner.api.BpmnSubProcess
 import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTextAnnotation
@@ -235,6 +236,8 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
 
     is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
+
+    is BpmnSubProcess -> BpmnTypeName.SUB_PROCESS
 
     // Unrecognized nodes (Choreography, Transaction, etc.) carry their BPMN typename
     // verbatim — exactly what `BpmnSubset`'s `targetElements` matches on.

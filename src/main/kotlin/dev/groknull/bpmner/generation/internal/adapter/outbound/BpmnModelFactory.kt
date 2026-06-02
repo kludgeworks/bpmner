@@ -22,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -41,6 +42,7 @@ import org.camunda.bpm.model.bpmn.instance.ScriptTask
 import org.camunda.bpm.model.bpmn.instance.SendTask
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
+import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.UserTask
 
 internal object BpmnModelFactory {
@@ -82,6 +84,11 @@ internal object BpmnModelFactory {
                 is BpmnBoundaryEvent -> modelInstance.newInstance(BoundaryEvent::class.java)
 
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
+
+                is BpmnSubProcess ->
+                    modelInstance.newInstance(SubProcess::class.java).apply {
+                        setTriggeredByEvent(node.triggeredByEvent)
+                    }
 
                 // Unrecognized nodes carry no Camunda model class. Callers are expected to
                 // filter them out before reaching the generator; reaching here is a contract

@@ -52,6 +52,7 @@ import dev.groknull.bpmner.api.BpmnServiceTask as ApiBpmnServiceTask
 import dev.groknull.bpmner.api.BpmnSignalEventDefinition as ApiBpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnSignalRef as ApiBpmnSignalRef
 import dev.groknull.bpmner.api.BpmnStartEvent as ApiBpmnStartEvent
+import dev.groknull.bpmner.api.BpmnSubProcess as ApiBpmnSubProcess
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition as ApiBpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTextAnnotation as ApiBpmnTextAnnotation
 import dev.groknull.bpmner.api.BpmnTimerEventDefinition as ApiBpmnTimerEventDefinition
@@ -261,6 +262,7 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnIntermediateThrowEvent::class, name = "INTERMEDIATE_THROW_EVENT"),
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
+    JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
 )
 sealed interface BpmnNode : ApiBpmnNode {
     override val id: String
@@ -291,6 +293,10 @@ private const val STANDARD_LOOP_DESCRIPTION: String =
     "Optional standard-loop marker. Set only when the activity repeats until a condition is met " +
         "(a while/until/retry loop); leave null for an ordinary single-run task. Distinct from " +
         "multiInstance, which runs once per item in a collection."
+
+private const val PARENT_REF_DESCRIPTION: String =
+    "Id of the enclosing subprocess when this node is nested inside one; leave null for a top-level node. " +
+        "Nodes stay in the flat list and carry this back-reference rather than being nested."
 
 @JsonClassDescription(
     "Multi-instance loop characteristics: the activity executes once per item in a collection, " +
@@ -350,6 +356,8 @@ data class BpmnStartEvent(
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
     @get:JsonPropertyDescription("Whether this start interrupts its enclosing scope; event subprocess starts may set false")
     override val isInterrupting: Boolean = true,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnStartEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -369,6 +377,8 @@ data class BpmnUserTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnUserTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -388,6 +398,8 @@ data class BpmnServiceTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnServiceTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -407,6 +419,8 @@ data class BpmnScriptTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnScriptTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -433,6 +447,8 @@ data class BpmnBusinessRuleTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnBusinessRuleTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -458,6 +474,8 @@ data class BpmnSendTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnSendTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -482,6 +500,8 @@ data class BpmnReceiveTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnReceiveTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -501,6 +521,8 @@ data class BpmnManualTask(
     @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnManualTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -512,6 +534,8 @@ data class BpmnExclusiveGateway(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnExclusiveGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -523,6 +547,8 @@ data class BpmnInclusiveGateway(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnInclusiveGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -534,6 +560,8 @@ data class BpmnParallelGateway(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnParallelGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -545,6 +573,8 @@ data class BpmnEventBasedGateway(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnEventBasedGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -559,6 +589,8 @@ data class BpmnIntermediateCatchEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnIntermediateCatchEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -573,6 +605,8 @@ data class BpmnIntermediateThrowEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnIntermediateThrowEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -594,6 +628,8 @@ data class BpmnBoundaryEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnBoundaryEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -608,8 +644,33 @@ data class BpmnEndEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition; NONE represents a plain end event")
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnEndEvent {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+@JsonClassDescription(
+    "An embedded subprocess: a composite activity containing its own start-to-end flow. Its inner " +
+        "nodes and edges stay in the flat definition lists and carry parentRef = this subprocess's id.",
+)
+data class BpmnSubProcess(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @get:PklProperty("triggeredByEvent")
+    @get:JsonPropertyDescription(
+        "false for an ordinary embedded subprocess; true for an event subprocess (triggered by an " +
+            "inner event start rather than an incoming sequence flow).",
+    )
+    override val triggeredByEvent: Boolean = false,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode,
+    ApiBpmnSubProcess {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -625,6 +686,7 @@ data class BpmnUnrecognizedNode(
     override val id: String,
     override val name: String? = null,
     override val bpmnType: String,
+    override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnUnrecognizedNode {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -651,6 +713,8 @@ data class BpmnEdge(
             "condition expression themselves. At most one default flow per gateway.",
     )
     override val isDefault: Boolean = false,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
 ) : ApiBpmnEdge {
     init {
         require(!(isDefault && !conditionExpression.isNullOrBlank())) {

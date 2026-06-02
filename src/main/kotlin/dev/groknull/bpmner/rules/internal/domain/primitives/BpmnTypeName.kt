@@ -31,6 +31,10 @@ internal object BpmnTypeName {
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
     const val EVENT_BASED_GATEWAY = "bpmn:EventBasedGateway"
 
+    // An embedded subprocess is an Activity (a FlowNode), not a task/gateway/event. Surfaced so
+    // FlowNode/FlowElement-targeting rules see it; not a member of TASK/GATEWAY/EVENT categories.
+    const val SUB_PROCESS = "bpmn:SubProcess"
+
     // Artifact, not a flow node: surfaced so annotation-targeting rules (TextAnnotationUsage,
     // and the association sub-checks of MiTaskAnnotation) can match it. Deliberately absent from
     // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — it is not a FlowNode/FlowElement

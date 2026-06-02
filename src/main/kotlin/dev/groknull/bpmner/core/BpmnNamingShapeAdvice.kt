@@ -74,6 +74,10 @@ internal object BpmnNamingShapeAdvice {
 
         is BpmnBoundaryEvent -> BOUNDARY_EVENT_ADVICE
 
+        // A subprocess label is plain prose (the composite step's name); no shape convention
+        // beyond the generic "requires a name" rule, so no specific repair advice.
+        is BpmnSubProcess -> null
+
         // Fallback for elements without a typed Kotlin class. No naming-shape advice — no
         // sensible convention for a type we don't model.
         is BpmnUnrecognizedNode -> null
