@@ -61,14 +61,54 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
+TIMEOUT_OVERRIDES = {
+    "ActivityLabelCapitalizationTest": "moderate",
+    "BpmnConfigBindingTest": "moderate",
+    "BpmnNlpConcurrencyTest": "long",
+    "BpmnSubsetTest": "moderate",
+    "BpmnerModuleBoundariesTest": "moderate",
+    "BpmnerModulithTest": "moderate",
+    "BusinessMeaningfulLabelTest": "moderate",
+    "EventStatePatternTest": "moderate",
+    "NoDuplicateDiagramsTest": "moderate",
+    "PklRuleCatalogTest": "moderate",
+    "RepairStartupValidationTest": "moderate",
+    "UncommonAbbreviationsTest": "moderate",
+    "VerbObjectNameTest": "moderate",
+}
+
+SHARD_COUNTS = {
+    "BpmnContractFidelityCheckerTest": 4,
+    "BpmnContractValidatorTest": 2,
+    "BpmnDefinitionToXmlConverterTest": 2,
+    "BpmnDefinitionValidatorTest": 3,
+    "BpmnOwnershipTest": 2,
+    "BpmnPatchApplierTest": 4,
+    "BpmnReadinessPostCheckerTest": 2,
+    "BpmnXmlToDefinitionConverterTest": 2,
+    "DeterministicPrimitivesTest": 3,
+    "EventDefinitionRuleTest": 2,
+    "FlatContractMapperTest": 2,
+    "PklRuleCatalogTest": 3,
+    "TopologyHandlersTest": 3,
+}
+
+EXTRA_TAGS = {
+    "ActiveLiveLlmProfileConditionTest": ["spring-context"],
+    "BpmnAgentFlowSystemTest": ["spring-context"],
+    "BpmnGuardrailSystemTest": ["spring-context"],
+    "BpmnNlpConcurrencyTest": ["concurrency"],
+    "BpmnWebControllerTest": ["spring-context"],
+    "BpmnerApplicationTests": ["spring-context"],
+}
+
 TEST_FILES = glob(["kotlin/**/*Test.kt"])
 
 [java_junit5_test(
     name = f.split("/")[-1].replace(".kt", ""),
-    timeout = (
-        # SmokeTests involve live LLM calls; CI latency accumulates across 25+ tests.
-        # "long" (900 s) is too tight — use "eternal" (3 600 s) for the full suite.
-        "eternal" if "SmokeTest" in f else "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
+    timeout = TIMEOUT_OVERRIDES.get(
+        f.split("/")[-1].replace(".kt", ""),
+        "eternal" if "SmokeTest" in f else "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short",
     ),
     data = ["//samples:prose_samples"] if "FullPipelineSmokeTest" in f else [],
     env_inherit = [
@@ -78,13 +118,22 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
         "OPENAI_API_KEY",
         "SPRING_PROFILES_ACTIVE",
     ] if "SmokeTest" in f else [],
+    shard_count = SHARD_COUNTS.get(
+        f.split("/")[-1].replace(".kt", ""),
+        1,
+    ),
     tags = (
-        # FullPipelineSmokeTest runs the entire pipeline against long prose;
-        # it is intentionally "manual" so CI skips it via -manual filter.
         [
             "live-llm",
             "manual",
-        ] if "FullPipelineSmokeTest" in f else ["live-llm"] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else []
+            "no-remote",
+        ] if "FullPipelineSmokeTest" in f else [
+            "live-llm",
+            "no-remote",
+        ] if "SmokeTest" in f and "ContractVocabulary" not in f else ["integration"] if "IntegrationTest" in f else []
+    ) + EXTRA_TAGS.get(
+        f.split("/")[-1].replace(".kt", ""),
+        [],
     ),
     test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
     visibility = ["//visibility:public"],
