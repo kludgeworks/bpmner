@@ -43,6 +43,7 @@ import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -226,15 +227,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             }
 
             is UserTask -> {
-                BpmnUserTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnUserTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                )
             }
 
             is ServiceTask -> {
-                BpmnServiceTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnServiceTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                )
             }
 
             is ScriptTask -> {
-                BpmnScriptTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnScriptTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                )
             }
 
             is BusinessRuleTask -> {
@@ -243,6 +259,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
                 )
             }
 
@@ -252,6 +269,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
                 )
             }
 
@@ -261,11 +279,17 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
                 )
             }
 
             is ManualTask -> {
-                BpmnManualTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnManualTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                )
             }
 
             is ExclusiveGateway -> {
@@ -339,14 +363,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val decisionRefs: Map<String, String>,
         // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
         val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,
+        // Standard-loop characteristics, keyed by task id. Applies to any task kind.
+        val standardLoop: Map<String, StandardLoopCharacteristics>,
     )
 
     private fun taskMetadataFrom(document: Document): TaskMetadata {
         // Local helper (kept off the class surface) parsing one task's multi-instance marker.
         fun Element.multiInstanceOrNull(): MultiInstanceLoopCharacteristics? {
             val loop = childElements().firstOrNull { it.localName == "multiInstanceLoopCharacteristics" } ?: return null
-            // xsd:boolean admits "true"/"false" and "1"/"0"; honour both rather than only "true".
-            val isSequential = loop.getAttribute("isSequential").let { it.equals("true", ignoreCase = true) || it == "1" }
+            val isSequential = xsdBooleanOrDefault(loop.getAttribute("isSequential"), default = false)
             val mode = if (isSequential) MultiInstanceMode.SEQUENTIAL else MultiInstanceMode.PARALLEL
             return MultiInstanceLoopCharacteristics(
                 mode = mode,
@@ -359,6 +384,17 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 loop.childElements().firstOrNull { it.localName == "completionCondition" }
                     ?.textContent
                     ?.takeIf { it.isNotBlank() },
+            )
+        }
+        fun Element.standardLoopOrNull(): StandardLoopCharacteristics? {
+            val loop = childElements().firstOrNull { it.localName == "standardLoopCharacteristics" } ?: return null
+            // xsd:boolean; an absent attribute defaults to our domain default (while-loop = true).
+            val testBefore = xsdBooleanOrDefault(loop.getAttribute("testBefore"), default = true)
+            return StandardLoopCharacteristics(
+                testBefore = testBefore,
+                loopCondition =
+                loop.childElements().firstOrNull { it.localName == "loopCondition" }?.textContent?.takeIf { it.isNotBlank() },
+                loopMaximum = loop.getAttribute("loopMaximum").trim().toIntOrNull(),
             )
         }
         val sendReceive =
@@ -376,7 +412,18 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .mapNotNull { task -> task.multiInstanceOrNull()?.let { task.getAttribute("id") to it } }
                 .filter { (id, _) -> id.isNotBlank() }
                 .toMap()
-        return TaskMetadata(messageRefs = sendReceive, decisionRefs = businessRule, multiInstance = multiInstance)
+        val standardLoop =
+            BPMN_TASK_LOCAL_NAMES
+                .flatMap { document.bpmnElements(it).toList() }
+                .mapNotNull { task -> task.standardLoopOrNull()?.let { task.getAttribute("id") to it } }
+                .filter { (id, _) -> id.isNotBlank() }
+                .toMap()
+        return TaskMetadata(
+            messageRefs = sendReceive,
+            decisionRefs = businessRule,
+            multiInstance = multiInstance,
+            standardLoop = standardLoop,
+        )
     }
 
     private data class EventMetadata(
@@ -512,4 +559,12 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     }
 
     private fun Element.childElements(): Sequence<Element> = childNodes.elements()
+}
+
+// Parses an xsd:boolean attribute value: "true" / "1" (case-insensitive) → true, "false" / "0" →
+// false, blank (absent) → [default]. Top-level so the loop-characteristics parsers share it without
+// adding to the converter's method-complexity or class function count.
+private fun xsdBooleanOrDefault(raw: String, default: Boolean): Boolean {
+    if (raw.isBlank()) return default
+    return raw.equals("true", ignoreCase = true) || raw == "1"
 }

@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 9068,
-			"updatedBy": "#181 + #183",
-			"reason": "Event-based decision recognition merged with main's boundary-event contract prompt; #332 review corrected branch_kinds.jinja to mark EVENT_GATEWAY triggerDetail as required."
+			"chars": 9944,
+			"updatedBy": "#326 (on #181 + #183)",
+			"reason": "Standard-loop detection in activity_kinds.jinja, atop event-based + boundary-event prompt (incl. #332 required-triggerDetail wording)."
 		},
 		"contractFullPayload": {
-			"chars": 30061,
-			"updatedBy": "#181 + #183",
-			"reason": "Event-based prose + FlatContractBranch.triggerKind/triggerDetail schema, merged with main's boundary-event fields."
+			"chars": 32211,
+			"updatedBy": "#326 (on #181 + #183)",
+			"reason": "Loop prose + FlatContractActivity.loop / FlatContractLoop schema, atop the event-based + boundary-event fields."
 		},
 		"generationPrompt": {
-			"chars": 12487,
-			"updatedBy": "#181 + #183",
-			"reason": "Event-based-gateway topology merged with main's boundary-event wiring; #332 review made SIGNAL catch events name their signals entry from triggerDetail."
+			"chars": 13152,
+			"updatedBy": "#333 review",
+			"reason": "Reworded the standard-loop wiring contrast in generate_bpmn.jinja as positive guidance while preserving loop-to-standardLoop behavior."
 		},
 		"generationFullPayload": {
-			"chars": 25281,
-			"updatedBy": "#181 + #183",
-			"reason": "Event-based-gateway wiring prose + EVENT_BASED_GATEWAY discriminator, merged with main's boundary-event prose."
+			"chars": 27191,
+			"updatedBy": "#333 review",
+			"reason": "Generation prompt wording changed to reserve gateway back-edges for explicit branch flows."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -43,14 +43,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
-			"chars": 1709,
-			"updatedBy": "#188",
-			"reason": "Repair patch schema now carries the BPMN multiInstance / annotations / associations fields."
+			"chars": 1763,
+			"updatedBy": "#326",
+			"reason": "Repair patch schema now carries the FlatBpmnNode.standardLoop field."
 		},
 		"repairFullPrompt": {
-			"chars": 2005,
-			"updatedBy": "#188",
-			"reason": "Repair full-rewrite schema now carries the BPMN multiInstance / annotations / associations fields."
+			"chars": 2059,
+			"updatedBy": "#326",
+			"reason": "Repair full-rewrite schema now carries the FlatBpmnNode.standardLoop field."
 		}
 	}
 }

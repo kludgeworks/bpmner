@@ -5,15 +5,12 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
-import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -56,6 +53,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     FlatActivityKind.USER -> ContractActivity.User(
@@ -65,6 +63,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     FlatActivityKind.SCRIPT -> ContractActivity.Script(
@@ -74,6 +73,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     FlatActivityKind.MANUAL -> ContractActivity.Manual(
@@ -83,6 +83,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     // The three kinds carrying a required payload field (decisionName / messageName) are split out
@@ -99,6 +100,7 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     FlatActivityKind.SEND -> ContractActivity.Send(
@@ -109,6 +111,7 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     FlatActivityKind.RECEIVE -> ContractActivity.Receive(
@@ -119,25 +122,11 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         sourceIds = sourceIds,
         iteration = iteration?.toSealed(),
         boundaryEvents = boundaryEvents.map { it.toSealed() },
+        loop = loop?.toSealed(),
     )
 
     else -> error("toPayloadActivity called with non-payload kind: $kind")
 }
-
-private fun FlatContractIteration.toSealed(): ContractIteration = ContractIteration(
-    mode = mode,
-    collectionDescription = requireField(collectionDescription, mode, "collectionDescription", "iteration"),
-    loopCardinality = loopCardinality,
-    completionCondition = completionCondition,
-)
-
-private fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = ContractBoundaryEvent(
-    kind = kind,
-    label = requireField(label, kind, "label", "boundaryEvent"),
-    nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
-    cancelActivity = cancelActivity,
-    detail = if (kind == BoundaryEventKind.TIMER) requireField(detail, kind, "detail", "boundaryEvent") else detail,
-)
 
 public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
     FlatEndStateKind.NORMAL -> ContractEndState.Normal(id = id, name = name, sourceIds = sourceIds)

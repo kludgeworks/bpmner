@@ -24,6 +24,7 @@ import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -518,6 +519,21 @@ internal class PklRuleCatalogTest {
         assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(linked))
     }
 
+    @Test
+    fun `round-trip - LoopTaskAnnotation passes a loop task with a condition-word annotation`() {
+        val rule = activeRuleEndingWith("loop-task-annotation")
+        val ctx = loopCtx(annotationText = "Retry until the payment succeeds", linked = true, includePlainTask = true)
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - LoopTaskAnnotation fires on a loop task with no annotation, ignoring plain tasks`() {
+        val rule = activeRuleEndingWith("loop-task-annotation")
+        val ctx = loopCtx(annotationText = null, linked = false, includePlainTask = true)
+        // Only the loop task is flagged; the ordinary task is narrowed out by appliesWhenProperty.
+        assertEquals(listOf("act-loop"), rule.evaluate(ctx).map { it.elementId }.distinct())
+    }
+
     private fun activeRuleEndingWith(idSuffix: String): BpmnRule {
         val catalog = PklRuleCatalog(emptyList(), nlp)
         return catalog.activeRules().firstOrNull { it.id.endsWith(idSuffix) }
@@ -545,6 +561,30 @@ internal class PklRuleCatalogTest {
                 sequences = listOf(BpmnEdge("f1", "s", "act-mi"), BpmnEdge("f2", "act-mi", "e")),
                 annotations = annotationText?.let { listOf(BpmnTextAnnotation("ta-mi", it)) } ?: emptyList(),
                 associations = if (linked) listOf(BpmnAssociation("assoc-mi", "act-mi", "ta-mi")) else emptyList(),
+            ),
+        )
+    }
+
+    // A standard-loop user task `act-loop` plus its annotation `ta-loop`. Mirrors [miCtx]; proves
+    // LoopTaskAnnotation narrows to standard-loop tasks via appliesWhenProperty and reads annotationText.
+    private fun loopCtx(annotationText: String?, linked: Boolean, includePlainTask: Boolean): BpmnDefinitionContext {
+        val tasks =
+            listOfNotNull(
+                BpmnUserTask(
+                    "act-loop",
+                    "Charge card",
+                    standardLoop = StandardLoopCharacteristics(testBefore = false, loopCondition = "payment not yet successful"),
+                ),
+                if (includePlainTask) BpmnUserTask("act-plain", "Approve order") else null,
+            )
+        return BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(BpmnStartEvent("s", "Start")) + tasks + BpmnEndEvent("e", "End"),
+                sequences = listOf(BpmnEdge("f1", "s", "act-loop"), BpmnEdge("f2", "act-loop", "e")),
+                annotations = annotationText?.let { listOf(BpmnTextAnnotation("ta-loop", it)) } ?: emptyList(),
+                associations = if (linked) listOf(BpmnAssociation("assoc-loop", "act-loop", "ta-loop")) else emptyList(),
             ),
         )
     }

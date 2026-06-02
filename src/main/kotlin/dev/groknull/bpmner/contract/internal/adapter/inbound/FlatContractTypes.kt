@@ -127,6 +127,13 @@ public data class FlatContractActivity(
             "for ordinary activities. Distinct from a normal decision branch off the activity's outcome.",
     )
     val boundaryEvents: List<FlatContractBoundaryEvent> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Set when the activity repeats until a condition is met (a while/until/retry loop, e.g. " +
+            "\"retry up to 3 times until it succeeds\"). Leave null for an ordinary single-run " +
+            "activity. Distinct from a per-item iteration over a collection.",
+    )
+    val loop: FlatContractLoop? = null,
 )
 
 @JsonClassDescription(
@@ -181,6 +188,22 @@ public data class FlatContractBoundaryEvent(
             "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
     )
     val detail: String? = null,
+)
+
+@JsonClassDescription(
+    "Standard-loop marker for an activity that repeats until a condition is met (while/until/retry).",
+)
+public data class FlatContractLoop(
+    @get:JsonPropertyDescription(
+        "true = while-loop (condition checked before each run); false = until-loop (the activity " +
+            "runs once, then the condition is checked).",
+    )
+    val testBefore: Boolean = true,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".")
+    val loopCondition: String? = null,
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times.")
+    val loopMaximum: Int? = null,
 )
 
 @JsonClassDescription(

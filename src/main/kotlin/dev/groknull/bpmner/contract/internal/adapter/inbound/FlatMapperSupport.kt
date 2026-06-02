@@ -5,6 +5,11 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.api.BoundaryEventKind
+import dev.groknull.bpmner.contract.ContractBoundaryEvent
+import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
+
 /**
  * Asserts a kind-required wire field is present and (for text fields) non-blank, returning the
  * non-null value. Jakarta `@NotBlank` on the sealed constructors is schema-only, so the flat→sealed
@@ -18,3 +23,24 @@ internal fun <T : Any> requireField(value: T?, kind: Enum<*>, fieldName: String,
     }
     return nonNull
 }
+
+internal fun FlatContractIteration.toSealed(): ContractIteration = ContractIteration(
+    mode = mode,
+    collectionDescription = requireField(collectionDescription, mode, "collectionDescription", "iteration"),
+    loopCardinality = loopCardinality,
+    completionCondition = completionCondition,
+)
+
+internal fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = ContractBoundaryEvent(
+    kind = kind,
+    label = requireField(label, kind, "label", "boundaryEvent"),
+    nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
+    cancelActivity = cancelActivity,
+    detail = if (kind == BoundaryEventKind.TIMER) requireField(detail, kind, "detail", "boundaryEvent") else detail,
+)
+
+internal fun FlatContractLoop.toSealed(): ContractLoop = ContractLoop(
+    testBefore = testBefore,
+    loopCondition = loopCondition,
+    loopMaximum = loopMaximum,
+)

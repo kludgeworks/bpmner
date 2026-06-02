@@ -9,6 +9,7 @@ import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.api.StandardLoopCharacteristics
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -325,6 +326,11 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 // appendMultiInstance carries collectionDescription in our extension namespace.
                 bpmnerNamespaceUsed = true
             }
+            task.standardLoop?.let { loop ->
+                val element = allTaskElementsById[task.id]
+                    ?: error("Task '${task.id}' has a standard-loop marker but no task element was rendered for it")
+                element.appendStandardLoop(document, loop)
+            }
         }
 
         // Text annotations and associations are process-level artifacts (after flowElements in the
@@ -397,6 +403,26 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 mi.completionCondition?.takeIf { it.isNotBlank() }?.let { condition ->
                     loop.appendChild(
                         document.bpmnElement("completionCondition").also { it.textContent = condition },
+                    )
+                }
+            },
+        )
+    }
+
+    // Appends `<bpmn:standardLoopCharacteristics>` as the last child of a task element. testBefore
+    // distinguishes a while-loop (true) from an until-loop (false); loopMaximum and the
+    // loopCondition child are native BPMN, so no extension namespace is needed.
+    private fun Element.appendStandardLoop(
+        document: Document,
+        loop: StandardLoopCharacteristics,
+    ) {
+        appendChild(
+            document.bpmnElement("standardLoopCharacteristics").also { el ->
+                el.setAttribute("testBefore", loop.testBefore.toString())
+                loop.loopMaximum?.let { el.setAttribute("loopMaximum", it.toString()) }
+                loop.loopCondition?.takeIf { it.isNotBlank() }?.let { condition ->
+                    el.appendChild(
+                        document.bpmnElement("loopCondition").also { it.textContent = condition },
                     )
                 }
             },

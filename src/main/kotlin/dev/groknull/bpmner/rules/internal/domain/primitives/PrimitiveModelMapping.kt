@@ -152,6 +152,11 @@ internal fun BpmnNode.toPrimitiveElement(
         if (this@toPrimitiveElement is BpmnTask && multiInstance != null) {
             put("multiInstanceLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
         }
+        // Distinct key from multiInstanceLoopCharacteristics so the standard-loop and MI rules
+        // narrow to their own task sets via `appliesWhenProperty` and never overlap.
+        if (this@toPrimitiveElement is BpmnTask && standardLoop != null) {
+            put("standardLoopCharacteristics", "bpmn:StandardLoopCharacteristics")
+        }
         // Text of the annotation linked to this element (if any), letting vocabulary checks read
         // the annotation's wording without re-typing the element.
         annotationTextByElementId[id]?.let { put("annotationText", it) }

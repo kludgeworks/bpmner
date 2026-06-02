@@ -38,6 +38,7 @@ import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -152,6 +153,45 @@ class BpmnDefinitionToXmlConverterTest {
         assertFalse(xml.contains("multiInstanceLoopCharacteristics"), "plain task must not emit a loop marker")
         val plain = BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-plain" } as BpmnUserTask
         assertNull(plain.multiInstance)
+    }
+
+    @Test
+    fun `standard-loop task round-trips through render and parse`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Loop",
+                processName = "Standard loop",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnServiceTask(
+                        "act-charge",
+                        "Charge card",
+                        standardLoop = StandardLoopCharacteristics(
+                            testBefore = false,
+                            loopCondition = "payment not yet successful",
+                            loopMaximum = 3,
+                        ),
+                    ),
+                    BpmnEndEvent("EndEvent_1", "End"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "act-charge"),
+                    BpmnEdge("F2", "act-charge", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+        assertContains(xml, "standardLoopCharacteristics")
+        assertContains(xml, "testBefore=\"false\"")
+
+        val parsed =
+            BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-charge" } as BpmnServiceTask
+        val loop = assertNotNull(parsed.standardLoop, "expected the charge task to carry a standard-loop marker")
+        assertFalse(loop.testBefore)
+        assertEquals("payment not yet successful", loop.loopCondition)
+        assertEquals(3, loop.loopMaximum)
     }
 
     // A two-task process: a PARALLEL multi-instance user task (peer review) and a SEQUENTIAL

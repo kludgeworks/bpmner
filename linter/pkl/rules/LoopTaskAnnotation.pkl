@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Loop Task Annotation"
@@ -19,28 +20,23 @@ targetElements =
 
 severity = "error"
 errorMessages = new {
-  ["default"] = "Loop activity is missing a linked text annotation expressing loop-until intent"
+  ["default"] =
+    "Loop activity's annotation must express the loop condition with until, while, unless, or till"
 }
 
 staticConfig = new {
-  loopWords =
-    List(
-      "loop",
-      "loops",
-      "looping",
-      "repeat",
-      "repeats",
-      "repeating",
-      "retry",
-      "retries",
-      "retrying",
-      "rework",
-      "reworks",
-      "reworking",
-    )
   conditionWords = List("until", "while", "unless", "till")
 }
 
-// No checkPrimitive / checkConfig: this rule is inactive and skipped at load time. The domain
-// model represents only multi-instance loop characteristics, not `bpmn:StandardLoopCharacteristics`,
-// so there is no element for a standard-loop check to target.
+// The associated annotation's text must express the loop condition. Narrowed to standard-loop
+// tasks via `appliesWhenProperty` (the `standardLoopCharacteristics` / `annotationText` properties
+// are projected by `PrimitiveModelMapping`). A loop task with no annotation carries no
+// `annotationText`, so the REQUIRE check fires on it too — covering both the missing-annotation and
+// the wrong-wording cases in one check.
+checkPrimitive = "VocabularyCheck"
+checkConfig = new CheckPrimitive.VocabularyCheck {
+  property = "annotationText"
+  mode = "REQUIRE"
+  words = staticConfig.conditionWords
+  appliesWhenProperty = "standardLoopCharacteristics"
+}
