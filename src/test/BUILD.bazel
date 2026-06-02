@@ -1,7 +1,7 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test", "java_test_suite")
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
@@ -68,49 +68,19 @@ JUNIT5_DEPS = [
 ]
 
 # --- Tier 1: Fast pure-unit tests (the majority) ---
-java_test_suite(
-    name = "unit_tests",
-    timeout = "short",
-    srcs = glob(
-        ["kotlin/**/*Test.kt"],
-        exclude = [
-            # Declared explicitly below (need shard_count or unique timeout)
-            "**/BpmnContractFidelityCheckerTest.kt",
-            "**/BpmnPatchApplierTest.kt",
-            "**/PklRuleCatalogTest.kt",
-            "**/DeterministicPrimitivesTest.kt",
-            "**/BpmnDefinitionValidatorTest.kt",
-            "**/TopologyHandlersTest.kt",
-            "**/BpmnXmlToDefinitionConverterTest.kt",
-            "**/BpmnDefinitionToXmlConverterTest.kt",
-            # Spring-context tests (different timeout + tag tier)
-            "**/BpmnerModulithTest.kt",
-            "**/BpmnerModuleBoundariesTest.kt",
-            "**/BpmnConfigBindingTest.kt",
-            "**/RepairStartupValidationTest.kt",
-            "**/GenerationModuleTest.kt",
-            "**/ValidationModuleTest.kt",
-            "**/BpmnWebControllerTest.kt",
-            "**/BpmnAgentFlowSystemTest.kt",
-            "**/BpmnGuardrailSystemTest.kt",
-            "**/BpmnRepairAgentIntegrationTest.kt",
-            # Special cases (unique needs)
-            "**/BpmnNlpConcurrencyTest.kt",
-            "**/*SmokeTest.kt",
-            "**/ActiveLiveLlmProfileCondition.kt",
-            "**/UpdatePromptBaselines.kt",  # main(), not a test
-        ],
-    ),
-    runner = "junit5",
-    test_suffixes = ["Test.kt"],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
-)
-
-# --- Tier 2: Spring context / static analysis tests ---
-java_test_suite(
-    name = "spring_context_tests",
-    timeout = "moderate",
-    srcs = glob([
+_UNIT_TESTS = glob(
+    ["kotlin/**/*Test.kt"],
+    exclude = [
+        # Declared explicitly below (need shard_count or unique timeout)
+        "**/BpmnContractFidelityCheckerTest.kt",
+        "**/BpmnPatchApplierTest.kt",
+        "**/PklRuleCatalogTest.kt",
+        "**/DeterministicPrimitivesTest.kt",
+        "**/BpmnDefinitionValidatorTest.kt",
+        "**/TopologyHandlersTest.kt",
+        "**/BpmnXmlToDefinitionConverterTest.kt",
+        "**/BpmnDefinitionToXmlConverterTest.kt",
+        # Spring-context tests (different timeout + tag tier)
         "**/BpmnerModulithTest.kt",
         "**/BpmnerModuleBoundariesTest.kt",
         "**/BpmnConfigBindingTest.kt",
@@ -120,52 +90,81 @@ java_test_suite(
         "**/BpmnWebControllerTest.kt",
         "**/BpmnAgentFlowSystemTest.kt",
         "**/BpmnGuardrailSystemTest.kt",
-    ]),
-    runner = "junit5",
-    tags = ["spring-context"],
-    test_suffixes = ["Test.kt"],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+        "**/BpmnRepairAgentIntegrationTest.kt",
+        # Special cases (unique needs)
+        "**/BpmnNlpConcurrencyTest.kt",
+        "**/*SmokeTest.kt",
+        "**/ActiveLiveLlmProfileCondition.kt",
+        "**/UpdatePromptBaselines.kt",  # main(), not a test
+    ],
 )
+
+[java_junit5_test(
+    name = src.split("/")[-1].replace(".kt", ""),
+    timeout = "short",
+    test_class = src.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+) for src in _UNIT_TESTS]
+
+# --- Tier 2: Spring context / static analysis tests ---
+_SPRING_CONTEXT_TESTS = glob([
+    "**/BpmnerModulithTest.kt",
+    "**/BpmnerModuleBoundariesTest.kt",
+    "**/BpmnConfigBindingTest.kt",
+    "**/RepairStartupValidationTest.kt",
+    "**/GenerationModuleTest.kt",
+    "**/ValidationModuleTest.kt",
+    "**/BpmnWebControllerTest.kt",
+    "**/BpmnAgentFlowSystemTest.kt",
+    "**/BpmnGuardrailSystemTest.kt",
+])
+
+[java_junit5_test(
+    name = src.split("/")[-1].replace(".kt", ""),
+    timeout = "moderate",
+    tags = ["spring-context"],
+    test_class = src.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+) for src in _SPRING_CONTEXT_TESTS]
 
 # --- Tier 3: Shard candidates (explicit java_junit5_test targets) ---
 [java_junit5_test(
     name = name,
     timeout = timeout,
-    srcs = [src],
     shard_count = shard_count,
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+    test_class = src.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
 ) for name, src, shard_count, timeout in [
-    ("BpmnContractFidelityCheckerTest", "kotlin/generation/BpmnContractFidelityCheckerTest.kt", 4, "moderate"),
-    ("BpmnPatchApplierTest", "kotlin/repair/internal/adapter/outbound/BpmnPatchApplierTest.kt", 4, "short"),
-    ("PklRuleCatalogTest", "kotlin/rules/internal/domain/PklRuleCatalogTest.kt", 3, "moderate"),
-    ("DeterministicPrimitivesTest", "kotlin/rules/internal/domain/primitives/DeterministicPrimitivesTest.kt", 3, "short"),
-    ("BpmnDefinitionValidatorTest", "kotlin/validation/BpmnDefinitionValidatorTest.kt", 3, "short"),
-    ("TopologyHandlersTest", "kotlin/repair/internal/domain/TopologyHandlersTest.kt", 3, "short"),
-    ("BpmnXmlToDefinitionConverterTest", "kotlin/generation/BpmnXmlToDefinitionConverterTest.kt", 2, "moderate"),
-    ("BpmnDefinitionToXmlConverterTest", "kotlin/generation/BpmnDefinitionToXmlConverterTest.kt", 2, "moderate"),
+    ("BpmnContractFidelityCheckerTest", "kotlin/dev/groknull/bpmner/generation/BpmnContractFidelityCheckerTest.kt", 4, "moderate"),
+    ("BpmnPatchApplierTest", "kotlin/dev/groknull/bpmner/repair/internal/adapter/outbound/BpmnPatchApplierTest.kt", 4, "short"),
+    ("PklRuleCatalogTest", "kotlin/dev/groknull/bpmner/rules/internal/domain/PklRuleCatalogTest.kt", 3, "moderate"),
+    ("DeterministicPrimitivesTest", "kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/DeterministicPrimitivesTest.kt", 3, "short"),
+    ("BpmnDefinitionValidatorTest", "kotlin/dev/groknull/bpmner/validation/BpmnDefinitionValidatorTest.kt", 3, "short"),
+    ("TopologyHandlersTest", "kotlin/dev/groknull/bpmner/repair/internal/domain/TopologyHandlersTest.kt", 3, "short"),
+    ("BpmnXmlToDefinitionConverterTest", "kotlin/dev/groknull/bpmner/generation/BpmnXmlToDefinitionConverterTest.kt", 2, "moderate"),
+    ("BpmnDefinitionToXmlConverterTest", "kotlin/dev/groknull/bpmner/generation/BpmnDefinitionToXmlConverterTest.kt", 2, "moderate"),
 ]]
 
 # --- Tier 4: Unique exceptions ---
 java_junit5_test(
     name = "BpmnNlpConcurrencyTest",
     timeout = "long",
-    srcs = ["kotlin/rules/internal/domain/nlp/BpmnNlpConcurrencyTest.kt"],
     tags = ["concurrency"],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+    test_class = "dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlpConcurrencyTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
 )
 
 java_junit5_test(
     name = "BpmnRepairAgentIntegrationTest",
     timeout = "moderate",
-    srcs = ["kotlin/repair/BpmnRepairAgentIntegrationTest.kt"],
     tags = ["integration"],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+    test_class = "dev.groknull.bpmner.repair.BpmnRepairAgentIntegrationTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
 )
 
 java_junit5_test(
     name = "ContractVocabularySmokeTest",
     timeout = "eternal",
-    srcs = ["kotlin/smoke/ContractVocabularySmokeTest.kt"],
     env_inherit = [
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
@@ -176,13 +175,13 @@ java_junit5_test(
         "live-llm",
         "no-remote",
     ],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+    test_class = "dev.groknull.bpmner.smoke.ContractVocabularySmokeTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
 )
 
 java_junit5_test(
     name = "LiveLlmFullPipelineSmokeTest",
     timeout = "eternal",
-    srcs = ["kotlin/smoke/LiveLlmFullPipelineSmokeTest.kt"],
     env_inherit = [
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
@@ -194,7 +193,8 @@ java_junit5_test(
         "manual",
         "no-remote",
     ],
-    deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+    test_class = "dev.groknull.bpmner.smoke.LiveLlmFullPipelineSmokeTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
 )
 
 ktlint_test(
