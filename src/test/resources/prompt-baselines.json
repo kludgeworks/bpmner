@@ -13,14 +13,14 @@
 			"reason": "Loop prose + FlatContractActivity.loop / FlatContractLoop schema, atop the event-based + boundary-event fields."
 		},
 		"generationPrompt": {
-			"chars": 13141,
-			"updatedBy": "#326 (on #181 + #183)",
-			"reason": "Loop-to-standardLoop wiring in generate_bpmn.jinja, stacked on the event-based + boundary-event wiring."
+			"chars": 13152,
+			"updatedBy": "#333 review",
+			"reason": "Reworded the standard-loop wiring contrast in generate_bpmn.jinja as positive guidance while preserving loop-to-standardLoop behavior."
 		},
 		"generationFullPayload": {
-			"chars": 27180,
-			"updatedBy": "#326 (on #181 + #183)",
-			"reason": "Loop wiring prose + FlatBpmnNode.standardLoop / FlatStandardLoopCharacteristics, atop the event-based + boundary-event prose."
+			"chars": 27191,
+			"updatedBy": "#333 review",
+			"reason": "Generation prompt wording changed to reserve gateway back-edges for explicit branch flows."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
