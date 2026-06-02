@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 7468,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-01"
+			"chars": 8665,
+			"updatedBy": "#325 + #183",
+			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
 		},
 		"contractFullPayload": {
-			"chars": 25202,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-01"
+			"chars": 28570,
+			"updatedBy": "#325 + #183",
+			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
 		},
 		"generationPrompt": {
-			"chars": 10844,
-			"updatedBy": "#188",
-			"reason": "Added the contract-iteration → multi-instance wiring rule (emit multiInstance + linked text annotation/association) to generate_bpmn."
+			"chars": 11609,
+			"updatedBy": "#183",
+			"reason": "Boundary-events wiring rule in generate_bpmn.jinja (reworded per #330 review)."
 		},
 		"generationFullPayload": {
-			"chars": 23615,
-			"updatedBy": "#188",
-			"reason": "FlatBpmnNode gained `multiInstance` (FlatMultiInstanceLoopCharacteristics) and FlatBpmnDefinition gained annotations/associations, plus the generation wiring rule."
+			"chars": 24380,
+			"updatedBy": "#183",
+			"reason": "Boundary-events wiring prose in generate_bpmn.jinja."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,

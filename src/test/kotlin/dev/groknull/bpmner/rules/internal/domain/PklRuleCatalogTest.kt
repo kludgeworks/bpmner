@@ -7,16 +7,20 @@ package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnAssociation
+import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTextAnnotation
+import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
@@ -298,6 +302,99 @@ internal class PklRuleCatalogTest {
         assertEquals(listOf("bad"), diagnostics.map { it.elementId })
     }
 
+    // -------------------------------------------------------------------------------------
+    // Diverging-flow rules: OUTGOING_FLOWS_NAMED flags a diverging gateway (not the flow) when any
+    // of its outgoing branches is unnamed; it ignores converging gateways and incoming flows.
+
+    @Test
+    fun `round-trip - DivergingFlowNames fires on a gateway with an unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames is silent when every outgoing branch is named`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(divergingGatewayCtx(secondBranchName = "Rejected")))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowNames ignores unnamed incoming flows on a converging gateway`() {
+        val rule = activeRuleEndingWith("diverging-flow-names")
+        // A converging gateway has a single outgoing flow, so it is not diverging — it must not fire
+        // even when that lone outgoing flow (and the incoming ones) are unnamed.
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s1", "Start A"),
+                    BpmnStartEvent("s2", "Start B"),
+                    BpmnExclusiveGateway("g", "Merge"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s1", "g"),
+                    BpmnEdge("f2", "s2", "g"),
+                    BpmnEdge("f3", "g", "e"),
+                ),
+            ),
+        )
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - DivergingFlowOutcomeLabel also fires on the same unnamed outgoing branch`() {
+        val rule = activeRuleEndingWith("diverging-flow-outcome-label")
+        assertEquals(listOf("g"), rule.evaluate(divergingGatewayCtx(secondBranchName = null)).map { it.elementId })
+    }
+
+    // -------------------------------------------------------------------------------------
+    // BoundaryEventConstraints — one composite rule, four sub-check codes. Each context injects
+    // exactly one violation so the asserted diagnosticCode is unambiguous.
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints passes a well-formed interrupting boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a detached boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(attachedToRef = "ghost"), listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(listOf("detached"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a boundary event with incoming flow`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), listOf(BpmnEdge("bf", "be", "caught"), BpmnEdge("inc", "t", "be")))
+        assertEquals(listOf("incoming"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a boundary event with no outgoing flow`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val ctx = boundaryCtx(timerBoundary(), emptyList())
+        assertEquals(listOf("outgoing"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
+    @Test
+    fun `round-trip - BoundaryEventConstraints flags a non-interrupting error boundary event`() {
+        val rule = activeRuleEndingWith("boundary-event-constraints")
+        val errorBoundary = BpmnBoundaryEvent(
+            id = "be",
+            name = "Chargeback",
+            attachedToRef = "t",
+            cancelActivity = false,
+            eventDefinition = BpmnErrorEventDefinition("err-chargeback"),
+        )
+        val ctx = boundaryCtx(errorBoundary, listOf(BpmnEdge("bf", "be", "caught")))
+        assertEquals(listOf("errorInterrupting"), rule.evaluate(ctx).map { it.diagnosticCode })
+    }
+
     @Test
     fun `catalog reports loaded count clearly when only compiled rules contribute`() {
         // Until 2D.7 ports rules with checkPrimitive set, the Pkl side adds nothing. The
@@ -405,6 +502,54 @@ internal class PklRuleCatalogTest {
             ),
         ),
     )
+
+    // A diverging exclusive gateway `g` with two outgoing branches: one named "Approved" and one
+    // whose name is [secondBranchName] (null = unnamed, the violation).
+    private fun divergingGatewayCtx(secondBranchName: String?): BpmnDefinitionContext = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnExclusiveGateway("g", "Is the order approved?"),
+                BpmnEndEvent("e1", "Approved"),
+                BpmnEndEvent("e2", "Other"),
+            ),
+            sequences = listOf(
+                BpmnEdge("f0", "s", "g"),
+                BpmnEdge("f1", "g", "e1", name = "Approved"),
+                BpmnEdge("f2", "g", "e2", name = secondBranchName),
+            ),
+        ),
+    )
+
+    private fun timerBoundary(attachedToRef: String = "t"): BpmnBoundaryEvent = BpmnBoundaryEvent(
+        id = "be",
+        name = "Timeout",
+        attachedToRef = attachedToRef,
+        cancelActivity = true,
+        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
+    )
+
+    // A task `t` (start -> t -> end "e") plus a [boundary] event `be` and its [boundaryEdges],
+    // routing the caught path to a second end "caught". Each test passes a boundary event / edge
+    // set carrying exactly one violation.
+    private fun boundaryCtx(boundary: BpmnBoundaryEvent, boundaryEdges: List<BpmnEdge>): BpmnDefinitionContext {
+        return BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnUserTask("t", "Do the work"),
+                    boundary,
+                    BpmnEndEvent("e", "Done"),
+                    BpmnEndEvent("caught", "Handled"),
+                ),
+                sequences = listOf(BpmnEdge("f1", "s", "t"), BpmnEdge("f2", "t", "e")) + boundaryEdges,
+            ),
+        )
+    }
 
     companion object {
         private const val ACTIVITY_LABEL_RULE_ID = "act-activity-label-capitalization"

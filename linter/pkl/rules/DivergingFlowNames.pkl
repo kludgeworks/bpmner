@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Diverging Flow Names"
@@ -24,3 +25,8 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+checkPrimitive = "ConnectivityCheck"
+checkConfig = new CheckPrimitive.ConnectivityCheck {
+  mode = "OUTGOING_FLOWS_NAMED"
+}

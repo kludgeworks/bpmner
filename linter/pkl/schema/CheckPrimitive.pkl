@@ -125,7 +125,7 @@ class TopologyCheck extends CheckConfig {
 }
 
 class ConnectivityCheck extends CheckConfig {
-  mode: "NO_INCOMING" | "FLOWS_NAMED" | "WITHIN_POOL" | "ACROSS_POOLS"
+  mode: "NO_INCOMING" | "FLOWS_NAMED" | "OUTGOING_FLOWS_NAMED" | "WITHIN_POOL" | "ACROSS_POOLS"
   sourceTypes: List<NonEmptyString> = List()
   targetTypes: List<NonEmptyString> = List()
 }
@@ -152,6 +152,9 @@ class ElementConstraintCheck extends CheckConfig {
     | "TIMER_EXPRESSION"
     | "PARALLEL_GATEWAY_STRUCTURE"
     | "EVENT_BASED_GATEWAY_DIRECT_EVENTS"
+    | "BOUNDARY_ATTACHED"
+    | "BOUNDARY_SINGLE_OUTGOING"
+    | "BOUNDARY_ERROR_INTERRUPTING"
   constraints: Mapping<NonEmptyString, Any> = new Mapping {}
 }
 
