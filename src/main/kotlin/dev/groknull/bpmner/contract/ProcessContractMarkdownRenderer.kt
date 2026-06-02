@@ -47,7 +47,7 @@ private fun StringBuilder.appendActivities(contract: ProcessContract) {
         contract.activities.forEach { activity ->
             val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
             val kindSuffix = activitySuffix(activity)
-            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
+            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix${dataSuffix(activity)}")
         }
     }
 }
@@ -74,7 +74,7 @@ private fun StringBuilder.appendArtifacts(contract: ProcessContract) {
         appendLine("## Artifacts")
         contract.artifacts.forEach { artifact ->
             val description = artifact.description?.let { " — $it" }.orEmpty()
-            appendLine("- ${artifact.id}: ${artifact.name}$description")
+            appendLine("- ${artifact.id}: ${artifact.name} [${artifact.kind}]$description")
         }
     }
 }
@@ -124,6 +124,14 @@ private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.l
 // its label to keep the rendering quiet; Send / Receive / BusinessRule carry their
 // payload reference to keep the rendered contract self-contained for the BPMN-generation
 // LLM (otherwise it would have to walk back to the source prose for the messageName).
+// Data reads/writes referencing the contract's artifacts, so the BPMN-generation LLM can wire a
+// READ/WRITE data association from the activity to each data object/store.
+private fun dataSuffix(activity: ContractActivity): String {
+    val reads = activity.dataInputIds.takeIf { it.isNotEmpty() }?.let { " reads=${it.joinToString(",")}" }.orEmpty()
+    val writes = activity.dataOutputIds.takeIf { it.isNotEmpty() }?.let { " writes=${it.joinToString(",")}" }.orEmpty()
+    return reads + writes
+}
+
 private fun activitySuffix(activity: ContractActivity): String = when (activity) {
     is ContractActivity.Service -> ""
     is ContractActivity.User -> " [USER]"

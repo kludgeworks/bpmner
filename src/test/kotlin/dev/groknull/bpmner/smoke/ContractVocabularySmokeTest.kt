@@ -11,6 +11,7 @@ import com.embabel.agent.core.ProcessOptions
 import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -121,6 +122,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasBoundary) {
             "Expected an activity carrying a $kind boundary event, but found: " +
                 activities.joinToString { "${it.name}(boundaryEvents=${it.boundaryEvents})" }
+        }
+    }
+
+    private fun ProcessContract.assertHasArtifactKind(kind: ContractArtifactKind) {
+        val hasArtifact = artifacts.any { it.kind == kind }
+        assertTrue(hasArtifact) {
+            "Expected a $kind artifact, but found: " +
+                artifacts.joinToString { "${it.id}: '${it.name}', kind=${it.kind}" }
         }
     }
 
@@ -422,5 +431,17 @@ class ContractVocabularySmokeTest {
             "Expected an activity carrying a standard loop, but found: " +
                 c.activities.joinToString { "${it.name}(loop=${it.loop})" }
         }
+    }
+
+    @Test
+    fun `data objects and stores`() {
+        val c = extractContract(
+            """
+            When an order is received, the system reads the customer record from the customer
+            database and produces a validated order, which it then stores.
+            """,
+        )
+        c.assertHasArtifactKind(ContractArtifactKind.DATA_STORE)
+        c.assertHasArtifactKind(ContractArtifactKind.DATA_OBJECT)
     }
 }

@@ -13,6 +13,7 @@ import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnDataObject
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -533,6 +534,29 @@ internal class PklRuleCatalogTest {
         // Only the loop task is flagged; the ordinary task is narrowed out by appliesWhenProperty.
         assertEquals(listOf("act-loop"), rule.evaluate(ctx).map { it.elementId }.distinct())
     }
+
+    @Test
+    fun `round-trip - NoTypeWordsInDataName fires on a type-word data name and passes a clean one`() {
+        val rule = activeRuleEndingWith("no-type-words-in-data-name")
+
+        assertEquals(listOf("d-bad"), rule.evaluate(dataObjectCtx("d-bad", "Order activity")).map { it.elementId })
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(dataObjectCtx("d-ok", "Order")))
+    }
+
+    // A process with a single data object `dataId` named `dataName`, projected for the data-naming rule.
+    private fun dataObjectCtx(dataId: String, dataName: String): BpmnDefinitionContext = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("t", "Handle order"),
+                BpmnEndEvent("e", "End"),
+            ),
+            sequences = listOf(BpmnEdge("f1", "s", "t"), BpmnEdge("f2", "t", "e")),
+            dataObjects = listOf(BpmnDataObject(dataId, dataName)),
+        ),
+    )
 
     private fun activeRuleEndingWith(idSuffix: String): BpmnRule {
         val catalog = PklRuleCatalog(emptyList(), nlp)

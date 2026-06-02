@@ -31,9 +31,30 @@ internal class BpmnContractValidator {
                 validateUniqueIds(contract) +
                 validateDecisions(contract) +
                 validateIntermediateThrows(contract) +
-                validateTraceability(contract)
+                validateTraceability(contract) +
+                validateActivityDataRefs(contract)
 
         return ContractValidationReport(issues = issues)
+    }
+
+    // Every id in an activity's dataInputIds/dataOutputIds must reference a declared artifact
+    // (data object/store), so the generator can wire a data association to an element that exists.
+    private fun validateActivityDataRefs(contract: ProcessContract): List<ContractValidationIssue> = buildList {
+        val artifactIds = contract.artifacts.map { it.id }.toSet()
+        contract.activities.forEach { activity ->
+            (activity.dataInputIds + activity.dataOutputIds)
+                .filter { it.isNotBlank() && it !in artifactIds }
+                .forEach { missingId ->
+                    add(
+                        errorIssue(
+                            code = ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS,
+                            message = "activity '${activity.id}' references data id '$missingId'" +
+                                " that is not declared in the contract's artifacts",
+                            targetId = activity.id,
+                        ),
+                    )
+                }
+        }
     }
 
     private fun validateProcessIdentity(contract: ProcessContract): List<ContractValidationIssue> = buildList {

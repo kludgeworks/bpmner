@@ -5,6 +5,10 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import dev.groknull.bpmner.api.DataFlowDirection
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
@@ -27,6 +31,10 @@ internal object GenerationExamples {
 
     const val INCLUSIVE_LABEL: String =
         "INCLUSIVE fork with a DEFAULT branch: conditions are independent; the join waits only for the branches that fired"
+
+    const val DATA_ARTIFACTS_LABEL: String =
+        "Data objects/stores: an activity reads a data store + data object and writes a data object; " +
+            "each link is a READ/WRITE data association"
 
     private const val START = "StartEvent_1"
 
@@ -99,6 +107,41 @@ internal object GenerationExamples {
                 BpmnEdge("Flow_7", SKIP, EXTRAS_JOIN),
                 BpmnEdge("Flow_8", EXTRAS_JOIN, LABEL),
                 BpmnEdge("Flow_9", LABEL, PACKED),
+            ),
+        )
+
+    private const val DATA_START = "StartEvent_1"
+    private const val VALIDATE = "act-validate-order"
+    private const val DATA_END = "end-validated"
+    private const val ORDER = "DataObject_order"
+    private const val VALIDATED = "DataObject_validated_order"
+    private const val CUSTOMER_DB = "DataStore_customer"
+
+    val dataArtifacts: FlatBpmnDefinition =
+        FlatBpmnDefinition(
+            processId = "Process_order_validation",
+            processName = "Order validation",
+            nodes = listOf(
+                FlatBpmnNode(DATA_START, FlatBpmnNodeKind.START_EVENT, "Order received"),
+                FlatBpmnNode(VALIDATE, FlatBpmnNodeKind.SERVICE_TASK, "Validate order"),
+                FlatBpmnNode(DATA_END, FlatBpmnNodeKind.END_EVENT, "Order validated"),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", DATA_START, VALIDATE),
+                BpmnEdge("Flow_2", VALIDATE, DATA_END),
+            ),
+            // Business-noun names only — no "activity"/"process"/"event" type words.
+            dataObjects = listOf(
+                BpmnDataObject(ORDER, "Order"),
+                BpmnDataObject(VALIDATED, "Validated order"),
+            ),
+            dataStores = listOf(
+                BpmnDataStore(CUSTOMER_DB, "Customer database"),
+            ),
+            dataAssociations = listOf(
+                BpmnDataAssociation("DataAssoc_1", VALIDATE, ORDER, DataFlowDirection.READ),
+                BpmnDataAssociation("DataAssoc_2", VALIDATE, CUSTOMER_DB, DataFlowDirection.READ),
+                BpmnDataAssociation("DataAssoc_3", VALIDATE, VALIDATED, DataFlowDirection.WRITE),
             ),
         )
 }

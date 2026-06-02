@@ -11,15 +11,20 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.PklProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
 import dev.groknull.bpmner.api.BpmnAssociation as ApiBpmnAssociation
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnDataAssociation as ApiBpmnDataAssociation
+import dev.groknull.bpmner.api.BpmnDataObject as ApiBpmnDataObject
+import dev.groknull.bpmner.api.BpmnDataStore as ApiBpmnDataStore
 import dev.groknull.bpmner.api.BpmnDefinition as ApiBpmnDefinition
 import dev.groknull.bpmner.api.BpmnEdge as ApiBpmnEdge
 import dev.groknull.bpmner.api.BpmnEndEvent as ApiBpmnEndEvent
@@ -111,6 +116,15 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
     override val associations: List<BpmnAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data objects (transient information) flowing through the process")
+    override val dataObjects: List<BpmnDataObject> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data stores (persisted information: databases, files, queues) the process reads or writes")
+    override val dataStores: List<BpmnDataStore> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Read/write links between activities and data objects/stores")
+    override val dataAssociations: List<BpmnDataAssociation> = emptyList(),
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
     // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
     // benign extra field on serialize and an unknown field on deserialize (skipped).
@@ -667,3 +681,39 @@ data class BpmnAssociation(
     @get:JsonPropertyDescription("Target element id (the text annotation)")
     override val targetRef: String,
 ) : ApiBpmnAssociation
+
+@JsonClassDescription("BPMN data object: transient information flowing through the process")
+data class BpmnDataObject(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-object id, e.g. DataObject_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Business name of the data object, e.g. \"Order\"")
+    override val name: String,
+) : ApiBpmnDataObject
+
+@JsonClassDescription("BPMN data store: persisted information (database, file, queue) the process reads or writes")
+data class BpmnDataStore(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-store id, e.g. DataStore_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Business name of the data store, e.g. \"Customer database\"")
+    override val name: String,
+) : ApiBpmnDataStore
+
+@JsonClassDescription("Read/write link between an activity and a data object or store")
+data class BpmnDataAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-association id, e.g. DataAssociation_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Source activity id (the reader or writer)")
+    override val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Target data object/store id")
+    override val targetRef: String,
+    @field:NotNull
+    @get:JsonPropertyDescription("READ = activity consumes the data; WRITE = activity produces or updates it")
+    override val direction: DataFlowDirection,
+) : ApiBpmnDataAssociation

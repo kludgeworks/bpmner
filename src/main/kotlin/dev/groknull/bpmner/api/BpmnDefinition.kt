@@ -32,6 +32,15 @@ interface BpmnDefinition {
     /** Association edges linking annotations (and other artifacts) to flow elements. */
     val associations: List<BpmnAssociation> get() = emptyList()
 
+    /** Data objects (transient information) flowing through the process. */
+    val dataObjects: List<BpmnDataObject> get() = emptyList()
+
+    /** Data stores (persisted information: databases, files, queues) the process reads or writes. */
+    val dataStores: List<BpmnDataStore> get() = emptyList()
+
+    /** Read/write links between an activity and a data object or store. */
+    val dataAssociations: List<BpmnDataAssociation> get() = emptyList()
+
     // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
     // model does not carry DI content; the count is the only signal that survives. The
     // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
@@ -196,6 +205,36 @@ interface BpmnAssociation {
     val id: String
     val sourceRef: String
     val targetRef: String
+}
+
+/** A BPMN data object: transient information flowing through the process. Renders to `<bpmn:dataObject>`. */
+interface BpmnDataObject {
+    val id: String
+    val name: String
+}
+
+/**
+ * A BPMN data store: persisted information (database, file, queue) the process reads or writes.
+ * Renders to `<bpmn:dataStore>`.
+ */
+interface BpmnDataStore {
+    val id: String
+    val name: String
+}
+
+/** Direction of a [BpmnDataAssociation]: the activity reads from, or writes to, the data element. */
+enum class DataFlowDirection { READ, WRITE }
+
+/**
+ * A read/write link between an activity (`sourceRef`) and a data object or store (`targetRef`).
+ * Distinct from [BpmnAssociation] (annotation links) and [BpmnEdge] (token flow). Renders to a
+ * `<bpmn:dataInputAssociation>` (READ) or `<bpmn:dataOutputAssociation>` (WRITE) child of the activity.
+ */
+interface BpmnDataAssociation {
+    val id: String
+    val sourceRef: String
+    val targetRef: String
+    val direction: DataFlowDirection
 }
 
 /** Process-level message catalog entry, referenced by message event definitions and tasks. */

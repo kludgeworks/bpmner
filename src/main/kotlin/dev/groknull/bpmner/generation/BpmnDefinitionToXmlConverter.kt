@@ -5,8 +5,10 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.api.BpmnDataAssociation
 import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.api.StandardLoopCharacteristics
@@ -315,9 +317,20 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
         }
 
+        val allTaskElementsById = document.allTaskElementsById()
+
+        // Data input/output associations are activity children that precede loopCharacteristics in
+        // the tActivity XSD sequence, so stamp them before the multi-instance pass. READ →
+        // <dataInputAssociation> (data element in its <sourceRef>), WRITE → <dataOutputAssociation>
+        // (data element in its <targetRef>); the activity is the parent element.
+        definition.dataAssociations.forEach { da ->
+            val element = allTaskElementsById[da.sourceRef]
+                ?: error("Data association '${da.id}' sourceRef '${da.sourceRef}' has no rendered task element")
+            element.appendDataAssociation(document, da)
+        }
+
         // Multi-instance marker applies to every task kind, so stamp it in a dedicated pass over
         // all task elements rather than widening the attribute `when` above with seven arms.
-        val allTaskElementsById = document.allTaskElementsById()
         definition.nodes.filterIsInstance<BpmnTask>().forEach { task ->
             task.multiInstance?.let { mi ->
                 val element = allTaskElementsById[task.id]
@@ -349,6 +362,24 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                     el.setAttribute("id", association.id)
                     el.setAttribute("sourceRef", association.sourceRef)
                     el.setAttribute("targetRef", association.targetRef)
+                },
+            )
+        }
+        // Data objects are process-level flow elements (children of <process>); data stores are
+        // definitions-level root elements (siblings of <process>), per the BPMN XSD.
+        definition.dataObjects.forEach { dataObject ->
+            process.appendChild(
+                document.bpmnElement("dataObject").also { el ->
+                    el.setAttribute("id", dataObject.id)
+                    el.setAttribute("name", dataObject.name)
+                },
+            )
+        }
+        definition.dataStores.forEach { dataStore ->
+            root.appendChild(
+                document.bpmnElement("dataStore").also { el ->
+                    el.setAttribute("id", dataStore.id)
+                    el.setAttribute("name", dataStore.name)
                 },
             )
         }
@@ -425,6 +456,27 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                         document.bpmnElement("loopCondition").also { it.textContent = condition },
                     )
                 }
+            },
+        )
+    }
+
+    // Appends a `<bpmn:dataInputAssociation>` (READ) or `<bpmn:dataOutputAssociation>` (WRITE) as a
+    // child of the activity, carrying the data element id in the spec child (`<sourceRef>` for inputs,
+    // `<targetRef>` for outputs). Stamped before any multiInstanceLoopCharacteristics to honour the
+    // tActivity XSD sequence (dataInput/OutputAssociation precede loopCharacteristics).
+    private fun Element.appendDataAssociation(document: Document, da: BpmnDataAssociation) {
+        // tDataAssociation requires a targetRef, so emit BOTH refs: the data element id sits on the
+        // direction-appropriate child (sourceRef for READ, targetRef for WRITE) and the activity id on
+        // the other. Keeps the XML XSD-valid and lets the parser recover the data id by direction.
+        val (localName, sourceId, targetId) = when (da.direction) {
+            DataFlowDirection.READ -> Triple("dataInputAssociation", da.targetRef, da.sourceRef)
+            DataFlowDirection.WRITE -> Triple("dataOutputAssociation", da.sourceRef, da.targetRef)
+        }
+        appendChild(
+            document.bpmnElement(localName).also { assoc ->
+                assoc.setAttribute("id", da.id)
+                assoc.appendChild(document.bpmnElement("sourceRef").also { it.textContent = sourceId })
+                assoc.appendChild(document.bpmnElement("targetRef").also { it.textContent = targetId })
             },
         )
     }
