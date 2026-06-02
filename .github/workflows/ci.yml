@@ -65,11 +65,17 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
+          OPENAI_API_KEY: op://bpmner/openai/api-key
+          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+          GEMINI_API_KEY: op://bpmner/gemini/api-key
 
       - name: Build and run all tests
         run: |
           bazel test \
             --config=rbe \
+            --test_env=OPENAI_API_KEY \
+            --test_env=ANTHROPIC_API_KEY \
+            --test_env=GEMINI_API_KEY \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --test_output=errors \
             //...
@@ -185,6 +191,9 @@ jobs:
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
+          OPENAI_API_KEY: op://bpmner/openai/api-key
+          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+          GEMINI_API_KEY: op://bpmner/gemini/api-key
 
       - name: Run Bazel coverage
         id: coverage
@@ -192,6 +201,9 @@ jobs:
           bazel coverage //... \
             --config=ci \
             --strategy=CoverageReport=local \
+            --test_env=OPENAI_API_KEY \
+            --test_env=ANTHROPIC_API_KEY \
+            --test_env=GEMINI_API_KEY \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
