@@ -25,6 +25,8 @@ bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 bazel_dep(name = "rules_pmd", version = "0.4.0")
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 
+use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
+
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.1.1", dev_dependency = True)
 
 # --- PMD Tooling ---
