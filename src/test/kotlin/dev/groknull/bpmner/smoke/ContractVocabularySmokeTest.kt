@@ -267,7 +267,8 @@ class ContractVocabularySmokeTest {
     fun `message end`() {
         val c = extractContract(
             """
-            The process begins when started. When everything is done, the process wraps up by sending a final invoice.
+            The process begins when started. The order is validated.
+            The process then terminates by dispatching the final invoice as an outbound message to the customer.
             """,
         )
         c.assertHasEndState<ContractEndState.Message>()
@@ -297,8 +298,9 @@ class ContractVocabularySmokeTest {
     fun `intermediate message throw`() {
         val c = extractContract(
             """
-            The process starts when requested. The system sends a confirmation message to billing
-            without ending the process. Then the process completes normally.
+            The process starts when requested. The system validates the request.
+            It then sends a confirmation message to billing without ending the process.
+            Then the process completes normally.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
@@ -309,7 +311,8 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process starts when requested. After updating inventory, it broadcasts
-            an inventory-updated signal to listening systems. Then the process ends.
+            an inventory-updated signal to listening systems. Then the record is archived
+            and the process ends.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
@@ -319,8 +322,9 @@ class ContractVocabularySmokeTest {
     fun `intermediate escalation throw`() {
         val c = extractContract(
             """
-            The process starts when requested. If approval is overdue, a non-interrupting
-            escalation is raised and the process continues to archive the request before ending normally.
+            The process starts when requested. The approver reviews the request.
+            If approval is overdue, a non-interrupting escalation is raised and
+            the process continues to archive the request before ending normally.
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()

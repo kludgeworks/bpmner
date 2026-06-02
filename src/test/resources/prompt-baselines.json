@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 8633,
-			"updatedBy": "#183",
-			"reason": "Boundary-events detection block in activity_kinds.jinja (reworded per #330 review to drop emphatic-negation prose)."
+			"chars": 8665,
+			"updatedBy": "#325 + #183",
+			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
 		},
 		"contractFullPayload": {
-			"chars": 28538,
-			"updatedBy": "#183",
-			"reason": "Boundary-events detection prose plus the FlatContractActivity.boundaryEvents / FlatContractBoundaryEvent schema fields."
+			"chars": 28570,
+			"updatedBy": "#325 + #183",
+			"reason": "Regenerated after merging main's boundary-event contract prompt/schema changes into the OpenAI CI prompt updates."
 		},
 		"generationPrompt": {
 			"chars": 11609,

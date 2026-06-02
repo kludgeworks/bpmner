@@ -14,6 +14,8 @@ spring:
       gh:
         - github
         - verbose
+      openai:
+        - openai
       web:
         - web
 
