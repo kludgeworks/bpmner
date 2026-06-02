@@ -63,6 +63,10 @@ class BpmnEventSubProcessRoundTripTest {
         val trigger = innerStart.eventDefinition
         assertIs<BpmnMessageEventDefinition>(trigger)
         assertEquals("Msg_cancel", trigger.messageRef)
+        assertTrue(
+            parsed.messages.any { it.id == "Msg_cancel" },
+            "the message catalog entry the trigger references must survive the round-trip",
+        )
     }
 
     private fun eventSubProcessDefinition(interrupting: Boolean): BpmnDefinition = BpmnDefinition(
