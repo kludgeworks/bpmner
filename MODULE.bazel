@@ -137,6 +137,7 @@ npm.npm_translate_lock(
     name = "npm",
     lifecycle_hooks_execution_requirements = {
         "@vvago/vale": [
+            "no-remote",
             "no-sandbox",
             "requires-network",
         ],
