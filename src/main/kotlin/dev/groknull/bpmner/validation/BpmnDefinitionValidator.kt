@@ -25,6 +25,7 @@ import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
@@ -44,6 +45,7 @@ internal class BpmnDefinitionValidator {
         validateNames(definition, errors)
         validateEdges(definition, errors)
         validateRequiredEvents(definition, errors)
+        validateSubProcesses(definition, errors)
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
@@ -115,11 +117,29 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        if (definition.nodes.none { it is BpmnStartEvent }) {
+        if (definition.nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
             errors.add("definition must contain at least one START_EVENT")
         }
-        if (definition.nodes.none { it is BpmnEndEvent }) {
+        if (definition.nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
             errors.add("definition must contain at least one END_EVENT")
+        }
+    }
+
+    // Each embedded subprocess is its own flow scope: it must declare a start and an end among the
+    // nodes that name it via parentRef — the subprocess analogue of validateRequiredEvents.
+    private fun validateSubProcesses(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val childrenByParent = definition.nodes.filter { it.parentRef != null }.groupBy { it.parentRef }
+        definition.nodes.filterIsInstance<BpmnSubProcess>().forEach { subProcess ->
+            val children = childrenByParent[subProcess.id].orEmpty()
+            if (children.none { it is BpmnStartEvent }) {
+                errors.add("subprocess '${subProcess.id}' must contain at least one START_EVENT")
+            }
+            if (children.none { it is BpmnEndEvent }) {
+                errors.add("subprocess '${subProcess.id}' must contain at least one END_EVENT")
+            }
         }
     }
 

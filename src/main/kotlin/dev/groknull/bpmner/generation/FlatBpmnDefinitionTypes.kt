@@ -56,6 +56,7 @@ public enum class FlatBpmnNodeKind {
     EVENT_BASED_GATEWAY,
     INTERMEDIATE_CATCH_EVENT,
     INTERMEDIATE_THROW_EVENT,
+    SUB_PROCESS,
 }
 
 public enum class FlatBpmnEventDefinitionKind {
@@ -74,7 +75,8 @@ public enum class FlatBpmnEventDefinitionKind {
         "START_EVENT / END_EVENT → optional eventDefinition (defaults to NONE); " +
         "INTERMEDIATE_CATCH_EVENT / INTERMEDIATE_THROW_EVENT → required eventDefinition; " +
         "BOUNDARY_EVENT → attachedToRef + eventDefinition (cancelActivity defaults true); " +
-        "START_EVENT additionally accepts isInterrupting (defaults true).",
+        "START_EVENT additionally accepts isInterrupting (defaults true); " +
+        "SUB_PROCESS → optional triggeredByEvent (defaults false), with inner nodes carrying parentRef.",
 )
 public data class FlatBpmnNode(
     @field:NotBlank
@@ -132,6 +134,16 @@ public data class FlatBpmnNode(
             "Leave null for an ordinary single-run activity.",
     )
     val standardLoop: FlatStandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(
+        "SUB_PROCESS only. false for an ordinary embedded subprocess; true for an event subprocess. " +
+            "Defaults to false if omitted.",
+    )
+    val triggeredByEvent: Boolean? = null,
+    @get:JsonPropertyDescription(
+        "Id of the enclosing SUB_PROCESS when this node is nested inside one; leave null for a " +
+            "top-level node. Nodes stay in this flat list and carry the back-reference.",
+    )
+    val parentRef: String? = null,
 )
 
 @JsonClassDescription(

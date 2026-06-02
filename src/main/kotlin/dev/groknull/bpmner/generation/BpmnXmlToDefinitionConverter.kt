@@ -40,6 +40,7 @@ import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -69,6 +70,8 @@ import org.camunda.bpm.model.bpmn.instance.SendTask
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
+import org.camunda.bpm.model.bpmn.instance.SubProcess
+import org.camunda.bpm.model.bpmn.instance.Transaction
 import org.camunda.bpm.model.bpmn.instance.UserTask
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
@@ -165,6 +168,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     conditionExpression = flow.conditionExpression?.textContent?.takeIf { it.isNotBlank() },
                     isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id ||
                         (flow.source as? InclusiveGateway)?.default?.id == flow.id,
+                    parentRef = (flow.parentElement as? SubProcess)?.id,
                 )
             }
 
@@ -248,6 +252,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         taskMetadata: TaskMetadata,
     ): BpmnNode {
         val normalisedName = name?.takeIf { it.isNotBlank() }
+        // Camunda's document-wide FlowNode scan returns nested nodes too; their `parentElement`
+        // is the enclosing <subProcess>. A top-level node's parent is the <process>, giving null.
+        val parentRef = (parentElement as? SubProcess)?.id
         return when (this) {
             is StartEvent -> {
                 BpmnStartEvent(
@@ -255,6 +262,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
                     isInterrupting = eventMetadata.isInterrupting[id] ?: true,
+                    parentRef = parentRef,
                 )
             }
 
@@ -264,6 +272,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -273,6 +282,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -282,6 +292,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -292,6 +303,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -302,6 +314,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -312,6 +325,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -321,23 +335,24 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     multiInstance = taskMetadata.multiInstance[id],
                     standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
             is ExclusiveGateway -> {
-                BpmnExclusiveGateway(id = id, name = normalisedName)
+                BpmnExclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is InclusiveGateway -> {
-                BpmnInclusiveGateway(id = id, name = normalisedName)
+                BpmnInclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is ParallelGateway -> {
-                BpmnParallelGateway(id = id, name = normalisedName)
+                BpmnParallelGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is EventBasedGateway -> {
-                BpmnEventBasedGateway(id = id, name = normalisedName)
+                BpmnEventBasedGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is IntermediateCatchEvent -> {
@@ -345,6 +360,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -353,6 +369,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -363,6 +380,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     attachedToRef = eventMetadata.attachedToRefs[id].orEmpty(),
                     cancelActivity = eventMetadata.cancelActivity[id] ?: true,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -371,19 +389,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
-            // FlowNode subtypes the parser doesn't translate (Transaction, CallActivity,
-            // SubProcess, etc.) are surfaced as `BpmnUnrecognizedNode` so the `BpmnSubset`
-            // rule can flag them. Policy stays in the rule engine.
-            else -> {
-                BpmnUnrecognizedNode(
-                    id = id,
-                    name = normalisedName,
-                    bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
-                )
+            // Transaction is a SubProcess subtype but carries distinct semantics the model
+            // doesn't represent, so it stays on the unrecognized path (parser-as-structure) —
+            // only a plain embedded subprocess becomes BpmnSubProcess.
+            is SubProcess -> {
+                if (this is Transaction) {
+                    toUnrecognizedNode(normalisedName, parentRef)
+                } else {
+                    BpmnSubProcess(
+                        id = id,
+                        name = normalisedName,
+                        triggeredByEvent = triggeredByEvent(),
+                        parentRef = parentRef,
+                    )
+                }
             }
+
+            // FlowNode subtypes the parser doesn't translate (CallActivity, etc.) are surfaced
+            // as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can flag them. Policy stays in
+            // the rule engine.
+            else -> toUnrecognizedNode(normalisedName, parentRef)
         }
     }
 
@@ -600,3 +629,16 @@ private fun xsdBooleanOrDefault(raw: String, default: Boolean): Boolean {
     if (raw.isBlank()) return default
     return raw.equals("true", ignoreCase = true) || raw == "1"
 }
+
+// Surfaces a FlowNode subtype the parser doesn't translate (CallActivity, Transaction, etc.) as a
+// BpmnUnrecognizedNode carrying its BPMN typename. Top-level so it stays off the converter's class
+// function count while serving both the SubProcess-variant and the catch-all `else` arm.
+private fun FlowNode.toUnrecognizedNode(
+    normalisedName: String?,
+    parentRef: String?,
+): BpmnUnrecognizedNode = BpmnUnrecognizedNode(
+    id = id,
+    name = normalisedName,
+    bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
+    parentRef = parentRef,
+)

@@ -52,6 +52,10 @@ object BpmnNodeNamingPolicy {
             is BpmnManualTask,
             -> true
 
+            // A subprocess stands in for a meaningful composite step, so it carries a label
+            // like a task does.
+            is BpmnSubProcess -> true
+
             // Fallback for elements without a typed Kotlin class. No naming requirement —
             // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
             // complaint on top would be noise.

@@ -61,6 +61,13 @@ interface BpmnNode {
     val id: String
     val name: String?
 
+    /**
+     * Id of the [BpmnSubProcess] this node is nested inside, or `null` for a top-level node.
+     * `BpmnDefinition` stays flat — subprocess children live in the same flat `nodes` list and
+     * carry this back-reference; nesting is reconstructed only when rendering XML.
+     */
+    val parentRef: String?
+
     fun withName(name: String?): BpmnNode
 }
 
@@ -164,6 +171,17 @@ interface BpmnParallelGateway : BpmnGateway
 interface BpmnEventBasedGateway : BpmnGateway
 
 /**
+ * An embedded subprocess — a composite activity that contains its own start-to-end flow.
+ * Modelled as a flat marker node: its inner nodes/edges live in the same [BpmnDefinition.nodes] /
+ * [BpmnDefinition.sequences] lists carrying [BpmnNode.parentRef] = this subprocess's id; the renderer
+ * reconstructs the `<bpmn:subProcess>` nesting. [triggeredByEvent] distinguishes an ordinary
+ * subprocess (false) from an event subprocess (true).
+ */
+interface BpmnSubProcess : BpmnNode {
+    val triggeredByEvent: Boolean
+}
+
+/**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
  * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
  * `targetElements` matching on [bpmnType].
@@ -184,6 +202,12 @@ interface BpmnEdge {
     val name: String?
     val conditionExpression: String?
     val isDefault: Boolean
+
+    /**
+     * Id of the [BpmnSubProcess] this edge is nested inside, or `null` for a top-level edge. BPMN
+     * forbids sequence flows crossing a subprocess boundary, so an edge sits wholly in one scope.
+     */
+    val parentRef: String?
 }
 
 /**
@@ -335,6 +359,7 @@ val BpmnNode.typeName: String
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
+            is BpmnSubProcess -> "SUB_PROCESS"
             is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
             else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }

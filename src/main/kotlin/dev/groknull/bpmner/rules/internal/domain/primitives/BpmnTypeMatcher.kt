@@ -32,6 +32,7 @@ internal object BpmnTypeMatcher {
         BpmnTypeName.EXCLUSIVE_GATEWAY,
         BpmnTypeName.PARALLEL_GATEWAY,
         BpmnTypeName.EVENT_BASED_GATEWAY,
+        BpmnTypeName.SUB_PROCESS,
         BpmnTypeName.SEQUENCE_FLOW,
     )
 
@@ -60,7 +61,11 @@ internal object BpmnTypeMatcher {
         BpmnTypeName.BOUNDARY_EVENT,
     )
 
-    private val flowNodeTypeNames = taskTypeNames + gatewayTypeNames + eventTypeNames
+    private val activityTypeNames = setOf(
+        BpmnTypeName.SUB_PROCESS,
+    )
+
+    private val flowNodeTypeNames = taskTypeNames + gatewayTypeNames + eventTypeNames + activityTypeNames
 
     private val flowElementTypeNames = flowNodeTypeNames + BpmnTypeName.SEQUENCE_FLOW
 

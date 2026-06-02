@@ -35,6 +35,7 @@ import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -43,6 +44,7 @@ import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class FlatBpmnDefinitionMapperTest {
@@ -390,6 +392,33 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(signals, sealed.signals)
         assertEquals(errors, sealed.errors)
         assertEquals(escalations, sealed.escalations)
+    }
+
+    @Test
+    fun `SUB_PROCESS maps to BpmnSubProcess and parentRef threads through every nested node`() {
+        val flat = FlatBpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes =
+            listOf(
+                FlatBpmnNode(id = "sp", type = FlatBpmnNodeKind.SUB_PROCESS, name = "Handle", triggeredByEvent = true),
+                FlatBpmnNode(id = "s", type = FlatBpmnNodeKind.START_EVENT, name = "Begin", parentRef = "sp"),
+                FlatBpmnNode(id = "u", type = FlatBpmnNodeKind.USER_TASK, name = "Work", parentRef = "sp"),
+                FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "Done", parentRef = "sp"),
+            ),
+            sequences = listOf(BpmnEdge("f", "s", "u", parentRef = "sp")),
+        )
+
+        val sealed = flat.toSealed()
+
+        val sp = sealed.nodes.single { it.id == "sp" }
+        assertIs<BpmnSubProcess>(sp)
+        assertTrue(sp.triggeredByEvent, "triggeredByEvent must survive the flat→sealed mapping")
+        assertEquals(
+            mapOf("sp" to null, "s" to "sp", "u" to "sp", "e" to "sp"),
+            sealed.nodes.associate { it.id to it.parentRef },
+        )
+        assertEquals("sp", sealed.sequences.single().parentRef)
     }
 
     private fun flatNode(

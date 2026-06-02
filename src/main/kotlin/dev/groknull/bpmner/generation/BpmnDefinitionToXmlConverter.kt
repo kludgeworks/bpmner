@@ -44,7 +44,9 @@ import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
+import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
+import org.camunda.bpm.model.xml.instance.ModelElementInstance
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 import org.w3c.dom.Document
@@ -146,13 +148,33 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         definition: BpmnDefinition,
         process: Process,
     ): Map<String, FlowNode> {
-        val nodeMap = mutableMapOf<String, FlowNode>()
+        // Create every flow node up front (detached), so a nested node can resolve its
+        // subprocess parent from the map regardless of where its parent sits in the flat list.
+        val nodeMap = definition.nodes.associate { node ->
+            node.id to BpmnModelFactory.newFlowNode(modelInstance, node)
+        }
+        // Attach each node to its container: the process for a top-level node, or the enclosing
+        // SubProcess element for a nested one. Parent subprocesses are already in nodeMap, so a
+        // subprocess nested inside a subprocess attaches correctly at any depth.
         for (node in definition.nodes) {
-            val flowNode = BpmnModelFactory.newFlowNode(modelInstance, node)
-            process.addChildElement(flowNode)
-            nodeMap[node.id] = flowNode
+            containerFor(node.parentRef, nodeMap, process).addChildElement(nodeMap.getValue(node.id))
         }
         return nodeMap
+    }
+
+    // Resolves the BPMN container a node or edge belongs to: the process when [parentRef] is null,
+    // otherwise the SubProcess flow node it names. Both Process and SubProcess accept child flow
+    // elements via addChildElement.
+    private fun containerFor(
+        parentRef: String?,
+        nodeMap: Map<String, FlowNode>,
+        process: Process,
+    ): ModelElementInstance {
+        if (parentRef == null) return process
+        return nodeMap[parentRef] as? SubProcess
+            ?: throw IllegalArgumentException(
+                "parentRef '$parentRef' does not resolve to a subprocess node",
+            )
     }
 
     private fun buildSequenceFlows(
@@ -178,7 +200,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
             sequenceFlow.source = source
             sequenceFlow.target = target
-            process.addChildElement(sequenceFlow)
+            // An edge sits wholly in one scope (BPMN forbids flows crossing a subprocess
+            // boundary), so it attaches to the same container its parentRef names.
+            containerFor(edge.parentRef, nodeMap, process).addChildElement(sequenceFlow)
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
             if (edge.isDefault) {

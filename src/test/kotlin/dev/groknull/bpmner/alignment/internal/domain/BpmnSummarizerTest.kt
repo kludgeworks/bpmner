@@ -10,6 +10,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -115,5 +116,39 @@ class BpmnSummarizerTest {
         assertEquals(listOf("Flow_1", "Flow_Dangling"), summary.flows.map { it.id })
 
         assertEquals(listOf("Task_Unreachable", "Flow_Dangling"), summary.unreachableElementIds)
+    }
+
+    @Test
+    fun `subprocess children reachable from their own inner start are not flagged unreachable`() {
+        // The subprocess marker is reached via the parent-level flow; its children are reached via
+        // the subprocess's own inner start event. Neither should appear as unreachable.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Subprocess Process",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_top", "Start"),
+                    BpmnSubProcess("SubProcess_1", "Handle"),
+                    BpmnEndEvent("End_top", "Done"),
+                    BpmnStartEvent("Start_in", "Begin", parentRef = "SubProcess_1"),
+                    BpmnUserTask("Task_in", "Work", parentRef = "SubProcess_1"),
+                    BpmnEndEvent("End_in", "Inner done", parentRef = "SubProcess_1"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_t1", "Start_top", "SubProcess_1"),
+                    BpmnEdge("Flow_t2", "SubProcess_1", "End_top"),
+                    BpmnEdge("Flow_i1", "Start_in", "Task_in", parentRef = "SubProcess_1"),
+                    BpmnEdge("Flow_i2", "Task_in", "End_in", parentRef = "SubProcess_1"),
+                ),
+            )
+
+        val summary = summarizer.summarize(definition)
+
+        assertTrue(
+            summary.unreachableElementIds.isEmpty(),
+            "subprocess children are reachable via the inner start; got: ${summary.unreachableElementIds}",
+        )
     }
 }

@@ -13,7 +13,7 @@ package dev.groknull.bpmner.api
  * is no `visitUnknown` fallback. Adding a new BPMN subtype forces an addition both here and
  * in [accept].
  */
-@Suppress("TooManyFunctions") // 15 visit methods — one per BpmnNode subtype, intentional
+@Suppress("TooManyFunctions") // 16 visit methods — one per BpmnNode subtype, intentional
 interface BpmnNodeVisitor<T> {
     fun visitStartEvent(node: BpmnStartEvent): T? = null
 
@@ -44,6 +44,8 @@ interface BpmnNodeVisitor<T> {
     fun visitBoundaryEvent(node: BpmnBoundaryEvent): T? = null
 
     fun visitEndEvent(node: BpmnEndEvent): T? = null
+
+    fun visitSubProcess(node: BpmnSubProcess): T? = null
 }
 
 /**
@@ -86,6 +88,8 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
     is BpmnBoundaryEvent -> visitor.visitBoundaryEvent(this)
 
     is BpmnEndEvent -> visitor.visitEndEvent(this)
+
+    is BpmnSubProcess -> visitor.visitSubProcess(this)
 
     // Fallback for elements without a typed Kotlin class. Visitors are typed against the
     // canonical subtypes; unrecognized nodes have no hook and return null.
