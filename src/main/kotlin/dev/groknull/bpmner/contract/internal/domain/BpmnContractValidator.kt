@@ -14,8 +14,10 @@ import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.DefaultBranch
+import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
+import dev.groknull.bpmner.contract.kindName
 import org.springframework.stereotype.Component
 
 @Component
@@ -88,6 +90,7 @@ internal class BpmnContractValidator {
     private fun validateDecisions(contract: ProcessContract): List<ContractValidationIssue> = buildList {
         contract.decisions.forEach { decision ->
             addAll(validateDecisionBranchCount(decision))
+            addAll(validateEventBranchPlacement(decision))
 
             val defaults = decision.branches.filterIsInstance<DefaultBranch>()
             addAll(validateDecisionDefaults(decision, defaults))
@@ -113,10 +116,40 @@ internal class BpmnContractValidator {
 
                 ContractGatewayKind.PARALLEL -> addAll(validateParallelDecision(decision, defaults))
 
-                // EVENT_BASED branches carry event triggers rather than conditions; their structural
-                // constraints are enforced on the rendered BPMN by the fidelity checker and the
-                // EventBasedDirectEvents rule, so there is no contract-level branch-kind check here.
+                // EVENT_BASED branch typing is enforced by validateEventBranchPlacement above; the
+                // per-branch trigger fields are constrained by Jakarta validation on EventGatewayBranch.
                 ContractGatewayKind.EVENT_BASED -> Unit
+            }
+        }
+    }
+
+    // An EVENT_BASED decision routes on whichever event fires first, so it carries EventGatewayBranch
+    // branches exclusively; every other gateway kind routes on conditions and must carry none. The
+    // condition/default/parallel cross-checks each filter by their own branch types and so cannot see
+    // a stray EventGatewayBranch (nor an event decision holding the wrong branch), so the
+    // correspondence is enforced here in both directions.
+    private fun validateEventBranchPlacement(decision: ContractDecision): List<ContractValidationIssue> = buildList {
+        if (decision.kind == ContractGatewayKind.EVENT_BASED) {
+            decision.branches.filterNot { it is EventGatewayBranch }.forEach { branch ->
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.NON_EVENT_BRANCH_ON_EVENT_BASED,
+                        message = "branch '${branch.id}' is ${branch.kindName} but decision '${decision.id}'" +
+                            " is EVENT_BASED — use an EventGatewayBranch naming the triggering event",
+                        targetId = branch.id,
+                    ),
+                )
+            }
+        } else {
+            decision.branches.filterIsInstance<EventGatewayBranch>().forEach { branch ->
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.EVENT_BRANCH_ON_NON_EVENT_BASED,
+                        message = "branch '${branch.id}' is EVENT_GATEWAY but decision '${decision.id}'" +
+                            " is ${decision.kind} — event-gateway branches are valid only on EVENT_BASED decisions",
+                        targetId = branch.id,
+                    ),
+                )
             }
         }
     }

@@ -17,6 +17,8 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.DefaultBranch
+import dev.groknull.bpmner.contract.EventGatewayBranch
+import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.contract.withSourceIds
@@ -260,6 +262,84 @@ class BpmnContractValidatorTest {
         )
         assertFalse(
             report.issues.any { it.code == ContractValidationCode.DEFAULT_BRANCH_ON_PARALLEL },
+        )
+    }
+
+    @Test
+    fun `conditional branch on event-based decision flags NON_EVENT_BRANCH_ON_EVENT_BASED`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.EVENT_BASED,
+                branches =
+                listOf(
+                    EventGatewayBranch(
+                        id = "br-pay",
+                        label = "Payment confirmed",
+                        triggerKind = EventTriggerKind.MESSAGE,
+                        triggerDetail = "payment confirmation",
+                    ),
+                    ConditionalBranch(id = "br-misplaced", label = "Score check", condition = "score >= 750"),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.NON_EVENT_BRANCH_ON_EVENT_BASED))
+    }
+
+    @Test
+    fun `event-gateway branch on exclusive decision flags EVENT_BRANCH_ON_NON_EVENT_BASED`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                branches =
+                listOf(
+                    ConditionalBranch(id = "br-yes", label = "Yes", condition = "x"),
+                    EventGatewayBranch(
+                        id = "br-misplaced",
+                        label = "Timeout",
+                        triggerKind = EventTriggerKind.TIMER,
+                        triggerDetail = "PT24H",
+                    ),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.EVENT_BRANCH_ON_NON_EVENT_BASED))
+    }
+
+    @Test
+    fun `event-based decision with only event-gateway branches is valid`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val decision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.EVENT_BASED,
+                branches =
+                listOf(
+                    EventGatewayBranch(
+                        id = "br-pay",
+                        label = "Payment confirmed",
+                        triggerKind = EventTriggerKind.MESSAGE,
+                        triggerDetail = "payment confirmation",
+                    ),
+                    EventGatewayBranch(
+                        id = "br-timeout",
+                        label = "Timed out",
+                        triggerKind = EventTriggerKind.TIMER,
+                        triggerDetail = "PT24H",
+                    ),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(decision))
+        val report = validator.validate(contract)
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.NON_EVENT_BRANCH_ON_EVENT_BASED },
+        )
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.EVENT_BRANCH_ON_NON_EVENT_BASED },
         )
     }
 

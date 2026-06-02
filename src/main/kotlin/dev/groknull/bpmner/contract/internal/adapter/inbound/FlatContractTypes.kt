@@ -224,7 +224,8 @@ public data class FlatContractIntermediateThrow(
 @JsonClassDescription(
     "Branch out of a contract decision. Set `kind` to CONDITIONAL (populate condition) for " +
         "branches of EXCLUSIVE decisions, DEFAULT for the catch-all of an EXCLUSIVE decision, " +
-        "or UNCONDITIONAL for branches of a PARALLEL decision.",
+        "UNCONDITIONAL for branches of a PARALLEL decision, or EVENT_GATEWAY for branches of an " +
+        "EVENT_BASED decision (populate triggerKind + triggerDetail).",
 )
 public data class FlatContractBranch(
     @field:NotBlank
@@ -241,7 +242,8 @@ public data class FlatContractBranch(
     @get:JsonPropertyDescription(
         "Branch kind. CONDITIONAL (default on EXCLUSIVE; populate condition), DEFAULT (catch-all " +
             "on EXCLUSIVE; no condition; at most one per decision), UNCONDITIONAL (on PARALLEL; no " +
-            "condition; every branch fires concurrently). Kind/decision matching is strict.",
+            "condition; every branch fires concurrently), EVENT_GATEWAY (on EVENT_BASED; populate " +
+            "triggerKind + triggerDetail; no condition). Kind/decision matching is strict.",
     )
     val kind: FlatBranchKind,
     @field:Size(max = 500)
@@ -256,7 +258,7 @@ public data class FlatContractBranch(
     val triggerKind: EventTriggerKind? = null,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
-        "Optional when kind=EVENT_GATEWAY. Event detail: an ISO-8601 duration for TIMER, or the " +
+        "Required when kind=EVENT_GATEWAY. Event detail: an ISO-8601 duration for TIMER, or the " +
             "message / signal name for MESSAGE / SIGNAL.",
     )
     val triggerDetail: String? = null,

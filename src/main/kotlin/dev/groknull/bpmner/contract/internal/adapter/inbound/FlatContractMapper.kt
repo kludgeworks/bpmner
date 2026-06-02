@@ -192,7 +192,7 @@ public fun FlatContractBranch.toSealed(): ContractBranch = when (kind) {
         id = id,
         label = label,
         triggerKind = requireField(triggerKind, kind, "triggerKind", id),
-        triggerDetail = triggerDetail,
+        triggerDetail = requireField(triggerDetail, kind, "triggerDetail", id),
         nextRef = nextRef,
     )
 }

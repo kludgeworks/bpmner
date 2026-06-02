@@ -44,7 +44,7 @@ Inclusive-gateway topology:
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
 Event-based-gateway topology:
-- An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry.
+- An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry named from `triggerDetail`.
 - The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.
 - The gateway is a pure wait: it has no join. Each branch proceeds independently after its event fires.
 

@@ -347,8 +347,8 @@ internal class PklRuleCatalogTest {
     }
 
     // -------------------------------------------------------------------------------------
-    // #181 makes BpmnEventBasedGateway a real node, so the already-active EventBasedDirectEvents
-    // rule now has a type to fire on: an event-based gateway must route directly to catch events.
+    // EventBasedDirectEvents: an event-based gateway must route directly to intermediate catch
+    // events, never to tasks or other activities.
 
     @Test
     fun `round-trip - EventBasedDirectEvents fires when an event-based gateway targets a task`() {

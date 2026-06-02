@@ -652,11 +652,12 @@ data class EventGatewayBranch(
     )
     val triggerKind: EventTriggerKind,
     @field:Size(max = 200)
+    @field:NotBlank
     @get:JsonPropertyDescription(
-        "Optional event detail: an ISO-8601 duration for TIMER, or the message / signal name for " +
-            "MESSAGE / SIGNAL.",
+        "Event detail naming the awaited event: an ISO-8601 duration for TIMER, or the message / " +
+            "signal name for MESSAGE / SIGNAL. Required.",
     )
-    val triggerDetail: String? = null,
+    val triggerDetail: String,
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
     override val nextRef: String? = null,

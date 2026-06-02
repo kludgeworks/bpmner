@@ -265,6 +265,20 @@ class FlatContractMapperTest {
     }
 
     @Test
+    fun `EVENT_GATEWAY branch without triggerDetail fails with the offending id`() {
+        val flat = FlatContractBranch(
+            id = "b-e",
+            label = "Payment confirmed",
+            kind = FlatBranchKind.EVENT_GATEWAY,
+            triggerKind = EventTriggerKind.MESSAGE,
+            triggerDetail = null,
+        )
+        val ex = assertFailsWith<IllegalArgumentException> { flat.toSealed() }
+        assertTrue("b-e" in ex.message.orEmpty())
+        assertTrue("triggerDetail" in ex.message.orEmpty())
+    }
+
+    @Test
     fun `every FlatContractTrigger kind round-trips to the matching sealed subtype`() {
         assertEquals(
             ContractTrigger.None("plain start"),
