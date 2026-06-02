@@ -23,3 +23,34 @@ test --test_output=errors
 # Run live-llm smoke tests with:
 #   bazel test --test_tag_filters=live-llm //src/test/...
 test --test_tag_filters=-integration,-live-llm
+
+# =============================================================================
+# BuildBuddy — Remote Cache + BES
+# =============================================================================
+
+# Base CI config: BES + remote cache
+build:ci --bes_results_url=https://app.buildbuddy.io/invocation/
+build:ci --bes_backend=grpcs://remote.buildbuddy.io
+build:ci --remote_cache=grpcs://remote.buildbuddy.io
+build:ci --remote_upload_local_results
+build:ci --build_metadata=ROLE=CI
+build:ci --nolegacy_important_outputs
+build:ci --test_keep_going
+
+# Phase 3 extension: RBE (enable after RC hit rates confirmed)
+build:rbe --config=ci
+build:rbe --remote_executor=grpcs://remote.buildbuddy.io
+build:rbe --remote_download_minimal
+build:rbe --jobs=100
+build:rbe --platforms=@toolchains_buildbuddy//platforms:linux_x86_64
+build:rbe --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_x86_64
+build:rbe --java_language_version=21
+build:rbe --java_runtime_version=remotejdk_21
+build:rbe --tool_java_language_version=21
+build:rbe --tool_java_runtime_version=remotejdk_21
+build:rbe --strategy=CoverageReport=local   # coverage merge is incompatible with RBE
+
+# Read-only consumers (smoke-tests): read RC, do not write
+build:rbe-readonly --config=rbe
+build:rbe-readonly --noremote_upload_local_results
+build:rbe-readonly --incompatible_remote_results_ignore_disk

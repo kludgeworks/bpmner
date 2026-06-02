@@ -55,11 +55,23 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
+          disk-cache: false
           repository-cache: true
 
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
+
       - name: Build and run all tests
-        run: bazel test //...
+        run: |
+          bazel test \
+            --config=rbe \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            //...
 
   smoke-tests:
     runs-on: ubuntu-latest
@@ -92,7 +104,7 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
+          disk-cache: false
           repository-cache: true
           cache-save: false
 
@@ -105,6 +117,7 @@ jobs:
           OPENAI_API_KEY: op://bpmner/openai/api-key
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
           GEMINI_API_KEY: op://bpmner/gemini/api-key
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
       - name: Compute shard index for this run
         id: shard
@@ -127,6 +140,7 @@ jobs:
             --test_env=SPRING_PROFILES_ACTIVE \
             --test_env=TEST_TOTAL_SHARDS=3 \
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             //src/test/... \
             --test_output=errors
 
@@ -159,14 +173,25 @@ jobs:
         uses: bazel-contrib/setup-bazel@0.19.0
         with:
           bazelisk-cache: true
-          disk-cache: ${{ github.workflow }}
+          disk-cache: false
           repository-cache: true
           cache-save: false
+
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
       - name: Run Bazel coverage
         id: coverage
         run: |
           bazel coverage //... \
+            --config=ci \
+            --strategy=CoverageReport=local \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
             --instrumentation_filter="^//src,^//web"
@@ -178,7 +203,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          bazel run //:sonar -- \
+          bazel run //:sonar \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
@@ -189,7 +216,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
-          bazel run //web:sonar -- \
+          bazel run //web:sonar \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            -- \
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
