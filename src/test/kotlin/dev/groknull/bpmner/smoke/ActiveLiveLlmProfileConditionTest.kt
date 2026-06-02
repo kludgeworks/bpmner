@@ -47,7 +47,7 @@ class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `disables when both provider families are active`() {
         val result = evaluate(
-            activeProfiles = "anth,github",
+            activeProfiles = "anth,gh",
             env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test", "GITHUB_TOKEN" to "github_pat_test"),
         )
 
@@ -57,7 +57,7 @@ class ActiveLiveLlmProfileConditionTest {
 
     @Test
     fun `disables when selected provider token is missing`() {
-        val result = evaluate(activeProfiles = "anthropic")
+        val result = evaluate(activeProfiles = "anth")
 
         assertFalse(result.enabled, result.reason)
         assertTrue(result.reason.contains("ANTHROPIC_API_KEY"), result.reason)
