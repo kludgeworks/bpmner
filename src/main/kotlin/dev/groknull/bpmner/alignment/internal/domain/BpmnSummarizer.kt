@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import org.springframework.stereotype.Component
 import java.util.LinkedList
 import java.util.Queue
@@ -48,8 +49,11 @@ class BpmnSummarizer {
         visited: TraversalState,
     ) {
         val queue: Queue<String> = LinkedList()
+        // Roots: every start event, plus event-subprocess markers — an event subprocess has no
+        // incoming flow by design (it is triggered by its inner start), so it would otherwise be
+        // reported unreachable. Its inner nodes are reached via the inner start, itself a root.
         definition.nodes
-            .filter { it is BpmnStartEvent }
+            .filter { it is BpmnStartEvent || (it is BpmnSubProcess && it.triggeredByEvent) }
             .sortedBy { it.id }
             .forEach { node -> enqueue(node, queue, visited) }
 
