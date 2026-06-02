@@ -210,6 +210,14 @@ sealed interface ContractActivity {
      */
     val boundaryEvents: List<ContractBoundaryEvent>
 
+    /**
+     * Standard-loop marker, or `null` for an ordinary single-run activity. Cross-cutting like
+     * [iteration]; set when the activity repeats until a condition is met (a while/until/retry
+     * loop). Realized as a BPMN standard-loop task downstream. Distinct from [iteration], which
+     * runs once per item in a collection.
+     */
+    val loop: ContractLoop?
+
     @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
     data class Service(
         @field:NotBlank
@@ -232,6 +240,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
@@ -256,6 +267,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
@@ -280,6 +294,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -310,6 +327,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
@@ -338,6 +358,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -368,6 +391,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
@@ -392,6 +418,9 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
     ) : ContractActivity
 
     companion object {
@@ -427,6 +456,11 @@ private const val ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION: String =
         "it and route elsewhere (e.g. 'if approval takes longer than 24h, escalate'; 'if the " +
         "payment subprocess raises a chargeback error, route to dispute handling'). Empty for " +
         "ordinary activities. Distinct from a normal decision branch off the activity's outcome."
+
+private const val ACTIVITY_LOOP_DESCRIPTION: String =
+    "Standard-loop marker. Set only when the source says the activity repeats until a condition " +
+        "is met (a while/until/retry loop, e.g. \"retry up to 3 times until it succeeds\"); null " +
+        "otherwise. Distinct from a per-item iteration over a collection."
 
 @JsonClassDescription(
     "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
@@ -482,6 +516,22 @@ data class ContractBoundaryEvent(
             "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
     )
     val detail: String? = null,
+)
+
+@JsonClassDescription(
+    "Standard loop over a single activity that repeats until a condition is met (while/until/retry).",
+)
+data class ContractLoop(
+    @get:JsonPropertyDescription(
+        "true = while-loop (the condition is checked before each run); false = until-loop (the " +
+            "activity runs once, then the condition is checked after).",
+    )
+    val testBefore: Boolean = true,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".")
+    val loopCondition: String? = null,
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times.")
+    val loopMaximum: Int? = null,
 )
 
 /**

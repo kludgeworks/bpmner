@@ -406,4 +406,21 @@ class ContractVocabularySmokeTest {
         )
         c.assertHasGatewayKind(ContractGatewayKind.EVENT_BASED)
     }
+
+    // Standard loop
+
+    @Test
+    fun `standard loop activity`() {
+        val c = extractContract(
+            """
+            When a payment is submitted, the system attempts to charge the card. If the charge
+            fails it retries the same charge, up to three times, until the payment succeeds. Once
+            it succeeds or the attempts are exhausted, the process ends.
+            """,
+        )
+        assertTrue(c.activities.any { it.loop != null }) {
+            "Expected an activity carrying a standard loop, but found: " +
+                c.activities.joinToString { "${it.name}(loop=${it.loop})" }
+        }
+    }
 }

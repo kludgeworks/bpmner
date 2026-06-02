@@ -88,6 +88,7 @@ internal class BpmnContractFidelityChecker {
         contract.activities.forEach { activity ->
             checkActivityKind(activity, nodeById, issues)
             checkActivityIteration(activity, nodeById, issues)
+            checkActivityLoop(activity, nodeById, issues)
         }
 
         contract.endStates.forEach { endState ->
@@ -371,6 +372,54 @@ internal class BpmnContractFidelityChecker {
         issues +=
             BpmnFidelityIssue(
                 code = BpmnFidelityCode.ACTIVITY_ITERATION_MODE_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message = message,
+                contractElementId = activity.id,
+                bpmnElementId = activity.id,
+            )
+    }
+
+    /**
+     * Verifies that a contract `loop` (standard while/until/retry) is realised as a `standardLoop`
+     * marker on the BPMN task, and that the task does not carry an undeclared loop marker.
+     */
+    private fun checkActivityLoop(
+        activity: ContractActivity,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val task = nodeById[activity.id] as? BpmnTask ?: return
+        val loop = activity.loop
+        val standardLoop = task.standardLoop
+        if (loop == null && standardLoop == null) return
+        // Past the guard, a null on either side means the other is non-null (presence asymmetry);
+        // once both are confirmed non-null the remaining arms compare the loop's properties.
+        val message = when {
+            standardLoop == null ->
+                "Activity '${activity.id}' declares a standard loop but its BPMN task carries no " +
+                    "standard-loop marker — the loop semantic was dropped."
+
+            loop == null ->
+                "Activity '${activity.id}' does not declare a loop but its BPMN task carries a " +
+                    "standard-loop marker — unexpected loop characteristics."
+
+            loop.testBefore != standardLoop.testBefore ->
+                "Activity '${activity.id}' declares standard loop testBefore=${loop.testBefore} but its BPMN " +
+                    "task is standard loop testBefore=${standardLoop.testBefore} (while/until flipped)."
+
+            loop.loopCondition != standardLoop.loopCondition ->
+                "Activity '${activity.id}' declares standard loop condition '${loop.loopCondition}' but its " +
+                    "BPMN task has condition '${standardLoop.loopCondition}'."
+
+            loop.loopMaximum != standardLoop.loopMaximum ->
+                "Activity '${activity.id}' declares standard loop maximum=${loop.loopMaximum} but its BPMN " +
+                    "task has maximum=${standardLoop.loopMaximum}."
+
+            else -> return
+        }
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH,
                 severity = BpmnFidelitySeverity.ERROR,
                 message = message,
                 contractElementId = activity.id,

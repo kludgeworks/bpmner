@@ -16,6 +16,7 @@ import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -133,6 +134,21 @@ class FlatContractMapperTest {
                 ),
             ),
             flat.toSealed().boundaryEvents,
+        )
+    }
+
+    @Test
+    fun `activity loop round-trips to ContractLoop`() {
+        val flat = FlatContractActivity(
+            id = "act-charge",
+            name = "Charge card",
+            kind = FlatActivityKind.SERVICE,
+            loop = FlatContractLoop(testBefore = false, loopCondition = "payment not yet successful", loopMaximum = 3),
+        )
+
+        assertEquals(
+            ContractLoop(testBefore = false, loopCondition = "payment not yet successful", loopMaximum = 3),
+            flat.toSealed().loop,
         )
     }
 

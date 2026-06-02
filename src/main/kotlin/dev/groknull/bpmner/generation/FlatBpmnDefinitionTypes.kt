@@ -19,6 +19,7 @@ import dev.groknull.bpmner.core.BpmnTextAnnotation
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Size
 
 /*
  * Flat wire-format types that the LLM is asked to produce for BPMN generation and
@@ -121,6 +122,13 @@ public data class FlatBpmnNode(
             "associations) describing the item set. Leave null for an ordinary single-run activity.",
     )
     val multiInstance: FlatMultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Task kinds only. Set when the activity repeats until a condition is met (a while/until/" +
+            "retry loop). Pair it with a linked text annotation describing the loop condition. " +
+            "Leave null for an ordinary single-run activity.",
+    )
+    val standardLoop: FlatStandardLoopCharacteristics? = null,
 )
 
 @JsonClassDescription(
@@ -141,6 +149,22 @@ public data class FlatMultiInstanceLoopCharacteristics(
     val loopCardinality: Int? = null,
     @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are done")
     val completionCondition: String? = null,
+)
+
+@JsonClassDescription(
+    "Standard loop characteristics for a task that repeats until a condition is met.",
+)
+public data class FlatStandardLoopCharacteristics(
+    @get:JsonPropertyDescription(
+        "true = while-loop (condition tested before each iteration); " +
+            "false = until-loop (body runs once, then the condition is tested).",
+    )
+    val testBefore: Boolean = true,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".")
+    val loopCondition: String? = null,
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times")
+    val loopMaximum: Int? = null,
 )
 
 @JsonClassDescription(

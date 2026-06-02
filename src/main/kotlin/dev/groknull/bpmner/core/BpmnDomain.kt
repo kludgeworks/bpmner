@@ -54,6 +54,7 @@ import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition as ApiBpmnUnrecog
 import dev.groknull.bpmner.api.BpmnUnrecognizedNode as ApiBpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask as ApiBpmnUserTask
 import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics as ApiMultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.api.StandardLoopCharacteristics as ApiStandardLoopCharacteristics
 
 data class BpmnRequest(
     @get:JsonPropertyDescription("Natural-language description of the workflow to model")
@@ -272,6 +273,11 @@ private const val MULTI_INSTANCE_DESCRIPTION: String =
     "Optional multi-instance marker. Set only when the activity runs once per item in a " +
         "collection (a 'for each …' loop); leave null for an ordinary single-run task."
 
+private const val STANDARD_LOOP_DESCRIPTION: String =
+    "Optional standard-loop marker. Set only when the activity repeats until a condition is met " +
+        "(a while/until/retry loop); leave null for an ordinary single-run task. Distinct from " +
+        "multiInstance, which runs once per item in a collection."
+
 @JsonClassDescription(
     "Multi-instance loop characteristics: the activity executes once per item in a collection, " +
         "either one at a time (SEQUENTIAL) or all concurrently (PARALLEL).",
@@ -295,6 +301,28 @@ data class MultiInstanceLoopCharacteristics(
     @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are processed")
     override val completionCondition: String? = null,
 ) : ApiMultiInstanceLoopCharacteristics
+
+@JsonClassDescription(
+    "Standard loop characteristics: the activity repeats until a condition is met — a while loop " +
+        "(testBefore=true, condition tested before each iteration) or an until loop " +
+        "(testBefore=false, body runs once then the condition is tested).",
+)
+data class StandardLoopCharacteristics(
+    @get:PklProperty("testBefore")
+    @get:JsonPropertyDescription(
+        "true = while-loop (condition tested before each iteration); " +
+            "false = until-loop (body runs once, then the condition is tested).",
+    )
+    override val testBefore: Boolean = true,
+    @get:PklProperty("loopCondition")
+    @get:JsonPropertyDescription(
+        "Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".",
+    )
+    override val loopCondition: String? = null,
+    @get:PklProperty("loopMaximum")
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times")
+    override val loopMaximum: Int? = null,
+) : ApiStandardLoopCharacteristics
 
 data class BpmnStartEvent(
     @field:NotBlank
@@ -323,6 +351,10 @@ data class BpmnUserTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnUserTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -338,6 +370,10 @@ data class BpmnServiceTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnServiceTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -353,6 +389,10 @@ data class BpmnScriptTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnScriptTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -375,6 +415,10 @@ data class BpmnBusinessRuleTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnBusinessRuleTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -396,6 +440,10 @@ data class BpmnSendTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnSendTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -416,6 +464,10 @@ data class BpmnReceiveTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnReceiveTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
@@ -431,6 +483,10 @@ data class BpmnManualTask(
     @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:PklProperty("standardLoop")
+    @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
+    override val standardLoop: StandardLoopCharacteristics? = null,
 ) : BpmnNode,
     ApiBpmnManualTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)

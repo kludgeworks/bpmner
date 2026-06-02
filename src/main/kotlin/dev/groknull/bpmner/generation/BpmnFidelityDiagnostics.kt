@@ -66,6 +66,14 @@ enum class BpmnFidelityCode {
     ACTIVITY_ITERATION_MODE_MISMATCH,
 
     /**
+     * A ContractActivity's `loop` (standard while/until/retry) disagrees with the `standardLoop`
+     * marker on the BPMN task realising it: the marker is missing, present-but-undeclared, or its
+     * `testBefore` / `loopCondition` / `loopMaximum` differs from the contract. Catches the failure
+     * mode where the generator drops or corrupts the loop semantic.
+     */
+    ACTIVITY_STANDARD_LOOP_MISMATCH,
+
+    /**
      * A [dev.groknull.bpmner.contract.ContractDecision] has a
      * [dev.groknull.bpmner.contract.DefaultBranch] but no outbound edge from the corresponding
      * gateway has `isDefault = true`. The BPMN spec requires the gateway's `default` attribute

@@ -64,6 +64,14 @@ sealed interface BpmnTask : BpmnNode {
      * engine read it polymorphically over any task without an exhaustive `when`.
      */
     val multiInstance: MultiInstanceLoopCharacteristics?
+
+    /**
+     * Standard-loop characteristics, or `null` for an ordinary single-run activity. Present when
+     * the activity repeats until a condition is met (a while/until/retry loop). Cross-cutting
+     * across all task kinds, declared here for polymorphic reads; distinct from [multiInstance]
+     * (which runs once per item in a collection rather than repeating until a condition holds).
+     */
+    val standardLoop: StandardLoopCharacteristics?
 }
 
 /**
@@ -76,6 +84,17 @@ interface MultiInstanceLoopCharacteristics {
     val collectionDescription: String
     val loopCardinality: Int?
     val completionCondition: String?
+}
+
+/**
+ * Standard-loop characteristics attached to a [BpmnTask]. Annotation-free api view; the concrete
+ * data class lives in `core/BpmnDomain.kt` and renders to `<bpmn:standardLoopCharacteristics>` on
+ * the task element.
+ */
+interface StandardLoopCharacteristics {
+    val testBefore: Boolean
+    val loopCondition: String?
+    val loopMaximum: Int?
 }
 
 /** Grouping marker for gateway nodes. */
