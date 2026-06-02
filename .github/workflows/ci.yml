@@ -34,17 +34,6 @@ jobs:
         env:
           MISE_LOCKED: 0
 
-      - name: Cache pnpm store
-        uses: actions/cache@v5.0.5
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
-
       - name: Run hk lint checks
         run: hk check all
 
@@ -62,15 +51,12 @@ jobs:
         env:
           MISE_LOCKED: 0
 
-      - name: Cache Bazel
-        uses: actions/cache@v5.0.5
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
 
       - name: Build and run all tests
         run: bazel test //...
@@ -102,15 +88,13 @@ jobs:
         env:
           MISE_LOCKED: 0
 
-      - name: Restore Bazel cache (read-only)
-        uses: actions/cache/restore@v5.0.5
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
         with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+          cache-save: false
 
       - name: Load secrets from 1Password
         uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
@@ -145,3 +129,67 @@ jobs:
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
             //src/test/... \
             --test_output=errors
+
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    needs: [test-unit]
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: ${{ github.workflow }}
+          repository-cache: true
+          cache-save: false
+
+      - name: Run Bazel coverage
+        id: coverage
+        run: |
+          bazel coverage //... \
+            --combined_report=lcov \
+            --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
+            --instrumentation_filter="^//src,^//web"
+          cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Backend
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Web
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //web:sonar -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
