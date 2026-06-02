@@ -1,0 +1,32 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+spring:
+  autoconfigure:
+    exclude:
+      - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
+
+embabel:
+  agent:
+    platform:
+      models:
+        gemini:
+          api-key: ${GEMINI_API_KEY:}
+      llm-operations:
+        prompts:
+          default-timeout: PT180S
+  models:
+    default-llm: gemini-2.5-flash
+    llms:
+      generator: gemini-2.5-pro
+      repairer: gemini-2.5-pro
+      repair-label: gemini-2.5-flash
+      repair-patch: gemini-2.5-flash
+      repair-rewrite: gemini-2.5-pro
+      readiness-assessor: gemini-2.5-flash
+      contract-extractor: gemini-2.5-pro
+      alignment-validator: gemini-2.5-pro
+
+bpmner:
+  max-attempts: 8

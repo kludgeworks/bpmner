@@ -73,6 +73,7 @@ TEST_FILES = glob(["kotlin/**/*Test.kt"])
     data = ["//samples:prose_samples"] if "FullPipelineSmokeTest" in f else [],
     env_inherit = [
         "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
         "GITHUB_TOKEN",
         "OPENAI_API_KEY",
         "SPRING_PROFILES_ACTIVE",
