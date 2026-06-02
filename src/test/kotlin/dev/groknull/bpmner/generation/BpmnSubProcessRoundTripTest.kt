@@ -22,10 +22,10 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 /**
- * B-5a (#191) deliverable: an embedded subprocess survives render → parse → render. The flat
- * model carries every child's `parentRef`; the renderer reconstructs the `<subProcess>` nesting
- * and Camunda's parse (the XSD gate) recovers it. Covers one subprocess, a subprocess nested in a
- * subprocess, and a multi-instance task inside a subprocess (the DOM post-pass edge case).
+ * An embedded subprocess survives render → parse → render. The flat model carries every child's
+ * `parentRef`; the renderer reconstructs the `<subProcess>` nesting and Camunda's parse (the XSD
+ * gate) recovers it. Covers one subprocess, a subprocess nested in a subprocess, and a
+ * multi-instance task inside a subprocess (the DOM post-pass edge case).
  */
 class BpmnSubProcessRoundTripTest {
     private val converter = BpmnDefinitionToXmlConverter()

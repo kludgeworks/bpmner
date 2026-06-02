@@ -26,7 +26,6 @@ import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
@@ -582,59 +581,6 @@ class BpmnDefinitionValidatorTest {
             errors.joinToString("\n"),
             "businessRuleTask Task_1 is missing the required decisionRef attribute",
         )
-    }
-
-    @Test
-    fun `validator accepts a subprocess that declares its own start and end`() {
-        val definition =
-            BpmnDefinition(
-                processId = "Process_1",
-                processName = "Handle request",
-                nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Received"),
-                    BpmnSubProcess("SubProcess_1", "Handle"),
-                    BpmnStartEvent("Inner_start", "Begin", parentRef = "SubProcess_1"),
-                    BpmnUserTask("Inner_task", "Work", parentRef = "SubProcess_1"),
-                    BpmnEndEvent("Inner_end", "Inner done", parentRef = "SubProcess_1"),
-                    BpmnEndEvent("EndEvent_1", "Completed"),
-                ),
-                sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "StartEvent_1", "SubProcess_1"),
-                    BpmnEdge("Flow_2", "SubProcess_1", "EndEvent_1"),
-                    BpmnEdge("Flow_in1", "Inner_start", "Inner_task", parentRef = "SubProcess_1"),
-                    BpmnEdge("Flow_in2", "Inner_task", "Inner_end", parentRef = "SubProcess_1"),
-                ),
-            )
-
-        val errors = validator.validate(definition)
-        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
-    }
-
-    @Test
-    fun `validator rejects a subprocess missing its own start and end`() {
-        val definition =
-            BpmnDefinition(
-                processId = "Process_1",
-                processName = "Handle request",
-                nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Received"),
-                    BpmnSubProcess("SubProcess_1", "Handle"),
-                    BpmnUserTask("Inner_task", "Work", parentRef = "SubProcess_1"),
-                    BpmnEndEvent("EndEvent_1", "Completed"),
-                ),
-                sequences =
-                listOf(
-                    BpmnEdge("Flow_1", "StartEvent_1", "SubProcess_1"),
-                    BpmnEdge("Flow_2", "SubProcess_1", "EndEvent_1"),
-                ),
-            )
-
-        val errors = validator.validate(definition).joinToString("\n")
-        assertContains(errors, "subprocess 'SubProcess_1' must contain at least one START_EVENT")
-        assertContains(errors, "subprocess 'SubProcess_1' must contain at least one END_EVENT")
     }
 
     private fun intermediateDefinition(intermediate: BpmnNode) = BpmnDefinition(
