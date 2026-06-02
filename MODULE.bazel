@@ -27,6 +27,8 @@ bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
 
 use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 
+register_toolchains("@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_x86_64")
+
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.1.1", dev_dependency = True)
 
 # --- PMD Tooling ---
