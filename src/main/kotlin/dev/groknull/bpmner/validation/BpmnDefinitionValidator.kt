@@ -25,6 +25,7 @@ import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
@@ -44,6 +45,7 @@ internal class BpmnDefinitionValidator {
         validateNames(definition, errors)
         validateEdges(definition, errors)
         validateRequiredEvents(definition, errors)
+        validateSubProcesses(definition, errors)
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
@@ -115,11 +117,131 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        if (definition.nodes.none { it is BpmnStartEvent }) {
+        if (definition.nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
             errors.add("definition must contain at least one START_EVENT")
         }
-        if (definition.nodes.none { it is BpmnEndEvent }) {
+        if (definition.nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
             errors.add("definition must contain at least one END_EVENT")
+        }
+    }
+
+    // Subprocess containment integrity. Each guard turns a malformed parentRef into a clean error
+    // rather than an unhandled IllegalArgumentException from the renderer's container resolution.
+    private fun validateSubProcesses(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val subProcessesById = definition.nodes.filterIsInstance<BpmnSubProcess>().associateBy { it.id }
+        val nodesById = definition.nodes.associateBy { it.id }
+
+        validateParentRefTargets(definition, nodesById.keys, subProcessesById.keys, errors)
+        validateFlowsStayInScope(definition, nodesById, errors)
+        validateNoSubProcessCycles(subProcessesById, errors)
+        validateSubProcessRequiredEvents(definition, subProcessesById.values, errors)
+        validateEventSubProcesses(definition, subProcessesById.values.filter { it.triggeredByEvent }, errors)
+    }
+
+    // An event subprocess is triggered by its typed inner start, not by the parent flow: it must
+    // carry no connecting sequence flow, and each inner start must be typed (a non-NONE event
+    // definition is the trigger). Interrupting vs non-interrupting rides the inner start's
+    // isInterrupting flag and needs no separate check.
+    private fun validateEventSubProcesses(
+        definition: BpmnDefinition,
+        eventSubProcesses: Collection<BpmnSubProcess>,
+        errors: MutableList<String>,
+    ) {
+        if (eventSubProcesses.isEmpty()) return
+        // Index once rather than re-scanning per event subprocess.
+        val connectedNodeIds = definition.sequences.flatMap { listOf(it.sourceRef, it.targetRef) }.toSet()
+        val startEventsByParent = definition.nodes.filterIsInstance<BpmnStartEvent>().groupBy { it.parentRef }
+
+        eventSubProcesses.forEach { sp ->
+            if (sp.id in connectedNodeIds) {
+                errors.add("event subprocess '${sp.id}' must not have an incoming or outgoing sequence flow")
+            }
+            startEventsByParent[sp.id]?.forEach { start ->
+                if (start.eventDefinition is BpmnNoneEventDefinition) {
+                    errors.add(
+                        "event subprocess '${sp.id}' start event '${start.id}' must be typed " +
+                            "(carry a non-NONE event definition)",
+                    )
+                }
+            }
+        }
+    }
+
+    // Every non-null parentRef must resolve to an existing node, and that node must be a subprocess
+    // — otherwise the renderer cannot find a container for the child.
+    private fun validateParentRefTargets(
+        definition: BpmnDefinition,
+        nodeIds: Set<String>,
+        subProcessIds: Set<String>,
+        errors: MutableList<String>,
+    ) {
+        fun check(kind: String, ownerId: String, parentRef: String?) {
+            if (parentRef == null) return
+            if (parentRef !in nodeIds) {
+                errors.add("$kind '$ownerId' parentRef '$parentRef' does not match any node id")
+            } else if (parentRef !in subProcessIds) {
+                errors.add("$kind '$ownerId' parentRef '$parentRef' must reference a subprocess")
+            }
+        }
+        definition.nodes.forEach { check("node", it.id, it.parentRef) }
+        definition.sequences.forEach { check("edge", it.id, it.parentRef) }
+    }
+
+    // A sequence flow lives wholly in one scope: its parentRef must match both endpoints' parentRef.
+    // BPMN forbids a flow crossing a subprocess boundary. Dangling endpoints are left to validateEdges.
+    private fun validateFlowsStayInScope(
+        definition: BpmnDefinition,
+        nodesById: Map<String, BpmnNode>,
+        errors: MutableList<String>,
+    ) {
+        definition.sequences.forEach { edge ->
+            // Dangling endpoints are reported by validateEdges; only check scope when both resolve.
+            val source = nodesById[edge.sourceRef] ?: return@forEach
+            val target = nodesById[edge.targetRef] ?: return@forEach
+            if (source.parentRef != edge.parentRef || target.parentRef != edge.parentRef) {
+                errors.add("edge '${edge.id}' must not cross a subprocess boundary")
+            }
+        }
+    }
+
+    // Walk each subprocess's parentRef chain; revisiting an id means the containment forms a cycle,
+    // which would otherwise loop forever / corrupt the rendered tree.
+    private fun validateNoSubProcessCycles(
+        subProcessesById: Map<String, BpmnSubProcess>,
+        errors: MutableList<String>,
+    ) {
+        subProcessesById.keys.forEach { startId ->
+            val seen = mutableSetOf(startId)
+            var current = subProcessesById[startId]?.parentRef
+            while (current != null) {
+                if (!seen.add(current)) {
+                    errors.add("subprocess '$startId' has a cyclic parentRef chain")
+                    return@forEach
+                }
+                current = subProcessesById[current]?.parentRef
+            }
+        }
+    }
+
+    // Each embedded subprocess is its own flow scope: it must declare a start and an end among the
+    // nodes that name it via parentRef — the subprocess analogue of validateRequiredEvents.
+    private fun validateSubProcessRequiredEvents(
+        definition: BpmnDefinition,
+        subProcesses: Collection<BpmnSubProcess>,
+        errors: MutableList<String>,
+    ) {
+        val childrenByParent = definition.nodes.filter { it.parentRef != null }.groupBy { it.parentRef }
+        subProcesses.forEach { subProcess ->
+            val children = childrenByParent[subProcess.id].orEmpty()
+            if (children.none { it is BpmnStartEvent }) {
+                errors.add("subprocess '${subProcess.id}' must contain at least one START_EVENT")
+            }
+            if (children.none { it is BpmnEndEvent }) {
+                errors.add("subprocess '${subProcess.id}' must contain at least one END_EVENT")
+            }
         }
     }
 

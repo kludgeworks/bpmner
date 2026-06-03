@@ -136,11 +136,16 @@ jobs:
           echo "Provider ${{ matrix.provider }} running shard $SHARD_INDEX / 3 (run #${{ github.run_number }})"
 
       - name: Run smoke tests (${{ matrix.provider }}, shard ${{ steps.shard.outputs.SHARD_INDEX }}/3)
+        # Live-LLM tests are non-deterministic in two independent ways: classification variance
+        # (a weaker model occasionally mis-extracts) and latency (a single call can exceed the
+        # per-test timeout). One automatic retry absorbs a transient flake without masking a real
+        # regression — a genuine break fails both attempts.
         env:
           SPRING_PROFILES_ACTIVE: ${{ matrix.provider }}
         run: |
           bazel test \
             --test_tag_filters=live-llm,-manual \
+            --flaky_test_attempts=2 \
             --test_env=OPENAI_API_KEY \
             --test_env=ANTHROPIC_API_KEY \
             --test_env=GEMINI_API_KEY \

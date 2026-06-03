@@ -29,12 +29,23 @@ internal object BpmnTypeName {
     const val EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
     const val INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
     const val PARALLEL_GATEWAY = "bpmn:ParallelGateway"
+    const val EVENT_BASED_GATEWAY = "bpmn:EventBasedGateway"
+
+    // An embedded subprocess is an Activity (a FlowNode), not a task/gateway/event. Surfaced so
+    // FlowNode/FlowElement-targeting rules see it; not a member of TASK/GATEWAY/EVENT categories.
+    const val SUB_PROCESS = "bpmn:SubProcess"
 
     // Artifact, not a flow node: surfaced so annotation-targeting rules (TextAnnotationUsage,
     // and the association sub-checks of MiTaskAnnotation) can match it. Deliberately absent from
     // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — it is not a FlowNode/FlowElement
     // and matches only by exact type name.
     const val TEXT_ANNOTATION = "bpmn:TextAnnotation"
+
+    // Data elements, not flow nodes: surfaced so the data-naming rule (NoTypeWordsInDataName) can
+    // match them by exact type name. Like TEXT_ANNOTATION, deliberately absent from
+    // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — they are not FlowNode/FlowElement.
+    const val DATA_OBJECT = "bpmn:DataObject"
+    const val DATA_STORE = "bpmn:DataStore"
 
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the

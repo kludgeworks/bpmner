@@ -7,12 +7,15 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnDataObject
+import dev.groknull.bpmner.api.BpmnDataStore
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnEdge
 import dev.groknull.bpmner.api.BpmnEndEvent
 import dev.groknull.bpmner.api.BpmnErrorEventDefinition
 import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.api.BpmnEvent
+import dev.groknull.bpmner.api.BpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnInclusiveGateway
@@ -29,6 +32,7 @@ import dev.groknull.bpmner.api.BpmnSendTask
 import dev.groknull.bpmner.api.BpmnServiceTask
 import dev.groknull.bpmner.api.BpmnSignalEventDefinition
 import dev.groknull.bpmner.api.BpmnStartEvent
+import dev.groknull.bpmner.api.BpmnSubProcess
 import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.api.BpmnTextAnnotation
@@ -81,6 +85,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
+    val dataElements = dataElementsOf(definition.dataObjects, definition.dataStores)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
     }
@@ -102,6 +107,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             definition.nodes.map { it.toPrimitiveElement(annotationTextByElementId) } +
             eventDefinitionElements +
             annotationElements +
+            dataElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
         associations = associations,
@@ -117,6 +123,30 @@ private fun annotationElementsOf(annotations: List<BpmnTextAnnotation>): List<Pr
         typeName = BpmnTypeName.TEXT_ANNOTATION,
         properties = mapOf("id" to it.id, "text" to it.text),
     )
+}
+
+// Data objects/stores projected as their own `PrimitiveElement`s (like annotations) so the
+// data-naming rule can target `bpmn:DataObject`/`bpmn:DataStore` by exact type name. Not nodes, so
+// the sealed `when` over BpmnNode stays closed.
+private fun dataElementsOf(
+    dataObjects: List<BpmnDataObject>,
+    dataStores: List<BpmnDataStore>,
+): List<PrimitiveElement> {
+    val objects = dataObjects.map {
+        PrimitiveElement(
+            id = it.id,
+            typeName = BpmnTypeName.DATA_OBJECT,
+            properties = mapOf("id" to it.id, "name" to it.name),
+        )
+    }
+    val stores = dataStores.map {
+        PrimitiveElement(
+            id = it.id,
+            typeName = BpmnTypeName.DATA_STORE,
+            properties = mapOf("id" to it.id, "name" to it.name),
+        )
+    }
+    return objects + stores
 }
 
 private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {
@@ -150,6 +180,11 @@ internal fun BpmnNode.toPrimitiveElement(
         // that actually carry a multi-instance marker, so ordinary tasks stay out of scope.
         if (this@toPrimitiveElement is BpmnTask && multiInstance != null) {
             put("multiInstanceLoopCharacteristics", "bpmn:MultiInstanceLoopCharacteristics")
+        }
+        // Distinct key from multiInstanceLoopCharacteristics so the standard-loop and MI rules
+        // narrow to their own task sets via `appliesWhenProperty` and never overlap.
+        if (this@toPrimitiveElement is BpmnTask && standardLoop != null) {
+            put("standardLoopCharacteristics", "bpmn:StandardLoopCharacteristics")
         }
         // Text of the annotation linked to this element (if any), letting vocabulary checks read
         // the annotation's wording without re-typing the element.
@@ -199,6 +234,10 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnInclusiveGateway -> BpmnTypeName.INCLUSIVE_GATEWAY
 
     is BpmnParallelGateway -> BpmnTypeName.PARALLEL_GATEWAY
+
+    is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
+
+    is BpmnSubProcess -> BpmnTypeName.SUB_PROCESS
 
     // Unrecognized nodes (Choreography, Transaction, etc.) carry their BPMN typename
     // verbatim — exactly what `BpmnSubset`'s `targetElements` matches on.

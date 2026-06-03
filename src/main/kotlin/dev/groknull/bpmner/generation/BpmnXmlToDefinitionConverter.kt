@@ -6,10 +6,14 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -17,6 +21,7 @@ import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -35,6 +40,7 @@ import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -42,12 +48,14 @@ import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.EndEvent
+import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
@@ -62,6 +70,8 @@ import org.camunda.bpm.model.bpmn.instance.SendTask
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
+import org.camunda.bpm.model.bpmn.instance.SubProcess
+import org.camunda.bpm.model.bpmn.instance.Transaction
 import org.camunda.bpm.model.bpmn.instance.UserTask
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
@@ -72,6 +82,16 @@ import java.io.ByteArrayInputStream
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+
+// The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
+// surfaces them with a single helper.
+private data class ParsedArtifacts(
+    val annotations: List<BpmnTextAnnotation>,
+    val associations: List<BpmnAssociation>,
+    val dataObjects: List<BpmnDataObject>,
+    val dataStores: List<BpmnDataStore>,
+    val dataAssociations: List<BpmnDataAssociation>,
+)
 
 @SecondaryAdapter
 @Component
@@ -148,10 +168,11 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     conditionExpression = flow.conditionExpression?.textContent?.takeIf { it.isNotBlank() },
                     isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id ||
                         (flow.source as? InclusiveGateway)?.default?.id == flow.id,
+                    parentRef = (flow.parentElement as? SubProcess)?.id,
                 )
             }
 
-        val (annotations, associations) = artifactsFrom(document)
+        val artifacts = artifactsAndDataFrom(document)
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
@@ -161,36 +182,54 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
-            annotations = annotations,
-            associations = associations,
+            annotations = artifacts.annotations,
+            associations = artifacts.associations,
+            dataObjects = artifacts.dataObjects,
+            dataStores = artifacts.dataStores,
+            dataAssociations = artifacts.dataAssociations,
             diagramCount = diagramCount,
         )
     }
 
-    // Text annotations and their association edges, parsed together (one helper keeps the class
-    // function count in check). BPMN models the link as sourceRef = annotated element,
-    // targetRef = annotation.
-    private fun artifactsFrom(document: Document): Pair<List<BpmnTextAnnotation>, List<BpmnAssociation>> {
-        val annotations = document
-            .bpmnElements("textAnnotation")
+    // All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
+    // text annotations + their association edges (sourceRef = annotated element, targetRef =
+    // annotation), data objects/stores, and the read/write data associations parsed from each
+    // activity's `<dataInputAssociation>` (data id in `<sourceRef>`) / `<dataOutputAssociation>`
+    // (data id in `<targetRef>`) children (the association's `sourceRef` is the parent activity id).
+    private fun artifactsAndDataFrom(document: Document): ParsedArtifacts {
+        val annotations = document.bpmnElements("textAnnotation")
             .map { el ->
                 BpmnTextAnnotation(
                     id = el.getAttribute("id"),
                     text = el.childElements().firstOrNull { it.localName == "text" }?.textContent?.trim().orEmpty(),
                 )
-            }.filter { it.id.isNotBlank() }
-            .toList()
-        val associations = document
-            .bpmnElements("association")
-            .map { el ->
-                BpmnAssociation(
-                    id = el.getAttribute("id"),
-                    sourceRef = el.getAttribute("sourceRef"),
-                    targetRef = el.getAttribute("targetRef"),
-                )
-            }.filter { it.id.isNotBlank() }
-            .toList()
-        return annotations to associations
+            }.filter { it.id.isNotBlank() }.toList()
+        val associations = document.bpmnElements("association")
+            .map { el -> BpmnAssociation(el.getAttribute("id"), el.getAttribute("sourceRef"), el.getAttribute("targetRef")) }
+            .filter { it.id.isNotBlank() }.toList()
+        val dataObjects = document.bpmnElements("dataObject")
+            .map { BpmnDataObject(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() }.toList()
+        val dataStores = document.bpmnElements("dataStore")
+            .map { BpmnDataStore(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() }.toList()
+        fun Element.toAssociation(direction: DataFlowDirection, refChild: String): BpmnDataAssociation? {
+            val activityId = (parentNode as? Element)?.getAttribute("id").orEmpty()
+            val dataId = childElements().firstOrNull { it.localName == refChild }?.textContent?.trim().orEmpty()
+            // Externally-authored BPMN may omit the association id; derive a deterministic one so the
+            // link still round-trips. Skip only when the endpoints (activity / data id) are missing.
+            val id = getAttribute("id").ifBlank { "DataAssoc_${activityId}_$dataId" }
+            return if (activityId.isBlank() || dataId.isBlank()) {
+                null
+            } else {
+                BpmnDataAssociation(id = id, sourceRef = activityId, targetRef = dataId, direction = direction)
+            }
+        }
+        val inputs = document.bpmnElements("dataInputAssociation")
+            .mapNotNull { it.toAssociation(DataFlowDirection.READ, "sourceRef") }
+        val outputs = document.bpmnElements("dataOutputAssociation")
+            .mapNotNull { it.toAssociation(DataFlowDirection.WRITE, "targetRef") }
+        return ParsedArtifacts(annotations, associations, dataObjects, dataStores, (inputs + outputs).toList())
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory
@@ -213,6 +252,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         taskMetadata: TaskMetadata,
     ): BpmnNode {
         val normalisedName = name?.takeIf { it.isNotBlank() }
+        // Camunda's document-wide FlowNode scan returns nested nodes too; their `parentElement`
+        // is the enclosing <subProcess>. A top-level node's parent is the <process>, giving null.
+        val parentRef = (parentElement as? SubProcess)?.id
         return when (this) {
             is StartEvent -> {
                 BpmnStartEvent(
@@ -220,19 +262,38 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
                     isInterrupting = eventMetadata.isInterrupting[id] ?: true,
+                    parentRef = parentRef,
                 )
             }
 
             is UserTask -> {
-                BpmnUserTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnUserTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
+                )
             }
 
             is ServiceTask -> {
-                BpmnServiceTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnServiceTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
+                )
             }
 
             is ScriptTask -> {
-                BpmnScriptTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnScriptTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
+                )
             }
 
             is BusinessRuleTask -> {
@@ -241,6 +302,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -250,6 +313,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
@@ -259,23 +324,35 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     name = normalisedName,
                     messageRef = taskMetadata.messageRefs[id].orEmpty(),
                     multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
                 )
             }
 
             is ManualTask -> {
-                BpmnManualTask(id = id, name = normalisedName, multiInstance = taskMetadata.multiInstance[id])
+                BpmnManualTask(
+                    id = id,
+                    name = normalisedName,
+                    multiInstance = taskMetadata.multiInstance[id],
+                    standardLoop = taskMetadata.standardLoop[id],
+                    parentRef = parentRef,
+                )
             }
 
             is ExclusiveGateway -> {
-                BpmnExclusiveGateway(id = id, name = normalisedName)
+                BpmnExclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is InclusiveGateway -> {
-                BpmnInclusiveGateway(id = id, name = normalisedName)
+                BpmnInclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is ParallelGateway -> {
-                BpmnParallelGateway(id = id, name = normalisedName)
+                BpmnParallelGateway(id = id, name = normalisedName, parentRef = parentRef)
+            }
+
+            is EventBasedGateway -> {
+                BpmnEventBasedGateway(id = id, name = normalisedName, parentRef = parentRef)
             }
 
             is IntermediateCatchEvent -> {
@@ -283,6 +360,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -291,6 +369,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -301,6 +380,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     attachedToRef = eventMetadata.attachedToRefs[id].orEmpty(),
                     cancelActivity = eventMetadata.cancelActivity[id] ?: true,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
@@ -309,19 +389,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     id = id,
                     name = normalisedName,
                     eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    parentRef = parentRef,
                 )
             }
 
-            // FlowNode subtypes the parser doesn't translate (Transaction, CallActivity,
-            // SubProcess, etc.) are surfaced as `BpmnUnrecognizedNode` so the `BpmnSubset`
-            // rule can flag them. Policy stays in the rule engine.
-            else -> {
-                BpmnUnrecognizedNode(
-                    id = id,
-                    name = normalisedName,
-                    bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
-                )
+            // Transaction is a SubProcess subtype but carries distinct semantics the model
+            // doesn't represent, so it stays on the unrecognized path (parser-as-structure) —
+            // only a plain embedded subprocess becomes BpmnSubProcess.
+            is SubProcess -> {
+                if (this is Transaction) {
+                    toUnrecognizedNode(normalisedName, parentRef)
+                } else {
+                    BpmnSubProcess(
+                        id = id,
+                        name = normalisedName,
+                        triggeredByEvent = triggeredByEvent(),
+                        parentRef = parentRef,
+                    )
+                }
             }
+
+            // FlowNode subtypes the parser doesn't translate (CallActivity, etc.) are surfaced
+            // as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can flag them. Policy stays in
+            // the rule engine.
+            else -> toUnrecognizedNode(normalisedName, parentRef)
         }
     }
 
@@ -333,14 +424,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val decisionRefs: Map<String, String>,
         // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
         val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,
+        // Standard-loop characteristics, keyed by task id. Applies to any task kind.
+        val standardLoop: Map<String, StandardLoopCharacteristics>,
     )
 
     private fun taskMetadataFrom(document: Document): TaskMetadata {
         // Local helper (kept off the class surface) parsing one task's multi-instance marker.
         fun Element.multiInstanceOrNull(): MultiInstanceLoopCharacteristics? {
             val loop = childElements().firstOrNull { it.localName == "multiInstanceLoopCharacteristics" } ?: return null
-            // xsd:boolean admits "true"/"false" and "1"/"0"; honour both rather than only "true".
-            val isSequential = loop.getAttribute("isSequential").let { it.equals("true", ignoreCase = true) || it == "1" }
+            val isSequential = xsdBooleanOrDefault(loop.getAttribute("isSequential"), default = false)
             val mode = if (isSequential) MultiInstanceMode.SEQUENTIAL else MultiInstanceMode.PARALLEL
             return MultiInstanceLoopCharacteristics(
                 mode = mode,
@@ -353,6 +445,17 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 loop.childElements().firstOrNull { it.localName == "completionCondition" }
                     ?.textContent
                     ?.takeIf { it.isNotBlank() },
+            )
+        }
+        fun Element.standardLoopOrNull(): StandardLoopCharacteristics? {
+            val loop = childElements().firstOrNull { it.localName == "standardLoopCharacteristics" } ?: return null
+            // xsd:boolean; an absent attribute defaults to our domain default (while-loop = true).
+            val testBefore = xsdBooleanOrDefault(loop.getAttribute("testBefore"), default = true)
+            return StandardLoopCharacteristics(
+                testBefore = testBefore,
+                loopCondition =
+                loop.childElements().firstOrNull { it.localName == "loopCondition" }?.textContent?.takeIf { it.isNotBlank() },
+                loopMaximum = loop.getAttribute("loopMaximum").trim().toIntOrNull(),
             )
         }
         val sendReceive =
@@ -370,7 +473,18 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .mapNotNull { task -> task.multiInstanceOrNull()?.let { task.getAttribute("id") to it } }
                 .filter { (id, _) -> id.isNotBlank() }
                 .toMap()
-        return TaskMetadata(messageRefs = sendReceive, decisionRefs = businessRule, multiInstance = multiInstance)
+        val standardLoop =
+            BPMN_TASK_LOCAL_NAMES
+                .flatMap { document.bpmnElements(it).toList() }
+                .mapNotNull { task -> task.standardLoopOrNull()?.let { task.getAttribute("id") to it } }
+                .filter { (id, _) -> id.isNotBlank() }
+                .toMap()
+        return TaskMetadata(
+            messageRefs = sendReceive,
+            decisionRefs = businessRule,
+            multiInstance = multiInstance,
+            standardLoop = standardLoop,
+        )
     }
 
     private data class EventMetadata(
@@ -507,3 +621,24 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
     private fun Element.childElements(): Sequence<Element> = childNodes.elements()
 }
+
+// Parses an xsd:boolean attribute value: "true" / "1" (case-insensitive) → true, "false" / "0" →
+// false, blank (absent) → [default]. Top-level so the loop-characteristics parsers share it without
+// adding to the converter's method-complexity or class function count.
+private fun xsdBooleanOrDefault(raw: String, default: Boolean): Boolean {
+    if (raw.isBlank()) return default
+    return raw.equals("true", ignoreCase = true) || raw == "1"
+}
+
+// Surfaces a FlowNode subtype the parser doesn't translate (CallActivity, Transaction, etc.) as a
+// BpmnUnrecognizedNode carrying its BPMN typename. Top-level so it stays off the converter's class
+// function count while serving both the SubProcess-variant and the catch-all `else` arm.
+private fun FlowNode.toUnrecognizedNode(
+    normalisedName: String?,
+    parentRef: String?,
+): BpmnUnrecognizedNode = BpmnUnrecognizedNode(
+    id = id,
+    name = normalisedName,
+    bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
+    parentRef = parentRef,
+)

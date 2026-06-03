@@ -22,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -87,6 +88,7 @@ internal class BpmnContractFidelityChecker {
         contract.activities.forEach { activity ->
             checkActivityKind(activity, nodeById, issues)
             checkActivityIteration(activity, nodeById, issues)
+            checkActivityLoop(activity, nodeById, issues)
         }
 
         contract.endStates.forEach { endState ->
@@ -378,6 +380,54 @@ internal class BpmnContractFidelityChecker {
     }
 
     /**
+     * Verifies that a contract `loop` (standard while/until/retry) is realised as a `standardLoop`
+     * marker on the BPMN task, and that the task does not carry an undeclared loop marker.
+     */
+    private fun checkActivityLoop(
+        activity: ContractActivity,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val task = nodeById[activity.id] as? BpmnTask ?: return
+        val loop = activity.loop
+        val standardLoop = task.standardLoop
+        if (loop == null && standardLoop == null) return
+        // Past the guard, a null on either side means the other is non-null (presence asymmetry);
+        // once both are confirmed non-null the remaining arms compare the loop's properties.
+        val message = when {
+            standardLoop == null ->
+                "Activity '${activity.id}' declares a standard loop but its BPMN task carries no " +
+                    "standard-loop marker — the loop semantic was dropped."
+
+            loop == null ->
+                "Activity '${activity.id}' does not declare a loop but its BPMN task carries a " +
+                    "standard-loop marker — unexpected loop characteristics."
+
+            loop.testBefore != standardLoop.testBefore ->
+                "Activity '${activity.id}' declares standard loop testBefore=${loop.testBefore} but its BPMN " +
+                    "task is standard loop testBefore=${standardLoop.testBefore} (while/until flipped)."
+
+            loop.loopCondition != standardLoop.loopCondition ->
+                "Activity '${activity.id}' declares standard loop condition '${loop.loopCondition}' but its " +
+                    "BPMN task has condition '${standardLoop.loopCondition}'."
+
+            loop.loopMaximum != standardLoop.loopMaximum ->
+                "Activity '${activity.id}' declares standard loop maximum=${loop.loopMaximum} but its BPMN " +
+                    "task has maximum=${standardLoop.loopMaximum}."
+
+            else -> return
+        }
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH,
+                severity = BpmnFidelitySeverity.ERROR,
+                message = message,
+                contractElementId = activity.id,
+                bpmnElementId = activity.id,
+            )
+    }
+
+    /**
      * Verifies the BPMN node that realises [endState] is a [BpmnEndEvent] whose
      * `eventDefinition` shape matches the contract's end-state kind. Silent when no
      * matching node is present in the BPMN — that's a separate fidelity concern
@@ -501,12 +551,14 @@ private fun ContractGatewayKind.matchesGatewayType(node: BpmnNode): Boolean = wh
     ContractGatewayKind.EXCLUSIVE -> node is BpmnExclusiveGateway
     ContractGatewayKind.INCLUSIVE -> node is BpmnInclusiveGateway
     ContractGatewayKind.PARALLEL -> node is BpmnParallelGateway
+    ContractGatewayKind.EVENT_BASED -> node is BpmnEventBasedGateway
 }
 
 private fun kindDescription(kind: ContractGatewayKind): String = when (kind) {
     ContractGatewayKind.EXCLUSIVE -> "pick one branch"
     ContractGatewayKind.INCLUSIVE -> "take any branch whose condition is true"
     ContractGatewayKind.PARALLEL -> "take all branches concurrently"
+    ContractGatewayKind.EVENT_BASED -> "wait for the first of several events"
 }
 
 private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (this) {

@@ -2,4 +2,5 @@ Branch kind (`kind` discriminator):
 - CONDITIONAL — default branch kind on EXCLUSIVE decisions. Example: `{kind: "CONDITIONAL", id: "br-yes", label: "Eligible", condition: "score >= 750"}`.
 - DEFAULT — keywords: otherwise, for every other case, catch-all, anything else, for all remaining cases. NO condition; label describes the destination. Example: `{kind: "DEFAULT", id: "br-fallback", label: "Manual review"}`. At most one DEFAULT per decision.
 - UNCONDITIONAL — Example: `{kind: "UNCONDITIONAL", id: "br-track-a", label: "IT prep"}`.
-- Kind/decision matching is strict: CONDITIONAL and DEFAULT only on EXCLUSIVE decisions; UNCONDITIONAL only on PARALLEL decisions.
+- EVENT_GATEWAY — branch of an EVENT_BASED decision. Carries `triggerKind` (TIMER | MESSAGE | SIGNAL) and a required `triggerDetail` (a duration for TIMER, or the message / signal name) in place of a condition. Example: `{kind: "EVENT_GATEWAY", id: "br-confirmed", label: "Payment confirmed", triggerKind: "MESSAGE", triggerDetail: "payment confirmation"}`.
+- Kind/decision matching is strict: CONDITIONAL and DEFAULT only on EXCLUSIVE decisions; UNCONDITIONAL only on PARALLEL decisions; EVENT_GATEWAY only on EVENT_BASED decisions.

@@ -5,10 +5,13 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.api.BpmnDataAssociation
 import dev.groknull.bpmner.api.BpmnTask
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.api.StandardLoopCharacteristics
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -41,7 +44,9 @@ import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.InclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
+import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
+import org.camunda.bpm.model.xml.instance.ModelElementInstance
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
 import org.w3c.dom.Document
@@ -143,13 +148,33 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         definition: BpmnDefinition,
         process: Process,
     ): Map<String, FlowNode> {
-        val nodeMap = mutableMapOf<String, FlowNode>()
+        // Create every flow node up front (detached), so a nested node can resolve its
+        // subprocess parent from the map regardless of where its parent sits in the flat list.
+        val nodeMap = definition.nodes.associate { node ->
+            node.id to BpmnModelFactory.newFlowNode(modelInstance, node)
+        }
+        // Attach each node to its container: the process for a top-level node, or the enclosing
+        // SubProcess element for a nested one. Parent subprocesses are already in nodeMap, so a
+        // subprocess nested inside a subprocess attaches correctly at any depth.
         for (node in definition.nodes) {
-            val flowNode = BpmnModelFactory.newFlowNode(modelInstance, node)
-            process.addChildElement(flowNode)
-            nodeMap[node.id] = flowNode
+            containerFor(node.parentRef, nodeMap, process).addChildElement(nodeMap.getValue(node.id))
         }
         return nodeMap
+    }
+
+    // Resolves the BPMN container a node or edge belongs to: the process when [parentRef] is null,
+    // otherwise the SubProcess flow node it names. Both Process and SubProcess accept child flow
+    // elements via addChildElement.
+    private fun containerFor(
+        parentRef: String?,
+        nodeMap: Map<String, FlowNode>,
+        process: Process,
+    ): ModelElementInstance {
+        if (parentRef == null) return process
+        return nodeMap[parentRef] as? SubProcess
+            ?: throw IllegalArgumentException(
+                "parentRef '$parentRef' does not resolve to a subprocess node",
+            )
     }
 
     private fun buildSequenceFlows(
@@ -175,7 +200,9 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
             sequenceFlow.source = source
             sequenceFlow.target = target
-            process.addChildElement(sequenceFlow)
+            // An edge sits wholly in one scope (BPMN forbids flows crossing a subprocess
+            // boundary), so it attaches to the same container its parentRef names.
+            containerFor(edge.parentRef, nodeMap, process).addChildElement(sequenceFlow)
             source.outgoing.add(sequenceFlow)
             target.incoming.add(sequenceFlow)
             if (edge.isDefault) {
@@ -314,9 +341,20 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             }
         }
 
+        val allTaskElementsById = document.allTaskElementsById()
+
+        // Data input/output associations are activity children that precede loopCharacteristics in
+        // the tActivity XSD sequence, so stamp them before the multi-instance pass. READ →
+        // <dataInputAssociation> (data element in its <sourceRef>), WRITE → <dataOutputAssociation>
+        // (data element in its <targetRef>); the activity is the parent element.
+        definition.dataAssociations.forEach { da ->
+            val element = allTaskElementsById[da.sourceRef]
+                ?: error("Data association '${da.id}' sourceRef '${da.sourceRef}' has no rendered task element")
+            element.appendDataAssociation(document, da)
+        }
+
         // Multi-instance marker applies to every task kind, so stamp it in a dedicated pass over
         // all task elements rather than widening the attribute `when` above with seven arms.
-        val allTaskElementsById = document.allTaskElementsById()
         definition.nodes.filterIsInstance<BpmnTask>().forEach { task ->
             task.multiInstance?.let { mi ->
                 val element = allTaskElementsById[task.id]
@@ -324,6 +362,11 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 element.appendMultiInstance(document, mi)
                 // appendMultiInstance carries collectionDescription in our extension namespace.
                 bpmnerNamespaceUsed = true
+            }
+            task.standardLoop?.let { loop ->
+                val element = allTaskElementsById[task.id]
+                    ?: error("Task '${task.id}' has a standard-loop marker but no task element was rendered for it")
+                element.appendStandardLoop(document, loop)
             }
         }
 
@@ -343,6 +386,24 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                     el.setAttribute("id", association.id)
                     el.setAttribute("sourceRef", association.sourceRef)
                     el.setAttribute("targetRef", association.targetRef)
+                },
+            )
+        }
+        // Data objects are process-level flow elements (children of <process>); data stores are
+        // definitions-level root elements (siblings of <process>), per the BPMN XSD.
+        definition.dataObjects.forEach { dataObject ->
+            process.appendChild(
+                document.bpmnElement("dataObject").also { el ->
+                    el.setAttribute("id", dataObject.id)
+                    el.setAttribute("name", dataObject.name)
+                },
+            )
+        }
+        definition.dataStores.forEach { dataStore ->
+            root.appendChild(
+                document.bpmnElement("dataStore").also { el ->
+                    el.setAttribute("id", dataStore.id)
+                    el.setAttribute("name", dataStore.name)
                 },
             )
         }
@@ -399,6 +460,47 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                         document.bpmnElement("completionCondition").also { it.textContent = condition },
                     )
                 }
+            },
+        )
+    }
+
+    // Appends `<bpmn:standardLoopCharacteristics>` as the last child of a task element. testBefore
+    // distinguishes a while-loop (true) from an until-loop (false); loopMaximum and the
+    // loopCondition child are native BPMN, so no extension namespace is needed.
+    private fun Element.appendStandardLoop(
+        document: Document,
+        loop: StandardLoopCharacteristics,
+    ) {
+        appendChild(
+            document.bpmnElement("standardLoopCharacteristics").also { el ->
+                el.setAttribute("testBefore", loop.testBefore.toString())
+                loop.loopMaximum?.let { el.setAttribute("loopMaximum", it.toString()) }
+                loop.loopCondition?.takeIf { it.isNotBlank() }?.let { condition ->
+                    el.appendChild(
+                        document.bpmnElement("loopCondition").also { it.textContent = condition },
+                    )
+                }
+            },
+        )
+    }
+
+    // Appends a `<bpmn:dataInputAssociation>` (READ) or `<bpmn:dataOutputAssociation>` (WRITE) as a
+    // child of the activity, carrying the data element id in the spec child (`<sourceRef>` for inputs,
+    // `<targetRef>` for outputs). Stamped before any multiInstanceLoopCharacteristics to honour the
+    // tActivity XSD sequence (dataInput/OutputAssociation precede loopCharacteristics).
+    private fun Element.appendDataAssociation(document: Document, da: BpmnDataAssociation) {
+        // tDataAssociation requires a targetRef, so emit BOTH refs: the data element id sits on the
+        // direction-appropriate child (sourceRef for READ, targetRef for WRITE) and the activity id on
+        // the other. Keeps the XML XSD-valid and lets the parser recover the data id by direction.
+        val (localName, sourceId, targetId) = when (da.direction) {
+            DataFlowDirection.READ -> Triple("dataInputAssociation", da.targetRef, da.sourceRef)
+            DataFlowDirection.WRITE -> Triple("dataOutputAssociation", da.sourceRef, da.targetRef)
+        }
+        appendChild(
+            document.bpmnElement(localName).also { assoc ->
+                assoc.setAttribute("id", da.id)
+                assoc.appendChild(document.bpmnElement("sourceRef").also { it.textContent = sourceId })
+                assoc.appendChild(document.bpmnElement("targetRef").also { it.textContent = targetId })
             },
         )
     }

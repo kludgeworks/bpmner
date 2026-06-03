@@ -8,18 +8,25 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
+import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
+import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
+import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
@@ -30,6 +37,7 @@ import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -121,6 +129,40 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
+    fun `data objects, stores, and read-write associations round-trip through render and parse`() {
+        val original = BpmnDefinition(
+            processId = "Process_data",
+            processName = "Order validation",
+            nodes = listOf(
+                BpmnStartEvent("StartEvent_1", "Order received"),
+                BpmnServiceTask("act-validate", "Validate order"),
+                BpmnEndEvent("end-done", "Order validated"),
+            ),
+            sequences = listOf(
+                BpmnEdge("F1", "StartEvent_1", "act-validate"),
+                BpmnEdge("F2", "act-validate", "end-done"),
+            ),
+            dataObjects = listOf(
+                BpmnDataObject("DataObject_order", "Order"),
+                BpmnDataObject("DataObject_validated", "Validated order"),
+            ),
+            dataStores = listOf(BpmnDataStore("DataStore_customer", "Customer database")),
+            dataAssociations = listOf(
+                BpmnDataAssociation("DA1", "act-validate", "DataObject_order", DataFlowDirection.READ),
+                BpmnDataAssociation("DA2", "act-validate", "DataStore_customer", DataFlowDirection.READ),
+                BpmnDataAssociation("DA3", "act-validate", "DataObject_validated", DataFlowDirection.WRITE),
+            ),
+        )
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
+
+        assertEquals(original.dataObjects, parsed.dataObjects)
+        assertEquals(original.dataStores, parsed.dataStores)
+        // Parse groups inputs then outputs, so compare order-independently.
+        assertEquals(original.dataAssociations.toSet(), parsed.dataAssociations.toSet())
+    }
+
+    @Test
     fun `task without multiInstance emits no loop characteristics`() {
         val definition =
             BpmnDefinition(
@@ -144,6 +186,45 @@ class BpmnDefinitionToXmlConverterTest {
         assertFalse(xml.contains("multiInstanceLoopCharacteristics"), "plain task must not emit a loop marker")
         val plain = BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-plain" } as BpmnUserTask
         assertNull(plain.multiInstance)
+    }
+
+    @Test
+    fun `standard-loop task round-trips through render and parse`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Loop",
+                processName = "Standard loop",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnServiceTask(
+                        "act-charge",
+                        "Charge card",
+                        standardLoop = StandardLoopCharacteristics(
+                            testBefore = false,
+                            loopCondition = "payment not yet successful",
+                            loopMaximum = 3,
+                        ),
+                    ),
+                    BpmnEndEvent("EndEvent_1", "End"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "act-charge"),
+                    BpmnEdge("F2", "act-charge", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+        assertContains(xml, "standardLoopCharacteristics")
+        assertContains(xml, "testBefore=\"false\"")
+
+        val parsed =
+            BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-charge" } as BpmnServiceTask
+        val loop = assertNotNull(parsed.standardLoop, "expected the charge task to carry a standard-loop marker")
+        assertFalse(loop.testBefore)
+        assertEquals("payment not yet successful", loop.loopCondition)
+        assertEquals(3, loop.loopMaximum)
     }
 
     // A two-task process: a PARALLEL multi-instance user task (peer review) and a SEQUENTIAL
@@ -229,6 +310,46 @@ class BpmnDefinitionToXmlConverterTest {
         assertContains(xml, "<parallelGateway id=\"Gateway_join_prep\"")
         // No condition expressions on any of the parallel-branch flows
         assertFalse(xml.contains("<conditionExpression"), "Parallel branches must not carry conditions")
+    }
+
+    @Test
+    fun `converter round-trips an event-based gateway routing to intermediate catch events`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_EventBased",
+                processName = "Await response",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Charge submitted"),
+                    BpmnEventBasedGateway("dec-await", "Await response"),
+                    BpmnIntermediateCatchEvent(
+                        "evt-ok",
+                        name = "Confirmation received",
+                        eventDefinition = BpmnNoneEventDefinition,
+                    ),
+                    BpmnIntermediateCatchEvent(
+                        "evt-timeout",
+                        name = "Timed out",
+                        eventDefinition = BpmnNoneEventDefinition,
+                    ),
+                    BpmnEndEvent("end-ok", "Settled"),
+                    BpmnEndEvent("end-timeout", "Abandoned"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "dec-await"),
+                    BpmnEdge("F2", "dec-await", "evt-ok"),
+                    BpmnEdge("F3", "dec-await", "evt-timeout"),
+                    BpmnEdge("F4", "evt-ok", "end-ok"),
+                    BpmnEdge("F5", "evt-timeout", "end-timeout"),
+                ),
+            )
+
+        val xml = converter.render(definition).xml
+        assertContains(xml, "<eventBasedGateway id=\"dec-await\"")
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.toXml(definition))
+        assertEquals("dec-await", parsed.nodes.filterIsInstance<BpmnEventBasedGateway>().single().id)
     }
 
     @Test

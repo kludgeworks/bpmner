@@ -7,6 +7,8 @@ package dev.groknull.bpmner.contract.internal.domain
 
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractArtifact
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -17,6 +19,8 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.DefaultBranch
+import dev.groknull.bpmner.contract.EventGatewayBranch
+import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.contract.withSourceIds
@@ -264,6 +268,84 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `conditional branch on event-based decision flags NON_EVENT_BRANCH_ON_EVENT_BASED`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.EVENT_BASED,
+                branches =
+                listOf(
+                    EventGatewayBranch(
+                        id = "br-pay",
+                        label = "Payment confirmed",
+                        triggerKind = EventTriggerKind.MESSAGE,
+                        triggerDetail = "payment confirmation",
+                    ),
+                    ConditionalBranch(id = "br-misplaced", label = "Score check", condition = "score >= 750"),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.NON_EVENT_BRANCH_ON_EVENT_BASED))
+    }
+
+    @Test
+    fun `event-gateway branch on exclusive decision flags EVENT_BRANCH_ON_NON_EVENT_BASED`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val brokenDecision =
+            originalDecision.copy(
+                branches =
+                listOf(
+                    ConditionalBranch(id = "br-yes", label = "Yes", condition = "x"),
+                    EventGatewayBranch(
+                        id = "br-misplaced",
+                        label = "Timeout",
+                        triggerKind = EventTriggerKind.TIMER,
+                        triggerDetail = "PT24H",
+                    ),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(brokenDecision))
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.EVENT_BRANCH_ON_NON_EVENT_BASED))
+    }
+
+    @Test
+    fun `event-based decision with only event-gateway branches is valid`() {
+        val branchingContract = branchingContract()
+        val originalDecision = branchingContract.decisions.first()
+        val decision =
+            originalDecision.copy(
+                kind = ContractGatewayKind.EVENT_BASED,
+                branches =
+                listOf(
+                    EventGatewayBranch(
+                        id = "br-pay",
+                        label = "Payment confirmed",
+                        triggerKind = EventTriggerKind.MESSAGE,
+                        triggerDetail = "payment confirmation",
+                    ),
+                    EventGatewayBranch(
+                        id = "br-timeout",
+                        label = "Timed out",
+                        triggerKind = EventTriggerKind.TIMER,
+                        triggerDetail = "PT24H",
+                    ),
+                ),
+            )
+        val contract = branchingContract.copy(decisions = listOf(decision))
+        val report = validator.validate(contract)
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.NON_EVENT_BRANCH_ON_EVENT_BASED },
+        )
+        assertFalse(
+            report.issues.any { it.code == ContractValidationCode.EVENT_BRANCH_ON_NON_EVENT_BASED },
+        )
+    }
+
+    @Test
     fun `trigger without trace links produces an error`() {
         val contract = linearContract().copy(start = ContractStart(ContractTrigger.None("Applicant submits an application")))
         val report = validator.validate(contract)
@@ -341,6 +423,47 @@ class BpmnContractValidatorTest {
     }
 
     private val sources = listOf("ev-source")
+
+    @Test
+    fun `activity referencing an undeclared data id flags DATA_REF_NOT_IN_ARTIFACTS`() {
+        val contract = linearContract().copy(
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "activity-receive",
+                    name = "Receive application",
+                    sourceIds = sources,
+                    dataInputIds = listOf("art-missing"),
+                ),
+            ),
+            artifacts = listOf(ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT)),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS))
+    }
+
+    @Test
+    fun `activity data refs that match declared artifacts pass`() {
+        val contract = linearContract().copy(
+            activities = listOf(
+                ContractActivity.Service(
+                    id = "activity-receive",
+                    name = "Receive application",
+                    sourceIds = sources,
+                    dataInputIds = listOf("art-order"),
+                    dataOutputIds = listOf("art-decision"),
+                ),
+            ),
+            artifacts = listOf(
+                ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT),
+                ContractArtifact("art-decision", "Approval decision", ContractArtifactKind.DATA_OBJECT),
+            ),
+        )
+
+        assertFalse(
+            validator.validate(contract).issues.any { it.code == ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS },
+        )
+    }
 
     private fun linearContract(): ProcessContract = ProcessContract(
         id = "contract-linear",

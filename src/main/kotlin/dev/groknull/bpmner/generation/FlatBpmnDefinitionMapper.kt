@@ -11,6 +11,7 @@ import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
@@ -27,10 +28,12 @@ import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 
 /*
  * Wire-format → sealed conversion at the BPMN generation + repair LLM boundary.
@@ -56,11 +59,15 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     escalations = escalations,
     annotations = annotations,
     associations = associations,
+    dataObjects = dataObjects,
+    dataStores = dataStores,
+    dataAssociations = dataAssociations,
 )
 
 public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {
     in TASK_KINDS -> toTaskNode()
     in GATEWAY_KINDS -> toGatewayNode()
+    FlatBpmnNodeKind.SUB_PROCESS -> toSubProcessNode()
     else -> toEventPositionNode()
 }
 
@@ -78,32 +85,44 @@ private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.EXCLUSIVE_GATEWAY,
     FlatBpmnNodeKind.INCLUSIVE_GATEWAY,
     FlatBpmnNodeKind.PARALLEL_GATEWAY,
+    FlatBpmnNodeKind.EVENT_BASED_GATEWAY,
 )
 
 private fun FlatBpmnNode.toTaskNode(): BpmnNode {
     val mi = multiInstance?.toSealed()
+    val sl = standardLoop?.toSealed()
     return when (type) {
-        FlatBpmnNodeKind.USER_TASK -> BpmnUserTask(id = id, name = name, multiInstance = mi)
-        FlatBpmnNodeKind.SERVICE_TASK -> BpmnServiceTask(id = id, name = name, multiInstance = mi)
-        FlatBpmnNodeKind.SCRIPT_TASK -> BpmnScriptTask(id = id, name = name, multiInstance = mi)
-        FlatBpmnNodeKind.MANUAL_TASK -> BpmnManualTask(id = id, name = name, multiInstance = mi)
+        FlatBpmnNodeKind.USER_TASK ->
+            BpmnUserTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
+        FlatBpmnNodeKind.SERVICE_TASK ->
+            BpmnServiceTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
+        FlatBpmnNodeKind.SCRIPT_TASK ->
+            BpmnScriptTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
+        FlatBpmnNodeKind.MANUAL_TASK ->
+            BpmnManualTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
         FlatBpmnNodeKind.BUSINESS_RULE_TASK -> BpmnBusinessRuleTask(
             id = id,
             name = name,
             decisionRef = requireField(decisionRef, type, "decisionRef", id),
             multiInstance = mi,
+            standardLoop = sl,
+            parentRef = parentRef,
         )
         FlatBpmnNodeKind.SEND_TASK -> BpmnSendTask(
             id = id,
             name = name,
             messageRef = requireField(messageRef, type, "messageRef", id),
             multiInstance = mi,
+            standardLoop = sl,
+            parentRef = parentRef,
         )
         FlatBpmnNodeKind.RECEIVE_TASK -> BpmnReceiveTask(
             id = id,
             name = name,
             messageRef = requireField(messageRef, type, "messageRef", id),
             multiInstance = mi,
+            standardLoop = sl,
+            parentRef = parentRef,
         )
         else -> error("toTaskNode called with non-task kind $type")
     }
@@ -116,12 +135,26 @@ private fun FlatMultiInstanceLoopCharacteristics.toSealed(): MultiInstanceLoopCh
     completionCondition = completionCondition,
 )
 
+private fun FlatStandardLoopCharacteristics.toSealed(): StandardLoopCharacteristics = StandardLoopCharacteristics(
+    testBefore = testBefore,
+    loopCondition = loopCondition,
+    loopMaximum = loopMaximum,
+)
+
 private fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
-    FlatBpmnNodeKind.EXCLUSIVE_GATEWAY -> BpmnExclusiveGateway(id = id, name = name)
-    FlatBpmnNodeKind.INCLUSIVE_GATEWAY -> BpmnInclusiveGateway(id = id, name = name)
-    FlatBpmnNodeKind.PARALLEL_GATEWAY -> BpmnParallelGateway(id = id, name = name)
+    FlatBpmnNodeKind.EXCLUSIVE_GATEWAY -> BpmnExclusiveGateway(id = id, name = name, parentRef = parentRef)
+    FlatBpmnNodeKind.INCLUSIVE_GATEWAY -> BpmnInclusiveGateway(id = id, name = name, parentRef = parentRef)
+    FlatBpmnNodeKind.PARALLEL_GATEWAY -> BpmnParallelGateway(id = id, name = name, parentRef = parentRef)
+    FlatBpmnNodeKind.EVENT_BASED_GATEWAY -> BpmnEventBasedGateway(id = id, name = name, parentRef = parentRef)
     else -> error("toGatewayNode called with non-gateway kind $type")
 }
+
+private fun FlatBpmnNode.toSubProcessNode(): BpmnNode = BpmnSubProcess(
+    id = id,
+    name = name,
+    triggeredByEvent = triggeredByEvent ?: false,
+    parentRef = parentRef,
+)
 
 private fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
     FlatBpmnNodeKind.START_EVENT -> BpmnStartEvent(
@@ -129,11 +162,13 @@ private fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         name = name,
         eventDefinition = eventDefinition?.toSealed() ?: BpmnNoneEventDefinition,
         isInterrupting = isInterrupting ?: true,
+        parentRef = parentRef,
     )
     FlatBpmnNodeKind.END_EVENT -> BpmnEndEvent(
         id = id,
         name = name,
         eventDefinition = eventDefinition?.toSealed() ?: BpmnNoneEventDefinition,
+        parentRef = parentRef,
     )
     FlatBpmnNodeKind.BOUNDARY_EVENT -> BpmnBoundaryEvent(
         id = id,
@@ -141,16 +176,19 @@ private fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         attachedToRef = requireField(attachedToRef, type, "attachedToRef", id),
         cancelActivity = cancelActivity ?: true,
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
+        parentRef = parentRef,
     )
     FlatBpmnNodeKind.INTERMEDIATE_CATCH_EVENT -> BpmnIntermediateCatchEvent(
         id = id,
         name = name,
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
+        parentRef = parentRef,
     )
     FlatBpmnNodeKind.INTERMEDIATE_THROW_EVENT -> BpmnIntermediateThrowEvent(
         id = id,
         name = name,
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
+        parentRef = parentRef,
     )
     else -> error("toEventPositionNode called with non-event-position kind $type")
 }

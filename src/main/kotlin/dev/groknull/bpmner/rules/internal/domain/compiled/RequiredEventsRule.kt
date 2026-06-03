@@ -48,7 +48,7 @@ internal class RequiredEventsRule : BpmnRule {
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
         val diagnostics = mutableListOf<RuleDiagnostic>()
 
-        if (ctx.definition.nodes.none { it is BpmnStartEvent }) {
+        if (ctx.definition.nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
             diagnostics +=
                 RuleDiagnostic(
                     diagnosticCode = "def-missing-start-event",
@@ -57,7 +57,7 @@ internal class RequiredEventsRule : BpmnRule {
                     message = "definition must contain at least one START_EVENT",
                 )
         }
-        if (ctx.definition.nodes.none { it is BpmnEndEvent }) {
+        if (ctx.definition.nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
             diagnostics +=
                 RuleDiagnostic(
                     diagnosticCode = "def-missing-end-event",

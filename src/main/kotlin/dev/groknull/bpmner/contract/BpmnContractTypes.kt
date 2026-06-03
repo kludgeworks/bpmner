@@ -16,6 +16,7 @@ import dev.groknull.bpmner.api.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 
 @JsonClassDescription("Source-grounded process start declaration")
@@ -210,6 +211,24 @@ sealed interface ContractActivity {
      */
     val boundaryEvents: List<ContractBoundaryEvent>
 
+    /**
+     * Standard-loop marker, or `null` for an ordinary single-run activity. Cross-cutting like
+     * [iteration]; set when the activity repeats until a condition is met (a while/until/retry
+     * loop). Realized as a BPMN standard-loop task downstream. Distinct from [iteration], which
+     * runs once per item in a collection.
+     */
+    val loop: ContractLoop?
+
+    /**
+     * Ids of [ProcessContract.artifacts] this activity reads. Cross-cutting like [iteration] /
+     * [boundaryEvents]; realized as READ `BpmnDataAssociation` edges from the activity to each
+     * referenced data object/store. Empty for activities that consume no declared data.
+     */
+    val dataInputIds: List<String>
+
+    /** Ids of [ProcessContract.artifacts] this activity writes — realized as WRITE data associations. */
+    val dataOutputIds: List<String>
+
     @JsonClassDescription("Service activity — external/system automation. Maps to BpmnServiceTask.")
     data class Service(
         @field:NotBlank
@@ -232,6 +251,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("User activity — human work through a system UI. Maps to BpmnUserTask.")
@@ -256,6 +284,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Script activity — engine-evaluated computation, no external service. Maps to BpmnScriptTask.")
@@ -280,6 +317,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -310,6 +356,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Send activity — fire-and-forget outbound message. Maps to BpmnSendTask.")
@@ -338,6 +393,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription(
@@ -368,6 +432,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     @JsonClassDescription("Manual activity — human work without system support. Maps to BpmnManualTask.")
@@ -392,6 +465,15 @@ sealed interface ContractActivity {
         @field:Valid
         @get:JsonPropertyDescription(ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION)
         override val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
+        @field:Valid
+        @get:JsonPropertyDescription(ACTIVITY_LOOP_DESCRIPTION)
+        override val loop: ContractLoop? = null,
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_INPUT_IDS_DESCRIPTION)
+        override val dataInputIds: List<String> = emptyList(),
+        @field:Size(max = 50)
+        @get:JsonPropertyDescription(ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION)
+        override val dataOutputIds: List<String> = emptyList(),
     ) : ContractActivity
 
     companion object {
@@ -427,6 +509,19 @@ private const val ACTIVITY_BOUNDARY_EVENTS_DESCRIPTION: String =
         "it and route elsewhere (e.g. 'if approval takes longer than 24h, escalate'; 'if the " +
         "payment subprocess raises a chargeback error, route to dispute handling'). Empty for " +
         "ordinary activities. Distinct from a normal decision branch off the activity's outcome."
+
+private const val ACTIVITY_LOOP_DESCRIPTION: String =
+    "Standard-loop marker. Set only when the source says the activity repeats until a condition " +
+        "is met (a while/until/retry loop, e.g. \"retry up to 3 times until it succeeds\"); null " +
+        "otherwise. Distinct from a per-item iteration over a collection."
+
+private const val ACTIVITY_DATA_INPUT_IDS_DESCRIPTION: String =
+    "Ids of artifacts (data objects/stores) this activity reads. Each id must match a " +
+        "ProcessContract.artifacts entry. Empty for activities that consume no declared data."
+
+private const val ACTIVITY_DATA_OUTPUT_IDS_DESCRIPTION: String =
+    "Ids of artifacts (data objects/stores) this activity writes or updates. Each id must match a " +
+        "ProcessContract.artifacts entry. Empty for activities that produce no declared data."
 
 @JsonClassDescription(
     "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
@@ -482,6 +577,22 @@ data class ContractBoundaryEvent(
             "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
     )
     val detail: String? = null,
+)
+
+@JsonClassDescription(
+    "Standard loop over a single activity that repeats until a condition is met (while/until/retry).",
+)
+data class ContractLoop(
+    @get:JsonPropertyDescription(
+        "true = while-loop (the condition is checked before each run); false = until-loop (the " +
+            "activity runs once, then the condition is checked after).",
+    )
+    val testBefore: Boolean = true,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".")
+    val loopCondition: String? = null,
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times.")
+    val loopMaximum: Int? = null,
 )
 
 /**
@@ -546,6 +657,13 @@ enum class ContractGatewayKind {
      * proceeds. Maps to `<bpmn:parallelGateway>`.
      */
     PARALLEL,
+
+    /**
+     * The flow waits for one of several events; the first to fire selects its branch. Maps to
+     * `<bpmn:eventBasedGateway>`. Branches are [EventGatewayBranch] — each names the event
+     * (TIMER / MESSAGE / SIGNAL) that triggers it rather than carrying a condition.
+     */
+    EVENT_BASED,
 }
 
 @JsonClassDescription("Decision required by the extracted process contract")
@@ -603,6 +721,7 @@ data class ContractDecision(
     JsonSubTypes.Type(value = ConditionalBranch::class, name = "CONDITIONAL"),
     JsonSubTypes.Type(value = DefaultBranch::class, name = "DEFAULT"),
     JsonSubTypes.Type(value = UnconditionalBranch::class, name = "UNCONDITIONAL"),
+    JsonSubTypes.Type(value = EventGatewayBranch::class, name = "EVENT_GATEWAY"),
 )
 sealed interface ContractBranch {
     val id: String
@@ -620,6 +739,7 @@ val ContractBranch.kindName: String
             is ConditionalBranch -> "CONDITIONAL"
             is DefaultBranch -> "DEFAULT"
             is UnconditionalBranch -> "UNCONDITIONAL"
+            is EventGatewayBranch -> "EVENT_GATEWAY"
         }
 
 @JsonClassDescription("Conditional branch — taken when `condition` evaluates true")
@@ -683,6 +803,47 @@ data class UnconditionalBranch(
     override val nextRef: String? = null,
 ) : ContractBranch
 
+/**
+ * The event that selects an [EventGatewayBranch] of an EVENT_BASED decision: a deadline elapsing
+ * (`TIMER`), a named message arriving (`MESSAGE`), or a broadcast being observed (`SIGNAL`).
+ * Realized as the intermediate catch event the event-based gateway routes to on that branch.
+ */
+enum class EventTriggerKind {
+    TIMER,
+    MESSAGE,
+    SIGNAL,
+}
+
+@JsonClassDescription(
+    "Branch of an EVENT_BASED decision — taken when its event fires first. Names the triggering " +
+        "event kind (TIMER / MESSAGE / SIGNAL) instead of a condition.",
+)
+data class EventGatewayBranch(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable branch id")
+    override val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Branch label naming the awaited event, e.g. \"Payment confirmed\".")
+    override val label: String,
+    @get:JsonPropertyDescription(
+        "The event that selects this branch: TIMER (a deadline elapses), MESSAGE (a named message " +
+            "arrives), or SIGNAL (a broadcast is observed). Realized as an intermediate catch event.",
+    )
+    val triggerKind: EventTriggerKind,
+    @field:Size(max = 200)
+    @field:NotBlank
+    @get:JsonPropertyDescription(
+        "Event detail naming the awaited event: an ISO-8601 duration for TIMER, or the message / " +
+            "signal name for MESSAGE / SIGNAL. Required.",
+    )
+    val triggerDetail: String,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Optional next-element id; same semantics as on ConditionalBranch.")
+    override val nextRef: String? = null,
+) : ContractBranch
+
 @JsonClassDescription("Actor referenced by the extracted process contract")
 data class ContractActor(
     @field:NotBlank
@@ -698,7 +859,12 @@ data class ContractActor(
     val role: String? = null,
 )
 
-@JsonClassDescription("Artifact referenced by the extracted process contract")
+enum class ContractArtifactKind { DATA_OBJECT, DATA_STORE }
+
+@JsonClassDescription(
+    "Data artifact referenced by the contract: a DATA_OBJECT (transient information flowing through " +
+        "the process) or a DATA_STORE (persisted store — database, file, queue).",
+)
 data class ContractArtifact(
     @field:NotBlank
     @field:Size(max = 200)
@@ -706,8 +872,14 @@ data class ContractArtifact(
     val id: String,
     @field:NotBlank
     @field:Size(max = 200)
-    @get:JsonPropertyDescription("Artifact name")
+    @get:JsonPropertyDescription("Business name of the artifact, e.g. \"Order\" or \"Customer database\"")
     val name: String,
+    @field:NotNull
+    @get:JsonPropertyDescription(
+        "DATA_OBJECT = transient information flowing through the process; DATA_STORE = persisted " +
+            "information (database, file, queue) the process reads or writes.",
+    )
+    val kind: ContractArtifactKind,
     @field:Size(max = 500)
     @get:JsonPropertyDescription("Optional artifact description")
     val description: String? = null,

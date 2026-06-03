@@ -11,6 +11,7 @@ import com.embabel.agent.core.ProcessOptions
 import dev.groknull.bpmner.api.BoundaryEventKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -37,7 +38,10 @@ import java.util.concurrent.TimeUnit
     SmokeTestSummaryExtension::class,
 )
 @SpringBootTest
-@Timeout(120, unit = TimeUnit.SECONDS)
+// Each method makes two sequential live-LLM calls (readiness + extraction); 120s was too tight
+// under provider latency spikes / tool-loop retries. Generous headroom below Bazel's 'eternal'
+// target still catches a genuine hang.
+@Timeout(240, unit = TimeUnit.SECONDS)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
@@ -122,6 +126,14 @@ class ContractVocabularySmokeTest {
         assertTrue(hasBoundary) {
             "Expected an activity carrying a $kind boundary event, but found: " +
                 activities.joinToString { "${it.name}(boundaryEvents=${it.boundaryEvents})" }
+        }
+    }
+
+    private fun ProcessContract.assertHasArtifactKind(kind: ContractArtifactKind) {
+        val hasArtifact = artifacts.any { it.kind == kind }
+        assertTrue(hasArtifact) {
+            "Expected a $kind artifact, but found: " +
+                artifacts.joinToString { "${it.id}: '${it.name}', kind=${it.kind}" }
         }
     }
 
@@ -392,5 +404,48 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.INCLUSIVE)
+    }
+
+    // Event-based gateway
+
+    @Test
+    fun `event-based gateway`() {
+        val c = extractContract(
+            """
+            The process starts when a card charge is submitted. The system then waits for whichever
+            of these happens first: a success confirmation arrives, a decline notification arrives,
+            or sixty seconds pass with no response. Each outcome is recorded and the process ends.
+            """,
+        )
+        c.assertHasGatewayKind(ContractGatewayKind.EVENT_BASED)
+    }
+
+    // Standard loop
+
+    @Test
+    fun `standard loop activity`() {
+        val c = extractContract(
+            """
+            When a payment is submitted, the system attempts to charge the card. If the charge
+            fails it retries the same charge, up to three times, until the payment succeeds. Once
+            it succeeds or the attempts are exhausted, the process ends.
+            """,
+        )
+        assertTrue(c.activities.any { it.loop != null }) {
+            "Expected an activity carrying a standard loop, but found: " +
+                c.activities.joinToString { "${it.name}(loop=${it.loop})" }
+        }
+    }
+
+    @Test
+    fun `data objects and stores`() {
+        val c = extractContract(
+            """
+            When an order is received, the system reads the customer record from the customer
+            database and produces a validated order, which it then stores.
+            """,
+        )
+        c.assertHasArtifactKind(ContractArtifactKind.DATA_STORE)
+        c.assertHasArtifactKind(ContractArtifactKind.DATA_OBJECT)
     }
 }

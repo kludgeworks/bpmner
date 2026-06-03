@@ -32,6 +32,15 @@ interface BpmnDefinition {
     /** Association edges linking annotations (and other artifacts) to flow elements. */
     val associations: List<BpmnAssociation> get() = emptyList()
 
+    /** Data objects (transient information) flowing through the process. */
+    val dataObjects: List<BpmnDataObject> get() = emptyList()
+
+    /** Data stores (persisted information: databases, files, queues) the process reads or writes. */
+    val dataStores: List<BpmnDataStore> get() = emptyList()
+
+    /** Read/write links between an activity and a data object or store. */
+    val dataAssociations: List<BpmnDataAssociation> get() = emptyList()
+
     // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
     // model does not carry DI content; the count is the only signal that survives. The
     // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
@@ -52,6 +61,13 @@ interface BpmnNode {
     val id: String
     val name: String?
 
+    /**
+     * Id of the [BpmnSubProcess] this node is nested inside, or `null` for a top-level node.
+     * `BpmnDefinition` stays flat — subprocess children live in the same flat `nodes` list and
+     * carry this back-reference; nesting is reconstructed only when rendering XML.
+     */
+    val parentRef: String?
+
     fun withName(name: String?): BpmnNode
 }
 
@@ -64,6 +80,14 @@ sealed interface BpmnTask : BpmnNode {
      * engine read it polymorphically over any task without an exhaustive `when`.
      */
     val multiInstance: MultiInstanceLoopCharacteristics?
+
+    /**
+     * Standard-loop characteristics, or `null` for an ordinary single-run activity. Present when
+     * the activity repeats until a condition is met (a while/until/retry loop). Cross-cutting
+     * across all task kinds, declared here for polymorphic reads; distinct from [multiInstance]
+     * (which runs once per item in a collection rather than repeating until a condition holds).
+     */
+    val standardLoop: StandardLoopCharacteristics?
 }
 
 /**
@@ -76,6 +100,17 @@ interface MultiInstanceLoopCharacteristics {
     val collectionDescription: String
     val loopCardinality: Int?
     val completionCondition: String?
+}
+
+/**
+ * Standard-loop characteristics attached to a [BpmnTask]. Annotation-free api view; the concrete
+ * data class lives in `core/BpmnDomain.kt` and renders to `<bpmn:standardLoopCharacteristics>` on
+ * the task element.
+ */
+interface StandardLoopCharacteristics {
+    val testBefore: Boolean
+    val loopCondition: String?
+    val loopMaximum: Int?
 }
 
 /** Grouping marker for gateway nodes. */
@@ -133,6 +168,19 @@ interface BpmnInclusiveGateway : BpmnGateway
 
 interface BpmnParallelGateway : BpmnGateway
 
+interface BpmnEventBasedGateway : BpmnGateway
+
+/**
+ * An embedded subprocess — a composite activity that contains its own start-to-end flow.
+ * Modelled as a flat marker node: its inner nodes/edges live in the same [BpmnDefinition.nodes] /
+ * [BpmnDefinition.sequences] lists carrying [BpmnNode.parentRef] = this subprocess's id; the renderer
+ * reconstructs the `<bpmn:subProcess>` nesting. [triggeredByEvent] distinguishes an ordinary
+ * subprocess (false) from an event subprocess (true).
+ */
+interface BpmnSubProcess : BpmnNode {
+    val triggeredByEvent: Boolean
+}
+
 /**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
  * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
@@ -154,6 +202,12 @@ interface BpmnEdge {
     val name: String?
     val conditionExpression: String?
     val isDefault: Boolean
+
+    /**
+     * Id of the [BpmnSubProcess] this edge is nested inside, or `null` for a top-level edge. BPMN
+     * forbids sequence flows crossing a subprocess boundary, so an edge sits wholly in one scope.
+     */
+    val parentRef: String?
 }
 
 /**
@@ -175,6 +229,36 @@ interface BpmnAssociation {
     val id: String
     val sourceRef: String
     val targetRef: String
+}
+
+/** A BPMN data object: transient information flowing through the process. Renders to `<bpmn:dataObject>`. */
+interface BpmnDataObject {
+    val id: String
+    val name: String
+}
+
+/**
+ * A BPMN data store: persisted information (database, file, queue) the process reads or writes.
+ * Renders to `<bpmn:dataStore>`.
+ */
+interface BpmnDataStore {
+    val id: String
+    val name: String
+}
+
+/** Direction of a [BpmnDataAssociation]: the activity reads from, or writes to, the data element. */
+enum class DataFlowDirection { READ, WRITE }
+
+/**
+ * A read/write link between an activity (`sourceRef`) and a data object or store (`targetRef`).
+ * Distinct from [BpmnAssociation] (annotation links) and [BpmnEdge] (token flow). Renders to a
+ * `<bpmn:dataInputAssociation>` (READ) or `<bpmn:dataOutputAssociation>` (WRITE) child of the activity.
+ */
+interface BpmnDataAssociation {
+    val id: String
+    val sourceRef: String
+    val targetRef: String
+    val direction: DataFlowDirection
 }
 
 /** Process-level message catalog entry, referenced by message event definitions and tasks. */
@@ -270,10 +354,12 @@ val BpmnNode.typeName: String
             is BpmnExclusiveGateway -> "EXCLUSIVE_GATEWAY"
             is BpmnInclusiveGateway -> "INCLUSIVE_GATEWAY"
             is BpmnParallelGateway -> "PARALLEL_GATEWAY"
+            is BpmnEventBasedGateway -> "EVENT_BASED_GATEWAY"
             is BpmnIntermediateCatchEvent -> "INTERMEDIATE_CATCH_EVENT"
             is BpmnIntermediateThrowEvent -> "INTERMEDIATE_THROW_EVENT"
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
+            is BpmnSubProcess -> "SUB_PROCESS"
             is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
             else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }

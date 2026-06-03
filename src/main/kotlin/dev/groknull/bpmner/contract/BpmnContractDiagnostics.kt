@@ -39,10 +39,19 @@ enum class ContractValidationCode {
     /** An UnconditionalBranch appeared under an INCLUSIVE decision (inclusive branches are conditional). */
     UNCONDITIONAL_BRANCH_ON_INCLUSIVE,
 
+    /** A non-EventGatewayBranch appeared under an EVENT_BASED decision (event decisions route on triggers). */
+    NON_EVENT_BRANCH_ON_EVENT_BASED,
+
+    /** An EventGatewayBranch appeared under a non-EVENT_BASED decision (event branches are EVENT_BASED-only). */
+    EVENT_BRANCH_ON_NON_EVENT_BASED,
+
     ASSUMPTION_WITHOUT_TRACE,
     CONTRACT_ITEM_WITHOUT_TRACE,
     DUPLICATE_CONTRACT_ELEMENT_ID,
     INVALID_CONTRACT_ITEM,
+
+    /** An activity's dataInputIds/dataOutputIds references an id not present in the contract's artifacts. */
+    DATA_REF_NOT_IN_ARTIFACTS,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

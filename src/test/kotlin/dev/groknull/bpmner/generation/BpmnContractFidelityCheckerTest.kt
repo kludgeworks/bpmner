@@ -15,6 +15,7 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
+import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -29,11 +30,13 @@ import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -146,6 +149,111 @@ class BpmnContractFidelityCheckerTest {
         listOf(
             BpmnEdge("F1", "StartEvent_1", "act-review"),
             BpmnEdge("F2", "act-review", "end-done"),
+        ),
+    )
+
+    @Test
+    fun `matching standard loop activity passes`() {
+        val loop = ContractLoop(testBefore = false, loopCondition = "payment failed", loopMaximum = 3)
+        val marker = StandardLoopCharacteristics(testBefore = false, loopCondition = "payment failed", loopMaximum = 3)
+        val report = checker.check(loopContract(loop), loopDefinition(marker))
+
+        assertTrue(report.isValid, "expected valid; got ${report.issues}")
+    }
+
+    @Test
+    fun `standard loop contract realised without the marker flagged`() {
+        val report = checker.check(loopContract(ContractLoop(testBefore = false)), loopDefinition(standardLoop = null))
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
+            "expected ACTIVITY_STANDARD_LOOP_MISMATCH; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `single-run activity rendered with a standard-loop marker is flagged`() {
+        val contract = ProcessContract(
+            id = "c-loop",
+            processName = "Loop",
+            summary = "Single-run charge",
+            start = ContractStart(ContractTrigger.None("order placed")),
+            activities = listOf(ContractActivity.Service(id = "act-charge", name = "Charge card")),
+            endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Charged")),
+        )
+
+        val report = checker.check(contract, loopDefinition(StandardLoopCharacteristics(testBefore = false)))
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
+            "expected ACTIVITY_STANDARD_LOOP_MISMATCH for the unexpected marker; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `standard loop testBefore disagreement flagged`() {
+        val report =
+            checker.check(
+                loopContract(ContractLoop(testBefore = false, loopCondition = "payment not yet successful")),
+                loopDefinition(StandardLoopCharacteristics(testBefore = true, loopCondition = "payment not yet successful")),
+            )
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
+            "expected ACTIVITY_STANDARD_LOOP_MISMATCH for the while/until flip; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `standard loop condition disagreement flagged`() {
+        val report =
+            checker.check(
+                loopContract(ContractLoop(testBefore = false, loopCondition = "payment not yet successful")),
+                loopDefinition(StandardLoopCharacteristics(testBefore = false, loopCondition = "shipment not yet confirmed")),
+            )
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
+            "expected ACTIVITY_STANDARD_LOOP_MISMATCH for the condition mismatch; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `standard loop maximum disagreement flagged`() {
+        val report =
+            checker.check(
+                loopContract(ContractLoop(testBefore = false, loopMaximum = 3)),
+                loopDefinition(StandardLoopCharacteristics(testBefore = false, loopMaximum = 5)),
+            )
+
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
+            "expected ACTIVITY_STANDARD_LOOP_MISMATCH for the maximum mismatch; got ${report.issues.map { it.code }}",
+        )
+    }
+
+    private fun loopContract(loop: ContractLoop): ProcessContract = ProcessContract(
+        id = "c-loop",
+        processName = "Loop",
+        summary = "Retry charge until it succeeds",
+        start = ContractStart(ContractTrigger.None("order placed")),
+        activities = listOf(ContractActivity.Service(id = "act-charge", name = "Charge card", loop = loop)),
+        endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Charged")),
+    )
+
+    private fun loopDefinition(standardLoop: StandardLoopCharacteristics?): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Loop",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Order placed"),
+            BpmnServiceTask("act-charge", "Charge card", standardLoop = standardLoop),
+            BpmnEndEvent("end-done", "Charged"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("F1", "StartEvent_1", "act-charge"),
+            BpmnEdge("F2", "act-charge", "end-done"),
         ),
     )
 

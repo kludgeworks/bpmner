@@ -13,16 +13,19 @@ import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
+import dev.groknull.bpmner.core.BpmnDataObject
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
+import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTextAnnotation
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.core.StandardLoopCharacteristics
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
@@ -350,6 +353,67 @@ internal class PklRuleCatalogTest {
     }
 
     // -------------------------------------------------------------------------------------
+    // EventBasedDirectEvents: an event-based gateway must route directly to intermediate catch
+    // events, never to tasks or other activities.
+
+    @Test
+    fun `round-trip - EventBasedDirectEvents fires when an event-based gateway targets a task`() {
+        val rule = activeRuleEndingWith("event-based-direct-events")
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnEventBasedGateway("g", "Await response"),
+                    BpmnUserTask("t", "Handle response"),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s", "g"),
+                    BpmnEdge("f2", "g", "t"),
+                    BpmnEdge("f3", "t", "e"),
+                ),
+            ),
+        )
+        assertEquals(listOf("g"), rule.evaluate(ctx).map { it.elementId })
+    }
+
+    @Test
+    fun `round-trip - EventBasedDirectEvents passes when targets are intermediate catch events`() {
+        val rule = activeRuleEndingWith("event-based-direct-events")
+        val ctx = BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(
+                    BpmnStartEvent("s", "Start"),
+                    BpmnEventBasedGateway("g", "Await response"),
+                    dev.groknull.bpmner.core.BpmnIntermediateCatchEvent(
+                        "c1",
+                        name = "Confirmation received",
+                        eventDefinition = dev.groknull.bpmner.core.BpmnNoneEventDefinition,
+                    ),
+                    dev.groknull.bpmner.core.BpmnIntermediateCatchEvent(
+                        "c2",
+                        name = "Timed out",
+                        eventDefinition = dev.groknull.bpmner.core.BpmnNoneEventDefinition,
+                    ),
+                    BpmnEndEvent("e", "End"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("f1", "s", "g"),
+                    BpmnEdge("f2", "g", "c1"),
+                    BpmnEdge("f3", "g", "c2"),
+                    BpmnEdge("f4", "c1", "e"),
+                    BpmnEdge("f5", "c2", "e"),
+                ),
+            ),
+        )
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    // -------------------------------------------------------------------------------------
     // BoundaryEventConstraints — one composite rule, four sub-check codes. Each context injects
     // exactly one violation so the asserted diagnosticCode is unambiguous.
 
@@ -456,6 +520,44 @@ internal class PklRuleCatalogTest {
         assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(linked))
     }
 
+    @Test
+    fun `round-trip - LoopTaskAnnotation passes a loop task with a condition-word annotation`() {
+        val rule = activeRuleEndingWith("loop-task-annotation")
+        val ctx = loopCtx(annotationText = "Retry until the payment succeeds", linked = true, includePlainTask = true)
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(ctx))
+    }
+
+    @Test
+    fun `round-trip - LoopTaskAnnotation fires on a loop task with no annotation, ignoring plain tasks`() {
+        val rule = activeRuleEndingWith("loop-task-annotation")
+        val ctx = loopCtx(annotationText = null, linked = false, includePlainTask = true)
+        // Only the loop task is flagged; the ordinary task is narrowed out by appliesWhenProperty.
+        assertEquals(listOf("act-loop"), rule.evaluate(ctx).map { it.elementId }.distinct())
+    }
+
+    @Test
+    fun `round-trip - NoTypeWordsInDataName fires on a type-word data name and passes a clean one`() {
+        val rule = activeRuleEndingWith("no-type-words-in-data-name")
+
+        assertEquals(listOf("d-bad"), rule.evaluate(dataObjectCtx("d-bad", "Order activity")).map { it.elementId })
+        assertEquals(emptyList<RuleDiagnostic>(), rule.evaluate(dataObjectCtx("d-ok", "Order")))
+    }
+
+    // A process with a single data object `dataId` named `dataName`, projected for the data-naming rule.
+    private fun dataObjectCtx(dataId: String, dataName: String): BpmnDefinitionContext = BpmnDefinitionContext(
+        BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                BpmnStartEvent("s", "Start"),
+                BpmnUserTask("t", "Handle order"),
+                BpmnEndEvent("e", "End"),
+            ),
+            sequences = listOf(BpmnEdge("f1", "s", "t"), BpmnEdge("f2", "t", "e")),
+            dataObjects = listOf(BpmnDataObject(dataId, dataName)),
+        ),
+    )
+
     private fun activeRuleEndingWith(idSuffix: String): BpmnRule {
         val catalog = PklRuleCatalog(emptyList(), nlp)
         return catalog.activeRules().firstOrNull { it.id.endsWith(idSuffix) }
@@ -483,6 +585,30 @@ internal class PklRuleCatalogTest {
                 sequences = listOf(BpmnEdge("f1", "s", "act-mi"), BpmnEdge("f2", "act-mi", "e")),
                 annotations = annotationText?.let { listOf(BpmnTextAnnotation("ta-mi", it)) } ?: emptyList(),
                 associations = if (linked) listOf(BpmnAssociation("assoc-mi", "act-mi", "ta-mi")) else emptyList(),
+            ),
+        )
+    }
+
+    // A standard-loop user task `act-loop` plus its annotation `ta-loop`. Mirrors [miCtx]; proves
+    // LoopTaskAnnotation narrows to standard-loop tasks via appliesWhenProperty and reads annotationText.
+    private fun loopCtx(annotationText: String?, linked: Boolean, includePlainTask: Boolean): BpmnDefinitionContext {
+        val tasks =
+            listOfNotNull(
+                BpmnUserTask(
+                    "act-loop",
+                    "Charge card",
+                    standardLoop = StandardLoopCharacteristics(testBefore = false, loopCondition = "payment not yet successful"),
+                ),
+                if (includePlainTask) BpmnUserTask("act-plain", "Approve order") else null,
+            )
+        return BpmnDefinitionContext(
+            BpmnDefinition(
+                processId = "P",
+                processName = "Process",
+                nodes = listOf(BpmnStartEvent("s", "Start")) + tasks + BpmnEndEvent("e", "End"),
+                sequences = listOf(BpmnEdge("f1", "s", "act-loop"), BpmnEdge("f2", "act-loop", "e")),
+                annotations = annotationText?.let { listOf(BpmnTextAnnotation("ta-loop", it)) } ?: emptyList(),
+                associations = if (linked) listOf(BpmnAssociation("assoc-loop", "act-loop", "ta-loop")) else emptyList(),
             ),
         )
     }

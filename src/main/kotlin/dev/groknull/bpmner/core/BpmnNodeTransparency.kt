@@ -51,6 +51,10 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
         false
     }
 
+    // A subprocess is a composite activity wrapping its own flow — collapsing it would erase
+    // a containment boundary the fidelity walk must preserve. Never transparent.
+    is BpmnSubProcess -> false
+
     // Fallback for elements without a typed Kotlin class. Never transparent — not enough
     // information to treat an unrecognized node as a routing-only pass-through.
     is BpmnUnrecognizedNode -> false

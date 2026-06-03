@@ -10,6 +10,9 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
+import dev.groknull.bpmner.core.BpmnDataAssociation
+import dev.groknull.bpmner.core.BpmnDataObject
+import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
@@ -19,6 +22,7 @@ import dev.groknull.bpmner.core.BpmnTextAnnotation
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
+import jakarta.validation.constraints.Size
 
 /*
  * Flat wire-format types that the LLM is asked to produce for BPMN generation and
@@ -49,8 +53,10 @@ public enum class FlatBpmnNodeKind {
     EXCLUSIVE_GATEWAY,
     INCLUSIVE_GATEWAY,
     PARALLEL_GATEWAY,
+    EVENT_BASED_GATEWAY,
     INTERMEDIATE_CATCH_EVENT,
     INTERMEDIATE_THROW_EVENT,
+    SUB_PROCESS,
 }
 
 public enum class FlatBpmnEventDefinitionKind {
@@ -69,7 +75,8 @@ public enum class FlatBpmnEventDefinitionKind {
         "START_EVENT / END_EVENT → optional eventDefinition (defaults to NONE); " +
         "INTERMEDIATE_CATCH_EVENT / INTERMEDIATE_THROW_EVENT → required eventDefinition; " +
         "BOUNDARY_EVENT → attachedToRef + eventDefinition (cancelActivity defaults true); " +
-        "START_EVENT additionally accepts isInterrupting (defaults true).",
+        "START_EVENT additionally accepts isInterrupting (defaults true); " +
+        "SUB_PROCESS → optional triggeredByEvent (defaults false), with inner nodes carrying parentRef.",
 )
 public data class FlatBpmnNode(
     @field:NotBlank
@@ -120,6 +127,23 @@ public data class FlatBpmnNode(
             "associations) describing the item set. Leave null for an ordinary single-run activity.",
     )
     val multiInstance: FlatMultiInstanceLoopCharacteristics? = null,
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Task kinds only. Set when the activity repeats until a condition is met (a while/until/" +
+            "retry loop). Pair it with a linked text annotation describing the loop condition. " +
+            "Leave null for an ordinary single-run activity.",
+    )
+    val standardLoop: FlatStandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(
+        "SUB_PROCESS only. false for an ordinary embedded subprocess; true for an event subprocess. " +
+            "Defaults to false if omitted.",
+    )
+    val triggeredByEvent: Boolean? = null,
+    @get:JsonPropertyDescription(
+        "Id of the enclosing SUB_PROCESS when this node is nested inside one; leave null for a " +
+            "top-level node. Nodes stay in this flat list and carry the back-reference.",
+    )
+    val parentRef: String? = null,
 )
 
 @JsonClassDescription(
@@ -140,6 +164,22 @@ public data class FlatMultiInstanceLoopCharacteristics(
     val loopCardinality: Int? = null,
     @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are done")
     val completionCondition: String? = null,
+)
+
+@JsonClassDescription(
+    "Standard loop characteristics for a task that repeats until a condition is met.",
+)
+public data class FlatStandardLoopCharacteristics(
+    @get:JsonPropertyDescription(
+        "true = while-loop (condition tested before each iteration); " +
+            "false = until-loop (body runs once, then the condition is tested).",
+    )
+    val testBefore: Boolean = true,
+    @field:Size(max = 500)
+    @get:JsonPropertyDescription("Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".")
+    val loopCondition: String? = null,
+    @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times")
+    val loopMaximum: Int? = null,
 )
 
 @JsonClassDescription(
@@ -235,6 +275,24 @@ public data class FlatBpmnDefinition(
             "multi-instance task's annotation, set sourceRef=task id, targetRef=annotation id.",
     )
     val associations: List<BpmnAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Data objects (transient information) flowing through the process, e.g. \"Order\". Link them " +
+            "to activities via dataAssociations.",
+    )
+    val dataObjects: List<BpmnDataObject> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Data stores (persisted information: databases, files, queues) the process reads or writes, " +
+            "e.g. \"Customer database\". Link them to activities via dataAssociations.",
+    )
+    val dataStores: List<BpmnDataStore> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Read/write links between activities and data objects/stores. Set sourceRef=activity id, " +
+            "targetRef=data id, direction=READ (activity consumes) or WRITE (activity produces).",
+    )
+    val dataAssociations: List<BpmnDataAssociation> = emptyList(),
 )
 
 // Ported verbatim from core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than
