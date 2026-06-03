@@ -12,14 +12,14 @@ import org.junit.jupiter.api.Test
 class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `enables anthropic profile when anthropic token is present`() {
-        val result = evaluate(activeProfiles = "anth", env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test"))
+        val result = evaluate(activeProfiles = "anthropic", env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test"))
 
         assertTrue(result.enabled, result.reason)
     }
 
     @Test
     fun `enables github profile when github token is present`() {
-        val result = evaluate(profileEnvironment = "gh", env = mapOf("GITHUB_TOKEN" to "github_pat_test"))
+        val result = evaluate(profileEnvironment = "github", env = mapOf("GITHUB_TOKEN" to "github_pat_test"))
 
         assertTrue(result.enabled, result.reason)
     }
@@ -27,8 +27,8 @@ class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `system property takes precedence over environment profile`() {
         val result = evaluate(
-            activeProfiles = "gh",
-            profileEnvironment = "anth",
+            activeProfiles = "github",
+            profileEnvironment = "anthropic",
             env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test"),
         )
 
@@ -47,7 +47,7 @@ class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `disables when both provider families are active`() {
         val result = evaluate(
-            activeProfiles = "anth,gh",
+            activeProfiles = "anthropic,github",
             env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test", "GITHUB_TOKEN" to "github_pat_test"),
         )
 
@@ -57,7 +57,7 @@ class ActiveLiveLlmProfileConditionTest {
 
     @Test
     fun `disables when selected provider token is missing`() {
-        val result = evaluate(activeProfiles = "anth")
+        val result = evaluate(activeProfiles = "anthropic")
 
         assertFalse(result.enabled, result.reason)
         assertTrue(result.reason.contains("ANTHROPIC_API_KEY"), result.reason)

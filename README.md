@@ -56,7 +56,7 @@ bazel build //src:bpmner_app
 Starts an HTTP server with a live, progress-aware browser UI for submitting process descriptions, watching generation progress over SSE, inspecting intermediate validation snapshots, and downloading the final BPMN XML. The web flow keeps XML in memory rather than writing `.bpmn` files to disk.
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anth,web
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic,web
 ```
 Open `http://localhost:8080` once the server is up.
 
@@ -64,12 +64,12 @@ Open `http://localhost:8080` once the server is up.
 Start the shell to use the `generate` command with interactive clarification:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anth
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic
 ```
 
 #### One-Shot Generation
 ```bash
-bazel run //src:bpmner_app -- --spring.profiles.active=anth \
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic \
   --process-file=toast-process.txt --output=toast.bpmn
 ```
 
@@ -95,26 +95,26 @@ bazel test //...
 ### Live LLM Smoke Tests
 To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite with one supported live provider profile. Use the `--test_output=streamed` flag to display live execution logs, token usage, and model cost details in the terminal:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anth \
+ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 
-GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
+GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=github \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
-The `anth` profile expands to `anthropic`, and `gh` expands to `github`, through the Spring profile groups in `application.yaml`.
+Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `github`, `openai`, or `gemini`.
 
 To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest` suite with one supported live provider profile:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anth \
+ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:LiveLlmFullPipelineSmokeTest --test_output=streamed
 
-GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
+GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=github \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:LiveLlmFullPipelineSmokeTest --test_output=streamed

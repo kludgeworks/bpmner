@@ -33,12 +33,12 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
         private val providers = listOf(
             LiveLlmProvider(
                 displayName = "Anthropic",
-                profiles = setOf("anth"),
+                profiles = setOf("anthropic"),
                 tokenName = ANTHROPIC_API_KEY,
             ),
             LiveLlmProvider(
                 displayName = "GitHub",
-                profiles = setOf("gh"),
+                profiles = setOf("github"),
                 tokenName = GITHUB_TOKEN,
             ),
             LiveLlmProvider(
@@ -71,7 +71,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 0 ->
                     Evaluation.disabled(
                         "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
-                            "set one of anth, gh, openai, or gemini",
+                            "set one of anthropic, github, openai, or gemini",
                     )
 
                 1 ->
@@ -82,7 +82,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                         "multiple live LLM profile families are active in " +
                             "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
                             activeProviders.joinToString { it.displayName } +
-                            "; select exactly one of anth, gh, openai, or gemini",
+                            "; select exactly one of anthropic, github, openai, or gemini",
                     )
             }
         }

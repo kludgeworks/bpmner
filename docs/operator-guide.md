@@ -50,7 +50,7 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 | `alignment-validator` | `BpmnAlignmentAgent.checkAlignment` | (profile default) |
 | `linter` | `LlmRuleAgent.evaluateLlmRules` | (profile default) |
 
-Override per-role under `embabel.models.llms.<role>`. Anthropic and GitHub Models profiles are configured in `application-anthropic.yaml` and `application-github.yaml` respectively. Run with `--spring.profiles.active=anth` or `gh`.
+Override per-role under `embabel.models.llms.<role>`. Anthropic and GitHub Models profiles are configured in `application-anthropic.yaml` and `application-github.yaml` respectively. Run with `--spring.profiles.active=anthropic` or `github`.
 
 The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
 
