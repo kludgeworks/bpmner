@@ -7,12 +7,9 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
-import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
@@ -581,37 +578,5 @@ class DeterministicPrimitivesTest {
             PoolLabelCheckConfig(PoolLabelMode.CHILD_DIAGRAMS_KEEP_POOL_PROCESS_NAME),
         )
         assertEquals(listOf("drift"), diagnostics.map { it.elementId })
-    }
-
-    private fun metadata(id: String, vararg targetElements: String): RuleMetadata = RuleMetadata(
-        id = id,
-        name = id,
-        slug = id,
-        category = "Test",
-        intent = "Test rule.",
-        forModellers = "Test rule.",
-        forAI = "Test rule.",
-        targetElements = targetElements.toList(),
-        errorMessages = mapOf("default" to "$id violation"),
-        severity = RuleSeverity.ERROR,
-    )
-
-    private fun context(
-        nodes: List<dev.groknull.bpmner.core.BpmnNode>,
-        edges: List<BpmnEdge>? = null,
-        groups: List<BpmnGroup> = emptyList(),
-    ): BpmnDefinitionContext {
-        val actualEdges = edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->
-            BpmnEdge("f${index + 1}", source.id, target.id)
-        }
-        return BpmnDefinitionContext(
-            BpmnDefinition(
-                processId = "P",
-                processName = "Process",
-                nodes = nodes,
-                sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
-                groups = groups,
-            ),
-        )
     }
 }

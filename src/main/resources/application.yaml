@@ -6,18 +6,6 @@ spring:
     name: bpmner
   main:
     web-application-type: none
-  profiles:
-    group:
-      anth:
-        - anthropic
-        - verbose
-      gh:
-        - github
-        - verbose
-      openai:
-        - openai
-      web:
-        - web
 
 embabel:
   models:

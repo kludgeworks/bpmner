@@ -2,6 +2,10 @@
 # SPDX-License-Identifier: MIT
 
 spring:
+  autoconfigure:
+    exclude:
+      - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}

@@ -1,5 +1,10 @@
 # bpmner
 
+[![CI](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml/badge.svg)](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml)
+[![Quality Gate — Backend](https://sonarcloud.io/api/project_badges/measure?project=kludgeworks_bpmner_backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kludgeworks_bpmner_backend)
+[![Quality Gate — Web](https://sonarcloud.io/api/project_badges/measure?project=kludgeworks_bpmner_web&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kludgeworks_bpmner_web)
+[![Reviewed by Greptile](https://img.shields.io/badge/reviewed%20by-greptile-1f8acb)](https://www.greptile.com)
+
 Generates valid, semantically-grounded BPMN 2.0 XML from plain-language workflow descriptions — business, automated, technical, scientific, or personal.
 
 `bpmner` is more than a simple BPMN generator. It is a high-integrity modeling assistant that bridges the gap between ambiguous human language and technical process standards. Built on the [Embabel](https://github.com/embabel/embabel-agent) agentic framework, it employs a defense-in-depth pipeline to ensure every generated diagram is not only syntactically correct but also semantically aligned with user intent.
@@ -42,7 +47,7 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ### Prerequisites
 - **Bazel 8.6.0** (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk).
 - **Mise** for environment and tool management.
-- An LLM API key (Anthropic, OpenAI, or GitHub Models).
+- An LLM API key (Anthropic, OpenAI, Gemini, or GitHub Models).
 
 ### Build
 ```bash
@@ -56,7 +61,7 @@ bazel build //src:bpmner_app
 Starts an HTTP server with a live, progress-aware browser UI for submitting process descriptions, watching generation progress over SSE, inspecting intermediate validation snapshots, and downloading the final BPMN XML. The web flow keeps XML in memory rather than writing `.bpmn` files to disk.
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anth,web
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic,web
 ```
 Open `http://localhost:8080` once the server is up.
 
@@ -64,12 +69,12 @@ Open `http://localhost:8080` once the server is up.
 Start the shell to use the `generate` command with interactive clarification:
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anth
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic
 ```
 
 #### One-Shot Generation
 ```bash
-bazel run //src:bpmner_app -- --spring.profiles.active=anth \
+bazel run //src:bpmner_app -- --spring.profiles.active=anthropic \
   --process-file=toast-process.txt --output=toast.bpmn
 ```
 
@@ -95,26 +100,26 @@ bazel test //...
 ### Live LLM Smoke Tests
 To manually verify that the LLM correctly extracts process contract vocabulary items (such as task kinds, start/end events, and gateways), run the `ContractVocabularySmokeTest` suite with one supported live provider profile. Use the `--test_output=streamed` flag to display live execution logs, token usage, and model cost details in the terminal:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anth \
+ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 
-GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
+GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=github \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
-The `anth` profile expands to `anthropic`, and `gh` expands to `github`, through the Spring profile groups in `application.yaml`.
+Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `github`, `openai`, or `gemini`.
 
 To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest` suite with one supported live provider profile:
 ```bash
-ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anth \
+ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:LiveLlmFullPipelineSmokeTest --test_output=streamed
 
-GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=gh \
+GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=github \
   bazel test --test_tag_filters=manual,live-llm \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:LiveLlmFullPipelineSmokeTest --test_output=streamed

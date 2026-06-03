@@ -7,11 +7,6 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
@@ -160,35 +155,5 @@ internal class PropertyPatternCheckTest {
         val message = check.evaluate(ctx, metadata("combined", "bpmn:UserTask"), config).single().message
         assertTrue(message.contains("no camelCase"), "combined message should keep patternDescription: $message")
         assertTrue(message.contains("contains forbidden token 'api'"), "combined message should also name the token: $message")
-    }
-
-    private fun metadata(id: String, vararg targetElements: String): RuleMetadata = RuleMetadata(
-        id = id,
-        name = id,
-        slug = id,
-        category = "Test",
-        intent = "Test rule.",
-        forModellers = "Test rule.",
-        forAI = "Test rule.",
-        targetElements = targetElements.toList(),
-        errorMessages = mapOf("default" to "$id violation"),
-        severity = RuleSeverity.ERROR,
-    )
-
-    private fun context(
-        nodes: List<dev.groknull.bpmner.core.BpmnNode>,
-        edges: List<BpmnEdge>? = null,
-    ): BpmnDefinitionContext {
-        val actualEdges = edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->
-            BpmnEdge("f${index + 1}", source.id, target.id)
-        }
-        return BpmnDefinitionContext(
-            BpmnDefinition(
-                processId = "P",
-                processName = "Process",
-                nodes = nodes,
-                sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
-            ),
-        )
     }
 }

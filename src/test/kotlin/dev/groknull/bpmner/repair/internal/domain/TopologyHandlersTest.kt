@@ -362,29 +362,6 @@ class TopologyHandlersTest {
         )
     }
 
-    private fun joinForkDefinition() = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Join Fork Process",
-        nodes =
-        listOf(
-            BpmnStartEvent("Start_1", "Start"),
-            BpmnStartEvent("Start_2", "Trigger"),
-            BpmnExclusiveGateway("Gateway_1", "Route?"),
-            BpmnUserTask("Task_1", "Handle A"),
-            BpmnUserTask("Task_2", "Handle B"),
-            BpmnEndEvent("End_1", "End"),
-        ),
-        sequences =
-        listOf(
-            BpmnEdge("Flow_1", "Start_1", "Gateway_1"),
-            BpmnEdge("Flow_2", "Start_2", "Gateway_1"),
-            BpmnEdge("Flow_3", "Gateway_1", "Task_1", name = "Path A"),
-            BpmnEdge("Flow_4", "Gateway_1", "Task_2", name = "Path B"),
-            BpmnEdge("Flow_5", "Task_1", "End_1"),
-            BpmnEdge("Flow_6", "Task_2", "End_1"),
-        ),
-    )
-
     private fun fakeJoinDefinition() = BpmnDefinition(
         processId = "Process_1",
         processName = "Fake Join Process",

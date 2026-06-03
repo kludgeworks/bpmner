@@ -15,7 +15,7 @@ bazel_dep(name = "aspect_rules_js", version = "3.1.1")
 bazel_dep(name = "aspect_rules_ts", version = "3.8.9")
 bazel_dep(name = "aspect_rules_esbuild", version = "0.25.1")
 bazel_dep(name = "rules_spring", version = "2.6.3")
-bazel_dep(name = "bazel_skylib", version = "1.8.2")
+bazel_dep(name = "bazel_skylib", version = "1.9.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.4")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_shell", version = "0.8.0")
@@ -23,6 +23,11 @@ bazel_dep(name = "contrib_rules_jvm", version = "0.33.0")
 bazel_dep(name = "rules_pkl", version = "0.15.0")
 bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 bazel_dep(name = "rules_pmd", version = "0.4.0")
+bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
+
+use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
+
+register_toolchains("@toolchains_buildbuddy//toolchains/cc:ubuntu_gcc_x86_64")
 
 bazel_dep(name = "buildifier_prebuilt", version = "8.2.1.1", dev_dependency = True)
 
@@ -81,6 +86,7 @@ maven.install(
         "org.springframework.boot:spring-boot-starter-test:" + SPRING_BOOT_VERSION,
         "com.embabel.agent:embabel-agent-starter-openai:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-anthropic:" + EMBABEL_VERSION,
+        "com.embabel.agent:embabel-agent-starter-gemini:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-shell:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-webmvc:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-test:" + EMBABEL_VERSION,
@@ -129,6 +135,13 @@ node.toolchain(node_version = "20.11.0")
 npm = use_extension("@aspect_rules_js//npm:extensions.bzl", "npm")
 npm.npm_translate_lock(
     name = "npm",
+    lifecycle_hooks_execution_requirements = {
+        "@vvago/vale": [
+            "no-remote",
+            "no-sandbox",
+            "requires-network",
+        ],
+    },
     pnpm_lock = "//:pnpm-lock.yaml",
     verify_node_modules_ignored = "//:.bazelignore",
 )

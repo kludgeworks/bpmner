@@ -77,39 +77,7 @@ class BpmnXmlToDefinitionConverterTest {
     @Suppress("LongMethod") // fixture builds + round-trip assertions stay cohesive
     fun `new task subtypes round-trip with payload fields preserved`() {
         // Single fixture exercises all 5 new task kinds + their payload fields end-to-end.
-        val original =
-            BpmnDefinition(
-                processId = "Process_mortgage_rt",
-                processName = "Mortgage processing",
-                nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Application submitted"),
-                    BpmnScriptTask("act-normalise", "Normalise address"),
-                    BpmnBusinessRuleTask("act-credit", "Evaluate credit policy", decisionRef = "credit-policy"),
-                    BpmnSendTask("act-decline", "Send decline notification", messageRef = "Message_Decline"),
-                    BpmnReceiveTask(
-                        "act-await-ack",
-                        "Customer acknowledgement received",
-                        messageRef = "Message_Ack",
-                    ),
-                    BpmnManualTask("act-inspect", "Inspect property"),
-                    BpmnEndEvent("EndEvent_1", "Application completed"),
-                ),
-                sequences =
-                listOf(
-                    BpmnEdge("F1", "StartEvent_1", "act-normalise"),
-                    BpmnEdge("F2", "act-normalise", "act-credit"),
-                    BpmnEdge("F3", "act-credit", "act-decline"),
-                    BpmnEdge("F4", "act-decline", "act-await-ack"),
-                    BpmnEdge("F5", "act-await-ack", "act-inspect"),
-                    BpmnEdge("F6", "act-inspect", "EndEvent_1"),
-                ),
-                messages =
-                listOf(
-                    BpmnMessageRef("Message_Decline", "Decline notification"),
-                    BpmnMessageRef("Message_Ack", "Customer acknowledgement"),
-                ),
-            )
+        val original = mortgageProcessingDefinition("Process_mortgage_rt")
 
         val xml = forward.toXml(original)
         val parsed = reverse.parse(xml)
@@ -501,32 +469,6 @@ class BpmnXmlToDefinitionConverterTest {
 
         assertEquals(original.sequences.byId(), parsed.sequences.byId())
     }
-
-    private fun creditTierDefinition() = BpmnDefinition(
-        processId = "Process_credit",
-        processName = "Credit-tier routing",
-        nodes =
-        listOf(
-            BpmnStartEvent("StartEvent_1", "Score received"),
-            BpmnExclusiveGateway("Gateway_1", "Which credit tier?"),
-            BpmnUserTask("Task_fast", "Fast-track underwriting"),
-            BpmnUserTask("Task_manual", "Manual review"),
-            BpmnEndEvent("EndEvent_1", "Offer generated"),
-        ),
-        sequences =
-        listOf(
-            BpmnEdge("Flow_1", "StartEvent_1", "Gateway_1"),
-            BpmnEdge(
-                "Flow_fast",
-                "Gateway_1",
-                "Task_fast",
-                conditionExpression = "score >= 750",
-            ),
-            BpmnEdge("Flow_manual", "Gateway_1", "Task_manual", isDefault = true),
-            BpmnEdge("Flow_3", "Task_fast", "EndEvent_1"),
-            BpmnEdge("Flow_4", "Task_manual", "EndEvent_1"),
-        ),
-    )
 
     private fun assertProcessShellEqual(
         a: BpmnDefinition,

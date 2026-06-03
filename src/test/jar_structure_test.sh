@@ -8,7 +8,7 @@ set -euo pipefail
 jar_path="${1:?expected spring boot jar path}"
 
 manifest="$(unzip -p "${jar_path}" META-INF/MANIFEST.MF)"
-entries="$(jar tf "${jar_path}")"
+entries="$(unzip -Z1 "${jar_path}")"
 
 assert_contains() {
   local haystack="$1"

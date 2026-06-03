@@ -54,6 +54,7 @@ import kotlin.io.path.readText
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
         "embabel.agent.platform.models.openai.api-key=test-key",
+        "embabel.agent.platform.models.gemini.api-key=test-key",
     ],
 )
 class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {

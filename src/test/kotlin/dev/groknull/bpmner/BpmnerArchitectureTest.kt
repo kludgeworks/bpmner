@@ -10,7 +10,6 @@ import com.embabel.agent.api.annotation.Agent
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
@@ -25,7 +24,6 @@ import org.junit.jupiter.api.Test
 class BpmnerArchitectureTest {
     private val classes =
         ClassFileImporter()
-            .withImportOption(ImportOption.DoNotIncludeTests())
             .withImportOption(excludeBazelTestClasses)
             .importPackages("dev.groknull.bpmner")
 

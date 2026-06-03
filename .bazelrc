@@ -17,9 +17,54 @@ build --experimental_output_paths=strip
 # Strict action env for reproducibility
 build --incompatible_strict_action_env
 
+# Local builds never upload to the shared remote cache (the :ci config below
+# re-enables upload). Guards the linux CI cache against a local macOS run
+# poisoning it if a developer passes --config=ci/rbe locally.
+build --noremote_upload_local_results
+
 test --test_output=errors
 # Skip integration and live-llm tests by default; run integration with:
 #   bazel test --test_tag_filters=integration //src/test/...
 # Run live-llm smoke tests with:
 #   bazel test --test_tag_filters=live-llm //src/test/...
 test --test_tag_filters=-integration,-live-llm
+
+# =============================================================================
+# BuildBuddy — Remote Cache + BES
+# =============================================================================
+
+# Base CI config: BES + remote cache
+build:ci --bes_results_url=https://app.buildbuddy.io/invocation/
+build:ci --bes_backend=grpcs://remote.buildbuddy.io
+build:ci --remote_cache=grpcs://remote.buildbuddy.io
+build:ci --remote_cache_compression
+# Skip zstd-wrapping tiny blobs, where compression is net-negative
+build:ci --experimental_remote_cache_compression_threshold=100
+build:ci --remote_upload_local_results
+build:ci --build_metadata=ROLE=CI
+build:ci --nolegacy_important_outputs
+build:ci --test_keep_going
+# Memoise Merkle-tree computation to speed remote cache checking on the large graph
+build:ci --experimental_remote_merkle_tree_cache
+# Recover from mid-build remote-cache blob eviction instead of hard-failing (exit 39)
+build:ci --experimental_remote_cache_eviction_retries=5
+# Don't block the invocation's exit on BES result upload
+build:ci --bes_upload_mode=fully_async
+
+# RBE: remote execution on BuildBuddy workers, layered on the cache config above
+build:rbe --config=ci
+build:rbe --remote_executor=grpcs://remote.buildbuddy.io
+build:rbe --remote_download_minimal
+build:rbe --jobs=100
+build:rbe --platforms=@toolchains_buildbuddy//platforms:linux_x86_64
+build:rbe --extra_execution_platforms=@toolchains_buildbuddy//platforms:linux_x86_64
+build:rbe --java_language_version=21
+build:rbe --java_runtime_version=remotejdk_21
+build:rbe --tool_java_language_version=21
+build:rbe --tool_java_runtime_version=remotejdk_21
+build:rbe --strategy=CoverageReport=local   # coverage merge is incompatible with RBE
+
+# Read-only consumers (smoke-tests): read RC, do not write
+build:rbe-readonly --config=rbe
+build:rbe-readonly --noremote_upload_local_results
+build:rbe-readonly --incompatible_remote_results_ignore_disk

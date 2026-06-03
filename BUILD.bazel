@@ -31,11 +31,9 @@ sonarqube(
 
 buildifier_test(
     name = "buildifier_check",
-    srcs = [
-        "BUILD.bazel",
-        "MODULE.bazel",
-        "WORKSPACE",
-    ],
+    no_sandbox = True,
+    tags = ["local"],
+    workspace = "//:WORKSPACE",
 )
 
 ktlint_config(
@@ -56,14 +54,14 @@ cpd_test(
     name = "cpd_kotlin_main",
     srcs = ["//src:analysis_srcs"],
     language = "kotlin",
-    minimum_tokens = 100,
+    minimum_tokens = 150,
 )
 
 cpd_test(
     name = "cpd_kotlin_test",
     srcs = ["//src/test:analysis_srcs"],
     language = "kotlin",
-    minimum_tokens = 100,
+    minimum_tokens = 150,
 )
 
 VALE_SRCS = [

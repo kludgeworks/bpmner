@@ -61,39 +61,120 @@ filegroup(
     visibility = ["//visibility:public"],
 )
 
-TEST_FILES = glob(["kotlin/**/*Test.kt"])
+JUNIT5_DEPS = [
+    "@maven//:org_junit_jupiter_junit_jupiter_engine",
+    "@maven//:org_junit_platform_junit_platform_launcher",
+    "@maven//:org_junit_platform_junit_platform_reporting",
+]
 
+# Per-class attribute overrides. Every *Test.kt is discovered by the glob below
+# and gets one java_junit5_test target; only the exceptions to the defaults
+# (timeout = "short", unsharded, no tags) are listed here, keyed by class name.
+# New test files are picked up automatically — there is no file list to maintain.
+_TIMEOUTS = {
+    "BpmnAgentFlowSystemTest": "moderate",
+    "BpmnConfigBindingTest": "moderate",
+    "BpmnContractFidelityCheckerTest": "moderate",
+    "BpmnDefinitionToXmlConverterTest": "moderate",
+    "BpmnGuardrailSystemTest": "moderate",
+    "BpmnNlpConcurrencyTest": "long",
+    "BpmnRepairAgentIntegrationTest": "moderate",
+    "BpmnWebControllerTest": "moderate",
+    "BpmnXmlToDefinitionConverterTest": "moderate",
+    "BpmnerModuleBoundariesTest": "moderate",
+    "BpmnerModulithTest": "moderate",
+    "GenerationModuleTest": "moderate",
+    "PklRuleCatalogTest": "moderate",
+    "RepairStartupValidationTest": "moderate",
+    "ValidationModuleTest": "moderate",
+}
+
+# Large/slow classes worth fanning across RBE workers. shard_count is a latency
+# tool for individually slow targets, not a default — most tests stay unsharded.
+_SHARD_COUNTS = {
+    "BpmnContractFidelityCheckerTest": 4,
+    "BpmnDefinitionToXmlConverterTest": 2,
+    "BpmnDefinitionValidatorTest": 3,
+    "BpmnPatchApplierTest": 4,
+    "BpmnXmlToDefinitionConverterTest": 2,
+    "DeterministicPrimitivesTest": 3,
+    "PklRuleCatalogTest": 3,
+    "TopologyHandlersTest": 3,
+}
+
+_TAGS = {
+    "BpmnAgentFlowSystemTest": ["spring-context"],
+    "BpmnConfigBindingTest": ["spring-context"],
+    "BpmnGuardrailSystemTest": ["spring-context"],
+    "BpmnNlpConcurrencyTest": ["concurrency"],
+    "BpmnRepairAgentIntegrationTest": ["integration"],
+    "BpmnWebControllerTest": ["spring-context"],
+    "BpmnerModuleBoundariesTest": ["spring-context"],
+    "BpmnerModulithTest": ["spring-context"],
+    "GenerationModuleTest": ["spring-context"],
+    "RepairStartupValidationTest": ["spring-context"],
+    "ValidationModuleTest": ["spring-context"],
+}
+
+# One java_junit5_test per *Test.kt. Live-LLM smoke tests carry unique
+# attributes (env_inherit, data, no-remote) and are declared explicitly below.
 [java_junit5_test(
-    name = f.split("/")[-1].replace(".kt", ""),
-    timeout = (
-        # SmokeTests involve live LLM calls; CI latency accumulates across 25+ tests.
-        # "long" (900 s) is too tight — use "eternal" (3 600 s) for the full suite.
-        "eternal" if "SmokeTest" in f else "long" if "GuardrailSystemTest" in f else "moderate" if "AgentFlowSystemTest" in f or "ModuleTest" in f or "ArchitectureTest" in f or "IntegrationTest" in f else "short"
-    ),
-    data = ["//samples:prose_samples"] if "FullPipelineSmokeTest" in f else [],
+    name = name,
+    timeout = _TIMEOUTS.get(name, "short"),
+    shard_count = _SHARD_COUNTS.get(name, 1),
+    tags = _TAGS.get(name, []),
+    test_class = src.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+) for src, name in [
+    (
+        s,
+        s.split("/")[-1].replace(".kt", ""),
+    )
+    for s in glob(
+        ["kotlin/**/*Test.kt"],
+        exclude = ["kotlin/**/*SmokeTest.kt"],
+    )
+]]
+
+# --- Live-LLM smoke tests (unique attributes; excluded from the glob above) ---
+
+java_junit5_test(
+    name = "ContractVocabularySmokeTest",
+    timeout = "eternal",
     env_inherit = [
-        "ANTHROPIC_API_KEY",
-        "GITHUB_TOKEN",
         "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GITHUB_TOKEN",
         "SPRING_PROFILES_ACTIVE",
-    ] if "SmokeTest" in f else [],
-    tags = (
-        # FullPipelineSmokeTest runs the entire pipeline against long prose;
-        # it is intentionally "manual" so CI skips it via -manual filter.
-        [
-            "live-llm",
-            "manual",
-        ] if "FullPipelineSmokeTest" in f else ["live-llm"] if "SmokeTest" in f else ["integration"] if "IntegrationTest" in f else []
-    ),
-    test_class = f.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
-    visibility = ["//visibility:public"],
-    runtime_deps = [
-        ":bpmner_tests_lib",
-        "@maven//:org_junit_jupiter_junit_jupiter_engine",
-        "@maven//:org_junit_platform_junit_platform_launcher",
-        "@maven//:org_junit_platform_junit_platform_reporting",
     ],
-) for f in TEST_FILES]
+    tags = [
+        "live-llm",
+        "no-remote",
+    ],
+    test_class = "dev.groknull.bpmner.smoke.ContractVocabularySmokeTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+)
+
+java_junit5_test(
+    name = "LiveLlmFullPipelineSmokeTest",
+    timeout = "eternal",
+    data = ["//samples:prose_samples"],
+    env_inherit = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "GITHUB_TOKEN",
+        "SPRING_PROFILES_ACTIVE",
+    ],
+    tags = [
+        "live-llm",
+        "manual",
+        "no-remote",
+    ],
+    test_class = "dev.groknull.bpmner.smoke.LiveLlmFullPipelineSmokeTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+)
 
 ktlint_test(
     name = "ktlint_check",

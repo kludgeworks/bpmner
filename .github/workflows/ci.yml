@@ -20,13 +20,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  lint:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        uses: actions/checkout@v6
 
       - name: Setup mise
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
@@ -34,53 +32,20 @@ jobs:
           install: true
           cache: true
         env:
-          MISE_LOCKED: 0 # core:java does not support multi-platform locking yet
-
-      - name: Cache pnpm store
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
-        with:
-          path: ~/.local/share/pnpm/store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            pnpm-${{ runner.os }}-
-
-      - name: Cache Bazel
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
-        with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
-
-      - name: Install pnpm dependencies
-        run: pnpm install --frozen-lockfile
+          MISE_LOCKED: 0
 
       - name: Run hk lint checks
         run: hk check all
 
-      # Run every test discoverable in the build graph. Integration tests are gated
-      # out by the `.bazelrc` policy (`test --test_tag_filters=-integration,-live-llm`) and run
-      # separately with `bazel test --test_tag_filters=integration //src/test/...`.
-      # This matches the canonical Bazel pattern (`rules_pkl/.github/workflows/build.yml`)
-      # and removes the allowlist-drift class of bug that hid `RepairRoutingModuleTest`
-      # failures on main between Phase 2F (#243) and PR #249.
-      - name: Build and run all tests
-        run: bazel test //...
-
-  smoke-tests:
+  test-unit:
     runs-on: ubuntu-latest
-    needs: ci
-    # OP_SERVICE_ACCOUNT_TOKEN is unavailable on fork PRs — GitHub does not expose
-    # organisation secrets to workflows triggered by external contributors. Skip the
-    # job rather than failing it immediately before any test runs.
+    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY / OP token), so the
+    # RBE unit-test job would fail at "Load secrets". Skip it on forks, matching
+    # smoke-tests and sonarcloud; same-repo PRs and pushes run the full suite.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - name: Checkout repository
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
+        uses: actions/checkout@v6
 
       - name: Setup mise
         uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
@@ -88,17 +53,68 @@ jobs:
           install: true
           cache: true
         env:
-          MISE_LOCKED: 0 # core:java does not support multi-platform locking yet
+          MISE_LOCKED: 0
 
-      - name: Cache Bazel
-        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae #v5.0.5
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
         with:
-          path: |
-            ~/.cache/bazel
-            ~/.cache/bazelisk
-          key: bazel-${{ runner.os }}-${{ hashFiles('MODULE.bazel', 'MODULE.bazel.lock', 'WORKSPACE') }}
-          restore-keys: |
-            bazel-${{ runner.os }}-
+          bazelisk-cache: true
+          disk-cache: false
+          repository-cache: true
+
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
+
+      - name: Build and run all tests
+        # Unit tests exclude the live-llm/integration tags (see .bazelrc default
+        # --test_tag_filters), so no LLM credentials are needed here. Withholding
+        # them keeps the keys off the BuildBuddy remote-execution workers.
+        run: |
+          bazel test \
+            --config=rbe \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            --test_output=errors \
+            //...
+
+  smoke-tests:
+    runs-on: ubuntu-latest
+    needs: [lint, test-unit]
+    # Skip on fork PRs — org secrets not available to external contributors
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false    # one flaky provider doesn't cancel the other two
+      matrix:
+        include:
+          - provider: anthropic
+            shard_offset: 0
+          - provider: openai
+            shard_offset: 1
+          - provider: gemini
+            shard_offset: 2
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: false
+          repository-cache: true
+          cache-save: false
 
       - name: Load secrets from 1Password
         uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
@@ -108,27 +124,118 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
           OPENAI_API_KEY: op://bpmner/openai/api-key
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+          GEMINI_API_KEY: op://bpmner/gemini/api-key
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
-      - name: Select random LLM provider
-        id: pick-provider
+      - name: Compute shard index for this run
+        id: shard
         run: |
-          # Array length drives the modulo — adding Gemini is a one-line change here.
-          PROVIDERS=("openai" "anthropic")
-          SELECTED=${PROVIDERS[$RANDOM % ${#PROVIDERS[@]}]}
-          echo "Selected provider for this run: $SELECTED"
-          echo "SPRING_PROFILES_ACTIVE=$SELECTED" >> "$GITHUB_ENV"
+          # Rotate shard assignment every run so each test is validated on
+          # each provider after 3 runs. github.run_number is 1-based.
+          SHARD_INDEX=$(( (${{ github.run_number }} + ${{ matrix.shard_offset }}) % 3 ))
+          echo "SHARD_INDEX=$SHARD_INDEX" >> "$GITHUB_OUTPUT"
+          echo "Provider ${{ matrix.provider }} running shard $SHARD_INDEX / 3 (run #${{ github.run_number }})"
 
-      - name: Run smoke tests
+      - name: Run smoke tests (${{ matrix.provider }}, shard ${{ steps.shard.outputs.SHARD_INDEX }}/3)
         # Live-LLM tests are non-deterministic in two independent ways: classification variance
         # (a weaker model occasionally mis-extracts) and latency (a single call can exceed the
         # per-test timeout). One automatic retry absorbs a transient flake without masking a real
         # regression — a genuine break fails both attempts.
+        env:
+          SPRING_PROFILES_ACTIVE: ${{ matrix.provider }}
         run: |
           bazel test \
             --test_tag_filters=live-llm,-manual \
             --flaky_test_attempts=2 \
             --test_env=OPENAI_API_KEY \
             --test_env=ANTHROPIC_API_KEY \
+            --test_env=GEMINI_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
+            --test_env=TEST_TOTAL_SHARDS=3 \
+            --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             //src/test/... \
             --test_output=errors
+
+  sonarcloud:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository || github.event_name != 'pull_request'
+    needs: [test-unit]
+    permissions:
+      contents: read
+      pull-requests: write
+      statuses: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Setup mise
+        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+        with:
+          install: true
+          cache: true
+        env:
+          MISE_LOCKED: 0
+
+      - name: Setup Bazel
+        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+        with:
+          bazelisk-cache: true
+          disk-cache: false
+          repository-cache: true
+          cache-save: false
+
+      - name: Load secrets from 1Password
+        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: true
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
+          OPENAI_API_KEY: op://bpmner/openai/api-key
+          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
+          GEMINI_API_KEY: op://bpmner/gemini/api-key
+
+      - name: Run Bazel coverage
+        id: coverage
+        run: |
+          bazel coverage //... \
+            --config=ci \
+            --strategy=CoverageReport=local \
+            --test_env=OPENAI_API_KEY \
+            --test_env=ANTHROPIC_API_KEY \
+            --test_env=GEMINI_API_KEY \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            --combined_report=lcov \
+            --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
+            --instrumentation_filter="^//src,^//web"
+          cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Backend
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //:sonar \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+
+      - name: SonarCloud Scan — Web
+        if: always() && steps.coverage.outcome != 'skipped'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          bazel run //web:sonar \
+            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
+            -- \
+            -Dsonar.organization=kludgeworks \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"

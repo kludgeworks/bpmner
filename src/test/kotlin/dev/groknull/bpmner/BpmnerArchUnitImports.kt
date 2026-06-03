@@ -15,7 +15,9 @@ import com.tngtech.archunit.core.importer.ImportOption
 // custom ImportOption fills that gap.
 internal val excludeBazelTestClasses =
     ImportOption { location ->
-        !location.contains("/bin/src/test/") && !location.contains("_tests_lib")
+        val uri = location.asURI().toString()
+        val archiveUri = uri.substringBefore('!')
+        !(archiveUri.endsWith("Test.jar") || archiveUri.contains("_tests_lib") || archiveUri.contains("/test-classes/"))
     }
 
 // Kotlin compiler-generated synthetic classes (lambdas, $Companion, $WhenMappings,
