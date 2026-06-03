@@ -47,7 +47,7 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ### Prerequisites
 - **Bazel 8.6.0** (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk).
 - **Mise** for environment and tool management.
-- An LLM API key (Anthropic, OpenAI, Gemini, or GitHub Models).
+- An LLM API key (Anthropic, OpenAI, Gemini, Mistral, or GitHub Models).
 
 ### Build
 ```bash
@@ -110,7 +110,7 @@ GITHUB_TOKEN=github_pat_... SPRING_PROFILES_ACTIVE=github \
   --test_env=GITHUB_TOKEN --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
-Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `github`, `openai`, or `gemini`.
+Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `github`, `openai`, `gemini`, or `mistral`.
 
 To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest` suite with one supported live provider profile:
 ```bash

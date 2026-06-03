@@ -58,6 +58,7 @@ import java.nio.file.Path
         "embabel.agent.platform.models.anthropic.api-key=test-key",
         "embabel.agent.platform.models.openai.api-key=test-key",
         "embabel.agent.platform.models.gemini.api-key=test-key",
+        "embabel.agent.platform.models.mistralai.api-key=test-key",
         "bpmner.readiness.ready-threshold=75",
         "bpmner.readiness.clarification-threshold=40",
     ],

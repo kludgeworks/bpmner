@@ -87,7 +87,7 @@ jobs:
     # Skip on fork PRs — org secrets not available to external contributors
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
-      fail-fast: false    # one flaky provider doesn't cancel the other two
+      fail-fast: false    # one flaky provider doesn't cancel the other three
       matrix:
         include:
           - provider: anthropic
@@ -96,6 +96,8 @@ jobs:
             shard_offset: 1
           - provider: gemini
             shard_offset: 2
+          - provider: mistral
+            shard_offset: 3
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -125,18 +127,19 @@ jobs:
           OPENAI_API_KEY: op://bpmner/openai/api-key
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
           GEMINI_API_KEY: op://bpmner/gemini/api-key
+          MISTRAL_API_KEY: op://bpmner/mistral/api-key
           BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
       - name: Compute shard index for this run
         id: shard
         run: |
           # Rotate shard assignment every run so each test is validated on
-          # each provider after 3 runs. github.run_number is 1-based.
-          SHARD_INDEX=$(( (${{ github.run_number }} + ${{ matrix.shard_offset }}) % 3 ))
+          # each provider after 4 runs. github.run_number is 1-based.
+          SHARD_INDEX=$(( (${{ github.run_number }} + ${{ matrix.shard_offset }}) % 4 ))
           echo "SHARD_INDEX=$SHARD_INDEX" >> "$GITHUB_OUTPUT"
-          echo "Provider ${{ matrix.provider }} running shard $SHARD_INDEX / 3 (run #${{ github.run_number }})"
+          echo "Provider ${{ matrix.provider }} running shard $SHARD_INDEX / 4 (run #${{ github.run_number }})"
 
-      - name: Run smoke tests (${{ matrix.provider }}, shard ${{ steps.shard.outputs.SHARD_INDEX }}/3)
+      - name: Run smoke tests (${{ matrix.provider }}, shard ${{ steps.shard.outputs.SHARD_INDEX }}/4)
         # Live-LLM tests are non-deterministic in two independent ways: classification variance
         # (a weaker model occasionally mis-extracts) and latency (a single call can exceed the
         # per-test timeout). One automatic retry absorbs a transient flake without masking a real
@@ -150,8 +153,9 @@ jobs:
             --test_env=OPENAI_API_KEY \
             --test_env=ANTHROPIC_API_KEY \
             --test_env=GEMINI_API_KEY \
+            --test_env=MISTRAL_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
-            --test_env=TEST_TOTAL_SHARDS=3 \
+            --test_env=TEST_TOTAL_SHARDS=4 \
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             //src/test/... \
@@ -199,6 +203,7 @@ jobs:
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
           GEMINI_API_KEY: op://bpmner/gemini/api-key
           SONAR_TOKEN: op://bpmner/sonarqube/api-key
+          MISTRAL_API_KEY: op://bpmner/mistral/api-key
 
       - name: Run Bazel coverage
         id: coverage
@@ -209,6 +214,7 @@ jobs:
             --test_env=OPENAI_API_KEY \
             --test_env=ANTHROPIC_API_KEY \
             --test_env=GEMINI_API_KEY \
+            --test_env=MISTRAL_API_KEY \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \

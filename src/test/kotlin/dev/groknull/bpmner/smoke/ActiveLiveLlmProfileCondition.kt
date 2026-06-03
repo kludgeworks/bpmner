@@ -51,6 +51,11 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 profiles = setOf("gemini"),
                 tokenName = "GEMINI_API_KEY",
             ),
+            LiveLlmProvider(
+                displayName = "Mistral",
+                profiles = setOf("mistral"),
+                tokenName = "MISTRAL_API_KEY",
+            ),
         )
 
         internal fun evaluate(
@@ -71,7 +76,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 0 ->
                     Evaluation.disabled(
                         "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
-                            "set one of anthropic, github, openai, or gemini",
+                            "set one of anthropic, github, openai, gemini, or mistral",
                     )
 
                 1 ->
@@ -82,7 +87,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                         "multiple live LLM profile families are active in " +
                             "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
                             activeProviders.joinToString { it.displayName } +
-                            "; select exactly one of anthropic, github, openai, or gemini",
+                            "; select exactly one of anthropic, github, openai, gemini, or mistral",
                     )
             }
         }
