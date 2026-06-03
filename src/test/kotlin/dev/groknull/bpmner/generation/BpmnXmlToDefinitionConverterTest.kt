@@ -14,6 +14,7 @@ import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnManualTask
@@ -36,12 +37,41 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 @Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
+
+    @Test
+    fun `labeled group renders category indirection and parses back to group name`() {
+        val original = minimalDefinition(groups = listOf(BpmnGroup("Group_review", "Review work")))
+
+        val xml = forward.toXml(original)
+        val parsed = reverse.parse(xml)
+
+        assertContains(xml, "<bpmn:category id=\"Category_Group_review\"")
+        assertContains(xml, "<bpmn:categoryValue id=\"CategoryValue_Group_review\" value=\"Review work\"")
+        assertContains(xml, "<bpmn:group")
+        assertContains(xml, "id=\"Group_review\"")
+        assertContains(xml, "categoryValueRef=\"CategoryValue_Group_review\"")
+        assertEquals(listOf(BpmnGroup("Group_review", "Review work")), parsed.groups)
+    }
+
+    @Test
+    fun `unlabeled group renders without categoryValueRef and parses as null name`() {
+        val original = minimalDefinition(groups = listOf(BpmnGroup("Group_unlabeled")))
+
+        val xml = forward.toXml(original)
+        val parsed = reverse.parse(xml)
+
+        assertContains(xml, "<bpmn:group id=\"Group_unlabeled\"")
+        assertFalse(xml.contains("categoryValueRef"))
+        assertEquals("Group_unlabeled", parsed.groups.single().id)
+        assertNull(parsed.groups.single().name)
+    }
 
     @Test
     @Suppress("LongMethod") // fixture builds + round-trip assertions stay cohesive
@@ -550,6 +580,14 @@ class BpmnXmlToDefinitionConverterTest {
         sequences = listOf(BpmnEdge("Flow_1", start.id, "End_1")),
         messages = messages,
         signals = signals,
+    )
+
+    private fun minimalDefinition(groups: List<BpmnGroup> = emptyList()): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Process",
+        nodes = listOf(BpmnStartEvent("StartEvent_1", "Start"), BpmnEndEvent("EndEvent_1", "End")),
+        sequences = listOf(BpmnEdge("Flow_1", "StartEvent_1", "EndEvent_1")),
+        groups = groups,
     )
 
     private fun intermediateThrowDefinition(

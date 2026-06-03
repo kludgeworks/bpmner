@@ -33,6 +33,8 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
  */
 internal sealed interface DeterministicCheckConfig
 
+internal data object PresenceCheckConfig : DeterministicCheckConfig
+
 internal data class RequiredPropertyCheckConfig(
     val property: String,
 ) : DeterministicCheckConfig

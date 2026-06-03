@@ -10,6 +10,7 @@ import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnNode
 
 /**
@@ -45,6 +46,7 @@ internal fun metadata(
 internal fun context(
     nodes: List<BpmnNode>,
     edges: List<BpmnEdge>? = null,
+    groups: List<BpmnGroup> = emptyList(),
 ): BpmnDefinitionContext {
     val actualEdges =
         edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->
@@ -56,6 +58,7 @@ internal fun context(
             processName = "Process",
             nodes = nodes,
             sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
+            groups = groups,
         ),
     )
 }

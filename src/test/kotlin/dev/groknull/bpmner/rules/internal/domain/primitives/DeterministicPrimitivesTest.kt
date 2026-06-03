@@ -14,6 +14,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -23,6 +24,31 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class DeterministicPrimitivesTest {
+    @Test
+    fun `presence check emits one diagnostic per targeted group`() {
+        val ctx = context(
+            nodes = listOf(BpmnStartEvent("s", "Start"), BpmnEndEvent("e", "End")),
+            groups = listOf(BpmnGroup("g1", "Review"), BpmnGroup("g2")),
+        )
+
+        val diagnostics = PresenceCheck().evaluate(ctx, metadata("group-presence", BpmnTypeName.GROUP), PresenceCheckConfig)
+
+        assertEquals(listOf("g1", "g2"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `groups project as exact primitive artifacts and not flow nodes`() {
+        val model = context(
+            nodes = listOf(BpmnStartEvent("s", "Start"), BpmnEndEvent("e", "End")),
+            groups = listOf(BpmnGroup("g1", "Review")),
+        ).toPrimitiveModelContext()
+
+        val group = model.elements.single { it.id == "g1" }
+        assertEquals(BpmnTypeName.GROUP, group.typeName)
+        assertEquals("Review", group.property("name"))
+        assertTrue(metadata("flow-node", BpmnTypeName.FLOW_NODE).targetedElements(model).none { it.id == "g1" })
+    }
+
     @Test
     fun `required property flags only matched blank properties`() {
         val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t"), BpmnEndEvent("e", "End")))
