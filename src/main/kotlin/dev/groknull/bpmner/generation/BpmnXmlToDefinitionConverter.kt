@@ -24,6 +24,7 @@ import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
@@ -88,6 +89,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 private data class ParsedArtifacts(
     val annotations: List<BpmnTextAnnotation>,
     val associations: List<BpmnAssociation>,
+    val groups: List<BpmnGroup>,
     val dataObjects: List<BpmnDataObject>,
     val dataStores: List<BpmnDataStore>,
     val dataAssociations: List<BpmnDataAssociation>,
@@ -183,6 +185,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
             annotations = artifacts.annotations,
+            groups = artifacts.groups,
             associations = artifacts.associations,
             dataObjects = artifacts.dataObjects,
             dataStores = artifacts.dataStores,
@@ -193,15 +196,30 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
     // All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
     // text annotations + their association edges (sourceRef = annotated element, targetRef =
-    // annotation), data objects/stores, and the read/write data associations parsed from each
-    // activity's `<dataInputAssociation>` (data id in `<sourceRef>`) / `<dataOutputAssociation>`
-    // (data id in `<targetRef>`) children (the association's `sourceRef` is the parent activity id).
+    // annotation), groups, data objects/stores, and the read/write data associations parsed from
+    // each activity's `<dataInputAssociation>` (data id in `<sourceRef>`) /
+    // `<dataOutputAssociation>` (data id in `<targetRef>`) children (the association's `sourceRef`
+    // is the parent activity id).
     private fun artifactsAndDataFrom(document: Document): ParsedArtifacts {
+        val categoryValuesById = document.bpmnElements("categoryValue")
+            .mapNotNull { el ->
+                val id = el.getAttribute("id")
+                val value = el.getAttribute("value")
+                if (id.isNotBlank() && value.isNotBlank()) id to value else null
+            }.toMap()
         val annotations = document.bpmnElements("textAnnotation")
             .map { el ->
                 BpmnTextAnnotation(
                     id = el.getAttribute("id"),
                     text = el.childElements().firstOrNull { it.localName == "text" }?.textContent?.trim().orEmpty(),
+                )
+            }.filter { it.id.isNotBlank() }.toList()
+        val groups = document.bpmnElements("group")
+            .map { el ->
+                val categoryValueRef = el.getAttribute("categoryValueRef").localNameRef()
+                BpmnGroup(
+                    id = el.getAttribute("id"),
+                    name = categoryValueRef?.let { categoryValuesById[it] },
                 )
             }.filter { it.id.isNotBlank() }.toList()
         val associations = document.bpmnElements("association")
@@ -229,7 +247,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             .mapNotNull { it.toAssociation(DataFlowDirection.READ, "sourceRef") }
         val outputs = document.bpmnElements("dataOutputAssociation")
             .mapNotNull { it.toAssociation(DataFlowDirection.WRITE, "targetRef") }
-        return ParsedArtifacts(annotations, associations, dataObjects, dataStores, (inputs + outputs).toList())
+        return ParsedArtifacts(annotations, associations, groups, dataObjects, dataStores, (inputs + outputs).toList())
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory
@@ -642,3 +660,7 @@ private fun FlowNode.toUnrecognizedNode(
     bpmnType = "bpmn:${elementType.typeName.replaceFirstChar { it.uppercase() }}",
     parentRef = parentRef,
 )
+
+private fun String.localNameRef(): String? = trim()
+    .takeIf { it.isNotBlank() }
+    ?.substringAfterLast(":")

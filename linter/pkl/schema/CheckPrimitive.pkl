@@ -35,7 +35,8 @@ typealias NonEmptyString = String(!isEmpty)
 /// Kotlin loader fails fast at startup on an unknown name. Two of these are composite /
 /// non-deterministic (`CompositeCheck`, `LlmCheckRule`) and land later in Phase 2C.
 typealias Primitive =
-  "RequiredPropertyCheck"
+  "PresenceCheck"
+    | "RequiredPropertyCheck"
     | "PropertyPatternCheck"
     | "VocabularyCheck"
     | "RequiredAssociationCheck"
@@ -54,6 +55,8 @@ typealias Primitive =
 /// Marker base class. Exists only so `BpmnRule.checkConfig: CheckConfig?` can accept any of
 /// the typed subclasses below. Intentionally empty — see the file-level doc comment.
 abstract class CheckConfig
+
+class PresenceCheck extends CheckConfig {}
 
 class RequiredPropertyCheck extends CheckConfig {
   property: NonEmptyString

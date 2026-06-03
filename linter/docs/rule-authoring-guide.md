@@ -160,6 +160,7 @@ See `linter/pkl/rules/` for the catalog — every file there is an example.
 
 | Primitive | What it checks |
 |---|---|
+| `PresenceCheck` | Emits one diagnostic for each targeted element that exists |
 | `PropertyEquals` | Element's named property has a specific value |
 | `PropertyPattern` | Element's named property matches/violates a regex |
 | `PropertyExists` | Element has a non-blank named property |

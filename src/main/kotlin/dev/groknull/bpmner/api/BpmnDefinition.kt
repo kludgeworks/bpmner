@@ -29,6 +29,9 @@ interface BpmnDefinition {
     /** Free-text annotations attached to elements via [associations]. */
     val annotations: List<BpmnTextAnnotation> get() = emptyList()
 
+    /** Visual grouping artifacts. Groups carry no control-flow, data-flow, or ownership semantics. */
+    val groups: List<BpmnGroup> get() = emptyList()
+
     /** Association edges linking annotations (and other artifacts) to flow elements. */
     val associations: List<BpmnAssociation> get() = emptyList()
 
@@ -217,6 +220,12 @@ interface BpmnEdge {
 interface BpmnTextAnnotation {
     val id: String
     val text: String
+}
+
+/** A BPMN group artifact: a visual, non-semantic container rendered as `<bpmn:group>`. */
+interface BpmnGroup {
+    val id: String
+    val name: String?
 }
 
 /**

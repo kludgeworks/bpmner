@@ -280,6 +280,22 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 process,
             )
         }
+        definition.groups.asReversed().forEach { group ->
+            group.name?.takeIf { it.isNotBlank() }?.let { name ->
+                root.insertBefore(
+                    document.bpmnElement("category").also { category ->
+                        category.setAttribute("id", group.categoryId())
+                        category.appendChild(
+                            document.bpmnElement("categoryValue").also { value ->
+                                value.setAttribute("id", group.categoryValueId())
+                                value.setAttribute("value", name)
+                            },
+                        )
+                    },
+                    process,
+                )
+            }
+        }
 
         val taskElementsById = document.taskElementsById()
         var bpmnerNamespaceUsed = false
@@ -377,6 +393,16 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
                 document.bpmnElement("textAnnotation").also { el ->
                     el.setAttribute("id", annotation.id)
                     el.appendChild(document.bpmnElement("text").also { it.textContent = annotation.text })
+                },
+            )
+        }
+        definition.groups.forEach { group ->
+            process.appendChild(
+                document.bpmnElement("group").also { el ->
+                    el.setAttribute("id", group.id)
+                    if (!group.name.isNullOrBlank()) {
+                        el.setAttribute("categoryValueRef", group.categoryValueId())
+                    }
                 },
             )
         }
@@ -539,6 +565,10 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     }
 
     private fun Document.bpmnElement(localName: String): Element = createElementNS(BPMN_NS, "bpmn:$localName")
+
+    private fun dev.groknull.bpmner.api.BpmnGroup.categoryId(): String = "Category_$id"
+
+    private fun dev.groknull.bpmner.api.BpmnGroup.categoryValueId(): String = "CategoryValue_$id"
 
     private fun Document.eventElementsById(): Map<String, Element> = listOf(
         "startEvent",
