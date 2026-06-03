@@ -154,7 +154,7 @@ data class ProcessContract(
  * Activity required by the extracted process contract.
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger] and [ContractBranch]:
- * the `kind` discriminator in the LLM-facing JSON dispatches to one of seven subtypes,
+ * the `kind` discriminator dispatches to one of seven subtypes,
  * each carrying exactly the fields its task kind needs. Kind / payload coupling is
  * enforced by the type system — `Send`/`Receive` carry `messageName`, `BusinessRule`
  * carries `decisionName`, others carry nothing kind-specific.
@@ -382,7 +382,7 @@ data class ContractLoop(
 )
 
 /**
- * The discriminator string for [activity], matching the `kind` field in the LLM JSON output
+ * The discriminator string for [activity], matching the `kind` field in its serialized JSON
  * and the names declared in `@JsonSubTypes` on [ContractActivity].
  */
 val ContractActivity.kindName: String
@@ -488,8 +488,8 @@ data class ContractDecision(
 /**
  * A branch out of a [ContractDecision].
  *
- * Mirrors the sealed-subtype pattern established by PR #184 for [dev.groknull.bpmner.core.BpmnNode]:
- * the `kind` discriminator in the LLM-facing JSON dispatches to one of three subtypes, each
+ * Mirrors the sealed-subtype pattern used by [dev.groknull.bpmner.core.BpmnNode]:
+ * the `kind` discriminator dispatches to one of three subtypes, each
  * carrying exactly the fields it needs. Mutual exclusion between `condition` and "default" is a
  * type-system guarantee — there is no shape where both could coexist.
  *
@@ -516,7 +516,7 @@ sealed interface ContractBranch {
 }
 
 /**
- * The discriminator string for [branch], matching the `kind` field in the LLM JSON output
+ * The discriminator string for [branch], matching the `kind` field in its serialized JSON
  * and the names declared in `@JsonSubTypes` on [ContractBranch].
  */
 val ContractBranch.kindName: String
@@ -624,7 +624,7 @@ data class ContractArtifact(
  * Required end state for the extracted process contract.
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger], [ContractBranch],
- * and [ContractActivity]: the `kind` discriminator in the LLM-facing JSON dispatches
+ * and [ContractActivity]: the `kind` discriminator dispatches
  * to one of six subtypes, each carrying exactly the payload its end-event kind needs.
  * Kind / payload coupling is enforced by the type system — [Error] always carries an
  * `errorCode`, [Message] always carries a `messageName`, etc.
@@ -734,7 +734,7 @@ sealed interface ContractEndState {
     companion object {
         // Convenience factory: lets existing call sites that don't specify a kind keep working
         // (`ContractEndState("id", "name")` → Normal). Most end states are NORMAL in practice;
-        // matches the analogous `ContractActivity.invoke` companion added in PR #203.
+        // matches the analogous `ContractActivity.invoke` companion.
         operator fun invoke(
             id: String,
             name: String,
