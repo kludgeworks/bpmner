@@ -16,6 +16,7 @@ import dev.groknull.bpmner.api.BpmnEvent
 import dev.groknull.bpmner.api.BpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
+import dev.groknull.bpmner.api.BpmnGroup
 import dev.groknull.bpmner.api.BpmnInclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
@@ -82,6 +83,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
+    val groupElements = groupElementsOf(definition.groups)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
     }
@@ -103,6 +105,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             definition.nodes.map { it.toPrimitiveElement(annotationTextByElementId) } +
             eventDefinitionElements +
             annotationElements +
+            groupElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
         associations = associations,
@@ -117,6 +120,17 @@ private fun annotationElementsOf(annotations: List<BpmnTextAnnotation>): List<Pr
         id = it.id,
         typeName = BpmnTypeName.TEXT_ANNOTATION,
         properties = mapOf("id" to it.id, "text" to it.text),
+    )
+}
+
+private fun groupElementsOf(groups: List<BpmnGroup>): List<PrimitiveElement> = groups.map {
+    PrimitiveElement(
+        id = it.id,
+        typeName = BpmnTypeName.GROUP,
+        properties = buildMap {
+            put("id", it.id)
+            it.name?.let { name -> put("name", name) }
+        },
     )
 }
 

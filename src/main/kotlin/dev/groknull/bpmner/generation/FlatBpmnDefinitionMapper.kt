@@ -57,6 +57,7 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     errors = errors,
     escalations = escalations,
     annotations = annotations,
+    groups = groups,
     associations = associations,
 )
 

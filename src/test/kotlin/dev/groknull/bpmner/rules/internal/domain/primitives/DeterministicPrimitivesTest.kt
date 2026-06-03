@@ -17,6 +17,7 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
@@ -26,6 +27,31 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 class DeterministicPrimitivesTest {
+    @Test
+    fun `presence check emits one diagnostic per targeted group`() {
+        val ctx = context(
+            nodes = listOf(BpmnStartEvent("s", "Start"), BpmnEndEvent("e", "End")),
+            groups = listOf(BpmnGroup("g1", "Review"), BpmnGroup("g2")),
+        )
+
+        val diagnostics = PresenceCheck().evaluate(ctx, metadata("group-presence", BpmnTypeName.GROUP), PresenceCheckConfig)
+
+        assertEquals(listOf("g1", "g2"), diagnostics.map { it.elementId })
+    }
+
+    @Test
+    fun `groups project as exact primitive artifacts and not flow nodes`() {
+        val model = context(
+            nodes = listOf(BpmnStartEvent("s", "Start"), BpmnEndEvent("e", "End")),
+            groups = listOf(BpmnGroup("g1", "Review")),
+        ).toPrimitiveModelContext()
+
+        val group = model.elements.single { it.id == "g1" }
+        assertEquals(BpmnTypeName.GROUP, group.typeName)
+        assertEquals("Review", group.property("name"))
+        assertTrue(metadata("flow-node", BpmnTypeName.FLOW_NODE).targetedElements(model).none { it.id == "g1" })
+    }
+
     @Test
     fun `required property flags only matched blank properties`() {
         val ctx = context(nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t"), BpmnEndEvent("e", "End")))
@@ -573,6 +599,7 @@ class DeterministicPrimitivesTest {
     private fun context(
         nodes: List<dev.groknull.bpmner.core.BpmnNode>,
         edges: List<BpmnEdge>? = null,
+        groups: List<BpmnGroup> = emptyList(),
     ): BpmnDefinitionContext {
         val actualEdges = edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->
             BpmnEdge("f${index + 1}", source.id, target.id)
@@ -583,6 +610,7 @@ class DeterministicPrimitivesTest {
                 processName = "Process",
                 nodes = nodes,
                 sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
+                groups = groups,
             ),
         )
     }

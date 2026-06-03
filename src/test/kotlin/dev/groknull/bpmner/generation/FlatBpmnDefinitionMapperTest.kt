@@ -20,6 +20,7 @@ import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
@@ -93,10 +94,12 @@ class FlatBpmnDefinitionMapperTest {
             nodes = listOf(flatTask, FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "End")),
             sequences = listOf(BpmnEdge("f", "u1", "e")),
             annotations = listOf(BpmnTextAnnotation("ta", "For each reviewer")),
+            groups = listOf(BpmnGroup("Group_review", "Review work")),
             associations = listOf(BpmnAssociation("as", "u1", "ta")),
         ).toSealed()
 
         assertEquals(listOf(BpmnTextAnnotation("ta", "For each reviewer")), sealed.annotations)
+        assertEquals(listOf(BpmnGroup("Group_review", "Review work")), sealed.groups)
         assertEquals(listOf(BpmnAssociation("as", "u1", "ta")), sealed.associations)
     }
 
@@ -362,6 +365,7 @@ class FlatBpmnDefinitionMapperTest {
         val signals = listOf(BpmnSignalRef(id = "sg1", name = "Settled"))
         val errors = listOf(BpmnErrorRef(id = "e1", code = "REJECTED"))
         val escalations = listOf(BpmnEscalationRef(id = "es1", code = "OVERDUE"))
+        val groups = listOf(BpmnGroup(id = "g1", name = "Visual group"))
 
         val flat = FlatBpmnDefinition(
             processId = "Process_1",
@@ -376,6 +380,7 @@ class FlatBpmnDefinitionMapperTest {
             signals = signals,
             errors = errors,
             escalations = escalations,
+            groups = groups,
         )
 
         val sealed: BpmnDefinition = flat.toSealed()
@@ -390,6 +395,7 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(signals, sealed.signals)
         assertEquals(errors, sealed.errors)
         assertEquals(escalations, sealed.escalations)
+        assertEquals(groups, sealed.groups)
     }
 
     private fun flatNode(

@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnTextAnnotation
@@ -254,6 +255,9 @@ public data class FlatBpmnDefinition(
             "describing the item set (\"For each …\") and link it to the task with an association.",
     )
     val annotations: List<BpmnTextAnnotation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Visual BPMN group artifacts. Groups carry no process semantics.")
+    val groups: List<BpmnGroup> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription(
         "Association edges linking each text annotation to the element it explains. For a " +

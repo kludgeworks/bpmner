@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.rules
 
 sealed interface CheckPrimitive {
+    data object PresenceCheck : CheckPrimitive
     data object RequiredPropertyCheck : CheckPrimitive
     data object PropertyPatternCheck : CheckPrimitive
     data object VocabularyCheck : CheckPrimitive

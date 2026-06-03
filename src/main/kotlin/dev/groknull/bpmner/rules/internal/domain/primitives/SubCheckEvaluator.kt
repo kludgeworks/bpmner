@@ -29,12 +29,14 @@ import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
  * they're stateless data carriers, so the cost is a single object allocation per dispatch.
  */
 internal object SubCheckEvaluator {
+    @Suppress("CyclomaticComplexMethod")
     fun evaluate(
         model: PrimitiveModelContext,
         metadata: RuleMetadata,
         config: DeterministicCheckConfig,
         nlp: BpmnNlp,
     ): List<RuleDiagnostic> = when (config) {
+        is PresenceCheckConfig -> PresenceCheck().evaluate(model, metadata, config)
         is RequiredPropertyCheckConfig -> RequiredPropertyCheck().evaluate(model, metadata, config)
         is PropertyPatternCheckConfig -> PropertyPatternCheck().evaluate(model, metadata, config)
         is VocabularyCheckConfig -> VocabularyCheck().evaluate(model, metadata, config)

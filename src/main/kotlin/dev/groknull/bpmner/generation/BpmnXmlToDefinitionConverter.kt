@@ -20,6 +20,7 @@ import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
@@ -154,7 +155,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
-        val (annotations, associations) = artifactsFrom(document)
+        val artifacts = artifactsFrom(document)
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
@@ -164,8 +165,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
-            annotations = annotations,
-            associations = associations,
+            annotations = artifacts.annotations,
+            groups = artifacts.groups,
+            associations = artifacts.associations,
             diagramCount = diagramCount,
         )
     }
@@ -173,13 +175,33 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     // Text annotations and their association edges, parsed together (one helper keeps the class
     // function count in check). BPMN models the link as sourceRef = annotated element,
     // targetRef = annotation.
-    private fun artifactsFrom(document: Document): Pair<List<BpmnTextAnnotation>, List<BpmnAssociation>> {
+    private data class Artifacts(
+        val annotations: List<BpmnTextAnnotation>,
+        val groups: List<BpmnGroup>,
+        val associations: List<BpmnAssociation>,
+    )
+
+    private fun artifactsFrom(document: Document): Artifacts {
+        val categoryValuesById = document
+            .bpmnElements("categoryValue")
+            .associate { it.getAttribute("id") to it.getAttribute("value") }
+            .filter { (id, value) -> id.isNotBlank() && value.isNotBlank() }
         val annotations = document
             .bpmnElements("textAnnotation")
             .map { el ->
                 BpmnTextAnnotation(
                     id = el.getAttribute("id"),
                     text = el.childElements().firstOrNull { it.localName == "text" }?.textContent?.trim().orEmpty(),
+                )
+            }.filter { it.id.isNotBlank() }
+            .toList()
+        val groups = document
+            .bpmnElements("group")
+            .map { el ->
+                val categoryValueRef = el.getAttribute("categoryValueRef").localNameRef()
+                BpmnGroup(
+                    id = el.getAttribute("id"),
+                    name = categoryValueRef?.let { categoryValuesById[it] },
                 )
             }.filter { it.id.isNotBlank() }
             .toList()
@@ -193,7 +215,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }.filter { it.id.isNotBlank() }
             .toList()
-        return annotations to associations
+        return Artifacts(annotations = annotations, groups = groups, associations = associations)
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory
@@ -568,3 +590,7 @@ private fun xsdBooleanOrDefault(raw: String, default: Boolean): Boolean {
     if (raw.isBlank()) return default
     return raw.equals("true", ignoreCase = true) || raw == "1"
 }
+
+private fun String.localNameRef(): String? = trim()
+    .takeIf { it.isNotBlank() }
+    ?.substringAfterLast(":")

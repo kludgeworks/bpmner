@@ -30,6 +30,7 @@ import dev.groknull.bpmner.api.BpmnEscalationRef as ApiBpmnEscalationRef
 import dev.groknull.bpmner.api.BpmnEventBasedGateway as ApiBpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition as ApiBpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway as ApiBpmnExclusiveGateway
+import dev.groknull.bpmner.api.BpmnGroup as ApiBpmnGroup
 import dev.groknull.bpmner.api.BpmnInclusiveGateway as ApiBpmnInclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent as ApiBpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent as ApiBpmnIntermediateThrowEvent
@@ -109,6 +110,9 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
     override val annotations: List<BpmnTextAnnotation> = emptyList(),
     @field:Valid
+    @get:JsonPropertyDescription("Visual BPMN group artifacts. Groups carry no process semantics.")
+    override val groups: List<BpmnGroup> = emptyList(),
+    @field:Valid
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
     override val associations: List<BpmnAssociation> = emptyList(),
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
@@ -147,6 +151,12 @@ data class BpmnEscalationRef(
     override val code: String,
     override val name: String? = null,
 ) : ApiBpmnEscalationRef
+
+data class BpmnGroup(
+    @field:NotBlank
+    override val id: String,
+    override val name: String? = null,
+) : ApiBpmnGroup
 
 @JsonClassDescription("Reusable BPMN event definition carried by an event-position node")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")

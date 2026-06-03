@@ -37,6 +37,10 @@ internal object BpmnTypeName {
     // and matches only by exact type name.
     const val TEXT_ANNOTATION = "bpmn:TextAnnotation"
 
+    // Artifact, not a flow node: surfaced so GroupUsage can teach that groups are visual
+    // containers only. Deliberately absent from broad type matching and supported node names.
+    const val GROUP = "bpmn:Group"
+
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
     // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can
