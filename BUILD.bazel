@@ -31,11 +31,8 @@ sonarqube(
 
 buildifier_test(
     name = "buildifier_check",
-    srcs = [
-        "BUILD.bazel",
-        "MODULE.bazel",
-        "WORKSPACE",
-    ],
+    no_sandbox = True,
+    workspace = "//:WORKSPACE",
 )
 
 ktlint_config(
