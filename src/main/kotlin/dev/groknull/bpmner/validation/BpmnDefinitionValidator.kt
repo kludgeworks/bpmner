@@ -138,6 +138,36 @@ internal class BpmnDefinitionValidator {
         validateFlowsStayInScope(definition, nodesById, errors)
         validateNoSubProcessCycles(subProcessesById, errors)
         validateSubProcessRequiredEvents(definition, subProcessesById.values, errors)
+        validateEventSubProcesses(definition, subProcessesById.values.filter { it.triggeredByEvent }, errors)
+    }
+
+    // An event subprocess is triggered by its typed inner start, not by the parent flow: it must
+    // carry no connecting sequence flow, and each inner start must be typed (a non-NONE event
+    // definition is the trigger). Interrupting vs non-interrupting rides the inner start's
+    // isInterrupting flag and needs no separate check.
+    private fun validateEventSubProcesses(
+        definition: BpmnDefinition,
+        eventSubProcesses: Collection<BpmnSubProcess>,
+        errors: MutableList<String>,
+    ) {
+        if (eventSubProcesses.isEmpty()) return
+        // Index once rather than re-scanning per event subprocess.
+        val connectedNodeIds = definition.sequences.flatMap { listOf(it.sourceRef, it.targetRef) }.toSet()
+        val startEventsByParent = definition.nodes.filterIsInstance<BpmnStartEvent>().groupBy { it.parentRef }
+
+        eventSubProcesses.forEach { sp ->
+            if (sp.id in connectedNodeIds) {
+                errors.add("event subprocess '${sp.id}' must not have an incoming or outgoing sequence flow")
+            }
+            startEventsByParent[sp.id]?.forEach { start ->
+                if (start.eventDefinition is BpmnNoneEventDefinition) {
+                    errors.add(
+                        "event subprocess '${sp.id}' start event '${start.id}' must be typed " +
+                            "(carry a non-NONE event definition)",
+                    )
+                }
+            }
+        }
     }
 
     // Every non-null parentRef must resolve to an existing node, and that node must be a subprocess

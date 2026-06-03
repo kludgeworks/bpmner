@@ -38,7 +38,10 @@ import java.util.concurrent.TimeUnit
     SmokeTestSummaryExtension::class,
 )
 @SpringBootTest
-@Timeout(120, unit = TimeUnit.SECONDS)
+// Each method makes two sequential live-LLM calls (readiness + extraction); 120s was too tight
+// under provider latency spikes / tool-loop retries. Generous headroom below Bazel's 'eternal'
+// target still catches a genuine hang.
+@Timeout(240, unit = TimeUnit.SECONDS)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",

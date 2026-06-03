@@ -3,14 +3,14 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 10778,
-			"updatedBy": "#195 (on #326)",
-			"reason": "data_artifacts.jinja (data objects/stores + activity dataInputIds/dataOutputIds), atop the merged standard-loop prompt."
+			"chars": 11359,
+			"updatedBy": "#339 (#195 data_artifacts)",
+			"reason": "data_artifacts.jinja hardened so a named persistent system is surfaced as a separate DATA_STORE (decomposition + store-signal verbs/nouns; broadened framing), atop the merged standard-loop prompt."
 		},
 		"contractFullPayload": {
-			"chars": 34196,
-			"updatedBy": "#195 (on #326)",
-			"reason": "Data-artifact prose + ContractArtifact.kind / FlatContractActivity.dataInputIds/dataOutputIds schema, atop loop fields."
+			"chars": 34777,
+			"updatedBy": "#339 (#195 data_artifacts)",
+			"reason": "data_artifacts.jinja DATA_STORE-extraction hardening prose, atop the data-artifact schema + loop fields."
 		},
 		"generationPrompt": {
 			"chars": 13662,

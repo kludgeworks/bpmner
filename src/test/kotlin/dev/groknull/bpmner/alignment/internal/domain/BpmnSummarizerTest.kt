@@ -151,4 +151,36 @@ class BpmnSummarizerTest {
             "subprocess children are reachable via the inner start; got: ${summary.unreachableElementIds}",
         )
     }
+
+    @Test
+    fun `event subprocess marker with no connecting flow is not reported unreachable`() {
+        // The event-subprocess marker has no incoming edge by design — it is a reachability root.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Event Subprocess Process",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_main", "Start"),
+                    BpmnEndEvent("End_main", "Done"),
+                    BpmnSubProcess("EventSub_1", "Handle", triggeredByEvent = true),
+                    BpmnStartEvent("Start_evt", "Triggered", parentRef = "EventSub_1"),
+                    BpmnUserTask("Task_evt", "Handle", parentRef = "EventSub_1"),
+                    BpmnEndEvent("End_evt", "Handled", parentRef = "EventSub_1"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_main", "Start_main", "End_main"),
+                    BpmnEdge("Flow_e1", "Start_evt", "Task_evt", parentRef = "EventSub_1"),
+                    BpmnEdge("Flow_e2", "Task_evt", "End_evt", parentRef = "EventSub_1"),
+                ),
+            )
+
+        val summary = summarizer.summarize(definition)
+
+        assertTrue(
+            summary.unreachableElementIds.isEmpty(),
+            "the event-subprocess marker is a root and its inner nodes reachable; got: ${summary.unreachableElementIds}",
+        )
+    }
 }
