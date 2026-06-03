@@ -18,7 +18,10 @@
 				"src/main/resources/**/*.yaml",
 				"src/main/resources/prompts/**/*.jinja",
 				"linter/**",
-				".github/workflows/**/*.yml"
+				".github/workflows/**/*.yml",
+				".bazelrc",
+				"MODULE.bazel",
+				"**/BUILD.bazel"
 			],
 			"rule": "When a PR changes architecture, pipeline stages, agent actions, model roles, runtime configuration, BPMN rule behavior, build/test commands, prompt behavior, or GitHub Actions behavior, check the documentation files referenced in .greptile/files.json. Flag the PR if relevant documentation is stale, contradicted by the code, or missing an update."
 		},

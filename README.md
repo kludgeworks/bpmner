@@ -1,6 +1,9 @@
 # bpmner
 
 [![CI](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml/badge.svg)](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml)
+[![Quality Gate — Backend](https://sonarcloud.io/api/project_badges/measure?project=kludgeworks_bpmner_backend&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kludgeworks_bpmner_backend)
+[![Quality Gate — Web](https://sonarcloud.io/api/project_badges/measure?project=kludgeworks_bpmner_web&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=kludgeworks_bpmner_web)
+[![Reviewed by Greptile](https://img.shields.io/badge/reviewed%20by-greptile-1f8acb)](https://www.greptile.com)
 
 Generates valid, semantically-grounded BPMN 2.0 XML from plain-language workflow descriptions — business, automated, technical, scientific, or personal.
 
