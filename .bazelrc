@@ -38,7 +38,7 @@ build:ci --build_metadata=ROLE=CI
 build:ci --nolegacy_important_outputs
 build:ci --test_keep_going
 
-# Phase 3 extension: RBE (enable after RC hit rates confirmed)
+# RBE: remote execution on BuildBuddy workers, layered on the cache config above
 build:rbe --config=ci
 build:rbe --remote_executor=grpcs://remote.buildbuddy.io
 build:rbe --remote_download_minimal
