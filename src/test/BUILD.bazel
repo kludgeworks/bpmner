@@ -145,6 +145,7 @@ java_junit5_test(
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
+        "GITHUB_TOKEN",
         "SPRING_PROFILES_ACTIVE",
     ],
     tags = [
@@ -163,6 +164,7 @@ java_junit5_test(
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
+        "GITHUB_TOKEN",
         "SPRING_PROFILES_ACTIVE",
     ],
     tags = [

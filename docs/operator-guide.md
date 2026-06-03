@@ -39,7 +39,7 @@ bpmner:
 
 bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapping resolves the role to a concrete LLM. The roles bpmner uses:
 
-| Role | Used by | Default model (gh profile) |
+| Role | Used by | Default model |
 |---|---|---|
 | `generator` | `BpmnGeneratorAgent.createOutline` | `gpt-4.1` |
 | `repair-label` | `BpmnRepairAgent.applyLlmLabelPatch` | `gpt-4.1-nano` |
@@ -50,7 +50,7 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 | `alignment-validator` | `BpmnAlignmentAgent.checkAlignment` | (profile default) |
 | `linter` | `LlmRuleAgent.evaluateLlmRules` | (profile default) |
 
-Override per-role under `embabel.models.llms.<role>`. Anthropic and GitHub Models profiles are configured in `application-anthropic.yaml` and `application-github.yaml` respectively. Run with `--spring.profiles.active=anthropic` or `github`.
+Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, and `application-github.yaml`. Run with `--spring.profiles.active=<provider>` — one of `anthropic`, `openai`, `gemini`, or `github`.
 
 The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
 
