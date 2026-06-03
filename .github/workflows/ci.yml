@@ -198,6 +198,7 @@ jobs:
           OPENAI_API_KEY: op://bpmner/openai/api-key
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
           GEMINI_API_KEY: op://bpmner/gemini/api-key
+          SONAR_TOKEN: op://bpmner/sonarqube/api-key
 
       - name: Run Bazel coverage
         id: coverage
@@ -218,7 +219,6 @@ jobs:
         if: always() && steps.coverage.outcome != 'skipped'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           bazel run //:sonar \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
@@ -231,7 +231,6 @@ jobs:
         if: always() && steps.coverage.outcome != 'skipped'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           bazel run //web:sonar \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
