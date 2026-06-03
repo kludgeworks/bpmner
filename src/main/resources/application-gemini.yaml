@@ -6,6 +6,7 @@ spring:
     exclude:
       - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
       - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
 
 embabel:
   agent:

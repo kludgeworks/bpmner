@@ -11,6 +11,9 @@ spring:
 embabel:
   agent:
     platform:
+      models:
+        mistralai:
+          api-key: ${MISTRAL_API_KEY:}
       llm-operations:
         prompts:
           default-timeout: PT180S

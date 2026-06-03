@@ -6,6 +6,7 @@ spring:
     exclude:
       - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
       - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
