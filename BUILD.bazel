@@ -32,6 +32,7 @@ sonarqube(
 buildifier_test(
     name = "buildifier_check",
     no_sandbox = True,
+    tags = ["local"],
     workspace = "//:WORKSPACE",
 )
 
