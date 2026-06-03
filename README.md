@@ -1,5 +1,7 @@
 # bpmner
 
+[![CI](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml/badge.svg)](https://github.com/kludgeworks/bpmner/actions/workflows/ci.yml)
+
 Generates valid, semantically-grounded BPMN 2.0 XML from plain-language workflow descriptions — business, automated, technical, scientific, or personal.
 
 `bpmner` is more than a simple BPMN generator. It is a high-integrity modeling assistant that bridges the gap between ambiguous human language and technical process standards. Built on the [Embabel](https://github.com/embabel/embabel-agent) agentic framework, it employs a defense-in-depth pipeline to ensure every generated diagram is not only syntactically correct but also semantically aligned with user intent.
@@ -42,7 +44,7 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ### Prerequisites
 - **Bazel 8.6.0** (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk).
 - **Mise** for environment and tool management.
-- An LLM API key (Anthropic, OpenAI, or GitHub Models).
+- An LLM API key (Anthropic, OpenAI, Gemini, or GitHub Models).
 
 ### Build
 ```bash
