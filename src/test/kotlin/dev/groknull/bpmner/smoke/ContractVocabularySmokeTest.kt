@@ -20,6 +20,9 @@ import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.contract.boundaryEvents
+import dev.groknull.bpmner.contract.iteration
+import dev.groknull.bpmner.contract.loop
 import dev.groknull.bpmner.core.BpmnRequest
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag

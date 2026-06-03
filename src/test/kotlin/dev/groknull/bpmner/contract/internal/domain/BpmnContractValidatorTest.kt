@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractArtifact
@@ -432,7 +433,7 @@ class BpmnContractValidatorTest {
                     id = "activity-receive",
                     name = "Receive application",
                     sourceIds = sources,
-                    dataInputIds = listOf("art-missing"),
+                    modifiers = ActivityModifiers(dataInputIds = listOf("art-missing")),
                 ),
             ),
             artifacts = listOf(ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT)),
@@ -450,8 +451,10 @@ class BpmnContractValidatorTest {
                     id = "activity-receive",
                     name = "Receive application",
                     sourceIds = sources,
-                    dataInputIds = listOf("art-order"),
-                    dataOutputIds = listOf("art-decision"),
+                    modifiers = ActivityModifiers(
+                        dataInputIds = listOf("art-order"),
+                        dataOutputIds = listOf("art-decision"),
+                    ),
                 ),
             ),
             artifacts = listOf(

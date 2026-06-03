@@ -17,6 +17,8 @@ import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
+import dev.groknull.bpmner.contract.dataInputIds
+import dev.groknull.bpmner.contract.dataOutputIds
 import dev.groknull.bpmner.contract.kindName
 import org.springframework.stereotype.Component
 
