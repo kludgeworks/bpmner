@@ -182,6 +182,7 @@ java_junit5_test(
 java_junit5_test(
     name = "LiveLlmFullPipelineSmokeTest",
     timeout = "eternal",
+    data = ["//samples:prose_samples"],
     env_inherit = [
         "OPENAI_API_KEY",
         "ANTHROPIC_API_KEY",
