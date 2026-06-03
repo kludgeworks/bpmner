@@ -39,6 +39,10 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
+    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY / OP token), so the
+    # RBE unit-test job would fail at "Load secrets". Skip it on forks, matching
+    # smoke-tests and sonarcloud; same-repo PRs and pushes run the full suite.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
