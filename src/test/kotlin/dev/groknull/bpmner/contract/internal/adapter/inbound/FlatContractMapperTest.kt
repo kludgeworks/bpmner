@@ -24,6 +24,9 @@ import dev.groknull.bpmner.contract.EventGatewayBranch
 import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
+import dev.groknull.bpmner.contract.boundaryEvents
+import dev.groknull.bpmner.contract.iteration
+import dev.groknull.bpmner.contract.loop
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBranch
@@ -51,11 +52,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     FlatActivityKind.USER -> ContractActivity.User(
@@ -63,11 +60,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     FlatActivityKind.SCRIPT -> ContractActivity.Script(
@@ -75,11 +68,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     FlatActivityKind.MANUAL -> ContractActivity.Manual(
@@ -87,11 +76,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         name = name,
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     // The three kinds carrying a required payload field (decisionName / messageName) are split out
@@ -106,11 +91,7 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         decisionName = requireField(decisionName, kind, "decisionName", id),
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     FlatActivityKind.SEND -> ContractActivity.Send(
@@ -119,11 +100,7 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         messageName = requireField(messageName, kind, "messageName", id),
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     FlatActivityKind.RECEIVE -> ContractActivity.Receive(
@@ -132,11 +109,7 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         messageName = requireField(messageName, kind, "messageName", id),
         actorId = actorId,
         sourceIds = sourceIds,
-        iteration = iteration?.toSealed(),
-        boundaryEvents = boundaryEvents.map { it.toSealed() },
-        loop = loop?.toSealed(),
-        dataInputIds = dataInputIds,
-        dataOutputIds = dataOutputIds,
+        modifiers = toModifiers(),
     )
 
     else -> error("toPayloadActivity called with non-payload kind: $kind")
@@ -246,4 +219,12 @@ public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
     branches = branches.map { it.toSealed() },
     kind = kind,
     sourceIds = sourceIds,
+)
+
+private fun FlatContractActivity.toModifiers(): ActivityModifiers = ActivityModifiers(
+    iteration = iteration?.toSealed(),
+    boundaryEvents = boundaryEvents.map { it.toSealed() },
+    loop = loop?.toSealed(),
+    dataInputIds = dataInputIds,
+    dataOutputIds = dataOutputIds,
 )

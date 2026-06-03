@@ -61,6 +61,14 @@
 			"severity": "high",
 			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/rules/**"],
 			"rule": "If BPMN rule schema, Pkl profiles, primitive checks, rule metadata, repair capability mapping, or rule authoring workflow changes, linter/docs/rule-authoring-guide.md and linter/docs/toolbox.md must stay accurate."
+		},
+		{
+			"id": "domain-types-no-llm-annotations",
+			"severity": "high",
+			"scope": [
+				"src/main/kotlin/dev/groknull/bpmner/contract/BpmnContractTypes.kt"
+			],
+			"rule": "The sealed interfaces in this file (ContractActivity, ContractEndState, ContractBranch, ContractTrigger, ContractIntermediateThrow) and their subtypes are internal domain types — never passed to Embabel's creating() or createObject(), never Jakarta-validated by the framework, never deserialized in production. The LLM-facing schema surface is exclusively FlatContractTypes.kt. Flag any PR that adds @get:JsonPropertyDescription, @field:NotBlank, @field:Size, or @field:Valid to a property of one of these sealed-interface subtypes. Those annotations are vestigial duplicates of the ones on the corresponding Flat DTO and re-introduce the cross-variant copy-paste that //:cpd_kotlin_main detects (issue #343)."
 		}
 	]
 }

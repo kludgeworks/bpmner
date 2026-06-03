@@ -8,6 +8,7 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -130,7 +131,9 @@ class BpmnContractFidelityCheckerTest {
             ContractActivity.User(
                 id = "act-review",
                 name = "Review manuscript",
-                iteration = ContractIteration(mode = mode, collectionDescription = "each reviewer on the panel"),
+                modifiers = ActivityModifiers(
+                    iteration = ContractIteration(mode = mode, collectionDescription = "each reviewer on the panel"),
+                ),
             ),
         ),
         endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Verdict sent")),
@@ -237,7 +240,9 @@ class BpmnContractFidelityCheckerTest {
         processName = "Loop",
         summary = "Retry charge until it succeeds",
         start = ContractStart(ContractTrigger.None("order placed")),
-        activities = listOf(ContractActivity.Service(id = "act-charge", name = "Charge card", loop = loop)),
+        activities = listOf(
+            ContractActivity.Service(id = "act-charge", name = "Charge card", modifiers = ActivityModifiers(loop = loop)),
+        ),
         endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Charged")),
     )
 
