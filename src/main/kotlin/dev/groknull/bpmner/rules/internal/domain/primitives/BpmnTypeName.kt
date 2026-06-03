@@ -47,6 +47,10 @@ internal object BpmnTypeName {
     const val DATA_OBJECT = "bpmn:DataObject"
     const val DATA_STORE = "bpmn:DataStore"
 
+    // Artifact, not a flow node: surfaced so GroupUsage can teach that groups are visual
+    // containers only. Deliberately absent from broad type matching and supported node names.
+    const val GROUP = "bpmn:Group"
+
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
     // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can

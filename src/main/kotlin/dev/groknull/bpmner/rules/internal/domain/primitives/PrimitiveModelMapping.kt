@@ -18,6 +18,7 @@ import dev.groknull.bpmner.api.BpmnEvent
 import dev.groknull.bpmner.api.BpmnEventBasedGateway
 import dev.groknull.bpmner.api.BpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway
+import dev.groknull.bpmner.api.BpmnGroup
 import dev.groknull.bpmner.api.BpmnInclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
@@ -41,6 +42,9 @@ import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask
 
+// This is the single definition-to-primitive projection pipeline; splitting the local projections
+// would obscure the ordering of synthetic elements, typed nodes, artifacts, and flows.
+@Suppress("LongMethod")
 internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelContext {
     val sequenceFlows = definition.sequences.map { it.toPrimitiveFlow() }
     // One synthetic `bpmndi:BPMNDiagram` element per counted diagram so `CardinalityCheck`
@@ -86,6 +90,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
     val dataElements = dataElementsOf(definition.dataObjects, definition.dataStores)
+    val groupElements = groupElementsOf(definition.groups)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
     }
@@ -108,6 +113,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             eventDefinitionElements +
             annotationElements +
             dataElements +
+            groupElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
         associations = associations,
@@ -147,6 +153,17 @@ private fun dataElementsOf(
         )
     }
     return objects + stores
+}
+
+private fun groupElementsOf(groups: List<BpmnGroup>): List<PrimitiveElement> = groups.map {
+    PrimitiveElement(
+        id = it.id,
+        typeName = BpmnTypeName.GROUP,
+        properties = buildMap {
+            put("id", it.id)
+            it.name?.let { name -> put("name", name) }
+        },
+    )
 }
 
 private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {

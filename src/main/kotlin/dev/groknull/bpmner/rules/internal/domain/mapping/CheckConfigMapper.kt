@@ -25,6 +25,7 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechCheckCon
 import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelMode
+import dev.groknull.bpmner.rules.internal.domain.primitives.PresenceCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.RequiredAssociationCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.RequiredPropertyCheckConfig
@@ -78,6 +79,8 @@ private fun PklCheckPrim.CheckConfig.toDeterministicConfig(): DeterministicCheck
     ?: error("Unknown CheckConfig subtype: ${this::class.java.name}")
 
 private fun PklCheckPrim.CheckConfig.toStructuralConfig(): DeterministicCheckConfig? = when (this) {
+    is PklCheckPrim.PresenceCheck -> PresenceCheckConfig
+
     is PklCheckPrim.RequiredPropertyCheck -> RequiredPropertyCheckConfig(property)
 
     is PklCheckPrim.PropertyPatternCheck -> PropertyPatternCheckConfig(
