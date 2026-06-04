@@ -82,16 +82,12 @@ internal class BpmnGeneratorAgent(
             error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
         val promptRunner = config.generator.promptRunner(context)
-        val flat = promptRunner
-            .creating(FlatBpmnDefinition::class.java)
-            // Typed few-shot examples for the non-obvious topologies (parallel fork/join, inclusive
-            // fork with a default branch, and data objects/stores with read/write associations).
-            .withExample(GenerationExamples.PARALLEL_LABEL, GenerationExamples.parallelForkJoin)
-            .withExample(GenerationExamples.INCLUSIVE_LABEL, GenerationExamples.inclusiveWithDefault)
-            .withExample(GenerationExamples.DATA_ARTIFACTS_LABEL, GenerationExamples.dataArtifacts)
-            .withExample(GenerationExamples.SUB_PROCESS_LABEL, GenerationExamples.embeddedSubProcess)
-            .withExample(GenerationExamples.EVENT_SUB_PROCESS_LABEL, GenerationExamples.eventSubProcess)
-            .fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
+        // Typed few-shot examples for the non-obvious topologies (fork/join, data, subprocesses, pools).
+        val creating = GenerationExamples.all
+            .fold(promptRunner.creating(FlatBpmnDefinition::class.java)) { acc, (label, example) ->
+                acc.withExample(label, example)
+            }
+        val flat = creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {

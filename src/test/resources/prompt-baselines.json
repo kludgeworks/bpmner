@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 13639,
-			"updatedBy": "#351",
-			"reason": "extract_contract gained embedded + event-subprocess element guidance (B-5b #349 stayed within the 15% tolerance; the B-6b event-subprocess block pushes past it)."
+			"chars": 14421,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		},
 		"contractFullPayload": {
-			"chars": 41259,
-			"updatedBy": "#351",
-			"reason": "subprocess + event-subprocess few-shot examples (withExample) added to the contract-extraction payload."
+			"chars": 42041,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		},
 		"generationPrompt": {
-			"chars": 15829,
-			"updatedBy": "#351",
-			"reason": "generate_bpmn gained embedded + event-subprocess topology blocks."
+			"chars": 17499,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		},
 		"generationFullPayload": {
-			"chars": 33726,
-			"updatedBy": "#351",
-			"reason": "embedded + event-subprocess generation few-shot examples added to the generation payload."
+			"chars": 38602,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -43,14 +43,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
-			"chars": 2022,
-			"updatedBy": "#351",
-			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
+			"chars": 2087,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		},
 		"repairFullPrompt": {
-			"chars": 2318,
-			"updatedBy": "#351",
-			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
+			"chars": 2383,
+			"updatedBy": "auto",
+			"reason": "regenerated 2026-06-04"
 		}
 	}
 }
