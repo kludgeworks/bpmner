@@ -824,9 +824,10 @@ data class BpmnLane(
     override val id: String,
     @get:JsonPropertyDescription("Lane label — a business role or performer, e.g. \"Sales\"")
     override val name: String? = null,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Id of the participant (pool) this lane belongs to")
-    override val participantId: String,
+    @get:JsonPropertyDescription(
+        "Id of the participant (pool) this lane belongs to; null when the process has lanes but no surrounding collaboration",
+    )
+    override val participantId: String? = null,
     @get:JsonPropertyDescription("Ids of the flow nodes contained in this lane (node ids, not names)")
     override val flowNodeRefs: List<String> = emptyList(),
 ) : ApiBpmnLane

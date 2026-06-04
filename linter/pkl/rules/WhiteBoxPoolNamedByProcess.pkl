@@ -24,7 +24,7 @@ staticConfig = new {
 }
 
 // Fires when a white-box participant's label differs from its referenced process name.
-// `processName` is populated only for the participant whose processRef names this process (#196).
+// `processName` is populated only for the participant whose processRef names this process.
 checkPrimitive = "PoolLabelCheck"
 checkConfig = new CheckPrimitive.PoolLabelCheck {
   mode = "WHITE_BOX_NAMED_BY_PROCESS"

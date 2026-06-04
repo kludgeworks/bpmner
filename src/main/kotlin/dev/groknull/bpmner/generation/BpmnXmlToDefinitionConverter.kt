@@ -98,9 +98,9 @@ private data class ParsedArtifacts(
     val dataAssociations: List<BpmnDataAssociation>,
 )
 
-// Collaboration artifacts (#196): participants (pools) + message flows from <collaboration>, and
-// lanes from each process's <laneSet>. Parsed top-level (off the converter class) so the projection
-// stays a single pass without inflating the class's function count.
+// Collaboration artifacts: participants (pools) + message flows from <collaboration>, and lanes from
+// each process's <laneSet>. Parsed top-level (off the converter class) so the projection stays a
+// single pass without inflating the class's function count.
 private data class ParsedCollaboration(
     val participants: List<BpmnParticipant>,
     val lanes: List<BpmnLane>,
@@ -692,6 +692,8 @@ private fun org.w3c.dom.NodeList.elementSequence(): Sequence<Element> = sequence
     }
 }
 
+// Single-line expression body: splitting the qualifier and call across lines adds no readability
+// for this thin namespace-scan delegation, so the line-length warning is suppressed deliberately.
 @Suppress("MaxLineLength")
 private fun Document.bpmnModelElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_MODEL_NS, localName).elementSequence()
 
@@ -708,9 +710,10 @@ private fun Element.enclosingProcessId(): String? {
     return null
 }
 
-// Parses the collaboration view (#196): participants + message flows from <collaboration>, lanes
-// from each <laneSet>. A white-box participant carries processRef; a black-box one omits it. Lane
-// membership is the <flowNodeRef> children only; a lane binds to the participant owning its process.
+// Parses the collaboration view: participants + message flows from <collaboration>, lanes from each
+// <laneSet>. A white-box participant carries processRef; a black-box one omits it. Lane membership is
+// the <flowNodeRef> children only; a lane binds to the participant owning its process, or to no
+// participant when the process has a lane set without a surrounding collaboration.
 private fun parseCollaboration(document: Document): ParsedCollaboration {
     val participants = document.bpmnModelElements("participant")
         .map { el ->
@@ -726,7 +729,7 @@ private fun parseCollaboration(document: Document): ParsedCollaboration {
             BpmnLane(
                 id = el.getAttribute("id"),
                 name = el.getAttribute("name").takeIf { it.isNotBlank() },
-                participantId = el.enclosingProcessId()?.let { participantByProcessId[it] }.orEmpty(),
+                participantId = el.enclosingProcessId()?.let { participantByProcessId[it] },
                 flowNodeRefs = el.childNodes.elementSequence()
                     .filter { it.localName == "flowNodeRef" }
                     .mapNotNull { it.textContent?.trim()?.takeIf { ref -> ref.isNotBlank() } }
@@ -741,6 +744,6 @@ private fun parseCollaboration(document: Document): ParsedCollaboration {
                 sourceRef = el.getAttribute("sourceRef"),
                 targetRef = el.getAttribute("targetRef"),
             )
-        }.filter { it.id.isNotBlank() }.toList()
+        }.filter { it.id.isNotBlank() && it.sourceRef.isNotBlank() && it.targetRef.isNotBlank() }.toList()
     return ParsedCollaboration(participants, lanes, messageFlows)
 }

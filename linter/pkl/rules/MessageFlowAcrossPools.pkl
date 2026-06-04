@@ -22,7 +22,7 @@ errorMessages = new {
 staticConfig = new {}
 
 // Fires when a message flow's source and target resolve to the same pool, or either endpoint can't
-// be mapped to a pool. Reads the per-flow sourcePool/targetPool set by PrimitiveModelMapping (#196).
+// be mapped to a pool. Reads the per-flow sourcePool/targetPool set by PrimitiveModelMapping.
 checkPrimitive = "ConnectivityCheck"
 checkConfig = new CheckPrimitive.ConnectivityCheck {
   mode = "ACROSS_POOLS"

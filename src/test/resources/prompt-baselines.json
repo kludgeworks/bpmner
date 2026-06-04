@@ -3,22 +3,22 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 14421,
+			"chars": 14423,
 			"updatedBy": "auto",
 			"reason": "regenerated 2026-06-04"
 		},
 		"contractFullPayload": {
-			"chars": 42041,
+			"chars": 42043,
 			"updatedBy": "auto",
 			"reason": "regenerated 2026-06-04"
 		},
 		"generationPrompt": {
-			"chars": 17499,
+			"chars": 17488,
 			"updatedBy": "auto",
 			"reason": "regenerated 2026-06-04"
 		},
 		"generationFullPayload": {
-			"chars": 38602,
+			"chars": 38657,
 			"updatedBy": "auto",
 			"reason": "regenerated 2026-06-04"
 		},

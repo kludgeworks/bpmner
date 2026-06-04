@@ -47,8 +47,8 @@ import dev.groknull.bpmner.api.BpmnUserTask
 // would obscure the ordering of synthetic elements, typed nodes, artifacts, and flows.
 @Suppress("LongMethod")
 internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelContext {
-    // Pool resolution (#196): in v1 every flow node lives in the single white-box pool (the
-    // participant whose processRef names this process), so every sequence flow's source and target
+    // Pool resolution: in v1 every flow node lives in the single white-box pool (the participant
+    // whose processRef names this process), so every sequence flow's source and target
     // pool are that participant — `SequenceFlowWithinPool` (WITHIN_POOL) never fires. A message-flow
     // endpoint resolves to its own pool: a participant ref is its own pool, otherwise it is a flow
     // node in the white-box pool. `MessageFlowAcrossPools` (ACROSS_POOLS) fires when both ends share
@@ -78,16 +78,19 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         )
     }
     // Lane membership is the lane's flowNodeRefs only; nodes carry no lane back-reference. The label
-    // is surfaced as `role` (what `PoolLabelCheck.LANE_LABELS_BUSINESS_ROLES_PERFORMERS` reads).
+    // is surfaced as `role` (what PoolLabelCheck.LANE_LABELS_BUSINESS_ROLES_PERFORMERS reads);
+    // participantId is absent when the lane sits in a process without a surrounding collaboration.
     val laneElements = definition.lanes.map { lane ->
         PrimitiveElement(
             id = lane.id,
             typeName = BpmnTypeName.LANE,
             properties = buildMap {
                 put("id", lane.id)
-                lane.name?.let { put("name", it) }
-                lane.name?.let { put("role", it) }
-                put("participantId", lane.participantId)
+                lane.name?.let {
+                    put("name", it)
+                    put("role", it)
+                }
+                lane.participantId?.let { put("participantId", it) }
             },
         )
     }
@@ -168,7 +171,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         messageFlows = messageFlows,
         // ASSOCIATIONS is always on (the model always carries annotations/associations). POOLS_AND_LANES
         // and MESSAGE_FLOWS flip on only when the definition actually carries those constructs, so the
-        // pool/lane/message-flow rules stay dormant on ordinary single-pool-less processes (#196).
+        // pool/lane/message-flow rules stay dormant on ordinary single-pool-less processes.
         supportedCapabilities = buildSet {
             add(ModelCapability.ASSOCIATIONS)
             if (definition.participants.isNotEmpty()) add(ModelCapability.POOLS_AND_LANES)

@@ -23,9 +23,9 @@ staticConfig = new {
   cookbookCode = "POOL-03"
 }
 
-// Fires when a child-diagram pool is renamed off its parent process. The model enforces one
-// diagram per document, so `isChildDiagram` is never set today and this rule stays inert until
-// multi-diagram support lands — but it loads through the active path, ready for that capability.
+// Fires when a child-diagram pool is renamed off its parent process. The model enforces one diagram
+// per document, so no participant carries `isChildDiagram` and the rule reports nothing; it loads
+// through the active path and evaluates each participant the engine presents.
 checkPrimitive = "PoolLabelCheck"
 checkConfig = new CheckPrimitive.PoolLabelCheck {
   mode = "CHILD_DIAGRAMS_KEEP_POOL_PROCESS_NAME"

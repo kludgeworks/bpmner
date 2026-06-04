@@ -16,6 +16,7 @@ import dev.groknull.bpmner.core.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 /**
@@ -77,6 +78,24 @@ class BpmnCollaborationRoundTripTest {
         assertEquals("Participant_psp", flow.targetRef)
         // A message flow crosses pools — it never appears as a sequence flow.
         assertEquals(emptyList(), parsed.sequences.filter { it.id == "MessageFlow_1" })
+    }
+
+    @Test
+    fun `lanes without a pool round-trip with a null participant`() {
+        // A process may carry a <laneSet> without a surrounding <collaboration>; such lanes belong to
+        // no participant. The renderer emits the laneSet inside the process and the parser recovers a
+        // null participantId rather than fabricating a pool.
+        val original = whiteBoxWithLanes().copy(participants = emptyList())
+
+        val xml = converter.render(original).xml
+        assertContains(xml, "<bpmn:laneSet")
+        assertFalse(xml.contains("<bpmn:collaboration"), "no participants means no collaboration is emitted")
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(xml)
+        assertEquals(emptyList(), parsed.participants)
+        assertEquals(2, parsed.lanes.size)
+        parsed.lanes.forEach { assertNull(it.participantId, "a lane outside a collaboration binds to no participant") }
+        assertEquals(listOf("StartEvent_1", "act-submit"), parsed.lanes.single { it.id == "Lane_front" }.flowNodeRefs)
     }
 
     private fun whiteBoxWithLanes(): BpmnDefinition = BpmnDefinition(

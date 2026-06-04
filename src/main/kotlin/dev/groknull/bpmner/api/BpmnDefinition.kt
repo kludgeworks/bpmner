@@ -269,14 +269,17 @@ interface BpmnParticipant {
 }
 
 /**
- * A BPMN lane: a horizontal partition of a white-box pool by business role or performer. Membership
- * is the lane's [flowNodeRefs] (the sole source of truth — nodes carry no lane back-reference).
- * Renders to `<bpmn:lane>` (with `<bpmn:flowNodeRef>` children) inside the pool's `<bpmn:laneSet>`.
+ * A BPMN lane: a horizontal partition of a pool by business role or performer. Membership is the
+ * lane's [flowNodeRefs] (the sole source of truth — nodes carry no lane back-reference). Renders to
+ * `<bpmn:lane>` (with `<bpmn:flowNodeRef>` children) inside the process's `<bpmn:laneSet>`.
+ *
+ * [participantId] is the owning pool, or `null` when the process carries a lane set without a
+ * surrounding collaboration (a single-process diagram with lanes but no explicit pool).
  */
 interface BpmnLane {
     val id: String
     val name: String?
-    val participantId: String
+    val participantId: String?
     val flowNodeRefs: List<String>
 }
 
