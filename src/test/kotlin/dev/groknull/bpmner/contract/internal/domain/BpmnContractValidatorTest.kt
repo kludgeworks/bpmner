@@ -666,6 +666,40 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `duplicate member within one embedded subprocess is not misreported as shared`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-dup",
+                name = "Dup",
+                containedActivityIds = listOf("activity-receive", "activity-receive"),
+                sourceIds = sources,
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertFalse(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
+    }
+
+    @Test
+    fun `duplicate member within one event subprocess is not misreported as shared`() {
+        val contract = linearContract().copy(
+            eventSubProcesses = listOf(
+                ContractEventSubProcess(
+                    id = "esp-dup",
+                    name = "Dup",
+                    containedActivityIds = listOf("activity-receive", "activity-receive"),
+                    trigger = EventSubProcessTrigger.MESSAGE,
+                    sourceIds = sources,
+                ),
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertFalse(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_MEMBER_SHARED))
+    }
+
+    @Test
     fun `event subprocess id colliding with an activity flags DUPLICATE_CONTRACT_ELEMENT_ID`() {
         val base = linearContract()
         val contract = base.copy(

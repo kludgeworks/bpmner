@@ -74,7 +74,9 @@ internal class BpmnContractValidator {
 
         val activityIds = contract.activities.map { it.id }.toSet()
         val subProcessIds = subProcesses.map { it.id }.toSet()
-        val membershipCount = mutableMapOf<String, Int>()
+        // memberId -> the distinct subprocess ids that claim it. Tracking distinct owners (rather than
+        // raw occurrences) means a member listed twice within one subprocess isn't misreported as shared.
+        val claimants = mutableMapOf<String, MutableSet<String>>()
 
         subProcesses.forEach { subProcess ->
             if (subProcess.containedActivityIds.isEmpty()) {
@@ -87,7 +89,7 @@ internal class BpmnContractValidator {
                 )
             }
             subProcess.containedActivityIds.forEach { memberId ->
-                membershipCount[memberId] = (membershipCount[memberId] ?: 0) + 1
+                claimants.getOrPut(memberId) { mutableSetOf() }.add(subProcess.id)
                 when {
                     memberId == subProcess.id -> add(
                         errorIssue(
@@ -121,11 +123,11 @@ internal class BpmnContractValidator {
             }
         }
 
-        membershipCount.filterValues { it > 1 }.forEach { (memberId, count) ->
+        claimants.filterValues { it.size > 1 }.forEach { (memberId, owners) ->
             add(
                 errorIssue(
                     code = ContractValidationCode.SUBPROCESS_MEMBER_SHARED,
-                    message = "activity '$memberId' is claimed by $count subprocesses —" +
+                    message = "activity '$memberId' is claimed by ${owners.size} subprocesses —" +
                         " an activity belongs to at most one",
                     targetId = memberId,
                 ),
@@ -148,21 +150,23 @@ internal class BpmnContractValidator {
             .filterIsInstance<ContractActivity.SubProcess>()
             .flatMap { it.containedActivityIds }
             .toSet()
-        val membershipCount = mutableMapOf<String, Int>()
+        // memberId -> the distinct event-subprocess ids that claim it (see validateSubProcesses): a
+        // duplicate id within one handler's list must not be misreported as cross-subprocess sharing.
+        val claimants = mutableMapOf<String, MutableSet<String>>()
 
         eventSubProcesses.forEach { eventSubProcess ->
             addAll(validateEventSubProcessShape(eventSubProcess))
             eventSubProcess.containedActivityIds.forEach { memberId ->
-                membershipCount[memberId] = (membershipCount[memberId] ?: 0) + 1
+                claimants.getOrPut(memberId) { mutableSetOf() }.add(eventSubProcess.id)
                 addAll(validateEventSubProcessMember(eventSubProcess, memberId, activityIds, embeddedMembers))
             }
         }
 
-        membershipCount.filterValues { it > 1 }.forEach { (memberId, count) ->
+        claimants.filterValues { it.size > 1 }.forEach { (memberId, owners) ->
             add(
                 errorIssue(
                     code = ContractValidationCode.EVENT_SUBPROCESS_MEMBER_SHARED,
-                    message = "activity '$memberId' is claimed by $count event subprocesses —" +
+                    message = "activity '$memberId' is claimed by ${owners.size} event subprocesses —" +
                         " an activity belongs to at most one",
                     targetId = memberId,
                 ),
