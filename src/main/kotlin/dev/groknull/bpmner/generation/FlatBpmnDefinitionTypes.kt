@@ -17,7 +17,10 @@ import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnGroup
+import dev.groknull.bpmner.core.BpmnLane
+import dev.groknull.bpmner.core.BpmnMessageFlow
 import dev.groknull.bpmner.core.BpmnMessageRef
+import dev.groknull.bpmner.core.BpmnParticipant
 import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnTextAnnotation
 import jakarta.validation.Valid
@@ -297,6 +300,25 @@ public data class FlatBpmnDefinition(
             "targetRef=data id, direction=READ (activity consumes) or WRITE (activity produces).",
     )
     val dataAssociations: List<BpmnDataAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Participants (pools): a white-box participant sets processRef to this process id and owns its " +
+            "lanes; a black-box participant (processRef null) is an external entity. Emit only when the " +
+            "process is modelled as a collaboration.",
+    )
+    val participants: List<BpmnParticipant> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Lanes partitioning a white-box pool by business role/performer. Set participantId to the owning " +
+            "participant and flowNodeRefs to the ids of the nodes in the lane.",
+    )
+    val lanes: List<BpmnLane> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Message flows between participants (across pools only). Set sourceRef/targetRef to a flow " +
+            "element id or a black-box participant id; name them after the message, not an action.",
+    )
+    val messageFlows: List<BpmnMessageFlow> = emptyList(),
 )
 
 // Ported verbatim from core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than

@@ -24,11 +24,14 @@ import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageFlow
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnParticipant
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -103,6 +106,33 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(listOf(BpmnTextAnnotation("ta", "For each reviewer")), sealed.annotations)
         assertEquals(listOf(BpmnGroup("Group_review", "Review work")), sealed.groups)
         assertEquals(listOf(BpmnAssociation("as", "u1", "ta")), sealed.associations)
+    }
+
+    @Test
+    fun `collaboration participants lanes and message flows map to sealed`() {
+        val participants = listOf(
+            BpmnParticipant("P_main", "Process", processRef = "P"),
+            BpmnParticipant("P_ext", "Payment Provider", processRef = null),
+        )
+        val lanes = listOf(BpmnLane("Lane_sales", "Sales", participantId = "P_main", flowNodeRefs = listOf("u1")))
+        val messageFlows = listOf(BpmnMessageFlow("mf", "Payment request", "u1", "P_ext"))
+
+        val sealed = FlatBpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = listOf(
+                FlatBpmnNode(id = "u1", type = FlatBpmnNodeKind.USER_TASK, name = "Place order"),
+                FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
+            ),
+            sequences = listOf(BpmnEdge("f", "u1", "e")),
+            participants = participants,
+            lanes = lanes,
+            messageFlows = messageFlows,
+        ).toSealed()
+
+        assertEquals(participants, sealed.participants)
+        assertEquals(lanes, sealed.lanes)
+        assertEquals(messageFlows, sealed.messageFlows)
     }
 
     @Test
