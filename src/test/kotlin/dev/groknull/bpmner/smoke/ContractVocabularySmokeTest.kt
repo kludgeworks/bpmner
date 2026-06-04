@@ -151,6 +151,28 @@ class ContractVocabularySmokeTest {
     // Task Kinds
 
     @Test
+    fun `service task`() {
+        val c = extractContract(
+            """
+            When an order is submitted, the system automatically charges the customer's card through
+            the payment gateway. Once the charge succeeds, the process ends.
+            """,
+        )
+        c.assertHasActivity<ContractActivity.Service>()
+    }
+
+    @Test
+    fun `user task`() {
+        val c = extractContract(
+            """
+            When a claim arrives, a reviewer opens it in the claims application and records a decision
+            in the system. Then the process ends.
+            """,
+        )
+        c.assertHasActivity<ContractActivity.User>()
+    }
+
+    @Test
     fun `script task`() {
         val c = extractContract(
             """
@@ -402,6 +424,29 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasBoundaryEvent(BoundaryEventKind.TIMER)
+    }
+
+    @Test
+    fun `error boundary event`() {
+        val c = extractContract(
+            """
+            The process starts when a payment is submitted. The system attempts to charge the card.
+            If the charge fails with a payment error, the order is cancelled. Otherwise the process ends.
+            """,
+        )
+        c.assertHasBoundaryEvent(BoundaryEventKind.ERROR)
+    }
+
+    @Test
+    fun `escalation boundary event`() {
+        val c = extractContract(
+            """
+            The process begins when a support ticket is opened. An agent works the ticket. While the
+            agent is handling it, if the agent raises an escalation because the issue is severe, a
+            manager immediately takes over. Once the ticket is resolved, the process ends.
+            """,
+        )
+        c.assertHasBoundaryEvent(BoundaryEventKind.ESCALATION)
     }
 
     // Inclusive gateway
