@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.contract.internal.domain
 
 import dev.groknull.bpmner.contract.ConditionalBranch
+import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
@@ -34,7 +35,8 @@ internal class BpmnContractValidator {
                 validateDecisions(contract) +
                 validateIntermediateThrows(contract) +
                 validateTraceability(contract) +
-                validateActivityDataRefs(contract)
+                validateActivityDataRefs(contract) +
+                validateSubProcesses(contract)
 
         return ContractValidationReport(issues = issues)
     }
@@ -56,6 +58,62 @@ internal class BpmnContractValidator {
                         ),
                     )
                 }
+        }
+    }
+
+    // Embedded-subprocess membership invariants. Subprocesses arrive appended to `activities` as
+    // ContractActivity.SubProcess entries (see FlatContractMapper). Each member id must resolve to a
+    // declared activity, a subprocess cannot contain itself, membership is exclusive (an activity
+    // belongs to at most one subprocess), and a subprocess must contain at least one member.
+    private fun validateSubProcesses(contract: ProcessContract): List<ContractValidationIssue> = buildList {
+        val subProcesses = contract.activities.filterIsInstance<ContractActivity.SubProcess>()
+        if (subProcesses.isEmpty()) return@buildList
+
+        val activityIds = contract.activities.map { it.id }.toSet()
+        val membershipCount = mutableMapOf<String, Int>()
+
+        subProcesses.forEach { subProcess ->
+            if (subProcess.containedActivityIds.isEmpty()) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.SUBPROCESS_EMPTY,
+                        message = "subprocess '${subProcess.id}' must contain at least one member activity",
+                        targetId = subProcess.id,
+                    ),
+                )
+            }
+            subProcess.containedActivityIds.forEach { memberId ->
+                membershipCount[memberId] = (membershipCount[memberId] ?: 0) + 1
+                when {
+                    memberId == subProcess.id -> add(
+                        errorIssue(
+                            code = ContractValidationCode.SUBPROCESS_MEMBER_NOT_FOUND,
+                            message = "subprocess '${subProcess.id}' lists itself as a member",
+                            targetId = subProcess.id,
+                        ),
+                    )
+
+                    memberId !in activityIds -> add(
+                        errorIssue(
+                            code = ContractValidationCode.SUBPROCESS_MEMBER_NOT_FOUND,
+                            message = "subprocess '${subProcess.id}' references member activity '$memberId'" +
+                                " that is not declared in the contract's activities",
+                            targetId = subProcess.id,
+                        ),
+                    )
+                }
+            }
+        }
+
+        membershipCount.filterValues { it > 1 }.forEach { (memberId, count) ->
+            add(
+                errorIssue(
+                    code = ContractValidationCode.SUBPROCESS_MEMBER_SHARED,
+                    message = "activity '$memberId' is claimed by $count subprocesses —" +
+                        " an activity belongs to at most one",
+                    targetId = memberId,
+                ),
+            )
         }
     }
 

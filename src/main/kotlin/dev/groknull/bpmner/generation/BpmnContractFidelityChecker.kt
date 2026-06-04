@@ -39,6 +39,7 @@ import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.isSemanticallyTransparent
@@ -91,6 +92,9 @@ internal class BpmnContractFidelityChecker {
             checkActivityKind(activity, nodeById, issues)
             checkActivityIteration(activity, nodeById, issues)
             checkActivityLoop(activity, nodeById, issues)
+            if (activity is ContractActivity.SubProcess) {
+                checkSubProcess(activity, nodeById, definition, issues)
+            }
         }
 
         contract.endStates.forEach { endState ->
@@ -430,6 +434,76 @@ internal class BpmnContractFidelityChecker {
     }
 
     /**
+     * Verifies that an embedded [ContractActivity.SubProcess] is realised as a [BpmnSubProcess]
+     * whose declared members are nested inside it and whose boundary no sequence flow crosses:
+     * 1. [BpmnFidelityCode.SUBPROCESS_NODE_MISSING] — the subprocess id resolves to no BPMN node.
+     *    (A node of the wrong type is reported by [checkActivityKind] as ACTIVITY_TASK_KIND_MISMATCH.)
+     * 2. [BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED] — a member node's `parentRef` is not the
+     *    subprocess id, so the grouping the contract declared was dropped.
+     * 3. [BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED] — a sequence flow has one endpoint inside
+     *    the subprocess and one outside.
+     */
+    private fun checkSubProcess(
+        subProcess: ContractActivity.SubProcess,
+        nodeById: Map<String, BpmnNode>,
+        definition: BpmnDefinition,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val node = nodeById[subProcess.id]
+        if (node == null) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.SUBPROCESS_NODE_MISSING,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Subprocess '${subProcess.id}' has no corresponding node in the generated BPMN. " +
+                        "Under the unified-id convention the subprocess node must share the contract id.",
+                    contractElementId = subProcess.id,
+                )
+            return
+        }
+        // A non-BpmnSubProcess realisation is reported by checkActivityKind (ACTIVITY_TASK_KIND_MISMATCH);
+        // without the container we cannot verify nesting, so stop here.
+        if (node !is BpmnSubProcess) return
+
+        subProcess.containedActivityIds.forEach { memberId ->
+            val memberNode = nodeById[memberId] ?: return@forEach
+            if (memberNode.parentRef != subProcess.id) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Member activity '$memberId' of subprocess '${subProcess.id}' is realised with " +
+                            "parentRef='${memberNode.parentRef}' — expected '${subProcess.id}'. The member " +
+                            "was left on the enclosing flow rather than nested inside the subprocess.",
+                        contractElementId = subProcess.id,
+                        bpmnElementId = memberId,
+                    )
+            }
+        }
+
+        definition.sequences.forEach { edge ->
+            val sourceInside = nodeById[edge.sourceRef]?.parentRef == subProcess.id
+            val targetInside = nodeById[edge.targetRef]?.parentRef == subProcess.id
+            if (sourceInside != targetInside) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED,
+                        severity = BpmnFidelitySeverity.ERROR,
+                        message =
+                        "Sequence flow '${edge.id}' crosses the boundary of subprocess '${subProcess.id}': " +
+                            "'${edge.sourceRef}' → '${edge.targetRef}' has one endpoint inside the subprocess " +
+                            "and one outside. Embedded subprocesses join the main flow only through their " +
+                            "own boundary.",
+                        contractElementId = subProcess.id,
+                        bpmnElementId = edge.id,
+                    )
+            }
+        }
+    }
+
+    /**
      * Verifies the BPMN node that realises [endState] is a [BpmnEndEvent] whose
      * `eventDefinition` shape matches the contract's end-state kind. Silent when no
      * matching node is present in the BPMN — that's a separate fidelity concern
@@ -571,6 +645,7 @@ private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (th
     is ContractActivity.Send -> node is BpmnSendTask
     is ContractActivity.Receive -> node is BpmnReceiveTask
     is ContractActivity.Manual -> node is BpmnManualTask
+    is ContractActivity.SubProcess -> node is BpmnSubProcess
 }
 
 private fun ContractActivity.expectedTaskTypeName(): String = when (this) {
@@ -581,4 +656,5 @@ private fun ContractActivity.expectedTaskTypeName(): String = when (this) {
     is ContractActivity.Send -> "SEND_TASK"
     is ContractActivity.Receive -> "RECEIVE_TASK"
     is ContractActivity.Manual -> "MANUAL_TASK"
+    is ContractActivity.SubProcess -> "SUB_PROCESS"
 }

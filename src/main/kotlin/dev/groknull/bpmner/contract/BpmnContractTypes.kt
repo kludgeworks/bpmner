@@ -154,12 +154,13 @@ data class ProcessContract(
  * Activity required by the extracted process contract.
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger] and [ContractBranch]:
- * the `kind` discriminator dispatches to one of seven subtypes,
+ * the `kind` discriminator dispatches to one of eight subtypes,
  * each carrying exactly the fields its task kind needs. Kind / payload coupling is
  * enforced by the type system — `Send`/`Receive` carry `messageName`, `BusinessRule`
- * carries `decisionName`, others carry nothing kind-specific.
+ * carries `decisionName`, `SubProcess` carries `containedActivityIds`, others carry
+ * nothing kind-specific.
  *
- * Subtypes map 1:1 to BPMN task kinds in `dev.groknull.bpmner.core`:
+ * Subtypes map 1:1 to BPMN node kinds in `dev.groknull.bpmner.core`:
  *
  *  - [Service] — external/system automation → `BpmnServiceTask`
  *  - [User] — human work through a system UI → `BpmnUserTask`
@@ -168,6 +169,7 @@ data class ProcessContract(
  *  - [Send] — fire-and-forget outbound message → `BpmnSendTask`
  *  - [Receive] — wait for an inbound message → `BpmnReceiveTask`
  *  - [Manual] — human work without system support → `BpmnManualTask`
+ *  - [SubProcess] — embedded grouping of member activities → `BpmnSubProcess`
  *
  * The companion object's `invoke` keeps the old flat-constructor call sites working
  * (`ContractActivity("id", "name")`) by defaulting to [Service] — the most common kind.
@@ -182,6 +184,7 @@ data class ProcessContract(
     JsonSubTypes.Type(value = ContractActivity.Send::class, name = "SEND"),
     JsonSubTypes.Type(value = ContractActivity.Receive::class, name = "RECEIVE"),
     JsonSubTypes.Type(value = ContractActivity.Manual::class, name = "MANUAL"),
+    JsonSubTypes.Type(value = ContractActivity.SubProcess::class, name = "SUB_PROCESS"),
 )
 sealed interface ContractActivity {
     val id: String
@@ -262,6 +265,19 @@ sealed interface ContractActivity {
     data class Manual(
         override val id: String,
         override val name: String,
+        override val actorId: String? = null,
+        override val sourceIds: List<String> = emptyList(),
+        override val modifiers: ActivityModifiers = ActivityModifiers(),
+    ) : ContractActivity
+
+    @JsonClassDescription(
+        "Embedded subprocess — a composite activity grouping member activities into one step on the " +
+            "main flow. Maps to BpmnSubProcess (triggeredByEvent=false) containing the member nodes.",
+    )
+    data class SubProcess(
+        override val id: String,
+        override val name: String,
+        val containedActivityIds: List<String>,
         override val actorId: String? = null,
         override val sourceIds: List<String> = emptyList(),
         override val modifiers: ActivityModifiers = ActivityModifiers(),
@@ -395,6 +411,7 @@ val ContractActivity.kindName: String
             is ContractActivity.Send -> "SEND"
             is ContractActivity.Receive -> "RECEIVE"
             is ContractActivity.Manual -> "MANUAL"
+            is ContractActivity.SubProcess -> "SUB_PROCESS"
         }
 
 /**
@@ -411,6 +428,7 @@ fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity = 
     is ContractActivity.Send -> copy(sourceIds = sourceIds)
     is ContractActivity.Receive -> copy(sourceIds = sourceIds)
     is ContractActivity.Manual -> copy(sourceIds = sourceIds)
+    is ContractActivity.SubProcess -> copy(sourceIds = sourceIds)
 }
 
 /**

@@ -468,6 +468,78 @@ class BpmnContractValidatorTest {
         )
     }
 
+    @Test
+    fun `valid embedded subprocess passes`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                containedActivityIds = base.activities.map { it.id },
+                sourceIds = sources,
+            ),
+        )
+
+        val report = validator.validate(contract)
+        assertTrue(report.isValid, "expected valid subprocess, got ${report.issues}")
+    }
+
+    @Test
+    fun `subprocess with a dangling member id flags SUBPROCESS_MEMBER_NOT_FOUND`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess",
+                containedActivityIds = listOf("activity-receive", "act-ghost"),
+                sourceIds = sources,
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_NOT_FOUND))
+    }
+
+    @Test
+    fun `activity claimed by two subprocesses flags SUBPROCESS_MEMBER_SHARED`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + listOf(
+                ContractActivity.SubProcess(
+                    id = "sub-a",
+                    name = "A",
+                    containedActivityIds = listOf("activity-receive"),
+                    sourceIds = sources,
+                ),
+                ContractActivity.SubProcess(
+                    id = "sub-b",
+                    name = "B",
+                    containedActivityIds = listOf("activity-receive"),
+                    sourceIds = sources,
+                ),
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
+    }
+
+    @Test
+    fun `empty subprocess flags SUBPROCESS_EMPTY`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-empty",
+                name = "Empty",
+                containedActivityIds = emptyList(),
+                sourceIds = sources,
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_EMPTY))
+    }
+
     private fun linearContract(): ProcessContract = ProcessContract(
         id = "contract-linear",
         processName = "Submit application",

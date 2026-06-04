@@ -34,6 +34,7 @@ import dev.groknull.bpmner.core.BpmnParallelGateway
 import dev.groknull.bpmner.core.BpmnServiceTask
 import dev.groknull.bpmner.core.BpmnSignalEventDefinition
 import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
@@ -153,6 +154,106 @@ class BpmnContractFidelityCheckerTest {
             BpmnEdge("F1", "StartEvent_1", "act-review"),
             BpmnEdge("F2", "act-review", "end-done"),
         ),
+    )
+
+    @Test
+    fun `embedded subprocess realised correctly passes`() {
+        val report = checker.check(subProcessContract(), subProcessDefinition())
+
+        assertTrue(report.isValid, "expected valid; got ${report.issues}")
+    }
+
+    @Test
+    fun `subprocess member left on the outer flow flags SUBPROCESS_MEMBER_NOT_NESTED`() {
+        // act-validate is realised with no parentRef — left on the enclosing flow, not nested.
+        val report = checker.check(subProcessContract(), subProcessDefinition(validateParent = null))
+
+        val codes = report.issues.map { it.code }
+        assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED), "got $codes")
+    }
+
+    @Test
+    fun `sequence flow crossing the subprocess boundary flags SUBPROCESS_BOUNDARY_CROSSED`() {
+        // An edge from the outer act-pay directly to the inner act-validate crosses the boundary.
+        val crossing = BpmnEdge("Fx", "act-pay", "act-validate")
+        val report = checker.check(subProcessContract(), subProcessDefinition(extra = listOf(crossing)))
+
+        val codes = report.issues.map { it.code }
+        assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED), "got $codes")
+    }
+
+    @Test
+    fun `subprocess with no corresponding node flags SUBPROCESS_NODE_MISSING`() {
+        val definition = subProcessDefinition().let { def ->
+            def.copy(nodes = def.nodes.filterNot { it.id == "sub-assess" })
+        }
+        val report = checker.check(subProcessContract(), definition)
+
+        val codes = report.issues.map { it.code }
+        assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_NODE_MISSING), "got $codes")
+    }
+
+    @Test
+    fun `subprocess realised as a non-subprocess node flags ACTIVITY_TASK_KIND_MISMATCH`() {
+        // Replace the BpmnSubProcess with a plain service task of the same id.
+        val definition = subProcessDefinition().let { def ->
+            def.copy(
+                nodes = def.nodes.map { node ->
+                    if (node.id == "sub-assess") BpmnServiceTask("sub-assess", "Assess claim") else node
+                },
+            )
+        }
+        val report = checker.check(subProcessContract(), definition)
+
+        val codes = report.issues.map { it.code }
+        assertTrue(codes.contains(BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH), "got $codes")
+    }
+
+    private fun subProcessContract(): ProcessContract = ProcessContract(
+        id = "c-sub",
+        processName = "Claim assessment",
+        summary = "Assess a claim as one composite step, then pay it.",
+        start = ContractStart(ContractTrigger.None("claim submitted")),
+        activities = listOf(
+            ContractActivity.User("act-validate", "Validate documents"),
+            ContractActivity.Service("act-estimate", "Estimate damage"),
+            ContractActivity.Service("act-pay", "Pay claim"),
+            ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess claim",
+                containedActivityIds = listOf("act-validate", "act-estimate"),
+            ),
+        ),
+        endStates = listOf(ContractEndState.Normal("end-paid", "Claim paid")),
+    )
+
+    // A faithful realisation: SUB_PROCESS node on the main flow, members + inner start/end carrying
+    // parentRef = the subprocess id, and no edge crossing the boundary. `validateParent` lets a test
+    // mis-nest a member; `extra` lets a test add a boundary-crossing edge.
+    private fun subProcessDefinition(
+        validateParent: String? = "sub-assess",
+        extra: List<BpmnEdge> = emptyList(),
+    ): BpmnDefinition = BpmnDefinition(
+        processId = "P",
+        processName = "Claim assessment",
+        nodes = listOf(
+            BpmnStartEvent("StartEvent_1", "Submitted"),
+            BpmnSubProcess("sub-assess", "Assess claim"),
+            BpmnStartEvent("StartEvent_assess", parentRef = "sub-assess"),
+            BpmnUserTask("act-validate", "Validate documents", parentRef = validateParent),
+            BpmnServiceTask("act-estimate", "Estimate damage", parentRef = "sub-assess"),
+            BpmnEndEvent("EndEvent_assess", parentRef = "sub-assess"),
+            BpmnServiceTask("act-pay", "Pay claim"),
+            BpmnEndEvent("end-paid", "Claim paid"),
+        ),
+        sequences = listOf(
+            BpmnEdge("F1", "StartEvent_1", "sub-assess"),
+            BpmnEdge("F2", "sub-assess", "act-pay"),
+            BpmnEdge("F3", "act-pay", "end-paid"),
+            BpmnEdge("Fin1", "StartEvent_assess", "act-validate", parentRef = "sub-assess"),
+            BpmnEdge("Fin2", "act-validate", "act-estimate", parentRef = "sub-assess"),
+            BpmnEdge("Fin3", "act-estimate", "EndEvent_assess", parentRef = "sub-assess"),
+        ) + extra,
     )
 
     @Test

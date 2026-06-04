@@ -87,6 +87,15 @@ class ExtractContractTemplateTest {
     }
 
     @Test
+    fun `template includes the embedded-subprocess extraction guidance`() {
+        val prompt = render(request(), assessment(), clarificationHistory = emptyList())
+
+        assertTrue(prompt.contains("Embedded subprocesses (optional `subProcesses` list)"))
+        assertTrue(prompt.contains("An activity belongs to at most one subprocess."))
+        assertTrue(prompt.contains("activityIds"))
+    }
+
+    @Test
     fun `decision-kind recognition heuristics move from the template into the shipped schema`() {
         // Decision-kind recognition heuristics live in FlatContractDecision.kind's
         // @JsonPropertyDescription, not the rendered template. Guard both halves: the prose is

@@ -48,6 +48,10 @@ internal object ContractExtractionExamples {
         "BUSINESS_RULE activity: evaluates a decision table or rules engine —" +
             " use kind=BUSINESS_RULE and populate decisionName, not kind=SERVICE"
 
+    const val SUB_PROCESS_LABEL: String =
+        "Embedded subprocess: a named group of activities handled as one composite step —" +
+            " list its member ids in a subProcesses entry; members stay in the activities array"
+
     // ──────────────────────────────────────────────────────────────────────────
     // Shared node ids
     // ──────────────────────────────────────────────────────────────────────────
@@ -395,6 +399,77 @@ internal object ContractExtractionExamples {
                 FlatContractEndState(
                     id = END_NORMAL,
                     name = "Order confirmed",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+        )
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Example 8 — embedded subprocess
+    //
+    // Prose: "To assess a claim, the adjuster validates the documents, estimates the
+    //          damage, then decides the payout. Once the claim has been assessed, it is paid."
+    // The three assessment steps are a named composite step → a subProcesses entry grouping
+    // them. The members stay in `activities`; the subprocess only names which ids it contains.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const val SUB_ASSESS = "sub-assess-claim"
+    private const val ACT_VALIDATE_DOCS = "act-validate-documents"
+    private const val ACT_ESTIMATE = "act-estimate-damage"
+    private const val ACT_DECIDE_PAYOUT = "act-decide-payout"
+    private const val ACT_PAY_CLAIM = "act-pay-claim"
+
+    val subProcessExample: FlatProcessContract =
+        FlatProcessContract(
+            id = "contract-claim-assessment",
+            processName = "Claim assessment process",
+            summary = "Process that assesses a claim as one composite step, then pays it.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "Claim submitted",
+                ),
+                sourceIds = listOf("src-1"),
+            ),
+            activities = listOf(
+                FlatContractActivity(
+                    id = ACT_VALIDATE_DOCS,
+                    name = "Validate documents",
+                    kind = FlatActivityKind.USER,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_ESTIMATE,
+                    name = "Estimate damage",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_DECIDE_PAYOUT,
+                    name = "Decide payout",
+                    kind = FlatActivityKind.USER,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_PAY_CLAIM,
+                    name = "Pay claim",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            subProcesses = listOf(
+                FlatContractSubProcess(
+                    id = SUB_ASSESS,
+                    name = "Assess claim",
+                    activityIds = listOf(ACT_VALIDATE_DOCS, ACT_ESTIMATE, ACT_DECIDE_PAYOUT),
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = END_NORMAL,
+                    name = "Claim paid",
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),

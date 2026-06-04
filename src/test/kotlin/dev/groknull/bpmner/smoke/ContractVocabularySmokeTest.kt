@@ -440,6 +440,21 @@ class ContractVocabularySmokeTest {
         }
     }
 
+    // Embedded subprocess
+
+    @Test
+    fun `embedded subprocess`() {
+        val c = extractContract(
+            """
+            When a claim is filed, it is assessed. Assessing a claim involves three steps handled
+            together as one stage: an adjuster validates the documents, the system estimates the
+            damage, and the adjuster decides the payout. Once the claim has been assessed, it is
+            paid and the process ends.
+            """,
+        )
+        c.assertHasActivity<ContractActivity.SubProcess>()
+    }
+
     @Test
     fun `data objects and stores`() {
         val c = extractContract(

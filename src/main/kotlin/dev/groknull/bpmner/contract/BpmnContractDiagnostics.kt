@@ -52,6 +52,15 @@ enum class ContractValidationCode {
 
     /** An activity's dataInputIds/dataOutputIds references an id not present in the contract's artifacts. */
     DATA_REF_NOT_IN_ARTIFACTS,
+
+    /** A subprocess declares no member activities. An embedded subprocess must contain at least one. */
+    SUBPROCESS_EMPTY,
+
+    /** A subprocess's member id does not resolve to a declared activity (or names the subprocess itself). */
+    SUBPROCESS_MEMBER_NOT_FOUND,
+
+    /** An activity is claimed as a member by more than one subprocess; membership is exclusive. */
+    SUBPROCESS_MEMBER_SHARED,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

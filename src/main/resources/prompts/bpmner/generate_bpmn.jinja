@@ -46,6 +46,12 @@ Inclusive-gateway topology:
 - A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other branch's condition is true. The renderer writes the gateway's `default` attribute on the chosen outbound flow.
 - After the join, emit a single outbound sequence flow to whatever comes next.
 
+Embedded-subprocess topology:
+- A `[SUB_PROCESS contains="a,b,c"]` contract activity becomes a `SUB_PROCESS` node with `triggeredByEvent=false`, id copied verbatim. Its members are the activities listed in `contains=`.
+- Every member node listed in `contains=` MUST carry `parentRef` = the subprocess id, and every sequence flow between two members MUST also carry `parentRef` = the subprocess id. Members stay in the flat node list — nesting is expressed only by `parentRef`, not by physically moving them.
+- Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` and one inner `END_EVENT` (both with `parentRef` = the subprocess id) and wire the members start-to-end between them.
+- The subprocess node itself sits on the enclosing flow like any task: the main flow connects INTO the `SUB_PROCESS` node and OUT of it. NEVER wire an outer node directly to an inner member or vice versa — no sequence flow may have one endpoint inside the subprocess and one outside.
+
 Event-based-gateway topology:
 - An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry named from `triggerDetail`.
 - The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.

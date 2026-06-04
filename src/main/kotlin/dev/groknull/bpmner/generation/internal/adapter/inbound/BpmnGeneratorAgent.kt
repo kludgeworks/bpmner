@@ -87,6 +87,7 @@ internal class BpmnGeneratorAgent(
             .withExample(GenerationExamples.PARALLEL_LABEL, GenerationExamples.parallelForkJoin)
             .withExample(GenerationExamples.INCLUSIVE_LABEL, GenerationExamples.inclusiveWithDefault)
             .withExample(GenerationExamples.DATA_ARTIFACTS_LABEL, GenerationExamples.dataArtifacts)
+            .withExample(GenerationExamples.SUB_PROCESS_LABEL, GenerationExamples.embeddedSubProcess)
             .fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()
