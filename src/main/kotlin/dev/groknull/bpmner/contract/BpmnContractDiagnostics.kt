@@ -76,6 +76,13 @@ enum class ContractValidationCode {
 
     /** An event subprocess has an ERROR trigger but is non-interrupting; error handlers must interrupt. */
     EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING,
+
+    /**
+     * An activity is claimed both by an embedded subprocess and an event subprocess. Membership is
+     * exclusive across container kinds — a BPMN node has a single parent — so this is surfaced at
+     * contract time rather than left to the fidelity checker.
+     */
+    SUBPROCESS_MEMBER_CROSS_CLAIMED,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

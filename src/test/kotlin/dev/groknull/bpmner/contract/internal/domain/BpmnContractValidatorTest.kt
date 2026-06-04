@@ -665,6 +665,52 @@ class BpmnContractValidatorTest {
         assertTrue(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING))
     }
 
+    @Test
+    fun `event subprocess id colliding with an activity flags DUPLICATE_CONTRACT_ELEMENT_ID`() {
+        val base = linearContract()
+        val contract = base.copy(
+            eventSubProcesses = listOf(
+                ContractEventSubProcess(
+                    // Collides with an existing activity id; event subprocesses are a separate
+                    // collection, so uniqueness must fold them in explicitly.
+                    id = "activity-receive",
+                    name = "Handler",
+                    containedActivityIds = listOf("activity-review"),
+                    trigger = EventSubProcessTrigger.MESSAGE,
+                    sourceIds = sources,
+                ),
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.DUPLICATE_CONTRACT_ELEMENT_ID))
+    }
+
+    @Test
+    fun `activity claimed by both an embedded and event subprocess flags SUBPROCESS_MEMBER_CROSS_CLAIMED`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + ContractActivity.SubProcess(
+                id = "sub-embedded",
+                name = "Embedded",
+                containedActivityIds = listOf("activity-receive"),
+                sourceIds = sources,
+            ),
+            eventSubProcesses = listOf(
+                ContractEventSubProcess(
+                    id = "esp-handler",
+                    name = "Handler",
+                    containedActivityIds = listOf("activity-receive"),
+                    trigger = EventSubProcessTrigger.MESSAGE,
+                    sourceIds = sources,
+                ),
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_CROSS_CLAIMED))
+    }
+
     private fun linearContract(): ProcessContract = ProcessContract(
         id = "contract-linear",
         processName = "Submit application",

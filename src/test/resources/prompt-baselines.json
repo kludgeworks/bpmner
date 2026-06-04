@@ -4,23 +4,23 @@
 	"baselines": {
 		"contractPrompt": {
 			"chars": 13639,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "extract_contract gained embedded + event-subprocess element guidance (B-5b #349 stayed within the 15% tolerance; the B-6b event-subprocess block pushes past it)."
 		},
 		"contractFullPayload": {
 			"chars": 41259,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "subprocess + event-subprocess few-shot examples (withExample) added to the contract-extraction payload."
 		},
 		"generationPrompt": {
 			"chars": 15829,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "generate_bpmn gained embedded + event-subprocess topology blocks."
 		},
 		"generationFullPayload": {
 			"chars": 33726,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "embedded + event-subprocess generation few-shot examples added to the generation payload."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -44,13 +44,13 @@
 		},
 		"repairPatchPrompt": {
 			"chars": 2022,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
 		},
 		"repairFullPrompt": {
 			"chars": 2318,
-			"updatedBy": "auto",
-			"reason": "regenerated 2026-06-04"
+			"updatedBy": "#351",
+			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
 		}
 	}
 }
