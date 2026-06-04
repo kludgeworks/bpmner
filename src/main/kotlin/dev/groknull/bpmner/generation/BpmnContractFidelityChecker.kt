@@ -439,9 +439,11 @@ internal class BpmnContractFidelityChecker {
      * 1. [BpmnFidelityCode.SUBPROCESS_NODE_MISSING] — the subprocess id resolves to no BPMN node.
      *    (A node of the wrong type is reported by [checkActivityKind] as ACTIVITY_TASK_KIND_MISMATCH.)
      * 2. [BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED] — a member node's `parentRef` is not the
-     *    subprocess id, so the grouping the contract declared was dropped.
+     *    subprocess id, or a sequence flow between two direct members does not carry the subprocess
+     *    id as its own `parentRef`, so the grouping the contract declared was dropped.
      * 3. [BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED] — a sequence flow has one endpoint inside
-     *    the subprocess and one outside.
+     *    the subprocess and one outside. "Inside" is transitive (a descendant at any nesting depth),
+     *    so an edge wholly within a nested subprocess does not register as crossing the outer one.
      */
     private fun checkSubProcess(
         subProcess: ContractActivity.SubProcess,
@@ -484,23 +486,69 @@ internal class BpmnContractFidelityChecker {
         }
 
         definition.sequences.forEach { edge ->
-            val sourceInside = nodeById[edge.sourceRef]?.parentRef == subProcess.id
-            val targetInside = nodeById[edge.targetRef]?.parentRef == subProcess.id
-            if (sourceInside != targetInside) {
-                issues +=
-                    BpmnFidelityIssue(
-                        code = BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED,
-                        severity = BpmnFidelitySeverity.ERROR,
-                        message =
-                        "Sequence flow '${edge.id}' crosses the boundary of subprocess '${subProcess.id}': " +
-                            "'${edge.sourceRef}' → '${edge.targetRef}' has one endpoint inside the subprocess " +
-                            "and one outside. Embedded subprocesses join the main flow only through their " +
-                            "own boundary.",
-                        contractElementId = subProcess.id,
-                        bpmnElementId = edge.id,
-                    )
-            }
+            checkSubProcessEdge(edge, subProcess, nodeById, issues)
         }
+    }
+
+    private fun checkSubProcessEdge(
+        edge: BpmnEdge,
+        subProcess: ContractActivity.SubProcess,
+        nodeById: Map<String, BpmnNode>,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        // "Inside" is transitive so a flow nested in an inner subprocess isn't read as crossing the
+        // outer boundary; the own-parentRef check below is by *direct* membership, since a deeper
+        // edge legitimately carries the inner subprocess's id, not this one's.
+        val sourceInside = isDescendantOf(edge.sourceRef, subProcess.id, nodeById)
+        val targetInside = isDescendantOf(edge.targetRef, subProcess.id, nodeById)
+        if (sourceInside != targetInside) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Sequence flow '${edge.id}' crosses the boundary of subprocess '${subProcess.id}': " +
+                        "'${edge.sourceRef}' → '${edge.targetRef}' has one endpoint inside the subprocess " +
+                        "and one outside. Embedded subprocesses join the main flow only through their " +
+                        "own boundary.",
+                    contractElementId = subProcess.id,
+                    bpmnElementId = edge.id,
+                )
+            return
+        }
+        val betweenDirectMembers = nodeById[edge.sourceRef]?.parentRef == subProcess.id &&
+            nodeById[edge.targetRef]?.parentRef == subProcess.id
+        if (betweenDirectMembers && edge.parentRef != subProcess.id) {
+            issues +=
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message =
+                    "Sequence flow '${edge.id}' between members of subprocess '${subProcess.id}' is " +
+                        "realised with parentRef='${edge.parentRef}' — expected '${subProcess.id}'. The " +
+                        "flow was left on the enclosing scope rather than nested inside the subprocess.",
+                    contractElementId = subProcess.id,
+                    bpmnElementId = edge.id,
+                )
+        }
+    }
+
+    /**
+     * Whether [nodeId] is nested inside [ancestorId] at any depth, walking the `parentRef` chain.
+     * The visited set guards against a malformed parent cycle making the walk non-terminating.
+     */
+    private fun isDescendantOf(
+        nodeId: String?,
+        ancestorId: String,
+        nodeById: Map<String, BpmnNode>,
+    ): Boolean {
+        val visited = mutableSetOf<String>()
+        var current = nodeById[nodeId]?.parentRef
+        while (current != null && visited.add(current)) {
+            if (current == ancestorId) return true
+            current = nodeById[current]?.parentRef
+        }
+        return false
     }
 
     /**

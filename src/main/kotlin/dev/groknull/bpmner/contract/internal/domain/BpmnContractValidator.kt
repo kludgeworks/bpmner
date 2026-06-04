@@ -70,6 +70,7 @@ internal class BpmnContractValidator {
         if (subProcesses.isEmpty()) return@buildList
 
         val activityIds = contract.activities.map { it.id }.toSet()
+        val subProcessIds = subProcesses.map { it.id }.toSet()
         val membershipCount = mutableMapOf<String, Int>()
 
         subProcesses.forEach { subProcess ->
@@ -89,6 +90,18 @@ internal class BpmnContractValidator {
                         errorIssue(
                             code = ContractValidationCode.SUBPROCESS_MEMBER_NOT_FOUND,
                             message = "subprocess '${subProcess.id}' lists itself as a member",
+                            targetId = subProcess.id,
+                        ),
+                    )
+
+                    // The member id resolves to another subprocess (it sits in `activities`), so the
+                    // dangling-reference check below would not catch it. Nested subprocesses are out
+                    // of scope for collapsed-only v1; surface it rather than passing silently.
+                    memberId in subProcessIds -> add(
+                        errorIssue(
+                            code = ContractValidationCode.SUBPROCESS_NESTED_MEMBER,
+                            message = "subprocess '${subProcess.id}' lists subprocess '$memberId' as a member" +
+                                " — nested subprocesses are not supported",
                             targetId = subProcess.id,
                         ),
                     )

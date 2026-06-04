@@ -59,6 +59,9 @@ enum class ContractValidationCode {
     /** A subprocess's member id does not resolve to a declared activity (or names the subprocess itself). */
     SUBPROCESS_MEMBER_NOT_FOUND,
 
+    /** A subprocess names another subprocess as a member; nested subprocesses are not supported (v1). */
+    SUBPROCESS_NESTED_MEMBER,
+
     /** An activity is claimed as a member by more than one subprocess; membership is exclusive. */
     SUBPROCESS_MEMBER_SHARED,
 }

@@ -183,6 +183,27 @@ class BpmnContractFidelityCheckerTest {
     }
 
     @Test
+    fun `inner sequence flow without the subprocess parentRef flags SUBPROCESS_MEMBER_NOT_NESTED`() {
+        // Both endpoints stay nested, so this is not a boundary crossing — but the edge itself was
+        // left on the enclosing scope (parentRef dropped) rather than nested in the subprocess.
+        val definition = subProcessDefinition().let { def ->
+            def.copy(
+                sequences = def.sequences.map { edge ->
+                    if (edge.id == "Fin2") edge.copy(parentRef = null) else edge
+                },
+            )
+        }
+        val report = checker.check(subProcessContract(), definition)
+
+        val codes = report.issues.map { it.code }
+        assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED), "got $codes")
+        assertFalse(
+            codes.contains(BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED),
+            "a nested-but-mis-parented edge is not a boundary crossing; got $codes",
+        )
+    }
+
+    @Test
     fun `subprocess with no corresponding node flags SUBPROCESS_NODE_MISSING`() {
         val definition = subProcessDefinition().let { def ->
             def.copy(nodes = def.nodes.filterNot { it.id == "sub-assess" })

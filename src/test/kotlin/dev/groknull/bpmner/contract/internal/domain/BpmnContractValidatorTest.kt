@@ -525,6 +525,30 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `subprocess naming another subprocess as a member flags SUBPROCESS_NESTED_MEMBER`() {
+        val base = linearContract()
+        val contract = base.copy(
+            activities = base.activities + listOf(
+                ContractActivity.SubProcess(
+                    id = "sub-inner",
+                    name = "Inner",
+                    containedActivityIds = listOf("activity-receive"),
+                    sourceIds = sources,
+                ),
+                ContractActivity.SubProcess(
+                    id = "sub-outer",
+                    name = "Outer",
+                    containedActivityIds = listOf("activity-review", "sub-inner"),
+                    sourceIds = sources,
+                ),
+            ),
+        )
+
+        val codes = validator.validate(contract).issues.map { it.code }
+        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_NESTED_MEMBER))
+    }
+
+    @Test
     fun `empty subprocess flags SUBPROCESS_EMPTY`() {
         val base = linearContract()
         val contract = base.copy(
