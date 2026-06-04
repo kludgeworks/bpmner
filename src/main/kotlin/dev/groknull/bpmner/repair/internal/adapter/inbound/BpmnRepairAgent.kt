@@ -12,51 +12,21 @@ import com.embabel.agent.api.annotation.Condition
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.annotation.RequireNameMatch
 import com.embabel.agent.api.common.ActionContext
-import com.embabel.agent.api.common.Actor
-import com.embabel.agent.api.common.OperationContext
-import com.embabel.agent.api.common.PromptRunner
-import com.embabel.agent.core.support.InvalidLlmReturnFormatException
-import com.embabel.agent.core.support.InvalidLlmReturnTypeException
-import com.embabel.agent.prompt.persona.Persona
-import com.embabel.chat.AssistantMessage
-import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.core.withUpdatedDefinition
-import dev.groknull.bpmner.generation.BpmnRenderer
-import dev.groknull.bpmner.generation.DefaultFlowAssigner
-import dev.groknull.bpmner.generation.FlatBpmnDefinition
-import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import dev.groknull.bpmner.repair.BpmnAttemptHistory
-import dev.groknull.bpmner.repair.BpmnAttemptRecord
-import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.repair.internal.domain.BpmnAttemptRecordFactory
 import dev.groknull.bpmner.repair.internal.domain.BpmnContractAwareValidator
-import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
-import dev.groknull.bpmner.repair.internal.domain.BpmnPatchApplicationPort
+import dev.groknull.bpmner.repair.internal.domain.BpmnLlmRepairApplier
+import dev.groknull.bpmner.repair.internal.domain.BpmnLocalFixApplier
+import dev.groknull.bpmner.repair.internal.domain.BpmnRepairAdvancer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairEvaluation
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
-import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
-import dev.groknull.bpmner.repair.internal.domain.BpmnUnrecognizedElementScanner
-import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
-import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
-import dev.groknull.bpmner.repair.internal.domain.UnrecognizedFinding
-import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintRuleIds
 import dev.groknull.bpmner.validation.BpmnRepairScope
 import dev.groknull.bpmner.validation.BpmnValidationFailedEvent
 import dev.groknull.bpmner.validation.BpmnValidationPassedEvent
-import dev.groknull.bpmner.validation.GlobalDiagnostics
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
@@ -87,18 +57,11 @@ import org.springframework.context.ApplicationEventPublisher
 @Agent(
     description = "Refine and repair generated BPMN 2.0 diagrams to ensure technical and semantic validity",
 )
-@Suppress("LongParameterList", "TooManyFunctions") // cohesive GOAP surface — actions, conditions, helper
 internal class BpmnRepairAgent(
-    private val bpmnRenderer: BpmnRenderer,
+    private val advancer: BpmnRepairAdvancer,
+    private val localFixApplier: BpmnLocalFixApplier,
+    private val llmRepairApplier: BpmnLlmRepairApplier,
     private val contractAwareValidator: BpmnContractAwareValidator,
-    private val attemptRecordFactory: BpmnAttemptRecordFactory,
-    private val promptFactory: BpmnRepairPromptPort,
-    private val patchApplier: BpmnPatchApplicationPort,
-    private val fingerprints: BpmnFingerprintService,
-    private val modelFixHandlerRegistry: BpmnLocalModelFixHandlerRegistry,
-    private val ruleRegistry: RuleRegistry,
-    private val defaultFlowAssigner: DefaultFlowAssigner,
-    private val config: BpmnConfig,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRepairAgent::class.java)
@@ -121,50 +84,7 @@ internal class BpmnRepairAgent(
         rendered: RenderedBpmn,
         validatedContract: ValidatedProcessContract,
     ): BpmnRepairEvaluation {
-        val request = ready.request
-        val contract = validatedContract.contract
-
-        // Pre-flight: #287 — surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,
-        // `BpmnUnrecognizedEventDefinition`) as typed UNFIXABLE diagnostics before any code
-        // path serialises the definition through Jackson. The downstream calls in this method
-        // (`promptFactory.initialMessages`, `contractAwareValidator.evaluate` →
-        // `BpmnEvaluationPipeline.logArtifactsIfEnabled` in debug mode, and
-        // `attemptRecordFactory.toRecord` → `definitionFingerprint`) all serialise; the
-        // short-circuit return below skips all three. Scanning the original definition is
-        // sufficient because `defaultFlowAssigner.assign` only rewrites `sequences`.
-        val unrecognized = BpmnUnrecognizedElementScanner.scan(rendered.definition)
-        if (unrecognized.isNotEmpty()) {
-            return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
-        }
-
-        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
-        val normalisedRendered = rendered.copy(definition = normalisedDefinition)
-        val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
-        val evaluation = contractAwareValidator.evaluate(
-            graph = graph,
-            definition = normalisedDefinition,
-            rendered = normalisedRendered,
-            contract = contract,
-            repairAttempts = 0,
-        )
-        val initialAttempt = BpmnRepairAttempt(
-            attemptNumber = 1,
-            repairAttempts = 0,
-            graph = graph,
-            evaluation = evaluation,
-            messages = initialMessages,
-        )
-        val initialRecord = attemptRecordFactory.toRecord(initialAttempt)
-        return BpmnRepairEvaluation(
-            request = request,
-            graph = graph,
-            rendered = normalisedRendered,
-            evaluation = evaluation,
-            messages = initialMessages,
-            history = BpmnAttemptHistory().append(initialRecord),
-            contract = contract,
-            repairAttempts = 0,
-        )
+        return advancer.initialEvaluation(ready, graph, rendered, validatedContract)
     }
 
     /**
@@ -180,16 +100,7 @@ internal class BpmnRepairAgent(
     )
     fun applyDeterministicFixes(@RequireNameMatch("repairEval") repairEval: BpmnRepairEvaluation): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
-        val attempt = repairEval.toAttempt()
-        val applied = applyLocalModelFix(attempt)
-            ?: throw RepairReplans.signal("no LOCAL_MODEL_FIX produced a candidate")
-        logger.info("Local model fix applied on repair attempt {}", repairEval.repairAttempts + 1)
-        return revalidateAndAdvance(
-            prior = repairEval,
-            repaired = applied.definition,
-            appendedMessages = emptyList(),
-            promptText = applied.reason,
-        )
+        return localFixApplier.applyLocalModelFix(repairEval)
     }
 
     /**
@@ -208,21 +119,10 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
-        // `hasLlmLabelEligible` precondition guarantees at least one candidate — no runtime
-        // emptiness check needed. ReplanRequestedException is reserved for genuine "I tried
-        // and couldn't make progress" signals, not "I shouldn't have been selected."
         val candidates = repairEval.diagnostics.filter {
             eligibleForLlm(it) && it.repairScope == BpmnRepairScope.LABEL
         }
-        val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
-        return applyLlmPatch(
-            repairEval = repairEval,
-            operationContext = context,
-            actor = config.labelRepairer,
-            feedback = feedback,
-            patchTypeName = "LLM label patch",
-            labelOnly = true,
-        )
+        return llmRepairApplier.applyLlmLabelPatch(repairEval, context, candidates)
     }
 
     /**
@@ -241,20 +141,10 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
-        // `hasLlmStructuralEligible` precondition guarantees at least one OUTLINE/PHASE
-        // candidate — the runtime filter is non-empty by construction.
         val candidates = repairEval.diagnostics.filter {
             eligibleForLlm(it) && (it.repairScope == BpmnRepairScope.OUTLINE || it.repairScope == BpmnRepairScope.PHASE)
         }
-        val feedback = promptFactory.patchFeedback(repairEval.definition, candidates)
-        return applyLlmPatch(
-            repairEval = repairEval,
-            operationContext = context,
-            actor = config.patchRepairer,
-            feedback = feedback,
-            patchTypeName = "LLM structural patch",
-            labelOnly = false,
-        )
+        return llmRepairApplier.applyLlmStructuralPatch(repairEval, context, candidates)
     }
 
     /**
@@ -273,23 +163,8 @@ internal class BpmnRepairAgent(
         context: ActionContext,
     ): BpmnRepairEvaluation {
         publishAttemptEvent(repairEval)
-        // `hasLlmEligible` precondition (`kind != UNFIXABLE`) exactly matches `eligibleForLlm` —
-        // the filter is non-empty by construction.
         val candidates = repairEval.diagnostics.filter { eligibleForLlm(it) }
-        val feedback = promptFactory.fullRepairFeedback(repairEval.toAttempt(), candidates)
-        val runner = promptRunner(repairEval, context, config.rewriteRepairer)
-        // `createObject` (not `createObjectIfPossible`) routes through `LlmOperations.createObject`,
-        // which is what `EmbabelMockitoIntegrationTest.whenCreateObject` mocks. The contract is
-        // non-null + throws-on-failure with two specific framework exceptions; let everything else
-        // propagate so a real infrastructure failure (auth, timeout, OOM) doesn't get silently
-        // converted to a planner replan that burns the budget hiding the root cause.
-        val repaired: BpmnDefinition = requestLlmDefinition(runner, repairEval.messages + UserMessage(feedback))
-        return revalidateAndAdvance(
-            prior = repairEval,
-            repaired = repaired,
-            appendedMessages = listOf(UserMessage(feedback), AssistantMessage(repaired.toString())),
-            promptText = feedback,
-        )
+        return llmRepairApplier.applyFullLlmRewrite(repairEval, context, candidates)
     }
 
     /**
@@ -311,11 +186,6 @@ internal class BpmnRepairAgent(
     )
     fun finalize(@RequireNameMatch("repairEval") repairEval: BpmnRepairEvaluation): ValidatedBpmnXml {
         logAdvisoryDiagnostics(repairEval.evaluation.advisoryDiagnostics, repairEval.repairAttempts)
-        // The pipeline only stamps `validatedXml` when all structural diagnostics clear AND the
-        // rendered XML survived. In some pipeline configurations (notably contract-aware
-        // fidelity routes) a successful render with zero diagnostics still leaves
-        // `validatedXml` null — diagnosticsResolved guards the action at the planner level
-        // but the artifact still needs synthesising from the rendered output we already hold.
         val xml = repairEval.evaluation.validatedXml
             ?: repairEval.rendered?.xml
             ?: error("finalize fired with no validated XML and no rendered XML on the blackboard")
@@ -335,21 +205,9 @@ internal class BpmnRepairAgent(
     // Conditions — every `repairEval` parameter carries `@RequireNameMatch` so all bindings
     // resolve to the same blackboard instance the actions produced.
 
-    // The condition bodies delegate to extension-style properties on `BpmnRepairEvaluation`
-    // (see `hasDiagnostics`, `hasLocalFixable`, …) so each signature stays short enough to
-    // satisfy both ktlint's auto-inliner and detekt's MaxLineLength=130.
-
     @Condition
     fun hasDiagnostics(@RequireNameMatch("repairEval") repairEval: BpmnRepairEvaluation): Boolean = repairEval.hasDiagnostics
 
-    /**
-     * Logical opposite of [hasDiagnostics]. Intentionally narrower than
-     * [dev.groknull.bpmner.validation.BpmnEvaluation.isSuccessful], which also requires
-     * `validatedXml` to be set — that's a downstream concern handled by [finalize], which
-     * synthesises the XML from `rendered` when the pipeline didn't store one. Pinning the
-     * planner condition to the diagnostic count alone keeps `diagnosticsResolved` the
-     * strict inverse of `hasDiagnostics`.
-     */
     @Condition
     fun diagnosticsResolved(@RequireNameMatch("repairEval") repair: BpmnRepairEvaluation): Boolean = repair.diagnosticsResolved
 
@@ -367,285 +225,6 @@ internal class BpmnRepairAgent(
 
     // -----------------------------------------------------------------------------------
     // Helpers
-
-    /**
-     * The plan's [#revalidateAndAdvance]: re-stamp DefaultBranch, fingerprint-guard, update
-     * the graph, re-render, re-validate, append to history, return the next blackboard.
-     *
-     * Throws `ReplanRequestedException` (via [RepairReplans.signal]) when:
-     *  - the post-stamp definition fingerprint equals the previous one — the repair
-     *    produced no observable change.
-     *  - the post-stamp definition fingerprint has been seen earlier in the history — a
-     *    cycle. Both push the planner toward a different (higher-cost) action next pass.
-     */
-    @Suppress("LongMethod") // mirrors the engine's evaluateNextAttempt + validateRepairEffect
-    private fun revalidateAndAdvance(
-        prior: BpmnRepairEvaluation,
-        repaired: BpmnDefinition,
-        appendedMessages: List<com.embabel.chat.Message>,
-        promptText: String,
-    ): BpmnRepairEvaluation {
-        val stamped = defaultFlowAssigner.assign(prior.contract, repaired)
-        val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
-        val priorRecord = prior.history.last
-            ?: error("revalidateAndAdvance called with empty history — validate() must run first")
-        guardAgainstNoProgress(stampedFingerprint, prior, priorRecord)
-
-        val nextGraph = prior.graph.withUpdatedDefinition(stamped)
-        var renderFailureMessage: String? = null
-        val nextRendered = try {
-            bpmnRenderer.render(nextGraph)
-        } catch (e: IllegalStateException) {
-            renderFailureMessage = e.message ?: e.javaClass.simpleName
-            null
-        } catch (e: IllegalArgumentException) {
-            renderFailureMessage = e.message ?: e.javaClass.simpleName
-            null
-        }
-
-        val nextEvaluation = contractAwareValidator.evaluate(
-            graph = nextGraph,
-            definition = stamped,
-            rendered = nextRendered,
-            contract = prior.contract,
-            renderFailureMessage = renderFailureMessage,
-            repairAttempts = prior.repairAttempts + 1,
-        )
-
-        val nextMessages = prior.messages + appendedMessages
-        val nextAttempt = BpmnRepairAttempt(
-            attemptNumber = prior.history.size + 1,
-            repairAttempts = prior.repairAttempts + 1,
-            graph = nextGraph,
-            evaluation = nextEvaluation,
-            messages = nextMessages,
-        )
-        val nextRecord: BpmnAttemptRecord = attemptRecordFactory.toRecord(
-            attempt = nextAttempt,
-            repairPromptFingerprint = fingerprints.promptFingerprint(promptText),
-        )
-
-        guardAgainstStuckBlocking(nextEvaluation, nextRecord, priorRecord, nextAttempt.repairAttempts)
-
-        return BpmnRepairEvaluation(
-            request = prior.request,
-            graph = nextGraph,
-            rendered = nextRendered,
-            evaluation = nextEvaluation,
-            messages = nextMessages,
-            history = prior.history.append(nextRecord),
-            contract = prior.contract,
-            repairAttempts = prior.repairAttempts + 1,
-            renderFailureMessage = renderFailureMessage,
-        )
-    }
-
-    /**
-     * Throws `ReplanRequestedException` if the repair produced no observable change (same
-     * fingerprint as the previous attempt) or if the resulting definition has already been
-     * seen earlier in the history (cycle). Either case pushes the planner to a different,
-     * more expensive action next iteration.
-     */
-    private fun guardAgainstNoProgress(
-        stampedFingerprint: String,
-        prior: BpmnRepairEvaluation,
-        priorRecord: BpmnAttemptRecord,
-    ) {
-        val reason = when {
-            stampedFingerprint == priorRecord.definitionFingerprint ->
-                "unchanged patch on repair attempt ${priorRecord.attemptNumber}"
-
-            prior.history.containsDefinitionFingerprint(stampedFingerprint) ->
-                "repeated invalid output on repair attempt ${priorRecord.attemptNumber}"
-
-            else -> return
-        }
-        throw RepairReplans.signal(reason)
-    }
-
-    /**
-     * Legacy engine's stuck-blocking guard: same blocking fingerprint twice in a row means
-     * the repair didn't move a blocking diagnostic. Forces GOAP to try a different action.
-     */
-    private fun guardAgainstStuckBlocking(
-        nextEvaluation: dev.groknull.bpmner.validation.BpmnEvaluation,
-        nextRecord: BpmnAttemptRecord,
-        priorRecord: BpmnAttemptRecord,
-        repairAttempts: Int,
-    ) {
-        if (nextEvaluation.blockingDiagnostics.isNotEmpty() &&
-            nextRecord.blockingDiagnosticFingerprint == priorRecord.blockingDiagnosticFingerprint
-        ) {
-            throw RepairReplans.signal(
-                "unchanged blocking diagnostics after repair attempt $repairAttempts",
-            )
-        }
-    }
-
-    private fun applyLlmPatch(
-        repairEval: BpmnRepairEvaluation,
-        operationContext: OperationContext,
-        actor: Actor<Persona>,
-        feedback: String,
-        patchTypeName: String,
-        labelOnly: Boolean,
-    ): BpmnRepairEvaluation {
-        val runner = promptRunner(repairEval, operationContext, actor)
-        // See applyFullLlmRewrite for why this uses `createObject` rather than
-        // `createObjectIfPossible` — alignment with what `whenCreateObject` mocks.
-        val patch: BpmnRepairPatch = requestLlmPatch(
-            runner = runner,
-            messages = repairEval.messages + UserMessage(feedback),
-            patchTypeName = patchTypeName,
-            labelOnly = labelOnly,
-        )
-        val application = patchApplier.apply(repairEval.definition, patch)
-        val success = patchSuccessOrReplan(application, patchTypeName)
-        return revalidateAndAdvance(
-            prior = repairEval,
-            repaired = success.definition,
-            appendedMessages = listOf(UserMessage(feedback), AssistantMessage(patch.toString())),
-            promptText = feedback,
-        )
-    }
-
-    /**
-     * Unwraps a [PatchApplicationResult] into its [PatchApplicationResult.Success] form or
-     * throws `ReplanRequestedException`. Centralising the throw here means [applyLlmPatch]
-     * has a single throw site, satisfying detekt's `ThrowsCount` without flattening the
-     * sealed-result `when`.
-     */
-    private fun patchSuccessOrReplan(
-        application: PatchApplicationResult,
-        patchTypeName: String,
-    ): PatchApplicationResult.Success {
-        val reason = when (application) {
-            is PatchApplicationResult.Success -> return application
-
-            is PatchApplicationResult.Failure -> {
-                logger.warn("{} application failed: {}", patchTypeName, application.reason)
-                "$patchTypeName application failed: ${application.reason}"
-            }
-
-            PatchApplicationResult.NoOp -> "$patchTypeName produced no-op"
-        }
-        throw RepairReplans.signal(reason)
-    }
-
-    private fun applyLocalModelFix(attempt: BpmnRepairAttempt): LocalFixApplied? = attempt.diagnostics
-        .asSequence()
-        .mapNotNull { buildLocalFixCandidate(attempt.definition, it) }
-        .firstNotNullOfOrNull { tryApplyLocalFix(attempt.definition, it) }
-
-    private fun buildLocalFixCandidate(definition: BpmnDefinition, diagnostic: BpmnDiagnostic): LocalFixCandidate? {
-        if (diagnostic.kind != RepairKind.LOCAL_MODEL_FIX) return null
-        val handlerName = diagnostic.fixHandler ?: return null
-        val elementId = diagnostic.elementId ?: return null
-        val handler = modelFixHandlerRegistry.lookup(handlerName) ?: return null
-        val ops = handler.buildPatch(definition, elementId, handlerConfigFor(diagnostic))
-        if (ops.isEmpty()) return null
-        val reason = "LOCAL_MODEL_FIX: $handlerName on $elementId"
-        return LocalFixCandidate(
-            handlerName = handlerName,
-            elementId = elementId,
-            patch = BpmnRepairPatch(operations = ops, reason = reason),
-            reason = reason,
-        )
-    }
-
-    private fun tryApplyLocalFix(
-        definition: BpmnDefinition,
-        candidate: LocalFixCandidate,
-    ): LocalFixApplied? = when (val applied = patchApplier.apply(definition, candidate.patch)) {
-        is PatchApplicationResult.Success -> LocalFixApplied(applied.definition, candidate.reason)
-
-        is PatchApplicationResult.Failure -> {
-            logger.warn(
-                "Local model fix produced invalid patch; trying next diagnostic. handler={}, elementId={}, reason={}",
-                candidate.handlerName,
-                candidate.elementId,
-                applied.reason,
-            )
-            null
-        }
-
-        PatchApplicationResult.NoOp -> null
-    }
-
-    private data class LocalFixCandidate(
-        val handlerName: String,
-        val elementId: String,
-        val patch: BpmnRepairPatch,
-        val reason: String,
-    )
-
-    private fun handlerConfigFor(diagnostic: BpmnDiagnostic): HandlerConfig {
-        val ruleId = diagnostic.rule?.let(BpmnLintRuleIds::bareRuleId) ?: return HandlerConfig.EMPTY
-        val meta = ruleRegistry.ruleByIdOrAlias(ruleId)?.metadata ?: return HandlerConfig.EMPTY
-        return HandlerConfig(staticConfig = meta.staticConfig, replacementMap = meta.repair.replacementMap)
-    }
-
-    private fun promptRunner(
-        repairEval: BpmnRepairEvaluation,
-        operationContext: OperationContext,
-        actor: Actor<Persona>,
-    ): PromptRunner {
-        val baseRunner = actor.promptRunner(operationContext).withPromptContributor(repairEval.request)
-        val docsPrompt = promptFactory.lintRuleDocsPrompt(repairEval.diagnostics)
-        return if (docsPrompt != null) baseRunner.withPromptContributor(docsPrompt) else baseRunner
-    }
-
-    /**
-     * Translate the two framework-level LLM exceptions into a planner-visible replan signal.
-     * Anything else (auth failure, OOM, timeout, transient infra exception) propagates so the
-     * real cause stays diagnosable instead of being masked by a stream of budget-burning replans.
-     */
-    private fun requestLlmDefinition(
-        runner: PromptRunner,
-        messages: List<com.embabel.chat.Message>,
-    ): BpmnDefinition = try {
-        runner.createObject(messages, FlatBpmnDefinition::class.java).toSealed()
-    } catch (e: InvalidLlmReturnFormatException) {
-        throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
-    } catch (e: InvalidLlmReturnTypeException) {
-        throw RepairReplans.signal("LLM rewrite returned a definition that failed validation: ${e.message}", e)
-    } catch (e: IllegalArgumentException) {
-        // FlatBpmnDefinition.toSealed() throws when the LLM emits a structurally
-        // incomplete node (e.g. BUSINESS_RULE_TASK with no decisionRef). Surface it as
-        // a replan signal so the planner retries instead of aborting the repair loop.
-        throw RepairReplans.signal("LLM rewrite produced a structurally incomplete definition: ${e.message}", e)
-    }
-
-    /**
-     * Sibling of [requestLlmDefinition] for the patch-shaped LLM calls.
-     *
-     * When [labelOnly] is true the `node` and `edge` fields are stripped from the JSON
-     * schema sent to the LLM, removing the full `BpmnNode` sealed hierarchy from each
-     * repair-iteration schema. Label-scope patches only ever produce SET_NODE_NAME /
-     * SET_EDGE_LABEL operations, which use `nodeId` / `edgeId` / `name` / `label` and never
-     * populate `node` or `edge`. The fluent builder still routes through
-     * `LlmOperations.createObject` under the hood, so existing `whenCreateObject` mocks keep
-     * intercepting label-patch calls.
-     */
-    private fun requestLlmPatch(
-        runner: PromptRunner,
-        messages: List<com.embabel.chat.Message>,
-        patchTypeName: String,
-        labelOnly: Boolean,
-    ): BpmnRepairPatch = try {
-        if (labelOnly) {
-            runner
-                .creating(BpmnRepairPatch::class.java)
-                .withoutProperties("node", "edge")
-                .fromMessages(messages)
-        } else {
-            runner.createObject(messages, BpmnRepairPatch::class.java)
-        }
-    } catch (e: InvalidLlmReturnFormatException) {
-        throw RepairReplans.signal("$patchTypeName failed to produce a structured patch: ${e.message}", e)
-    } catch (e: InvalidLlmReturnTypeException) {
-        throw RepairReplans.signal("$patchTypeName returned a patch that failed validation: ${e.message}", e)
-    }
 
     private fun publishAttemptEvent(repairEval: BpmnRepairEvaluation) {
         contractAwareValidator.logDiagnosticSummary(repairEval.evaluation.globalDiagnostics.diagnostics)
@@ -669,73 +248,12 @@ internal class BpmnRepairAgent(
         )
     }
 
-    private data class LocalFixApplied(val definition: BpmnDefinition, val reason: String)
-
-    /** Sole post-Phase-2 LLM eligibility predicate — cost ordering and the fingerprint guard handle priority. */
     private fun eligibleForLlm(diagnostic: BpmnDiagnostic): Boolean = diagnostic.kind != RepairKind.UNFIXABLE
-
-    /**
-     * #287 short-circuit for definitions containing parser fallback subtypes
-     * (`BpmnUnrecognizedNode` / `BpmnUnrecognizedEventDefinition`). Returns a blackboard
-     * carrying one UNFIXABLE blocking diagnostic per finding. Skips every Jackson-touching
-     * call (`promptFactory.initialMessages`, `contractAwareValidator.evaluate`,
-     * `attemptRecordFactory.toRecord`). The resulting evaluation drives GOAP into the
-     * existing UNFIXABLE-only / STUCK contract — no repair action's preconditions hold and
-     * `finalize`'s `diagnosticsResolved` precondition is false, so the planner surfaces a
-     * `ProcessExecutionStuckException` with the diagnostics intact.
-     */
-    private fun shortCircuitUnrecognized(
-        request: BpmnRequest,
-        graph: LaidOutProcessGraph,
-        rendered: RenderedBpmn,
-        contract: ProcessContract,
-        findings: List<UnrecognizedFinding>,
-    ): BpmnRepairEvaluation {
-        val diagnostics = findings.map { it.toDiagnostic() }
-        logger.warn(
-            "Repair short-circuited: {} unrecognized element(s) found pre-flight; LLM not invoked",
-            findings.size,
-        )
-        val evaluation = BpmnEvaluation(
-            definition = rendered.definition,
-            rendered = rendered,
-            diagnostics = diagnostics,
-            globalDiagnostics = GlobalDiagnostics(diagnostics),
-            validatedXml = null,
-        )
-        return BpmnRepairEvaluation(
-            request = request,
-            graph = graph,
-            rendered = rendered,
-            evaluation = evaluation,
-            messages = emptyList(),
-            history = BpmnAttemptHistory(),
-            contract = contract,
-            repairAttempts = 0,
-        )
-    }
 
     private companion object {
         const val COST_DETERMINISTIC = 0.1
         const val COST_LLM_LABEL = 0.5
         const val COST_LLM_STRUCTURAL = 0.7
         const val COST_LLM_REWRITE = 0.9
-    }
-}
-
-/**
- * Bridge to the Embabel framework's replan signal. The agent calls [signal] from the
- * `revalidateAndAdvance` helper (fingerprint-cycle and blocking-unchanged guards) and from
- * the patch-failure branches of each LLM action — the planner catches it and picks a
- * different applicable action next iteration.
- */
-private object RepairReplans {
-    // `ReplanRequestedException` doesn't expose a cause slot in its constructor, so chain via
-    // `initCause`. Preserving the cause lets a downstream operator trace the framework exception
-    // (`InvalidLlmReturnFormatException` etc.) without grepping logs.
-    fun signal(reason: String, cause: Throwable? = null): RuntimeException {
-        val ex = com.embabel.agent.core.ReplanRequestedException(reason)
-        if (cause != null) ex.initCause(cause)
-        return ex
     }
 }
