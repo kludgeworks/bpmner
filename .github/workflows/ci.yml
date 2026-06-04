@@ -232,7 +232,7 @@ jobs:
             "$GITHUB_WORKSPACE/reports/spotbugs/spotbugs-backend.xml"
 
       - name: SonarCloud Scan — Backend
-        if: always() && steps.coverage.outcome != 'skipped'
+        if: success() && steps.coverage.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -246,7 +246,7 @@ jobs:
             -Dsonar.externalIssuesReportPaths="$GITHUB_WORKSPACE/reports/spotbugs/spotbugs-sonar-external-issues.json"
 
       - name: SonarCloud Scan — Web
-        if: always() && steps.coverage.outcome != 'skipped'
+        if: success() && steps.coverage.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
