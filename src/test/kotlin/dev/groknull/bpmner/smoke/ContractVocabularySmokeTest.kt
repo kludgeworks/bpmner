@@ -24,6 +24,8 @@ import dev.groknull.bpmner.contract.boundaryEvents
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.loop
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -60,10 +62,15 @@ class ContractVocabularySmokeTest {
     @Autowired
     private lateinit var agentPlatform: AgentPlatform
 
+    @Autowired
+    private lateinit var readinessInvoker: BpmnReadinessInvoker
+
     private fun extractContract(prose: String): ProcessContract {
         val request = BpmnRequest(processDescription = prose.trimIndent().trim())
+        val assessment = readinessInvoker.assess(request)
+        val readyContext = ReadyBpmnContext(request = request, assessment = assessment)
         return AgentPlatformTypedOps(agentPlatform).transform(
-            request,
+            readyContext,
             ValidatedProcessContract::class.java,
             ProcessOptions(listeners = listOf(SuiteCostCapturer)),
         ).contract

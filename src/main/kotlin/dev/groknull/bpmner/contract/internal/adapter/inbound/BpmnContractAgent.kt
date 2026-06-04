@@ -39,7 +39,6 @@ internal class BpmnContractAgent(
             remote = true,
             startingInputTypes = [
                 ReadyBpmnContext::class,
-                BpmnRequest::class,
             ],
         ),
     )
