@@ -16,8 +16,8 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
@@ -37,8 +37,7 @@ internal class BpmnContractAgent(
             name = "extractProcessContract",
             remote = true,
             startingInputTypes = [
-                BpmnRequest::class,
-                ProcessInputAssessment::class,
+                ReadyBpmnContext::class,
             ],
         ),
     )
@@ -46,10 +45,11 @@ internal class BpmnContractAgent(
         description = "Extract a source-grounded process contract from a BPMN request and readiness assessment",
     )
     fun extractProcessContract(
-        request: BpmnRequest,
-        assessment: ProcessInputAssessment,
+        ready: ReadyBpmnContext,
         context: OperationContext,
     ): ValidatedProcessContract {
+        val request = ready.request
+        val assessment = ready.assessment
         val promptRunner =
             config.contractExtractor
                 .promptRunner(context)
@@ -84,7 +84,7 @@ internal class BpmnContractAgent(
     }
 
     private fun templateModel(
-        request: BpmnRequest,
+        request: dev.groknull.bpmner.core.BpmnRequest,
         assessment: ProcessInputAssessment,
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to config.contract.maxAssumptions,

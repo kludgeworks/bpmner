@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -27,7 +28,7 @@ class BpmnContractAgentTest {
         context.expectResponse(flat)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
-        val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
+        val result = agent.extractProcessContract(sampleReadyContext(), context)
 
         assertEquals(flat.toSealed(), result.contract)
         assertTrue(result.isValid, "expected sample contract to pass validation, got ${result.report.issues}")
@@ -49,7 +50,7 @@ class BpmnContractAgentTest {
         context.expectResponse(invalid)
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
-        val result = agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
+        val result = agent.extractProcessContract(sampleReadyContext(), context)
 
         assertEquals(invalid.toSealed(), result.contract)
         assertTrue(!result.isValid)
@@ -62,7 +63,7 @@ class BpmnContractAgentTest {
         context.expectResponse(sampleFlatContract())
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
-        agent.extractProcessContract(sampleRequest(), sampleAssessment(), context)
+        agent.extractProcessContract(sampleReadyContext(), context)
 
         val prompt = context.llmInvocations.single().prompt
         assertTrue(prompt.contains("When a customer submits an order, ship it."))
@@ -78,17 +79,19 @@ class BpmnContractAgentTest {
         val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
 
         agent.extractProcessContract(
-            sampleRequest().copy(
-                clarificationHistory =
-                listOf(
-                    ClarificationExchange(
-                        questionId = "q1",
-                        questionText = "What starts the process?",
-                        answerText = "The customer submits an order.",
+            sampleReadyContext(
+                request =
+                sampleRequest().copy(
+                    clarificationHistory =
+                    listOf(
+                        ClarificationExchange(
+                            questionId = "q1",
+                            questionText = "What starts the process?",
+                            answerText = "The customer submits an order.",
+                        ),
                     ),
                 ),
             ),
-            sampleAssessment(),
             context,
         )
 
@@ -98,6 +101,11 @@ class BpmnContractAgentTest {
     }
 
     private fun sampleRequest() = BpmnRequest(processDescription = "When a customer submits an order, ship it.")
+
+    private fun sampleReadyContext(
+        request: BpmnRequest = sampleRequest(),
+        assessment: ProcessInputAssessment = sampleAssessment(),
+    ) = ReadyBpmnContext(request = request, assessment = assessment)
 
     private fun sampleAssessment() = ProcessInputAssessment(
         verdict = ReadinessVerdict.NEEDS_CLARIFICATION,

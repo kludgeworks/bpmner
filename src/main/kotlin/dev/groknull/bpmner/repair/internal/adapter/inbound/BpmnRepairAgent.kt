@@ -33,6 +33,7 @@ import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.toSealed
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnAttemptRecord
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
@@ -115,11 +116,12 @@ internal class BpmnRepairAgent(
         outputBinding = "repairEval",
     )
     fun validate(
-        request: BpmnRequest,
+        ready: ReadyBpmnContext,
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
         validatedContract: ValidatedProcessContract,
     ): BpmnRepairEvaluation {
+        val request = ready.request
         val contract = validatedContract.contract
 
         // Pre-flight: #287 — surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,

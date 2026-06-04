@@ -5,10 +5,7 @@
 
 package dev.groknull.bpmner.web
 
-import dev.groknull.bpmner.generation.BpmnGenerationInput
-import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import dev.groknull.bpmner.generation.BpmnResult
-import dev.groknull.bpmner.generation.StartGenerationOutcome
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -47,20 +44,14 @@ data class WebGenerationBlockedResponse(
 @RequestMapping("/api/bpmn")
 @Profile("web")
 class BpmnWebController(
-    private val generationUseCase: BpmnGenerationUseCase,
+    private val generationStarter: WebGenerationStarter,
 ) {
     @PostMapping("/generations")
     fun startGeneration(
         @Valid @RequestBody request: WebGenerationRequest,
     ): ResponseEntity<Any> {
-        val input =
-            BpmnGenerationInput(
-                processDescription = request.processDescription,
-                styleGuideContent = request.styleGuide,
-            )
-
-        return when (val outcome = generationUseCase.startAsync(input)) {
-            is StartGenerationOutcome.Started -> {
+        return when (val outcome = generationStarter.start(request)) {
+            is WebGenerationStartOutcome.Started -> {
                 ResponseEntity.accepted().body(
                     WebGenerationResponse(
                         processId = outcome.processId,
@@ -69,7 +60,7 @@ class BpmnWebController(
                 )
             }
 
-            is StartGenerationOutcome.Blocked -> {
+            is WebGenerationStartOutcome.Blocked -> {
                 ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(blockedBody(outcome.result))
             }
         }

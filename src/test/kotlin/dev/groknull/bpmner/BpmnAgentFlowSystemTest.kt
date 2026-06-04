@@ -5,9 +5,6 @@
 
 package dev.groknull.bpmner
 
-import com.embabel.agent.api.common.AgentPlatformTypedOps
-import com.embabel.agent.core.Budget
-import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
@@ -21,7 +18,7 @@ import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
@@ -40,6 +37,7 @@ import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 import java.nio.file.Path
@@ -65,6 +63,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
     private lateinit var bpmnLintingPort: BpmnLintingPort
 
+    @Autowired
+    private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
+
     @Test
     @Suppress("LongMethod")
     fun `planner resolves request through definition render validation and write`(
@@ -73,33 +74,28 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         val flatDefinition = validFlatDefinition()
         val outputFile = tempDir.resolve("process.bpmn")
 
-        // 1. Mock Readiness
-        whenCreateObject(
-            { it.contains("Assess whether the source text describes a workflow") },
-            ProcessInputAssessment::class.java,
-        ).thenReturn(
+        val assessment =
             ProcessInputAssessment(
                 verdict = ReadinessVerdict.READY,
                 overallScore = 100,
                 dimensions = emptyList(),
                 evidence = emptyList(),
                 rationale = "Ready",
-            ),
-        )
+            )
 
-        // 2. Mock Contract
+        // 1. Mock Contract
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
             FlatProcessContract::class.java,
         ).thenReturn(sampleFlatContract())
 
-        // 3. Mock Generation
+        // 2. Mock Generation
         whenCreateObject(
             { it.contains("Generate a BPMN definition object from the validated process contract") },
             FlatBpmnDefinition::class.java,
         ).thenReturn(flatDefinition)
 
-        // 4. Mock Alignment
+        // 3. Mock Alignment
         whenCreateObject(
             { it.contains("You are a BPMN alignment validator") },
             AlignmentFindings::class.java,
@@ -110,7 +106,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ),
         )
 
-        // 5. Mock Validators
+        // 4. Mock Validators
         `when`(bpmnXsdValidator.validateDetailed(anyString()))
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
@@ -118,18 +114,13 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             .lint(anyDefinition())
 
         val result =
-            AgentPlatformTypedOps(agentPlatform)
-                .transform(
-                    BpmnRequest(
-                        processDescription = "Make toast",
-                        outputFile = outputFile.toString(),
-                    ),
-                    BpmnResult::class.java,
-                    // Mirrors `AgentPlatformBpmnAgentInvoker.syncGenerationProcessOptions()`:
-                    // exercise the real budget so a regression that pushes generation past
-                    // 100 actions surfaces here rather than only in production.
-                    ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
-                )
+            bpmnAgentInvoker.generate(
+                BpmnRequest(
+                    processDescription = "Make toast",
+                    outputFile = outputFile.toString(),
+                ),
+                assessment,
+            )
 
         assertEquals(outputFile.toString(), result.outputFile)
         assertTrue(result.xml!!.contains("<process"))

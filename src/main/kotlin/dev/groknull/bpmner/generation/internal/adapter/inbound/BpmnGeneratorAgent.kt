@@ -34,6 +34,7 @@ import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.toSealed
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -69,10 +70,11 @@ internal class BpmnGeneratorAgent(
         "Create and validate a process outline from a validated process contract",
     )
     fun createOutline(
-        request: BpmnRequest,
+        ready: ReadyBpmnContext,
         validatedContract: ValidatedProcessContract,
         context: OperationContext,
     ): ValidatedOutline {
+        val request = ready.request
         if (!validatedContract.isValid) {
             val issues =
                 validatedContract.report.issues
@@ -210,9 +212,10 @@ internal class BpmnGeneratorAgent(
 
     @Action(description = "Render a laid out BPMN process graph into BPMN 2.0 XML with stable element linkage")
     fun renderBpmnXml(
-        request: BpmnRequest,
+        ready: ReadyBpmnContext,
         graph: LaidOutProcessGraph,
     ): RenderedBpmn {
+        val request = ready.request
         val rendered = bpmnConverter.render(graph)
         logArtifactDump("rendered-bpmn-xml", rendered.xml)
         eventPublisher.publishEvent(BpmnGeneratedEvent(request, rendered))
@@ -225,14 +228,15 @@ internal class BpmnGeneratorAgent(
         Export(
             name = "generateBpmn",
             remote = true,
-            startingInputTypes = [BpmnRequest::class],
+            startingInputTypes = [com.embabel.agent.domain.io.UserInput::class, BpmnRequest::class],
         ),
     )
     @Action(description = "Return the layouted BPMN XML and write to disk if requested")
     fun finalizeBpmn(
-        request: BpmnRequest,
+        ready: ReadyBpmnContext,
         bpmn: AlignedBpmnXml,
     ): BpmnResult {
+        val request = ready.request
         if (request.outputFile != null) {
             File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
             logger.info(

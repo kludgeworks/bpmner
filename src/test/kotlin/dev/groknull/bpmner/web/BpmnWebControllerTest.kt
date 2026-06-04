@@ -5,11 +5,8 @@
 
 package dev.groknull.bpmner.web
 
-import dev.groknull.bpmner.generation.BpmnGenerationInput
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnGenerationUseCase
 import dev.groknull.bpmner.generation.BpmnResult
-import dev.groknull.bpmner.generation.StartGenerationOutcome
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
@@ -21,13 +18,13 @@ import org.mockito.Mockito.`when`
 import org.springframework.http.HttpStatus
 
 class BpmnWebControllerTest {
-    private val generationUseCase = mock(BpmnGenerationUseCase::class.java)
-    private val controller = BpmnWebController(generationUseCase)
+    private val generationStarter = mock(WebGenerationStarter::class.java)
+    private val controller = BpmnWebController(generationStarter)
 
     @Test
     fun `accepted with relative sseUrl when readiness is ready`() {
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
-            .thenReturn(StartGenerationOutcome.Started("test-process-123"))
+        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
+            .thenReturn(WebGenerationStartOutcome.Started("test-process-123"))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Order is shipped"))
 
@@ -38,9 +35,9 @@ class BpmnWebControllerTest {
     }
 
     @Test
-    fun `delegates process description and inline style guide to use case`() {
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
-            .thenReturn(StartGenerationOutcome.Started("p-1"))
+    fun `delegates process description and inline style guide to starter`() {
+        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
+            .thenReturn(WebGenerationStartOutcome.Started("p-1"))
 
         controller.startGeneration(
             WebGenerationRequest(
@@ -49,12 +46,11 @@ class BpmnWebControllerTest {
             ),
         )
 
-        val captor = ArgumentCaptor.forClass(BpmnGenerationInput::class.java)
-        verify(generationUseCase).startAsync(captor.capture() ?: BpmnGenerationInput())
-        val input = captor.value
-        assertEquals("Order is shipped", input.processDescription)
-        assertEquals("Use verb-object task names", input.styleGuideContent)
-        assertNull(input.styleGuide)
+        val captor = ArgumentCaptor.forClass(WebGenerationRequest::class.java)
+        verify(generationStarter).start(captor.capture() ?: WebGenerationRequest("fallback"))
+        val request = captor.value
+        assertEquals("Order is shipped", request.processDescription)
+        assertEquals("Use verb-object task names", request.styleGuide)
     }
 
     @Test
@@ -66,8 +62,8 @@ class BpmnWebControllerTest {
                 xml = null,
                 reportFile = "/tmp/readiness.md",
             )
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
-            .thenReturn(StartGenerationOutcome.Blocked(blocked))
+        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
+            .thenReturn(WebGenerationStartOutcome.Blocked(blocked))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Make it nicer"))
 
@@ -86,8 +82,8 @@ class BpmnWebControllerTest {
                 xml = null,
                 reportFile = null,
             )
-        `when`(generationUseCase.startAsync(any() ?: BpmnGenerationInput()))
-            .thenReturn(StartGenerationOutcome.Blocked(blocked))
+        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
+            .thenReturn(WebGenerationStartOutcome.Blocked(blocked))
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Cherry blossoms drift"))
 

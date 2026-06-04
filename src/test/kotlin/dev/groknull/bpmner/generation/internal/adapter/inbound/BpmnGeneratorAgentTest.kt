@@ -29,6 +29,9 @@ import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
+import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,7 +52,7 @@ class BpmnGeneratorAgentTest {
                 BpmnRequest(
                     processDescription = "Raw prose kept for traceability.",
                     styleGuide = "Use sentence case names.",
-                ),
+                ).ready(),
                 validContract(),
                 context,
             )
@@ -77,7 +80,7 @@ class BpmnGeneratorAgentTest {
         context.expectResponse(flatTestDefinition(processName = "Handle claim"))
 
         agent().createOutline(
-            BpmnRequest(processDescription = "Raw prose kept for traceability."),
+            BpmnRequest(processDescription = "Raw prose kept for traceability.").ready(),
             validContract(),
             context,
         )
@@ -113,7 +116,7 @@ class BpmnGeneratorAgentTest {
 
         val error =
             assertFailsWith<IllegalStateException> {
-                agent.createOutline(BpmnRequest("Generate this"), invalid, context)
+                agent.createOutline(BpmnRequest("Generate this").ready(), invalid, context)
             }
 
         assertTrue(error.message.orEmpty().contains("invalid process contract"))
@@ -181,6 +184,17 @@ class BpmnGeneratorAgentTest {
             report = ContractValidationReport(emptyList()),
         )
     }
+
+    private fun BpmnRequest.ready() = ReadyBpmnContext(
+        request = this,
+        assessment =
+        ProcessInputAssessment(
+            verdict = ReadinessVerdict.READY,
+            overallScore = 100,
+            dimensions = emptyList(),
+            rationale = "Ready",
+        ),
+    )
 
     private object NoopRenderer : BpmnRenderer {
         override fun render(definition: BpmnDefinition): RenderedBpmn = RenderedBpmn(

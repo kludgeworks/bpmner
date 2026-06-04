@@ -5,9 +5,6 @@
 
 package dev.groknull.bpmner
 
-import com.embabel.agent.api.common.AgentPlatformTypedOps
-import com.embabel.agent.core.Budget
-import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
@@ -28,7 +25,7 @@ import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
-import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
@@ -44,6 +41,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.doReturn
 import org.mockito.Mockito.`when`
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
@@ -62,6 +60,9 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
     private lateinit var bpmnLintingPort: BpmnLintingPort
 
+    @Autowired
+    private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
+
     @Test
     fun `alignment failure blocks the pipeline`() {
         `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString()))
@@ -70,10 +71,6 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             .`when`(bpmnLintingPort)
             .lint(anyDefinition())
 
-        whenCreateObject(
-            { it.contains("Return only a structured ProcessInputAssessment object.") },
-            ProcessInputAssessment::class.java,
-        ).thenReturn(validAssessment())
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
             FlatProcessContract::class.java,
@@ -98,17 +95,13 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
 
         val error =
             assertThrows<BpmnAlignmentException> {
-                AgentPlatformTypedOps(agentPlatform)
-                    .transform(
-                        BpmnRequest(
-                            processDescription = "Unused",
-                            outputFile = "ignored.bpmn",
-                        ),
-                        BpmnResult::class.java,
-                        // Mirrors `AgentPlatformBpmnAgentInvoker.syncGenerationProcessOptions()`
-                        // so the test exercises the real budget.
-                        ProcessOptions(budget = Budget(actions = 100), ephemeral = true),
-                    )
+                bpmnAgentInvoker.generate(
+                    BpmnRequest(
+                        processDescription = "Unused",
+                        outputFile = "ignored.bpmn",
+                    ),
+                    validAssessment(),
+                )
             }
 
         assertTrue(error.message!!.contains("Generated BPMN does not align with process contract"))

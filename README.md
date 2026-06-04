@@ -55,7 +55,7 @@ bazel build //src:bpmner_app
 ```
 
 ### Run
-`bpmner` runs in three modes: a browser-based web UI, an interactive Spring Shell, and one-shot CLI generation.
+`bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell.
 
 #### Web Interface
 Starts an HTTP server with a live, progress-aware browser UI for submitting process descriptions, watching generation progress over SSE, inspecting intermediate validation snapshots, and downloading the final BPMN XML. The web flow keeps XML in memory rather than writing `.bpmn` files to disk.
@@ -66,17 +66,13 @@ bazel run //src:bpmner_app -- --spring.profiles.active=anthropic,web
 Open `http://localhost:8080` once the server is up.
 
 #### Interactive Shell
-Start the shell to use the `generate` command with interactive clarification:
+Start the shell and use Embabel's built-in `x` / `execute` command. The shell owns prompting,
+blackboard inspection, cost output, and tool statistics.
 ```bash
 export ANTHROPIC_API_KEY="sk-ant-..."
 bazel run //src:bpmner_app -- --spring.profiles.active=anthropic
 ```
-
-#### One-Shot Generation
-```bash
-bazel run //src:bpmner_app -- --spring.profiles.active=anthropic \
-  --process-file=toast-process.txt --output=toast.bpmn
-```
+Then run, for example: `x "Generate BPMN for the toast process in toast-process.txt and write it to toast.bpmn"`.
 
 ## Observability & Tracing
 `bpmner` is built for production observability:
