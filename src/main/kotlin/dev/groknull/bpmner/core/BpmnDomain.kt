@@ -39,12 +39,15 @@ import dev.groknull.bpmner.api.BpmnGroup as ApiBpmnGroup
 import dev.groknull.bpmner.api.BpmnInclusiveGateway as ApiBpmnInclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent as ApiBpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent as ApiBpmnIntermediateThrowEvent
+import dev.groknull.bpmner.api.BpmnLane as ApiBpmnLane
 import dev.groknull.bpmner.api.BpmnManualTask as ApiBpmnManualTask
 import dev.groknull.bpmner.api.BpmnMessageEventDefinition as ApiBpmnMessageEventDefinition
+import dev.groknull.bpmner.api.BpmnMessageFlow as ApiBpmnMessageFlow
 import dev.groknull.bpmner.api.BpmnMessageRef as ApiBpmnMessageRef
 import dev.groknull.bpmner.api.BpmnNode as ApiBpmnNode
 import dev.groknull.bpmner.api.BpmnNoneEventDefinition as ApiBpmnNoneEventDefinition
 import dev.groknull.bpmner.api.BpmnParallelGateway as ApiBpmnParallelGateway
+import dev.groknull.bpmner.api.BpmnParticipant as ApiBpmnParticipant
 import dev.groknull.bpmner.api.BpmnReceiveTask as ApiBpmnReceiveTask
 import dev.groknull.bpmner.api.BpmnRequest as ApiBpmnRequest
 import dev.groknull.bpmner.api.BpmnScriptTask as ApiBpmnScriptTask
@@ -130,6 +133,17 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Read/write links between activities and data objects/stores")
     override val dataAssociations: List<BpmnDataAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Participants (pools): white-box (processRef set, owns the process) or black-box (external, processRef null)",
+    )
+    override val participants: List<BpmnParticipant> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Lanes partitioning white-box pools by business role/performer")
+    override val lanes: List<BpmnLane> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Message flows between participants (across pools only)")
+    override val messageFlows: List<BpmnMessageFlow> = emptyList(),
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
     // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
     // benign extra field on serialize and an unknown field on deserialize (skipped).
@@ -791,3 +805,43 @@ data class BpmnDataAssociation(
     @get:JsonPropertyDescription("READ = activity consumes the data; WRITE = activity produces or updates it")
     override val direction: DataFlowDirection,
 ) : ApiBpmnDataAssociation
+
+@JsonClassDescription("BPMN participant (pool): white-box owns a process, black-box is an external entity")
+data class BpmnParticipant(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable participant id, e.g. Participant_OrderSvc")
+    override val id: String,
+    @get:JsonPropertyDescription("Pool label; for a white-box pool this is the process name")
+    override val name: String? = null,
+    @get:JsonPropertyDescription("Id of the process this pool owns; LEAVE NULL for a black-box (external) participant")
+    override val processRef: String? = null,
+) : ApiBpmnParticipant
+
+@JsonClassDescription("BPMN lane: partitions a white-box pool by business role or performer")
+data class BpmnLane(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable lane id, e.g. Lane_Sales")
+    override val id: String,
+    @get:JsonPropertyDescription("Lane label — a business role or performer, e.g. \"Sales\"")
+    override val name: String? = null,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the participant (pool) this lane belongs to")
+    override val participantId: String,
+    @get:JsonPropertyDescription("Ids of the flow nodes contained in this lane (node ids, not names)")
+    override val flowNodeRefs: List<String> = emptyList(),
+) : ApiBpmnLane
+
+@JsonClassDescription("BPMN message flow between two participants (across pools only)")
+data class BpmnMessageFlow(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable message-flow id, e.g. MessageFlow_1")
+    override val id: String,
+    @get:JsonPropertyDescription("Optional label, e.g. \"Payment request\"")
+    override val name: String? = null,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Source: a flow-element id or a black-box participant id")
+    override val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Target: a flow-element id or a black-box participant id")
+    override val targetRef: String,
+) : ApiBpmnMessageFlow

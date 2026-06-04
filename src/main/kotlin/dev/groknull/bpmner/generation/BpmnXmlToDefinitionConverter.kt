@@ -28,12 +28,15 @@ import dev.groknull.bpmner.core.BpmnGroup
 import dev.groknull.bpmner.core.BpmnInclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageFlow
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnParticipant
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -93,6 +96,15 @@ private data class ParsedArtifacts(
     val dataObjects: List<BpmnDataObject>,
     val dataStores: List<BpmnDataStore>,
     val dataAssociations: List<BpmnDataAssociation>,
+)
+
+// Collaboration artifacts (#196): participants (pools) + message flows from <collaboration>, and
+// lanes from each process's <laneSet>. Parsed top-level (off the converter class) so the projection
+// stays a single pass without inflating the class's function count.
+private data class ParsedCollaboration(
+    val participants: List<BpmnParticipant>,
+    val lanes: List<BpmnLane>,
+    val messageFlows: List<BpmnMessageFlow>,
 )
 
 @SecondaryAdapter
@@ -175,6 +187,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             }
 
         val artifacts = artifactsAndDataFrom(document)
+        val collaboration = parseCollaboration(document)
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
@@ -190,6 +203,9 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             dataObjects = artifacts.dataObjects,
             dataStores = artifacts.dataStores,
             dataAssociations = artifacts.dataAssociations,
+            participants = collaboration.participants,
+            lanes = collaboration.lanes,
+            messageFlows = collaboration.messageFlows,
             diagramCount = diagramCount,
         )
     }
@@ -664,3 +680,67 @@ private fun FlowNode.toUnrecognizedNode(
 private fun String.localNameRef(): String? = trim()
     .takeIf { it.isNotBlank() }
     ?.substringAfterLast(":")
+
+// BPMN MODEL namespace, duplicated at file scope so the collaboration helpers below stay top-level
+// (off the converter class) and don't inflate its function count. Kept in lockstep with the
+// converter's companion `BPMN_NS`.
+private const val BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+
+private fun org.w3c.dom.NodeList.elementSequence(): Sequence<Element> = sequence {
+    for (index in 0 until length) {
+        (item(index) as? Element)?.let { yield(it) }
+    }
+}
+
+@Suppress("MaxLineLength")
+private fun Document.bpmnModelElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_MODEL_NS, localName).elementSequence()
+
+// Walks up to the <process> enclosing this element, returning its id (or null). Binds a <lane> to
+// the white-box participant whose processRef names that process.
+private fun Element.enclosingProcessId(): String? {
+    var node: org.w3c.dom.Node? = parentNode
+    while (node != null) {
+        if (node is Element && node.localName == "process") {
+            return node.getAttribute("id").takeIf { it.isNotBlank() }
+        }
+        node = node.parentNode
+    }
+    return null
+}
+
+// Parses the collaboration view (#196): participants + message flows from <collaboration>, lanes
+// from each <laneSet>. A white-box participant carries processRef; a black-box one omits it. Lane
+// membership is the <flowNodeRef> children only; a lane binds to the participant owning its process.
+private fun parseCollaboration(document: Document): ParsedCollaboration {
+    val participants = document.bpmnModelElements("participant")
+        .map { el ->
+            BpmnParticipant(
+                id = el.getAttribute("id"),
+                name = el.getAttribute("name").takeIf { it.isNotBlank() },
+                processRef = el.getAttribute("processRef").takeIf { it.isNotBlank() },
+            )
+        }.filter { it.id.isNotBlank() }.toList()
+    val participantByProcessId = participants.mapNotNull { p -> p.processRef?.let { it to p.id } }.toMap()
+    val lanes = document.bpmnModelElements("lane")
+        .map { el ->
+            BpmnLane(
+                id = el.getAttribute("id"),
+                name = el.getAttribute("name").takeIf { it.isNotBlank() },
+                participantId = el.enclosingProcessId()?.let { participantByProcessId[it] }.orEmpty(),
+                flowNodeRefs = el.childNodes.elementSequence()
+                    .filter { it.localName == "flowNodeRef" }
+                    .mapNotNull { it.textContent?.trim()?.takeIf { ref -> ref.isNotBlank() } }
+                    .toList(),
+            )
+        }.filter { it.id.isNotBlank() }.toList()
+    val messageFlows = document.bpmnModelElements("messageFlow")
+        .map { el ->
+            BpmnMessageFlow(
+                id = el.getAttribute("id"),
+                name = el.getAttribute("name").takeIf { it.isNotBlank() },
+                sourceRef = el.getAttribute("sourceRef"),
+                targetRef = el.getAttribute("targetRef"),
+            )
+        }.filter { it.id.isNotBlank() }.toList()
+    return ParsedCollaboration(participants, lanes, messageFlows)
+}

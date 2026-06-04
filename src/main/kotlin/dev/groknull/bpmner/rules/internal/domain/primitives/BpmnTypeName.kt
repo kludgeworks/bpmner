@@ -51,6 +51,14 @@ internal object BpmnTypeName {
     // containers only. Deliberately absent from broad type matching and supported node names.
     const val GROUP = "bpmn:Group"
 
+    // Collaboration constructs (#196): participants (pools) and lanes are surfaced so the pool/lane
+    // naming and usage rules can target them by exact type name; message flows are surfaced both as
+    // elements (for name-pattern rules) and as `PrimitiveModelContext.messageFlows` (for the
+    // across-pool connectivity check). Not flow nodes — absent from broad type matching.
+    const val PARTICIPANT = "bpmn:Participant"
+    const val LANE = "bpmn:Lane"
+    const val MESSAGE_FLOW = "bpmn:MessageFlow"
+
     // BPMN DI diagram typename. The parser surfaces its document-level count on
     // `BpmnDefinition.diagramCount`; `PrimitiveModelMapping` projects that count into the
     // primitive model as N synthetic `PrimitiveElement` entries so `CardinalityCheck` can

@@ -24,6 +24,7 @@ import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.api.BpmnManualTask
 import dev.groknull.bpmner.api.BpmnMessageEventDefinition
+import dev.groknull.bpmner.api.BpmnMessageFlow
 import dev.groknull.bpmner.api.BpmnNode
 import dev.groknull.bpmner.api.BpmnNoneEventDefinition
 import dev.groknull.bpmner.api.BpmnParallelGateway
@@ -46,7 +47,47 @@ import dev.groknull.bpmner.api.BpmnUserTask
 // would obscure the ordering of synthetic elements, typed nodes, artifacts, and flows.
 @Suppress("LongMethod")
 internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelContext {
-    val sequenceFlows = definition.sequences.map { it.toPrimitiveFlow() }
+    // Pool resolution (#196): in v1 every flow node lives in the single white-box pool (the
+    // participant whose processRef names this process), so every sequence flow's source and target
+    // pool are that participant — `SequenceFlowWithinPool` (WITHIN_POOL) never fires. A message-flow
+    // endpoint resolves to its own pool: a participant ref is its own pool, otherwise it is a flow
+    // node in the white-box pool. `MessageFlowAcrossPools` (ACROSS_POOLS) fires when both ends share
+    // a pool.
+    val whiteBoxParticipantId = definition.participants.firstOrNull { it.processRef == definition.processId }?.id
+    val participantIds = definition.participants.map { it.id }.toSet()
+    fun poolFor(ref: String): String? = if (ref in participantIds) ref else whiteBoxParticipantId
+    val sequenceFlows = definition.sequences.map {
+        it.toPrimitiveFlow().copy(sourcePool = whiteBoxParticipantId, targetPool = whiteBoxParticipantId)
+    }
+    val messageFlows = definition.messageFlows.map { it.toPrimitiveFlow(::poolFor) }
+    // Participants/lanes projected inline (rather than via helpers) to keep this file's top-level
+    // function count under the detekt threshold. White-box vs black-box is surfaced as a property so
+    // the two pool-naming rules narrow to their own kind via `appliesWhenProperty`.
+    val participantElements = definition.participants.map { participant ->
+        PrimitiveElement(
+            id = participant.id,
+            typeName = BpmnTypeName.PARTICIPANT,
+            properties = buildMap {
+                put("id", participant.id)
+                participant.name?.let { put("name", it) }
+                participant.processRef?.let { put("processRef", it) }
+                put("isWhiteBox", (participant.processRef != null).toString())
+            },
+        )
+    }
+    // Lane membership is the lane's flowNodeRefs only; nodes carry no lane back-reference.
+    val laneElements = definition.lanes.map { lane ->
+        PrimitiveElement(
+            id = lane.id,
+            typeName = BpmnTypeName.LANE,
+            properties = buildMap {
+                put("id", lane.id)
+                lane.name?.let { put("name", it) }
+                put("participantId", lane.participantId)
+            },
+        )
+    }
+    val messageFlowElements = messageFlows.map { it.asElement(BpmnTypeName.MESSAGE_FLOW) }
     // One synthetic `bpmndi:BPMNDiagram` element per counted diagram so `CardinalityCheck`
     // (driving `NoDuplicateDiagrams`) can count them via `model.elements`. The id is null
     // because diagrams have no element-level id in the semantic model.
@@ -114,12 +155,21 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             annotationElements +
             dataElements +
             groupElements +
+            participantElements +
+            laneElements +
+            messageFlowElements +
             sequenceFlows.map { it.asElement(BpmnTypeName.SEQUENCE_FLOW) },
         sequenceFlows = sequenceFlows,
         associations = associations,
-        // The model now always carries annotations/associations, so the capability is on; the
-        // loop/MI rules narrow to relevant elements via `appliesWhenProperty`.
-        supportedCapabilities = setOf(ModelCapability.ASSOCIATIONS),
+        messageFlows = messageFlows,
+        // ASSOCIATIONS is always on (the model always carries annotations/associations). POOLS_AND_LANES
+        // and MESSAGE_FLOWS flip on only when the definition actually carries those constructs, so the
+        // pool/lane/message-flow rules stay dormant on ordinary single-pool-less processes (#196).
+        supportedCapabilities = buildSet {
+            add(ModelCapability.ASSOCIATIONS)
+            if (definition.participants.isNotEmpty()) add(ModelCapability.POOLS_AND_LANES)
+            if (definition.messageFlows.isNotEmpty()) add(ModelCapability.MESSAGE_FLOWS)
+        },
     )
 }
 
@@ -218,6 +268,18 @@ internal fun BpmnEdge.toPrimitiveFlow(): PrimitiveFlow = PrimitiveFlow(
     targetRef = targetRef,
     name = name,
     conditionExpression = conditionExpression,
+)
+
+// A message flow projects to a `PrimitiveFlow` carrying the pool of each endpoint, so the
+// ACROSS_POOLS connectivity check can assert the flow crosses a pool boundary. [poolFor] resolves an
+// endpoint id to its owning participant id.
+internal fun BpmnMessageFlow.toPrimitiveFlow(poolFor: (String) -> String?): PrimitiveFlow = PrimitiveFlow(
+    id = id,
+    sourceRef = sourceRef,
+    targetRef = targetRef,
+    name = name,
+    sourcePool = poolFor(sourceRef),
+    targetPool = poolFor(targetRef),
 )
 
 @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property

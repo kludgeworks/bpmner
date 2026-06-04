@@ -44,6 +44,23 @@ interface BpmnDefinition {
     /** Read/write links between an activity and a data object or store. */
     val dataAssociations: List<BpmnDataAssociation> get() = emptyList()
 
+    /**
+     * Participants (pools) in the collaboration. A white-box participant owns this process
+     * (`processRef` set); a black-box participant is an external entity (`processRef` null).
+     * Empty for an ordinary single-pool-less process — the renderer emits a `<bpmn:collaboration>`
+     * only when this is non-empty.
+     */
+    val participants: List<BpmnParticipant> get() = emptyList()
+
+    /**
+     * Lanes partitioning a white-box pool by business role/performer. Lane membership is carried
+     * solely by [BpmnLane.flowNodeRefs] — nodes do not back-reference their lane.
+     */
+    val lanes: List<BpmnLane> get() = emptyList()
+
+    /** Message flows between participants. Distinct from [sequences]: they cross pool boundaries. */
+    val messageFlows: List<BpmnMessageFlow> get() = emptyList()
+
     // Count of `<bpmndi:BPMNDiagram>` elements observed in the parsed XML. The semantic
     // model does not carry DI content; the count is the only signal that survives. The
     // `NoDuplicateDiagrams` rule reads this via synthetic `bpmndi:BPMNDiagram` elements
@@ -236,6 +253,41 @@ interface BpmnGroup {
  */
 interface BpmnAssociation {
     val id: String
+    val sourceRef: String
+    val targetRef: String
+}
+
+/**
+ * A BPMN participant: a pool in a collaboration. White-box (`processRef` set) owns a process and
+ * its lanes/nodes are visible; black-box (`processRef` null) is an opaque external entity. Renders
+ * to `<bpmn:participant>` inside a `<bpmn:collaboration>`.
+ */
+interface BpmnParticipant {
+    val id: String
+    val name: String?
+    val processRef: String?
+}
+
+/**
+ * A BPMN lane: a horizontal partition of a white-box pool by business role or performer. Membership
+ * is the lane's [flowNodeRefs] (the sole source of truth — nodes carry no lane back-reference).
+ * Renders to `<bpmn:lane>` (with `<bpmn:flowNodeRef>` children) inside the pool's `<bpmn:laneSet>`.
+ */
+interface BpmnLane {
+    val id: String
+    val name: String?
+    val participantId: String
+    val flowNodeRefs: List<String>
+}
+
+/**
+ * A BPMN message flow: an async message between two participants. Unlike [BpmnEdge] (sequence flow,
+ * within one pool) a message flow crosses pool boundaries; `sourceRef`/`targetRef` may be a flow
+ * element id or a black-box participant id. Renders to `<bpmn:messageFlow>` in the collaboration.
+ */
+interface BpmnMessageFlow {
+    val id: String
+    val name: String?
     val sourceRef: String
     val targetRef: String
 }
