@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Black Box Pool Named By External Entity Or Process"
@@ -20,4 +21,10 @@ errorMessages = new {
 
 staticConfig = new {
   cookbookCode = "POOL-02"
+}
+
+// Fires when a black-box participant (no process reference) has no label.
+checkPrimitive = "PoolLabelCheck"
+checkConfig = new CheckPrimitive.PoolLabelCheck {
+  mode = "BLACK_BOX_NAMED_BY_EXTERNAL_ENTITY_OR_PROCESS"
 }

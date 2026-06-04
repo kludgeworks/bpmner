@@ -434,6 +434,59 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             )
         }
 
+        // Lanes partition the process: a <laneSet> is the FIRST child of <process> (it precedes
+        // flowElements in the tProcess XSD sequence). Each <lane> lists its members as <flowNodeRef>
+        // children — the sole source of truth for lane membership. Emitted with no DI; the
+        // auto-layout step synthesises swimlane geometry.
+        if (definition.lanes.isNotEmpty()) {
+            val laneSet = document.bpmnElement("laneSet").also { ls ->
+                ls.setAttribute("id", "LaneSet_${definition.processId}")
+                definition.lanes.forEach { lane ->
+                    ls.appendChild(
+                        document.bpmnElement("lane").also { el ->
+                            el.setAttribute("id", lane.id)
+                            lane.name?.takeIf { it.isNotBlank() }?.let { el.setAttribute("name", it) }
+                            lane.flowNodeRefs.forEach { ref ->
+                                el.appendChild(document.bpmnElement("flowNodeRef").also { it.textContent = ref })
+                            }
+                        },
+                    )
+                }
+            }
+            process.insertBefore(laneSet, process.firstChild)
+        }
+
+        // Participants (pools) and message flows live in a <collaboration> sibling of <process>. A
+        // white-box participant carries processRef; a black-box one omits it. Message flows cross
+        // pool boundaries (sourceRef/targetRef may name a flow element or a black-box participant).
+        // The collaboration id is derived deterministically; it is not part of the semantic model
+        // and the parser does not read it back.
+        if (definition.participants.isNotEmpty()) {
+            val collaboration = document.bpmnElement("collaboration").also { collab ->
+                collab.setAttribute("id", "Collaboration_${definition.processId}")
+                definition.participants.forEach { participant ->
+                    collab.appendChild(
+                        document.bpmnElement("participant").also { el ->
+                            el.setAttribute("id", participant.id)
+                            participant.name?.takeIf { it.isNotBlank() }?.let { el.setAttribute("name", it) }
+                            participant.processRef?.takeIf { it.isNotBlank() }?.let { el.setAttribute("processRef", it) }
+                        },
+                    )
+                }
+                definition.messageFlows.forEach { messageFlow ->
+                    collab.appendChild(
+                        document.bpmnElement("messageFlow").also { el ->
+                            el.setAttribute("id", messageFlow.id)
+                            messageFlow.name?.takeIf { it.isNotBlank() }?.let { el.setAttribute("name", it) }
+                            el.setAttribute("sourceRef", messageFlow.sourceRef)
+                            el.setAttribute("targetRef", messageFlow.targetRef)
+                        },
+                    )
+                }
+            }
+            root.insertBefore(collaboration, process)
+        }
+
         if (bpmnerNamespaceUsed) {
             root.setAttributeNS(
                 "http://www.w3.org/2000/xmlns/",

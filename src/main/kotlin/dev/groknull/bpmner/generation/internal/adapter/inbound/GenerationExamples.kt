@@ -11,6 +11,8 @@ import dev.groknull.bpmner.core.BpmnDataAssociation
 import dev.groknull.bpmner.core.BpmnDataObject
 import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.core.BpmnLane
+import dev.groknull.bpmner.core.BpmnParticipant
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnEventDefinition
 import dev.groknull.bpmner.generation.FlatBpmnEventDefinitionKind
@@ -46,6 +48,10 @@ internal object GenerationExamples {
     const val EVENT_SUB_PROCESS_LABEL: String =
         "Event subprocess: a SUB_PROCESS node with triggeredByEvent=true and a typed inner start " +
             "(isInterrupting per the contract); members carry parentRef and it has no connecting flow"
+
+    const val POOLS_AND_LANES_LABEL: String =
+        "White-box pool with lanes: one participant whose processRef is the process and whose name is " +
+            "the process name, plus one lane per performing role with that role's node ids in flowNodeRefs"
 
     private const val START = "StartEvent_1"
 
@@ -247,4 +253,58 @@ internal object GenerationExamples {
                 BpmnEdge("Flow_esp_2", ESP_ESCALATE, ESP_INNER_END, parentRef = ESP_OVERDUE),
             ),
         )
+
+    private const val POOL_PROC = "Process_order_handling"
+    private const val POOL_PARTICIPANT = "Participant_order_handling"
+    private const val POOL_START = "StartEvent_1"
+    private const val POOL_CONFIRM = "act-confirm-order"
+    private const val POOL_APPROVE = "act-approve-payment"
+    private const val POOL_HANDLED = "end-handled"
+
+    // A single white-box pool partitioned into two role lanes. Each lane lists the ids of the nodes
+    // its actor performs; the participant's name matches the process name and its processRef binds
+    // the pool to the process. No DI — the auto-layout stage places the swimlanes.
+    val whiteBoxPoolWithLanes: FlatBpmnDefinition =
+        FlatBpmnDefinition(
+            processId = POOL_PROC,
+            processName = "Order handling",
+            nodes = listOf(
+                FlatBpmnNode(POOL_START, FlatBpmnNodeKind.START_EVENT, "Order submitted"),
+                FlatBpmnNode(POOL_CONFIRM, FlatBpmnNodeKind.USER_TASK, "Confirm order details"),
+                FlatBpmnNode(POOL_APPROVE, FlatBpmnNodeKind.USER_TASK, "Approve payment"),
+                FlatBpmnNode(POOL_HANDLED, FlatBpmnNodeKind.END_EVENT, "Order handled"),
+            ),
+            sequences = listOf(
+                BpmnEdge("Flow_1", POOL_START, POOL_CONFIRM),
+                BpmnEdge("Flow_2", POOL_CONFIRM, POOL_APPROVE),
+                BpmnEdge("Flow_3", POOL_APPROVE, POOL_HANDLED),
+            ),
+            participants = listOf(
+                BpmnParticipant(POOL_PARTICIPANT, "Order handling", processRef = POOL_PROC),
+            ),
+            lanes = listOf(
+                BpmnLane(
+                    "Lane_sales",
+                    "Sales",
+                    participantId = POOL_PARTICIPANT,
+                    flowNodeRefs = listOf(POOL_START, POOL_CONFIRM),
+                ),
+                BpmnLane(
+                    "Lane_finance",
+                    "Finance",
+                    participantId = POOL_PARTICIPANT,
+                    flowNodeRefs = listOf(POOL_APPROVE, POOL_HANDLED),
+                ),
+            ),
+        )
+
+    /** Every worked example with its label, attached to the generation call in order. */
+    val all: List<Pair<String, FlatBpmnDefinition>> = listOf(
+        PARALLEL_LABEL to parallelForkJoin,
+        INCLUSIVE_LABEL to inclusiveWithDefault,
+        DATA_ARTIFACTS_LABEL to dataArtifacts,
+        SUB_PROCESS_LABEL to embeddedSubProcess,
+        EVENT_SUB_PROCESS_LABEL to eventSubProcess,
+        POOLS_AND_LANES_LABEL to whiteBoxPoolWithLanes,
+    )
 }

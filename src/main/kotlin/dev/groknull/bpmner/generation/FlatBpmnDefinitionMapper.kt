@@ -63,6 +63,9 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     dataObjects = dataObjects,
     dataStores = dataStores,
     dataAssociations = dataAssociations,
+    participants = participants,
+    lanes = lanes,
+    messageFlows = messageFlows,
 )
 
 public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {

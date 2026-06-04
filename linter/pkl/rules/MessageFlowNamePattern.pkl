@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Message Flow Name Pattern"
@@ -18,3 +19,12 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+// Fires when a message flow's label leads with a verb (action phrasing like "Send approval")
+// rather than a noun message name. Mirrors IntermediateEventNotAction's leading-verb guard.
+checkPrimitive = "PartOfSpeechCheck"
+checkConfig = new CheckPrimitive.PartOfSpeechCheck {
+  property = "name"
+  mode = "LEADING_MUST_NOT_BE"
+  posClass = "VERB"
+}
