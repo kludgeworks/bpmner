@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * and contract-aware re-validation. Depends on generation (XML conversion +
  * fidelity check) and validation (lint / XSD / rule catalog) to do its work.
  */
-@ApplicationModule(allowedDependencies = ["api", "contract", "core", "generation", "rules", "validation"])
+@ApplicationModule(allowedDependencies = ["api", "contract", "core", "generation", "readiness", "rules", "validation"])
 internal object RepairModule

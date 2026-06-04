@@ -1,6 +1,6 @@
 # BPMN Generation Pipeline Architecture
 
-`bpmner` turns a plain-language business-process description into validated BPMN 2.0 XML by chaining three Embabel agents — generation, repair, layout — over a sequence of strongly-typed domain objects. Each stage narrows the failure mode: the LLM owns *what* the process means; deterministic Kotlin code owns *how* it is structured, laid out, and validated.
+`bpmner` turns a plain-language business-process description into validated BPMN 2.0 XML by chaining Embabel agents over a sequence of strongly-typed domain objects. Each stage narrows the failure mode: the LLM owns *what* the process means; deterministic Kotlin code owns *how* it is structured, laid out, and validated.
 
 This document maps the end-to-end pipeline. The Embabel GOAP planner — how actions are chained, how the repair loop iterates, how failure modes surface as typed exceptions — has its own deeper dive in [`goap-lifecycle.md`](./goap-lifecycle.md). The Pkl repair contract (RepairKind, RepairSafety, handler registration) is documented there too.
 
@@ -11,15 +11,14 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | Module | Owns | Key public types |
 | --- | --- | --- |
 | `core/` | Shared domain model, configuration, fingerprints, naming policy. No Spring visibility restrictions. | `BpmnRequest`, `BpmnDefinition`, `BpmnConfig`, `BpmnDiagnostic`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`, `BpmnResult`. |
-| `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`. |
+| `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation, ready-state handoff. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`, `BpmnReadinessState`, `ReadyBpmnContext`. |
 | `contract/` | Guardrail 2: Extraction of source-grounded process contracts, multi-source evidence tracking. | `BpmnContractAgent`, `ProcessContract`, `ValidatedProcessContract`. |
-| `generation/` | LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGeneratorAgent`, `BpmnRenderer` (port), `BpmnGeneratedEvent`. |
+| `generation/` | Embabel-native request intake, readiness gating, LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGenerationGateAgent`, `BpmnGeneratorAgent`, `BpmnAgentInvoker`, `BpmnRenderer` (port), `BpmnResult`, `BpmnGeneratedEvent`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
 | `repair/` | Local-first deterministic repair, LLM patch / rewrite via Embabel GOAP planner. Six actions chained via `outputBinding = "repairEval"`; cost ordering picks the cheapest applicable tier each iteration. See [`goap-lifecycle.md`](./goap-lifecycle.md). | `BpmnRepairAgent`, `BpmnRepairEvaluation`, `RepairKind`. |
 | `layout/` | Bounded pre-layout XML cleanup, deterministic auto-layout, final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort`. |
 | `alignment/` | Guardrail 3: Semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAlignmentAgent`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`. |
-| `shell/` | `generate` / `gen` Spring Shell commands. | `BpmnShellCommands`. |
 | `config/` | GitHub Models / Anthropic model configuration. | `GitHubModelsConfig`, `GitHubCatalogClient`. |
 
 Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter packages under each module are not importable from outside.
@@ -27,18 +26,22 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
 ## End-to-end pipeline
 
 ```
-                              ┌──────────────────────┐
-                              │     BpmnRequest      │
-                              │  (process + style)   │
-                              └──────────┬───────────┘
-                                         ▼
+           ┌──────────────────────┐             ┌──────────────────────┐
+           │ Shell UserInput via  │             │ Web/programmatic     │
+           │ Embabel x / execute  │             │ BpmnRequest +        │
+           └──────────┬───────────┘             │ ProcessInputAssessment│
+                      ▼                         └──────────┬───────────┘
             ┌─────────────────────────────────────────────────────────┐
-            │           BpmnReadinessAgent  (readiness/)              │
+            │        BpmnGenerationGateAgent  (generation/)           │
             │                                                         │
-            │  assessReadiness ── LLM ──► ProcessInputAssessment      │
+            │  draftBpmnRequest ── LLM ──► BpmnRequestDraft           │
+            │  resolveBpmnRequest ───────► BpmnRequest                │
+            │  assessBpmnReadiness ──────► BpmnReadinessState         │
             │              │                                          │
             │              ▼                                          │
-            │       if !READY ──► write report & block/ask            │
+            │       READY or externally READY ─► ReadyBpmnContext     │
+            │       NEEDS_CLARIFICATION ───────► WaitFor.formSubmission│
+            │       round limit reached ───────► BpmnResult           │
             └──────────────┬──────────────────────────────────────────┘
                            ▼
             ┌─────────────────────────────────────────────────────────┐
@@ -128,10 +131,10 @@ The arrows between domain types are exact: each agent action declares its input 
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `createOutline` | `(BpmnRequest, ValidatedProcessContract) → ValidatedOutline` | Builds a generator prompt, calls `promptRunner.createObject(BpmnDefinition::class.java)`, applies `DefaultFlowAssigner` to stamp default outgoing flows on exclusive gateways, runs the inline fidelity check (`processId`/`processName` non-blank, `BpmnContractFidelityChecker`). Emits a `ValidatedOutline` containing the `BpmnDefinition`, the request, computed `OutlineMetrics`, and any non-blocking diagnostics. |
+| `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract) → ValidatedOutline` | Builds a generator prompt, calls `promptRunner.createObject(BpmnDefinition::class.java)`, applies `DefaultFlowAssigner` to stamp default outgoing flows on exclusive gateways, runs the inline fidelity check (`processId`/`processName` non-blank, `BpmnContractFidelityChecker`). Emits a `ValidatedOutline` containing the `BpmnDefinition`, the request, computed `OutlineMetrics`, and any non-blocking diagnostics. |
 | `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | Single deterministic action that absorbed five Phase-pre-5 actions. Builds the `objectOwnersByObjectRef` map (every node and sequence stamped with the main phase), derives the `elementOwnersByElementId` map (mirrors object ownership plus `_di` diagram-element ids), and wraps the whole thing in `LaidOutProcessGraph`. The intermediate types `ComposedProcessGraph` and `OwnedElementGraph` still exist internally (the repair agent reads `OwnedElementGraph` via `LaidOutProcessGraph.ownedGraph`) but they no longer cross an action boundary. |
-| `renderBpmnXml` | `(BpmnRequest, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds semantic XML (no BPMNDI — layout coordinates come later) and a `BpmnElementIndex` mapping element ids to render objects. Emits `BpmnGeneratedEvent`. |
-| `finalizeBpmn` | `(BpmnRequest, AlignedBpmnXml) → BpmnResult` | UTF-8 writes the final XML to the requested output file if one is configured, returns the result. Carries `@AchievesGoal(name = "generateBpmn")` — this is the top-level goal the Embabel planner is trying to reach. |
+| `renderBpmnXml` | `(ReadyBpmnContext, LaidOutProcessGraph) → RenderedBpmn` | `BpmnRenderer` (Camunda model API) builds semantic XML (no BPMNDI — layout coordinates come later) and a `BpmnElementIndex` mapping element ids to render objects. Emits `BpmnGeneratedEvent`. |
+| `finalizeBpmn` | `(ReadyBpmnContext, AlignedBpmnXml) → BpmnResult` | UTF-8 writes the final XML to the requested output file if one is configured, returns the result. Carries `@AchievesGoal(name = "generateBpmn")` — this is the top-level goal the Embabel planner is trying to reach. |
 
 ### Why a typed `BpmnDefinition`, not raw XML
 
@@ -251,7 +254,7 @@ For someone reading this doc to find the test that proves an invariant:
 
 | Invariant | Verified by |
 | --- | --- |
-| Generator outputs a typed `BpmnDefinition`, not raw XML. | `BpmnGenerationServiceTest`, `BpmnGeneratorRunnerTest`. |
+| Generator outputs a typed `BpmnDefinition`, not raw XML. | `BpmnGeneratorAgentTest`, `BpmnGenerationGateAgentTest`. |
 | Phase composition preserves ownership. | `BpmnOwnershipTest`. |
 | Validation pipeline normalises rule prefixes and stamps `kind`. | `BpmnDiagnosticNormalizerTest`. |
 | Cost-based repair runs cheaper actions before LLM tiers. | `BpmnRepairAgentIntegrationTest` (chain wiring), `RepairRoutingModuleTest`. |

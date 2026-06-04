@@ -169,104 +169,54 @@ Two things to note:
 
 ## Worked example: the `generation` module
 
-`generation/` shows the same shape with a slightly different flavour, plus a CLI-style primary adapter.
+`generation/` shows the same shape with an Embabel-native primary adapter plus a public secondary port for callers that need to start agent processes directly.
 
-### Primary port
+### Embabel primary adapter
 
-`src/main/kotlin/dev/groknull/bpmner/generation/BpmnGenerationUseCase.kt`:
+Shell users enter through Embabel Shell's built-in `x` / `execute` command. That places `UserInput` on the blackboard; `BpmnGenerationGateAgent` extracts a `BpmnRequestDraft`, resolves it to a `BpmnRequest`, gates readiness, and emits `ReadyBpmnContext` for the downstream pipeline.
+
+`src/main/kotlin/dev/groknull/bpmner/generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt`:
 
 ```kotlin
-package dev.groknull.bpmner.generation
+@Application
+@Agent(description = "Resolve shell BPMN requests and gate generation on readiness")
+internal class BpmnGenerationGateAgent {
+    @Action
+    fun draftBpmnRequest(userInput: UserInput, context: OperationContext): BpmnRequestDraft = TODO()
 
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+    @Action
+    fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = TODO()
 
-data class BpmnGenerationInput(
-    val processDescription: String? = null,
-    val processFile: String? = null,
-    val outputFile: String = "output.bpmn",
-    val styleGuide: String? = null,
-    val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
-)
-
-@PrimaryPort
-interface BpmnGenerationUseCase {
-    fun generate(input: BpmnGenerationInput): BpmnResult
+    @AchievesGoal(
+        export = Export(
+            name = "prepareBpmnGeneration",
+            startingInputTypes = [UserInput::class, BpmnRequest::class],
+        ),
+    )
+    @Action(pre = ["bpmnRequestReady"])
+    fun approveReadyBpmnRequest(state: BpmnReadinessState): ReadyBpmnContext = TODO()
 }
 ```
 
-### Two primary adapters drive the same use case
+### Public secondary port for process starts
 
-The same `BpmnGenerationUseCase` is invoked from a CLI runner and from a Spring Shell command. Each is an `@PrimaryAdapter`; neither owns business logic.
-
-`src/main/kotlin/dev/groknull/bpmner/generation/internal/adapter/inbound/BpmnGeneratorRunner.kt`:
-
-```kotlin
-@PrimaryAdapter
-@Component
-class BpmnGeneratorRunner(
-    private val generationUseCase: BpmnGenerationUseCase,
-    private val applicationShutdown: BpmnerApplicationShutdown,
-) : ApplicationRunner, Ordered {
-    override fun run(args: ApplicationArguments) {
-        // … parses --process / --process-file CLI flags
-        val result = generationUseCase.generate(BpmnGenerationInput(/* … */))
-        // …
-    }
-}
-```
-
-`src/main/kotlin/dev/groknull/bpmner/shell/BpmnShellCommands.kt`:
-
-```kotlin
-@PrimaryAdapter
-@ShellComponent
-class BpmnShellCommands(
-    private val generationUseCase: BpmnGenerationUseCase,
-) {
-    @ShellMethod(value = "Generate a BPMN 2.0 diagram from a process description", key = ["generate", "gen"])
-    fun generate(/* … shell options … */) { /* delegates to generationUseCase */ }
-}
-```
-
-Both adapters are *clients* of `generation`'s primary port. Adding a REST controller or a Kafka listener would mean adding a third `@PrimaryAdapter`, not changing the use case.
-
-### A primary port implemented by a domain service
-
-`src/main/kotlin/dev/groknull/bpmner/generation/internal/domain/BpmnGenerationService.kt`:
+`src/main/kotlin/dev/groknull/bpmner/generation/BpmnAgentInvoker.kt`:
 
 ```kotlin
 @SecondaryPort
-internal interface BpmnAgentInvoker {
+interface BpmnAgentInvoker {
     fun generate(request: BpmnRequest): BpmnResult
-}
-
-@Service
-@Component
-internal class BpmnGenerationService(
-    private val agentInvoker: BpmnAgentInvoker,
-    private val inputPathResolver: InputPathResolver,
-) : BpmnGenerationUseCase {
-    override fun generate(input: BpmnGenerationInput): BpmnResult { /* … */ }
+    fun startAsync(request: BpmnRequest, assessment: ProcessInputAssessment): AgentProcess
 }
 ```
 
-This file is interesting because it shows the *internal* form of a secondary port:
+This port is public because `web/` starts an async agent process after performing HTTP readiness checks. The concrete implementation, `AgentPlatformBpmnAgentInvoker`, lives in `generation/` and is the only adapter that drives the Embabel agent platform.
 
-- `BpmnAgentInvoker` is `@SecondaryPort` **and** `internal`. The generation module needs "something that drives the Embabel agent platform" but doesn't want that need to leak across module boundaries. So the port lives in `internal/domain/` rather than at the module root.
-- The concrete implementation, `AgentPlatformBpmnAgentInvoker`, lives in `internal/adapter/outbound/` with `@SecondaryAdapter`. This is the same role split as `BpmnLintingPort` → `BpmnLintService`, just kept private to the module.
+The web adapter does not duplicate shell behavior. It assesses readiness up front, returns HTTP 422 when blocked, and otherwise seeds the agent process with `BpmnRequest + ProcessInputAssessment`; `BpmnGenerationGateAgent.approveExternallyAssessedBpmnRequest` converts that pair to the same `ReadyBpmnContext` used by shell starts.
 
 ## Where the pattern bends
 
 The pattern is uniform enough to be useful, and bent in exactly the places where uniformity would have hurt.
-
-### `shell/` is flat — no `internal/`
-
-```
-shell/
-└── BpmnShellCommands.kt        @PrimaryAdapter at the module root
-```
-
-Spring Shell needs `@ShellComponent` classes to be discoverable. Wrapping them in `internal/adapter/inbound/` would make them invisible to other Spring Shell bits and would not buy anything: the shell module has no domain logic to hide.
 
 ### Secondary ports inside `internal/domain/`
 
@@ -328,7 +278,7 @@ Spring Modulith adds a second layer of enforcement: `BpmnerModulithTest` verifie
 
 A few decision points that come up often:
 
-- **Adding a new way to trigger generation** (HTTP endpoint, schedule, message queue) — `@PrimaryAdapter` in `generation/internal/adapter/inbound/`. Depend on `BpmnGenerationUseCase`. Do not touch the domain.
+- **Adding a new way to trigger generation** (HTTP endpoint, schedule, message queue) — add a primary adapter for the new transport, then start an Embabel process through `BpmnAgentInvoker` or seed the same blackboard types the gate agent already consumes. Do not reintroduce bespoke shell commands or startup flags.
 - **Adding a new validator** (e.g. semantic guard rails over the typed `BpmnDefinition`) — `@Service` in `validation/internal/domain/`. Implement `BpmnValidator` or be invoked by `BpmnEvaluationPipeline`.
 - **Swapping the rule engine for a different evaluator** — write a new `@SecondaryAdapter` that implements `BpmnLintingPort`. Toggle via Spring profile or `@Primary`.
 - **Adding a brand-new module** (say, an export module) — create `export/` with `BpmnExportUseCase` (`@PrimaryPort`), `BpmnExportTargetPort` (`@SecondaryPort`), an `internal/domain/` service and `internal/adapter/{inbound,outbound}/` adapters. The architecture and Modulith tests pick up the new module without configuration.

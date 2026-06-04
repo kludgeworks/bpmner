@@ -121,13 +121,13 @@ The mapping table lives in [`BpmnProgressProjectionObserver.kt`](../src/main/kot
 
 ### Custom Embabel listeners
 
-`ProcessOptions.listeners` is populated from Spring-collected `List<AgenticEventListener>`. Drop a `@Component` `AgenticEventListener` into the application context and it auto-wires into both `AgentPlatformBpmnAgentInvoker` (sync + async generation) and `AgentPlatformBpmnReadinessInvoker` (readiness). Useful for cost tracking, per-action timing, prompt logging.
+`ProcessOptions.listeners` is populated from Spring-collected `List<AgenticEventListener>`. Drop a `@Component` `AgenticEventListener` into the application context and it auto-wires into both `AgentPlatformBpmnAgentInvoker` (generation) and `AgentPlatformBpmnReadinessInvoker` (readiness). Useful for cost tracking, per-action timing, prompt logging.
 
 ## Troubleshooting
 
 ### `ProcessExecutionStuckException`
 
-Surface: `AgentPlatformBpmnAgentInvoker.generate()` throws this. Caller sees it through `BpmnGenerationService.handleGenerationException`.
+Surface: `AgentPlatformBpmnAgentInvoker.generate()` throws this for synchronous programmatic use; async shell/web processes expose the process state through Embabel.
 
 Meaning: the planner can't find any applicable action. The most common cause is that every remaining diagnostic has `kind = UNFIXABLE` — no repair tier matches.
 
@@ -151,7 +151,7 @@ Diagnose:
 
 ### `BpmnAlignmentException`
 
-Surface: thrown by `BpmnAlignmentAgent.checkAlignment`. Caught in `BpmnGenerationService.handleGenerationException` and returned to the caller as `BpmnResult(status = ALIGNMENT_FAILED, alignmentReport = ?)`.
+Surface: thrown by `BpmnAlignmentAgent.checkAlignment`. Embabel records the failed process state; synchronous programmatic callers see the typed exception from `AgentPlatformBpmnAgentInvoker.generate()`.
 
 Two flavours, distinguished by `report` nullability:
 - **`report != null`** — alignment model examined the BPMN and found problems. Read `report.issues` for the breakdown.

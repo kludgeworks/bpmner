@@ -27,6 +27,7 @@ import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.Application
 import org.springframework.context.ApplicationEventPublisher
@@ -48,6 +49,7 @@ internal class BpmnAlignmentAgent(
             remote = true,
             startingInputTypes = [
                 BpmnRequest::class,
+                ReadyBpmnContext::class,
                 ValidatedProcessContract::class,
                 FinalValidatedBpmnXml::class,
             ],
@@ -58,11 +60,12 @@ internal class BpmnAlignmentAgent(
         actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
     )
     fun checkAlignment(
-        request: BpmnRequest,
+        ready: ReadyBpmnContext,
         contract: ValidatedProcessContract,
         bpmn: FinalValidatedBpmnXml,
         context: OperationContext,
     ): AlignedBpmnXml {
+        val request = ready.request
         val summary = summarizer.summarize(bpmn.definition)
         val promptRunner =
             config.alignmentValidator

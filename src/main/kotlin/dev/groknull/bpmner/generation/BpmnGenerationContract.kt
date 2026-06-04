@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
+import com.embabel.common.core.types.HasInfoString
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
@@ -50,4 +51,19 @@ data class BpmnResult(
     val alignmentReport: BpmnAlignmentReport? = null,
     @get:JsonPropertyDescription("Optional report output file path for guardrail diagnostics")
     val reportFile: String? = null,
-)
+) : HasInfoString {
+    override fun infoString(
+        verbose: Boolean?,
+        indent: Int,
+    ): String {
+        val destination = outputFile ?: "(none)"
+        val base = "BPMN status=$status, output=$destination"
+        val details =
+            when {
+                status == BpmnGenerationStatus.GENERATED -> ", xmlLength=${xml?.length ?: 0}"
+                reportFile != null -> ", report=$reportFile"
+                else -> ""
+            }
+        return "\t".repeat(indent) + base + details
+    }
+}
