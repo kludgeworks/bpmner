@@ -53,29 +53,31 @@ internal class BpmnRequestResolver(
     }
 
     private fun resolveProcessDescription(draft: BpmnRequestDraft): String {
-        val hasInlineDescription = !draft.processDescription.isNullOrBlank()
-        val hasProcessFile = !draft.processFile.isNullOrBlank()
-        require(hasInlineDescription != hasProcessFile) {
-            "Provide exactly one process description, either inline prose or a process file."
-        }
-
-        return if (hasInlineDescription) {
-            draft.processDescription!!.trim()
-        } else {
-            inputPathResolver.readUtf8(draft.processFile!!).trim()
+        val inline = draft.processDescription?.trim()?.takeIf { it.isNotEmpty() }
+        val file = draft.processFile?.trim()?.takeIf { it.isNotEmpty() }
+        return when {
+            inline != null -> {
+                require(file == null) { "Provide exactly one process description, either inline prose or a process file." }
+                inline
+            }
+            file != null -> {
+                inputPathResolver.readUtf8(file).trim()
+            }
+            else -> {
+                throw IllegalArgumentException("Provide exactly one process description, either inline prose or a process file.")
+            }
         }
     }
 
     private fun resolveStyleGuide(draft: BpmnRequestDraft): String? {
-        val hasInlineStyleGuide = !draft.styleGuide.isNullOrBlank()
-        val hasStyleGuideFile = !draft.styleGuideFile.isNullOrBlank()
-        require(!(hasInlineStyleGuide && hasStyleGuideFile)) {
+        val inline = draft.styleGuide?.trim()?.takeIf { it.isNotEmpty() }
+        val file = draft.styleGuideFile?.trim()?.takeIf { it.isNotEmpty() }
+        require(inline == null || file == null) {
             "Provide at most one style guide, either inline text or a style-guide file."
         }
-
         return when {
-            hasInlineStyleGuide -> draft.styleGuide!!.trim()
-            hasStyleGuideFile -> inputPathResolver.readUtf8(draft.styleGuideFile!!).trim()
+            inline != null -> inline
+            file != null -> inputPathResolver.readUtf8(file).trim()
             else -> null
         }?.takeIf { it.isNotEmpty() }
     }
