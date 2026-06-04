@@ -49,82 +49,20 @@ import org.camunda.bpm.model.bpmn.instance.Transaction
 import org.camunda.bpm.model.bpmn.instance.UserTask
 import org.w3c.dom.Document
 
-@Suppress("LongMethod")
 internal fun FlowNode.toBpmnTaskOrNull(normalisedName: String?, parentRef: String?, taskMetadata: TaskMetadata): BpmnNode? {
+    val mi = taskMetadata.multiInstance[id]
+    val sl = taskMetadata.standardLoop[id]
+    val dRef = taskMetadata.decisionRefs[id].orEmpty()
+    val mRef = taskMetadata.messageRefs[id].orEmpty()
+
     return when (this) {
-        is UserTask -> {
-            BpmnUserTask(
-                id = id,
-                name = normalisedName,
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is ServiceTask -> {
-            BpmnServiceTask(
-                id = id,
-                name = normalisedName,
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is ScriptTask -> {
-            BpmnScriptTask(
-                id = id,
-                name = normalisedName,
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is BusinessRuleTask -> {
-            BpmnBusinessRuleTask(
-                id = id,
-                name = normalisedName,
-                decisionRef = taskMetadata.decisionRefs[id].orEmpty(),
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is SendTask -> {
-            BpmnSendTask(
-                id = id,
-                name = normalisedName,
-                messageRef = taskMetadata.messageRefs[id].orEmpty(),
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is ReceiveTask -> {
-            BpmnReceiveTask(
-                id = id,
-                name = normalisedName,
-                messageRef = taskMetadata.messageRefs[id].orEmpty(),
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
-        is ManualTask -> {
-            BpmnManualTask(
-                id = id,
-                name = normalisedName,
-                multiInstance = taskMetadata.multiInstance[id],
-                standardLoop = taskMetadata.standardLoop[id],
-                parentRef = parentRef,
-            )
-        }
-
+        is UserTask -> BpmnUserTask(id, normalisedName, mi, sl, parentRef)
+        is ServiceTask -> BpmnServiceTask(id, normalisedName, mi, sl, parentRef)
+        is ScriptTask -> BpmnScriptTask(id, normalisedName, mi, sl, parentRef)
+        is BusinessRuleTask -> BpmnBusinessRuleTask(id, normalisedName, dRef, mi, sl, parentRef)
+        is SendTask -> BpmnSendTask(id, normalisedName, mRef, mi, sl, parentRef)
+        is ReceiveTask -> BpmnReceiveTask(id, normalisedName, mRef, mi, sl, parentRef)
+        is ManualTask -> BpmnManualTask(id, normalisedName, mi, sl, parentRef)
         else -> null
     }
 }

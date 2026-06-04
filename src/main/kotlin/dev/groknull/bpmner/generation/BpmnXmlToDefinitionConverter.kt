@@ -483,7 +483,7 @@ private fun parseCollaboration(document: Document): ParsedCollaboration {
                 id = el.getAttribute("id"),
                 name = el.getAttribute("name").takeIf { it.isNotBlank() },
                 participantId = el.enclosingProcessId()?.let { participantByProcessId[it] },
-                flowNodeRefs = el.childNodes.elementSequence()
+                flowNodeRefs = el.childNodes.elements()
                     .filter { it.localName == "flowNodeRef" }
                     .mapNotNull { it.textContent?.trim()?.takeIf { ref -> ref.isNotBlank() } }
                     .toList(),
@@ -500,7 +500,7 @@ private fun parseCollaboration(document: Document): ParsedCollaboration {
         }.filter { it.id.isNotBlank() && it.sourceRef.isNotBlank() && it.targetRef.isNotBlank() }.toList()
     return ParsedCollaboration(participants, lanes, messageFlows)
 }
-=======
+
 internal data class TaskMetadata(
     // `messageRef` on send / receive tasks — BPMN spec attribute on the task element.
     val messageRefs: Map<String, String>,
@@ -523,4 +523,3 @@ internal data class EventMetadata(
     val errors: List<BpmnErrorRef>,
     val escalations: List<BpmnEscalationRef>,
 )
->>>>>>> 81b2ee9f (refactor: extract helpers to appease TooManyFunctions and fix CI yaml remarks)
