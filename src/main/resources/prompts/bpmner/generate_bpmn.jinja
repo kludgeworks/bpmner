@@ -52,6 +52,12 @@ Embedded-subprocess topology:
 - Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` and one inner `END_EVENT` (both with `parentRef` = the subprocess id) and wire the members start-to-end between them.
 - The subprocess node itself sits on the enclosing flow like any task: the main flow connects into the `SUB_PROCESS` node and out of it. Sequence flows connect to the subprocess node, not to its interior members — each flow keeps both endpoints on the same side of the boundary (both inside the subprocess or both outside).
 
+Event-subprocess topology:
+- An `[EVENT_SUBPROCESS trigger=… interrupting=… contains="a,b"]` contract entry becomes a `SUB_PROCESS` node with `triggeredByEvent=true`, id copied verbatim. Its members are the activities listed in `contains=`.
+- Give it a typed inner start: one `START_EVENT` with `parentRef` = the event-subprocess id whose `eventDefinition` matches the trigger — MESSAGE → `BpmnMessageEventDefinition` (+ a `definition.messages` entry), TIMER → `BpmnTimerEventDefinition`, ERROR → `BpmnErrorEventDefinition` (+ a `definition.errors` entry), ESCALATION → `BpmnEscalationEventDefinition` (+ a `definition.escalations` entry), SIGNAL → `BpmnSignalEventDefinition` (+ a `definition.signals` entry). Set that start's `isInterrupting` to the entry's interrupting flag.
+- Every member node and every inner sequence flow carries `parentRef` = the event-subprocess id; wire the members start-to-end to one inner `END_EVENT` (also parentRef'd).
+- An event subprocess has no incoming or outgoing sequence flow: it runs when its inner start fires, so it stays disconnected from the main flow rather than being wired into it.
+
 Event-based-gateway topology:
 - An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry named from `triggerDetail`.
 - The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.

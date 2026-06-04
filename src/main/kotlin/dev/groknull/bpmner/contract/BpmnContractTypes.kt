@@ -106,6 +106,10 @@ data class ProcessContract(
     val intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
+    @get:JsonPropertyDescription("Event subprocesses — event-triggered handlers off the main flow")
+    val eventSubProcesses: List<ContractEventSubProcess> = emptyList(),
+    @field:Valid
+    @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
     val assumptions: List<ContractAssumption> = emptyList(),
 ) {
@@ -134,6 +138,7 @@ data class ProcessContract(
         artifacts: List<ContractArtifact> = emptyList(),
         endStates: List<ContractEndState>,
         intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
+        eventSubProcesses: List<ContractEventSubProcess> = emptyList(),
         assumptions: List<ContractAssumption> = emptyList(),
     ) : this(
         id = id,
@@ -146,6 +151,7 @@ data class ProcessContract(
         artifacts = artifacts,
         endStates = endStates,
         intermediateThrows = intermediateThrows,
+        eventSubProcesses = eventSubProcesses,
         assumptions = assumptions,
     )
 }
@@ -430,6 +436,33 @@ fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity = 
     is ContractActivity.Manual -> copy(sourceIds = sourceIds)
     is ContractActivity.SubProcess -> copy(sourceIds = sourceIds)
 }
+
+/**
+ * The event that starts an [ContractEventSubProcess]. Unlike [EventTriggerKind] (event-based gateway
+ * branches, which only route on TIMER / MESSAGE / SIGNAL), an event subprocess may also be triggered
+ * by a caught business ERROR or a raised ESCALATION, so it carries its own wider enum.
+ */
+enum class EventSubProcessTrigger { MESSAGE, TIMER, ERROR, ESCALATION, SIGNAL }
+
+/**
+ * An event subprocess: an event-triggered handler that sits off the main flow and runs when its inner
+ * start event fires, rather than being reached by a sequence flow. Distinct from
+ * [ContractActivity.SubProcess] (an embedded subprocess on the main flow) — it is deliberately NOT a
+ * [ContractActivity] because it has no incoming/outgoing edges. Realized as a
+ * [dev.groknull.bpmner.core.BpmnSubProcess] with `triggeredByEvent = true` containing a typed inner
+ * start event matching [trigger]; [interrupting] maps to that start event's `isInterrupting`.
+ *
+ * Members in [containedActivityIds] are ordinary entries in `ProcessContract.activities`; the event
+ * subprocess only names which of them form its handler body.
+ */
+data class ContractEventSubProcess(
+    val id: String,
+    val name: String,
+    val containedActivityIds: List<String>,
+    val trigger: EventSubProcessTrigger,
+    val interrupting: Boolean = true,
+    val sourceIds: List<String> = emptyList(),
+)
 
 /**
  * How the branches of a [ContractDecision] are selected at runtime.

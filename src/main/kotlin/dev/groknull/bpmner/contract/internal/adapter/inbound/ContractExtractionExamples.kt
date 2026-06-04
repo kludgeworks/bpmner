@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import dev.groknull.bpmner.contract.ContractGatewayKind
+import dev.groknull.bpmner.contract.EventSubProcessTrigger
 
 /**
  * Typed few-shot examples attached to the contract-extraction call via
@@ -51,6 +52,10 @@ internal object ContractExtractionExamples {
     const val SUB_PROCESS_LABEL: String =
         "Embedded subprocess: a named group of activities handled as one composite step —" +
             " list its member ids in a subProcesses entry; members stay in the activities array"
+
+    const val EVENT_SUB_PROCESS_LABEL: String =
+        "Event subprocess: an event-triggered handler off the main flow (\"at any point, if X …\") —" +
+            " use an eventSubProcesses entry with a trigger; members stay in the activities array"
 
     // ──────────────────────────────────────────────────────────────────────────
     // Shared node ids
@@ -470,6 +475,80 @@ internal object ContractExtractionExamples {
                 FlatContractEndState(
                     id = END_NORMAL,
                     name = "Claim paid",
+                    kind = FlatEndStateKind.NORMAL,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+        )
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Example 9 — event subprocess
+    //
+    // Prose: "An order is processed and shipped. At any point before shipping, if a cancellation
+    //          request arrives, the order is refunded and the customer is notified of the cancellation."
+    // The cancellation handler runs off the main flow on an inbound message → an eventSubProcesses
+    // entry (trigger=MESSAGE, interrupting). Its handler steps stay in `activities`.
+    // ──────────────────────────────────────────────────────────────────────────
+
+    private const val ACT_PROCESS_ORDER = "act-process-order"
+    private const val ACT_SHIP_ORDER = "act-ship-order"
+    private const val ACT_REFUND = "act-refund"
+    private const val ACT_NOTIFY_CANCEL = "act-notify-cancellation"
+    private const val ESP_CANCEL = "esp-handle-cancellation"
+
+    val eventSubProcessExample: FlatProcessContract =
+        FlatProcessContract(
+            id = "contract-order-cancellation",
+            processName = "Order with cancellation handler",
+            summary = "Process that ships an order, with an event-triggered cancellation handler.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(
+                    type = FlatTriggerKind.NONE,
+                    description = "Order placed",
+                ),
+                sourceIds = listOf("src-1"),
+            ),
+            activities = listOf(
+                FlatContractActivity(
+                    id = ACT_PROCESS_ORDER,
+                    name = "Process order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_SHIP_ORDER,
+                    name = "Ship order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_REFUND,
+                    name = "Refund order",
+                    kind = FlatActivityKind.SERVICE,
+                    sourceIds = listOf("src-1"),
+                ),
+                FlatContractActivity(
+                    id = ACT_NOTIFY_CANCEL,
+                    name = "Send cancellation notification",
+                    kind = FlatActivityKind.SEND,
+                    messageName = "cancellation notification",
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            eventSubProcesses = listOf(
+                FlatContractEventSubProcess(
+                    id = ESP_CANCEL,
+                    name = "Handle cancellation",
+                    activityIds = listOf(ACT_REFUND, ACT_NOTIFY_CANCEL),
+                    trigger = EventSubProcessTrigger.MESSAGE,
+                    interrupting = true,
+                    sourceIds = listOf("src-1"),
+                ),
+            ),
+            endStates = listOf(
+                FlatContractEndState(
+                    id = END_NORMAL,
+                    name = "Order shipped",
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),

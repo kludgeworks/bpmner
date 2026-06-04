@@ -14,6 +14,7 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -21,6 +22,7 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
+import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
@@ -114,6 +116,65 @@ class FlatContractMapperTest {
         val subProcess = sealed.activities.filterIsInstance<ContractActivity.SubProcess>().single()
         assertEquals("sub-assess", subProcess.id)
         assertEquals(listOf("act-validate", "act-estimate"), subProcess.containedActivityIds)
+    }
+
+    @Test
+    fun `FlatContractEventSubProcess maps to a ContractEventSubProcess preserving trigger and flag`() {
+        val flat = FlatContractEventSubProcess(
+            id = "esp-cancel",
+            name = "Handle cancellation",
+            activityIds = listOf("act-refund", "act-notify"),
+            trigger = EventSubProcessTrigger.MESSAGE,
+            interrupting = true,
+            sourceIds = listOf("ev1"),
+        )
+
+        assertEquals(
+            ContractEventSubProcess(
+                id = "esp-cancel",
+                name = "Handle cancellation",
+                containedActivityIds = listOf("act-refund", "act-notify"),
+                trigger = EventSubProcessTrigger.MESSAGE,
+                interrupting = true,
+                sourceIds = listOf("ev1"),
+            ),
+            flat.toSealed(),
+        )
+    }
+
+    @Test
+    fun `toSealed maps eventSubProcesses to a separate collection, not into activities`() {
+        val flat = FlatProcessContract(
+            id = "c-esp",
+            processName = "Order with cancellation",
+            summary = "Process an order with an event-triggered cancellation handler.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Order placed"),
+                sourceIds = listOf("ev1"),
+            ),
+            activities = listOf(
+                flatActivity(FlatActivityKind.SERVICE, id = "act-process"),
+                flatActivity(FlatActivityKind.SERVICE, id = "act-refund"),
+            ),
+            eventSubProcesses = listOf(
+                FlatContractEventSubProcess(
+                    id = "esp-cancel",
+                    name = "Handle cancellation",
+                    activityIds = listOf("act-refund"),
+                    trigger = EventSubProcessTrigger.MESSAGE,
+                    sourceIds = listOf("ev1"),
+                ),
+            ),
+            endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-ok")),
+        )
+
+        val sealed = flat.toSealed()
+
+        // Event subprocesses are NOT folded into activities (unlike embedded subprocesses).
+        assertEquals(2, sealed.activities.size)
+        assertTrue(sealed.activities.none { it is ContractActivity.SubProcess })
+        assertEquals("esp-cancel", sealed.eventSubProcesses.single().id)
+        assertEquals(EventSubProcessTrigger.MESSAGE, sealed.eventSubProcesses.single().trigger)
     }
 
     @Test

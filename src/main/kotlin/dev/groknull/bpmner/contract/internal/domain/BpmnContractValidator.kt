@@ -16,6 +16,7 @@ import dev.groknull.bpmner.contract.ContractValidationIssue
 import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
+import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import dev.groknull.bpmner.contract.dataInputIds
@@ -36,7 +37,8 @@ internal class BpmnContractValidator {
                 validateIntermediateThrows(contract) +
                 validateTraceability(contract) +
                 validateActivityDataRefs(contract) +
-                validateSubProcesses(contract)
+                validateSubProcesses(contract) +
+                validateEventSubProcesses(contract)
 
         return ContractValidationReport(issues = issues)
     }
@@ -123,6 +125,68 @@ internal class BpmnContractValidator {
                 errorIssue(
                     code = ContractValidationCode.SUBPROCESS_MEMBER_SHARED,
                     message = "activity '$memberId' is claimed by $count subprocesses —" +
+                        " an activity belongs to at most one",
+                    targetId = memberId,
+                ),
+            )
+        }
+    }
+
+    // Event-subprocess membership invariants. Unlike embedded subprocesses these are a separate
+    // ProcessContract.eventSubProcesses collection (off the main flow, no incoming/outgoing edges).
+    // Each handler member must resolve to a declared activity, membership is exclusive among event
+    // subprocesses, a handler must have ≥1 member, and an ERROR-triggered handler must be interrupting
+    // (BPMN spec). The "no connecting flow" + "typed inner start" domain guards live in B-6a's
+    // BpmnDefinitionValidator; cross-membership with an embedded subprocess is caught at fidelity time
+    // (a node has a single parentRef).
+    private fun validateEventSubProcesses(contract: ProcessContract): List<ContractValidationIssue> = buildList {
+        val eventSubProcesses = contract.eventSubProcesses
+        if (eventSubProcesses.isEmpty()) return@buildList
+
+        val activityIds = contract.activities.map { it.id }.toSet()
+        val membershipCount = mutableMapOf<String, Int>()
+
+        eventSubProcesses.forEach { eventSubProcess ->
+            if (eventSubProcess.containedActivityIds.isEmpty()) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.EVENT_SUBPROCESS_EMPTY,
+                        message = "event subprocess '${eventSubProcess.id}' must contain at least one" +
+                            " handler activity",
+                        targetId = eventSubProcess.id,
+                    ),
+                )
+            }
+            if (eventSubProcess.trigger == EventSubProcessTrigger.ERROR && !eventSubProcess.interrupting) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING,
+                        message = "event subprocess '${eventSubProcess.id}' has an ERROR trigger but is" +
+                            " non-interrupting — error event subprocesses must interrupt the enclosing process",
+                        targetId = eventSubProcess.id,
+                    ),
+                )
+            }
+            eventSubProcess.containedActivityIds.forEach { memberId ->
+                membershipCount[memberId] = (membershipCount[memberId] ?: 0) + 1
+                if (memberId !in activityIds) {
+                    add(
+                        errorIssue(
+                            code = ContractValidationCode.EVENT_SUBPROCESS_MEMBER_NOT_FOUND,
+                            message = "event subprocess '${eventSubProcess.id}' references handler activity" +
+                                " '$memberId' that is not declared in the contract's activities",
+                            targetId = eventSubProcess.id,
+                        ),
+                    )
+                }
+            }
+        }
+
+        membershipCount.filterValues { it > 1 }.forEach { (memberId, count) ->
+            add(
+                errorIssue(
+                    code = ContractValidationCode.EVENT_SUBPROCESS_MEMBER_SHARED,
+                    message = "activity '$memberId' is claimed by $count event subprocesses —" +
                         " an activity belongs to at most one",
                     targetId = memberId,
                 ),
