@@ -48,7 +48,7 @@ internal class BpmnRepairAdvancer(
         val request = ready.request
         val contract = validatedContract.contract
 
-        // Pre-flight: #287 — surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,
+        // Pre-flight: surface unrecognized parser fallbacks (`BpmnUnrecognizedNode`,
         // `BpmnUnrecognizedEventDefinition`) as typed UNFIXABLE diagnostics before any code
         // path serialises the definition through Jackson.
         val unrecognized = BpmnUnrecognizedElementScanner.scan(rendered.definition)
