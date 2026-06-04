@@ -32,11 +32,6 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {
         private const val TARGET_NAMESPACE = "https://groknull.dev/bpmner"
 
-        // Foreign-namespace extension prefix for attributes we carry on flow elements that the
-        // BPMN 2.0 spec doesn't define (e.g. `decisionRef` on businessRuleTask). The BPMN XSD
-        // allows `xs:anyAttribute namespace="##other"` on most complex types, so qualifying
-        // these in our own namespace keeps XSD validation happy while still round-tripping.
-        const val BPMNER_EXT_NS = "https://groknull.dev/bpmner/ext"
         private const val EXPORTER = "bpmner"
         private const val EXPORTER_VERSION = "0.0.1"
         private val UNUSED_DI_NAMESPACES_REGEX = Regex("\\s+xmlns:(?:bpmndi|omgdi|di|dc)=\"[^\"]*\"")

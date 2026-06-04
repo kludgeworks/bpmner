@@ -103,10 +103,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         // Foreign-namespace extension prefix for attributes we read off flow elements that the
         // BPMN 2.0 spec doesn't define (e.g. `decisionRef` on businessRuleTask). The canonical
-        // URI lives on the writer side as [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS]; we
-        // alias it here so the reader stays in lockstep with the writer and a URI change in
-        // one place can't silently dissociate the round-trip.
-        private const val BPMNER_EXT_NS = BpmnDefinitionToXmlConverter.BPMNER_EXT_NS
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
@@ -438,7 +434,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         // `messageRef` on send / receive tasks — BPMN spec attribute on the task element.
         val messageRefs: Map<String, String>,
         // `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
-        // spec defines no decisionRef on tBusinessRuleTask. See [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS].
+        // spec defines no decisionRef on tBusinessRuleTask. See [BPMNER_EXT_NS].
         val decisionRefs: Map<String, String>,
         // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
         val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,

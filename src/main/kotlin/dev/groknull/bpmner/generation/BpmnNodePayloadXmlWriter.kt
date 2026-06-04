@@ -32,10 +32,11 @@ internal class BpmnNodePayloadXmlWriter(
         definition: BpmnDefinition,
     ): Boolean {
         val taskElementsById = document.payloadTaskElementsById()
+        val eventElementsById = document.eventElementsById()
         var bpmnerNamespaceUsed = false
 
         definition.nodes.forEach { node ->
-            if (writeNodePayload(document, node, taskElementsById)) {
+            if (writeNodePayload(document, node, taskElementsById, eventElementsById)) {
                 bpmnerNamespaceUsed = true
             }
         }
@@ -52,9 +53,10 @@ internal class BpmnNodePayloadXmlWriter(
         document: Document,
         node: BpmnNode,
         taskElementsById: Map<String, Element>,
+        eventElementsById: Map<String, Element>,
     ): Boolean = when (node) {
         is BpmnStartEvent -> {
-            val element = document.eventElement(node.id)
+            val element = eventElementsById.eventElement(node.id)
             if (!node.isInterrupting) {
                 element.setAttribute("isInterrupting", node.isInterrupting.toString())
             }
@@ -62,22 +64,22 @@ internal class BpmnNodePayloadXmlWriter(
             false
         }
         is BpmnIntermediateCatchEvent -> {
-            eventDefinitionWriter.appendTo(document.eventElement(node.id), document, node.eventDefinition)
+            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
             false
         }
         is BpmnIntermediateThrowEvent -> {
-            eventDefinitionWriter.appendTo(document.eventElement(node.id), document, node.eventDefinition)
+            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
             false
         }
         is BpmnBoundaryEvent -> {
-            val element = document.eventElement(node.id)
+            val element = eventElementsById.eventElement(node.id)
             element.setAttribute("attachedToRef", node.attachedToRef)
             element.setAttribute("cancelActivity", node.cancelActivity.toString())
             eventDefinitionWriter.appendTo(element, document, node.eventDefinition)
             false
         }
         is BpmnEndEvent -> {
-            eventDefinitionWriter.appendTo(document.eventElement(node.id), document, node.eventDefinition)
+            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
             false
         }
         is BpmnSendTask -> {
@@ -90,7 +92,7 @@ internal class BpmnNodePayloadXmlWriter(
         }
         is BpmnBusinessRuleTask -> {
             taskElementsById.taskElement(node.id).setAttributeNS(
-                BpmnDefinitionToXmlConverter.BPMNER_EXT_NS,
+                BPMNER_EXT_NS,
                 "bpmner:decisionRef",
                 node.decisionRef,
             )
@@ -147,10 +149,6 @@ internal class BpmnNodePayloadXmlWriter(
             .filterKeys { it.isNotBlank() }
     }
 
-    private fun Document.eventElement(id: String): Element {
-        return eventElementsById()[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
-    }
-
     private fun Document.eventElementsById(): Map<String, Element> = listOf(
         "startEvent",
         "intermediateCatchEvent",
@@ -162,6 +160,10 @@ internal class BpmnNodePayloadXmlWriter(
     private fun Map<String, Element>.taskElement(id: String): Element {
         return this[id] ?: error("Task element with id='$id' not found in rendered XML")
     }
+
+    private fun Map<String, Element>.eventElement(id: String): Element {
+        return this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
+    }
 }
 
 private fun Element.appendMultiInstance(
@@ -172,7 +174,7 @@ private fun Element.appendMultiInstance(
         document.bpmnElement("multiInstanceLoopCharacteristics").also { loop ->
             loop.setAttribute("isSequential", (mi.mode == MultiInstanceMode.SEQUENTIAL).toString())
             loop.setAttributeNS(
-                BpmnDefinitionToXmlConverter.BPMNER_EXT_NS,
+                BPMNER_EXT_NS,
                 "bpmner:collectionDescription",
                 mi.collectionDescription,
             )

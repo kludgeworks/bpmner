@@ -36,7 +36,7 @@ internal class BpmnDefinitionDomPostProcessor(
         setAttributeNS(
             "http://www.w3.org/2000/xmlns/",
             "xmlns:bpmner",
-            BpmnDefinitionToXmlConverter.BPMNER_EXT_NS,
+            BPMNER_EXT_NS,
         )
     }
 }

@@ -18,6 +18,7 @@ import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 
 internal const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+internal const val BPMNER_EXT_NS = "https://groknull.dev/bpmner/ext"
 
 private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
 private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
