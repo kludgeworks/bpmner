@@ -280,7 +280,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         }.newDocumentBuilder()
         .parse(org.xml.sax.InputSource(StringReader(xml)))
 
-    @Suppress("CyclomaticComplexMethod", "LongMethod")
     private fun FlowNode.toBpmnNode(
         eventMetadata: EventMetadata,
         taskMetadata: TaskMetadata,
@@ -289,17 +288,14 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         // Camunda's document-wide FlowNode scan returns nested nodes too; their `parentElement`
         // is the enclosing <subProcess>. A top-level node's parent is the <process>, giving null.
         val parentRef = (parentElement as? SubProcess)?.id
-        return when (this) {
-            is StartEvent -> {
-                BpmnStartEvent(
-                    id = id,
-                    name = normalisedName,
-                    eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
-                    isInterrupting = eventMetadata.isInterrupting[id] ?: true,
-                    parentRef = parentRef,
-                )
-            }
+        return toBpmnTaskOrNull(normalisedName, parentRef, taskMetadata)
+            ?: toBpmnEventOrNull(normalisedName, parentRef, eventMetadata)
+            ?: toBpmnGatewayOrNull(normalisedName, parentRef)
+            ?: toBpmnSubProcessOrUnrecognized(normalisedName, parentRef)
+    }
 
+    private fun FlowNode.toBpmnTaskOrNull(normalisedName: String?, parentRef: String?, taskMetadata: TaskMetadata): BpmnNode? {
+        return when (this) {
             is UserTask -> {
                 BpmnUserTask(
                     id = id,
@@ -373,20 +369,20 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
-            is ExclusiveGateway -> {
-                BpmnExclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
-            }
+            else -> null
+        }
+    }
 
-            is InclusiveGateway -> {
-                BpmnInclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
-            }
-
-            is ParallelGateway -> {
-                BpmnParallelGateway(id = id, name = normalisedName, parentRef = parentRef)
-            }
-
-            is EventBasedGateway -> {
-                BpmnEventBasedGateway(id = id, name = normalisedName, parentRef = parentRef)
+    private fun FlowNode.toBpmnEventOrNull(normalisedName: String?, parentRef: String?, eventMetadata: EventMetadata): BpmnNode? {
+        return when (this) {
+            is StartEvent -> {
+                BpmnStartEvent(
+                    id = id,
+                    name = normalisedName,
+                    eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                    isInterrupting = eventMetadata.isInterrupting[id] ?: true,
+                    parentRef = parentRef,
+                )
             }
 
             is IntermediateCatchEvent -> {
@@ -427,6 +423,34 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 )
             }
 
+            else -> null
+        }
+    }
+
+    private fun FlowNode.toBpmnGatewayOrNull(normalisedName: String?, parentRef: String?): BpmnNode? {
+        return when (this) {
+            is ExclusiveGateway -> {
+                BpmnExclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
+            }
+
+            is InclusiveGateway -> {
+                BpmnInclusiveGateway(id = id, name = normalisedName, parentRef = parentRef)
+            }
+
+            is ParallelGateway -> {
+                BpmnParallelGateway(id = id, name = normalisedName, parentRef = parentRef)
+            }
+
+            is EventBasedGateway -> {
+                BpmnEventBasedGateway(id = id, name = normalisedName, parentRef = parentRef)
+            }
+
+            else -> null
+        }
+    }
+
+    private fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, parentRef: String?): BpmnNode {
+        return when (this) {
             // Transaction is a SubProcess subtype but carries distinct semantics the model
             // doesn't represent, so it stays on the unrecognized path (parser-as-structure) —
             // only a plain embedded subprocess becomes BpmnSubProcess.
@@ -532,7 +556,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val escalations: List<BpmnEscalationRef>,
     )
 
-    @Suppress("LongMethod")
     private fun eventMetadataFrom(document: Document): EventMetadata {
         val eventElements =
             listOf("startEvent", "intermediateCatchEvent", "intermediateThrowEvent", "boundaryEvent", "endEvent")
@@ -557,45 +580,54 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .bpmnElements("boundaryEvent")
                 .filter { it.hasAttribute("cancelActivity") }
                 .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
-            messages =
-            document
-                .bpmnElements("message")
-                .map { BpmnMessageRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                .filter { it.id.isNotBlank() && it.name.isNotBlank() }
-                .toList(),
-            signals =
-            document
-                .bpmnElements("signal")
-                .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-                .filter { it.id.isNotBlank() && it.name.isNotBlank() }
-                .toList(),
-            errors =
-            document
-                .bpmnElements("error")
-                .map {
-                    BpmnErrorRef(
-                        id = it.getAttribute("id"),
-                        code = it.getAttribute("errorCode"),
-                        name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
-                    )
-                }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
-                .toList(),
-            escalations =
-            document
-                .bpmnElements("escalation")
-                .map {
-                    BpmnEscalationRef(
-                        id = it.getAttribute("id"),
-                        code = it.getAttribute("escalationCode"),
-                        name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
-                    )
-                }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
-                .toList(),
+            messages = document.parseMessages(),
+            signals = document.parseSignals(),
+            errors = document.parseErrors(),
+            escalations = document.parseEscalations(),
         )
     }
 
-    @Suppress("MaxLineLength")
-    private fun Document.bpmnElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_NS, localName).elements()
+    private fun Document.parseMessages(): List<BpmnMessageRef> {
+        return bpmnElements("message")
+            .map { BpmnMessageRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() && it.name.isNotBlank() }
+            .toList()
+    }
+
+    private fun Document.parseSignals(): List<BpmnSignalRef> {
+        return bpmnElements("signal")
+            .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+            .filter { it.id.isNotBlank() && it.name.isNotBlank() }
+            .toList()
+    }
+
+    private fun Document.parseErrors(): List<BpmnErrorRef> {
+        return bpmnElements("error")
+            .map {
+                BpmnErrorRef(
+                    id = it.getAttribute("id"),
+                    code = it.getAttribute("errorCode"),
+                    name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
+                )
+            }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
+            .toList()
+    }
+
+    private fun Document.parseEscalations(): List<BpmnEscalationRef> {
+        return bpmnElements("escalation")
+            .map {
+                BpmnEscalationRef(
+                    id = it.getAttribute("id"),
+                    code = it.getAttribute("escalationCode"),
+                    name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
+                )
+            }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
+            .toList()
+    }
+
+    private fun Document.bpmnElements(localName: String): Sequence<Element> {
+        return getElementsByTagNameNS(BPMN_NS, localName).elements()
+    }
 
     private fun org.w3c.dom.NodeList.elements(): Sequence<Element> = sequence {
         for (index in 0 until length) {
