@@ -35,9 +35,6 @@ import org.slf4j.LoggerFactory
 
 @Application
 @Agent(description = "Resolve shell BPMN requests and gate generation on readiness")
-// Each @Action and @Condition must be a distinct method for the Embabel GOAP planner to dispatch it;
-// the function count is structural, not incidental complexity.
-@Suppress("TooManyFunctions")
 internal class BpmnGenerationGateAgent(
     private val config: BpmnConfig,
     private val requestResolver: BpmnRequestResolver,
