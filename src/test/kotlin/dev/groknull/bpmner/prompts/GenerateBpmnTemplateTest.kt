@@ -108,6 +108,45 @@ class GenerateBpmnTemplateTest {
         )
     }
 
+    @Test
+    fun `template teaches embedded-subprocess topology and renders the member list`() {
+        val prompt = render(
+            request = BpmnRequest(processDescription = "Assess the claim, then pay it."),
+            contract = subProcessContract(),
+        )
+
+        assertTrue(prompt.contains("Embedded-subprocess topology:"))
+        assertTrue(prompt.contains("parentRef"))
+        // The markdown renderer surfaces the membership so the LLM knows what the subprocess groups.
+        assertTrue(
+            prompt.contains("[SUB_PROCESS contains=\"a-validate,a-estimate\"]"),
+            "rendered subprocess should list its member ids; got:\n$prompt",
+        )
+    }
+
+    private fun subProcessContract(): ProcessContract {
+        val sources = listOf("ev1")
+        return ProcessContract(
+            id = "contract-claim-assess",
+            processName = "Assess and pay claim",
+            summary = "Assess a claim as one composite step, then pay it.",
+            trigger = "Claim is filed",
+            triggerSourceIds = sources,
+            activities = listOf(
+                ContractActivity(id = "a-validate", name = "Validate documents", sourceIds = sources),
+                ContractActivity(id = "a-estimate", name = "Estimate damage", sourceIds = sources),
+                ContractActivity(id = "a-pay", name = "Pay claim", sourceIds = sources),
+                ContractActivity.SubProcess(
+                    id = "sub-assess",
+                    name = "Assess claim",
+                    containedActivityIds = listOf("a-validate", "a-estimate"),
+                    sourceIds = sources,
+                ),
+            ),
+            endStates = listOf(ContractEndState(id = "end-paid", name = "Claim paid", sourceIds = sources)),
+        )
+    }
+
     private fun render(request: BpmnRequest, contract: ProcessContract): String {
         return renderer.renderLoadedTemplate("bpmner/generate_bpmn", model(request, contract))
     }

@@ -1,0 +1,6 @@
+Embedded subprocesses (optional `subProcesses` list): set when the source describes a group of activities handled together as a single composite step — cues: "the X process, which involves …", "as part of handling Y: first a, then b, then c", "the X sub-flow / block / stage", a named bundle of sub-steps treated as one unit. Leave empty when the process is flat.
+- Each entry has `id`, `name`, and `activityIds` — the ids of its member activities. Those members stay listed in the top-level `activities` array (with their own kinds and sourceIds); the subprocess only NAMES which of them it groups.
+- An activity belongs to at most one subprocess. List at least one member per subprocess.
+- Members are interior steps: the main flow enters the subprocess as a whole and leaves it as a whole. A member must not be the `nextRef` target of a branch outside the group, nor branch out of the group itself.
+- Reserve a subprocess for a genuine grouping the source calls out; a plain linear sequence of ordinary steps stays ungrouped.
+- Example: `{id: "sub-assess", name: "Assess claim", activityIds: ["act-validate", "act-estimate", "act-decide"]}`.

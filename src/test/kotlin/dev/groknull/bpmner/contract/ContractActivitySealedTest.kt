@@ -43,6 +43,7 @@ class ContractActivitySealedTest {
                 ContractActivity.Send("a", "n", messageName = "decline notice") to "SEND",
                 ContractActivity.Receive("a", "n", messageName = "ack") to "RECEIVE",
                 ContractActivity.Manual("a", "n") to "MANUAL",
+                ContractActivity.SubProcess("a", "n", containedActivityIds = listOf("m1")) to "SUB_PROCESS",
             )
         cases.forEach { (activity, expectedKind) ->
             assertEquals(expectedKind, activity.kindName)
@@ -60,6 +61,7 @@ class ContractActivitySealedTest {
                 ContractActivity.Send("act-5", "Notify decline", messageName = "decline notification"),
                 ContractActivity.Receive("act-6", "Await ack", messageName = "customer acknowledgement"),
                 ContractActivity.Manual("act-7", "File paperwork"),
+                ContractActivity.SubProcess("sub-1", "Assess claim", containedActivityIds = listOf("act-1", "act-2")),
             )
         subjects.forEach { original ->
             val json = objectMapper.writeValueAsString(original)

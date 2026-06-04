@@ -104,6 +104,27 @@ enum class BpmnFidelityCode {
      * the declared throw kind.
      */
     INTERMEDIATE_THROW_KIND_MISMATCH,
+
+    /**
+     * A ContractActivity.SubProcess has no corresponding node in the generated BPMN. Under the
+     * unified-id convention the BpmnSubProcess must share the contract subprocess's id.
+     */
+    SUBPROCESS_NODE_MISSING,
+
+    /**
+     * A subprocess member activity is realised as a node whose `parentRef` does not point at the
+     * subprocess id — the LLM emitted the member but left it on the top-level flow rather than
+     * nesting it inside the subprocess. The grouping the contract declared was dropped.
+     */
+    SUBPROCESS_MEMBER_NOT_NESTED,
+
+    /**
+     * A sequence flow crosses the subprocess boundary: exactly one of its endpoints is nested
+     * inside the subprocess and the other is outside. Embedded subprocesses connect to the main
+     * flow only through their own boundary, so an inner node must not be wired directly to an
+     * outer one (or vice versa).
+     */
+    SUBPROCESS_BOUNDARY_CROSSED,
 }
 
 /**

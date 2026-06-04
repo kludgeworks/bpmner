@@ -36,6 +36,10 @@ internal object GenerationExamples {
         "Data objects/stores: an activity reads a data store + data object and writes a data object; " +
             "each link is a READ/WRITE data association"
 
+    const val SUB_PROCESS_LABEL: String =
+        "Embedded subprocess: a SUB_PROCESS node on the main flow whose members carry parentRef = the " +
+            "subprocess id; the subprocess has its own inner start/end and no flow crosses its boundary"
+
     private const val START = "StartEvent_1"
 
     private const val PREP_FORK = "dec-prep-tracks"
@@ -142,6 +146,50 @@ internal object GenerationExamples {
                 BpmnDataAssociation("DataAssoc_1", VALIDATE, ORDER, DataFlowDirection.READ),
                 BpmnDataAssociation("DataAssoc_2", VALIDATE, CUSTOMER_DB, DataFlowDirection.READ),
                 BpmnDataAssociation("DataAssoc_3", VALIDATE, VALIDATED, DataFlowDirection.WRITE),
+            ),
+        )
+
+    // Embedded subprocess (matches ContractExtractionExamples.subProcessExample). The SUB_PROCESS
+    // node sits on the main flow (Start → Assess claim → Pay claim → End); its three members and
+    // their inner flow — including a self-contained inner start and end — all carry parentRef = the
+    // subprocess id. No sequence flow crosses the boundary: the main flow connects to the subprocess
+    // node itself, never to an inner member.
+    private const val SUB_START = "StartEvent_1"
+    private const val SUB_ASSESS = "sub-assess-claim"
+    private const val SUB_INNER_START = "StartEvent_assess"
+    private const val SUB_VALIDATE = "act-validate-documents"
+    private const val SUB_ESTIMATE = "act-estimate-damage"
+    private const val SUB_DECIDE = "act-decide-payout"
+    private const val SUB_INNER_END = "EndEvent_assess"
+    private const val SUB_PAY = "act-pay-claim"
+    private const val SUB_END = "end-claim-paid"
+
+    val embeddedSubProcess: FlatBpmnDefinition =
+        FlatBpmnDefinition(
+            processId = "Process_claim_assessment",
+            processName = "Claim assessment",
+            nodes = listOf(
+                FlatBpmnNode(SUB_START, FlatBpmnNodeKind.START_EVENT, "Claim submitted"),
+                FlatBpmnNode(SUB_ASSESS, FlatBpmnNodeKind.SUB_PROCESS, "Assess claim"),
+                // Inner flow — every member carries parentRef = the subprocess id.
+                FlatBpmnNode(SUB_INNER_START, FlatBpmnNodeKind.START_EVENT, parentRef = SUB_ASSESS),
+                FlatBpmnNode(SUB_VALIDATE, FlatBpmnNodeKind.USER_TASK, "Validate documents", parentRef = SUB_ASSESS),
+                FlatBpmnNode(SUB_ESTIMATE, FlatBpmnNodeKind.SERVICE_TASK, "Estimate damage", parentRef = SUB_ASSESS),
+                FlatBpmnNode(SUB_DECIDE, FlatBpmnNodeKind.USER_TASK, "Decide payout", parentRef = SUB_ASSESS),
+                FlatBpmnNode(SUB_INNER_END, FlatBpmnNodeKind.END_EVENT, parentRef = SUB_ASSESS),
+                FlatBpmnNode(SUB_PAY, FlatBpmnNodeKind.SERVICE_TASK, "Pay claim"),
+                FlatBpmnNode(SUB_END, FlatBpmnNodeKind.END_EVENT, "Claim paid"),
+            ),
+            sequences = listOf(
+                // Main flow: connects to the subprocess node itself, never to an inner member.
+                BpmnEdge("Flow_1", SUB_START, SUB_ASSESS),
+                BpmnEdge("Flow_2", SUB_ASSESS, SUB_PAY),
+                BpmnEdge("Flow_3", SUB_PAY, SUB_END),
+                // Inner flow: both endpoints inside the subprocess; edges carry parentRef too.
+                BpmnEdge("Flow_in_1", SUB_INNER_START, SUB_VALIDATE, parentRef = SUB_ASSESS),
+                BpmnEdge("Flow_in_2", SUB_VALIDATE, SUB_ESTIMATE, parentRef = SUB_ASSESS),
+                BpmnEdge("Flow_in_3", SUB_ESTIMATE, SUB_DECIDE, parentRef = SUB_ASSESS),
+                BpmnEdge("Flow_in_4", SUB_DECIDE, SUB_INNER_END, parentRef = SUB_ASSESS),
             ),
         )
 }

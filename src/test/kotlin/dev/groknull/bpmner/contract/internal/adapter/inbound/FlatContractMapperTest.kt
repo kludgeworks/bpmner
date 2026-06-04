@@ -62,6 +62,61 @@ class FlatContractMapperTest {
     }
 
     @Test
+    fun `FlatContractSubProcess maps to a ContractActivity SubProcess preserving members`() {
+        val flat = FlatContractSubProcess(
+            id = "sub-assess",
+            name = "Assess claim",
+            activityIds = listOf("act-validate", "act-estimate"),
+            sourceIds = listOf("ev1"),
+        )
+
+        assertEquals(
+            ContractActivity.SubProcess(
+                id = "sub-assess",
+                name = "Assess claim",
+                containedActivityIds = listOf("act-validate", "act-estimate"),
+                sourceIds = listOf("ev1"),
+            ),
+            flat.toSealed(),
+        )
+    }
+
+    @Test
+    fun `toSealed appends subProcesses to activities as SubProcess entries`() {
+        val flat = FlatProcessContract(
+            id = "c-sub",
+            processName = "Assess and pay",
+            summary = "Assess a claim as one composite step, then pay it.",
+            start = FlatContractStart(
+                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Claim submitted"),
+                sourceIds = listOf("ev1"),
+            ),
+            activities = listOf(
+                flatActivity(FlatActivityKind.USER, id = "act-validate"),
+                flatActivity(FlatActivityKind.SERVICE, id = "act-estimate"),
+                flatActivity(FlatActivityKind.SERVICE, id = "act-pay"),
+            ),
+            subProcesses = listOf(
+                FlatContractSubProcess(
+                    id = "sub-assess",
+                    name = "Assess claim",
+                    activityIds = listOf("act-validate", "act-estimate"),
+                    sourceIds = listOf("ev1"),
+                ),
+            ),
+            endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-ok")),
+        )
+
+        val sealed = flat.toSealed()
+
+        // Three leaf activities followed by the appended subprocess.
+        assertEquals(4, sealed.activities.size)
+        val subProcess = sealed.activities.filterIsInstance<ContractActivity.SubProcess>().single()
+        assertEquals("sub-assess", subProcess.id)
+        assertEquals(listOf("act-validate", "act-estimate"), subProcess.containedActivityIds)
+    }
+
+    @Test
     fun `BUSINESS_RULE without decisionName fails with the offending id in the message`() {
         val flat = flatActivity(FlatActivityKind.BUSINESS_RULE, id = "a-br", decisionName = null)
 

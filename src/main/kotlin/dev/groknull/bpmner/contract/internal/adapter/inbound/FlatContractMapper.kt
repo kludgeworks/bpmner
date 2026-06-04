@@ -37,7 +37,10 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     processName = processName,
     summary = summary,
     start = ContractStart(trigger = start.trigger.toSealed(), sourceIds = start.sourceIds),
-    activities = activities.map { it.toSealed() },
+    // Embedded subprocesses are appended to `activities` as ContractActivity.SubProcess entries so
+    // the activity-keyed loops in the validator and fidelity checker pick them up uniformly — a
+    // subprocess IS a (composite) activity in BPMN. Membership is carried by containedActivityIds.
+    activities = activities.map { it.toSealed() } + subProcesses.map { it.toSealed() },
     decisions = decisions.map { it.toSealed() },
     actors = actors,
     artifacts = artifacts,
@@ -212,6 +215,13 @@ public fun FlatContractTrigger.toSealed(): ContractTrigger = when (type) {
         description = description,
     )
 }
+
+public fun FlatContractSubProcess.toSealed(): ContractActivity.SubProcess = ContractActivity.SubProcess(
+    id = id,
+    name = name,
+    containedActivityIds = activityIds,
+    sourceIds = sourceIds,
+)
 
 public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
     id = id,

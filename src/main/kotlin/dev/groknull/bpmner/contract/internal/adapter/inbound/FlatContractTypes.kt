@@ -388,6 +388,34 @@ public data class FlatContractStart(
 )
 
 @JsonClassDescription(
+    "Embedded subprocess — a named grouping of activities treated as a single composite step on the " +
+        "main flow (cues: \"handled as one block\", \"the X process, which involves …\", \"contains " +
+        "its own sub-steps\"). Lists the ids of its member activities; those activities stay in the " +
+        "top-level `activities` array and must not also sit on the main flow crossing the group " +
+        "boundary. An activity belongs to at most one subprocess.",
+)
+public data class FlatContractSubProcess(
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Stable subprocess id")
+    val id: String,
+    @field:NotBlank
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription("Human-readable subprocess name")
+    val name: String,
+    @field:NotEmpty
+    @field:Size(max = 100)
+    @get:JsonPropertyDescription(
+        "Ids of the member activities contained in this subprocess. Each must match an entry in the " +
+            "top-level `activities` array. Order follows the member flow inside the subprocess.",
+    )
+    val activityIds: List<String>,
+    @field:Size(max = 10)
+    @get:JsonPropertyDescription("Source ids grounding this subprocess in evidence.")
+    val sourceIds: List<String> = emptyList(),
+)
+
+@JsonClassDescription(
     "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
         "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +
         "kind-specific fields. The agent maps this to the internal sealed ProcessContract before " +
@@ -435,6 +463,14 @@ public data class FlatProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Intermediate throw events required in the middle of the process")
     val intermediateThrows: List<FlatContractIntermediateThrow> = emptyList(),
+    @field:Valid
+    @field:Size(max = 50)
+    @get:JsonPropertyDescription(
+        "Embedded subprocesses — named groupings of activities treated as single composite steps on " +
+            "the main flow. Each lists its member activity ids. Leave empty when the process has no " +
+            "composite steps.",
+    )
+    val subProcesses: List<FlatContractSubProcess> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
