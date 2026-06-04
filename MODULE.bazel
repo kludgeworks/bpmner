@@ -87,6 +87,7 @@ maven.install(
         "com.embabel.agent:embabel-agent-starter-openai:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-anthropic:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-gemini:" + EMBABEL_VERSION,
+        "com.embabel.agent:embabel-agent-starter-mistral-ai:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-shell:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-starter-webmvc:" + EMBABEL_VERSION,
         "com.embabel.agent:embabel-agent-test:" + EMBABEL_VERSION,
