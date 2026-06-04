@@ -16,6 +16,7 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.hexagonal.Application
@@ -84,7 +85,7 @@ internal class BpmnContractAgent(
     }
 
     private fun templateModel(
-        request: dev.groknull.bpmner.core.BpmnRequest,
+        request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): Map<String, Any> = mapOf(
         "maxAssumptions" to config.contract.maxAssumptions,

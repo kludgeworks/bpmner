@@ -35,6 +35,8 @@ import org.slf4j.LoggerFactory
 
 @Application
 @Agent(description = "Resolve shell BPMN requests and gate generation on readiness")
+// Each @Action and @Condition must be a distinct method for the Embabel GOAP planner to dispatch it;
+// the function count is structural, not incidental complexity.
 @Suppress("TooManyFunctions")
 internal class BpmnGenerationGateAgent(
     private val config: BpmnConfig,
@@ -132,6 +134,8 @@ internal class BpmnGenerationGateAgent(
     ): BpmnReadinessState {
         val trimmedAnswers = answers.answers.trim()
         require(trimmedAnswers.isNotEmpty()) { "Clarification answers must not be blank." }
+        // The shell form accepts one consolidated response; each pending question records that answer
+        // so the next readiness pass can decide which gaps were actually resolved.
         val exchanges = state.assessment.clarificationQuestions.map { question ->
             ClarificationExchange(
                 questionId = question.id,
