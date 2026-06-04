@@ -9,6 +9,7 @@ load("@npm//:defs.bzl", "npm_link_all_packages")
 load("@rules_detekt//detekt:defs.bzl", "detekt_test")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_config")
 load("//tools/pmd:cpd.bzl", "cpd_test")
+load("//tools/spotbugs:spotbugs.bzl", "spotbugs_sonar_report")
 
 package(default_visibility = ["//visibility:public"])
 
@@ -62,6 +63,26 @@ cpd_test(
     srcs = ["//src/test:analysis_srcs"],
     language = "kotlin",
     minimum_tokens = 150,
+)
+
+spotbugs_sonar_report(
+    name = "spotbugs_backend_reports",
+    srcs = ["//src:analysis_srcs"],
+    sonar_report = "spotbugs-sonar-external-issues.json",
+    target = "//src:bpmner_core",
+    xml_report = "spotbugs-backend.xml",
+)
+
+filegroup(
+    name = "spotbugs_backend_sonar_external_issues",
+    srcs = [":spotbugs_backend_reports"],
+    output_group = "sonar_external_issues",
+)
+
+filegroup(
+    name = "spotbugs_backend_xml",
+    srcs = [":spotbugs_backend_reports"],
+    output_group = "spotbugs_xml",
 )
 
 VALE_SRCS = [

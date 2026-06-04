@@ -48,3 +48,4 @@ linter/docs/rules/*.md
 /jacoco.xml
 *.lcov
 /coverage_report.dat
+/reports/

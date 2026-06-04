@@ -1,0 +1,49 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
+load("@rules_java//java:defs.bzl", "java_binary")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+
+package(default_visibility = ["//visibility:public"])
+
+java_binary(
+    name = "spotbugs_bin",
+    main_class = "edu.umd.cs.findbugs.LaunchAppropriateUI",
+    runtime_deps = ["@maven//:com_github_spotbugs_spotbugs"],
+)
+
+kt_jvm_library(
+    name = "spotbugs_sonar_converter_lib",
+    srcs = glob(["src/main/kotlin/**/*.kt"]),
+    deps = [
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+    ],
+)
+
+java_binary(
+    name = "spotbugs_sonar_converter",
+    main_class = "dev.groknull.bpmner.tools.spotbugs.MainKt",
+    runtime_deps = [":spotbugs_sonar_converter_lib"],
+)
+
+kt_jvm_library(
+    name = "spotbugs_sonar_converter_tests_lib",
+    srcs = glob(["src/test/kotlin/**/*.kt"]),
+    deps = [
+        ":spotbugs_sonar_converter_lib",
+        "@maven//:org_jetbrains_kotlin_kotlin_stdlib",
+        "@maven//:org_jetbrains_kotlin_kotlin_test_junit5",
+    ],
+)
+
+java_junit5_test(
+    name = "SpotBugsSonarConverterTest",
+    test_class = "dev.groknull.bpmner.tools.spotbugs.SpotBugsSonarConverterTest",
+    runtime_deps = [
+        ":spotbugs_sonar_converter_tests_lib",
+        "@maven//:org_junit_jupiter_junit_jupiter_engine",
+        "@maven//:org_junit_platform_junit_platform_launcher",
+        "@maven//:org_junit_platform_junit_platform_reporting",
+    ],
+)
