@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Lane Labels Business Roles Performers"
@@ -20,4 +21,10 @@ errorMessages = new {
 
 staticConfig = new {
   cookbookCode = "LANE-01"
+}
+
+// Fires when a lane has no label (the lane's name is surfaced as its `role`).
+checkPrimitive = "PoolLabelCheck"
+checkConfig = new CheckPrimitive.PoolLabelCheck {
+  mode = "LANE_LABELS_BUSINESS_ROLES_PERFORMERS"
 }

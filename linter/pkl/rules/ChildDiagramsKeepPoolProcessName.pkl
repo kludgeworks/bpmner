@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Child Diagrams Keep Pool Process Name"
@@ -20,4 +21,12 @@ errorMessages = new {
 
 staticConfig = new {
   cookbookCode = "POOL-03"
+}
+
+// Fires when a child-diagram pool is renamed off its parent process. The model enforces one
+// diagram per document, so `isChildDiagram` is never set today and this rule stays inert until
+// multi-diagram support lands — but it loads through the active path, ready for that capability.
+checkPrimitive = "PoolLabelCheck"
+checkConfig = new CheckPrimitive.PoolLabelCheck {
+  mode = "CHILD_DIAGRAMS_KEEP_POOL_PROCESS_NAME"
 }

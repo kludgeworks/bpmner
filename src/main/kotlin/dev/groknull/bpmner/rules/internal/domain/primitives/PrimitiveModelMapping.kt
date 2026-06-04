@@ -61,8 +61,9 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
     }
     val messageFlows = definition.messageFlows.map { it.toPrimitiveFlow(::poolFor) }
     // Participants/lanes projected inline (rather than via helpers) to keep this file's top-level
-    // function count under the detekt threshold. White-box vs black-box is surfaced as a property so
-    // the two pool-naming rules narrow to their own kind via `appliesWhenProperty`.
+    // function count under the detekt threshold. The property keys mirror what `PoolLabelCheck`
+    // reads: `poolKind` (WHITE_BOX/BLACK_BOX) drives the two pool-naming rules, and `processName`
+    // (the referenced process's name) lets the white-box rule assert the pool is named after it.
     val participantElements = definition.participants.map { participant ->
         PrimitiveElement(
             id = participant.id,
@@ -71,11 +72,13 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
                 put("id", participant.id)
                 participant.name?.let { put("name", it) }
                 participant.processRef?.let { put("processRef", it) }
-                put("isWhiteBox", (participant.processRef != null).toString())
+                put("poolKind", if (participant.processRef != null) "WHITE_BOX" else "BLACK_BOX")
+                if (participant.processRef == definition.processId) put("processName", definition.processName)
             },
         )
     }
-    // Lane membership is the lane's flowNodeRefs only; nodes carry no lane back-reference.
+    // Lane membership is the lane's flowNodeRefs only; nodes carry no lane back-reference. The label
+    // is surfaced as `role` (what `PoolLabelCheck.LANE_LABELS_BUSINESS_ROLES_PERFORMERS` reads).
     val laneElements = definition.lanes.map { lane ->
         PrimitiveElement(
             id = lane.id,
@@ -83,6 +86,7 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             properties = buildMap {
                 put("id", lane.id)
                 lane.name?.let { put("name", it) }
+                lane.name?.let { put("role", it) }
                 put("participantId", lane.participantId)
             },
         )
