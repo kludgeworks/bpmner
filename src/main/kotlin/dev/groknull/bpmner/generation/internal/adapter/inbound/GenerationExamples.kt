@@ -5,12 +5,15 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.core.BpmnDataAssociation
 import dev.groknull.bpmner.core.BpmnDataObject
 import dev.groknull.bpmner.core.BpmnDataStore
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.FlatBpmnEventDefinition
+import dev.groknull.bpmner.generation.FlatBpmnEventDefinitionKind
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
 
@@ -39,6 +42,10 @@ internal object GenerationExamples {
     const val SUB_PROCESS_LABEL: String =
         "Embedded subprocess: a SUB_PROCESS node on the main flow whose members carry parentRef = the " +
             "subprocess id; the subprocess has its own inner start/end and no flow crosses its boundary"
+
+    const val EVENT_SUB_PROCESS_LABEL: String =
+        "Event subprocess: a SUB_PROCESS node with triggeredByEvent=true and a typed inner start " +
+            "(isInterrupting per the contract); members carry parentRef and it has no connecting flow"
 
     private const val START = "StartEvent_1"
 
@@ -190,6 +197,54 @@ internal object GenerationExamples {
                 BpmnEdge("Flow_in_2", SUB_VALIDATE, SUB_ESTIMATE, parentRef = SUB_ASSESS),
                 BpmnEdge("Flow_in_3", SUB_ESTIMATE, SUB_DECIDE, parentRef = SUB_ASSESS),
                 BpmnEdge("Flow_in_4", SUB_DECIDE, SUB_INNER_END, parentRef = SUB_ASSESS),
+            ),
+        )
+
+    // Event subprocess. The SUB_PROCESS node has triggeredByEvent=true and a typed inner start whose
+    // eventDefinition matches the trigger (TIMER here) with isInterrupting=false (non-interrupting:
+    // the escalation runs alongside the main flow). Members and inner edges carry parentRef = the
+    // event-subprocess id, and the event subprocess has NO connecting flow on the main process — it
+    // runs when its inner start fires. Main flow: Start → Review request → End.
+    private const val ESP_MAIN_START = "StartEvent_1"
+    private const val ESP_REVIEW = "act-review-request"
+    private const val ESP_MAIN_END = "end-reviewed"
+    private const val ESP_OVERDUE = "esp-escalate-overdue"
+    private const val ESP_INNER_START = "StartEvent_overdue"
+    private const val ESP_ESCALATE = "act-notify-manager"
+    private const val ESP_INNER_END = "EndEvent_overdue"
+
+    val eventSubProcess: FlatBpmnDefinition =
+        FlatBpmnDefinition(
+            processId = "Process_request_review",
+            processName = "Request review",
+            nodes = listOf(
+                FlatBpmnNode(ESP_MAIN_START, FlatBpmnNodeKind.START_EVENT, "Request submitted"),
+                FlatBpmnNode(ESP_REVIEW, FlatBpmnNodeKind.USER_TASK, "Review request"),
+                FlatBpmnNode(ESP_MAIN_END, FlatBpmnNodeKind.END_EVENT, "Request reviewed"),
+                // Event subprocess: triggeredByEvent=true, off the main flow.
+                FlatBpmnNode(ESP_OVERDUE, FlatBpmnNodeKind.SUB_PROCESS, "Escalate if overdue", triggeredByEvent = true),
+                // Typed inner start: TIMER eventDefinition, non-interrupting.
+                FlatBpmnNode(
+                    ESP_INNER_START,
+                    FlatBpmnNodeKind.START_EVENT,
+                    eventDefinition = FlatBpmnEventDefinition(
+                        type = FlatBpmnEventDefinitionKind.TIMER,
+                        timerKind = BpmnTimerKind.DURATION,
+                        expression = "PT24H",
+                    ),
+                    isInterrupting = false,
+                    parentRef = ESP_OVERDUE,
+                ),
+                FlatBpmnNode(ESP_ESCALATE, FlatBpmnNodeKind.SERVICE_TASK, "Notify manager", parentRef = ESP_OVERDUE),
+                FlatBpmnNode(ESP_INNER_END, FlatBpmnNodeKind.END_EVENT, parentRef = ESP_OVERDUE),
+            ),
+            sequences = listOf(
+                // Main flow only — the event subprocess has no connecting flow.
+                BpmnEdge("Flow_1", ESP_MAIN_START, ESP_REVIEW),
+                BpmnEdge("Flow_2", ESP_REVIEW, ESP_MAIN_END),
+                // Inner handler flow, all parentRef'd to the event subprocess.
+                BpmnEdge("Flow_esp_1", ESP_INNER_START, ESP_ESCALATE, parentRef = ESP_OVERDUE),
+                BpmnEdge("Flow_esp_2", ESP_ESCALATE, ESP_INNER_END, parentRef = ESP_OVERDUE),
             ),
         )
 }

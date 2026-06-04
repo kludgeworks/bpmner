@@ -67,6 +67,10 @@ internal class BpmnContractAgent(
             .withExample(ContractExtractionExamples.INCLUSIVE_GATEWAY_LABEL, ContractExtractionExamples.inclusiveGatewayExample)
             .withExample(ContractExtractionExamples.BUSINESS_RULE_TASK_LABEL, ContractExtractionExamples.businessRuleTaskExample)
             .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
+            .withExample(
+                ContractExtractionExamples.EVENT_SUB_PROCESS_LABEL,
+                ContractExtractionExamples.eventSubProcessExample,
+            )
             .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
         val contract = flat.toSealed()
 

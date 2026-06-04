@@ -64,6 +64,25 @@ enum class ContractValidationCode {
 
     /** An activity is claimed as a member by more than one subprocess; membership is exclusive. */
     SUBPROCESS_MEMBER_SHARED,
+
+    /** An event subprocess declares no handler activities. It must contain at least one. */
+    EVENT_SUBPROCESS_EMPTY,
+
+    /** An event subprocess's handler member id does not resolve to a declared activity. */
+    EVENT_SUBPROCESS_MEMBER_NOT_FOUND,
+
+    /** An activity is claimed as a handler by more than one event subprocess; membership is exclusive. */
+    EVENT_SUBPROCESS_MEMBER_SHARED,
+
+    /** An event subprocess has an ERROR trigger but is non-interrupting; error handlers must interrupt. */
+    EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING,
+
+    /**
+     * An activity is claimed both by an embedded subprocess and an event subprocess. Membership is
+     * exclusive across container kinds — a BPMN node has a single parent — so this is surfaced at
+     * contract time rather than left to the fidelity checker.
+     */
+    SUBPROCESS_MEMBER_CROSS_CLAIMED,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

@@ -24,8 +24,24 @@ internal class ProcessContractMarkdownRenderer {
         appendDecisions(contract)
         appendArtifacts(contract)
         appendIntermediateThrows(contract)
+        appendEventSubProcesses(contract)
         appendEndStates(contract)
         appendAssumptions(contract)
+    }
+}
+
+private fun StringBuilder.appendEventSubProcesses(contract: ProcessContract) {
+    if (contract.eventSubProcesses.isNotEmpty()) {
+        appendLine()
+        appendLine("## Event subprocesses")
+        contract.eventSubProcesses.forEach { eventSubProcess ->
+            val interrupting = if (eventSubProcess.interrupting) "interrupting" else "non-interrupting"
+            val members = eventSubProcess.containedActivityIds.joinToString(",")
+            appendLine(
+                "- ${eventSubProcess.id}: ${eventSubProcess.name} " +
+                    "[EVENT_SUBPROCESS trigger=${eventSubProcess.trigger} $interrupting contains=\"$members\"]",
+            )
+        }
     }
 }
 

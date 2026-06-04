@@ -46,6 +46,9 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     artifacts = artifacts,
     endStates = endStates.map { it.toSealed() },
     intermediateThrows = intermediateThrows.map { it.toSealed() },
+    // Event subprocesses are a separate collection (not folded into `activities`): they sit off the
+    // main flow with no incoming/outgoing edges, so they are not ContractActivity entries.
+    eventSubProcesses = eventSubProcesses.map { it.toSealed() },
     assumptions = assumptions,
 )
 
@@ -215,13 +218,6 @@ public fun FlatContractTrigger.toSealed(): ContractTrigger = when (type) {
         description = description,
     )
 }
-
-public fun FlatContractSubProcess.toSealed(): ContractActivity.SubProcess = ContractActivity.SubProcess(
-    id = id,
-    name = name,
-    containedActivityIds = activityIds,
-    sourceIds = sourceIds,
-)
 
 public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
     id = id,

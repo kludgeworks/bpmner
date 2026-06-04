@@ -456,6 +456,23 @@ class ContractVocabularySmokeTest {
         c.assertHasActivity<ContractActivity.SubProcess>()
     }
 
+    // Event subprocess
+
+    @Test
+    fun `event subprocess`() {
+        val c = extractContract(
+            """
+            An order is processed and then shipped. At any point before shipping, if a cancellation
+            request arrives, the order is refunded and the customer is notified of the cancellation.
+            Otherwise the order ships and the process ends.
+            """,
+        )
+        assertTrue(c.eventSubProcesses.isNotEmpty()) {
+            "Expected an event subprocess, but found none. Activities: " +
+                c.activities.joinToString { it.name }
+        }
+    }
+
     @Test
     fun `data objects and stores`() {
         val c = extractContract(

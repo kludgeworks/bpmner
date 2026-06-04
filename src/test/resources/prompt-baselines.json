@@ -3,24 +3,24 @@
 	"_doc": "Char-count baseline for each LLM-facing payload. PromptSizeProbeTest derives ceiling as chars × 1.15 in code; there is no manual ceiling here. On growth past ceiling: trim the prompt. On shrinkage below 'chars': run `bazel run //src/test:update_prompt_baselines` to rewrite this file, then commit. Each entry carries 'updatedBy' (PR or issue ref) and 'reason' for audit trail; the updater stamps 'auto' / dated 'regenerated' when an entry changes, leaving you to refine those fields before committing.",
 	"baselines": {
 		"contractPrompt": {
-			"chars": 11359,
-			"updatedBy": "#339 (#195 data_artifacts)",
-			"reason": "data_artifacts.jinja hardened so a named persistent system is surfaced as a separate DATA_STORE (decomposition + store-signal verbs/nouns; broadened framing), atop the merged standard-loop prompt."
+			"chars": 13639,
+			"updatedBy": "#351",
+			"reason": "extract_contract gained embedded + event-subprocess element guidance (B-5b #349 stayed within the 15% tolerance; the B-6b event-subprocess block pushes past it)."
 		},
 		"contractFullPayload": {
-			"chars": 34777,
-			"updatedBy": "#339 (#195 data_artifacts)",
-			"reason": "data_artifacts.jinja DATA_STORE-extraction hardening prose, atop the data-artifact schema + loop fields."
+			"chars": 41259,
+			"updatedBy": "#351",
+			"reason": "subprocess + event-subprocess few-shot examples (withExample) added to the contract-extraction payload."
 		},
 		"generationPrompt": {
-			"chars": 13662,
-			"updatedBy": "#195 (on #326)",
-			"reason": "Data-artifact → dataObjects/dataStores/dataAssociations wiring (positive wording per #335 review), atop the loop wiring."
+			"chars": 15829,
+			"updatedBy": "#351",
+			"reason": "generate_bpmn gained embedded + event-subprocess topology blocks."
 		},
 		"generationFullPayload": {
-			"chars": 30284,
-			"updatedBy": "#195 (on #326)",
-			"reason": "Data wiring prose + FlatBpmnDefinition data fields + data-artifacts worked example, atop the merged loop schema."
+			"chars": 33726,
+			"updatedBy": "#351",
+			"reason": "embedded + event-subprocess generation few-shot examples added to the generation payload."
 		},
 		"alignmentPrompt": {
 			"chars": 2474,
@@ -43,14 +43,14 @@
 			"reason": "BpmnRequest.contribution() scoped to style-guide-only; ~1.8k chars of generation rules no longer ship on the readiness call."
 		},
 		"repairPatchPrompt": {
-			"chars": 1836,
-			"updatedBy": "#195 (on #326)",
-			"reason": "Repair patch schema now carries the FlatBpmnDefinition data object/store/association fields (atop standardLoop)."
+			"chars": 2022,
+			"updatedBy": "#351",
+			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
 		},
 		"repairFullPrompt": {
-			"chars": 2132,
-			"updatedBy": "#195 (on #326)",
-			"reason": "Repair full-rewrite schema now carries the FlatBpmnDefinition data object/store/association fields (atop standardLoop)."
+			"chars": 2318,
+			"updatedBy": "#351",
+			"reason": "shares the generate_bpmn topology guidance, which gained the embedded + event-subprocess blocks."
 		}
 	}
 }
