@@ -221,16 +221,6 @@ jobs:
             --instrumentation_filter="^//src,^//web"
           cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
 
-      - name: Generate SpotBugs report for SonarCloud
-        run: |
-          bazel build //:spotbugs_backend_sonar_external_issues //:spotbugs_backend_xml \
-            --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}"
-          mkdir -p "$GITHUB_WORKSPACE/reports/spotbugs"
-          cp "$(realpath bazel-bin/spotbugs-sonar-external-issues.json)" \
-            "$GITHUB_WORKSPACE/reports/spotbugs/spotbugs-sonar-external-issues.json"
-          cp "$(realpath bazel-bin/spotbugs-backend.xml)" \
-            "$GITHUB_WORKSPACE/reports/spotbugs/spotbugs-backend.xml"
-
       - name: SonarCloud Scan — Backend
         if: always() && steps.coverage.outcome != 'skipped'
         env:
@@ -242,8 +232,7 @@ jobs:
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token="${SONAR_TOKEN}" \
-            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat" \
-            -Dsonar.externalIssuesReportPaths="$GITHUB_WORKSPACE/reports/spotbugs/spotbugs-sonar-external-issues.json"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
 
       - name: SonarCloud Scan — Web
         if: always() && steps.coverage.outcome != 'skipped'
