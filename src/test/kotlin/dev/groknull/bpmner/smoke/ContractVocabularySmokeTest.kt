@@ -469,8 +469,9 @@ class ContractVocabularySmokeTest {
         val c = extractContract(
             """
             The process starts when a card charge is submitted. The system then waits for whichever
-            of these happens first: a success confirmation arrives, a decline notification arrives,
-            or sixty seconds pass with no response. Each outcome is recorded and the process ends.
+            of these happens first: it receives a "success confirmation" message, it receives a
+            "decline notification" message, or sixty seconds pass with no response. Each outcome is
+            recorded and the process ends.
             """,
         )
         c.assertHasGatewayKind(ContractGatewayKind.EVENT_BASED)
