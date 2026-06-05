@@ -46,3 +46,6 @@ yet-another-bpmn-auto-layout
 reusability
 agentic
 Greptile
+DeepSeek
+OpenRouter
+Cerebras

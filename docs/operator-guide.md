@@ -50,7 +50,7 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 | `alignment-validator` | `BpmnAlignmentAgent.checkAlignment` | (profile default) |
 | `linter` | `LlmRuleAgent.evaluateLlmRules` | (profile default) |
 
-Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, and `application-github.yaml`. Run with `--spring.profiles.active=<provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, or `github`. Ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, or `GITHUB_TOKEN`).
+Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, `application-deepseek.yaml`, and `application-llama.yaml`. Run with `--spring.profiles.active=<provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama` (Llama on Cerebras via the OpenRouter proxy). Ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, or `OPENROUTER_API_KEY`).
 
 The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
 

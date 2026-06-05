@@ -87,7 +87,7 @@ jobs:
     # Skip on fork PRs — org secrets not available to external contributors
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     strategy:
-      fail-fast: false    # one flaky provider doesn't cancel the other three
+      fail-fast: false    # one flaky provider doesn't cancel the others
       matrix:
         include:
           - provider: anthropic
@@ -98,6 +98,10 @@ jobs:
             shard_offset: 2
           - provider: mistral
             shard_offset: 3
+          - provider: deepseek
+            shard_offset: 4
+          - provider: llama
+            shard_offset: 5
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -128,6 +132,8 @@ jobs:
           ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
           GEMINI_API_KEY: op://bpmner/gemini/api-key
           MISTRAL_API_KEY: op://bpmner/mistral/api-key
+          DEEPSEEK_API_KEY: op://bpmner/deepseek/api-key
+          OPENROUTER_API_KEY: op://bpmner/openrouter/api-key
           BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
       - name: Compute shard index for this run
@@ -154,6 +160,8 @@ jobs:
             --test_env=ANTHROPIC_API_KEY \
             --test_env=GEMINI_API_KEY \
             --test_env=MISTRAL_API_KEY \
+            --test_env=DEEPSEEK_API_KEY \
+            --test_env=OPENROUTER_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
             --test_env=TEST_TOTAL_SHARDS=${{ strategy.job-total }} \
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \

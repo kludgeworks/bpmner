@@ -1,0 +1,40 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+spring:
+  autoconfigure:
+    exclude:
+      - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.deepseek.AgentDeepSeekAutoConfiguration
+
+embabel:
+  models:
+    # Open-weights Llama on Cerebras, accessed via OpenRouter (OpenAI-compatible). Cerebras is pinned
+    # at the OpenRouter account level (Provider preferences -> only Cerebras), since per-request
+    # provider routing is a body field Spring AI can't set. All roles use the 70B — Cerebras serves it
+    # on OpenRouter; a light 8B is omitted unless confirmed Cerebras-served (else the account pin fails
+    # that role). Every id below must also appear in `openrouter.models`. Confirm slugs at
+    # https://openrouter.ai/provider/cerebras.
+    default-llm: meta-llama/llama-3.3-70b-instruct
+    llms:
+      generator: meta-llama/llama-3.3-70b-instruct
+      repairer: meta-llama/llama-3.3-70b-instruct
+      repair-label: meta-llama/llama-3.3-70b-instruct
+      repair-patch: meta-llama/llama-3.3-70b-instruct
+      repair-rewrite: meta-llama/llama-3.3-70b-instruct
+      readiness-assessor: meta-llama/llama-3.3-70b-instruct
+      contract-extractor: meta-llama/llama-3.3-70b-instruct
+      alignment-validator: meta-llama/llama-3.3-70b-instruct
+  agent:
+    platform:
+      models:
+        openrouter:
+          api-key: ${OPENROUTER_API_KEY:}
+          models:
+            - meta-llama/llama-3.3-70b-instruct
+      llm-operations:
+        prompts:
+          default-timeout: PT180S
