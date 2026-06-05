@@ -13,8 +13,9 @@ import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnUserTask
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -27,6 +28,18 @@ import kotlin.test.assertTrue
  */
 class BpmnEventSubProcessRoundTripTest {
     private val converter = BpmnDefinitionToXmlConverter()
+
+    companion object {
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+            "bpmner" to "https://groknull.dev/bpmner/ext",
+            "camunda" to "http://camunda.org/schema/1.0/bpmn",
+        )
+    }
+
+    private fun assertXml(xml: String): XmlAssert {
+        return assertThat(xml).withNamespaceContext(NAMESPACES)
+    }
 
     @Test
     fun `interrupting event subprocess round-trips its trigger and flag`() {
@@ -42,7 +55,7 @@ class BpmnEventSubProcessRoundTripTest {
         val original = eventSubProcessDefinition(interrupting)
 
         val xml = converter.render(original).xml
-        assertContains(xml, "triggeredByEvent=\"true\"")
+        assertXml(xml).valueByXPath("//bpmn:subProcess[@id='EventSub_1']/@triggeredByEvent").isEqualTo("true")
 
         val parsed = BpmnXmlToDefinitionConverter().parse(xml)
 

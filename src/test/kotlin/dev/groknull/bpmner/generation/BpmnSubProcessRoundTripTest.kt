@@ -14,8 +14,9 @@ import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
-import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -30,12 +31,24 @@ import kotlin.test.assertNotNull
 class BpmnSubProcessRoundTripTest {
     private val converter = BpmnDefinitionToXmlConverter()
 
+    companion object {
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+            "bpmner" to "https://groknull.dev/bpmner/ext",
+            "camunda" to "http://camunda.org/schema/1.0/bpmn",
+        )
+    }
+
+    private fun assertXml(xml: String): XmlAssert {
+        return assertThat(xml).withNamespaceContext(NAMESPACES)
+    }
+
     @Test
     fun `embedded subprocess nests its children and round-trips every parentRef`() {
         val original = oneSubProcessDefinition()
 
         val xml = converter.render(original).xml
-        assertContains(xml, "<subProcess id=\"SubProcess_1\"")
+        assertXml(xml).nodesByXPath("//bpmn:subProcess[@id='SubProcess_1']").exist()
 
         val parsed = BpmnXmlToDefinitionConverter().parse(xml)
 
@@ -57,8 +70,8 @@ class BpmnSubProcessRoundTripTest {
         val original = nestedSubProcessDefinition()
 
         val xml = converter.render(original).xml
-        assertContains(xml, "<subProcess id=\"SubProcess_outer\"")
-        assertContains(xml, "<subProcess id=\"SubProcess_inner\"")
+        assertXml(xml).nodesByXPath("//bpmn:subProcess[@id='SubProcess_outer']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:subProcess[@id='SubProcess_inner']").exist()
 
         val parsed = BpmnXmlToDefinitionConverter().parse(xml)
         assertIs<BpmnSubProcess>(parsed.nodes.single { it.id == "SubProcess_outer" })

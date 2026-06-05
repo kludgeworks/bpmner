@@ -115,6 +115,8 @@ maven.install(
         "org.jmolecules.integrations:jmolecules-archunit:" + JMOLECULES_ARCHUNIT_VERSION,
         "com.tngtech.archunit:archunit:1.4.1",
         "com.github.spotbugs:spotbugs:4.9.8",
+        "org.assertj:assertj-core:3.26.3",
+        "org.xmlunit:xmlunit-assertj:2.10.0",
         "org.pkl-lang:pkl-config-java:" + PKL_VERSION,
         "org.pkl-lang:pkl-config-kotlin:" + PKL_VERSION,
         # OpenNLP for Phase 3 (#218): SimpleTokenizer + DictionaryLemmatizer. POS-tagging is
