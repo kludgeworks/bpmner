@@ -30,6 +30,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
         "embabel.agent.platform.models.openai.api-key=test-key",
         "embabel.agent.platform.models.gemini.api-key=test-key",
         "embabel.agent.platform.models.mistralai.api-key=test-key",
+        "embabel.agent.platform.models.deepseek.api-key=test-key",
     ],
 )
 @MockitoBean(types = [AgentPlatformBpmnAgentInvoker::class])

@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.TestPropertySource
 import java.util.concurrent.TimeUnit
 
@@ -41,8 +42,10 @@ import java.util.concurrent.TimeUnit
 @EnabledForLiveLlmProfile
 @ExtendWith(
     SmokeTestSummaryExtension::class,
+    SmokeResultRecorder::class,
 )
 @SpringBootTest
+@Import(PerTestEventCapture::class)
 // Each method makes two sequential live-LLM calls (readiness + extraction); 120s was too tight
 // under provider latency spikes / tool-loop retries. Generous headroom below Bazel's 'eternal'
 // target still catches a genuine hang.
@@ -52,6 +55,7 @@ import java.util.concurrent.TimeUnit
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
         "embabel.agent.platform.models.gemini.api-key=\${GEMINI_API_KEY:}",
         "embabel.agent.platform.models.mistralai.api-key=\${MISTRAL_API_KEY:}",
+        "embabel.agent.platform.models.deepseek.api-key=\${DEEPSEEK_API_KEY:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
     ],
@@ -64,6 +68,9 @@ class ContractVocabularySmokeTest {
     @Autowired
     private lateinit var readinessInvoker: BpmnReadinessInvoker
 
+    @Autowired
+    private lateinit var perTestCapture: PerTestEventCapture
+
     private fun extractContract(prose: String): ProcessContract {
         val request = BpmnRequest(processDescription = prose.trimIndent().trim())
         val assessment = readinessInvoker.assess(request)
@@ -71,7 +78,7 @@ class ContractVocabularySmokeTest {
         return AgentPlatformTypedOps(agentPlatform).transform(
             readyContext,
             ValidatedProcessContract::class.java,
-            ProcessOptions(listeners = listOf(SuiteCostCapturer)),
+            ProcessOptions(listeners = listOf(SuiteCostCapturer, perTestCapture)),
         ).contract
     }
 
