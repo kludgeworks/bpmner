@@ -8,6 +8,7 @@ package dev.groknull.bpmner.generation
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCollaboration
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -22,10 +23,12 @@ import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageFlow
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnNoneEventDefinition
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnPool
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -41,6 +44,7 @@ import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
+import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
 import org.camunda.bpm.model.bpmn.instance.FlowNode
@@ -68,6 +72,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 @SecondaryAdapter
 @Component
+@Suppress("TooManyFunctions") // per-element parse helpers + single-process and collaboration entry points
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     companion object {
         private const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -94,10 +99,56 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         val eventMetadata = eventMetadataFrom(document)
         val taskMetadata = taskMetadataFrom(document)
-        val nodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
+        // Single-process input: the document's definitions-level catalogs all belong to this one
+        // process, so attach them here.
+        return parseProcess(process, eventMetadata, taskMetadata, includeCatalogs = true)
+    }
 
+    /**
+     * Parses a `<collaboration>` document into a [BpmnCollaboration]: one [BpmnPool] per
+     * participant (each wrapping its referenced process) plus the cross-pool message flows.
+     * Note: definitions-level catalogs (message/signal/error/escalation) can't be attributed to a
+     * specific pool on read-back, so participant processes are parsed without them — round-tripping
+     * a collaboration that declares catalogs is a known limitation handled when the generator wires
+     * collaborations end-to-end.
+     */
+    fun parseCollaboration(xml: String): BpmnCollaboration {
+        val document = parseDocument(xml)
+        val model: BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+        rejectIfHasDiagramInterchange(model)
+
+        val collaboration =
+            model.getModelElementsByType(Collaboration::class.java).firstOrNull()
+                ?: error("BPMN XML contains no <collaboration> element")
+
+        val eventMetadata = eventMetadataFrom(document)
+        val taskMetadata = taskMetadataFrom(document)
+
+        val pools =
+            collaboration.participants.map { participant ->
+                BpmnPool(
+                    id = participant.id,
+                    name = participant.name?.takeIf { it.isNotBlank() } ?: participant.id,
+                    process = parseProcess(participant.process, eventMetadata, taskMetadata, includeCatalogs = false),
+                )
+            }
+        val messageFlows =
+            collaboration.messageFlows.map { flow ->
+                BpmnMessageFlow(id = flow.id, sourceRef = flow.source.id, targetRef = flow.target.id)
+            }
+        return BpmnCollaboration(id = collaboration.id, participants = pools, messageFlows = messageFlows)
+    }
+
+    private fun parseProcess(
+        process: Process,
+        eventMetadata: EventMetadata,
+        taskMetadata: TaskMetadata,
+        includeCatalogs: Boolean,
+    ): BpmnDefinition {
+        val nodes =
+            process.getChildElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
         val sequences =
-            model.getModelElementsByType(SequenceFlow::class.java).map { flow ->
+            process.getChildElementsByType(SequenceFlow::class.java).map { flow ->
                 BpmnEdge(
                     id = flow.id,
                     sourceRef = flow.source.id,
@@ -107,16 +158,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                     isDefault = (flow.source as? ExclusiveGateway)?.default?.id == flow.id,
                 )
             }
-
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
             nodes = nodes,
             sequences = sequences,
-            messages = eventMetadata.messages,
-            signals = eventMetadata.signals,
-            errors = eventMetadata.errors,
-            escalations = eventMetadata.escalations,
+            messages = if (includeCatalogs) eventMetadata.messages else emptyList(),
+            signals = if (includeCatalogs) eventMetadata.signals else emptyList(),
+            errors = if (includeCatalogs) eventMetadata.errors else emptyList(),
+            escalations = if (includeCatalogs) eventMetadata.escalations else emptyList(),
             lanes =
             process.laneSets.flatMap { it.lanes }.map { lane ->
                 BpmnLane(

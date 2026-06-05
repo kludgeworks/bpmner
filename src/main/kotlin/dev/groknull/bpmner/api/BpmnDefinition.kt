@@ -122,6 +122,35 @@ interface BpmnLane {
     val flowNodeRefs: List<String>
 }
 
+/**
+ * A BPMN collaboration: the multi-participant container that wraps two or more pools and the
+ * message flows between them. Used only when a process genuinely spans more than one
+ * organisation/system; the common single-pool case stays a bare [BpmnDefinition].
+ */
+interface BpmnCollaboration {
+    val id: String
+    val participants: List<BpmnPool>
+    val messageFlows: List<BpmnMessageFlow>
+}
+
+/** A participant (pool) in a [BpmnCollaboration]; each pool wraps exactly one process. */
+interface BpmnPool {
+    val id: String
+    val name: String
+    val process: BpmnDefinition
+}
+
+/**
+ * A message flow between two flow nodes that live in *different* pools of a collaboration.
+ * (Flows within a single pool are ordinary [BpmnEdge] sequence flows.)
+ */
+interface BpmnMessageFlow {
+    val id: String
+    val sourceRef: String
+    val targetRef: String
+    val messageRef: String?
+}
+
 /** Process-level message catalog entry, referenced by message event definitions and tasks. */
 interface BpmnMessageRef {
     val id: String

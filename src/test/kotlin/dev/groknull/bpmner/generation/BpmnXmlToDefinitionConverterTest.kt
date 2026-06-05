@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCollaboration
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -16,9 +17,11 @@ import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
+import dev.groknull.bpmner.core.BpmnMessageFlow
 import dev.groknull.bpmner.core.BpmnMessageRef
 import dev.groknull.bpmner.core.BpmnNode
 import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.core.BpmnPool
 import dev.groknull.bpmner.core.BpmnReceiveTask
 import dev.groknull.bpmner.core.BpmnScriptTask
 import dev.groknull.bpmner.core.BpmnSendTask
@@ -144,6 +147,72 @@ class BpmnXmlToDefinitionConverterTest {
             original.nodes.map { it.id }.toSet(),
             parsed.lanes.flatMap { it.flowNodeRefs }.toSet(),
         )
+    }
+
+    @Test
+    @Suppress("LongMethod") // fixture builds + collaboration round-trip assertions stay cohesive
+    fun `collaboration round-trips with participants and message flows preserved`() {
+        // Two-organisation collaboration (supplier purchase-order shape): buyer + supplier pools
+        // with a message flow between them.
+        val buyer =
+            BpmnDefinition(
+                processId = "Process_buyer",
+                processName = "Buyer",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_buyer", "PO needed"),
+                    BpmnUserTask("Task_issue_po", "Issue purchase order"),
+                    BpmnEndEvent("End_buyer", "PO issued"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("BF1", "Start_buyer", "Task_issue_po"),
+                    BpmnEdge("BF2", "Task_issue_po", "End_buyer"),
+                ),
+            )
+        val supplier =
+            BpmnDefinition(
+                processId = "Process_supplier",
+                processName = "Supplier",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_supplier", "Awaiting order"),
+                    BpmnServiceTask("Task_intake", "Receive order"),
+                    BpmnEndEvent("End_supplier", "Order acknowledged"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("SF1", "Start_supplier", "Task_intake"),
+                    BpmnEdge("SF2", "Task_intake", "End_supplier"),
+                ),
+            )
+        val collaboration =
+            BpmnCollaboration(
+                id = "Collaboration_1",
+                participants =
+                listOf(
+                    BpmnPool("Participant_buyer", "Buyer", buyer),
+                    BpmnPool("Participant_supplier", "Supplier", supplier),
+                ),
+                messageFlows = listOf(BpmnMessageFlow("MsgFlow_1", "Task_issue_po", "Task_intake")),
+            )
+
+        val xml = forward.toXml(collaboration)
+        assertContains(xml, "<collaboration id=\"Collaboration_1\"")
+        assertContains(xml, "<participant id=\"Participant_buyer\" name=\"Buyer\"")
+        assertContains(xml, "<messageFlow id=\"MsgFlow_1\"")
+        assertEquals(2, Regex("<process ").findAll(xml).count(), "expected two participant processes")
+
+        val parsed = reverse.parseCollaboration(xml)
+        assertEquals(2, parsed.participants.size)
+        val parsedBuyer = parsed.participants.single { it.id == "Participant_buyer" }
+        assertEquals("Buyer", parsedBuyer.name)
+        assertEquals("Process_buyer", parsedBuyer.process.processId)
+        assertEquals(3, parsedBuyer.process.nodes.size)
+        assertEquals(1, parsed.messageFlows.size)
+        val mf = parsed.messageFlows.single()
+        assertEquals("Task_issue_po", mf.sourceRef)
+        assertEquals("Task_intake", mf.targetRef)
     }
 
     @Test

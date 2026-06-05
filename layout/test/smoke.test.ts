@@ -48,6 +48,34 @@ const LANES_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
   </process>
 </definitions>`
 
+// Two-participant collaboration with one message flow between the pools (the #187 pools case).
+// The auto-layout library must place both participants and route the message flow without
+// throwing or dropping the collaboration.
+const COLLABORATION_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
+             id="Definitions_collab"
+             targetNamespace="http://example.com">
+  <collaboration id="Collaboration_1">
+    <participant id="Participant_buyer" name="Buyer" processRef="Process_buyer" />
+    <participant id="Participant_supplier" name="Supplier" processRef="Process_supplier" />
+    <messageFlow id="MsgFlow_1" sourceRef="Task_issue_po" targetRef="Task_intake" />
+  </collaboration>
+  <process id="Process_buyer" isExecutable="false">
+    <startEvent id="Start_buyer" />
+    <task id="Task_issue_po" name="Issue purchase order" />
+    <endEvent id="End_buyer" />
+    <sequenceFlow id="BF1" sourceRef="Start_buyer" targetRef="Task_issue_po" />
+    <sequenceFlow id="BF2" sourceRef="Task_issue_po" targetRef="End_buyer" />
+  </process>
+  <process id="Process_supplier" isExecutable="false">
+    <startEvent id="Start_supplier" />
+    <task id="Task_intake" name="Receive order" />
+    <endEvent id="End_supplier" />
+    <sequenceFlow id="SF1" sourceRef="Start_supplier" targetRef="Task_intake" />
+    <sequenceFlow id="SF2" sourceRef="Task_intake" targetRef="End_supplier" />
+  </process>
+</definitions>`
+
 describe("BpmnLayoutApi bundle smoke test", () => {
 	let api: BpmnLayoutApi
 
@@ -88,6 +116,26 @@ describe("BpmnLayoutApi bundle smoke test", () => {
 		assert.ok(
 			result.includes("<laneSet") || result.includes(":laneSet"),
 			"laneSet must survive layout",
+		)
+		assert.ok(
+			result.includes("BPMNShape") || result.includes("BPMNDiagram"),
+			"layout should add diagram interchange",
+		)
+	})
+
+	it("lays out a two-pool collaboration with a message flow", async () => {
+		const result = await api.layoutXml(COLLABORATION_BPMN)
+		assert.ok(
+			typeof result === "string" && result.length > 0,
+			"result should be a non-empty string",
+		)
+		assert.ok(
+			result.includes("<collaboration") || result.includes(":collaboration"),
+			"collaboration must survive layout",
+		)
+		assert.ok(
+			result.includes("<participant") || result.includes(":participant"),
+			"participants must survive layout",
 		)
 		assert.ok(
 			result.includes("BPMNShape") || result.includes("BPMNDiagram"),

@@ -18,6 +18,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnCollaboration as ApiBpmnCollaboration
 import dev.groknull.bpmner.api.BpmnDefinition as ApiBpmnDefinition
 import dev.groknull.bpmner.api.BpmnEdge as ApiBpmnEdge
 import dev.groknull.bpmner.api.BpmnEndEvent as ApiBpmnEndEvent
@@ -32,10 +33,12 @@ import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent as ApiBpmnIntermediate
 import dev.groknull.bpmner.api.BpmnLane as ApiBpmnLane
 import dev.groknull.bpmner.api.BpmnManualTask as ApiBpmnManualTask
 import dev.groknull.bpmner.api.BpmnMessageEventDefinition as ApiBpmnMessageEventDefinition
+import dev.groknull.bpmner.api.BpmnMessageFlow as ApiBpmnMessageFlow
 import dev.groknull.bpmner.api.BpmnMessageRef as ApiBpmnMessageRef
 import dev.groknull.bpmner.api.BpmnNode as ApiBpmnNode
 import dev.groknull.bpmner.api.BpmnNoneEventDefinition as ApiBpmnNoneEventDefinition
 import dev.groknull.bpmner.api.BpmnParallelGateway as ApiBpmnParallelGateway
+import dev.groknull.bpmner.api.BpmnPool as ApiBpmnPool
 import dev.groknull.bpmner.api.BpmnReceiveTask as ApiBpmnReceiveTask
 import dev.groknull.bpmner.api.BpmnRequest as ApiBpmnRequest
 import dev.groknull.bpmner.api.BpmnScriptTask as ApiBpmnScriptTask
@@ -167,6 +170,60 @@ data class BpmnLane(
     @get:JsonPropertyDescription("Ids of the flow nodes that belong to this lane")
     override val flowNodeRefs: List<String>,
 ) : ApiBpmnLane
+
+@JsonClassDescription("BPMN collaboration: two or more participant pools and the message flows between them")
+data class BpmnCollaboration(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable collaboration id, e.g. Collaboration_1")
+    override val id: String,
+    @field:NotEmpty
+    @field:Valid
+    @get:JsonPropertyDescription("Participant pools; each wraps exactly one process")
+    override val participants: List<BpmnPool>,
+    @field:Valid
+    @get:JsonPropertyDescription("Message flows connecting nodes that live in different pools")
+    override val messageFlows: List<BpmnMessageFlow> = emptyList(),
+) : ApiBpmnCollaboration {
+    init {
+        val nodeIds = participants.flatMap { pool -> pool.process.nodes.map { it.id } }.toSet()
+        messageFlows.forEach { flow ->
+            require(flow.sourceRef in nodeIds) {
+                "BpmnMessageFlow ${flow.id}: sourceRef '${flow.sourceRef}' matches no node in any participant process"
+            }
+            require(flow.targetRef in nodeIds) {
+                "BpmnMessageFlow ${flow.id}: targetRef '${flow.targetRef}' matches no node in any participant process"
+            }
+        }
+    }
+}
+
+@JsonClassDescription("Participant pool in a collaboration, wrapping a single process")
+data class BpmnPool(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable pool/participant id, e.g. Participant_buyer")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Pool label, typically the organisation, system, or role the pool represents")
+    override val name: String,
+    @field:Valid
+    @get:JsonPropertyDescription("The process executed within this pool")
+    override val process: BpmnDefinition,
+) : ApiBpmnPool
+
+@JsonClassDescription("Message flow between flow nodes that live in different pools of a collaboration")
+data class BpmnMessageFlow(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable message-flow id, e.g. MessageFlow_1")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Source node id (in one pool's process)")
+    override val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Target node id (in another pool's process)")
+    override val targetRef: String,
+    @get:JsonPropertyDescription("Optional id of the message catalog entry carried by this flow")
+    override val messageRef: String? = null,
+) : ApiBpmnMessageFlow
 
 data class BpmnErrorRef(
     @field:NotBlank
