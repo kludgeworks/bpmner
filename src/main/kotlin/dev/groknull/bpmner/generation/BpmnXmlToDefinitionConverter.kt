@@ -19,6 +19,7 @@ import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -116,6 +117,14 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             signals = eventMetadata.signals,
             errors = eventMetadata.errors,
             escalations = eventMetadata.escalations,
+            lanes =
+            process.laneSets.flatMap { it.lanes }.map { lane ->
+                BpmnLane(
+                    id = lane.id,
+                    name = lane.name?.takeIf { it.isNotBlank() } ?: lane.id,
+                    flowNodeRefs = lane.flowNodeRefs.map { it.id },
+                )
+            },
         )
     }
 

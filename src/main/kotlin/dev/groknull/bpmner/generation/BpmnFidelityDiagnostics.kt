@@ -81,6 +81,21 @@ enum class BpmnFidelityCode {
      * generator LLM flattens the end-state kind discriminator away in the BPMN pass.
      */
     END_EVENT_KIND_MISMATCH,
+
+    /**
+     * A ContractActivity carries an `actorId` (the prose assigns it to a role/team) but the
+     * realising BPMN node is not placed in any lane. The visual swimlane structure that makes
+     * the actor explicit is lost — the generator likely fell back to encoding the actor in the
+     * task name instead. WARNING severity: lanes are advisory visual structure, so this does
+     * not gate the pipeline.
+     */
+    LANE_ASSIGNMENT_MISSING,
+
+    /**
+     * A ContractActivity's realising node sits in a lane, but the lane's name does not match
+     * the actor the activity is assigned to. WARNING severity.
+     */
+    LANE_NAME_MISMATCH,
 }
 
 /**

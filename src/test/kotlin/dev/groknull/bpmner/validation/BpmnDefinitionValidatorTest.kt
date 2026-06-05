@@ -16,6 +16,7 @@ import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -491,6 +492,81 @@ class BpmnDefinitionValidatorTest {
             "boundary event Boundary_1 is missing the required attachedToRef attribute",
         )
     }
+
+    @Test
+    fun `validator accepts well-formed lanes`() {
+        val definition =
+            laneDefinition(
+                lanes =
+                listOf(
+                    BpmnLane("Lane_a", "Team A", listOf("StartEvent_1", "Task_1")),
+                    BpmnLane("Lane_b", "Team B", listOf("EndEvent_1")),
+                ),
+            )
+
+        assertTrue(validator.validate(definition).isEmpty())
+    }
+
+    @Test
+    fun `validator rejects lane flowNodeRef that matches no node`() {
+        val definition =
+            laneDefinition(
+                lanes = listOf(BpmnLane("Lane_a", "Team A", listOf("Task_1", "Ghost"))),
+            )
+
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "lane Lane_a flowNodeRef 'Ghost' does not match any node id",
+        )
+    }
+
+    @Test
+    fun `validator rejects a node assigned to more than one lane`() {
+        val definition =
+            laneDefinition(
+                lanes =
+                listOf(
+                    BpmnLane("Lane_a", "Team A", listOf("Task_1")),
+                    BpmnLane("Lane_b", "Team B", listOf("Task_1")),
+                ),
+            )
+
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "node 'Task_1' is assigned to more than one lane",
+        )
+    }
+
+    @Test
+    fun `validator rejects duplicate lane ids`() {
+        val definition =
+            laneDefinition(
+                lanes =
+                listOf(
+                    BpmnLane("Lane_dup", "Team A", listOf("StartEvent_1")),
+                    BpmnLane("Lane_dup", "Team B", listOf("Task_1")),
+                ),
+            )
+
+        assertContains(validator.validate(definition).joinToString("\n"), "duplicate lane id: Lane_dup")
+    }
+
+    private fun laneDefinition(lanes: List<BpmnLane>) = BpmnDefinition(
+        processId = "Process_1",
+        processName = "Handle request",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Request received"),
+            BpmnUserTask("Task_1", "Validate request"),
+            BpmnEndEvent("EndEvent_1", "Request completed"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+            BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+        ),
+        lanes = lanes,
+    )
 
     private fun minimalDefinition(
         start: BpmnNode = BpmnStartEvent("StartEvent_1", "Request received"),

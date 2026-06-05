@@ -91,6 +91,8 @@ internal class BpmnContractFidelityChecker {
             checkDecision(decision, nodeById, outgoingBySource, issues)
         }
 
+        checkLaneAssignments(contract, definition, issues)
+
         val report = BpmnFidelityReport(issues = issues.toList())
         if (!report.isValid) {
             logger.warn(
@@ -141,6 +143,7 @@ internal class BpmnContractFidelityChecker {
                         contractElementId = decision.id,
                     )
             }
+
             !gateway.isGateway() -> {
                 issues +=
                     BpmnFidelityIssue(
@@ -153,6 +156,7 @@ internal class BpmnContractFidelityChecker {
                         bpmnElementId = gateway.id,
                     )
             }
+
             !decision.kind.matchesGatewayType(gateway) -> {
                 issues +=
                     BpmnFidelityIssue(
@@ -300,6 +304,52 @@ internal class BpmnContractFidelityChecker {
         // Bound the transparent-join walk. Six hops handles real-world process topologies
         // comfortably and prevents pathological loops from making the check non-terminating.
         const val MAX_REACHABILITY_HOPS = 6
+    }
+
+    /**
+     * Verifies that every activity the contract assigns to an actor (`actorId`) is realised in a
+     * lane, and that the lane is labelled with that actor. Both findings are WARNING severity —
+     * lanes are advisory visual structure that must not gate the pipeline. Activities with no
+     * `actorId` (the common single-role case) and contracts without actors are skipped entirely,
+     * so unpartitioned processes raise nothing.
+     */
+    private fun checkLaneAssignments(
+        contract: ProcessContract,
+        definition: BpmnDefinition,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        val actorsById = contract.actors.associateBy { it.id }
+        val laneByNodeRef =
+            definition.lanes.flatMap { lane -> lane.flowNodeRefs.map { it to lane } }.toMap()
+
+        contract.activities.forEach { activity ->
+            val actorId = activity.actorId ?: return@forEach
+            val actor = actorsById[actorId] ?: return@forEach
+            val lane = laneByNodeRef[activity.id]
+            if (lane == null) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.LANE_ASSIGNMENT_MISSING,
+                        severity = BpmnFidelitySeverity.WARNING,
+                        message =
+                        "Activity '${activity.id}' is assigned to actor '${actor.name}' but its node " +
+                            "is not placed in any lane — the swimlane structure for that actor is missing.",
+                        contractElementId = activity.id,
+                        bpmnElementId = activity.id,
+                    )
+            } else if (!lane.name.equals(actor.name, ignoreCase = true)) {
+                issues +=
+                    BpmnFidelityIssue(
+                        code = BpmnFidelityCode.LANE_NAME_MISMATCH,
+                        severity = BpmnFidelitySeverity.WARNING,
+                        message =
+                        "Activity '${activity.id}' is assigned to actor '${actor.name}' but sits in lane " +
+                            "'${lane.name}' — the lane label does not match the actor.",
+                        contractElementId = activity.id,
+                        bpmnElementId = lane.id,
+                    )
+            }
+        }
     }
 
     /**

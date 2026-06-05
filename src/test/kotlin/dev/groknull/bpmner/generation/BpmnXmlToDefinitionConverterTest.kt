@@ -13,6 +13,7 @@ import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
+import dev.groknull.bpmner.core.BpmnLane
 import dev.groknull.bpmner.core.BpmnManualTask
 import dev.groknull.bpmner.core.BpmnMessageEventDefinition
 import dev.groknull.bpmner.core.BpmnMessageRef
@@ -95,6 +96,54 @@ class BpmnXmlToDefinitionConverterTest {
         val manual = parsed.nodes.single { it.id == "act-inspect" }
         assertIs<BpmnManualTask>(manual)
         assertEquals(2, parsed.messages.size)
+    }
+
+    @Test
+    @Suppress("LongMethod") // fixture builds + lane round-trip assertions stay cohesive
+    fun `lanes round-trip with flow node assignments preserved`() {
+        // Single-pool process partitioned across three role lanes (customer-refund shape).
+        val original =
+            BpmnDefinition(
+                processId = "Process_refund_rt",
+                processName = "Customer refund request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Refund requested"),
+                    BpmnUserTask("act-classify", "Classify request"),
+                    BpmnUserTask("act-review", "Review judgement call"),
+                    BpmnServiceTask("act-execute", "Execute refund"),
+                    BpmnEndEvent("EndEvent_1", "Ticket closed"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("F1", "StartEvent_1", "act-classify"),
+                    BpmnEdge("F2", "act-classify", "act-review"),
+                    BpmnEdge("F3", "act-review", "act-execute"),
+                    BpmnEdge("F4", "act-execute", "EndEvent_1"),
+                ),
+                lanes =
+                listOf(
+                    BpmnLane("Lane_support", "Customer support", listOf("StartEvent_1", "act-classify")),
+                    BpmnLane("Lane_operations", "Operations", listOf("act-review")),
+                    BpmnLane("Lane_finance", "Finance", listOf("act-execute", "EndEvent_1")),
+                ),
+            )
+
+        val xml = forward.toXml(original)
+        assertContains(xml, "<laneSet")
+        assertContains(xml, "<lane id=\"Lane_support\" name=\"Customer support\"")
+        assertContains(xml, "<flowNodeRef>act-classify</flowNodeRef>")
+
+        val parsed = reverse.parse(xml)
+        assertEquals(3, parsed.lanes.size)
+        val finance = parsed.lanes.single { it.id == "Lane_finance" }
+        assertEquals("Finance", finance.name)
+        assertEquals(listOf("act-execute", "EndEvent_1"), finance.flowNodeRefs)
+        // Every original node remains assigned to exactly one lane after the round-trip.
+        assertEquals(
+            original.nodes.map { it.id }.toSet(),
+            parsed.lanes.flatMap { it.flowNodeRefs }.toSet(),
+        )
     }
 
     @Test

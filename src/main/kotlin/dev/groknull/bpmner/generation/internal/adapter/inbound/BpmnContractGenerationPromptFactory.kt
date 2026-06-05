@@ -40,7 +40,14 @@ internal class BpmnContractGenerationPromptFactory(
                 " maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`.",
         )
         appendLine("- `ContractTrigger.None` maps to `BpmnNoneEventDefinition`.")
-        appendLine("- Represent actors only where current BPMN DTOs allow, usually in task names.")
+        appendLine(
+            "- When contract activities are assigned to distinct actors (`actorId`) within one" +
+                " organisation, partition the process with `lanes`: emit one `BpmnLane` per actor," +
+                " its `name` set to the actor's name, and `flowNodeRefs` listing the ids of the nodes" +
+                " that actor performs. Do NOT append the actor to the task name. Every actor-tagged" +
+                " node should appear in exactly one lane; leave `lanes` empty when activities share a" +
+                " single actor or none is given.",
+        )
         appendLine("- Do not add unsupported tasks, decisions, branches, actors, or end states.")
         appendLine(
             "- You may infer sequence flows and routing-only converging gateways needed for valid BPMN.",

@@ -25,6 +25,7 @@ interface BpmnDefinition {
     val signals: List<BpmnSignalRef>
     val errors: List<BpmnErrorRef>
     val escalations: List<BpmnEscalationRef>
+    val lanes: List<BpmnLane>
 }
 
 /**
@@ -107,6 +108,18 @@ interface BpmnEdge {
     val name: String?
     val conditionExpression: String?
     val isDefault: Boolean
+}
+
+/**
+ * A swimlane partition within a single process. A lane groups the flow nodes performed by
+ * one role, team, or system within the same organisation (the single-pool case). Lanes are
+ * a visual partition, not flow nodes themselves, so they live alongside [BpmnDefinition.nodes]
+ * rather than in the `BpmnNode` hierarchy.
+ */
+interface BpmnLane {
+    val id: String
+    val name: String
+    val flowNodeRefs: List<String>
 }
 
 /** Process-level message catalog entry, referenced by message event definitions and tasks. */

@@ -55,6 +55,20 @@ internal class BpmnContractPromptFactory(
         )
         appendLine("- Use `ContractTrigger.None(description)` for ordinary untyped process starts.")
         appendLine()
+        appendLine("Actors and roles:")
+        appendLine(
+            "- When the source describes distinct teams, roles, or systems within the same" +
+                " organisation that each own part of the work (e.g. \"the support team\", \"an" +
+                " operations lead\", \"a finance clerk\"), declare each as a `ContractActor` with a" +
+                " `name` and, where stated, a `role`.",
+        )
+        appendLine(
+            "- Tag each ContractActivity with the `actorId` of the actor that performs it. These" +
+                " actor groupings become BPMN swimlanes downstream, so do not fold the actor into the" +
+                " activity name.",
+        )
+        appendLine("- Only declare actors that are grounded in the source; leave `actors` empty otherwise.")
+        appendLine()
         appendLine("Activity kind (sealed type with a `kind` discriminator):")
         appendLine(
             "- SERVICE (default) — external/system automation: a backend service call, a job run by" +

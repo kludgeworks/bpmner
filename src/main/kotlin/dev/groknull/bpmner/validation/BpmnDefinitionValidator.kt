@@ -45,6 +45,7 @@ internal class BpmnDefinitionValidator {
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
+        validateLanes(definition, errors)
 
         return errors
     }
@@ -144,7 +145,9 @@ internal class BpmnDefinitionValidator {
         definition.nodes.forEach { node ->
             when (node) {
                 is BpmnStartEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
+
                 is BpmnEndEvent -> validateEventDefinition(node.id, node.eventDefinition, context, errors)
+
                 is BpmnIntermediateCatchEvent -> {
                     validateRequiredEventDefinition(
                         "intermediate catch event",
@@ -154,6 +157,7 @@ internal class BpmnDefinitionValidator {
                     )
                     validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
+
                 is BpmnIntermediateThrowEvent -> {
                     validateRequiredEventDefinition(
                         "intermediate throw event",
@@ -163,7 +167,9 @@ internal class BpmnDefinitionValidator {
                     )
                     validateEventDefinition(node.id, node.eventDefinition, context, errors)
                 }
+
                 is BpmnBoundaryEvent -> validateBoundaryEvent(node, context, errors)
+
                 else -> Unit
             }
         }
@@ -323,6 +329,34 @@ internal class BpmnDefinitionValidator {
                 "$elementName $nodeId messageRef '$messageRef' " +
                     "does not match any message catalog id",
             )
+        }
+    }
+
+    private fun validateLanes(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        if (definition.lanes.isEmpty()) return
+
+        val nodeIdSet = definition.nodes.map { it.id }.toSet()
+
+        definition.lanes
+            .map { it.id.trim() }
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate lane id: $it") }
+
+        val seenNodeRefs = mutableSetOf<String>()
+        definition.lanes.forEach { lane ->
+            lane.flowNodeRefs.forEach { ref ->
+                if (ref !in nodeIdSet) {
+                    errors.add("lane ${lane.id} flowNodeRef '$ref' does not match any node id")
+                }
+                if (!seenNodeRefs.add(ref)) {
+                    errors.add("node '$ref' is assigned to more than one lane")
+                }
+            }
         }
     }
 

@@ -29,6 +29,7 @@ import dev.groknull.bpmner.api.BpmnEventDefinition as ApiBpmnEventDefinition
 import dev.groknull.bpmner.api.BpmnExclusiveGateway as ApiBpmnExclusiveGateway
 import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent as ApiBpmnIntermediateCatchEvent
 import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent as ApiBpmnIntermediateThrowEvent
+import dev.groknull.bpmner.api.BpmnLane as ApiBpmnLane
 import dev.groknull.bpmner.api.BpmnManualTask as ApiBpmnManualTask
 import dev.groknull.bpmner.api.BpmnMessageEventDefinition as ApiBpmnMessageEventDefinition
 import dev.groknull.bpmner.api.BpmnMessageRef as ApiBpmnMessageRef
@@ -131,6 +132,13 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
     override val escalations: List<BpmnEscalationRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Swimlane partitions within this process. Each lane groups the ids of the flow nodes " +
+            "performed by one role, team, or system within the same organisation. Leave empty " +
+            "for an unpartitioned process.",
+    )
+    override val lanes: List<BpmnLane> = emptyList(),
 ) : ApiBpmnDefinition
 
 data class BpmnMessageRef(
@@ -146,6 +154,19 @@ data class BpmnSignalRef(
     @field:NotBlank
     override val name: String,
 ) : ApiBpmnSignalRef
+
+@JsonClassDescription("Swimlane partition grouping the flow nodes performed by one role within a process")
+data class BpmnLane(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Stable lane id, e.g. Lane_finance")
+    override val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Lane label, typically the role, team, or system that performs the grouped nodes")
+    override val name: String,
+    @field:NotEmpty
+    @get:JsonPropertyDescription("Ids of the flow nodes that belong to this lane")
+    override val flowNodeRefs: List<String>,
+) : ApiBpmnLane
 
 data class BpmnErrorRef(
     @field:NotBlank
