@@ -1,0 +1,38 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+spring:
+  autoconfigure:
+    exclude:
+      - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.deepseek.AgentDeepSeekAutoConfiguration
+
+embabel:
+  models:
+    # Open-weights Llama on Groq (OpenAI-compatible). Heavy roles → 70B, light roles → 8B.
+    # Every id below must also appear in the `groq.models` registration list. Confirm current
+    # ids at https://console.groq.com/docs/models (Groq rotates model availability).
+    default-llm: llama-3.3-70b-versatile
+    llms:
+      generator: llama-3.3-70b-versatile
+      repairer: llama-3.3-70b-versatile
+      repair-label: llama-3.1-8b-instant
+      repair-patch: llama-3.1-8b-instant
+      repair-rewrite: llama-3.3-70b-versatile
+      readiness-assessor: llama-3.1-8b-instant
+      contract-extractor: llama-3.3-70b-versatile
+      alignment-validator: llama-3.3-70b-versatile
+  agent:
+    platform:
+      models:
+        groq:
+          api-key: ${GROQ_API_KEY:}
+          models:
+            - llama-3.3-70b-versatile
+            - llama-3.1-8b-instant
+      llm-operations:
+        prompts:
+          default-timeout: PT180S

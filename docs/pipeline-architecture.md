@@ -19,7 +19,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `layout/` | Bounded pre-layout XML cleanup, deterministic auto-layout, final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort`. |
 | `alignment/` | Guardrail 3: Semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAlignmentAgent`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`. |
-| `config/` | GitHub Models / Anthropic model configuration. | `GitHubModelsConfig`, `GitHubCatalogClient`. |
+| `config/` | OpenAI-compatible provider model configuration (e.g. Groq). | `GroqModelsConfig`. |
 
 Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter packages under each module are not importable from outside.
 
@@ -236,7 +236,7 @@ For the full configuration reference (every `bpmner.*` YAML key, defaults, range
 | `bpmner.generator` / `bpmner.repairer` / etc. | role-based personas | Each agent has a `Persona` + `LlmOptions.withLlmForRole(...)` slot. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, emits truncated previews of every intermediate artifact at DEBUG. |
 
-Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile — `anthropic` for Anthropic, `github` for GitHub Models / OpenAI-compatible. See the top-level `README.md` for invocation.
+Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile (`anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `groq`). See the top-level `README.md` for invocation.
 
 ## Observability surface
 

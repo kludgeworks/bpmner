@@ -18,8 +18,15 @@ class ActiveLiveLlmProfileConditionTest {
     }
 
     @Test
-    fun `enables github profile when github token is present`() {
-        val result = evaluate(profileEnvironment = "github", env = mapOf("GITHUB_TOKEN" to "github_pat_test"))
+    fun `enables deepseek profile when deepseek token is present`() {
+        val result = evaluate(activeProfiles = "deepseek", env = mapOf("DEEPSEEK_API_KEY" to "sk-deepseek-test"))
+
+        assertTrue(result.enabled, result.reason)
+    }
+
+    @Test
+    fun `enables groq profile when groq token is present`() {
+        val result = evaluate(activeProfiles = "groq", env = mapOf("GROQ_API_KEY" to "gsk-test"))
 
         assertTrue(result.enabled, result.reason)
     }
@@ -27,13 +34,13 @@ class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `system property takes precedence over environment profile`() {
         val result = evaluate(
-            activeProfiles = "github",
+            activeProfiles = "mistral",
             profileEnvironment = "anthropic",
             env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test"),
         )
 
         assertFalse(result.enabled, result.reason)
-        assertTrue(result.reason.contains("GITHUB_TOKEN"), result.reason)
+        assertTrue(result.reason.contains("MISTRAL_API_KEY"), result.reason)
     }
 
     @Test
@@ -47,8 +54,8 @@ class ActiveLiveLlmProfileConditionTest {
     @Test
     fun `disables when both provider families are active`() {
         val result = evaluate(
-            activeProfiles = "anthropic,github",
-            env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test", "GITHUB_TOKEN" to "github_pat_test"),
+            activeProfiles = "anthropic,mistral",
+            env = mapOf("ANTHROPIC_API_KEY" to "sk-ant-test", "MISTRAL_API_KEY" to "mistral-test"),
         )
 
         assertFalse(result.enabled, result.reason)
