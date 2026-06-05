@@ -236,7 +236,7 @@ For the full configuration reference (every `bpmner.*` YAML key, defaults, range
 | `bpmner.generator` / `bpmner.repairer` / etc. | role-based personas | Each agent has a `Persona` + `LlmOptions.withLlmForRole(...)` slot. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, emits truncated previews of every intermediate artifact at DEBUG. |
 
-Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile (`anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `openrouter`). See the top-level `README.md` for invocation.
+Model role bindings (`generator`, `repair-label`, `repair-patch`, `repair-rewrite`, `readiness-assessor`, `contract-extractor`, `alignment-validator`, `linter`) are resolved by the active Spring profile (`anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama`). See the top-level `README.md` for invocation.
 
 ## Observability surface
 

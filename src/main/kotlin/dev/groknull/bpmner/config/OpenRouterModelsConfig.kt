@@ -64,7 +64,9 @@ class OpenRouterProperties : RetryProperties {
     override var backoffMaxInterval: Long = DEFAULT_BACKOFF_MAX_INTERVAL
 }
 
-@Profile("openrouter")
+// Activated by the `llama` profile: OpenRouter is just the proxy; the Llama model (on Cerebras,
+// pinned account-level) is the family under test, so the profile/CI row is named for the model.
+@Profile("llama")
 @Configuration(proxyBeanMethods = false)
 @EnableConfigurationProperties(OpenRouterProperties::class)
 class OpenRouterModelsConfig(

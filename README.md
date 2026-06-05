@@ -101,7 +101,7 @@ ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
-Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `openrouter`.
+Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama`.
 
 To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest` suite with one supported live provider profile:
 ```bash

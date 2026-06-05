@@ -25,8 +25,8 @@ class ActiveLiveLlmProfileConditionTest {
     }
 
     @Test
-    fun `enables openrouter profile when openrouter token is present`() {
-        val result = evaluate(activeProfiles = "openrouter", env = mapOf("OPENROUTER_API_KEY" to "sk-or-test"))
+    fun `enables llama profile when openrouter token is present`() {
+        val result = evaluate(activeProfiles = "llama", env = mapOf("OPENROUTER_API_KEY" to "sk-or-test"))
 
         assertTrue(result.enabled, result.reason)
     }

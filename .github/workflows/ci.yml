@@ -100,7 +100,7 @@ jobs:
             shard_offset: 3
           - provider: deepseek
             shard_offset: 4
-          - provider: openrouter
+          - provider: llama
             shard_offset: 5
     steps:
       - name: Checkout repository
