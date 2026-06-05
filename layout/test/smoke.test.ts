@@ -21,7 +21,7 @@ const MINIMAL_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
   </process>
 </definitions>`
 
-// Single-pool process partitioned into two role lanes (#187 lanes). The auto-layout library
+// Single-pool process partitioned into two role lanes. The auto-layout library
 // must place lane-partitioned flow nodes without throwing or dropping the laneSet.
 const LANES_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -48,7 +48,7 @@ const LANES_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
   </process>
 </definitions>`
 
-// Two-participant collaboration with one message flow between the pools (#187 pools). The
+// Two-participant collaboration with one message flow between the pools. The
 // auto-layout library must place both participants and route the message flow without throwing.
 const COLLABORATION_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"

@@ -462,7 +462,7 @@ internal class BpmnDefinitionValidator {
         }
     }
 
-    // Structural / referential integrity for the collaboration data plane (#360). Complements the
+    // Structural / referential integrity for the collaboration data plane. Complements the
     // Pkl convention rules (MessageFlowAcrossPools, LaneLabelsBusinessRolesPerformers, …) — those
     // check naming and cross-pool *semantics*; this checks that the ids actually resolve and that
     // the partition is well-formed, so the renderer never trips over a dangling reference.
@@ -549,6 +549,13 @@ internal class BpmnDefinitionValidator {
         // A message-flow endpoint is either a flow-node id (white-box pool) or a participant id
         // (typically a black-box pool). Cross-pool *semantics* are enforced by the
         // MessageFlowAcrossPools Pkl rule; here we only guard against dangling and self references.
+        definition.messageFlows
+            .map { it.id.trim() }
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate message flow id: $it") }
+
         val endpointIds = nodeIds + participantIds
         definition.messageFlows.forEach { flow ->
             val source = flow.sourceRef.trim()

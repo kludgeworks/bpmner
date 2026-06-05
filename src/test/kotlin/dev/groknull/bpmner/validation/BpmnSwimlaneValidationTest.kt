@@ -18,7 +18,7 @@ import kotlin.test.assertContains
 import kotlin.test.assertTrue
 
 /**
- * Structural / referential-integrity checks for the collaboration data plane (#360):
+ * Structural / referential-integrity checks for the collaboration data plane:
  * `BpmnDefinitionValidator.validateSwimlanes`. Cross-pool *semantics* are owned by the
  * MessageFlowAcrossPools Pkl rule; these tests cover the structural guards only.
  */
@@ -105,6 +105,24 @@ class BpmnSwimlaneValidationTest {
         assertContains(
             validator.validate(definition).joinToString("\n"),
             "message flow MsgFlow_1 targetRef 'Ghost' matches no node or participant id",
+        )
+    }
+
+    @Test
+    fun `validator rejects duplicate message flow ids`() {
+        val definition =
+            swimlaneDefinition(
+                participants = listOf(BpmnParticipant("Participant_ext", "Carrier", processRef = null)),
+                messageFlows =
+                listOf(
+                    BpmnMessageFlow("MsgFlow_dup", "Ship", "Task_1", "Participant_ext"),
+                    BpmnMessageFlow("MsgFlow_dup", "Confirm", "Participant_ext", "Task_1"),
+                ),
+            )
+
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "duplicate message flow id: MsgFlow_dup",
         )
     }
 
