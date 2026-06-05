@@ -33,6 +33,7 @@ import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.context.annotation.Import
 import org.springframework.test.context.TestPropertySource
 import java.util.concurrent.TimeUnit
 
@@ -41,8 +42,10 @@ import java.util.concurrent.TimeUnit
 @EnabledForLiveLlmProfile
 @ExtendWith(
     SmokeTestSummaryExtension::class,
+    SmokeResultRecorder::class,
 )
 @SpringBootTest
+@Import(PerTestEventCapture::class)
 // Each method makes two sequential live-LLM calls (readiness + extraction); 120s was too tight
 // under provider latency spikes / tool-loop retries. Generous headroom below Bazel's 'eternal'
 // target still catches a genuine hang.
@@ -64,6 +67,9 @@ class ContractVocabularySmokeTest {
     @Autowired
     private lateinit var readinessInvoker: BpmnReadinessInvoker
 
+    @Autowired
+    private lateinit var perTestCapture: PerTestEventCapture
+
     private fun extractContract(prose: String): ProcessContract {
         val request = BpmnRequest(processDescription = prose.trimIndent().trim())
         val assessment = readinessInvoker.assess(request)
@@ -71,7 +77,7 @@ class ContractVocabularySmokeTest {
         return AgentPlatformTypedOps(agentPlatform).transform(
             readyContext,
             ValidatedProcessContract::class.java,
-            ProcessOptions(listeners = listOf(SuiteCostCapturer)),
+            ProcessOptions(listeners = listOf(SuiteCostCapturer, perTestCapture)),
         ).contract
     }
 
