@@ -57,11 +57,12 @@ class PerTestEventCapture : AgenticEventListener {
             llmCallCount = invs.size,
             llmTimeMs = invs.sumOf { it.runningTime.toMillis() },
             toolCallCount = toolCalls,
-            servedModel = invs.firstOrNull()?.llmMetadata?.name,
+            servedModel = invs.map { it.llmMetadata.name }.distinct().joinToString(",").ifEmpty { null },
             stageBreakdown =
             invs.groupBy { it.agentName ?: UNKNOWN }
                 .mapValues { (_, group) ->
                     StageStats(
+                        model = group.map { it.llmMetadata.name }.distinct().joinToString(","),
                         promptTokens = group.sumOf { it.usage.promptTokens ?: 0 },
                         completionTokens = group.sumOf { it.usage.completionTokens ?: 0 },
                         llmCalls = group.size,

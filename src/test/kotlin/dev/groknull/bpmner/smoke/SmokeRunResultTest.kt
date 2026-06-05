@@ -40,8 +40,10 @@ class SmokeRunResultTest {
                 toolCallCount = 3,
                 stageBreakdown =
                 mapOf(
-                    "readiness" to StageStats(promptTokens = 500, completionTokens = 80, llmCalls = 1),
-                    "extraction" to StageStats(promptTokens = 1000, completionTokens = 240, llmCalls = 1),
+                    "readiness" to
+                        StageStats(model = "haiku", promptTokens = 500, completionTokens = 80, llmCalls = 1),
+                    "extraction" to
+                        StageStats(model = "sonnet", promptTokens = 1000, completionTokens = 240, llmCalls = 1),
                 ),
                 testFingerprint = "aaaa",
                 promptFingerprint = "bbbb",

@@ -21,14 +21,15 @@ import java.time.Instant
 import java.util.Optional
 
 /**
- * Phase 2.0 (report-only): records one [SmokeRunResult] per test method — outcome, per-test
- * cost/usage (from [PerTestEventCapture]), change-detection fingerprints, and CI identity — and writes
- * them as JSONL at suite end. Purely additive: it never affects pass/fail; nothing reads the file yet.
+ * Records one [SmokeRunResult] per test method — outcome, per-test cost/usage (from
+ * [PerTestEventCapture]), change-detection fingerprints, and CI identity — and writes them as JSONL to
+ * Bazel's `TEST_UNDECLARED_OUTPUTS_DIR` at suite end (collected into the test's `outputs.zip`).
+ * Additive: it never affects whether a test passes.
  *
  * Resets [PerTestEventCapture] before each test (`beforeEach`) and snapshots it when the outcome is
- * known (`TestWatcher`). The output lands in Bazel's `TEST_UNDECLARED_OUTPUTS_DIR` so it is collected
- * into the test's `outputs.zip` for the Phase 2.1 consolidation step.
+ * known (`TestWatcher`).
  */
+@Suppress("TooManyFunctions") // test-only recorder; several small cohesive extraction/fingerprint helpers
 class SmokeResultRecorder :
     BeforeEachCallback,
     TestWatcher,
@@ -48,7 +49,7 @@ class SmokeResultRecorder :
     ) = record(
         context,
         outcome = "fail",
-        category = if (cause is AssertionError) "classification" else "deterministic",
+        category = categoryFor(cause),
         message = cause.message,
     )
 
@@ -68,16 +69,9 @@ class SmokeResultRecorder :
         val target = outputDir().resolve(JSONL_FILE)
         try {
             Files.createDirectories(target.parent)
-            rows.forEach { row ->
-                Files.writeString(
-                    target,
-                    mapper.writeValueAsString(row.copy(runComplete = true)) + System.lineSeparator(),
-                    Charsets.UTF_8,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.APPEND,
-                )
-            }
-            logger.info("Wrote {} smoke result rows to {}", rows.size, target)
+            val lines = rows.map { mapper.writeValueAsString(it.copy(runComplete = true)) }
+            Files.write(target, lines, Charsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND)
+            logger.info("Wrote {} smoke result rows to {}", lines.size, target)
         } catch (e: java.io.IOException) {
             logger.warn("Failed to write smoke results to {}", target, e)
         }
@@ -116,7 +110,7 @@ class SmokeResultRecorder :
                 toolCallCount = snap?.toolCallCount ?: 0,
                 stageBreakdown = snap?.stageBreakdown ?: emptyMap(),
                 testFingerprint = testClassFingerprint(context),
-                promptFingerprint = promptFingerprint(),
+                promptFingerprint = cachedPromptFingerprint,
                 embabelVersion = LlmInvocation::class.java.`package`?.implementationVersion,
                 runComplete = false,
             ),
@@ -140,21 +134,46 @@ class SmokeResultRecorder :
         "$method::${message?.lineSequence()?.firstOrNull()?.trim()?.take(MAX_SIGNATURE).orEmpty()}"
     }
 
-    // The test SOURCE is not in the Bazel test sandbox, so hash the compiled class bytecode as a
-    // pragmatic proxy — stable within a build, and changes when the test changes.
-    private fun testClassFingerprint(context: ExtensionContext): String {
-        val cls = context.testClass.orElse(null) ?: return UNKNOWN
-        val res = cls.getResource("${cls.simpleName}.class") ?: return UNKNOWN
-        return runCatching { sha256(res.readBytes()) }.getOrDefault(UNKNOWN)
+    // A failed extraction assertion is a `classification` miss; a timeout / transport error is `infra`
+    // (latency or quota, not an LLM-quality regression); anything else (DI / parse / compile) is
+    // `deterministic`. Keeping infra out of `deterministic` matters: the gate hard-fails on deterministic.
+    private fun categoryFor(cause: Throwable): String = when {
+        isInfra(cause) -> "infra"
+        cause is AssertionError -> "classification"
+        else -> "deterministic"
     }
 
-    private fun promptFingerprint(): String {
+    private fun isInfra(cause: Throwable): Boolean = generateSequence(cause) { it.cause }.any {
+        isInfraTypeName(it::class.java.name) || "timed out" in (it.message ?: "").lowercase()
+    }
+
+    private fun isInfraTypeName(name: String): Boolean = name.startsWith("java.net.") ||
+        name.startsWith("java.util.concurrent.") ||
+        "TimeoutException" in name
+
+    // Cached — the test class is the same for every method in a suite. The test SOURCE is not in the
+    // Bazel sandbox, so hash the compiled class bytecode as a proxy (stable within a build, changes
+    // when the test changes).
+    private var cachedTestFingerprint: String? = null
+
+    private fun testClassFingerprint(context: ExtensionContext): String {
+        cachedTestFingerprint?.let { return it }
+        val cls = context.testClass.orElse(null) ?: return UNKNOWN
+        val res = cls.getResource("${cls.simpleName}.class")
+        val fp = if (res == null) UNKNOWN else runCatching { sha256(res.readBytes()) }.getOrDefault(UNKNOWN)
+        return fp.also { cachedTestFingerprint = it }
+    }
+
+    // Cached: prompts don't change during a suite. UNKNOWN unless *every* prompt resolves, so a partial
+    // hash (some resources absent) never masquerades as a real, comparable fingerprint.
+    private val cachedPromptFingerprint: String by lazy {
         val cl = SmokeResultRecorder::class.java.classLoader
-        val bytes =
-            VOCAB_PROMPTS.sorted()
-                .mapNotNull { cl.getResource(it)?.readBytes() }
-                .fold(ByteArray(0)) { acc, b -> acc + b }
-        return if (bytes.isEmpty()) UNKNOWN else sha256(bytes)
+        val resolved = VOCAB_PROMPTS.sorted().map { cl.getResource(it) }
+        if (resolved.any { it == null }) {
+            UNKNOWN
+        } else {
+            sha256(resolved.filterNotNull().fold(ByteArray(0)) { acc, url -> acc + url.readBytes() })
+        }
     }
 
     private fun env(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }

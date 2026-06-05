@@ -6,13 +6,12 @@
 package dev.groknull.bpmner.smoke
 
 /**
- * One row per test-method-instance, emitted by [SmokeResultRecorder] as a line of JSONL. This is the
- * Phase 2.0 "report-only" record consumed downstream by the smoke-history dashboard. Nothing reads it
- * yet — it is purely additive and never affects whether a test passes.
+ * One row per test-method-instance, emitted by [SmokeResultRecorder] as a line of JSONL. Additive
+ * test-only telemetry — it never affects whether a test passes.
  *
- * `attempts` and the authoritative final outcome are intentionally absent: Bazel reruns a fresh JVM per
- * `--flaky_test_attempts` retry, so the in-JVM writer always sees attempt 1. The consolidation step
- * (Phase 2.1) derives them from Bazel's `test.xml`/attempt dirs.
+ * `attempts` and the authoritative final outcome are intentionally absent: Bazel reruns a fresh JVM
+ * per `--flaky_test_attempts` retry, so the in-JVM writer always sees attempt 1; they are derived from
+ * Bazel's `test.xml`/attempt dirs.
  */
 data class SmokeRunResult(
     val ts: String,
@@ -42,8 +41,9 @@ data class SmokeRunResult(
     val runComplete: Boolean,
 )
 
-/** Per-pipeline-stage token usage (keyed by `LlmInvocation.agentName`, e.g. readiness vs extraction). */
+/** Per-pipeline-stage model + token usage (keyed by `LlmInvocation.agentName`, e.g. readiness vs extraction). */
 data class StageStats(
+    val model: String,
     val promptTokens: Int,
     val completionTokens: Int,
     val llmCalls: Int,
