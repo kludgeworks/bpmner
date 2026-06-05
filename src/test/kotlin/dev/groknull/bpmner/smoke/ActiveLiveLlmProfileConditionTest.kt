@@ -25,8 +25,8 @@ class ActiveLiveLlmProfileConditionTest {
     }
 
     @Test
-    fun `enables groq profile when groq token is present`() {
-        val result = evaluate(activeProfiles = "groq", env = mapOf("GROQ_API_KEY" to "gsk-test"))
+    fun `enables openrouter profile when openrouter token is present`() {
+        val result = evaluate(activeProfiles = "openrouter", env = mapOf("OPENROUTER_API_KEY" to "sk-or-test"))
 
         assertTrue(result.enabled, result.reason)
     }

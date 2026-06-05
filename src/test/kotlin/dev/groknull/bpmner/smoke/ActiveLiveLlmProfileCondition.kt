@@ -56,9 +56,9 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 tokenName = "DEEPSEEK_API_KEY",
             ),
             LiveLlmProvider(
-                displayName = "Groq",
-                profiles = setOf("groq"),
-                tokenName = "GROQ_API_KEY",
+                displayName = "OpenRouter",
+                profiles = setOf("openrouter"),
+                tokenName = "OPENROUTER_API_KEY",
             ),
         )
 
@@ -80,7 +80,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 0 ->
                     Evaluation.disabled(
                         "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
-                            "set one of anthropic, openai, gemini, mistral, deepseek, or groq",
+                            "set one of anthropic, openai, gemini, mistral, deepseek, or openrouter",
                     )
 
                 1 ->
@@ -91,7 +91,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                         "multiple live LLM profile families are active in " +
                             "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
                             activeProviders.joinToString { it.displayName } +
-                            "; select exactly one of anthropic, openai, gemini, mistral, deepseek, or groq",
+                            "; select exactly one of anthropic, openai, gemini, mistral, deepseek, or openrouter",
                     )
             }
         }

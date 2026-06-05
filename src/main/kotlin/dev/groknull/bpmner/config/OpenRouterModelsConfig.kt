@@ -24,62 +24,74 @@ import org.springframework.context.annotation.Profile
 import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient
 
-private const val PROVIDER = "Groq"
+private const val PROVIDER = "OpenRouter"
 private const val DEFAULT_MAX_ATTEMPTS = 10
 private const val DEFAULT_BACKOFF_MILLIS = 5000L
 private const val DEFAULT_BACKOFF_MULTIPLIER = 5.0
 private const val DEFAULT_BACKOFF_MAX_INTERVAL = 180000L
-private const val BASE_URL = "https://api.groq.com/openai"
-private const val COMPLETIONS_PATH = "/v1/chat/completions"
+private const val BASE_URL = "https://openrouter.ai/api/v1"
+private const val COMPLETIONS_PATH = "/chat/completions"
 
-// Groq is OpenAI-compatible but ships no Embabel pricing bundle (unlike first-class
-// providers, whose autoconfigure jar carries a models/<provider>-models.yml), so register
-// pricing explicitly — Groq public on-demand rates, USD per 1M input/output tokens. Models
-// absent here fall back to no pricing (cost reported as unknown). Verify rates and ids
-// against https://groq.com/pricing and https://console.groq.com/docs/models.
-private val GROQ_PRICING: Map<String, PricingModel> = mapOf(
-    "llama-3.3-70b-versatile" to PricingModel.usdPer1MTokens(0.59, 0.79),
-    "llama-3.1-8b-instant" to PricingModel.usdPer1MTokens(0.05, 0.08),
-)
+// OpenRouter is OpenAI-compatible but ships no Embabel pricing bundle, so register pricing explicitly
+// so the smoke-history dashboard reports real cost (`cost_known=priced`). These are the Cerebras rates
+// for the Llama model — Cerebras is pinned at the OpenRouter account level ("Provider preferences →
+// only Cerebras"), because OpenRouter's per-request `provider` routing is a request-body field that
+// Spring AI's OpenAiChatOptions cannot set. Verify the exact rate on the OpenRouter model page
+// (https://openrouter.ai/meta-llama/llama-3.3-70b-instruct, Cerebras provider). USD per 1M tokens.
+private const val LLAMA_70B_USD_PER_1M_IN = 0.85
+private const val LLAMA_70B_USD_PER_1M_OUT = 1.2
 
-@ConfigurationProperties(prefix = "embabel.agent.platform.models.groq")
-class GroqProperties : RetryProperties {
+private val OPENROUTER_PRICING: Map<String, PricingModel> =
+    mapOf(
+        "meta-llama/llama-3.3-70b-instruct" to
+            PricingModel.usdPer1MTokens(LLAMA_70B_USD_PER_1M_IN, LLAMA_70B_USD_PER_1M_OUT),
+    )
+
+// OpenRouter uses these for rate-limit tier and usage attribution; optional, harmless if absent.
+private val OPENROUTER_HEADERS =
+    mapOf(
+        "HTTP-Referer" to "https://github.com/kludgeworks/bpmner",
+        "X-Title" to "bpmner-smoke",
+    )
+
+@ConfigurationProperties(prefix = "embabel.agent.platform.models.openrouter")
+class OpenRouterProperties : RetryProperties {
     var apiKey: String? = null
-    var models: List<String> = listOf("llama-3.3-70b-versatile", "llama-3.1-8b-instant")
+    var models: List<String> = listOf("meta-llama/llama-3.3-70b-instruct")
     override var maxAttempts: Int = DEFAULT_MAX_ATTEMPTS
     override var backoffMillis: Long = DEFAULT_BACKOFF_MILLIS
     override var backoffMultiplier: Double = DEFAULT_BACKOFF_MULTIPLIER
     override var backoffMaxInterval: Long = DEFAULT_BACKOFF_MAX_INTERVAL
 }
 
-@Profile("groq")
+@Profile("openrouter")
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(GroqProperties::class)
-class GroqModelsConfig(
+@EnableConfigurationProperties(OpenRouterProperties::class)
+class OpenRouterModelsConfig(
     observationRegistry: ObjectProvider<ObservationRegistry>,
     @Qualifier("aiModelRestClientBuilder")
     restClientBuilder: ObjectProvider<RestClient.Builder>,
     @Qualifier("aiModelWebClientBuilder")
     webClientBuilder: ObjectProvider<WebClient.Builder>,
-    private val properties: GroqProperties,
+    private val properties: OpenRouterProperties,
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
     baseUrl = BASE_URL,
     apiKey =
     properties.apiKey?.takeIf { it.isNotBlank() }
         ?: error(
-            "Groq API key required: set GROQ_API_KEY env var or" +
-                " embabel.agent.platform.models.groq.api-key",
+            "OpenRouter API key required: set OPENROUTER_API_KEY env var or" +
+                " embabel.agent.platform.models.openrouter.api-key",
         ),
     completionsPath = COMPLETIONS_PATH,
     embeddingsPath = null,
-    httpHeaders = emptyMap(),
+    httpHeaders = OPENROUTER_HEADERS,
     observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
     restClientBuilder = restClientBuilder,
     webClientBuilder = webClientBuilder,
 ) {
     @Bean
-    fun groqModelsInitializer(): ProviderInitialization {
+    fun openRouterModelsInitializer(): ProviderInitialization {
         val registeredLlms =
             properties.models.map { modelId ->
                 val llm =
@@ -88,10 +100,10 @@ class GroqModelsConfig(
                         provider = PROVIDER,
                         chatModel = chatModelOf(modelId, properties.retryTemplate(modelId)),
                         optionsConverter = StandardOpenAiOptionsConverter,
-                        pricingModel = GROQ_PRICING[modelId],
+                        pricingModel = OPENROUTER_PRICING[modelId],
                     )
                 configurableBeanFactory.registerSingleton(modelId, llm)
-                logger.info("Registered Groq model: {}", modelId)
+                logger.info("Registered OpenRouter model: {}", modelId)
                 RegisteredModel(beanName = modelId, modelId = modelId)
             }
 

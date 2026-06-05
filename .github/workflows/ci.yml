@@ -100,7 +100,7 @@ jobs:
             shard_offset: 3
           - provider: deepseek
             shard_offset: 4
-          - provider: groq
+          - provider: openrouter
             shard_offset: 5
     steps:
       - name: Checkout repository
@@ -133,7 +133,7 @@ jobs:
           GEMINI_API_KEY: op://bpmner/gemini/api-key
           MISTRAL_API_KEY: op://bpmner/mistral/api-key
           DEEPSEEK_API_KEY: op://bpmner/deepseek/api-key
-          GROQ_API_KEY: op://bpmner/groq/api-key
+          OPENROUTER_API_KEY: op://bpmner/openrouter/api-key
           BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
 
       - name: Compute shard index for this run
@@ -161,7 +161,7 @@ jobs:
             --test_env=GEMINI_API_KEY \
             --test_env=MISTRAL_API_KEY \
             --test_env=DEEPSEEK_API_KEY \
-            --test_env=GROQ_API_KEY \
+            --test_env=OPENROUTER_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
             --test_env=TEST_TOTAL_SHARDS=${{ strategy.job-total }} \
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
