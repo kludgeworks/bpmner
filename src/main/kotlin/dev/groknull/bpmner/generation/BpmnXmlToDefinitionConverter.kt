@@ -79,14 +79,6 @@ private data class ParsedCollaboration(
 @Component
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     companion object {
-        internal const val BPMN_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
-
-        // Foreign-namespace extension prefix for attributes we read off flow elements that the
-        // BPMN 2.0 spec doesn't define (e.g. `decisionRef` on businessRuleTask). The canonical
-        // URI lives on the writer side as [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS]; we
-        // alias it here so the reader stays in lockstep with the writer and a URI change in
-        // one place can't silently dissociate the round-trip.
-        private const val BPMNER_EXT_NS = BpmnDefinitionToXmlConverter.BPMNER_EXT_NS
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
@@ -431,19 +423,8 @@ private fun String.localNameRef(): String? = trim()
     ?.substringAfterLast(":")
 
 // BPMN MODEL namespace, duplicated at file scope so the collaboration helpers below stay top-level
-// (off the converter class) and don't inflate its function count. Kept in lockstep with the
-// converter's companion `BPMN_NS`.
+// (off the converter class) and don't inflate its function count.
 private const val BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
-
-internal fun Document.bpmnElements(localName: String): Sequence<Element> {
-    return getElementsByTagNameNS(BpmnXmlToDefinitionConverter.BPMN_NS, localName).elements()
-}
-
-internal fun org.w3c.dom.NodeList.elements(): Sequence<Element> = sequence {
-    for (index in 0 until length) {
-        (item(index) as? Element)?.let { yield(it) }
-    }
-}
 
 // Single-line expression body: splitting the qualifier and call across lines adds no readability
 // for this thin namespace-scan delegation, so the line-length warning is suppressed deliberately.
@@ -505,7 +486,7 @@ internal data class TaskMetadata(
     // `messageRef` on send / receive tasks — BPMN spec attribute on the task element.
     val messageRefs: Map<String, String>,
     // `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
-    // spec defines no decisionRef on tBusinessRuleTask. See [BpmnDefinitionToXmlConverter.BPMNER_EXT_NS].
+    // spec defines no decisionRef on tBusinessRuleTask. See [BPMNER_EXT_NS].
     val decisionRefs: Map<String, String>,
     // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
     val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,

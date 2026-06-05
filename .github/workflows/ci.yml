@@ -214,7 +214,7 @@ jobs:
           cp "$(realpath bazel-out/_coverage/_coverage_report.dat)" "$GITHUB_WORKSPACE/coverage_report.dat"
 
       - name: SonarCloud Scan — Backend
-        if: always() && steps.coverage.outcome != 'skipped'
+        if: success() && steps.coverage.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -227,7 +227,7 @@ jobs:
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
 
       - name: SonarCloud Scan — Web
-        if: always() && steps.coverage.outcome != 'skipped'
+        if: success() && steps.coverage.outcome == 'success'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
