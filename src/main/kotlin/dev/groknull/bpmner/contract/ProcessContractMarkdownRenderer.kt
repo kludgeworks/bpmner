@@ -158,6 +158,7 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
     is ContractActivity.Manual -> " [MANUAL]"
     is ContractActivity.SubProcess ->
         " [SUB_PROCESS contains=\"${activity.containedActivityIds.joinToString(",")}\"]"
+    is ContractActivity.CallActivity -> " [CALL_ACTIVITY calledElement=\"${activity.calledElement}\"]"
 }
 
 // End-state-kind suffix for the markdown line. Normal is the default and gets no

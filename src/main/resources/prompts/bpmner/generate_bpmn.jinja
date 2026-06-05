@@ -52,6 +52,9 @@ Embedded-subprocess topology:
 - Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` and one inner `END_EVENT` (both with `parentRef` = the subprocess id) and wire the members start-to-end between them.
 - The subprocess node itself sits on the enclosing flow like any task: the main flow connects into the `SUB_PROCESS` node and out of it. Sequence flows connect to the subprocess node, not to its interior members — each flow keeps both endpoints on the same side of the boundary (both inside the subprocess or both outside).
 
+Call-activity topology:
+- A `[CALL_ACTIVITY calledElement="X"]` contract activity becomes a `CALL_ACTIVITY` node with `calledElement` = X, id copied verbatim. It sits on the flow like a task (one inbound, one outbound flow) and has NO interior nodes — the called process X is defined separately and referenced by id, so do not emit a second process or any `parentRef`'d children for it.
+
 Event-subprocess topology:
 - An `[EVENT_SUBPROCESS trigger=… interrupting contains="a,b"]` or `[EVENT_SUBPROCESS trigger=… non-interrupting contains="a,b"]` contract entry becomes a `SUB_PROCESS` node with `triggeredByEvent=true`, id copied verbatim. The keyword `interrupting` means the handler cancels the enclosing flow; `non-interrupting` means it runs alongside it. Its members are the activities listed in `contains=`.
 - Give it a typed inner start: one `START_EVENT` with `parentRef` = the event-subprocess id whose `eventDefinition` matches the trigger — MESSAGE → `BpmnMessageEventDefinition` (+ a `definition.messages` entry), TIMER → `BpmnTimerEventDefinition`, ERROR → `BpmnErrorEventDefinition` (+ a `definition.errors` entry), ESCALATION → `BpmnEscalationEventDefinition` (+ a `definition.escalations` entry), SIGNAL → `BpmnSignalEventDefinition` (+ a `definition.signals` entry). Set that start's `isInterrupting` to the entry's interrupting flag.

@@ -191,6 +191,7 @@ data class ProcessContract(
     JsonSubTypes.Type(value = ContractActivity.Receive::class, name = "RECEIVE"),
     JsonSubTypes.Type(value = ContractActivity.Manual::class, name = "MANUAL"),
     JsonSubTypes.Type(value = ContractActivity.SubProcess::class, name = "SUB_PROCESS"),
+    JsonSubTypes.Type(value = ContractActivity.CallActivity::class, name = "CALL_ACTIVITY"),
 )
 sealed interface ContractActivity {
     val id: String
@@ -284,6 +285,20 @@ sealed interface ContractActivity {
         override val id: String,
         override val name: String,
         val containedActivityIds: List<String>,
+        override val actorId: String? = null,
+        override val sourceIds: List<String> = emptyList(),
+        override val modifiers: ActivityModifiers = ActivityModifiers(),
+    ) : ContractActivity
+
+    @JsonClassDescription(
+        "Call activity — a single step that delegates to another, separately-defined process " +
+            "(reused across flows rather than inlined). Maps to BpmnCallActivity whose calledElement " +
+            "names the invoked process.",
+    )
+    data class CallActivity(
+        override val id: String,
+        override val name: String,
+        val calledElement: String,
         override val actorId: String? = null,
         override val sourceIds: List<String> = emptyList(),
         override val modifiers: ActivityModifiers = ActivityModifiers(),
@@ -418,6 +433,7 @@ val ContractActivity.kindName: String
             is ContractActivity.Receive -> "RECEIVE"
             is ContractActivity.Manual -> "MANUAL"
             is ContractActivity.SubProcess -> "SUB_PROCESS"
+            is ContractActivity.CallActivity -> "CALL_ACTIVITY"
         }
 
 /**
@@ -435,6 +451,7 @@ fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity = 
     is ContractActivity.Receive -> copy(sourceIds = sourceIds)
     is ContractActivity.Manual -> copy(sourceIds = sourceIds)
     is ContractActivity.SubProcess -> copy(sourceIds = sourceIds)
+    is ContractActivity.CallActivity -> copy(sourceIds = sourceIds)
 }
 
 /**

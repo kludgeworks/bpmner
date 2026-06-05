@@ -33,6 +33,7 @@ internal object BpmnTypeMatcher {
         BpmnTypeName.PARALLEL_GATEWAY,
         BpmnTypeName.EVENT_BASED_GATEWAY,
         BpmnTypeName.SUB_PROCESS,
+        BpmnTypeName.CALL_ACTIVITY,
         BpmnTypeName.SEQUENCE_FLOW,
     )
 
@@ -63,6 +64,7 @@ internal object BpmnTypeMatcher {
 
     private val activityTypeNames = setOf(
         BpmnTypeName.SUB_PROCESS,
+        BpmnTypeName.CALL_ACTIVITY,
     )
 
     private val flowNodeTypeNames = taskTypeNames + gatewayTypeNames + eventTypeNames + activityTypeNames

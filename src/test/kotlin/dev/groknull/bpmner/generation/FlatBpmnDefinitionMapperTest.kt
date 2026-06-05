@@ -12,6 +12,7 @@ import dev.groknull.bpmner.api.MultiInstanceMode
 import dev.groknull.bpmner.core.BpmnAssociation
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCallActivity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -171,6 +172,20 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(
             BpmnReceiveTask(id = "rcv1", name = "Await", messageRef = "msg-ack"),
             receive.toSealed(),
+        )
+    }
+
+    @Test
+    fun `CALL_ACTIVITY round-trips with calledElement`() {
+        val flat = FlatBpmnNode(
+            id = "call1",
+            type = FlatBpmnNodeKind.CALL_ACTIVITY,
+            name = "Fulfil order",
+            calledElement = "fulfil-order",
+        )
+        assertEquals(
+            BpmnCallActivity(id = "call1", name = "Fulfil order", calledElement = "fulfil-order"),
+            flat.toSealed(),
         )
     }
 

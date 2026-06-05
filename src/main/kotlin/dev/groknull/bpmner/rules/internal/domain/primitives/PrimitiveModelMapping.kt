@@ -7,6 +7,7 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.api.BpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnCallActivity
 import dev.groknull.bpmner.api.BpmnDataObject
 import dev.groknull.bpmner.api.BpmnDataStore
 import dev.groknull.bpmner.api.BpmnDefinitionContext
@@ -324,6 +325,8 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
     is BpmnEventBasedGateway -> BpmnTypeName.EVENT_BASED_GATEWAY
 
     is BpmnSubProcess -> BpmnTypeName.SUB_PROCESS
+
+    is BpmnCallActivity -> BpmnTypeName.CALL_ACTIVITY
 
     // Unrecognized nodes (Choreography, Transaction, etc.) carry their BPMN typename
     // verbatim — exactly what `BpmnSubset`'s `targetElements` matches on.

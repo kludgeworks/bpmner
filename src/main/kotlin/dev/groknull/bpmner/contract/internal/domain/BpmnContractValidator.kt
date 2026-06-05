@@ -39,9 +39,27 @@ internal class BpmnContractValidator {
                 validateTraceability(contract) +
                 validateActivityDataRefs(contract) +
                 validateSubProcesses(contract) +
-                validateEventSubProcesses(contract)
+                validateEventSubProcesses(contract) +
+                validateCallActivities(contract)
 
         return ContractValidationReport(issues = issues)
+    }
+
+    // A call activity delegates to a separately-defined process named by `calledElement`. That
+    // reference is the activity's whole payload, so it must be present (the called process is
+    // resolved externally, so we do not require it to appear in this contract).
+    private fun validateCallActivities(contract: ProcessContract): List<ContractValidationIssue> = buildList {
+        contract.activities.filterIsInstance<ContractActivity.CallActivity>().forEach { callActivity ->
+            if (callActivity.calledElement.isBlank()) {
+                add(
+                    errorIssue(
+                        code = ContractValidationCode.CALL_ACTIVITY_MISSING_TARGET,
+                        message = "call activity '${callActivity.id}' must name the process it invokes (calledElement)",
+                        targetId = callActivity.id,
+                    ),
+                )
+            }
+        }
     }
 
     // Every id in an activity's dataInputIds/dataOutputIds must reference a declared artifact

@@ -83,6 +83,9 @@ enum class ContractValidationCode {
      * contract time rather than left to the fidelity checker.
      */
     SUBPROCESS_MEMBER_CROSS_CLAIMED,
+
+    /** A call activity declares no `calledElement`; it must name the process it invokes. */
+    CALL_ACTIVITY_MISSING_TARGET,
 }
 
 @JsonClassDescription("Structural validation issue raised against an extracted ProcessContract")

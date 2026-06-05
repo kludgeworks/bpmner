@@ -78,6 +78,10 @@ internal object BpmnNamingShapeAdvice {
         // beyond the generic "requires a name" rule, so no specific repair advice.
         is BpmnSubProcess -> null
 
+        // A call-activity label names the invoked step; like a subprocess it's plain prose with
+        // no shape convention beyond "requires a name".
+        is BpmnCallActivity -> null
+
         // Fallback for elements without a typed Kotlin class. No naming-shape advice — no
         // sensible convention for a type we don't model.
         is BpmnUnrecognizedNode -> null

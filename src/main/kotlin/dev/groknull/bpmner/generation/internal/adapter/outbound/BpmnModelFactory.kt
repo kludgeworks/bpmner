@@ -8,6 +8,7 @@ package dev.groknull.bpmner.generation.internal.adapter.outbound
 import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCallActivity
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnEventBasedGateway
 import dev.groknull.bpmner.core.BpmnExclusiveGateway
@@ -28,6 +29,7 @@ import dev.groknull.bpmner.core.BpmnUserTask
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
+import org.camunda.bpm.model.bpmn.instance.CallActivity
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
@@ -88,6 +90,11 @@ internal object BpmnModelFactory {
                 is BpmnSubProcess ->
                     modelInstance.newInstance(SubProcess::class.java).apply {
                         setTriggeredByEvent(node.triggeredByEvent)
+                    }
+
+                is BpmnCallActivity ->
+                    modelInstance.newInstance(CallActivity::class.java).apply {
+                        calledElement = node.calledElement
                     }
 
                 // Unrecognized nodes carry no Camunda model class. Callers are expected to

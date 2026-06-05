@@ -22,6 +22,7 @@ import jakarta.validation.constraints.NotNull
 import dev.groknull.bpmner.api.BpmnAssociation as ApiBpmnAssociation
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
+import dev.groknull.bpmner.api.BpmnCallActivity as ApiBpmnCallActivity
 import dev.groknull.bpmner.api.BpmnDataAssociation as ApiBpmnDataAssociation
 import dev.groknull.bpmner.api.BpmnDataObject as ApiBpmnDataObject
 import dev.groknull.bpmner.api.BpmnDataStore as ApiBpmnDataStore
@@ -287,6 +288,7 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
     JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
+    JsonSubTypes.Type(value = BpmnCallActivity::class, name = "CALL_ACTIVITY"),
 )
 sealed interface BpmnNode : ApiBpmnNode {
     override val id: String
@@ -695,6 +697,28 @@ data class BpmnSubProcess(
     override val parentRef: String? = null,
 ) : BpmnNode,
     ApiBpmnSubProcess {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+@JsonClassDescription("BPMN call activity that delegates to another process referenced by id")
+data class BpmnCallActivity(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @field:NotBlank
+    @get:PklProperty("calledElement")
+    @get:JsonPropertyDescription(
+        "Id of the process this call activity invokes (the called process). The called process is " +
+            "defined separately — typically in another file or the runtime catalogue — and is " +
+            "referenced here by id; it need not appear in this definition.",
+    )
+    override val calledElement: String,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode,
+    ApiBpmnCallActivity {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
