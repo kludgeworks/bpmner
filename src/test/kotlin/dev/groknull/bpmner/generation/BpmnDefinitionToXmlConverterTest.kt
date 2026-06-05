@@ -38,6 +38,8 @@ import dev.groknull.bpmner.core.BpmnUnrecognizedNode
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.core.StandardLoopCharacteristics
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -48,6 +50,18 @@ import kotlin.test.assertNull
 
 class BpmnDefinitionToXmlConverterTest {
     private val converter = BpmnDefinitionToXmlConverter()
+
+    companion object {
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+            "bpmner" to "https://groknull.dev/bpmner/ext",
+            "camunda" to "http://camunda.org/schema/1.0/bpmn",
+        )
+    }
+
+    private fun assertXml(xml: String): XmlAssert {
+        return assertThat(xml).withNamespaceContext(NAMESPACES)
+    }
 
     @Test
     fun `converter emits inclusiveGateway for BpmnInclusiveGateway nodes with default flow`() {
@@ -84,13 +98,14 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.render(definition).xml
 
-        // Camunda's writer alphabetises attributes; the diverging gateway has
-        // `default="F4"` before `id="dec-extras"` and the join gateway has only `id`.
-        assertContains(xml, "<inclusiveGateway default=\"F4\" id=\"dec-extras\"")
-        assertContains(xml, "<inclusiveGateway id=\"Gateway_join_extras\"")
+        assertXml(xml).nodesByXPath("//bpmn:inclusiveGateway[@id='dec-extras' and @default='F4']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:inclusiveGateway[@id='Gateway_join_extras']").exist()
+
         // Conditions are present on the two conditional branches.
-        assertContains(xml, "gift wrap requested")
-        assertContains(xml, "qualifies for insert")
+        assertXml(xml).valueByXPath("//bpmn:sequenceFlow[@id='F2']/bpmn:conditionExpression/text()")
+            .isEqualTo("gift wrap requested")
+        assertXml(xml).valueByXPath("//bpmn:sequenceFlow[@id='F3']/bpmn:conditionExpression/text()")
+            .isEqualTo("qualifies for insert")
     }
 
     @Test
@@ -99,15 +114,15 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.render(definition).xml
 
-        assertContains(xml, "multiInstanceLoopCharacteristics")
+        val loopXpath = "//bpmn:userTask[@id='act-review']/bpmn:multiInstanceLoopCharacteristics"
+        assertXml(xml).nodesByXPath(loopXpath).exist()
         // Peer-review panel is parallel → isSequential="false".
-        assertContains(xml, "isSequential=\"false\"")
+        assertXml(xml).valueByXPath("$loopXpath/@isSequential").isEqualTo("false")
         // collectionDescription rides our extension namespace.
-        assertContains(xml, "each reviewer on the panel")
-        assertContains(xml, "<bpmn:textAnnotation")
-        assertContains(xml, "For each reviewer on the panel")
-        assertContains(xml, "<bpmn:association")
-        assertContains(xml, "sourceRef=\"act-review\"")
+        assertXml(xml).valueByXPath("$loopXpath/@bpmner:collectionDescription").isEqualTo("each reviewer on the panel")
+
+        assertXml(xml).nodesByXPath("//bpmn:textAnnotation[bpmn:text/text()='For each reviewer on the panel']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:association[@sourceRef='act-review']").exist()
     }
 
     @Test
@@ -183,7 +198,7 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.render(definition).xml
 
-        assertFalse(xml.contains("multiInstanceLoopCharacteristics"), "plain task must not emit a loop marker")
+        assertXml(xml).doesNotHaveXPath("//bpmn:multiInstanceLoopCharacteristics")
         val plain = BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-plain" } as BpmnUserTask
         assertNull(plain.multiInstance)
     }
@@ -216,8 +231,10 @@ class BpmnDefinitionToXmlConverterTest {
             )
 
         val xml = converter.render(definition).xml
-        assertContains(xml, "standardLoopCharacteristics")
-        assertContains(xml, "testBefore=\"false\"")
+
+        val loopXpath = "//bpmn:serviceTask[@id='act-charge']/bpmn:standardLoopCharacteristics"
+        assertXml(xml).nodesByXPath(loopXpath).exist()
+        assertXml(xml).valueByXPath("$loopXpath/@testBefore").isEqualTo("false")
 
         val parsed =
             BpmnXmlToDefinitionConverter().parse(xml).nodes.single { it.id == "act-charge" } as BpmnServiceTask
@@ -306,10 +323,10 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.render(definition).xml
 
-        assertContains(xml, "<parallelGateway id=\"dec-prep-tracks\"")
-        assertContains(xml, "<parallelGateway id=\"Gateway_join_prep\"")
+        assertXml(xml).nodesByXPath("//bpmn:parallelGateway[@id='dec-prep-tracks']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:parallelGateway[@id='Gateway_join_prep']").exist()
         // No condition expressions on any of the parallel-branch flows
-        assertFalse(xml.contains("<conditionExpression"), "Parallel branches must not carry conditions")
+        assertXml(xml).doesNotHaveXPath("//bpmn:sequenceFlow/bpmn:conditionExpression")
     }
 
     @Test
@@ -346,7 +363,7 @@ class BpmnDefinitionToXmlConverterTest {
             )
 
         val xml = converter.render(definition).xml
-        assertContains(xml, "<eventBasedGateway id=\"dec-await\"")
+        assertXml(xml).nodesByXPath("//bpmn:eventBasedGateway[@id='dec-await']").exist()
 
         val parsed = BpmnXmlToDefinitionConverter().parse(converter.toXml(definition))
         assertEquals("dec-await", parsed.nodes.filterIsInstance<BpmnEventBasedGateway>().single().id)
@@ -390,14 +407,16 @@ class BpmnDefinitionToXmlConverterTest {
         val rendered = converter.render(definition)
         val xml = rendered.xml
 
-        assertContains(xml, "<process")
-        assertContains(xml, "<startEvent id=\"StartEvent_1\"")
-        assertContains(xml, "<serviceTask id=\"Task_1\"")
-        assertContains(xml, "<exclusiveGateway id=\"Gateway_1\"")
-        assertContains(xml, "<endEvent id=\"EndEvent_1\"")
-        assertContains(xml, "<sequenceFlow id=\"Flow_3\" name=\"Yes\"")
-        assertContains(xml, "<conditionExpression")
-        assertContains(xml, "toastReady")
+        assertXml(xml).nodesByXPath("//bpmn:process").exist()
+        assertXml(xml).nodesByXPath("//bpmn:startEvent[@id='StartEvent_1']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:serviceTask[@id='Task_1']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:exclusiveGateway[@id='Gateway_1']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:endEvent[@id='EndEvent_1']").exist()
+
+        val flow3Xpath = "//bpmn:sequenceFlow[@id='Flow_3' and @name='Yes']"
+        assertXml(xml).nodesByXPath(flow3Xpath).exist()
+        assertXml(xml).valueByXPath("$flow3Xpath/bpmn:conditionExpression/text()").isEqualTo("toastReady")
+
         assertEquals("Process_42", rendered.elementIndex.processId)
         assertEquals("nodes[id=Gateway_1]", rendered.elementIndex.objectRefForElementId("Gateway_1"))
         assertEquals("sequences[id=Flow_3]", rendered.elementIndex.objectRefForElementId("Flow_3"))
@@ -502,12 +521,21 @@ class BpmnDefinitionToXmlConverterTest {
                 signals = listOf(BpmnSignalRef("Signal_Incident", "Incident broadcast")),
             )
 
-        assertContains(converter.toXml(timerDefinition), "timerEventDefinition")
-        assertContains(converter.toXml(timerDefinition), "<bpmn:timeCycle>R/PT24H</bpmn:timeCycle>")
-        assertContains(converter.toXml(messageDefinition), "<bpmn:message id=\"Message_OrderReceived\" name=\"Order received\"")
-        assertContains(converter.toXml(messageDefinition), "messageEventDefinition messageRef=\"Message_OrderReceived\"")
-        assertContains(converter.toXml(signalDefinition), "<bpmn:signal id=\"Signal_Incident\" name=\"Incident broadcast\"")
-        assertContains(converter.toXml(signalDefinition), "signalEventDefinition signalRef=\"Signal_Incident\"")
+        val timerXml = converter.toXml(timerDefinition)
+        assertXml(timerXml).nodesByXPath("//bpmn:startEvent[@id='StartEvent_timer']/bpmn:timerEventDefinition").exist()
+        assertXml(timerXml).valueByXPath("//bpmn:timerEventDefinition/bpmn:timeCycle/text()").isEqualTo("R/PT24H")
+
+        val messageXml = converter.toXml(messageDefinition)
+        assertXml(messageXml).nodesByXPath("//bpmn:message[@id='Message_OrderReceived' and @name='Order received']").exist()
+        assertXml(messageXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_message']/bpmn:messageEventDefinition[@messageRef='Message_OrderReceived']",
+        ).exist()
+
+        val signalXml = converter.toXml(signalDefinition)
+        assertXml(signalXml).nodesByXPath("//bpmn:signal[@id='Signal_Incident' and @name='Incident broadcast']").exist()
+        assertXml(signalXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_signal']/bpmn:signalEventDefinition[@signalRef='Signal_Incident']",
+        ).exist()
     }
 
     @Test
@@ -516,12 +544,8 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.toXml(definition)
 
-        // Camunda emits attributes alphabetically — `default` precedes `id` on the gateway.
-        assertContains(xml, "<exclusiveGateway default=\"Flow_manual\" id=\"Gateway_1\"")
-        assertFalse(
-            xml.contains("<sequenceFlow id=\"Flow_manual\"[^>]*>\\s*<conditionExpression".toRegex()),
-            "Default flow must not have an inline condition expression",
-        )
+        assertXml(xml).nodesByXPath("//bpmn:exclusiveGateway[@id='Gateway_1' and @default='Flow_manual']").exist()
+        assertXml(xml).doesNotHaveXPath("//bpmn:sequenceFlow[@id='Flow_manual']/bpmn:conditionExpression")
     }
 
     @Test
@@ -597,9 +621,9 @@ class BpmnDefinitionToXmlConverterTest {
 
         val xml = converter.toXml(definition)
 
-        assertContains(xml, "<exclusiveGateway id=\"Gateway_1\"")
-        assertFalse(xml.contains("<exclusiveGateway id=\"Gateway_1\" name="))
-        assertContains(xml, "<userTask id=\"Task_1\" name=\"Approve request\"")
+        assertXml(xml).nodesByXPath("//bpmn:exclusiveGateway[@id='Gateway_1']").exist()
+        assertXml(xml).doesNotHaveXPath("//bpmn:exclusiveGateway[@id='Gateway_1']/@name")
+        assertXml(xml).nodesByXPath("//bpmn:userTask[@id='Task_1' and @name='Approve request']").exist()
     }
 
     @Test
@@ -609,17 +633,18 @@ class BpmnDefinitionToXmlConverterTest {
         val xml = converter.toXml(definition)
 
         // Each task subtype emits the matching BPMN element with id intact.
-        assertContains(xml, "<scriptTask id=\"act-normalise\"")
-        assertContains(xml, "<businessRuleTask")
-        assertContains(xml, "<sendTask")
-        assertContains(xml, "<receiveTask")
-        assertContains(xml, "<manualTask id=\"act-inspect\"")
+        assertXml(xml).nodesByXPath("//bpmn:scriptTask[@id='act-normalise']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:businessRuleTask").exist()
+        assertXml(xml).nodesByXPath("//bpmn:sendTask").exist()
+        assertXml(xml).nodesByXPath("//bpmn:receiveTask").exist()
+        assertXml(xml).nodesByXPath("//bpmn:manualTask[@id='act-inspect']").exist()
+
         // messageRef is a BPMN spec attribute on send/receive task elements.
-        assertContains(xml, "messageRef=\"Message_Decline\"")
-        assertContains(xml, "messageRef=\"Message_Ack\"")
+        assertXml(xml).nodesByXPath("//bpmn:sendTask[@messageRef='Message_Decline']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:receiveTask[@messageRef='Message_Ack']").exist()
+
         // decisionRef is qualified in the bpmner extension namespace.
-        assertContains(xml, "bpmner:decisionRef=\"credit-policy\"")
-        assertContains(xml, "xmlns:bpmner=\"https://groknull.dev/bpmner/ext\"")
+        assertXml(xml).nodesByXPath("//bpmn:businessRuleTask[@bpmner:decisionRef='credit-policy']").exist()
     }
 
     @Test

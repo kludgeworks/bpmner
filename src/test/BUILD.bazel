@@ -35,6 +35,7 @@ kt_jvm_library(
     deps = [
         "@maven//:com_embabel_agent_embabel_agent_test",
         "@maven//:com_tngtech_archunit_archunit",
+        "@maven//:org_assertj_assertj_core",
         "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
         "@maven//:org_graalvm_polyglot_js",
         "@maven//:org_graalvm_polyglot_polyglot",
@@ -44,6 +45,7 @@ kt_jvm_library(
         "@maven//:org_jmolecules_integrations_jmolecules_archunit",
         "@maven//:org_springframework_boot_spring_boot_starter_test",
         "@maven//:org_springframework_modulith_spring_modulith_starter_test",
+        "@maven//:org_xmlunit_xmlunit_assertj",
         "@rules_java//java/runfiles",
     ],
 )
