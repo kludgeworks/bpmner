@@ -36,6 +36,7 @@ import kotlin.io.path.readText
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
         "embabel.agent.platform.models.gemini.api-key=\${GEMINI_API_KEY:}",
         "embabel.agent.platform.models.mistralai.api-key=\${MISTRAL_API_KEY:}",
+        "embabel.agent.platform.models.deepseek.api-key=\${DEEPSEEK_API_KEY:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
         "embabel.agent.shell.interactive.enabled=false",
