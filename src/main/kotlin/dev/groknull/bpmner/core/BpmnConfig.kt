@@ -54,7 +54,7 @@ data class BpmnConfig(
         // within an interactive session proves common.
         //
         // Unconditional by design: the caching config rides on LlmOptions and is read only by
-        // Anthropic's options converter, so it is inert under the github/OpenAI profile (gpt-4o) —
+        // Anthropic's options converter, so it is inert under non-Anthropic profiles —
         // no provider gate needed.
         private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
             .withAnthropicCaching(systemPrompt = true, tools = true)

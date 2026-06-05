@@ -27,7 +27,6 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
 
     companion object {
         private const val ANTHROPIC_API_KEY = "ANTHROPIC_API_KEY"
-        private const val GITHUB_TOKEN = "GITHUB_TOKEN"
 
         private val profileSplitter = Regex("[,\\s]+")
         private val providers = listOf(
@@ -35,11 +34,6 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 displayName = "Anthropic",
                 profiles = setOf("anthropic"),
                 tokenName = ANTHROPIC_API_KEY,
-            ),
-            LiveLlmProvider(
-                displayName = "GitHub",
-                profiles = setOf("github"),
-                tokenName = GITHUB_TOKEN,
             ),
             LiveLlmProvider(
                 displayName = "OpenAI",
@@ -55,6 +49,16 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 displayName = "Mistral",
                 profiles = setOf("mistral"),
                 tokenName = "MISTRAL_API_KEY",
+            ),
+            LiveLlmProvider(
+                displayName = "DeepSeek",
+                profiles = setOf("deepseek"),
+                tokenName = "DEEPSEEK_API_KEY",
+            ),
+            LiveLlmProvider(
+                displayName = "Llama",
+                profiles = setOf("llama"),
+                tokenName = "OPENROUTER_API_KEY",
             ),
         )
 
@@ -76,7 +80,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                 0 ->
                     Evaluation.disabled(
                         "no supported live LLM profile is active in ${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}; " +
-                            "set one of anthropic, github, openai, gemini, or mistral",
+                            "set one of anthropic, openai, gemini, mistral, deepseek, or llama",
                     )
 
                 1 ->
@@ -87,7 +91,7 @@ internal class ActiveLiveLlmProfileCondition : ExecutionCondition {
                         "multiple live LLM profile families are active in " +
                             "${AbstractEnvironment.ACTIVE_PROFILES_PROPERTY_NAME}: " +
                             activeProviders.joinToString { it.displayName } +
-                            "; select exactly one of anthropic, github, openai, gemini, or mistral",
+                            "; select exactly one of anthropic, openai, gemini, mistral, deepseek, or llama",
                     )
             }
         }

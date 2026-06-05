@@ -15,7 +15,7 @@ import kotlin.test.assertTrue
  * Every pipeline role's LlmOptions carries the Anthropic prompt-caching extension
  * (systemPrompt + tools). Caching itself is a runtime concern only exercisable against a real
  * Anthropic endpoint, so this guards the one thing that IS unit-testable: that the config rides
- * on each role's LlmOptions. Under the github/OpenAI profile the extension is inert (read only by
+ * on each role's LlmOptions. Under non-Anthropic profiles the extension is inert (read only by
  * Anthropic's options converter), so carrying it unconditionally is safe.
  */
 class BpmnConfigCachingTest {

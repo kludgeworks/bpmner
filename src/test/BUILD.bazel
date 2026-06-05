@@ -148,7 +148,8 @@ java_junit5_test(
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
         "MISTRAL_API_KEY",
-        "GITHUB_TOKEN",
+        "DEEPSEEK_API_KEY",
+        "OPENROUTER_API_KEY",
         "SPRING_PROFILES_ACTIVE",
     ],
     tags = [
@@ -168,7 +169,8 @@ java_junit5_test(
         "ANTHROPIC_API_KEY",
         "GEMINI_API_KEY",
         "MISTRAL_API_KEY",
-        "GITHUB_TOKEN",
+        "DEEPSEEK_API_KEY",
+        "OPENROUTER_API_KEY",
         "SPRING_PROFILES_ACTIVE",
     ],
     tags = [

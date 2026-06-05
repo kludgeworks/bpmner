@@ -7,6 +7,7 @@ spring:
       - com.embabel.agent.autoconfigure.models.openai.AgentOpenAiAutoConfiguration
       - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
       - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
+      - com.embabel.agent.autoconfigure.models.deepseek.AgentDeepSeekAutoConfiguration
 
 embabel:
   agent:

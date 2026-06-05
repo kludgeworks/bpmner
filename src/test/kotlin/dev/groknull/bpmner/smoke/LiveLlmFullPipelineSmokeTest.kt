@@ -35,7 +35,6 @@ import kotlin.io.path.readText
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=\${ANTHROPIC_API_KEY:}",
         "embabel.agent.platform.models.gemini.api-key=\${GEMINI_API_KEY:}",
-        "embabel.agent.platform.models.github.api-key=\${GITHUB_TOKEN:}",
         "embabel.agent.platform.models.mistralai.api-key=\${MISTRAL_API_KEY:}",
         "spring.shell.interactive.enabled=false",
         "spring.shell.noninteractive.enabled=false",
