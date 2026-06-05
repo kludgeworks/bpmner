@@ -69,6 +69,15 @@
 				"src/main/kotlin/dev/groknull/bpmner/contract/BpmnContractTypes.kt"
 			],
 			"rule": "The sealed interfaces in this file (ContractActivity, ContractEndState, ContractBranch, ContractTrigger, ContractIntermediateThrow) and their subtypes are internal domain types — never passed to Embabel's creating() or createObject(), never Jakarta-validated by the framework, never deserialized in production. The LLM-facing schema surface is exclusively FlatContractTypes.kt. Flag any PR that adds @get:JsonPropertyDescription, @field:NotBlank, @field:Size, or @field:Valid to a property of one of these sealed-interface subtypes. Those annotations are vestigial duplicates of the ones on the corresponding Flat DTO and re-introduce the cross-variant copy-paste that //:cpd_kotlin_main detects (issue #343)."
+		},
+		{
+			"id": "smoke-covers-new-contract-vocabulary",
+			"severity": "medium",
+			"scope": [
+				"src/main/kotlin/dev/groknull/bpmner/contract/BpmnContractTypes.kt",
+				"src/main/kotlin/dev/groknull/bpmner/contract/internal/adapter/inbound/FlatContractTypes.kt"
+			],
+			"rule": "ContractVocabularySmokeTest (src/test/kotlin/dev/groknull/bpmner/smoke/ContractVocabularySmokeTest.kt) is the live-LLM guard that every contract-vocabulary construct is actually extractable from natural-language prose. If this PR adds a new vocabulary construct — a new ContractActivity / ContractEndState / ContractBranch / ContractTrigger / ContractIntermediateThrow subtype, a new FlatActivityKind / FlatEndStateKind / BoundaryEventKind / ContractArtifactKind / ContractGatewayKind enum value, or a new cross-cutting construct surfaced from prose (actor responsibility, iteration, standard loop, data artifact, pool/lane, message flow) — flag the PR unless it also adds or extends a ContractVocabularySmokeTest case that exercises that construct end-to-end, or clearly explains why a live-extraction case is not applicable."
 		}
 	]
 }

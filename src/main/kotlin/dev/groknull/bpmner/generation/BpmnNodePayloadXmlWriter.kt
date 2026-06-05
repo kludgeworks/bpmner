@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.BpmnBusinessRuleTask
 import dev.groknull.bpmner.core.BpmnDataAssociation
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEndEvent
+import dev.groknull.bpmner.core.BpmnEventDefinition
 import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.core.BpmnNode
@@ -63,12 +64,11 @@ internal class BpmnNodePayloadXmlWriter(
             eventDefinitionWriter.appendTo(element, document, node.eventDefinition)
             false
         }
-        is BpmnIntermediateCatchEvent -> {
-            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
-            false
-        }
-        is BpmnIntermediateThrowEvent -> {
-            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
+        is BpmnIntermediateCatchEvent,
+        is BpmnIntermediateThrowEvent,
+        is BpmnEndEvent,
+        -> {
+            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.payloadEventDefinition())
             false
         }
         is BpmnBoundaryEvent -> {
@@ -78,16 +78,10 @@ internal class BpmnNodePayloadXmlWriter(
             eventDefinitionWriter.appendTo(element, document, node.eventDefinition)
             false
         }
-        is BpmnEndEvent -> {
-            eventDefinitionWriter.appendTo(eventElementsById.eventElement(node.id), document, node.eventDefinition)
-            false
-        }
-        is BpmnSendTask -> {
-            taskElementsById.taskElement(node.id).setAttribute("messageRef", node.messageRef)
-            false
-        }
-        is BpmnReceiveTask -> {
-            taskElementsById.taskElement(node.id).setAttribute("messageRef", node.messageRef)
+        is BpmnSendTask,
+        is BpmnReceiveTask,
+        -> {
+            taskElementsById.taskElement(node.id).setAttribute("messageRef", node.payloadMessageRef())
             false
         }
         is BpmnBusinessRuleTask -> {
@@ -164,6 +158,19 @@ internal class BpmnNodePayloadXmlWriter(
     private fun Map<String, Element>.eventElement(id: String): Element {
         return this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
     }
+}
+
+private fun BpmnNode.payloadEventDefinition(): BpmnEventDefinition = when (this) {
+    is BpmnIntermediateCatchEvent -> eventDefinition
+    is BpmnIntermediateThrowEvent -> eventDefinition
+    is BpmnEndEvent -> eventDefinition
+    else -> error("Event definition requested for non-payload event node '$id'")
+}
+
+private fun BpmnNode.payloadMessageRef(): String = when (this) {
+    is BpmnSendTask -> messageRef
+    is BpmnReceiveTask -> messageRef
+    else -> error("messageRef requested for non-message task '$id'")
 }
 
 private fun Element.appendMultiInstance(

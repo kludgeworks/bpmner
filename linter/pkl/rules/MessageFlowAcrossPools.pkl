@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Message Flow Across Pools"
@@ -19,3 +20,10 @@ errorMessages = new {
 }
 
 staticConfig = new {}
+
+// Fires when a message flow's source and target resolve to the same pool, or either endpoint can't
+// be mapped to a pool. Reads the per-flow sourcePool/targetPool set by PrimitiveModelMapping.
+checkPrimitive = "ConnectivityCheck"
+checkConfig = new CheckPrimitive.ConnectivityCheck {
+  mode = "ACROSS_POOLS"
+}

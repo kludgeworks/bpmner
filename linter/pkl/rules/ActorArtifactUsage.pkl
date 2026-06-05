@@ -1,5 +1,6 @@
 amends "../schema/BpmnRule.pkl"
 
+import "../schema/CheckPrimitive.pkl"
 import "../schema/RuleCategory.pkl"
 
 name = "Actor Artifact Usage"
@@ -21,3 +22,9 @@ errorMessages = new {
 staticConfig = new {
   cookbookCode = "LANE-02"
 }
+
+// Info-level advisory on any Actor custom artifact, mirroring GroupUsage: presence alone surfaces
+// the "documentation only" guidance. The model emits no bpmn:Artifact element, so the rule reports
+// nothing; it loads through the active path and flags any Actor artifact the engine presents.
+checkPrimitive = "PresenceCheck"
+checkConfig = new CheckPrimitive.PresenceCheck {}

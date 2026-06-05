@@ -63,6 +63,11 @@ Event-based-gateway topology:
 - The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.
 - The gateway is a pure wait: it has no join. Each branch proceeds independently after its event fires.
 
+Pools-and-lanes topology (collaboration):
+- When the contract's Actors identify who performs the activities, model the process as a collaboration. Emit one white-box `definition.participants` entry whose `processRef` is the process id and whose `name` is the process name (a white-box pool is named after its process). Then emit one `definition.lanes` entry per distinct performing actor: set `participantId` to that white-box participant id, `name` to the actor's name (the business role/performer, e.g. "Sales", "Finance Officer"), and `flowNodeRefs` to the ids of the nodes that actor performs (group the activities by their `actorId`). Routing-only gateways and shared events may be placed in whichever lane they most belong to, or left out of every lane.
+- An actor that only exchanges messages with the process — it appears under Actors but performs no activity — is an external participant: emit a black-box `definition.participants` entry (omit `processRef`) named after that actor, plus one `definition.messageFlows` entry per message exchanged. A message flow's `sourceRef`/`targetRef` are a flow-element id and the black-box participant id (it crosses the pool boundary); name it after the message as a noun phrase (e.g. "Payment request", "Approval confirmation").
+- Only model a collaboration when the contract actually assigns actor responsibilities. A single-actor or actor-less process needs no participants, lanes, or message flows — leave all three empty.
+
 The provided worked examples show the parallel and inclusive topologies end-to-end — follow their fork/join wiring.
 
 Primary validated ProcessContract:

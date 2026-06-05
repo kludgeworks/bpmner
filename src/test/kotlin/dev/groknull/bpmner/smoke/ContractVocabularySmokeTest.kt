@@ -537,4 +537,29 @@ class ContractVocabularySmokeTest {
         c.assertHasArtifactKind(ContractArtifactKind.DATA_STORE)
         c.assertHasArtifactKind(ContractArtifactKind.DATA_OBJECT)
     }
+
+    // Pools and lanes (actor responsibilities) — lanes are generated from distinct performing actors,
+    // so the contract-vocabulary precondition is that the extractor records each named performer and
+    // assigns activities to them.
+
+    @Test
+    fun `pools and lanes from distinct actors`() {
+        val c = extractContract(
+            """
+            When an order is submitted, a sales representative confirms the order details. Once
+            confirmed, a finance officer approves the payment. After approval, the warehouse team
+            ships the goods, and the process ends.
+            """,
+        )
+        c.assertHasDistinctActors(min = 2)
+    }
+
+    private fun ProcessContract.assertHasDistinctActors(min: Int) {
+        val performingActorIds = activities.mapNotNull { it.actorId }.toSet()
+        assertTrue(actors.size >= min && performingActorIds.size >= min) {
+            "Expected >= $min actors each performing activities (the precondition for pool/lane " +
+                "generation), but found actors=[${actors.joinToString { "${it.id}:'${it.name}'" }}] " +
+                "and activity assignments=[${activities.joinToString { "${it.id}->${it.actorId}" }}]"
+        }
+    }
 }
