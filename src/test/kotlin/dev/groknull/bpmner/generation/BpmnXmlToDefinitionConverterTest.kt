@@ -31,6 +31,8 @@ import dev.groknull.bpmner.core.BpmnSignalRef
 import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnTimerEventDefinition
 import dev.groknull.bpmner.core.BpmnUserTask
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
@@ -45,6 +47,18 @@ class BpmnXmlToDefinitionConverterTest {
     private val forward = BpmnDefinitionToXmlConverter()
     private val reverse = BpmnXmlToDefinitionConverter()
 
+    companion object {
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+            "bpmner" to "https://groknull.dev/bpmner/ext",
+            "camunda" to "http://camunda.org/schema/1.0/bpmn",
+        )
+    }
+
+    private fun assertXml(xml: String): XmlAssert {
+        return assertThat(xml).withNamespaceContext(NAMESPACES)
+    }
+
     @Test
     fun `labeled group renders category indirection and parses back to group name`() {
         val original = minimalDefinition(groups = listOf(BpmnGroup("Group_review", "Review work")))
@@ -52,11 +66,9 @@ class BpmnXmlToDefinitionConverterTest {
         val xml = forward.toXml(original)
         val parsed = reverse.parse(xml)
 
-        assertContains(xml, "<bpmn:category id=\"Category_Group_review\"")
-        assertContains(xml, "<bpmn:categoryValue id=\"CategoryValue_Group_review\" value=\"Review work\"")
-        assertContains(xml, "<bpmn:group")
-        assertContains(xml, "id=\"Group_review\"")
-        assertContains(xml, "categoryValueRef=\"CategoryValue_Group_review\"")
+        assertXml(xml).nodesByXPath("//bpmn:category[@id='Category_Group_review']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:categoryValue[@id='CategoryValue_Group_review' and @value='Review work']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:group[@id='Group_review' and @categoryValueRef='CategoryValue_Group_review']").exist()
         assertEquals(listOf(BpmnGroup("Group_review", "Review work")), parsed.groups)
     }
 
@@ -67,8 +79,8 @@ class BpmnXmlToDefinitionConverterTest {
         val xml = forward.toXml(original)
         val parsed = reverse.parse(xml)
 
-        assertContains(xml, "<bpmn:group id=\"Group_unlabeled\"")
-        assertFalse(xml.contains("categoryValueRef"))
+        assertXml(xml).nodesByXPath("//bpmn:group[@id='Group_unlabeled']").exist()
+        assertXml(xml).doesNotHaveXPath("//bpmn:group[@id='Group_unlabeled']/@categoryValueRef")
         assertEquals("Group_unlabeled", parsed.groups.single().id)
         assertNull(parsed.groups.single().name)
     }

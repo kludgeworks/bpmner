@@ -69,6 +69,12 @@
 				"src/main/kotlin/dev/groknull/bpmner/contract/BpmnContractTypes.kt"
 			],
 			"rule": "The sealed interfaces in this file (ContractActivity, ContractEndState, ContractBranch, ContractTrigger, ContractIntermediateThrow) and their subtypes are internal domain types — never passed to Embabel's creating() or createObject(), never Jakarta-validated by the framework, never deserialized in production. The LLM-facing schema surface is exclusively FlatContractTypes.kt. Flag any PR that adds @get:JsonPropertyDescription, @field:NotBlank, @field:Size, or @field:Valid to a property of one of these sealed-interface subtypes. Those annotations are vestigial duplicates of the ones on the corresponding Flat DTO and re-introduce the cross-variant copy-paste that //:cpd_kotlin_main detects (issue #343)."
+		},
+		{
+			"id": "xml-validation-use-xmlunit",
+			"severity": "high",
+			"scope": ["src/test/**/*.kt"],
+			"rule": "When reviewing tests that generate or validate BPMN XML, do not allow string-based assertions like `assertContains(xml, \"<tag>\")` or `xml.contains(\"attr\")`. All structural XML validation must use `XMLUnit` XPath assertions via `assertXml(xml).nodesByXPath(...)` or `assertXml(xml).valueByXPath(...)`. Fail the review if legacy string-matching is introduced for XML payloads."
 		}
 	]
 }
