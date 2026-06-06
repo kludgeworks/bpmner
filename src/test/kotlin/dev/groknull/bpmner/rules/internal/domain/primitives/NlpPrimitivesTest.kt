@@ -7,6 +7,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -270,7 +271,7 @@ class NlpPrimitivesTest {
         id = id,
         name = id,
         slug = id,
-        category = "Test",
+        category = RuleCategory.GENERAL,
         intent = "Test rule.",
         forModellers = "Test rule.",
         forAI = "Test rule.",

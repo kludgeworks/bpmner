@@ -8,6 +8,7 @@
 package dev.groknull.bpmner.rules.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnConfig
@@ -181,7 +182,7 @@ class LlmRuleAgentTest {
             id = "ambiguous",
             name = "ambiguous",
             slug = "ambiguous",
-            category = "Test",
+            category = RuleCategory.GENERAL,
             intent = "Test",
             forModellers = "Test",
             forAI = "Test",
@@ -230,7 +231,7 @@ class LlmRuleAgentTest {
                 id = "single-coded",
                 name = "single-coded",
                 slug = "single-coded",
-                category = "Test",
+                category = RuleCategory.GENERAL,
                 intent = "Test",
                 forModellers = "Test",
                 forAI = "Test",
@@ -263,7 +264,7 @@ class LlmRuleAgentTest {
             id = id,
             name = id,
             slug = id,
-            category = "Test",
+            category = RuleCategory.GENERAL,
             intent = "Test intent for $id.",
             forModellers = "Test guidance for modellers about $id.",
             forAI = "Test guidance for the model about $id.",

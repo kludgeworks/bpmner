@@ -15,6 +15,7 @@ import dev.groknull.bpmner.api.BpmnStartEvent
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -49,7 +50,7 @@ internal class EventDefinitionRule : BpmnRule {
         id = id,
         name = "Event Definitions",
         slug = "event-definitions",
-        category = "Definition",
+        category = RuleCategory.DEFINITION,
         intent = "Ensure BPMN event definitions are present, structurally valid, and resolve to catalog entries.",
         forModellers = "Choose the correct event trigger and attach boundary events to activities.",
         forAI = "Populate event definitions and catalog refs consistently for every event node.",

@@ -17,7 +17,7 @@ data class RuleMetadata(
     val id: String,
     val name: String,
     val slug: String,
-    val category: String,
+    val category: RuleCategory,
     val intent: String,
     val forModellers: String,
     val forAI: String,

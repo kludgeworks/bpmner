@@ -9,6 +9,7 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.core.BpmnAssociation
@@ -686,7 +687,7 @@ internal class PklRuleCatalogTest {
             id = id,
             name = "Test rule",
             slug = id,
-            category = "Test",
+            category = RuleCategory.GENERAL,
             intent = "test",
             forModellers = "test",
             forAI = "test",

@@ -1,0 +1,35 @@
+/// User-facing lint configuration template for the bpmner modelling team.
+///
+/// The deployed `bpmner.pkl` amends this module. It is evaluated once at startup (the
+/// `ConventionsLoader` lands in #381) into `dev.groknull.bpmner.rules.BpmnerLintConfig`. Defaults
+/// mirror today's Pkl rule literals so behaviour is unchanged out of the box.
+///
+/// Scaffolding (#377): this template defines the convention word-lists only. Profile selection and
+/// per-rule severity overrides are added to this surface in #382. Bazel codegen + runtime
+/// evaluation wiring land in #381.
+module dev.groknull.bpmner.pkl.BpmnerLintConfig
+
+/// Generic activity verbs discouraged as the leading word of an activity label.
+discouragedLeadingVerbs: Listing<String> = new {
+  "handle"
+  "manage"
+  "process"
+  "perform"
+  "do"
+}
+
+/// BPMN element-type words that must not appear inside a node's name.
+elementTypeWords: Listing<String> = new {
+  "activity"
+  "process"
+  "event"
+}
+
+/// Uppercase acronyms allowed in labels without being flagged as uncommon abbreviations.
+allowedAcronyms: Listing<String> = new {
+  "BPMN"
+  "ACME"
+  "SLA"
+  "API"
+  "IT"
+}

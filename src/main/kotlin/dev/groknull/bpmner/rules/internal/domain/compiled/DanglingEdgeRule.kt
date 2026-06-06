@@ -10,6 +10,7 @@ import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -31,7 +32,7 @@ internal class DanglingEdgeRule : BpmnRule {
         id = id,
         name = "Dangling Edges",
         slug = "dangling-edges",
-        category = "Definition",
+        category = RuleCategory.DEFINITION,
         intent = "Ensure every sequence flow connects existing BPMN nodes and does not self-reference.",
         forModellers = "Connect each flow to two distinct elements that exist in the process.",
         forAI = "Validate sequenceFlow sourceRef and targetRef against node ids before returning BPMN.",

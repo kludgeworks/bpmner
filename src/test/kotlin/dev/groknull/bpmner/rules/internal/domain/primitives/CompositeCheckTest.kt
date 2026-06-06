@@ -8,6 +8,7 @@
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.core.BpmnDefinition
@@ -159,7 +160,7 @@ class CompositeCheckTest {
         id = id,
         name = id,
         slug = id,
-        category = "Test",
+        category = RuleCategory.GENERAL,
         intent = "Test composite.",
         forModellers = "Test composite.",
         forAI = "Test composite.",

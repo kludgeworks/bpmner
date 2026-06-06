@@ -12,6 +12,7 @@ import dev.groknull.bpmner.api.BpmnStartEvent
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -31,7 +32,7 @@ internal class RequiredEventsRule : BpmnRule {
         id = id,
         name = "Required Events",
         slug = "required-events",
-        category = "Definition",
+        category = RuleCategory.DEFINITION,
         intent = "Ensure each BPMN definition has at least one start event and one end event.",
         forModellers = "Model a clear process start and completion point.",
         forAI = "Include at least one START_EVENT and one END_EVENT in every generated definition.",

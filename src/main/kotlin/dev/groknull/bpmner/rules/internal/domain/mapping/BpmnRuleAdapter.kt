@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain.mapping
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
 import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
@@ -46,7 +47,7 @@ internal object BpmnRuleAdapter {
                 id = generated.id,
                 name = generated.name,
                 slug = generated.slug,
-                category = generated.category.name,
+                category = RuleCategory.fromLabel(generated.category.name),
                 intent = generated.intent,
                 forModellers = generated.forModellers,
                 forAI = generated.forAI,
