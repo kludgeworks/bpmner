@@ -22,6 +22,7 @@ local linters = new Mapping<String, Step> {
     batch = true
     check = "vale {{files}}"
   }
+  ["rumdl"] = Builtins.rumdl
   ["taplo_format"] = Builtins.taplo_format
   ["check_merge_conflict"] = Builtins.check_merge_conflict
   ["newlines"] = Builtins.newlines
