@@ -1,0 +1,44 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+name: Dispatch smoke-history ingest
+
+# Reusable: mint a GitHub-App token (Actions:write on the data repo) and trigger its ingest workflow for a
+# given bpmner run's smoke-* artifacts. Called from ci.yml (post-merge main run) and smoke-history-on-merge.yml
+# (the PR's last run, at merge) — so the dispatch logic lives in exactly one place.
+on:
+  workflow_call:
+    inputs:
+      source_run_id:
+        description: The bpmner Actions run id whose smoke-* artifacts to ingest
+        required: true
+        type: string
+      sha:
+        description: The bpmner commit SHA under test
+        required: true
+        type: string
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Mint dispatch token (GitHub App)
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.SMOKE_HISTORY_APP_ID }}
+          private-key: ${{ secrets.SMOKE_HISTORY_APP_PRIVATE_KEY }}
+          owner: kludgeworks
+          repositories: bpmner-smoke-history
+          permission-actions: write
+
+      - name: Dispatch ingest in the smoke-history repo
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh workflow run ingest.yml \
+            --repo kludgeworks/bpmner-smoke-history \
+            -f source_run_id="${{ inputs.source_run_id }}" \
+            -f sha="${{ inputs.sha }}"
