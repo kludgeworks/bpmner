@@ -39,9 +39,9 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
-    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY / OP token), so the
-    # RBE unit-test job would fail at "Load secrets". Skip it on forks, matching
-    # smoke-tests and sonarcloud; same-repo PRs and pushes run the full suite.
+    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY), so the RBE unit-test
+    # job would fail without credentials. Skip it on forks, matching smoke-tests and
+    # sonarcloud; same-repo PRs and pushes run the full suite.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout repository
@@ -62,18 +62,12 @@ jobs:
           disk-cache: false
           repository-cache: true
 
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-
       - name: Build and run all tests
         # Unit tests exclude the live-llm/integration tags (see .bazelrc default
         # --test_tag_filters), so no LLM credentials are needed here. Withholding
         # them keeps the keys off the BuildBuddy remote-execution workers.
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           bazel test \
             --config=rbe \
@@ -122,20 +116,6 @@ jobs:
           repository-cache: true
           cache-save: false
 
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          OPENAI_API_KEY: op://bpmner/openai/api-key
-          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
-          GEMINI_API_KEY: op://bpmner/gemini/api-key
-          MISTRAL_API_KEY: op://bpmner/mistral/api-key
-          DEEPSEEK_API_KEY: op://bpmner/deepseek/api-key
-          OPENROUTER_API_KEY: op://bpmner/openrouter/api-key
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-
       - name: Compute shard index for this run
         id: shard
         run: |
@@ -152,6 +132,13 @@ jobs:
         # regression — a genuine break fails both attempts.
         env:
           SPRING_PROFILES_ACTIVE: ${{ matrix.provider }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           bazel test \
             --test_tag_filters=live-llm,-manual \
@@ -169,6 +156,58 @@ jobs:
             //src/test/... \
             --test_output=errors
 
+      - name: Collect smoke artifact
+        if: always()
+        run: |
+          dest=smoke-artifact
+          logs=bazel-testlogs/src/test/ContractVocabularySmokeTest
+          mkdir -p "$dest"
+          # The recorder writes smoke-results.jsonl into TEST_UNDECLARED_OUTPUTS_DIR; Bazel >=7 leaves
+          # undeclared outputs loose under test.outputs/ instead of packaging them into an outputs.zip.
+          cp "$logs/test.outputs/smoke-results.jsonl" "$dest/" 2>/dev/null || true
+          cp "$logs/test.xml" "$dest/" 2>/dev/null || true
+          echo "Collected for ${{ matrix.provider }}:"
+          ls -la "$dest" || true
+
+      - name: Upload smoke artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: smoke-${{ matrix.provider }}
+          path: smoke-artifact/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  dispatch-smoke-history:
+    runs-on: ubuntu-latest
+    needs: [smoke-tests]
+    # After the matrix, trigger the data repo's ingest workflow (it pulls these artifacts + renders).
+    # always() && !cancelled() so a failing provider is still ingested; the `!= 'skipped'` guard avoids
+    # dispatching an ingest against a run that uploaded no artifacts (e.g. the matrix gated off); main
+    # pushes / manual dispatch only.
+    if: always() && !cancelled() && needs.smoke-tests.result != 'skipped' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+    steps:
+      - name: Mint dispatch token (GitHub App)
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.SMOKE_HISTORY_APP_ID }}
+          private-key: ${{ secrets.SMOKE_HISTORY_APP_PRIVATE_KEY }}
+          owner: kludgeworks
+          repositories: bpmner-smoke-history
+          permission-actions: write
+
+      - name: Dispatch ingest in the smoke-history repo
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          gh workflow run ingest.yml \
+            --repo kludgeworks/bpmner-smoke-history \
+            -f source_run_id="${{ github.run_id }}" \
+            -f sha="${{ github.sha }}"
+
   sonarcloud:
     name: SonarCloud Scan
     runs-on: ubuntu-latest
@@ -178,6 +217,9 @@ jobs:
       contents: read
       pull-requests: write
       statuses: write
+    env:
+      BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -199,15 +241,6 @@ jobs:
           disk-cache: false
           repository-cache: true
           cache-save: false
-
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-          SONAR_TOKEN: op://bpmner/sonarqube/api-key
 
       - name: Run Bazel coverage
         id: coverage
