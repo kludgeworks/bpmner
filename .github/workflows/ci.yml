@@ -159,15 +159,13 @@ jobs:
       - name: Collect smoke artifact
         if: always()
         run: |
-          dest="smoke-artifact"
-          logdir="bazel-testlogs/src/test/ContractVocabularySmokeTest"
+          dest=smoke-artifact
+          logs=bazel-testlogs/src/test/ContractVocabularySmokeTest
           mkdir -p "$dest"
-          # The recorder writes smoke-results.jsonl into TEST_UNDECLARED_OUTPUTS_DIR -> outputs.zip.
-          if [ -f "$logdir/test.outputs/outputs.zip" ]; then
-            unzip -o "$logdir/test.outputs/outputs.zip" -d "$dest" > /dev/null 2>&1 || true
-          fi
-          cp "$logdir/test.xml" "$dest/" 2>/dev/null || true
-          if [ -d "$logdir/test_attempts" ]; then cp -r "$logdir/test_attempts" "$dest/"; fi
+          # The recorder writes smoke-results.jsonl into TEST_UNDECLARED_OUTPUTS_DIR; Bazel >=7 leaves
+          # undeclared outputs loose under test.outputs/ instead of packaging them into an outputs.zip.
+          cp "$logs/test.outputs/smoke-results.jsonl" "$dest/" 2>/dev/null || true
+          cp "$logs/test.xml" "$dest/" 2>/dev/null || true
           echo "Collected for ${{ matrix.provider }}:"
           ls -la "$dest" || true
 
