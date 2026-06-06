@@ -197,8 +197,10 @@ jobs:
     runs-on: ubuntu-latest
     needs: [smoke-tests]
     # After the matrix, trigger the data repo's ingest workflow (it pulls these artifacts + renders).
-    # always() && !cancelled() so a failing provider is still ingested; main pushes / manual dispatch only.
-    if: always() && !cancelled() && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
+    # always() && !cancelled() so a failing provider is still ingested; the `!= 'skipped'` guard avoids
+    # dispatching an ingest against a run that uploaded no artifacts (e.g. the matrix gated off); main
+    # pushes / manual dispatch only.
+    if: always() && !cancelled() && needs.smoke-tests.result != 'skipped' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read
     steps:
@@ -227,7 +229,6 @@ jobs:
         run: |
           gh workflow run ingest.yml \
             --repo kludgeworks/bpmner-smoke-history \
-            --ref main \
             -f source_run_id="${{ github.run_id }}" \
             -f sha="${{ github.sha }}"
 
