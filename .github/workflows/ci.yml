@@ -39,9 +39,9 @@ jobs:
 
   test-unit:
     runs-on: ubuntu-latest
-    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY / OP token), so the
-    # RBE unit-test job would fail at "Load secrets". Skip it on forks, matching
-    # smoke-tests and sonarcloud; same-repo PRs and pushes run the full suite.
+    # Fork PRs can't access org secrets (BUILDBUDDY_API_KEY), so the RBE unit-test
+    # job would fail without credentials. Skip it on forks, matching smoke-tests and
+    # sonarcloud; same-repo PRs and pushes run the full suite.
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout repository
@@ -62,18 +62,12 @@ jobs:
           disk-cache: false
           repository-cache: true
 
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-
       - name: Build and run all tests
         # Unit tests exclude the live-llm/integration tags (see .bazelrc default
         # --test_tag_filters), so no LLM credentials are needed here. Withholding
         # them keeps the keys off the BuildBuddy remote-execution workers.
+        env:
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           bazel test \
             --config=rbe \
@@ -122,20 +116,6 @@ jobs:
           repository-cache: true
           cache-save: false
 
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          OPENAI_API_KEY: op://bpmner/openai/api-key
-          ANTHROPIC_API_KEY: op://bpmner/anthropic/api-key
-          GEMINI_API_KEY: op://bpmner/gemini/api-key
-          MISTRAL_API_KEY: op://bpmner/mistral/api-key
-          DEEPSEEK_API_KEY: op://bpmner/deepseek/api-key
-          OPENROUTER_API_KEY: op://bpmner/openrouter/api-key
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-
       - name: Compute shard index for this run
         id: shard
         run: |
@@ -152,6 +132,13 @@ jobs:
         # regression — a genuine break fails both attempts.
         env:
           SPRING_PROFILES_ACTIVE: ${{ matrix.provider }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
         run: |
           bazel test \
             --test_tag_filters=live-llm,-manual \
@@ -204,21 +191,12 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          SMOKE_HISTORY_APP_ID: op://bpmner/smoke-history-app/app-id
-          SMOKE_HISTORY_APP_PRIVATE_KEY: op://bpmner/smoke-history-app/private-key
-
       - name: Mint dispatch token (GitHub App)
         id: app-token
         uses: actions/create-github-app-token@v3
         with:
-          app-id: ${{ env.SMOKE_HISTORY_APP_ID }}
-          private-key: ${{ env.SMOKE_HISTORY_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.SMOKE_HISTORY_APP_ID }}
+          private-key: ${{ secrets.SMOKE_HISTORY_APP_PRIVATE_KEY }}
           owner: kludgeworks
           repositories: bpmner-smoke-history
           permission-actions: write
@@ -241,6 +219,9 @@ jobs:
       contents: read
       pull-requests: write
       statuses: write
+    env:
+      BUILDBUDDY_API_KEY: ${{ secrets.BUILDBUDDY_API_KEY }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
@@ -262,15 +243,6 @@ jobs:
           disk-cache: false
           repository-cache: true
           cache-save: false
-
-      - name: Load secrets from 1Password
-        uses: 1Password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
-        with:
-          export-env: true
-        env:
-          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
-          BUILDBUDDY_API_KEY: op://bpmner/buildbuddy/api-key
-          SONAR_TOKEN: op://bpmner/sonarqube/api-key
 
       - name: Run Bazel coverage
         id: coverage
