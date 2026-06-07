@@ -9,6 +9,8 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.LlmInvocationEvent
+import com.embabel.agent.api.event.LlmResponseEvent
+import com.embabel.agent.api.event.ToolCallResponseEvent
 import com.embabel.agent.core.LlmInvocation
 import com.embabel.common.ai.model.PricingModel
 
@@ -27,14 +29,21 @@ import com.embabel.common.ai.model.PricingModel
 class PerTestEventCapture : AgenticEventListener {
     private val lock = Any()
     private val invocations = mutableListOf<LlmInvocation>()
-    private var toolCalls = 0
+    private var llmResponseTimeMs = 0L
+    private var finishedProcessToolCalls = 0
+    private var toolResponseCalls = 0
 
     override fun onProcessEvent(event: AgentProcessEvent) {
         when (event) {
             is LlmInvocationEvent -> synchronized(lock) { invocations.add(event.invocation) }
+            is LlmResponseEvent<*> ->
+                synchronized(lock) {
+                    llmResponseTimeMs += event.runningTime.toMillis().coerceAtLeast(0)
+                }
+            is ToolCallResponseEvent -> synchronized(lock) { toolResponseCalls++ }
             is AgentProcessFinishedEvent ->
                 synchronized(lock) {
-                    toolCalls += event.agentProcess.toolsStats.toolsStats.values.sumOf { it.calls }
+                    finishedProcessToolCalls += event.agentProcess.toolsStats.toolsStats.values.sumOf { it.calls }
                 }
             else -> Unit
         }
@@ -43,7 +52,9 @@ class PerTestEventCapture : AgenticEventListener {
     fun reset() {
         synchronized(lock) {
             invocations.clear()
-            toolCalls = 0
+            llmResponseTimeMs = 0L
+            finishedProcessToolCalls = 0
+            toolResponseCalls = 0
         }
     }
 
@@ -55,8 +66,8 @@ class PerTestEventCapture : AgenticEventListener {
             promptTokens = invs.sumOf { it.usage.promptTokens ?: 0 },
             completionTokens = invs.sumOf { it.usage.completionTokens ?: 0 },
             llmCallCount = invs.size,
-            llmTimeMs = invs.sumOf { it.runningTime.toMillis() },
-            toolCallCount = toolCalls,
+            llmTimeMs = llmTimeMsOf(invs),
+            toolCallCount = if (finishedProcessToolCalls > 0) finishedProcessToolCalls else toolResponseCalls,
             servedModel = invs.map { it.llmMetadata.name }.distinct().joinToString(",").ifEmpty { null },
             stageBreakdown =
             invs.groupBy { it.agentName ?: UNKNOWN }
@@ -69,6 +80,16 @@ class PerTestEventCapture : AgenticEventListener {
                     )
                 },
         )
+    }
+
+    /**
+     * Embabel 0.4.0 can emit zero-valued [LlmInvocation.runningTime] for provider-backed calls while
+     * [LlmResponseEvent.runningTime] is populated. Prefer response timing and keep invocation timing as
+     * a compatibility fallback.
+     */
+    private fun llmTimeMsOf(invs: List<LlmInvocation>): Long {
+        if (llmResponseTimeMs > 0) return llmResponseTimeMs
+        return invs.sumOf { it.runningTime.toMillis().coerceAtLeast(0) }
     }
 
     /**
