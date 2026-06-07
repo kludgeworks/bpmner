@@ -7,7 +7,6 @@ spring:
       - com.embabel.agent.autoconfigure.models.anthropic.AgentAnthropicAutoConfiguration
       - com.embabel.agent.autoconfigure.models.gemini.AgentGeminiAutoConfiguration
       - com.embabel.agent.autoconfigure.models.mistralai.AgentMistralAiAutoConfiguration
-      - com.embabel.agent.autoconfigure.models.deepseek.AgentDeepSeekAutoConfiguration
   ai:
     openai:
       api-key: ${OPENAI_API_KEY:}
