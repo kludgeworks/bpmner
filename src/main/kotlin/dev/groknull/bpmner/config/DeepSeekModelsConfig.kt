@@ -69,9 +69,7 @@ class DeepSeekModelsConfig(
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
     baseUrl = BASE_URL,
-    apiKey =
-    properties.apiKey?.takeIf { it.isNotBlank() }
-        ?: "UNCONFIGURED", // Allow context to load without an API key; fails only at call time
+    apiKey = properties.apiKey?.takeIf { it.isNotBlank() } ?: "UNCONFIGURED", // loads context without a key; fails at call time
     completionsPath = COMPLETIONS_PATH,
     embeddingsPath = null,
     httpHeaders = emptyMap(),
@@ -82,14 +80,18 @@ class DeepSeekModelsConfig(
     @Bean
     fun deepSeekModelsInitializer(): ProviderInitialization {
         val registeredLlms =
-            properties.models.map { modelId ->
+            properties.models.distinct().map { modelId ->
+                val pricingModel = DEEPSEEK_PRICING[modelId]
+                if (pricingModel == null) {
+                    logger.warn("No pricing model found for DeepSeek model: {}. Cost tracking will be disabled.", modelId)
+                }
                 val llm =
                     SpringAiLlmService(
                         name = modelId,
                         provider = PROVIDER,
                         chatModel = chatModelOf(modelId, properties.retryTemplate(modelId)),
                         optionsConverter = StandardOpenAiOptionsConverter,
-                        pricingModel = DEEPSEEK_PRICING[modelId],
+                        pricingModel = pricingModel,
                     )
                 configurableBeanFactory.registerSingleton(modelId, llm)
                 logger.info("Registered DeepSeek model: {}", modelId)
