@@ -45,6 +45,19 @@ class BpmnGenerationGateAgentTest {
     }
 
     @Test
+    fun `agent validates statically without NO_PATH_TO_GOAL`(
+        @TempDir tempDir: Path,
+    ) {
+        val agent = agent(tempDir)
+        val reader = com.embabel.agent.api.annotation.support.AgentMetadataReader()
+        val metadata = reader.createAgentMetadata(agent)
+        val validationManager = com.embabel.agent.spi.validation.DefaultAgentValidationManager()
+
+        val errors = validationManager.validate(metadata)
+        assertTrue(errors.isEmpty(), "Agent should validate without errors, found: \$errors")
+    }
+
+    @Test
     fun `clarification answers are recorded and trigger reassessment`(
         @TempDir tempDir: Path,
     ) {

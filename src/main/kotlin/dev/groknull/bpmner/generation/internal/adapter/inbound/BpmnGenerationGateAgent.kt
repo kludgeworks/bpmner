@@ -85,6 +85,12 @@ internal class BpmnGenerationGateAgent(
     @Action(description = "Resolve shell BPMN request draft into a generation request")
     fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = requestResolver.resolveShellRequest(draft)
 
+    @Action(
+        description = "Seed readiness conditions from an existing assessment",
+        post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
+    )
+    fun seedConditions(assessment: ProcessInputAssessment): ProcessInputAssessment = assessment
+
     @AchievesGoal(
         description = "Resolve and approve a BPMN generation request for downstream generation",
         export =
@@ -94,12 +100,6 @@ internal class BpmnGenerationGateAgent(
             startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
         ),
     )
-    @Action(
-        description = "Seed readiness conditions from an existing assessment",
-        post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
-    )
-    fun seedConditions(assessment: ProcessInputAssessment): ProcessInputAssessment = assessment
-
     @Action(description = "Approve a ready BPMN request for contract extraction", pre = ["assessmentReady"])
     fun approveReadyRequest(
         request: BpmnRequest,
