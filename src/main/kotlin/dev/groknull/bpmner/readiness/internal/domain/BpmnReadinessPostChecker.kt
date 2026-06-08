@@ -25,7 +25,13 @@ internal class BpmnReadinessPostChecker(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): ProcessInputAssessment {
-        val text = request.processDescription.lowercase()
+        // Score the source prose plus any clarification answers, so answering a readiness question can
+        // supply a missing deterministic marker (start/end/sequence/verb) and let the loop reach READY.
+        val text =
+            buildString {
+                append(request.processDescription)
+                request.clarificationHistory.forEach { append(' ').append(it.answerText) }
+            }.lowercase()
         val missingAreas = assessment.missingAreas.toMutableSet()
         val dimensions = assessment.dimensions.associateBy { it.dimension }.toMutableMap()
         var overallScore = assessment.overallScore.coerceIn(MIN_SCORE, MAX_SCORE)

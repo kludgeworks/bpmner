@@ -14,6 +14,7 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.hitl.WaitFor
 import com.embabel.agent.domain.io.UserInput
 import com.embabel.chat.UserMessage
+import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnRequestDraft
@@ -25,7 +26,6 @@ import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
-import dev.groknull.bpmner.readiness.BpmnReadinessState
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -33,6 +33,19 @@ import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
+/**
+ * Resolves shell `UserInput` into a [BpmnRequest] and gates downstream generation on readiness.
+ *
+ * Readiness is assessed once, by the single producer [dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessAgent]
+ * `assessReadiness` (which yields a [ProcessInputAssessment]). The GOAP planner runs that action
+ * in-process when no assessment is on the blackboard (the shell path) and skips it when one is
+ * already present (the seeded `generate(request, assessment)` path) — so there is a single path to
+ * [ReadyBpmnContext] via [approveReadyRequest], no nested readiness sub-process, and no ambiguity.
+ *
+ * The interactive clarification loop ([askForClarification] / [applyClarificationAnswers]) is gated on
+ * [GenerationMode.INTERACTIVE]; `SINGLE_SHOT` (and therefore ephemeral) requests cannot wait for input,
+ * so a `NEEDS_CLARIFICATION` verdict terminates immediately via [readinessBlocked].
+ */
 @Application
 @Agent(description = "Resolve shell BPMN requests and gate generation on readiness")
 internal class BpmnGenerationGateAgent(
@@ -72,22 +85,6 @@ internal class BpmnGenerationGateAgent(
     @Action(description = "Resolve shell BPMN request draft into a generation request")
     fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = requestResolver.resolveShellRequest(draft)
 
-    @Action(description = "Assess BPMN request readiness for generation")
-    fun assessBpmnReadiness(request: BpmnRequest): BpmnReadinessState {
-        val assessment = readinessInvoker.assess(request)
-        logger.info(
-            "Readiness assessment complete. verdict={}, overallScore={}, clarificationRound={}",
-            assessment.verdict,
-            assessment.overallScore,
-            request.clarificationHistory.size,
-        )
-        return BpmnReadinessState(
-            request = request,
-            assessment = assessment,
-            clarificationRound = request.clarificationHistory.size,
-        )
-    }
-
     @AchievesGoal(
         description = "Resolve and approve a BPMN generation request for downstream generation",
         export =
@@ -97,43 +94,47 @@ internal class BpmnGenerationGateAgent(
             startingInputTypes = [UserInput::class, BpmnRequest::class],
         ),
     )
-    @Action(description = "Approve a ready BPMN request for contract extraction", pre = ["bpmnRequestReady"])
-    fun approveReadyBpmnRequest(state: BpmnReadinessState): ReadyBpmnContext = ReadyBpmnContext(
-        request = state.request,
-        assessment = state.assessment,
-    )
-
-    @Action(description = "Accept externally assessed ready BPMN request for generation", pre = ["assessmentReady"])
-    fun approveExternallyAssessedBpmnRequest(
+    @Action(description = "Approve a ready BPMN request for contract extraction", pre = ["assessmentReady"])
+    fun approveReadyRequest(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): ReadyBpmnContext = ReadyBpmnContext(request = request, assessment = assessment)
 
     @Action(
         description = "Ask the user for BPMN readiness clarifications",
-        pre = ["bpmnClarificationAvailable"],
+        pre = ["clarificationAvailable"],
         canRerun = true,
-        trigger = BpmnReadinessState::class,
     )
-    fun askForClarification(state: BpmnReadinessState): BpmnClarificationAnswers = WaitFor.formSubmission(
-        clarificationPrompt(state),
+    fun askForClarification(
+        assessment: ProcessInputAssessment,
+        request: BpmnRequest,
+    ): BpmnClarificationAnswers = WaitFor.formSubmission(
+        clarificationPrompt(assessment, request.clarificationHistory.size),
         BpmnClarificationAnswers::class.java,
     )
 
     @Action(
         description = "Apply BPMN clarification answers and reassess readiness",
+        post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
+        // Input-gated on BpmnClarificationAnswers (only applicable once the form is submitted) and
+        // re-runnable across rounds. No trigger: a trigger makes the action reactive-only and removes
+        // it from goal-directed planning, so the planner could not plan a path through the loop.
         canRerun = true,
-        trigger = BpmnClarificationAnswers::class,
+        // Slightly more expensive than the initial assessReadiness (cost 0.0) so the planner prefers
+        // the direct assessment when both are applicable.
+        cost = CLARIFICATION_REASSESS_COST,
     )
     fun applyClarificationAnswers(
-        state: BpmnReadinessState,
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
         answers: BpmnClarificationAnswers,
-    ): BpmnReadinessState {
+    ): ProcessInputAssessment {
         val trimmedAnswers = answers.answers.trim()
         require(trimmedAnswers.isNotEmpty()) { "Clarification answers must not be blank." }
+        val round = request.clarificationHistory.size
         // The shell form accepts one consolidated response; each pending question records that answer
         // so the next readiness pass can decide which gaps were actually resolved.
-        val exchanges = state.assessment.clarificationQuestions.map { question ->
+        val exchanges = assessment.clarificationQuestions.map { question ->
             ClarificationExchange(
                 questionId = question.id,
                 questionText = question.questionText,
@@ -142,7 +143,7 @@ internal class BpmnGenerationGateAgent(
                 relatedDimensions = question.relatedDimensions,
                 evidence = listOf(
                     SourceEvidence(
-                        id = "clarification-${question.id}-${state.clarificationRound + 1}",
+                        id = "clarification-${question.id}-${round + 1}",
                         text = trimmedAnswers,
                         sourceType = EvidenceSourceType.CLARIFICATION,
                         sourceRef = question.id,
@@ -150,64 +151,76 @@ internal class BpmnGenerationGateAgent(
                 ),
             )
         }
-        val nextRequest =
-            state.request.copy(
-                clarificationHistory = state.request.clarificationHistory + exchanges,
-            )
+        val nextRequest = request.copy(clarificationHistory = request.clarificationHistory + exchanges)
         val nextAssessment = readinessInvoker.assess(nextRequest)
-        return BpmnReadinessState(
-            request = nextRequest,
-            assessment = nextAssessment,
-            clarificationRound = state.clarificationRound + 1,
+        logger.info(
+            "Readiness reassessed after clarification. verdict={}, overallScore={}, clarificationRound={}",
+            nextAssessment.verdict,
+            nextAssessment.overallScore,
+            nextRequest.clarificationHistory.size,
         )
+        return nextAssessment
     }
 
     @Action(
-        description = "Terminate BPMN generation after the clarification round limit",
-        pre = ["bpmnClarificationLimitReached"],
+        description = "Terminate BPMN generation when readiness clarification cannot resolve",
+        pre = ["clarificationBlocked"],
     )
-    fun readinessBlockedAfterClarificationLimit(state: BpmnReadinessState): BpmnResult {
+    fun readinessBlocked(
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): BpmnResult {
         val reportPath =
             readinessReportWriter.writeReport(
-                originalInput = state.request.processDescription,
-                assessment = state.assessment,
-                outputFile = state.request.outputFile,
+                originalInput = request.processDescription,
+                assessment = assessment,
+                outputFile = request.outputFile,
             )
         return BpmnResult(
-            outputFile = state.request.outputFile,
+            outputFile = request.outputFile,
             status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-            readinessReport = state.assessment,
+            readinessReport = assessment,
             reportFile = reportPath,
         )
     }
 
     @Condition
-    fun bpmnRequestReady(state: BpmnReadinessState): Boolean = state.assessment.verdict == ReadinessVerdict.READY
-
-    @Condition
     fun assessmentReady(assessment: ProcessInputAssessment): Boolean = assessment.verdict == ReadinessVerdict.READY
 
     @Condition
-    fun bpmnClarificationAvailable(state: BpmnReadinessState): Boolean = state.assessment.verdict ==
-        ReadinessVerdict.NEEDS_CLARIFICATION &&
-        state.clarificationRound < MAX_CLARIFICATION_ROUNDS &&
-        state.assessment.clarificationQuestions.isNotEmpty()
+    fun clarificationAvailable(
+        assessment: ProcessInputAssessment,
+        request: BpmnRequest,
+    ): Boolean = assessment.verdict == ReadinessVerdict.NEEDS_CLARIFICATION &&
+        request.mode == GenerationMode.INTERACTIVE &&
+        request.clarificationHistory.size < MAX_CLARIFICATION_ROUNDS &&
+        assessment.clarificationQuestions.isNotEmpty()
 
     @Condition
-    fun bpmnClarificationLimitReached(state: BpmnReadinessState): Boolean = state.assessment.verdict ==
-        ReadinessVerdict.NEEDS_CLARIFICATION &&
-        state.clarificationRound >= MAX_CLARIFICATION_ROUNDS
+    fun clarificationBlocked(
+        assessment: ProcessInputAssessment,
+        request: BpmnRequest,
+    ): Boolean {
+        if (assessment.verdict != ReadinessVerdict.NEEDS_CLARIFICATION) return false
+        val singleShot = request.mode == GenerationMode.SINGLE_SHOT
+        val roundsExhausted = request.clarificationHistory.size >= MAX_CLARIFICATION_ROUNDS
+        return singleShot || roundsExhausted
+    }
 
-    private fun clarificationPrompt(state: BpmnReadinessState): String {
+    private fun clarificationPrompt(
+        assessment: ProcessInputAssessment,
+        round: Int,
+    ): String {
         val questions =
-            state.assessment.clarificationQuestions
+            assessment.clarificationQuestions
                 .joinToString(separator = System.lineSeparator()) { question ->
                     "- ${question.questionText}"
                 }
-        return "BPMN clarification round ${state.clarificationRound + 1} of $MAX_CLARIFICATION_ROUNDS\n$questions"
+        return "BPMN clarification round ${round + 1} of $MAX_CLARIFICATION_ROUNDS\n$questions"
     }
 
     private companion object {
         const val MAX_CLARIFICATION_ROUNDS = 3
+        const val CLARIFICATION_REASSESS_COST = 0.5
     }
 }

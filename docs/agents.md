@@ -6,7 +6,7 @@ For the planner mechanics — how actions are chained, cost ordering, failure mo
 
 | Agent | File | Actions | Achieves goal | Configures |
 |---|---|---|---|---|
-| `BpmnGenerationGateAgent` | `generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt` | 8: `draftBpmnRequest`, `resolveBpmnRequest`, `assessBpmnReadiness`, `approveReadyBpmnRequest`, `approveExternallyAssessedBpmnRequest`, `askForClarification`, `applyClarificationAnswers`, `readinessBlockedAfterClarificationLimit` | `prepareBpmnGeneration` | `bpmner.readiness.*`, role: `readiness-assessor` |
+| `BpmnGenerationGateAgent` | `generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt` | 6: `draftBpmnRequest`, `resolveBpmnRequest`, `approveReadyRequest`, `askForClarification`, `applyClarificationAnswers`, `readinessBlocked` | `prepareBpmnGeneration` | `bpmner.readiness.*`, role: `readiness-assessor` |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` | `assessReadiness` | `bpmner.readiness.*`, `bpmner.budget.readiness`, role: `readiness-assessor` |
 | `BpmnContractAgent` | `contract/internal/adapter/inbound/BpmnContractAgent.kt` | 1: `extractProcessContract` | `extractProcessContract` | `bpmner.contract.*`, role: `contract-extractor` |
 | `BpmnGeneratorAgent` | `generation/internal/adapter/inbound/BpmnGeneratorAgent.kt` | 4: `createOutline`, `composeGraph`, `renderBpmnXml`, `finalizeBpmn` | `generateBpmn` (on `finalizeBpmn`) | role: `generator`, `bpmner.budget.generation`, `bpmner.logging.dump-artifacts` |

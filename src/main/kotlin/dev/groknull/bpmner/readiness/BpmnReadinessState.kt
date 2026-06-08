@@ -18,14 +18,6 @@ data class ReadyBpmnContext(
     val assessment: ProcessInputAssessment,
 )
 
-data class BpmnReadinessState(
-    @field:Valid
-    val request: BpmnRequest,
-    @field:Valid
-    val assessment: ProcessInputAssessment,
-    val clarificationRound: Int = 0,
-)
-
 @JsonClassDescription("User answers to BPMN readiness clarification questions")
 data class BpmnClarificationAnswers(
     @field:NotBlank
