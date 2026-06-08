@@ -91,7 +91,7 @@ internal class BpmnGenerationGateAgent(
         Export(
             name = "prepareBpmnGeneration",
             remote = false,
-            startingInputTypes = [UserInput::class, BpmnRequest::class],
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
         ),
     )
     @Action(description = "Approve a ready BPMN request for contract extraction", pre = ["assessmentReady"])
