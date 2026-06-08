@@ -150,6 +150,10 @@ jobs:
             --test_env=DEEPSEEK_API_KEY \
             --test_env=OPENROUTER_API_KEY \
             --test_env=SPRING_PROFILES_ACTIVE \
+            --test_env=GITHUB_RUN_NUMBER \
+            --test_env=GITHUB_SHA \
+            --test_env=GITHUB_HEAD_REF \
+            --test_env=GITHUB_REF \
             --test_env=TEST_TOTAL_SHARDS=${{ strategy.job-total }} \
             --test_env=TEST_SHARD_INDEX=${{ steps.shard.outputs.SHARD_INDEX }} \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
