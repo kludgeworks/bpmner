@@ -37,7 +37,7 @@ class BpmnGenerationGateAgentTest {
         val request = request()
         val ready = assessment(ReadinessVerdict.READY)
 
-        val context = agent.approveReadyRequest(request, ready)
+        val context = agent.approveReadyRequest(request, ready, ReadinessGate(ready))
 
         assertEquals(request, context.request)
         assertEquals(ready, context.assessment)

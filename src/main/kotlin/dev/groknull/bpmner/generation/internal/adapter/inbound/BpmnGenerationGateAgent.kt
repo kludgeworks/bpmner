@@ -36,12 +36,21 @@ import org.slf4j.LoggerFactory
 /**
  * Marker type produced by [BpmnGenerationGateAgent.openReadinessGate].
  *
- * The planner skips any action whose output type is already on the blackboard. Because
- * [ProcessInputAssessment] appears in `startingInputTypes`, any action that merely returns
- * [ProcessInputAssessment] is treated as satisfied and never executed — so its `post` conditions
- * are never registered. [ReadinessGate] is deliberately NOT in `startingInputTypes`, which forces
- * the planner to run [BpmnGenerationGateAgent.openReadinessGate] and thereby post the required
- * `assessmentReady` / `clarificationAvailable` / `clarificationBlocked` conditions.
+ * ## Why a distinct return type?
+ *
+ * The GOAP planner skips any action whose output type is already on the blackboard ([ProcessInputAssessment]
+ * is in `startingInputTypes`), so an action that returns [ProcessInputAssessment] would never execute and
+ * its `post` conditions would never be registered.
+ *
+ * ## Why must [BpmnGenerationGateAgent.approveReadyRequest] accept it?
+ *
+ * The planner's forward-pass optimisation **prunes** actions whose output type is not consumed by any
+ * subsequent action. If [ReadinessGate] were produced but never taken as a parameter, the forward pass
+ * would remove [BpmnGenerationGateAgent.openReadinessGate] from the plan; its string effects
+ * (`assessmentReady`, etc.) would therefore never be posted, leaving [BpmnGenerationGateAgent.approveReadyRequest]
+ * unreachable to the static validator. Declaring [ReadinessGate] as a parameter on [BpmnGenerationGateAgent.approveReadyRequest]
+ * anchors it in the plan without changing any runtime semantics — the parameter value is intentionally ignored
+ * in the method body.
  */
 internal data class ReadinessGate(val assessment: ProcessInputAssessment)
 
@@ -116,6 +125,11 @@ internal class BpmnGenerationGateAgent(
     fun approveReadyRequest(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
+        // gate is a planner type-token only — its value is intentionally unused.
+        // openReadinessGate produces it and posts the "assessmentReady" string condition;
+        // declaring it here prevents the forward-pass optimiser from pruning openReadinessGate
+        // (which would remove its post conditions from the world state and leave this goal unreachable).
+        @Suppress("UNUSED_PARAMETER") gate: ReadinessGate,
     ): ReadyBpmnContext = ReadyBpmnContext(request = request, assessment = assessment)
 
     @Action(
