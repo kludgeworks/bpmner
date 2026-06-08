@@ -45,16 +45,30 @@ class BpmnGenerationGateAgentTest {
     }
 
     @Test
-    fun `agent validates statically without NO_PATH_TO_GOAL`(
+    fun `openReadinessGate returns ReadinessGate wrapping the assessment`(
         @TempDir tempDir: Path,
     ) {
         val agent = agent(tempDir)
-        val reader = com.embabel.agent.api.annotation.support.AgentMetadataReader()
-        val metadata = reader.createAgentMetadata(agent)
-        val validationManager = com.embabel.agent.spi.validation.DefaultAgentValidationManager()
+        val assessment = assessment(ReadinessVerdict.READY)
 
-        val errors = validationManager.validate(metadata)
-        assertTrue(errors.isEmpty(), "Agent should validate without errors, found: \$errors")
+        val gate = agent.openReadinessGate(assessment)
+
+        assertEquals(assessment, gate.assessment)
+    }
+
+    @Test
+    fun `openReadinessGate return type is distinct from ProcessInputAssessment`(
+        @TempDir tempDir: Path,
+    ) {
+        // ReadinessGate must NOT be ProcessInputAssessment; that would allow the GOAP planner
+        // to skip the action (output type already on blackboard) and never post the string
+        // conditions needed by approveReadyRequest.  See BpmnGenerationGateAgent.ReadinessGate KDoc.
+        val agent = agent(tempDir)
+        val assessment = assessment(ReadinessVerdict.READY)
+
+        val gate = agent.openReadinessGate(assessment)
+
+        assertFalse(gate is ProcessInputAssessment, "ReadinessGate must be a different type to ProcessInputAssessment")
     }
 
     @Test

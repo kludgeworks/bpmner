@@ -34,6 +34,18 @@ import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
 /**
+ * Marker type produced by [BpmnGenerationGateAgent.openReadinessGate].
+ *
+ * The planner skips any action whose output type is already on the blackboard. Because
+ * [ProcessInputAssessment] appears in `startingInputTypes`, any action that merely returns
+ * [ProcessInputAssessment] is treated as satisfied and never executed — so its `post` conditions
+ * are never registered. [ReadinessGate] is deliberately NOT in `startingInputTypes`, which forces
+ * the planner to run [BpmnGenerationGateAgent.openReadinessGate] and thereby post the required
+ * `assessmentReady` / `clarificationAvailable` / `clarificationBlocked` conditions.
+ */
+internal data class ReadinessGate(val assessment: ProcessInputAssessment)
+
+/**
  * Resolves shell `UserInput` into a [BpmnRequest] and gates downstream generation on readiness.
  *
  * Readiness is assessed once, by the single producer [dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessAgent]
@@ -86,10 +98,10 @@ internal class BpmnGenerationGateAgent(
     fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = requestResolver.resolveShellRequest(draft)
 
     @Action(
-        description = "Seed readiness conditions from an existing assessment",
+        description = "Open the readiness gate from a pre-seeded assessment",
         post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
     )
-    fun seedConditions(assessment: ProcessInputAssessment): ProcessInputAssessment = assessment
+    fun openReadinessGate(assessment: ProcessInputAssessment): ReadinessGate = ReadinessGate(assessment)
 
     @AchievesGoal(
         description = "Resolve and approve a BPMN generation request for downstream generation",
