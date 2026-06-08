@@ -32,9 +32,12 @@ class PerTestEventCaptureTest {
     @Test
     fun `uses response event duration when invocation duration is zero`() {
         val capture = PerTestEventCapture()
+        val responseEvent = llmResponseEvent(Duration.ofMillis(1_250))
 
-        capture.onProcessEvent(invocationEvent(runningTime = Duration.ZERO))
-        capture.onProcessEvent(llmResponseEvent(Duration.ofMillis(1_250)))
+        capture.onProcessEvent(
+            invocationEvent(runningTime = Duration.ZERO, interactionId = responseEvent.request.interaction.id.value),
+        )
+        capture.onProcessEvent(responseEvent)
 
         val snap = capture.snapshot()
 
@@ -52,11 +55,26 @@ class PerTestEventCaptureTest {
     }
 
     @Test
+    fun `uses invocation duration per call when no response duration exists for that interaction`() {
+        val capture = PerTestEventCapture()
+        val responseEvent = llmResponseEvent(Duration.ofMillis(1_250))
+
+        capture.onProcessEvent(
+            invocationEvent(runningTime = Duration.ZERO, interactionId = responseEvent.request.interaction.id.value),
+        )
+        capture.onProcessEvent(responseEvent)
+        capture.onProcessEvent(invocationEvent(runningTime = Duration.ofMillis(500), interactionId = "local-interaction"))
+
+        assertEquals(1_750, capture.snapshot().llmTimeMs)
+    }
+
+    @Test
     fun `reset clears invocation response time and tool counters`() {
         val capture = PerTestEventCapture()
+        val responseEvent = llmResponseEvent(Duration.ofMillis(750))
 
         capture.onProcessEvent(invocationEvent(runningTime = Duration.ofMillis(500)))
-        capture.onProcessEvent(llmResponseEvent(Duration.ofMillis(750)))
+        capture.onProcessEvent(responseEvent)
         capture.onProcessEvent(toolCallResponseEvent())
         capture.reset()
 
@@ -92,7 +110,10 @@ class PerTestEventCaptureTest {
         assertEquals(2, capture.snapshot().toolCallCount)
     }
 
-    private fun invocationEvent(runningTime: Duration): LlmInvocationEvent = LlmInvocationEvent(
+    private fun invocationEvent(
+        runningTime: Duration,
+        interactionId: String = "interaction-1",
+    ): LlmInvocationEvent = LlmInvocationEvent(
         mock(AgentProcess::class.java),
         LlmInvocation(
             LlmMetadata.create("test-provider", "test-model", null, PricingModel.ALL_YOU_CAN_EAT),
@@ -101,7 +122,7 @@ class PerTestEventCaptureTest {
             Instant.parse("2026-06-07T00:00:00Z"),
             runningTime,
         ),
-        "interaction-1",
+        interactionId,
     )
 
     private fun llmResponseEvent(runningTime: Duration) = LlmRequestEvent(
