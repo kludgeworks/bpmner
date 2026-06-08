@@ -9,6 +9,8 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.LlmInvocationEvent
+import com.embabel.agent.api.event.LlmResponseEvent
+import com.embabel.agent.api.event.ToolCallResponseEvent
 import com.embabel.agent.core.LlmInvocation
 import com.embabel.common.ai.model.PricingModel
 
@@ -26,15 +28,27 @@ import com.embabel.common.ai.model.PricingModel
  */
 class PerTestEventCapture : AgenticEventListener {
     private val lock = Any()
-    private val invocations = mutableListOf<LlmInvocation>()
-    private var toolCalls = 0
+    private val invocations = mutableListOf<TimedInvocation>()
+    private val llmResponseTimeMsByInteraction = mutableMapOf<String, MutableList<Long>>()
+    private var finishedProcessToolCalls = 0
+    private var toolResponseCalls = 0
 
     override fun onProcessEvent(event: AgentProcessEvent) {
         when (event) {
-            is LlmInvocationEvent -> synchronized(lock) { invocations.add(event.invocation) }
+            is LlmInvocationEvent ->
+                synchronized(lock) {
+                    invocations.add(TimedInvocation(event.invocation, event.interactionId))
+                }
+            is LlmResponseEvent<*> ->
+                synchronized(lock) {
+                    llmResponseTimeMsByInteraction
+                        .getOrPut(event.request.interaction.id.value) { mutableListOf() }
+                        .add(event.runningTime.toMillis().coerceAtLeast(0))
+                }
+            is ToolCallResponseEvent -> synchronized(lock) { toolResponseCalls++ }
             is AgentProcessFinishedEvent ->
                 synchronized(lock) {
-                    toolCalls += event.agentProcess.toolsStats.toolsStats.values.sumOf { it.calls }
+                    finishedProcessToolCalls += event.agentProcess.toolsStats.toolsStats.values.sumOf { it.calls }
                 }
             else -> Unit
         }
@@ -43,20 +57,23 @@ class PerTestEventCapture : AgenticEventListener {
     fun reset() {
         synchronized(lock) {
             invocations.clear()
-            toolCalls = 0
+            llmResponseTimeMsByInteraction.clear()
+            finishedProcessToolCalls = 0
+            toolResponseCalls = 0
         }
     }
 
     fun snapshot(): Capture = synchronized(lock) {
-        val invs = invocations.toList()
+        val timedInvs = invocations.toList()
+        val invs = timedInvs.map { it.invocation }
         Capture(
             costUsd = invs.sumOf { it.cost() },
             costKnown = costKnownOf(invs),
             promptTokens = invs.sumOf { it.usage.promptTokens ?: 0 },
             completionTokens = invs.sumOf { it.usage.completionTokens ?: 0 },
             llmCallCount = invs.size,
-            llmTimeMs = invs.sumOf { it.runningTime.toMillis() },
-            toolCallCount = toolCalls,
+            llmTimeMs = llmTimeMsOf(timedInvs),
+            toolCallCount = if (finishedProcessToolCalls > 0) finishedProcessToolCalls else toolResponseCalls,
             servedModel = invs.map { it.llmMetadata.name }.distinct().joinToString(",").ifEmpty { null },
             stageBreakdown =
             invs.groupBy { it.agentName ?: UNKNOWN }
@@ -69,6 +86,25 @@ class PerTestEventCapture : AgenticEventListener {
                     )
                 },
         )
+    }
+
+    /**
+     * Embabel 0.4.0 can emit zero-valued [LlmInvocation.runningTime] for provider-backed calls while
+     * [LlmResponseEvent.runningTime] is populated. Prefer response timing and keep invocation timing as
+     * a compatibility fallback.
+     */
+    private fun llmTimeMsOf(invs: List<TimedInvocation>): Long {
+        val responseTimesByInteraction = llmResponseTimeMsByInteraction
+            .mapValues { (_, responseTimes) -> ArrayDeque(responseTimes) }
+        val invocationTotal = invs.sumOf { timedInvocation ->
+            val responseTimes = responseTimesByInteraction[timedInvocation.interactionId]
+            if (responseTimes != null && responseTimes.isNotEmpty()) {
+                responseTimes.removeFirst()
+            } else {
+                timedInvocation.invocation.runningTime.toMillis().coerceAtLeast(0)
+            }
+        }
+        return invocationTotal + responseTimesByInteraction.values.sumOf { responseTimes -> responseTimes.sum() }
     }
 
     /**
@@ -93,6 +129,11 @@ class PerTestEventCapture : AgenticEventListener {
         val toolCallCount: Int,
         val servedModel: String?,
         val stageBreakdown: Map<String, StageStats>,
+    )
+
+    private data class TimedInvocation(
+        val invocation: LlmInvocation,
+        val interactionId: String,
     )
 
     private companion object {
