@@ -67,7 +67,6 @@ kt_jvm_library(
         "//linter/pkl:pkl_runtime_resources",
         "//linter/pkl:rule_types_java",
         "@maven//:com_embabel_agent_embabel_agent_starter_anthropic",
-        "@maven//:com_embabel_agent_embabel_agent_starter_deepseek",
         "@maven//:com_embabel_agent_embabel_agent_starter_gemini",
         "@maven//:com_embabel_agent_embabel_agent_starter_mistral_ai",
         "@maven//:com_embabel_agent_embabel_agent_starter_openai",
