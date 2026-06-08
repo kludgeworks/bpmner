@@ -94,6 +94,12 @@ internal class BpmnGenerationGateAgent(
             startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
         ),
     )
+    @Action(
+        description = "Seed readiness conditions from an existing assessment",
+        post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
+    )
+    fun seedConditions(assessment: ProcessInputAssessment): ProcessInputAssessment = assessment
+
     @Action(description = "Approve a ready BPMN request for contract extraction", pre = ["assessmentReady"])
     fun approveReadyRequest(
         request: BpmnRequest,
