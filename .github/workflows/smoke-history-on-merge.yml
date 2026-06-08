@@ -1,0 +1,51 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+name: Smoke history on merge
+
+# When a PR merges, ship its LAST smoke run to the data repo as a second sample (the post-merge main run is
+# dispatched separately by ci.yml). The PR matrix runs against refs/pull/N/merge — i.e. effectively post-merge
+# code — so this captures a genuine extra sample without ever ingesting WIP intermediate pushes.
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]   # only PRs merging INTO main — not feature-to-feature / stack merges
+
+jobs:
+  find-run:
+    runs-on: ubuntu-latest
+    # actual merges only; same-repo only (fork PR runs have no smoke artifacts — org secrets aren't exposed)
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: read
+    outputs:
+      rid: ${{ steps.run.outputs.rid }}
+      sha: ${{ steps.run.outputs.sha }}
+    steps:
+      - name: Find the PR's last CI run
+        id: run
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          rid=$(gh api "/repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${HEAD_SHA}&event=pull_request" \
+            --jq '.workflow_runs | sort_by(.run_number) | last | .id // empty')
+          if [ -z "$rid" ]; then
+            echo "no CI run found for ${HEAD_SHA} — nothing to ship"
+            exit 0
+          fi
+          {
+            echo "rid=${rid}"
+            echo "sha=${HEAD_SHA}"
+          } >> "$GITHUB_OUTPUT"
+
+  dispatch:
+    needs: find-run
+    if: needs.find-run.outputs.rid != ''
+    uses: ./.github/workflows/dispatch-ingest.yml
+    with:
+      source_run_id: ${{ needs.find-run.outputs.rid }}
+      sha: ${{ needs.find-run.outputs.sha }}
+    secrets: inherit

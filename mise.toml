@@ -32,7 +32,7 @@ experimental = true
 lockfile = true
 
 [task_config]
-includes = [".mise/tasks.toml", "tasks.toml"]
+includes = [".mise/tasks.toml", "tasks.toml", "mise-tasks"]
 
 [hooks]
 postinstall = "hk install --mise && vale sync"

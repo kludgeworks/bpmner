@@ -30,7 +30,12 @@ internal class BpmnReadinessAgent(
         description = "Assess raw BPMN generation input for process readiness",
         export = Export(name = "assessReadiness", remote = true, startingInputTypes = [BpmnRequest::class]),
     )
-    @Action(description = "Assess raw BPMN generation input for process readiness")
+    @Action(
+        description = "Assess raw BPMN generation input for process readiness",
+        // The single readiness producer must advertise every gate condition it can establish, so the
+        // shell path can plan from a bare BpmnRequest to approval, clarification, or a blocked result.
+        post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
+    )
     fun assessReadiness(
         request: BpmnRequest,
         context: OperationContext,

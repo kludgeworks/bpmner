@@ -47,7 +47,7 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ### Prerequisites
 - **Bazel 8.6.0** (pinned in `.bazelversion`) — install via [Bazelisk](https://github.com/bazelbuild/bazelisk).
 - **Mise** for environment and tool management.
-- An LLM API key (Anthropic, OpenAI, Gemini, Mistral, DeepSeek, or OpenRouter).
+- An LLM API key for at least one supported provider, stored in 1Password and read via the `op` CLI (see [Run](#run)).
 
 ### Build
 ```bash
@@ -55,13 +55,20 @@ bazel build //src:bpmner_app
 ```
 
 ### Run
-`bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell.
+`bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell. Both launch
+through the `bpmner-cli` mise task, which loads the chosen provider's API key from 1Password
+(`op://bpmner/<provider>/api-key`), sets the matching Spring profile via `SPRING_PROFILES_ACTIVE`, and
+runs `bazel run //src:bpmner_app`. Sign in to 1Password first (`op signin`, or set
+`OP_SERVICE_ACCOUNT_TOKEN`).
+
+Select a provider with `--provider` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`,
+or `llama`; omit it to choose interactively (via `gum`). Add `--web` for the browser UI and `--verbose`
+for DEBUG logging.
 
 #### Web Interface
 Starts an HTTP server with a live, progress-aware browser UI for submitting process descriptions, watching generation progress over SSE, inspecting intermediate validation snapshots, and downloading the final BPMN XML. The web flow keeps XML in memory rather than writing `.bpmn` files to disk.
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anthropic,web
+mise run bpmner-cli --provider anthropic --web
 ```
 Open `http://localhost:8080` once the server is up.
 
@@ -69,8 +76,7 @@ Open `http://localhost:8080` once the server is up.
 Start the shell and use Embabel's built-in `x` / `execute` command. The shell owns prompting,
 blackboard inspection, cost output, and tool statistics.
 ```bash
-export ANTHROPIC_API_KEY="sk-ant-..."
-bazel run //src:bpmner_app -- --spring.profiles.active=anthropic
+mise run bpmner-cli --provider anthropic
 ```
 Then run, for example: `x "Generate BPMN for the toast process in toast-process.txt and write it to toast.bpmn"`.
 
