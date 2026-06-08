@@ -49,6 +49,7 @@ internal class BpmnDefinitionValidator {
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
+        validateSwimlanes(definition, errors)
 
         return errors
     }
@@ -458,6 +459,116 @@ internal class BpmnDefinitionValidator {
                 "$elementName $nodeId messageRef '$messageRef' " +
                     "does not match any message catalog id",
             )
+        }
+    }
+
+    // Structural / referential integrity for the collaboration data plane. Complements the
+    // Pkl convention rules (MessageFlowAcrossPools, LaneLabelsBusinessRolesPerformers, …) — those
+    // check naming and cross-pool *semantics*; this checks that the ids actually resolve and that
+    // the partition is well-formed, so the renderer never trips over a dangling reference.
+    private fun validateSwimlanes(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        if (definition.lanes.isEmpty() &&
+            definition.participants.isEmpty() &&
+            definition.messageFlows.isEmpty()
+        ) {
+            return
+        }
+
+        val nodeIds = definition.nodes.map { it.id.trim() }.toSet()
+        val participantIds = definition.participants.map { it.id.trim() }.toSet()
+
+        validateParticipants(definition, errors)
+        validateLanes(definition, nodeIds, participantIds, errors)
+        validateMessageFlows(definition, nodeIds, participantIds, errors)
+    }
+
+    private fun validateParticipants(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        definition.participants
+            .map { it.id.trim() }
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate participant id: $it") }
+
+        // A non-null processRef names the white-box process this pool owns; in a single-process
+        // definition that must be the definition's own process.
+        definition.participants.forEach { participant ->
+            val processRef = participant.processRef?.trim()
+            if (!processRef.isNullOrBlank() && processRef != definition.processId.trim()) {
+                errors.add(
+                    "participant ${participant.id} processRef '$processRef' does not match the process id " +
+                        "'${definition.processId}'",
+                )
+            }
+        }
+    }
+
+    private fun validateLanes(
+        definition: BpmnDefinition,
+        nodeIds: Set<String>,
+        participantIds: Set<String>,
+        errors: MutableList<String>,
+    ) {
+        definition.lanes
+            .map { it.id.trim() }
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate lane id: $it") }
+
+        val seenNodeRefs = mutableSetOf<String>()
+        definition.lanes.forEach { lane ->
+            val participantId = lane.participantId?.trim()
+            if (!participantId.isNullOrBlank() && participantId !in participantIds) {
+                errors.add("lane ${lane.id} participantId '$participantId' does not match any participant id")
+            }
+            lane.flowNodeRefs.forEach { rawRef ->
+                val ref = rawRef.trim()
+                if (ref !in nodeIds) {
+                    errors.add("lane ${lane.id} flowNodeRef '$ref' does not match any node id")
+                }
+                if (!seenNodeRefs.add(ref)) {
+                    errors.add("node '$ref' is assigned to more than one lane")
+                }
+            }
+        }
+    }
+
+    private fun validateMessageFlows(
+        definition: BpmnDefinition,
+        nodeIds: Set<String>,
+        participantIds: Set<String>,
+        errors: MutableList<String>,
+    ) {
+        // A message-flow endpoint is either a flow-node id (white-box pool) or a participant id
+        // (typically a black-box pool). Cross-pool *semantics* are enforced by the
+        // MessageFlowAcrossPools Pkl rule; here we only guard against dangling and self references.
+        definition.messageFlows
+            .map { it.id.trim() }
+            .groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys
+            .forEach { errors.add("duplicate message flow id: $it") }
+
+        val endpointIds = nodeIds + participantIds
+        definition.messageFlows.forEach { flow ->
+            val source = flow.sourceRef.trim()
+            val target = flow.targetRef.trim()
+            if (source !in endpointIds) {
+                errors.add("message flow ${flow.id} sourceRef '$source' matches no node or participant id")
+            }
+            if (target !in endpointIds) {
+                errors.add("message flow ${flow.id} targetRef '$target' matches no node or participant id")
+            }
+            if (source.isNotBlank() && source == target) {
+                errors.add("message flow ${flow.id} must not connect an element to itself")
+            }
         }
     }
 
