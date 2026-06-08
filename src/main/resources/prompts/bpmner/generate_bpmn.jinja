@@ -53,7 +53,7 @@ Embedded-subprocess topology:
 - The subprocess node itself sits on the enclosing flow like any task: the main flow connects into the `SUB_PROCESS` node and out of it. Sequence flows connect to the subprocess node, not to its interior members — each flow keeps both endpoints on the same side of the boundary (both inside the subprocess or both outside).
 
 Call-activity topology:
-- A `[CALL_ACTIVITY calledElement="X"]` contract activity becomes a `CALL_ACTIVITY` node with `calledElement` = X, id copied verbatim. It sits on the flow like a task (one inbound, one outbound flow) and has NO interior nodes — the called process X is defined separately and referenced by id, so do not emit a second process or any `parentRef`'d children for it.
+- A `[CALL_ACTIVITY calledElement="X"]` contract activity becomes a `CALL_ACTIVITY` node with `calledElement` = X, id copied verbatim. It sits on the flow like a task (one inbound, one outbound flow). The called process X is defined separately and referenced by id; this node has no interior nodes and no `parentRef`'d children.
 
 Event-subprocess topology:
 - An `[EVENT_SUBPROCESS trigger=… interrupting contains="a,b"]` or `[EVENT_SUBPROCESS trigger=… non-interrupting contains="a,b"]` contract entry becomes a `SUB_PROCESS` node with `triggeredByEvent=true`, id copied verbatim. The keyword `interrupting` means the handler cancels the enclosing flow; `non-interrupting` means it runs alongside it. Its members are the activities listed in `contains=`.

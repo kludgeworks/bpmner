@@ -164,12 +164,20 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
         }
 
         is CallActivity -> {
-            BpmnCallActivity(
-                id = id,
-                name = normalisedName,
-                calledElement = calledElement.orEmpty(),
-                parentRef = parentRef,
-            )
+            // A call activity must reference its called process; one with a blank or absent
+            // calledElement is surfaced as unrecognized (so the BpmnSubset rule flags it)
+            // rather than fabricating a typed node that renders as <callActivity calledElement="">.
+            val target = calledElement?.takeIf(String::isNotBlank)
+            if (target == null) {
+                toUnrecognizedNode(normalisedName, parentRef)
+            } else {
+                BpmnCallActivity(
+                    id = id,
+                    name = normalisedName,
+                    calledElement = target,
+                    parentRef = parentRef,
+                )
+            }
         }
 
         // FlowNode subtypes the parser doesn't translate are surfaced as `BpmnUnrecognizedNode`
