@@ -7,6 +7,7 @@ package dev.groknull.bpmner.readiness.internal.domain
 
 import dev.groknull.bpmner.core.BpmnReadinessConfig
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.readiness.ClarificationQuestion
@@ -171,6 +172,32 @@ class BpmnReadinessPostCheckerTest {
         assertEquals(ReadinessVerdict.READY, result.verdict)
         assertEquals(86, result.overallScore)
         assertTrue(result.missingAreas.isEmpty(), "expected no missing areas, got ${result.missingAreas}")
+    }
+
+    @Test
+    fun `clarification answers clear a deterministic gap and reach READY`() {
+        // The description alone is missing an END_STATE marker, so the floor caps it.
+        val description = "When an order is submitted, the clerk reviews it, then approves it."
+        val withoutAnswer = checker.apply(BpmnRequest(description), assessment(ReadinessVerdict.READY, 85))
+        assertEquals(ReadinessVerdict.NEEDS_CLARIFICATION, withoutAnswer.verdict)
+        assertTrue(MissingProcessArea.END_STATE in withoutAnswer.missingAreas)
+
+        // A clarification answer supplies the missing end-state marker → the gate clears, READY.
+        val answered =
+            BpmnRequest(
+                processDescription = description,
+                clarificationHistory =
+                listOf(
+                    ClarificationExchange(
+                        questionId = "q-end",
+                        questionText = "What final state should the process reach?",
+                        answerText = "Finally the order is completed.",
+                    ),
+                ),
+            )
+        val withAnswer = checker.apply(answered, assessment(ReadinessVerdict.READY, 85))
+        assertEquals(ReadinessVerdict.READY, withAnswer.verdict)
+        assertEquals(85, withAnswer.overallScore)
     }
 
     @Test

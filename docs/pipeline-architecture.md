@@ -11,7 +11,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | Module | Owns | Key public types |
 | --- | --- | --- |
 | `core/` | Shared domain model, configuration, fingerprints, naming policy. No Spring visibility restrictions. | `BpmnRequest`, `BpmnDefinition`, `BpmnConfig`, `BpmnDiagnostic`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`, `BpmnResult`. |
-| `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation, ready-state handoff. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`, `BpmnReadinessState`, `ReadyBpmnContext`. |
+| `readiness/` | Guardrail 1: Heuristic + LLM input assessment, clarification discovery, readiness report generation, ready-state handoff. | `BpmnReadinessAgent`, `BpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`, `ReadyBpmnContext`. |
 | `contract/` | Guardrail 2: Extraction of source-grounded process contracts, multi-source evidence tracking. | `BpmnContractAgent`, `ProcessContract`, `ValidatedProcessContract`. |
 | `generation/` | Embabel-native request intake, readiness gating, LLM-driven typed generation, structural composition, ownership assignment, XML rendering, file writing. | `BpmnGenerationGateAgent`, `BpmnGeneratorAgent`, `BpmnAgentInvoker`, `BpmnRenderer` (port), `BpmnResult`, `BpmnGeneratedEvent`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
@@ -36,12 +36,12 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             │                                                         │
             │  draftBpmnRequest ── LLM ──► BpmnRequestDraft           │
             │  resolveBpmnRequest ───────► BpmnRequest                │
-            │  assessBpmnReadiness ──────► BpmnReadinessState         │
+            │  assessReadiness ──────► ProcessInputAssessment         │
             │              │                                          │
             │              ▼                                          │
-            │       READY or externally READY ─► ReadyBpmnContext     │
-            │       NEEDS_CLARIFICATION ───────► WaitFor.formSubmission│
-            │       round limit reached ───────► BpmnResult           │
+            │       READY (or seeded) ─────────► ReadyBpmnContext     │
+            │       NEEDS_CLARIFICATION + interactive ► WaitFor form   │
+            │       single-shot / round limit ─► BpmnResult           │
             └──────────────┬──────────────────────────────────────────┘
                            ▼
             ┌─────────────────────────────────────────────────────────┐

@@ -193,8 +193,8 @@ internal class BpmnGenerationGateAgent {
             startingInputTypes = [UserInput::class, BpmnRequest::class],
         ),
     )
-    @Action(pre = ["bpmnRequestReady"])
-    fun approveReadyBpmnRequest(state: BpmnReadinessState): ReadyBpmnContext = TODO()
+    @Action(pre = ["assessmentReady"])
+    fun approveReadyRequest(request: BpmnRequest, assessment: ProcessInputAssessment): ReadyBpmnContext = TODO()
 }
 ```
 
@@ -212,7 +212,7 @@ interface BpmnAgentInvoker {
 
 This port is public because `web/` starts an async agent process after performing HTTP readiness checks. The concrete implementation, `AgentPlatformBpmnAgentInvoker`, lives in `generation/` and is the only adapter that drives the Embabel agent platform.
 
-The web adapter does not duplicate shell behavior. It assesses readiness up front, returns HTTP 422 when blocked, and otherwise seeds the agent process with `BpmnRequest + ProcessInputAssessment`; `BpmnGenerationGateAgent.approveExternallyAssessedBpmnRequest` converts that pair to the same `ReadyBpmnContext` used by shell starts.
+The web adapter does not duplicate shell behavior. It assesses readiness up front, returns HTTP 422 when blocked, and otherwise seeds the agent process with `BpmnRequest + ProcessInputAssessment`; `BpmnGenerationGateAgent.approveReadyRequest` converts that pair to the same `ReadyBpmnContext` used by shell starts.
 
 ## Where the pattern bends
 
