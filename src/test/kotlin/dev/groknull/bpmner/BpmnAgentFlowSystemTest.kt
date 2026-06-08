@@ -275,16 +275,6 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals(ReadinessVerdict.READY, process.last(ReadyBpmnContext::class.java)!!.assessment.verdict)
     }
 
-    private fun needsClarification() = ProcessInputAssessment(
-        verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
-        overallScore = 40,
-        dimensions = emptyList(),
-        evidence = emptyList(),
-        clarificationQuestions =
-        listOf(ClarificationQuestion(id = "q-end", questionText = "What final state should the process reach?")),
-        rationale = "Needs clarification",
-    )
-
     private fun runGateProcess(
         resultClass: Class<*>,
         ephemeral: Boolean,
@@ -311,60 +301,72 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ).run()
     }
 
-    private fun validFlatDefinition() = FlatBpmnDefinition(
-        processId = "Process_MakeToast",
-        processName = "Make Toast",
-        nodes = listOf(
-            FlatBpmnNode(id = "start", type = FlatBpmnNodeKind.START_EVENT, name = "Start"),
-            FlatBpmnNode(id = "task1", type = FlatBpmnNodeKind.USER_TASK, name = "Toast bread"),
-            FlatBpmnNode(id = "end", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
-        ),
-        sequences = listOf(
-            BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
-            BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
-        ),
-    )
+    private companion object {
+        fun needsClarification() = ProcessInputAssessment(
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+            overallScore = 40,
+            dimensions = emptyList(),
+            evidence = emptyList(),
+            clarificationQuestions =
+            listOf(ClarificationQuestion(id = "q-end", questionText = "What final state should the process reach?")),
+            rationale = "Needs clarification",
+        )
 
-    private fun sampleFlatContract(): FlatProcessContract {
-        val sources = listOf("s1")
-        return FlatProcessContract(
-            id = "contract-1",
+        fun validFlatDefinition() = FlatBpmnDefinition(
+            processId = "Process_MakeToast",
             processName = "Make Toast",
-            summary = "Toast making process",
-            start = FlatContractStart(
-                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Hunger"),
-                sourceIds = sources,
+            nodes = listOf(
+                FlatBpmnNode(id = "start", type = FlatBpmnNodeKind.START_EVENT, name = "Start"),
+                FlatBpmnNode(id = "task1", type = FlatBpmnNodeKind.USER_TASK, name = "Toast bread"),
+                FlatBpmnNode(id = "end", type = FlatBpmnNodeKind.END_EVENT, name = "End"),
             ),
-            activities = listOf(
-                FlatContractActivity(
-                    id = "a1",
-                    name = "Get bread",
-                    kind = FlatActivityKind.SERVICE,
-                    sourceIds = sources,
-                ),
-                FlatContractActivity(
-                    id = "a2",
-                    name = "Toast bread",
-                    kind = FlatActivityKind.SERVICE,
-                    sourceIds = sources,
-                ),
-            ),
-            endStates = listOf(
-                FlatContractEndState(
-                    id = "e1",
-                    name = "Toast ready",
-                    kind = FlatEndStateKind.NORMAL,
-                    sourceIds = sources,
-                ),
+            sequences = listOf(
+                BpmnEdge(id = "f1", sourceRef = "start", targetRef = "task1"),
+                BpmnEdge(id = "f2", sourceRef = "task1", targetRef = "end"),
             ),
         )
-    }
 
-    private fun anyDefinition(): BpmnDefinition = anyNonNull()
+        fun sampleFlatContract(): FlatProcessContract {
+            val sources = listOf("s1")
+            return FlatProcessContract(
+                id = "contract-1",
+                processName = "Make Toast",
+                summary = "Toast making process",
+                start = FlatContractStart(
+                    trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Hunger"),
+                    sourceIds = sources,
+                ),
+                activities = listOf(
+                    FlatContractActivity(
+                        id = "a1",
+                        name = "Get bread",
+                        kind = FlatActivityKind.SERVICE,
+                        sourceIds = sources,
+                    ),
+                    FlatContractActivity(
+                        id = "a2",
+                        name = "Toast bread",
+                        kind = FlatActivityKind.SERVICE,
+                        sourceIds = sources,
+                    ),
+                ),
+                endStates = listOf(
+                    FlatContractEndState(
+                        id = "e1",
+                        name = "Toast ready",
+                        kind = FlatEndStateKind.NORMAL,
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+        }
 
-    private fun <T> anyNonNull(): T {
-        org.mockito.ArgumentMatchers.any<T>()
-        @Suppress("UNCHECKED_CAST")
-        return null as T
+        fun anyDefinition(): BpmnDefinition = anyNonNull()
+
+        fun <T> anyNonNull(): T {
+            org.mockito.ArgumentMatchers.any<T>()
+            @Suppress("UNCHECKED_CAST")
+            return null as T
+        }
     }
 }
