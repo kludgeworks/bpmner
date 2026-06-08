@@ -151,6 +151,10 @@ java_junit5_test(
         "DEEPSEEK_API_KEY",
         "OPENROUTER_API_KEY",
         "SPRING_PROFILES_ACTIVE",
+        "GITHUB_RUN_NUMBER",
+        "GITHUB_SHA",
+        "GITHUB_HEAD_REF",
+        "GITHUB_REF",
     ],
     tags = [
         "live-llm",
