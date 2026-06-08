@@ -109,7 +109,7 @@ internal class BpmnGenerationGateAgent(
         assessment: ProcessInputAssessment,
         request: BpmnRequest,
     ): BpmnClarificationAnswers = WaitFor.formSubmission(
-        clarificationPrompt(assessment, request.clarificationHistory.size),
+        clarificationPrompt(assessment, request.clarificationRoundCount),
         BpmnClarificationAnswers::class.java,
     )
 
@@ -128,10 +128,14 @@ internal class BpmnGenerationGateAgent(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
         answers: BpmnClarificationAnswers,
+        context: OperationContext,
     ): ProcessInputAssessment {
+        require(assessment.clarificationQuestions.isNotEmpty()) {
+            "Cannot apply clarification answers: no pending questions."
+        }
         val trimmedAnswers = answers.answers.trim()
         require(trimmedAnswers.isNotEmpty()) { "Clarification answers must not be blank." }
-        val round = request.clarificationHistory.size
+        val round = request.clarificationRoundCount
         // The shell form accepts one consolidated response; each pending question records that answer
         // so the next readiness pass can decide which gaps were actually resolved.
         val exchanges = assessment.clarificationQuestions.map { question ->
@@ -153,11 +157,12 @@ internal class BpmnGenerationGateAgent(
         }
         val nextRequest = request.copy(clarificationHistory = request.clarificationHistory + exchanges)
         val nextAssessment = readinessInvoker.assess(nextRequest)
+        context.bind("request", nextRequest)
         logger.info(
             "Readiness reassessed after clarification. verdict={}, overallScore={}, clarificationRound={}",
             nextAssessment.verdict,
             nextAssessment.overallScore,
-            nextRequest.clarificationHistory.size,
+            nextRequest.clarificationRoundCount,
         )
         return nextAssessment
     }
@@ -193,7 +198,7 @@ internal class BpmnGenerationGateAgent(
         request: BpmnRequest,
     ): Boolean = assessment.verdict == ReadinessVerdict.NEEDS_CLARIFICATION &&
         request.mode == GenerationMode.INTERACTIVE &&
-        request.clarificationHistory.size < MAX_CLARIFICATION_ROUNDS &&
+        request.clarificationRoundCount < MAX_CLARIFICATION_ROUNDS &&
         assessment.clarificationQuestions.isNotEmpty()
 
     @Condition
@@ -203,7 +208,7 @@ internal class BpmnGenerationGateAgent(
     ): Boolean {
         if (assessment.verdict != ReadinessVerdict.NEEDS_CLARIFICATION) return false
         val singleShot = request.mode == GenerationMode.SINGLE_SHOT
-        val roundsExhausted = request.clarificationHistory.size >= MAX_CLARIFICATION_ROUNDS
+        val roundsExhausted = request.clarificationRoundCount >= MAX_CLARIFICATION_ROUNDS
         return singleShot || roundsExhausted
     }
 
@@ -218,6 +223,12 @@ internal class BpmnGenerationGateAgent(
                 }
         return "BPMN clarification round ${round + 1} of $MAX_CLARIFICATION_ROUNDS\n$questions"
     }
+
+    private val BpmnRequest.clarificationRoundCount: Int
+        get() = clarificationHistory
+            .flatMap { it.evidence }
+            .mapNotNull { it.id.substringAfterLast('-').toIntOrNull() }
+            .maxOrNull() ?: 0
 
     private companion object {
         const val MAX_CLARIFICATION_ROUNDS = 3

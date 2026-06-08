@@ -5,12 +5,15 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
+import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnRequestResolver
 import dev.groknull.bpmner.core.ClarificationExchange
+import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
@@ -47,12 +50,14 @@ class BpmnGenerationGateAgentTest {
     ) {
         val invoker = SequencedReadinessInvoker(assessment(ReadinessVerdict.READY))
         val agent = agent(tempDir, invoker)
+        val context = FakeOperationContext()
 
         val next =
             agent.applyClarificationAnswers(
                 interactiveRequest(),
                 assessment(ReadinessVerdict.NEEDS_CLARIFICATION),
                 BpmnClarificationAnswers("Customer submits an order."),
+                context,
             )
 
         assertEquals(ReadinessVerdict.READY, next.verdict)
@@ -127,6 +132,14 @@ class BpmnGenerationGateAgentTest {
                 questionId = "q$index",
                 questionText = "Question $index?",
                 answerText = "Answer $index.",
+                evidence = listOf(
+                    SourceEvidence(
+                        id = "clarification-q$index-${index + 1}",
+                        text = "Answer $index.",
+                        sourceType = EvidenceSourceType.CLARIFICATION,
+                        sourceRef = "q$index",
+                    ),
+                ),
             )
         },
     )
