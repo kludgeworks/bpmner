@@ -32,10 +32,13 @@ class BpmnLayoutServiceIntegrationTest {
         val xmlWithDataObjects = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1">
   <bpmn:process id="Process_1" isExecutable="true">
-    <bpmn:startEvent id="StartEvent_1"/>
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
     <bpmn:dataObjectReference id="DataObjectReference_1" dataObjectRef="DataObject_1"/>
     <bpmn:dataObject id="DataObject_1"/>
     <bpmn:task id="Task_1">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
       <bpmn:dataInputAssociation id="DataInputAssociation_1">
         <bpmn:sourceRef>DataObjectReference_1</bpmn:sourceRef>
       </bpmn:dataInputAssociation>
@@ -46,11 +49,11 @@ class BpmnLayoutServiceIntegrationTest {
 
         val layoutedXml = layoutService.layout(xmlWithDataObjects)
 
-        assertTrue(layoutedXml.contains("bpmndi:BPMNDiagram"), "Should contain BPMNDiagram")
-        assertTrue(layoutedXml.contains("bpmndi:BPMNPlane"), "Should contain BPMNPlane")
-        assertTrue(layoutedXml.contains("bpmnElement=\"StartEvent_1\""), "Should have shape for StartEvent")
-        assertTrue(layoutedXml.contains("bpmnElement=\"Task_1\""), "Should have shape for Task")
-        assertTrue(layoutedXml.contains("bpmnElement=\"Flow_1\""), "Should have edge for Flow_1")
+        assertTrue(layoutedXml.contains("bpmndi:BPMNDiagram"), "Should contain BPMNDiagram. Output: $layoutedXml")
+        assertTrue(layoutedXml.contains("bpmndi:BPMNPlane"), "Should contain BPMNPlane. Output: $layoutedXml")
+        assertTrue(layoutedXml.contains("bpmnElement=\"StartEvent_1\""), "Should have shape for StartEvent. Output: $layoutedXml")
+        assertTrue(layoutedXml.contains("bpmnElement=\"Task_1\""), "Should have shape for Task. Output: $layoutedXml")
+        assertTrue(layoutedXml.contains("bpmnElement=\"Flow_1\""), "Should have edge for Flow_1. Output: $layoutedXml")
         // The data objects were stripped during layout but should remain in the original XML definition
         assertTrue(layoutedXml.contains("dataObjectReference"), "Original XML should keep data artifacts")
     }

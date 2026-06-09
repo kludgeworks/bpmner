@@ -61,6 +61,7 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
         }
     }
 
+    @Suppress("LongMethod")
     override fun layout(xml: String): String {
         val api = layoutApi
             ?: throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
@@ -112,6 +113,18 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
             throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
                 "BPMN auto-layout projection failed: ${e.message}",
+                e,
+            )
+        } catch (e: org.xml.sax.SAXException) {
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
+                "BPMN auto-layout failed: ${e.message}",
+                e,
+            )
+        } catch (e: java.io.IOException) {
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
+                "BPMN auto-layout failed: ${e.message}",
                 e,
             )
         }
