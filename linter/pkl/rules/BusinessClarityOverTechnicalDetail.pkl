@@ -23,8 +23,5 @@ staticConfig = new {
   cookbookCode = "GEN-02"
 }
 
-checkPrimitive = "LlmCheckRule"
-checkConfig = new CheckPrimitive.LlmCheckRule {
-  prompt =
-    "Review labels and structure for business readability. Flag technical detail only when it dominates or obscures business intent."
-}
+checkPrimitive = null
+checkConfig = null

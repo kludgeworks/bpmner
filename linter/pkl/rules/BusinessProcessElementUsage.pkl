@@ -20,8 +20,5 @@ errorMessages = new {
     "Business Process elements should only be used for high-level overviews, not detailed flows."
 }
 
-checkPrimitive = "LlmCheckRule"
-checkConfig = new CheckPrimitive.LlmCheckRule {
-  prompt =
-    "Flag Business Process elements that contain detailed flow and suggest converting to a standard BPMN Process (Pool)."
-}
+checkPrimitive = null
+checkConfig = null

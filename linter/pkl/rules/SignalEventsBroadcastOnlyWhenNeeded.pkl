@@ -36,8 +36,5 @@ staticConfig = new {
     )
 }
 
-checkPrimitive = "LlmCheckRule"
-checkConfig = new CheckPrimitive.LlmCheckRule {
-  prompt =
-    "Treat signal event replacement as a modelling-intent heuristic. Deterministic linting can identify signal event usage, but deciding whether a message, error, or escalation is better requires business context."
-}
+checkPrimitive = null
+checkConfig = null

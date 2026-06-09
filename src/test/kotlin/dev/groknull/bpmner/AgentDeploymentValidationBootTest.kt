@@ -62,7 +62,6 @@ class AgentDeploymentValidationBootTest : EmbabelMockitoIntegrationTest() {
             "BpmnLayoutAgent",
             "BpmnReadinessAgent",
             "BpmnRepairAgent",
-            "LlmRuleAgent",
         )
     }
 }

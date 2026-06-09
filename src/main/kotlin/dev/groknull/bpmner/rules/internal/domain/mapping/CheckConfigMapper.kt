@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.rules.internal.domain.mapping
 
-import dev.groknull.bpmner.rules.LlmCheckRuleConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.AssociationDirection
 import dev.groknull.bpmner.rules.internal.domain.primitives.CardinalityCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
@@ -45,8 +44,6 @@ import dev.groknull.bpmner.pkl.CheckPrimitive as PklCheckPrim
  *    [dev.groknull.bpmner.rules.internal.domain.primitives].
  *  - [Composite] — `CompositeCheck` composes deterministic sub-checks. Each sub-check is
  *    itself a [Deterministic]; mixing in [Composite] (nesting) or [Llm] is rejected here.
- *  - [Llm] — LLM-judged check, routed through `LlmRuleAgent` rather than the deterministic
- *    engine.
  *
  * Pkl-codegen-java emits `CheckConfig` as an open abstract class (sealed unions aren't
  * supported, see apple/pkl#22). [CheckConfigMapper] is the single point where the open
@@ -57,14 +54,11 @@ internal sealed interface MappedCheck {
     data class Deterministic(val config: DeterministicCheckConfig) : MappedCheck
 
     data class Composite(val config: CompositeCheckConfig) : MappedCheck
-
-    data class Llm(val config: LlmCheckRuleConfig) : MappedCheck
 }
 
 internal object CheckConfigMapper {
     fun map(generated: PklCheckPrim.CheckConfig): MappedCheck = when (generated) {
         is PklCheckPrim.CompositeCheck -> MappedCheck.Composite(generated.toCompositeConfig())
-        is PklCheckPrim.LlmCheckRule -> MappedCheck.Llm(generated.toLlmConfig())
         else -> MappedCheck.Deterministic(generated.toDeterministicConfig())
     }
 }
@@ -162,8 +156,6 @@ private fun PklCheckPrim.CompositeCheck.toCompositeConfig(): CompositeCheckConfi
         SubCheckConfig(diagnosticCode = sub.diagnosticCode, config = mapped.config)
     },
 )
-
-private fun PklCheckPrim.LlmCheckRule.toLlmConfig(): LlmCheckRuleConfig = LlmCheckRuleConfig(prompt = prompt, rubric = rubric)
 
 /**
  * Parses [raw] as an enum value of [T], using the enum's declared `name`. Produces an

@@ -275,28 +275,4 @@ internal class CheckConfigMapperTest {
             CheckConfigMapper.map(outer)
         }
     }
-
-    @Test
-    fun `CompositeCheck rejects LlmCheckRule sub-check`() {
-        val llmSub = PklCheckPrim.LlmCheckRule("prompt", null)
-        val outer = PklCheckPrim.CompositeCheck(
-            emptyList(),
-            listOf(PklCheckPrim.SubCheck("nope", llmSub)),
-        )
-
-        assertFailsWith<IllegalArgumentException> {
-            CheckConfigMapper.map(outer)
-        }
-    }
-
-    @Test
-    fun `LlmCheckRule maps prompt and rubric`() {
-        val mapped = CheckConfigMapper.map(
-            PklCheckPrim.LlmCheckRule("Is this name business-meaningful?", "Fail vague verbs."),
-        )
-
-        assertIs<MappedCheck.Llm>(mapped)
-        assertEquals("Is this name business-meaningful?", mapped.config.prompt)
-        assertEquals("Fail vague verbs.", mapped.config.rubric)
-    }
 }
