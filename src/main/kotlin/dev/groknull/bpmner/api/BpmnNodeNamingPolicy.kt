@@ -56,6 +56,10 @@ object BpmnNodeNamingPolicy {
             // like a task does.
             is BpmnSubProcess -> true
 
+            // A call activity is a meaningful composite step (it names what it invokes), so it
+            // carries a label like a task does.
+            is BpmnCallActivity -> true
+
             // Fallback for elements without a typed Kotlin class. No naming requirement —
             // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
             // complaint on top would be noise.

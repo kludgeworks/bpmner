@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCallActivity
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorRef
 import dev.groknull.bpmner.core.BpmnEscalationRef
@@ -30,6 +31,7 @@ import dev.groknull.bpmner.core.BpmnSubProcess
 import dev.groknull.bpmner.core.BpmnUserTask
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
+import org.camunda.bpm.model.bpmn.instance.CallActivity
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.EventBasedGateway
 import org.camunda.bpm.model.bpmn.instance.ExclusiveGateway
@@ -161,9 +163,25 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
             }
         }
 
-        // FlowNode subtypes the parser doesn't translate (CallActivity, etc.) are surfaced
-        // as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can flag them. Policy stays in
-        // the rule engine.
+        is CallActivity -> {
+            // A call activity must reference its called process; one with a blank or absent
+            // calledElement is surfaced as unrecognized (so the BpmnSubset rule flags it)
+            // rather than fabricating a typed node that renders as <callActivity calledElement="">.
+            val target = calledElement?.takeIf(String::isNotBlank)
+            if (target == null) {
+                toUnrecognizedNode(normalisedName, parentRef)
+            } else {
+                BpmnCallActivity(
+                    id = id,
+                    name = normalisedName,
+                    calledElement = target,
+                    parentRef = parentRef,
+                )
+            }
+        }
+
+        // FlowNode subtypes the parser doesn't translate are surfaced as `BpmnUnrecognizedNode`
+        // so the `BpmnSubset` rule can flag them. Policy stays in the rule engine.
         else -> toUnrecognizedNode(normalisedName, parentRef)
     }
 }

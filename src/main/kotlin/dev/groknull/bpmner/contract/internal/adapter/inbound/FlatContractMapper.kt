@@ -85,9 +85,11 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
         modifiers = toModifiers(),
     )
 
-    // The three kinds carrying a required payload field (decisionName / messageName) are split out
-    // to keep this dispatcher within detekt's per-method length limit.
-    FlatActivityKind.BUSINESS_RULE, FlatActivityKind.SEND, FlatActivityKind.RECEIVE -> toPayloadActivity()
+    // The kinds carrying a required payload field (decisionName / messageName / calledElement) are
+    // split out to keep this dispatcher within detekt's per-method length limit.
+    FlatActivityKind.BUSINESS_RULE, FlatActivityKind.SEND, FlatActivityKind.RECEIVE,
+    FlatActivityKind.CALL_ACTIVITY,
+    -> toPayloadActivity()
 }
 
 private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
@@ -113,6 +115,15 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         id = id,
         name = name,
         messageName = requireField(messageName, kind, "messageName", id),
+        actorId = actorId,
+        sourceIds = sourceIds,
+        modifiers = toModifiers(),
+    )
+
+    FlatActivityKind.CALL_ACTIVITY -> ContractActivity.CallActivity(
+        id = id,
+        name = name,
+        calledElement = requireField(calledElement, kind, "calledElement", id),
         actorId = actorId,
         sourceIds = sourceIds,
         modifiers = toModifiers(),

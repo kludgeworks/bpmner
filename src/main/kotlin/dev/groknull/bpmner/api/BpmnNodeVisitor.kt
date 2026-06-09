@@ -46,6 +46,8 @@ interface BpmnNodeVisitor<T> {
     fun visitEndEvent(node: BpmnEndEvent): T? = null
 
     fun visitSubProcess(node: BpmnSubProcess): T? = null
+
+    fun visitCallActivity(node: BpmnCallActivity): T? = null
 }
 
 /**
@@ -90,6 +92,8 @@ fun <T> BpmnNode.accept(visitor: BpmnNodeVisitor<T>): T? = when (this) {
     is BpmnEndEvent -> visitor.visitEndEvent(this)
 
     is BpmnSubProcess -> visitor.visitSubProcess(this)
+
+    is BpmnCallActivity -> visitor.visitCallActivity(this)
 
     // Fallback for elements without a typed Kotlin class. Visitors are typed against the
     // canonical subtypes; unrecognized nodes have no hook and return null.

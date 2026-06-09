@@ -532,6 +532,22 @@ class ContractVocabularySmokeTest {
         }
     }
 
+    // Call activity (inter-process invocation) — a standalone, reusable process invoked by
+    // reference, defined elsewhere, rather than inlined as an embedded subprocess.
+
+    @Test
+    fun `call activity`() {
+        val c = extractContract(
+            """
+            When a web order is placed, the channel runs the shared "Fulfil Order" procedure — a
+            standalone, reusable process that is defined and maintained separately and called by
+            name from several channels, not spelled out here. Once fulfilment returns, the order is
+            confirmed and the process ends.
+            """,
+        )
+        c.assertHasActivity<ContractActivity.CallActivity>()
+    }
+
     @Test
     fun `data objects and stores`() {
         val c = extractContract(

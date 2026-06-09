@@ -202,6 +202,17 @@ interface BpmnSubProcess : BpmnNode {
 }
 
 /**
+ * A call activity — a single composite step that delegates to another, separately-defined process
+ * referenced by id ([calledElement]), rather than containing inline flow. Renders to
+ * `<bpmn:callActivity calledElement="…">`. The called process is resolved externally (another file
+ * or the runtime catalogue); a [calledElement] that names no process in *this* definition is the
+ * normal cross-file case, not an error.
+ */
+interface BpmnCallActivity : BpmnNode {
+    val calledElement: String
+}
+
+/**
  * Fallback for any process element the parser sees but doesn't have a typed Kotlin class for
  * (e.g. `bpmn:Choreography`, `bpmn:Transaction`). The rule engine sees and flags these via
  * `targetElements` matching on [bpmnType].
@@ -424,6 +435,7 @@ val BpmnNode.typeName: String
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
             is BpmnSubProcess -> "SUB_PROCESS"
+            is BpmnCallActivity -> "CALL_ACTIVITY"
             is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
             else -> error("Unknown BpmnNode subtype: ${this::class.qualifiedName}")
         }

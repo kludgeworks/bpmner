@@ -41,6 +41,7 @@ public enum class FlatActivityKind {
     SEND,
     RECEIVE,
     MANUAL,
+    CALL_ACTIVITY,
 }
 
 public enum class FlatEndStateKind {
@@ -112,6 +113,12 @@ public data class FlatContractActivity(
             "notification\"). Downstream generator maps this to a stable BpmnMessageRef catalogue id.",
     )
     val messageName: String? = null,
+    @field:Size(max = 200)
+    @get:JsonPropertyDescription(
+        "Required when kind=CALL_ACTIVITY. Id of the separately-defined process this activity " +
+            "invokes (a reusable sub-procedure referenced by id, not inlined here).",
+    )
+    val calledElement: String? = null,
     @field:Valid
     @get:JsonPropertyDescription(
         "Set when the activity runs once per item in a collection (\"for each …\"). Use SEQUENTIAL " +

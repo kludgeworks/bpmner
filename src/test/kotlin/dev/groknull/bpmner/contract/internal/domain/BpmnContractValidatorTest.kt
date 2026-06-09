@@ -58,6 +58,43 @@ class BpmnContractValidatorTest {
     }
 
     @Test
+    fun `call activity with a calledElement is valid`() {
+        val contract =
+            linearContract().copy(
+                activities =
+                listOf(
+                    ContractActivity(id = "activity-receive", name = "Receive order", sourceIds = sources),
+                    ContractActivity.CallActivity(
+                        id = "activity-fulfil",
+                        name = "Fulfil order",
+                        calledElement = "fulfil-order",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+        assertTrue(validator.validate(contract).isValid, "got: ${validator.validate(contract).issues}")
+    }
+
+    @Test
+    fun `call activity without a calledElement surfaces CALL_ACTIVITY_MISSING_TARGET`() {
+        val contract =
+            linearContract().copy(
+                activities =
+                listOf(
+                    ContractActivity(id = "activity-receive", name = "Receive order", sourceIds = sources),
+                    ContractActivity.CallActivity(
+                        id = "activity-fulfil",
+                        name = "Fulfil order",
+                        calledElement = " ",
+                        sourceIds = sources,
+                    ),
+                ),
+            )
+        val codes = validator.validate(contract).issues.map { it.code }.toSet()
+        assertTrue(codes.contains(ContractValidationCode.CALL_ACTIVITY_MISSING_TARGET), "got: $codes")
+    }
+
+    @Test
     fun `weak contract surfaces missing trigger, end state, and insufficient activities`() {
         val contract =
             linearContract().copy(

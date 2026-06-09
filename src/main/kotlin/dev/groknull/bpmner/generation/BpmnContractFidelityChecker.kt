@@ -21,6 +21,7 @@ import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.kindName
 import dev.groknull.bpmner.contract.loop
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCallActivity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEdge
 import dev.groknull.bpmner.core.BpmnEndEvent
@@ -818,6 +819,7 @@ private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (th
     is ContractActivity.Receive -> node is BpmnReceiveTask
     is ContractActivity.Manual -> node is BpmnManualTask
     is ContractActivity.SubProcess -> node is BpmnSubProcess
+    is ContractActivity.CallActivity -> node is BpmnCallActivity
 }
 
 private fun ContractActivity.expectedTaskTypeName(): String = when (this) {
@@ -829,4 +831,5 @@ private fun ContractActivity.expectedTaskTypeName(): String = when (this) {
     is ContractActivity.Receive -> "RECEIVE_TASK"
     is ContractActivity.Manual -> "MANUAL_TASK"
     is ContractActivity.SubProcess -> "SUB_PROCESS"
+    is ContractActivity.CallActivity -> "CALL_ACTIVITY"
 }

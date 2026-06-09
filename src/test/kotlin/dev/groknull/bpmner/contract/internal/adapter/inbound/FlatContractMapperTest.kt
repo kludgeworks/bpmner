@@ -58,6 +58,8 @@ class FlatContractMapperTest {
                 ContractActivity.Receive("a-rcv", "Activity", messageName = "ack", sourceIds = sourceIds),
             flatActivity(FlatActivityKind.MANUAL, id = "a-man") to
                 ContractActivity.Manual("a-man", "Activity", sourceIds = sourceIds),
+            flatActivity(FlatActivityKind.CALL_ACTIVITY, id = "a-call", calledElement = "fulfil-order") to
+                ContractActivity.CallActivity("a-call", "Activity", calledElement = "fulfil-order", sourceIds = sourceIds),
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -549,6 +551,7 @@ class FlatContractMapperTest {
         id: String,
         decisionName: String? = null,
         messageName: String? = null,
+        calledElement: String? = null,
     ): FlatContractActivity = FlatContractActivity(
         id = id,
         name = "Activity",
@@ -557,6 +560,7 @@ class FlatContractMapperTest {
         sourceIds = listOf("ev1"),
         decisionName = decisionName,
         messageName = messageName,
+        calledElement = calledElement,
     )
 
     private fun flatEnd(

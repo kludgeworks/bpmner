@@ -55,6 +55,10 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
     // a containment boundary the fidelity walk must preserve. Never transparent.
     is BpmnSubProcess -> false
 
+    // A call activity is a real (composite) step that delegates to another process — it carries
+    // semantic content, so it is never a routing-only pass-through.
+    is BpmnCallActivity -> false
+
     // Fallback for elements without a typed Kotlin class. Never transparent — not enough
     // information to treat an unrecognized node as a routing-only pass-through.
     is BpmnUnrecognizedNode -> false

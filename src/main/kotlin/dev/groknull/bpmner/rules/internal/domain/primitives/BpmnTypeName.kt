@@ -35,6 +35,11 @@ internal object BpmnTypeName {
     // FlowNode/FlowElement-targeting rules see it; not a member of TASK/GATEWAY/EVENT categories.
     const val SUB_PROCESS = "bpmn:SubProcess"
 
+    // A call activity is an Activity (a FlowNode) that delegates to another process. Surfaced so
+    // FlowNode/FlowElement-targeting rules (and TaskVsSubprocessVsCallActivity) see it; like
+    // SUB_PROCESS it is not a member of the TASK/GATEWAY/EVENT categories.
+    const val CALL_ACTIVITY = "bpmn:CallActivity"
+
     // Artifact, not a flow node: surfaced so annotation-targeting rules (TextAnnotationUsage,
     // and the association sub-checks of MiTaskAnnotation) can match it. Deliberately absent from
     // `broadTypeMembers`/`supportedTypeNames` in BpmnTypeMatcher — it is not a FlowNode/FlowElement

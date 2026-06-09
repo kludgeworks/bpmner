@@ -7,6 +7,7 @@ package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.core.BpmnBoundaryEvent
 import dev.groknull.bpmner.core.BpmnBusinessRuleTask
+import dev.groknull.bpmner.core.BpmnCallActivity
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.BpmnEndEvent
 import dev.groknull.bpmner.core.BpmnErrorEventDefinition
@@ -72,6 +73,12 @@ public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {
     in TASK_KINDS -> toTaskNode()
     in GATEWAY_KINDS -> toGatewayNode()
     FlatBpmnNodeKind.SUB_PROCESS -> toSubProcessNode()
+    FlatBpmnNodeKind.CALL_ACTIVITY -> BpmnCallActivity(
+        id = id,
+        name = name,
+        calledElement = requireField(calledElement, type, "calledElement", id),
+        parentRef = parentRef,
+    )
     else -> toEventPositionNode()
 }
 
