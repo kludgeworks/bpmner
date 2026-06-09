@@ -61,16 +61,54 @@ class BpmnLayoutAgentTest {
     // ---------------------------------------------------------------
 
     @Test
-    fun `final validation passes when XSD is clean`() {
+    fun `final validation passes when XSD is clean and DI is present`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
         val agent = buildLayoutAgent(xsdValidator)
 
         val definition = testBpmnDefinition()
-        val result = agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, "<definitions />"))
+        val validXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="shape_task"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
 
-        assertEquals("<definitions />", result.xml)
+        val result = agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, validXml))
+
+        assertEquals(validXml, result.xml)
         assertTrue(result.diagnostics.isEmpty())
         assertEquals(1, xsdValidator.xmls.size)
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on missing shapes`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // Missing EndEvent_1 shape
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="shape_task"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("Missing bpmndi:BPMNShape for flow nodes: [EndEvent_1]"))
     }
 
     @Test

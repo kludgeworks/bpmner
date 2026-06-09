@@ -45,6 +45,20 @@ class BpmnGenerationGateAgentTest {
     }
 
     @Test
+    fun `assessRequestReadiness delegates to the readiness invoker`(
+        @TempDir tempDir: Path,
+    ) {
+        val ready = assessment(ReadinessVerdict.READY)
+        val invoker = SequencedReadinessInvoker(ready)
+        val agent = agent(tempDir, invoker)
+
+        val produced = agent.assessRequestReadiness(request())
+
+        assertEquals(ready, produced)
+        assertEquals(request(), invoker.lastRequest)
+    }
+
+    @Test
     fun `clarification answers are recorded and trigger reassessment`(
         @TempDir tempDir: Path,
     ) {

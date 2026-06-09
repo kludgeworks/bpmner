@@ -98,6 +98,11 @@ internal class BpmnReadinessPostChecker(
             dimensions = ReadinessDimension.entries.map { dimensions.getValue(it) },
             missingAreas = missingAreas.toList(),
             clarificationQuestions = questions,
+            // The model omits evidence ids (they are a traceability concern, not its job); assign
+            // stable ones here so downstream consumers always see a non-blank id.
+            evidence = assessment.evidence.mapIndexed { index, item ->
+                if (item.id.isBlank()) item.copy(id = "ev-${index + 1}") else item
+            },
         )
     }
 
@@ -279,24 +284,20 @@ internal class BpmnReadinessPostChecker(
                 "verify",
             ).map { Regex("\\b${it}\\w*\\b") }
 
-        val START_TRIGGER_MARKERS =
-            listOf(
-                "when",
-                "after",
-                "once",
-                "starts",
-                "begins",
-                "receives",
-                "submitted",
-                "requested",
-                "triggered",
-                "on",
-                "upon",
-                "fires",
-                "arrives",
-                "invoked",
-                "called",
-            ).map { Regex("\\b$it\\b") }
+        // Start triggers are phrased in either voice/tense ("an order is submitted" vs "an employee
+        // submits"), so verb-derived roots are matched by stem (any inflection: submit/submits/
+        // submitted/submitting). Ambiguous function words and common nouns (e.g. "request") stay exact
+        // to avoid false positives — END_STATE markers stay exact past-tense for the same reason
+        // (a completed state, not an active verb).
+        val START_TRIGGER_VERB_ROOTS =
+            listOf("start", "begin", "receive", "submit", "trigger", "fire", "arrive", "invoke")
+                .map { Regex("\\b$it\\w*\\b") }
+
+        val START_TRIGGER_WORDS =
+            listOf("when", "after", "once", "on", "upon", "called", "requested")
+                .map { Regex("\\b$it\\b") }
+
+        val START_TRIGGER_MARKERS = START_TRIGGER_VERB_ROOTS + START_TRIGGER_WORDS
 
         val END_STATE_MARKERS =
             listOf(

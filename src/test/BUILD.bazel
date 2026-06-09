@@ -74,6 +74,7 @@ JUNIT5_DEPS = [
 # (timeout = "short", unsharded, no tags) are listed here, keyed by class name.
 # New test files are picked up automatically — there is no file list to maintain.
 _TIMEOUTS = {
+    "AgentDeploymentValidationBootTest": "moderate",
     "BpmnAgentFlowSystemTest": "moderate",
     "BpmnConfigBindingTest": "moderate",
     "BpmnContractFidelityCheckerTest": "moderate",
@@ -105,6 +106,7 @@ _SHARD_COUNTS = {
 }
 
 _TAGS = {
+    "AgentDeploymentValidationBootTest": ["spring-context"],
     "BpmnAgentFlowSystemTest": ["spring-context"],
     "BpmnConfigBindingTest": ["spring-context"],
     "BpmnGuardrailSystemTest": ["spring-context"],
