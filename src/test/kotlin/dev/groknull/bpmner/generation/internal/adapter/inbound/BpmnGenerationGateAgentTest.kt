@@ -37,7 +37,7 @@ class BpmnGenerationGateAgentTest {
         val request = request()
         val ready = assessment(ReadinessVerdict.READY)
 
-        val context = agent.approveReadyRequest(request, ready, ReadinessGate(ready))
+        val context = agent.approveReadyRequest(request, ready)
 
         assertEquals(request, context.request)
         assertEquals(ready, context.assessment)
@@ -45,30 +45,17 @@ class BpmnGenerationGateAgentTest {
     }
 
     @Test
-    fun `openReadinessGate returns ReadinessGate wrapping the assessment`(
+    fun `assessRequestReadiness delegates to the readiness invoker`(
         @TempDir tempDir: Path,
     ) {
-        val agent = agent(tempDir)
-        val assessment = assessment(ReadinessVerdict.READY)
+        val ready = assessment(ReadinessVerdict.READY)
+        val invoker = SequencedReadinessInvoker(ready)
+        val agent = agent(tempDir, invoker)
 
-        val gate = agent.openReadinessGate(assessment)
+        val produced = agent.assessRequestReadiness(request())
 
-        assertEquals(assessment, gate.assessment)
-    }
-
-    @Test
-    fun `openReadinessGate return type is distinct from ProcessInputAssessment`(
-        @TempDir tempDir: Path,
-    ) {
-        // ReadinessGate must NOT be ProcessInputAssessment; that would allow the GOAP planner
-        // to skip the action (output type already on blackboard) and never post the string
-        // conditions needed by approveReadyRequest.  See BpmnGenerationGateAgent.ReadinessGate KDoc.
-        val agent = agent(tempDir)
-        val assessment = assessment(ReadinessVerdict.READY)
-
-        val gate = agent.openReadinessGate(assessment)
-
-        assertFalse(gate is ProcessInputAssessment, "ReadinessGate must be a different type to ProcessInputAssessment")
+        assertEquals(ready, produced)
+        assertEquals(request(), invoker.lastRequest)
     }
 
     @Test

@@ -34,34 +34,23 @@ import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 
 /**
- * Marker type produced by [BpmnGenerationGateAgent.openReadinessGate].
- *
- * ## Why a distinct return type?
- *
- * The GOAP planner skips any action whose output type is already on the blackboard ([ProcessInputAssessment]
- * is in `startingInputTypes`), so an action that returns [ProcessInputAssessment] would never execute and
- * its `post` conditions would never be registered.
- *
- * ## Why must [BpmnGenerationGateAgent.approveReadyRequest] accept it?
- *
- * The planner's forward-pass optimisation **prunes** actions whose output type is not consumed by any
- * subsequent action. If [ReadinessGate] were produced but never taken as a parameter, the forward pass
- * would remove [BpmnGenerationGateAgent.openReadinessGate] from the plan; its string effects
- * (`assessmentReady`, etc.) would therefore never be posted, leaving [BpmnGenerationGateAgent.approveReadyRequest]
- * unreachable to the static validator. Declaring [ReadinessGate] as a parameter on [BpmnGenerationGateAgent.approveReadyRequest]
- * anchors it in the plan without changing any runtime semantics — the parameter value is intentionally ignored
- * in the method body.
- */
-internal data class ReadinessGate(val assessment: ProcessInputAssessment)
-
-/**
  * Resolves shell `UserInput` into a [BpmnRequest] and gates downstream generation on readiness.
  *
- * Readiness is assessed once, by the single producer [dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessAgent]
- * `assessReadiness` (which yields a [ProcessInputAssessment]). The GOAP planner runs that action
- * in-process when no assessment is on the blackboard (the shell path) and skips it when one is
- * already present (the seeded `generate(request, assessment)` path) — so there is a single path to
- * [ReadyBpmnContext] via [approveReadyRequest], no nested readiness sub-process, and no ambiguity.
+ * ## Why this agent assesses readiness itself
+ *
+ * Readiness assessment lives in [dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessAgent]
+ * (`assessReadiness`), but that is a *separate* agent and therefore invisible to the per-agent static
+ * GOAP validator (`GoapPathToCompletionValidator`), which plans over this agent's actions in isolation
+ * and **ignores `startingInputTypes`**. Without an in-scope, non-cyclic producer of [ProcessInputAssessment]
+ * the validator can never seed one — [applyClarificationAnswers] produces a `ProcessInputAssessment` but
+ * also *requires* one, so it cannot bootstrap — and every goal that needs readiness is reported
+ * `NO_PATH_TO_GOAL`.
+ *
+ * [assessRequestReadiness] closes that gap: it produces a [ProcessInputAssessment] from a bare
+ * [BpmnRequest] (delegating the real work to the [BpmnReadinessInvoker] port, which runs the readiness
+ * agent as a sub-process). The planner runs it on the shell path when no assessment is on the blackboard,
+ * and skips it on the seeded `generate(request, assessment)` path because its `assessment` output is
+ * already present.
  *
  * The interactive clarification loop ([askForClarification] / [applyClarificationAnswers]) is gated on
  * [GenerationMode.INTERACTIVE]; `SINGLE_SHOT` (and therefore ephemeral) requests cannot wait for input,
@@ -107,10 +96,24 @@ internal class BpmnGenerationGateAgent(
     fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = requestResolver.resolveShellRequest(draft)
 
     @Action(
-        description = "Open the readiness gate from a pre-seeded assessment",
+        description = "Assess a resolved BPMN request for process readiness",
+        // This is the in-scope, non-cyclic producer of ProcessInputAssessment that lets the per-agent static
+        // GOAP validator plan a path from a bare request to approval. (The validator plans over this agent's
+        // actions in isolation and ignores startingInputTypes, so without it the only in-scope producer is
+        // applyClarificationAnswers — which itself requires an assessment, a cycle with no seed — and every
+        // readiness goal is reported NO_PATH_TO_GOAL.) It advertises every gate condition it can establish so
+        // the planner can reach approveReadyRequest, askForClarification, or readinessBlocked from here; the
+        // actual verdict is recomputed at runtime by the @Condition methods against the returned assessment.
+        // The `assessment` output carries a FALSE precondition, so the planner skips it whenever an assessment
+        // is already on the blackboard (the seeded `generate(request, assessment)` path).
         post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
+        // Costlier than the canonical cross-agent producer (BpmnReadinessAgent.assessReadiness, cost 0.0) so
+        // the platform's multi-agent planner always prefers that one — this action exists only to make the
+        // single-agent static validation provable and is never the cheapest path at runtime, so its body
+        // (which would otherwise re-enter the readiness invoker) is not executed during real planning.
+        cost = READINESS_BOOTSTRAP_COST,
     )
-    fun openReadinessGate(assessment: ProcessInputAssessment): ReadinessGate = ReadinessGate(assessment)
+    fun assessRequestReadiness(request: BpmnRequest): ProcessInputAssessment = readinessInvoker.assess(request)
 
     @AchievesGoal(
         description = "Resolve and approve a BPMN generation request for downstream generation",
@@ -125,11 +128,6 @@ internal class BpmnGenerationGateAgent(
     fun approveReadyRequest(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
-        // gate is a planner type-token only — its value is intentionally unused.
-        // openReadinessGate produces it and posts the "assessmentReady" string condition;
-        // declaring it here prevents the forward-pass optimiser from pruning openReadinessGate
-        // (which would remove its post conditions from the world state and leave this goal unreachable).
-        @Suppress("UNUSED_PARAMETER") gate: ReadinessGate,
     ): ReadyBpmnContext = ReadyBpmnContext(request = request, assessment = assessment)
 
     @Action(
@@ -265,5 +263,9 @@ internal class BpmnGenerationGateAgent(
     private companion object {
         const val MAX_CLARIFICATION_ROUNDS = 3
         const val CLARIFICATION_REASSESS_COST = 0.5
+
+        // Strictly greater than BpmnReadinessAgent.assessReadiness (0.0) so the multi-agent planner never
+        // executes the in-scope bootstrap; it is present purely to make per-agent static validation provable.
+        const val READINESS_BOOTSTRAP_COST = 1.0
     }
 }
