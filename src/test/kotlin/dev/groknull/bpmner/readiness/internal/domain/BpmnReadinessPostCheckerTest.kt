@@ -8,14 +8,17 @@ package dev.groknull.bpmner.readiness.internal.domain
 import dev.groknull.bpmner.core.BpmnReadinessConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ClarificationExchange
+import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.MissingProcessArea
 import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 @Suppress("TooManyFunctions")
@@ -221,6 +224,74 @@ class BpmnReadinessPostCheckerTest {
         assertEquals(2, result.clarificationQuestions.size)
         assertTrue(result.clarificationQuestions.all { it.relatedMissingAreas.isNotEmpty() })
         assertTrue(result.clarificationQuestions.all { it.relatedDimensions.isNotEmpty() })
+    }
+
+    @Test
+    fun `present-tense start verbs are recognised as a trigger`() {
+        // Regression: the live shell input "An employee submits a purchase request..." was wrongly
+        // flagged NEEDS_CLARIFICATION because START markers only matched "submitted", not "submits".
+        val result =
+            checker.apply(
+                BpmnRequest(
+                    "An employee submits a purchase request. A manager reviews the request, then " +
+                        "approves it. If approved, procurement ships the order, and finally the order " +
+                        "is completed.",
+                ),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+
+        assertEquals(ReadinessVerdict.READY, result.verdict)
+        assertFalse(
+            MissingProcessArea.START_TRIGGER in result.missingAreas,
+            "present-tense 'submits' should satisfy the start-trigger floor",
+        )
+    }
+
+    @Test
+    fun `a bare noun does not falsely satisfy the start-trigger floor`() {
+        // "request" is a common noun, not a trigger verb, so it must not match the start floor.
+        val result = checker.apply(BpmnRequest("Review the request"), assessment(ReadinessVerdict.READY, 90))
+
+        assertTrue(MissingProcessArea.START_TRIGGER in result.missingAreas)
+    }
+
+    @Test
+    fun `blank evidence ids are backfilled with stable ids`() {
+        // The readiness LLM omits evidence ids; the post-checker must assign stable ones so downstream
+        // consumers (e.g. the contract agent) never see a blank id.
+        val withBlankIds =
+            assessment(ReadinessVerdict.READY, 90).copy(
+                evidence =
+                listOf(
+                    SourceEvidence(text = "An employee submits a request.", sourceType = EvidenceSourceType.ORIGINAL_INPUT),
+                    SourceEvidence(text = "Finally the order is completed.", sourceType = EvidenceSourceType.ORIGINAL_INPUT),
+                ),
+            )
+
+        val result =
+            checker.apply(
+                BpmnRequest("When an order is submitted, the clerk reviews it, then it is completed."),
+                withBlankIds,
+            )
+
+        assertEquals(listOf("ev-1", "ev-2"), result.evidence.map { it.id })
+        assertTrue(result.evidence.all { it.id.isNotBlank() })
+    }
+
+    @Test
+    fun `existing evidence ids are preserved`() {
+        val withId =
+            assessment(ReadinessVerdict.READY, 90).copy(
+                evidence = listOf(SourceEvidence(id = "src-7", text = "kept", sourceType = EvidenceSourceType.ORIGINAL_INPUT)),
+            )
+
+        val result =
+            checker.apply(
+                BpmnRequest("When an order is submitted, the clerk reviews it, then it is completed."),
+                withId,
+            )
+
+        assertEquals("src-7", result.evidence.single().id)
     }
 
     private fun assertDimensionLowered(
