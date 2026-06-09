@@ -10,7 +10,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import kotlin.test.assertFailsWith
-import kotlin.test.assertTrue
 
 class BpmnLayoutServiceIntegrationTest {
 
@@ -49,13 +48,25 @@ class BpmnLayoutServiceIntegrationTest {
 
         val layoutedXml = layoutService.layout(xmlWithDataObjects)
 
-        assertTrue(layoutedXml.contains("bpmndi:BPMNDiagram"), "Should contain BPMNDiagram. Output: $layoutedXml")
-        assertTrue(layoutedXml.contains("bpmndi:BPMNPlane"), "Should contain BPMNPlane. Output: $layoutedXml")
-        assertTrue(layoutedXml.contains("bpmnElement=\"StartEvent_1\""), "Should have shape for StartEvent. Output: $layoutedXml")
-        assertTrue(layoutedXml.contains("bpmnElement=\"Task_1\""), "Should have shape for Task. Output: $layoutedXml")
-        assertTrue(layoutedXml.contains("bpmnElement=\"Flow_1\""), "Should have edge for Flow_1. Output: $layoutedXml")
+        assertXml(layoutedXml).nodesByXPath("//bpmndi:BPMNDiagram").exist()
+        assertXml(layoutedXml).nodesByXPath("//bpmndi:BPMNPlane").exist()
+        assertXml(layoutedXml).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='StartEvent_1']").exist()
+        assertXml(layoutedXml).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Task_1']").exist()
+        assertXml(layoutedXml).nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1']").exist()
         // The data objects were stripped during layout but should remain in the original XML definition
-        assertTrue(layoutedXml.contains("dataObjectReference"), "Original XML should keep data artifacts")
+        assertXml(layoutedXml).nodesByXPath("//bpmn:dataObjectReference").exist()
+    }
+
+    private fun assertXml(xml: String): org.xmlunit.assertj.XmlAssert {
+        return org.xmlunit.assertj.XmlAssert.assertThat(xml)
+            .withNamespaceContext(
+                mapOf(
+                    "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+                    "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
+                    "dc" to "http://www.omg.org/spec/DD/20100524/DC",
+                    "di" to "http://www.omg.org/spec/DD/20100524/DI",
+                ),
+            )
     }
 
     @Test

@@ -63,46 +63,56 @@ internal class BpmnLayoutAgent(
             )
         }
 
-        val doc = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-        }.newDocumentBuilder().parse(org.xml.sax.InputSource(java.io.StringReader(bpmn.xml)))
-
-        val diagrams = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNDiagram")
-        if (diagrams.length != 1) {
-            errors.add("Final XML must contain exactly one bpmndi:BPMNDiagram")
+        val doc = try {
+            javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
+                isNamespaceAware = true
+            }.newDocumentBuilder().parse(org.xml.sax.InputSource(java.io.StringReader(bpmn.xml)))
+        } catch (e: org.xml.sax.SAXException) {
+            errors.add("Failed to parse layouted XML: ${e.message}")
+            null
+        } catch (e: java.io.IOException) {
+            errors.add("Failed to parse layouted XML: ${e.message}")
+            null
         }
 
-        val planes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNPlane")
-        if (planes.length != 1) {
-            errors.add("Final XML must contain exactly one bpmndi:BPMNPlane")
-        }
+        if (doc != null) {
+            val diagrams = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNDiagram")
+            if (diagrams.length != 1) {
+                errors.add("Final XML must contain exactly one bpmndi:BPMNDiagram")
+            }
 
-        val shapes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
-        if (shapes.length == 0) {
-            errors.add("Final XML must contain at least one bpmndi:BPMNShape")
-        }
+            val planes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNPlane")
+            if (planes.length != 1) {
+                errors.add("Final XML must contain exactly one bpmndi:BPMNPlane")
+            }
 
-        val shapeBpmnElements = mutableSetOf<String>()
-        for (i in 0 until shapes.length) {
-            val shape = shapes.item(i) as org.w3c.dom.Element
-            shapeBpmnElements.add(shape.getAttribute("bpmnElement"))
-        }
+            val shapes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
+            if (shapes.length == 0) {
+                errors.add("Final XML must contain at least one bpmndi:BPMNShape")
+            }
 
-        val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
-        val edgeBpmnElements = mutableSetOf<String>()
-        for (i in 0 until edges.length) {
-            val edge = edges.item(i) as org.w3c.dom.Element
-            edgeBpmnElements.add(edge.getAttribute("bpmnElement"))
-        }
+            val shapeBpmnElements = mutableSetOf<String>()
+            for (i in 0 until shapes.length) {
+                val shape = shapes.item(i) as org.w3c.dom.Element
+                shapeBpmnElements.add(shape.getAttribute("bpmnElement"))
+            }
 
-        val missingNodeShapes = bpmn.definition.nodes.map { it.id }.filter { !shapeBpmnElements.contains(it) }
-        if (missingNodeShapes.isNotEmpty()) {
-            errors.add("Missing bpmndi:BPMNShape for flow nodes: $missingNodeShapes")
-        }
+            val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
+            val edgeBpmnElements = mutableSetOf<String>()
+            for (i in 0 until edges.length) {
+                val edge = edges.item(i) as org.w3c.dom.Element
+                edgeBpmnElements.add(edge.getAttribute("bpmnElement"))
+            }
 
-        val missingSequenceEdges = bpmn.definition.sequences.map { it.id }.filter { !edgeBpmnElements.contains(it) }
-        if (missingSequenceEdges.isNotEmpty()) {
-            errors.add("Missing bpmndi:BPMNEdge for sequence flows: $missingSequenceEdges")
+            val missingNodeShapes = bpmn.definition.nodes.map { it.id }.filter { !shapeBpmnElements.contains(it) }
+            if (missingNodeShapes.isNotEmpty()) {
+                errors.add("Missing bpmndi:BPMNShape for flow nodes: $missingNodeShapes")
+            }
+
+            val missingSequenceEdges = bpmn.definition.sequences.map { it.id }.filter { !edgeBpmnElements.contains(it) }
+            if (missingSequenceEdges.isNotEmpty()) {
+                errors.add("Missing bpmndi:BPMNEdge for sequence flows: $missingSequenceEdges")
+            }
         }
 
         if (errors.isNotEmpty()) {

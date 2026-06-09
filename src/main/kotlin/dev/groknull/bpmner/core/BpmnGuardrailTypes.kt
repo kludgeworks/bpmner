@@ -124,10 +124,10 @@ enum class EvidenceSourceType {
 @JsonClassDescription("Source evidence supporting a guardrail assessment or trace")
 data class SourceEvidence(
     // Optional from the model's perspective: ids are a code/traceability concern, not something the
-    // LLM should invent (and Mistral reliably omits them, which previously crashed deserialization
-    // with KotlinInvalidNullException). Blank ids are backfilled deterministically by
-    // BpmnReadinessPostChecker before the assessment flows downstream. Not @NotBlank: the default
-    // empty value must survive bean validation rather than re-triggering the LLM retry loop.
+    // LLM should invent (Mistral omits them; a missing id deserialises as the empty string rather
+    // than null). Blank ids are backfilled deterministically by BpmnReadinessPostChecker before the
+    // assessment flows downstream. Not @NotBlank: the empty default must survive bean validation
+    // rather than re-triggering the LLM retry loop.
     @get:JsonPropertyDescription("Stable evidence id (assigned by the system if omitted)")
     val id: String = "",
     @field:NotBlank

@@ -27,9 +27,9 @@ internal class AgentDeploymentValidationException(
  *
  * Embabel validates each agent during deployment but the result is **non-fatal** —
  * `AgentMetadataReader` only logs a `WARN`/`ERROR` and the app boots regardless (there is even a
- * commented-out enforcement `return null` in the framework). That is exactly how the
- * `NO_PATH_TO_GOAL` defect in [dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGenerationGateAgent]
- * shipped unnoticed: a broken agent graph was indistinguishable from a healthy one in the logs.
+ * commented-out enforcement `return null` in the framework). Without this component a broken agent
+ * graph is indistinguishable from a healthy one in the logs: `NO_PATH_TO_GOAL` appears at startup
+ * and the application continues, silently unable to reach its goal.
  * This component turns that silent log into a hard boot failure, mirroring the existing fail-fast
  * precedent [dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator].
  *

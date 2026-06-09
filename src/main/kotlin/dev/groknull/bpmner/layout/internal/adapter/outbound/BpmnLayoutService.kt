@@ -61,6 +61,10 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
         }
     }
 
+    // The function is long by necessity: the GraalJS Promise API requires separate `then`/`catch`
+    // handlers, and each of the numerous exception types must be wrapped individually to preserve
+    // the cause and produce a diagnostic message. Extracting each arm into a helper would obscure
+    // the error-classification logic without reducing complexity.
     @Suppress("LongMethod")
     override fun layout(xml: String): String {
         val api = layoutApi
