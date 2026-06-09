@@ -62,12 +62,17 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
     }
 
     override fun layout(xml: String): String {
-        val api = layoutApi ?: return xml
+        val api = layoutApi
+            ?: throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
+                "BPMN auto-layout failed: layoutApi is unavailable (bundle not loaded)",
+            )
         logger.debug("Starting in-process BPMN auto-layout. xmlLength={}", xml.length)
 
+        val projector = BpmnLayoutXmlProjector()
         return try {
+            val projectedXml = projector.projectForLayout(xml)
             val future = CompletableFuture<String>()
-            val promise = api.invokeMember("layoutXml", xml)
+            val promise = api.invokeMember("layoutXml", projectedXml)
 
             promise.invokeMember(
                 "then",
@@ -75,23 +80,40 @@ internal open class BpmnLayoutService : BpmnLayoutPort {
                     future.complete(result)
                 },
             )
+            promise.invokeMember(
+                "catch",
+                Consumer<Any> { err ->
+                    logger.error("JS Promise rejected: {}", err)
+                    future.completeExceptionally(dev.groknull.bpmner.layout.BpmnAutoLayoutException("JS Promise rejected: $err"))
+                },
+            )
 
-            future.get(LAYOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            jsContext?.eval("js", "/* flush microtasks */")
+
+            val layoutedProjectedXml = future.get(LAYOUT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            projector.mergeLayout(xml, layoutedProjectedXml)
         } catch (e: org.graalvm.polyglot.PolyglotException) {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
-            xml
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException("BPMN auto-layout failed: ${e.message}", e)
         } catch (e: java.util.concurrent.ExecutionException) {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
-            xml
+            val msg = e.cause?.message ?: e.message
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException("BPMN auto-layout failed: $msg", e)
         } catch (e: java.util.concurrent.TimeoutException) {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
-            xml
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException("BPMN auto-layout timed out: ${e.message}", e)
         } catch (e: InterruptedException) {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
-            xml
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException("BPMN auto-layout interrupted: ${e.message}", e)
         } catch (e: java.util.concurrent.CancellationException) {
             logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
-            xml
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException("BPMN auto-layout cancelled: ${e.message}", e)
+        } catch (e: IllegalArgumentException) {
+            logger.warn(AUTO_LAYOUT_EXEC_ERROR, e.message)
+            throw dev.groknull.bpmner.layout.BpmnAutoLayoutException(
+                "BPMN auto-layout projection failed: ${e.message}",
+                e,
+            )
         }
     }
 

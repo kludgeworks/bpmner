@@ -237,13 +237,13 @@ internal class BpmnGeneratorAgent(
         if (request.outputFile != null) {
             File(request.outputFile).writeText(bpmn.xml, Charsets.UTF_8)
             logger.info(
-                "Final BPMN summary: layout applied, finalXmlLength={}, outputFile={}",
+                "Final BPMN summary: layout verified, finalXmlLength={}, outputFile={}",
                 bpmn.xml.length,
                 request.outputFile,
             )
         } else {
             logger.info(
-                "Final BPMN summary: layout applied, finalXmlLength={}, (no output file requested)",
+                "Final BPMN summary: layout verified, finalXmlLength={}, (no output file requested)",
                 bpmn.xml.length,
             )
         }
