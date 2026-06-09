@@ -29,8 +29,10 @@ class BpmnerRunSummaryListener : AgenticEventListener {
         val p = event.agentProcess
 
         logger.info("Run complete in {}s\n{}", p.runningTime.seconds, p.costInfoString(verbose = true))
+        // Per-action timings are diagnostic noise for the user — keep them in the log file (DEBUG) but
+        // off the console (whose threshold is INFO).
         if (p.history.isNotEmpty()) {
-            logger.info("Actions: {}", p.history.joinToString(", ") { it.infoString(verbose = true, indent = 0) })
+            logger.debug("Actions: {}", p.history.joinToString(", ") { it.infoString(verbose = true, indent = 0) })
         }
     }
 }
