@@ -12,11 +12,9 @@ import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
-import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.ComposedProcessGraph
 import dev.groknull.bpmner.core.LaidOutProcessGraph
@@ -33,6 +31,7 @@ import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGeneratorPromptFactory
 import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.BpmnDiagnostic
@@ -52,7 +51,7 @@ internal class BpmnGeneratorAgent(
     private val fidelityChecker: BpmnContractFidelityChecker,
     private val defaultFlowAssigner: DefaultFlowAssigner,
     private val eventPublisher: ApplicationEventPublisher,
-    private val contractRenderer: ProcessContractMarkdownRenderer,
+    private val promptFactory: BpmnGeneratorPromptFactory,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGeneratorAgent::class.java)
 
@@ -82,12 +81,11 @@ internal class BpmnGeneratorAgent(
             error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
         val promptRunner = config.generator.promptRunner(context)
-        // Typed few-shot examples for the non-obvious topologies (fork/join, data, subprocesses, pools).
-        val creating = GenerationExamples.all
+        val creating = promptFactory.generationExamples()
             .fold(promptRunner.creating(FlatBpmnDefinition::class.java)) { acc, (label, example) ->
                 acc.withExample(label, example)
             }
-        val flat = creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
+        val flat = creating.fromTemplate("bpmner/generate_bpmn", promptFactory.templateModel(request, validatedContract))
         val rawDefinition = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {
@@ -287,18 +285,4 @@ internal class BpmnGeneratorAgent(
         val payload = artifact.toString().take(config.logging.artifactPreviewLength)
         logger.debug("Artifact dump [{}]: {}", label, payload)
     }
-
-    private fun templateModel(
-        request: BpmnRequest,
-        validatedContract: ValidatedProcessContract,
-    ): Map<String, Any> = mapOf(
-        "contractMarkdown" to contractRenderer.render(validatedContract.contract).trim(),
-        "processDescription" to request.processDescription,
-        "styleGuide" to (request.styleGuide ?: ""),
-        "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
-            val examples = advice.examples.joinToString(", ") { "\"$it\"" }
-            val avoid = advice.antiExamples.joinToString(", ") { "\"$it\"" }
-            "- ${advice.kind}: ${advice.shape}\n    examples: $examples\n    avoid:    $avoid"
-        },
-    )
 }

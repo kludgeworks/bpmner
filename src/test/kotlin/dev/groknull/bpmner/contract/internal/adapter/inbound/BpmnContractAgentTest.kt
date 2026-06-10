@@ -7,6 +7,8 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.internal.adapter.inbound.BpmnContractAgent
+import dev.groknull.bpmner.contract.internal.adapter.inbound.BpmnContractPromptFactory
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
@@ -26,7 +28,12 @@ class BpmnContractAgentTest {
         val context = FakeOperationContext()
         val flat = sampleFlatContract()
         context.expectResponse(flat)
-        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+        val agent = BpmnContractAgent(
+            BpmnConfig(),
+            BpmnContractValidator(),
+            ProcessContractMarkdownRenderer(),
+            BpmnContractPromptFactory(BpmnConfig()),
+        )
 
         val result = agent.extractProcessContract(sampleReadyContext(), context)
 
@@ -48,7 +55,12 @@ class BpmnContractAgentTest {
             ),
         )
         context.expectResponse(invalid)
-        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+        val agent = BpmnContractAgent(
+            BpmnConfig(),
+            BpmnContractValidator(),
+            ProcessContractMarkdownRenderer(),
+            BpmnContractPromptFactory(BpmnConfig()),
+        )
 
         val result = agent.extractProcessContract(sampleReadyContext(), context)
 
@@ -61,7 +73,12 @@ class BpmnContractAgentTest {
     fun `prompt sent to the LLM grounds the model in the supplied inputs`() {
         val context = FakeOperationContext()
         context.expectResponse(sampleFlatContract())
-        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+        val agent = BpmnContractAgent(
+            BpmnConfig(),
+            BpmnContractValidator(),
+            ProcessContractMarkdownRenderer(),
+            BpmnContractPromptFactory(BpmnConfig()),
+        )
 
         agent.extractProcessContract(sampleReadyContext(), context)
 
@@ -76,7 +93,12 @@ class BpmnContractAgentTest {
     fun `prompt sent to the LLM includes request clarification history`() {
         val context = FakeOperationContext()
         context.expectResponse(sampleFlatContract())
-        val agent = BpmnContractAgent(BpmnConfig(), BpmnContractValidator(), ProcessContractMarkdownRenderer())
+        val agent = BpmnContractAgent(
+            BpmnConfig(),
+            BpmnContractValidator(),
+            ProcessContractMarkdownRenderer(),
+            BpmnContractPromptFactory(BpmnConfig()),
+        )
 
         agent.extractProcessContract(
             sampleReadyContext(

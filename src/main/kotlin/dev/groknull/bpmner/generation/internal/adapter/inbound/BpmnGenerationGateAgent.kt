@@ -24,6 +24,7 @@ import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGenerationGatePromptFactory
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -63,6 +64,7 @@ internal class BpmnGenerationGateAgent(
     private val requestResolver: BpmnRequestResolver,
     private val readinessInvoker: BpmnReadinessInvoker,
     private val readinessReportWriter: ReadinessReportWriter,
+    private val promptFactory: BpmnGenerationGatePromptFactory,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGenerationGateAgent::class.java)
 
@@ -71,22 +73,7 @@ internal class BpmnGenerationGateAgent(
         userInput: UserInput,
         context: OperationContext,
     ): BpmnRequestDraft {
-        val prompt =
-            """
-            Extract a BPMN generation request from the user's shell instruction.
-
-            Rules:
-            - Put the workflow prose in processDescription when the user described the workflow directly.
-            - Put a file path in processFile only when the user explicitly says the workflow is in a file.
-            - Always set outputFile. If the user named a specific output file, use it exactly;
-              otherwise generate a concise, lowercase, kebab-case name ending in .bpmn derived from
-              the process, with no directories or spaces (e.g. purchase-order-approval.bpmn).
-            - Put inline style guidance in styleGuide, or a style-guide file path in styleGuideFile.
-            - Do not invent input files (processFile) or style-guide files.
-
-            User instruction:
-            ${userInput.content}
-            """.trimIndent()
+        val prompt = promptFactory.draftBpmnRequestPrompt(userInput)
 
         return config.readinessAssessor
             .promptRunner(context)
@@ -141,7 +128,7 @@ internal class BpmnGenerationGateAgent(
         assessment: ProcessInputAssessment,
         request: BpmnRequest,
     ): BpmnClarificationAnswers = WaitFor.formSubmission(
-        clarificationPrompt(assessment, request.clarificationRoundCount),
+        promptFactory.clarificationPrompt(assessment, request.clarificationRoundCount, MAX_CLARIFICATION_ROUNDS),
         BpmnClarificationAnswers::class.java,
     )
 
@@ -242,18 +229,6 @@ internal class BpmnGenerationGateAgent(
         val singleShot = request.mode == GenerationMode.SINGLE_SHOT
         val roundsExhausted = request.clarificationRoundCount >= MAX_CLARIFICATION_ROUNDS
         return singleShot || roundsExhausted
-    }
-
-    private fun clarificationPrompt(
-        assessment: ProcessInputAssessment,
-        round: Int,
-    ): String {
-        val questions =
-            assessment.clarificationQuestions
-                .joinToString(separator = System.lineSeparator()) { question ->
-                    "- ${question.questionText}"
-                }
-        return "BPMN clarification round ${round + 1} of $MAX_CLARIFICATION_ROUNDS\n$questions"
     }
 
     private val BpmnRequest.clarificationRoundCount: Int

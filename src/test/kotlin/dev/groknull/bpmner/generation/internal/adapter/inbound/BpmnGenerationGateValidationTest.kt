@@ -12,6 +12,7 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnRequestResolver
 import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGenerationGatePromptFactory
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
@@ -41,6 +42,7 @@ class BpmnGenerationGateValidationTest {
                 requestResolver = BpmnRequestResolver(InputPathResolver(cwd = tempDir)),
                 readinessInvoker = StubInvoker,
                 readinessReportWriter = ReadinessReportWriter { _, _, _ -> "readiness.md" },
+                promptFactory = BpmnGenerationGatePromptFactory(),
             )
 
         val scope: AgentScope = AgentMetadataReader().createAgentMetadata(agent)

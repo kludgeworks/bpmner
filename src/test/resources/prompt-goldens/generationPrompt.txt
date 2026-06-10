@@ -1,0 +1,142 @@
+Generate a BPMN definition object from the validated process contract.
+
+The validated ProcessContract is the primary and authoritative generation input.
+Use the original input only as secondary traceability context.
+
+Contract-driven generation rules:
+- Include the contract trigger, ordered activities, decisions, branches, exception or rework paths, and end states.
+- Generate exactly one START_EVENT node for `contract.start`. Put trigger semantics in that node's `eventDefinition`, not in a specialized start-event subtype.
+- `ContractTrigger.Timer` maps to `BpmnTimerEventDefinition`; `Message` maps to `BpmnMessageEventDefinition` plus a process-level `BpmnMessageRef`; `Signal` maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`.
+- `ContractTrigger.None` maps to `BpmnNoneEventDefinition`.
+- ContractIntermediateThrow entries map to `INTERMEDIATE_THROW_EVENT` nodes. `Message` maps to `BpmnMessageEventDefinition` plus a process-level `BpmnMessageRef`; `Signal` maps to `BpmnSignalEventDefinition` plus a process-level `BpmnSignalRef`; `Escalation` maps to `BpmnEscalationEventDefinition` plus a process-level `BpmnEscalationRef`.
+- Represent actors only where current BPMN DTOs allow, usually in task names.
+- Do not add unsupported tasks, decisions, branches, actors, or end states.
+- You may infer sequence flows and routing-only converging gateways needed for valid BPMN.
+- Leave routing-only converging gateways unnamed.
+
+Contract-to-BPMN wiring (the schema covers each `kind` → BPMN `type`/`eventDefinition` mapping and the catalogue dedup rules; these are the contract links it can't express):
+- BusinessRule: copy `decisionName` from the contract verbatim into `decisionRef` on the BPMN node.
+- Send / Receive: point the task's `messageRef` at a `definition.messages` entry whose `name` is the contract's `messageName`.
+- Iteration → multi-instance: when a contract activity carries `iteration`, set `multiInstance` on its BPMN task — `mode` = the contract's `iteration.mode` (SEQUENTIAL renders `isSequential=true`, PARALLEL renders `isSequential=false`), `collectionDescription` = the contract's verbatim. ALSO emit, for that task: (1) a `definition.annotations` text annotation whose text names the item set using "each"/"every"/"per" (e.g. "For each line item on the slip"), and (2) a `definition.associations` edge with `sourceRef` = the task id and `targetRef` = that annotation's id. Every multi-instance task MUST have this linked annotation.
+- Boundary events → boundary-event nodes: when a contract activity carries `boundaryEvents`, emit one `BOUNDARY_EVENT` node per entry with `attachedToRef` = that activity's BPMN task id and `cancelActivity` from the contract. Map `kind`: TIMER → `BpmnTimerEventDefinition` whose expression is the contract `detail` (an ISO-8601 duration); ERROR → `BpmnErrorEventDefinition` pointing at a `definition.errors` entry whose `code` is the contract `detail`; ESCALATION → `BpmnEscalationEventDefinition` pointing at a `definition.escalations` entry whose `code` is the contract `detail`. Emit exactly one outbound sequence flow from the boundary event to the node whose id is `nextRef`, with no incoming flow into it. For ERROR boundary events, `cancelActivity` is true.
+- Loop → standard-loop: when a contract activity carries `loop`, set `standardLoop` on its BPMN task — `testBefore` from the contract (true = while, false = until), `loopCondition` and `loopMaximum` copied verbatim. ALSO emit, for that task: (1) a `definition.annotations` text annotation whose text states the loop condition using "until"/"while"/"unless"/"till" (e.g. "Retry until the payment succeeds"), and (2) a `definition.associations` edge with `sourceRef` = the task id and `targetRef` = that annotation's id. Every standard-loop task has this linked annotation. Treat `loop` as a self-repeating task; reserve gateway back-edges for explicit branch flows.
+- Data artifacts → data objects/stores: emit one `definition.dataObjects` entry for each contract artifact whose kind is DATA_OBJECT, and one `definition.dataStores` entry for each DATA_STORE, copying the artifact id and name verbatim. Then for each activity, emit one `definition.dataAssociations` edge per `dataInputIds` id (sourceRef = activity id, targetRef = data id, direction = READ) and per `dataOutputIds` id (direction = WRITE). Keep data names as business nouns (e.g. "Order", "Customer database").
+- Error / Message / Signal / Escalation end states: point the event definition's ref at a matching entry in the process-level `definition.errors` / `.messages` / `.signals` / `.escalations` catalogue whose `code`/`name` is the contract's.
+- Message / Signal / Escalation intermediate throws: point the event definition's ref at a matching entry in the process-level `definition.messages` / `.signals` / `.escalations` catalogue whose `name`/`code` is the contract's.
+
+Branch wiring (the `kind` → BpmnEdge shape is in each ContractBranch subtype's schema, and `conditionExpression`/`isDefault` carry their own field descriptions):
+- DEFAULT: emit the outbound edge with no `conditionExpression`. You may leave `isDefault = false`; the downstream DefaultFlowAssigner sets it from the contract and the renderer writes the gateway's `default="Flow_X"` attribute. NEVER invent placeholder conditions like "otherwise" or "all other cases".
+
+Naming shape rules — follow these on your first emission to avoid lint repair rounds:
+- START_EVENT: Trigger event in past-participle / state form (subject + received/fired/arrived).
+    examples: "Order received", "Timer fired", "Application submitted"
+    avoid:    "Receive order", "Trigger timer", "Submit application"
+- INTERMEDIATE_CATCH_EVENT: Past-tense state form describing what was caught (same shape as start/end events). The event-definition kind (timer / message / signal / error / escalation) determines what's caught; the name describes the observed state.
+    examples: "Approval received", "Timer fired", "Confirmation arrived"
+    avoid:    "Receive approval", "Trigger timer", "Wait for confirmation"
+- INTERMEDIATE_THROW_EVENT: Past-tense form describing the event the process emits (state of having thrown). The event-definition kind (message / signal / escalation) determines what's thrown; the name describes the emission's effect.
+    examples: "Notification sent", "Escalation raised", "Signal broadcast"
+    avoid:    "Send notification", "Raise escalation", "Broadcast signal"
+- BOUNDARY_EVENT: Short event-shaped name describing what the boundary catches on the host activity. Past-tense state or noun phrase. The host activity is named separately and is not duplicated here.
+    examples: "Timer fired", "Error caught", "Escalation received"
+    avoid:    "Cancel approval", "Handle error", "Catch escalation"
+- END_EVENT: Past-tense state describing the terminal state the process reached. Object + past-participle verb. Never start with an imperative verb.
+    examples: "Offer issued", "Application declined", "Decline letter written"
+    avoid:    "Issue offer", "Decline application", "Write decline letter"
+- USER_TASK: Imperative verb-object naming the work the human performs.
+    examples: "Validate request", "Approve loan", "Collect documentation"
+    avoid:    "Validation", "Loan approval", "Documents"
+- SERVICE_TASK: Imperative verb-object naming the work the system performs.
+    examples: "Send notification", "Charge card", "Generate offer letter"
+    avoid:    "Notification", "Card charge", "Letter generation"
+- SCRIPT_TASK: Imperative verb-object naming the computation or transformation the engine evaluates inline. Reads like a service task but with no external service.
+    examples: "Normalise address", "Compute loan-to-value ratio", "Convert currencies"
+    avoid:    "Script", "Run script", "Data normalisation"
+- BUSINESS_RULE_TASK: Imperative verb-object describing the decision being evaluated, typically starting with `Evaluate`, `Determine`, or `Apply` to signal the rule-set call. The decision id lives on `decisionRef`.
+    examples: "Evaluate credit policy", "Determine premium tier", "Apply pricing rules"
+    avoid:    "Decision", "Credit policy", "Rules engine"
+- SEND_TASK: Imperative messaging verb-object describing the outbound message. Reads as a fire-and-forget send: no acknowledgement is awaited.
+    examples: "Send decline notification", "Notify customer of approval", "Publish settlement"
+    avoid:    "Notification", "Send", "Message customer"
+- RECEIVE_TASK: Past-participle wait shape — names what arrived, not the act of waiting. Shares the past-tense event convention because the task IS a wait-point.
+    examples: "Customer acknowledgement received", "Payment confirmation received", "Counter-signature received"
+    avoid:    "Wait for acknowledgement", "Receive payment confirmation", "Await counter-signature"
+- MANUAL_TASK: Imperative verb-object naming the off-system work the human performs. Same shape as a user task; the distinction is that no system UI mediates the work.
+    examples: "Inspect property condition", "File paper documents", "Walk the trading floor"
+    avoid:    "Inspection", "Manual review", "Off-system work"
+- EXCLUSIVE_GATEWAY (diverging): Question form ending in '?'. Names the decision being made, not the routing mechanism. Converging joins are unnamed (policy).
+    examples: "Is the score above 750?", "Which credit tier?", "Did validation pass?"
+    avoid:    "Routing", "Decision", "Branch on score"
+- INCLUSIVE_GATEWAY (diverging): Question form ending in '?'. Names the inclusive choice — typically 'which of these apply?' shapes — not the routing mechanism. Converging joins are unnamed (policy).
+    examples: "Which add-on services apply?", "Which notification channels should fire?", "Which optional checks are required?"
+    avoid:    "OR-split", "Inclusive routing", "Optional branches"
+- PARALLEL_GATEWAY (diverging): Imperative describing the concurrent action the fork triggers. Converging joins are unnamed (policy).
+    examples: "Run preparation tracks", "Send notifications in parallel"
+    avoid:    "Parallel split", "Fork", "AND-split"
+
+Loop and back-edge rules:
+- A sequence flow with `sourceRef == targetRef` is forbidden. Back-edges to earlier elements (a different `targetRef` that the process has already visited) are valid and required when the contract describes an iterative process.
+- When a ContractBranch carries a `nextRef`, emit a sequence flow from the decision's gateway to the node with that id. If `nextRef` points to an earlier activity, this is the loop back-edge.
+- For multi-exit loops (e.g. pass / no-progress / exhausted), emit ONE XOR gateway after the loop body with one outbound flow per branch — including the back-edge — not separate gateways per exit.
+
+Parallel-gateway topology:
+- Every PARALLEL fork MUST have a matching synchronising join: a second PARALLEL_GATEWAY node where every branch reconverges before downstream work proceeds. The join is a synthesised node with a stable unique id (e.g. `Gateway_join_<descriptor>`) and no `name`.
+- After the join, emit a single outbound sequence flow to whatever comes next.
+
+Inclusive-gateway topology:
+- INCLUSIVE conditions are evaluated independently — any subset (including all) may fire concurrently. (Same `conditionExpression` shape as EXCLUSIVE, different semantics.)
+- Every INCLUSIVE fork MUST have a matching synchronising join: a second INCLUSIVE_GATEWAY node. The join waits only for the branches that fired (unlike a parallel join, which waits for all branches). It's a synthesised node with a stable unique id and no `name`.
+- A DEFAULT branch is permitted under INCLUSIVE — it fires only when no other branch's condition is true. The renderer writes the gateway's `default` attribute on the chosen outbound flow.
+- After the join, emit a single outbound sequence flow to whatever comes next.
+
+Embedded-subprocess topology:
+- A `[SUB_PROCESS contains="a,b,c"]` contract activity becomes a `SUB_PROCESS` node with `triggeredByEvent=false`, id copied verbatim. Its members are the activities listed in `contains=`.
+- Every member node listed in `contains=` MUST carry `parentRef` = the subprocess id, and every sequence flow between two members MUST also carry `parentRef` = the subprocess id. Members stay in the flat node list — nesting is expressed only by `parentRef`, not by physically moving them.
+- Give the subprocess its own self-contained inner flow: emit one inner `START_EVENT` and one inner `END_EVENT` (both with `parentRef` = the subprocess id) and wire the members start-to-end between them.
+- The subprocess node itself sits on the enclosing flow like any task: the main flow connects into the `SUB_PROCESS` node and out of it. Sequence flows connect to the subprocess node, not to its interior members — each flow keeps both endpoints on the same side of the boundary (both inside the subprocess or both outside).
+
+Call-activity topology:
+- A `[CALL_ACTIVITY calledElement="X"]` contract activity becomes a `CALL_ACTIVITY` node with `calledElement` = X, id copied verbatim. It sits on the flow like a task (one inbound, one outbound flow). The called process X is defined separately and referenced by id; this node has no interior nodes and no `parentRef`'d children.
+
+Event-subprocess topology:
+- An `[EVENT_SUBPROCESS trigger=… interrupting contains="a,b"]` or `[EVENT_SUBPROCESS trigger=… non-interrupting contains="a,b"]` contract entry becomes a `SUB_PROCESS` node with `triggeredByEvent=true`, id copied verbatim. The keyword `interrupting` means the handler cancels the enclosing flow; `non-interrupting` means it runs alongside it. Its members are the activities listed in `contains=`.
+- Give it a typed inner start: one `START_EVENT` with `parentRef` = the event-subprocess id whose `eventDefinition` matches the trigger — MESSAGE → `BpmnMessageEventDefinition` (+ a `definition.messages` entry), TIMER → `BpmnTimerEventDefinition`, ERROR → `BpmnErrorEventDefinition` (+ a `definition.errors` entry), ESCALATION → `BpmnEscalationEventDefinition` (+ a `definition.escalations` entry), SIGNAL → `BpmnSignalEventDefinition` (+ a `definition.signals` entry). Set that start's `isInterrupting` to the entry's interrupting flag.
+- Every member node and every inner sequence flow carries `parentRef` = the event-subprocess id; wire the members start-to-end to one inner `END_EVENT` (also parentRef'd).
+- An event subprocess has no incoming or outgoing sequence flow: it runs when its inner start fires, so it stays disconnected from the main flow rather than being wired into it.
+
+Event-based-gateway topology:
+- An EVENT_BASED decision becomes an `EVENT_BASED_GATEWAY` node. For each EVENT_GATEWAY branch, emit an `INTERMEDIATE_CATCH_EVENT` whose `eventDefinition` matches the branch `triggerKind`: TIMER → `BpmnTimerEventDefinition` (expression from `triggerDetail`, an ISO-8601 duration); MESSAGE → `BpmnMessageEventDefinition` pointing at a `definition.messages` entry named from `triggerDetail`; SIGNAL → `BpmnSignalEventDefinition` pointing at a `definition.signals` entry named from `triggerDetail`.
+- The gateway's only direct successors are those catch events — one outbound flow from the gateway to each catch event, and no activities directly between them. From each catch event, emit one flow to the branch's `nextRef`.
+- The gateway is a pure wait: it has no join. Each branch proceeds independently after its event fires.
+
+Pools-and-lanes topology (collaboration):
+- When the contract's Actors identify who performs the activities, model the process as a collaboration. Emit one white-box `definition.participants` entry whose `processRef` is the process id and whose `name` is the process name (a white-box pool is named after its process). Then emit one `definition.lanes` entry per distinct performing actor: set `participantId` to that white-box participant id, `name` to the actor's name (the business role/performer, e.g. "Sales", "Finance Officer"), and `flowNodeRefs` to the ids of the nodes that actor performs (group the activities by their `actorId`). Routing-only gateways and shared events may be placed in whichever lane they most belong to, or left out of every lane.
+- An actor that only exchanges messages with the process — it appears under Actors but performs no activity — is an external participant: emit a black-box `definition.participants` entry (omit `processRef`) named after that actor, plus one `definition.messageFlows` entry per message exchanged. A message flow's `sourceRef`/`targetRef` are a flow-element id and the black-box participant id (it crosses the pool boundary); name it after the message as a noun phrase (e.g. "Payment request", "Approval confirmation").
+- Only model a collaboration when the contract actually assigns actor responsibilities. A single-actor or actor-less process needs no participants, lanes, or message flows — leave all three empty.
+
+The provided worked examples show the parallel and inclusive topologies end-to-end — follow their fork/join wiring.
+
+Primary validated ProcessContract:
+# Credit application
+Trigger: Customer submits credit application
+
+## Summary
+Credit applications are scored and approved automatically when the score is high enough.
+
+## Activities
+- act-score: Run credit check
+- act-review: Review credit application
+
+## Decisions
+- dec-score: Is the score at least 700?
+  - br-approve → "Approve" if "score >= 700"
+  - br-review → "Review" if "score < 700"
+
+## End states
+- end-approved: Application approved
+- end-reviewed: Application reviewed
+
+Original input for traceability only:
+When a customer submits a credit application, the system runs a credit check. If the score is at least 700 the application is approved; otherwise it is routed to a human underwriter for review.
+Style guide:
+Use sentence case for task names.

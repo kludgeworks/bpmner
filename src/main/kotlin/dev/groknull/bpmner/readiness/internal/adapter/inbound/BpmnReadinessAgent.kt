@@ -14,6 +14,7 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessPromptFactory
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
 import org.jmolecules.architecture.hexagonal.Application
 import org.springframework.context.ApplicationEventPublisher
@@ -23,6 +24,7 @@ import org.springframework.context.ApplicationEventPublisher
 internal class BpmnReadinessAgent(
     private val config: BpmnConfig,
     private val eventPublisher: ApplicationEventPublisher,
+    private val promptFactory: BpmnReadinessPromptFactory,
 ) {
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
 
@@ -43,22 +45,9 @@ internal class BpmnReadinessAgent(
         val promptRunner = config.readinessAssessor.promptRunner(context).withPromptContributor(request)
         val modelAssessment = promptRunner
             .creating(ProcessInputAssessment::class.java)
-            .fromTemplate("bpmner/assess_readiness", templateModel(request))
+            .fromTemplate("bpmner/assess_readiness", promptFactory.templateModel(request))
         val assessment = postChecker.apply(request, modelAssessment)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment
     }
-
-    private fun templateModel(request: BpmnRequest): Map<String, Any> = mapOf(
-        "readyThreshold" to config.readiness.readyThreshold,
-        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
-        "processDescription" to request.processDescription,
-        "clarificationHistory" to request.clarificationHistory.map {
-            mapOf(
-                "questionId" to it.questionId,
-                "questionText" to it.questionText,
-                "answerText" to it.answerText,
-            )
-        },
-    )
 }

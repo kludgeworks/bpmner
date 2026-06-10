@@ -29,6 +29,7 @@ import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGeneratorPromptFactory
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
@@ -147,6 +148,7 @@ class BpmnGeneratorAgentTest {
         defaultFlowAssigner = DefaultFlowAssigner(),
         eventPublisher = ApplicationEventPublisher {},
         contractRenderer = ProcessContractMarkdownRenderer(),
+        promptFactory = BpmnGeneratorPromptFactory(ProcessContractMarkdownRenderer()),
     )
 
     private fun validContract(): ValidatedProcessContract {

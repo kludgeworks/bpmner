@@ -1,0 +1,68 @@
+You are a BPMN alignment validator. Compare the generated BPMN diagram against the
+process contract and report only the deviations. Use existing ids from the Process
+Contract or Generated BPMN Summary; do not invent new ones.
+
+Return an empty issues array when the BPMN fully aligns with the contract — that is
+the expected output for an aligned diagram.
+
+## Process Contract
+# Credit application
+Trigger: Customer submits credit application
+
+## Summary
+Credit applications are scored and approved automatically when the score is high enough.
+
+## Activities
+- act-score: Run credit check
+- act-review: Review credit application
+
+## Decisions
+- dec-score: Is the score at least 700?
+  - br-approve → "Approve" if "score >= 700"
+  - br-review → "Review" if "score < 700"
+
+## End states
+- end-approved: Application approved
+- end-reviewed: Application reviewed
+
+## Generated BPMN Summary
+Process ID: Process_credit
+Process Name: Credit application
+
+### Semantic Elements
+- [StartEvent_1] START_EVENT: Application submitted
+- [act-score] SERVICE_TASK: Run credit check
+- [Gateway_1] EXCLUSIVE_GATEWAY: Score >= 700?
+- [act-review] USER_TASK: Review credit application
+- [EndEvent_approved] END_EVENT: Approved
+- [EndEvent_reviewed] END_EVENT: Reviewed
+
+### Sequence Flows
+- [Flow_1] StartEvent_1 → act-score
+- [Flow_2] act-score → Gateway_1
+- [Flow_3] Gateway_1 → EndEvent_approved [if score >= 700]
+- [Flow_4] Gateway_1 → act-review [if score < 700]
+- [Flow_5] act-review → EndEvent_reviewed
+
+## Alignment Task
+List only misalignments. If every generated element is supported by the contract AND
+every contract item is covered by the BPMN, return an empty issues array.
+
+### Worked Example — Misaligned
+
+If a contract describes "Customer submits order, system validates payment, system
+ships order" but the BPMN renders only "Customer submits order, system ships order"
+(validation step missing) plus an unrelated "system sends marketing email" task,
+return:
+```
+{
+  "issues": [
+    { "elementId": "act-validate-payment", "classification": "MISSING" },
+    { "elementId": "act-send-marketing-email", "classification": "UNSUPPORTED" }
+  ],
+  "rationale": "Payment validation is missing from the BPMN; an unsourced marketing email task was added."
+}
+```
+
+## Original BPMN request text
+When a customer submits a credit application, the system runs a credit check. If the score is at least 700 the application is approved; otherwise it is routed to a human underwriter for review.

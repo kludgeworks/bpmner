@@ -1,0 +1,105 @@
+Return only a structured FlatProcessContract object.
+
+Extract a source-grounded process contract from the supplied inputs.
+Do not invent actors, triggers, end states, decisions, branches, or artifacts.
+If a fact required for a complete contract is not present in the source text or clarification answers, record it as a ContractAssumption with at least one sourceId.
+Cap assumptions at 10.
+
+Source grounding (provenance):
+- Every ContractActivity, ContractDecision, ContractEndState, and ContractAssumption must list at least one entry in its `sourceIds` field.
+- A source id is an assessment evidence id, a clarification questionId, or a literal input-text marker.
+- Return the process start in `start` with a `trigger` object and `sourceIds`.
+- `start.sourceIds` must list at least one source id grounding the trigger.
+- Schedule language (dates, delays, cycles, cron-like intervals): set `trigger.type` = TIMER and populate `timerKind` + `expression` + `description`.
+- Webhook/API/event-bus triggers intended for one process/listener: set `trigger.type` = MESSAGE and populate `messageName` + `description`.
+- Broadcast or multi-listener triggers: set `trigger.type` = SIGNAL and populate `signalName` + `description`.
+- Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
+- Mid-flow sends that do not complete the process are intermediate throws, not tasks or end states:
+  set `intermediateThrows[].kind` = MESSAGE for point-to-point messages, SIGNAL for broadcasts,
+  and ESCALATION for non-interrupting business escalations. Populate the matching payload field.
+
+Activity kind (`kind` discriminator); SERVICE is the default:
+- SERVICE — Example: `{kind: "SERVICE", id: "act-charge-card", name: "Charge card"}`.
+- USER — through a form, queue, or review screen. Example: `{kind: "USER", id: "act-approve", name: "Approve loan"}`.
+- SCRIPT — keywords: computes, normalises, transforms, calculates, runs a script. Example: `{kind: "SCRIPT", id: "act-normalise", name: "Normalise address"}`.
+- BUSINESS_RULE — keywords: evaluates the rule set, applies the credit policy, decision table, DMN decision, rules engine. Carries `decisionName`. Example: `{kind: "BUSINESS_RULE", id: "act-credit", name: "Evaluate credit policy", decisionName: "credit policy"}`.
+- SEND — workflow does NOT wait for an acknowledgement. Keywords: sends a notification, notifies, publishes, emits, emails, confirms. Carries `messageName`. Example: `{kind: "SEND", id: "act-decline", name: "Send decline notification", messageName: "decline notification"}`.
+- RECEIVE — flow BLOCKS until the message arrives. Keywords: waits for X message, blocks until X is received, the customer must confirm, awaits reply. Name with past-participle ("X received"). Carries `messageName`. Example: `{kind: "RECEIVE", id: "act-await-ack", name: "Customer acknowledgement received", messageName: "customer acknowledgement"}`.
+- MANUAL — paper, in-person, or off-system. Keywords: manually visits, works with paper notes, off-system. Example: `{kind: "MANUAL", id: "act-inspect", name: "Inspect property condition"}`.
+- CALL_ACTIVITY — a single step that delegates to a SEPARATE, reusable named process (not inlined). Keywords: "calls / invokes / runs the X process", "the shared X sub-process is invoked", "delegates to X", a named procedure reused across several flows. Carries `calledElement` = the id of the process it invokes. Distinct from an embedded subprocess (a one-off grouping of THIS flow's own steps): use CALL_ACTIVITY when the same named process is called from more than one place or is defined elsewhere. Example: `{kind: "CALL_ACTIVITY", id: "act-fulfil", name: "Fulfil order", calledElement: "fulfil-order"}`.
+
+Iteration (optional `iteration` object, valid on ANY activity kind): set ONLY when the source says the activity repeats once per item in a collection — a "for each …" loop. Distinct from a retry/poll loop (use the `loop` marker below) and from a parallel gateway fork (that runs different branches concurrently, not the same activity over a collection).
+- `iteration.mode = SEQUENTIAL` — items handled one at a time / in order. Keywords: "for each X, in order", "one at a time", "one by one", a route or ordering constrains the sequence.
+- `iteration.mode = PARALLEL` — items handled concurrently and independently. Keywords: "each X in parallel", "every X independently", "all at once", the workers do not coordinate or wait for each other.
+- `iteration.collectionDescription` — the "for each …" phrase naming the item set, e.g. "each line item on the slip".
+- Example (parallel): `{kind: "USER", id: "act-review", name: "Review manuscript", iteration: {mode: "PARALLEL", collectionDescription: "each reviewer on the panel"}}`.
+- Example (sequential): `{kind: "USER", id: "act-pick", name: "Pick line item", iteration: {mode: "SEQUENTIAL", collectionDescription: "each line item on the packing slip"}}`.
+
+Boundary events (optional `boundaryEvents` list, valid on ANY activity kind): set when the source says something can interrupt the activity and divert the flow — a deadline, a caught business error, or an escalation. Each entry has `kind` (TIMER | ERROR | ESCALATION), `label`, `nextRef` (id of the activity / decision / end state the exception path leads to), optional `cancelActivity` (default true; for ERROR boundary events this field is true), and optional `detail`. Distinct from a normal decision branch off the activity's outcome.
+- TIMER — keywords: "if it takes longer than …", "after N hours/days without …", "times out". `detail` = ISO-8601 duration. Example: `{kind: "TIMER", label: "24h timeout", nextRef: "act-escalate", detail: "PT24H"}`.
+- ERROR — keywords: "if X fails / throws / raises the … error", a named failure routed to handling. `detail` = error code. Example: `{kind: "ERROR", label: "Chargeback raised", nextRef: "act-dispute", detail: "CHARGEBACK"}`.
+- ESCALATION — keywords: "if X must be escalated", a non-failure escalation. `detail` = escalation code. Example: `{kind: "ESCALATION", label: "Approval overdue", nextRef: "act-notify", detail: "APPROVAL_OVERDUE"}`.
+
+Loop (optional `loop` object, valid on ANY activity kind): set when the source says the activity repeats until a condition is met — a while/until/retry loop over the SAME activity. Distinct from iteration, which runs once per item in a collection.
+- `loop.testBefore = true` — while-loop: the condition is checked before each run. Keywords: "while X", "as long as X", "keep …ing while".
+- `loop.testBefore = false` — until-loop: the activity runs once, then the condition is checked. Keywords: "repeat until X", "retry until X", "poll until X".
+- `loop.loopCondition` — the continue/exit condition phrase, e.g. "payment not yet successful".
+- `loop.loopMaximum` — optional iteration cap, e.g. 3 for "retry up to 3 times".
+- Example: `{kind: "SERVICE", id: "act-charge", name: "Charge card", loop: {testBefore: false, loopCondition: "payment not yet successful", loopMaximum: 3}}`.
+
+Embedded subprocesses (optional `subProcesses` list): set when the source describes a group of activities handled together as a single composite step — cues: "the X process, which involves …", "as part of handling Y: first a, then b, then c", "the X sub-flow / block / stage", a named bundle of sub-steps treated as one unit. Leave empty when the process is flat.
+- Each entry has `id`, `name`, and `activityIds` — the ids of its member activities. Those members stay listed in the top-level `activities` array (with their own kinds and sourceIds); the subprocess only NAMES which of them it groups.
+- An activity belongs to at most one subprocess. List at least one member per subprocess.
+- Members are interior steps: the main flow enters the subprocess as a whole and leaves it as a whole. A member must not be the `nextRef` target of a branch outside the group, nor branch out of the group itself.
+- Reserve a subprocess for a genuine grouping the source calls out; a plain linear sequence of ordinary steps stays ungrouped.
+- Example: `{id: "sub-assess", name: "Assess claim", activityIds: ["act-validate", "act-estimate", "act-decide"]}`.
+
+Event subprocesses (optional `eventSubProcesses` list): set when the source describes a handler that runs off the main flow when an event fires at any point during the process — cues: "at any point during X, if Y happens …", "whenever Z occurs …", "on cancellation / timeout, …", "if an error is raised while …" — followed by one or more handler steps. Distinct from a `subProcesses` entry (a composite step on the main flow) and from a boundary event (which attaches to a single activity).
+- Each entry has `id`, `name`, `activityIds` (the handler steps, which stay listed in `activities`), `trigger`, and `interrupting`.
+- `trigger`: MESSAGE | TIMER | ERROR | ESCALATION | SIGNAL — the event that starts the handler.
+- `interrupting`: true (default) cancels the main flow when the handler fires; false lets the handler run alongside it. An ERROR handler is always interrupting.
+- An activity belongs to at most one event subprocess, and a handler member stays off the main flow.
+- Example: `{id: "esp-cancel", name: "Handle cancellation", trigger: "MESSAGE", interrupting: true, activityIds: ["act-refund", "act-notify-cancel"]}`.
+
+End-state kind (`kind` discriminator); NORMAL is the default:
+- TERMINATE — keywords: process terminates immediately, every in-flight track stops, abandons all work, the entire workflow ends. Use when one path's completion must KILL every other parallel path. Example: `{kind: "TERMINATE", id: "end-cancelled", name: "Booking cancelled"}`.
+- ERROR — keywords: raises an error, throws X error, propagates failure up, bubbles up to a catcher. `errorCode` is the stable BUSINESS error code (e.g. "CREDIT_REJECTED"), NOT a user-facing message. Example: `{kind: "ERROR", id: "end-rejected", name: "Credit rejected", errorCode: "CREDIT_REJECTED"}`.
+- MESSAGE — keywords: sends X on completion, wraps up by sending, fires X webhook at the end. Example: `{kind: "MESSAGE", id: "end-confirmed", name: "Shipment confirmation sent", messageName: "shipment confirmation"}`.
+- SIGNAL — keywords: broadcasts X, notifies all subscribers, one-to-many notification. Example: `{kind: "SIGNAL", id: "end-settled", name: "Settlement complete signal", signalName: "settlement complete"}`.
+- ESCALATION — keywords: escalates, notifies the manager, flagged for follow-up. Example: `{kind: "ESCALATION", id: "end-overdue", name: "Approval overdue escalation", escalationCode: "APPROVAL_OVERDUE"}`.
+
+Branch kind (`kind` discriminator):
+- CONDITIONAL — default branch kind on EXCLUSIVE decisions. Example: `{kind: "CONDITIONAL", id: "br-yes", label: "Eligible", condition: "score >= 750"}`.
+- DEFAULT — keywords: otherwise, for every other case, catch-all, anything else, for all remaining cases. NO condition; label describes the destination. Example: `{kind: "DEFAULT", id: "br-fallback", label: "Manual review"}`. At most one DEFAULT per decision.
+- UNCONDITIONAL — Example: `{kind: "UNCONDITIONAL", id: "br-track-a", label: "IT prep"}`.
+- EVENT_GATEWAY — branch of an EVENT_BASED decision. Carries `triggerKind` (TIMER | MESSAGE | SIGNAL) and a required `triggerDetail` (a duration for TIMER, or the message / signal name) in place of a condition. Example: `{kind: "EVENT_GATEWAY", id: "br-confirmed", label: "Payment confirmed", triggerKind: "MESSAGE", triggerDetail: "payment confirmation"}`.
+- Kind/decision matching is strict: CONDITIONAL and DEFAULT only on EXCLUSIVE decisions; UNCONDITIONAL only on PARALLEL decisions; EVENT_GATEWAY only on EVENT_BASED decisions.
+
+Loop and topology rules:
+- When the source describes an iterative process (retry / repair / poll / until / while), set the branch's `nextRef` to the id of the activity that the iteration loops back to.
+- When a decision has multiple exit conditions (e.g. pass, no-progress, exhausted), declare each as a separate branch with its own condition. Set `nextRef` on the looping branch; leave it null on the exiting branches.
+- Branch ids referenced via `nextRef` must exist elsewhere in `activities`, `decisions`, or `endStates`.
+- For sequential (non-looping) flow, leave `nextRef` null; the branch is assumed to lead to the next sequential element.
+
+Data artifacts (the `artifacts` list plus each activity's `dataInputIds` / `dataOutputIds`):
+- Record each distinct business data item or persistent system the process reads or writes as an `artifacts` entry with a `kind`: DATA_OBJECT for transient information that flows through the process (e.g. "Order", "Approval decision"); DATA_STORE for a persistent system the process reads from or writes to — a database, file, queue, repository, ledger, or system of record (e.g. "Customer database", "Order queue"). Name them as business nouns — never include the words "activity", "process", or "event".
+- A named persistent system is a separate artifact from the data that flows through it. When the text reads a data item *from* such a system or *stores / saves / persists / writes* one *to* it, record BOTH: the data item (DATA_OBJECT) and the system (DATA_STORE). Verbs like "stores", "persists", "saves", "retrieves from", or "looks up in", and nouns like "database", "file", or "queue", signal a DATA_STORE.
+- On each activity, list the ids of artifacts it consumes in `dataInputIds` and the ids it produces or updates in `dataOutputIds`. Every id must match an `artifacts` entry. Leave both empty for activities that do not manipulate declared data.
+- Only record data the source text actually mentions; do not invent artifacts. Emit a DATA_STORE only when the text names or clearly implies a persistent system.
+
+Actors and responsibilities (who performs the work):
+- When the source names who performs an activity — a role, team, department, or named system (e.g. "a sales representative confirms the order", "Finance approves the payment", "the warehouse team ships the goods") — record that performer once in `actors` (a stable id, their name, and an optional role) and set that activity's `actorId` to the actor's id. Reuse the same actor id for every activity the same performer does.
+- Also record an external party the process only exchanges messages with — one that performs none of the process's own activities (e.g. a payment provider it sends a request to) — as an actor, so downstream generation can model it as a separate participant. Record only actors the source explicitly names.
+
+Readiness assessment rationale:
+The source describes a complete credit-decisioning workflow.
+
+Assessment evidence ids available for use in `sourceIds`:
+- ev1: Customer submits credit application
+- ev2: Score >= 700 approves the application
+
+Style guide (constraints on naming and structure):
+Use sentence case for task names.
+
+Original BPMN request text:
+When a customer submits a credit application, the system runs a credit check. If the score is at least 700 the application is approved; otherwise it is routed to a human underwriter for review.

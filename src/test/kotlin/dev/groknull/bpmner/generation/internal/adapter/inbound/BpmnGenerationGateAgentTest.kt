@@ -15,6 +15,7 @@ import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.InputPathResolver
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGenerationGatePromptFactory
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ClarificationQuestion
@@ -131,6 +132,7 @@ class BpmnGenerationGateAgentTest {
         requestResolver = BpmnRequestResolver(InputPathResolver(cwd = tempDir)),
         readinessInvoker = invoker,
         readinessReportWriter = reportWriter,
+        promptFactory = BpmnGenerationGatePromptFactory(),
     )
 
     private fun request(outputFile: String? = null) = BpmnRequest(

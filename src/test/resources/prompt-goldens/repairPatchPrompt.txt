@@ -1,0 +1,82 @@
+The following diagnostics can be fixed with targeted name or label patches.
+Return a BpmnRepairPatch with the minimum operations needed to fix these issues.
+Do not rewrite the whole graph — only include operations that directly address the listed diagnostics.
+
+Current canonical FlatBpmnDefinition JSON:
+{
+  "processId" : "Process_1",
+  "processName" : "Sample",
+  "nodes" : [ {
+    "type" : "START_EVENT",
+    "id" : "Start_1",
+    "name" : "Start",
+    "eventDefinition" : {
+      "type" : "NONE"
+    },
+    "isInterrupting" : true,
+    "parentRef" : null
+  }, {
+    "type" : "USER_TASK",
+    "id" : "Task_1",
+    "name" : "Do thing",
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "parentRef" : null
+  }, {
+    "type" : "USER_TASK",
+    "id" : "Task_2",
+    "name" : "Do other",
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "parentRef" : null
+  }, {
+    "type" : "END_EVENT",
+    "id" : "End_1",
+    "name" : "End",
+    "eventDefinition" : {
+      "type" : "NONE"
+    },
+    "parentRef" : null
+  } ],
+  "sequences" : [ {
+    "id" : "Flow_1",
+    "sourceRef" : "Start_1",
+    "targetRef" : "Task_1",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_2",
+    "sourceRef" : "Task_1",
+    "targetRef" : "Task_2",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_3",
+    "sourceRef" : "Task_2",
+    "targetRef" : "End_1",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  } ],
+  "messages" : [ ],
+  "signals" : [ ],
+  "errors" : [ ],
+  "escalations" : [ ],
+  "annotations" : [ ],
+  "groups" : [ ],
+  "associations" : [ ],
+  "dataObjects" : [ ],
+  "dataStores" : [ ],
+  "dataAssociations" : [ ],
+  "participants" : [ ],
+  "lanes" : [ ],
+  "messageFlows" : [ ]
+}
+
+ERRORs — MUST be fixed; the pipeline cannot succeed while any remain:
+- source=lint, rule=bpmner/name-02, severity=error, elementId=Task_1, repairScope=phase, kind=llm_model_patch: Use action verb

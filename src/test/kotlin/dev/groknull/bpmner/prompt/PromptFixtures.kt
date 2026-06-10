@@ -11,21 +11,27 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.alignment.internal.adapter.inbound.BpmnAlignmentPromptFactory
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.ContractValidationReport
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.contract.internal.adapter.inbound.BpmnContractPromptFactory
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGenerationGatePromptFactory
+import dev.groknull.bpmner.generation.internal.adapter.inbound.BpmnGeneratorPromptFactory
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessPromptFactory
 
 /**
  * Canonical inputs + per-site [PromptSite] bundles shared between [PromptSizeProbeTest] and
@@ -143,28 +149,39 @@ internal object PromptFixtures {
     // excluded — this probe tracks the drift-prone surface: template + request contribution + schema.
     private val requestContribution: () -> String = { canonicalRequest.contribution() }
 
+    val contractFactory = BpmnContractPromptFactory(config)
+    val generatorFactory = BpmnGeneratorPromptFactory(markdownRenderer)
+    val alignmentFactory = BpmnAlignmentPromptFactory(markdownRenderer)
+    val readinessFactory = BpmnReadinessPromptFactory(config)
+    val gateFactory = BpmnGenerationGatePromptFactory()
+
     val contract: PromptSite<FlatProcessContract> = site(
         template = "bpmner/extract_contract",
         outputType = FlatProcessContract::class.java,
         contribution = requestContribution,
-    ) { contractExtractionModel() }
+    ) { contractFactory.templateModel(canonicalRequest, canonicalAssessment) }
 
     val generation: PromptSite<FlatBpmnDefinition> = site(
         template = "bpmner/generate_bpmn",
         outputType = FlatBpmnDefinition::class.java,
-    ) { bpmnGenerationModel() }
+    ) {
+        generatorFactory.templateModel(
+            canonicalRequest,
+            ValidatedProcessContract(canonicalContract, ContractValidationReport(emptyList())),
+        )
+    }
 
     val alignment: PromptSite<AlignmentFindings> = site(
         template = "bpmner/check_alignment",
         outputType = AlignmentFindings::class.java,
         contribution = requestContribution,
-    ) { alignmentModel() }
+    ) { alignmentFactory.templateModel(canonicalRequest, canonicalContract, canonicalBpmnSummary) }
 
     val readiness: PromptSite<ProcessInputAssessment> = site(
         template = "bpmner/assess_readiness",
         outputType = ProcessInputAssessment::class.java,
         contribution = requestContribution,
-    ) { readinessModel() }
+    ) { readinessFactory.templateModel(canonicalRequest) }
 
     private fun <T : Any> site(
         template: String,
@@ -172,52 +189,4 @@ internal object PromptFixtures {
         contribution: () -> String = { "" },
         model: () -> Map<String, Any>,
     ): PromptSite<T> = PromptSite(template, outputType, renderer, objectMapper, model, contribution)
-
-    private fun contractExtractionModel(): Map<String, Any> = mapOf(
-        "maxAssumptions" to config.contract.maxAssumptions,
-        "rationale" to canonicalAssessment.rationale,
-        "missingAreas" to canonicalAssessment.missingAreas.map { it.name },
-        "evidence" to canonicalAssessment.evidence.map { mapOf("id" to it.id, "text" to it.text) },
-        "clarificationHistory" to canonicalRequest.clarificationHistory.map {
-            mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)
-        },
-        "styleGuide" to (canonicalRequest.styleGuide ?: ""),
-        "processDescription" to canonicalRequest.processDescription,
-    )
-
-    private fun bpmnGenerationModel(): Map<String, Any> = mapOf(
-        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
-        "processDescription" to canonicalRequest.processDescription,
-        "styleGuide" to (canonicalRequest.styleGuide ?: ""),
-        "namingShapeAdvice" to BpmnNamingShapeAdvice.allAdvice().map { advice ->
-            val examples = advice.examples.joinToString(", ") { "\"$it\"" }
-            val avoid = advice.antiExamples.joinToString(", ") { "\"$it\"" }
-            "- ${advice.kind}: ${advice.shape}\n    examples: $examples\n    avoid:    $avoid"
-        },
-    )
-
-    private fun alignmentModel(): Map<String, Any> = mapOf(
-        "contractMarkdown" to markdownRenderer.render(canonicalContract).trim(),
-        "processId" to canonicalBpmnSummary.processId,
-        "processName" to canonicalBpmnSummary.processName,
-        "elementLines" to canonicalBpmnSummary.elements.map { element ->
-            "[${element.id}] ${element.type}: ${element.name ?: "(unnamed)"}"
-        },
-        "flowLines" to canonicalBpmnSummary.flows.map { flow ->
-            val condition = flow.conditionExpression?.let { " [if $it]" } ?: ""
-            val name = flow.name?.let { " ($it)" } ?: ""
-            "[${flow.id}] ${flow.sourceRef} → ${flow.targetRef}$condition$name"
-        },
-        "unreachableElementIds" to canonicalBpmnSummary.unreachableElementIds,
-        "processDescription" to canonicalRequest.processDescription,
-    )
-
-    private fun readinessModel(): Map<String, Any> = mapOf(
-        "readyThreshold" to config.readiness.readyThreshold,
-        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
-        "processDescription" to canonicalRequest.processDescription,
-        "clarificationHistory" to canonicalRequest.clarificationHistory.map {
-            mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)
-        },
-    )
 }

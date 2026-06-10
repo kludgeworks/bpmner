@@ -12,6 +12,7 @@ import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessPromptFactory
 import org.mockito.Mockito.mock
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
@@ -23,7 +24,7 @@ class BpmnReadinessAgentTest {
         val context = FakeOperationContext()
         context.expectResponse(assessment(ReadinessVerdict.READY, 92))
         val eventPublisher = mock(ApplicationEventPublisher::class.java)
-        val agent = BpmnReadinessAgent(BpmnConfig(), eventPublisher)
+        val agent = BpmnReadinessAgent(BpmnConfig(), eventPublisher, BpmnReadinessPromptFactory(BpmnConfig()))
 
         val result =
             agent.assessReadiness(
