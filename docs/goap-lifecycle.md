@@ -16,21 +16,20 @@ Three signals shape execution:
 
 ## Agent inventory
 
-The pipeline that runs end-to-end for a `BpmnRequest → BpmnResult` traversal spans seven agents and 17 `@Action` methods total:
+The pipeline that runs end-to-end for a `BpmnRequest → BpmnResult` traversal spans six agents and 15 `@Action` methods total:
 
 | Agent | File | Actions | Achieves goal | Configures |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/` | 1: `assessReadiness` | `assessReadiness` | `bpmner.readiness.*`, `bpmner.budget.readiness` |
 | `BpmnContractAgent` | `contract/internal/adapter/inbound/` | 1: `extractProcessContract` | `extractProcessContract` | `bpmner.contract.*`, role: `contract-extractor` |
 | `BpmnGeneratorAgent` | `generation/internal/adapter/inbound/` | 4: `createOutline`, `composeGraph`, `renderBpmnXml`, `finalizeBpmn` | `generateBpmn` (on `finalizeBpmn`) | role: `generator`, `bpmner.budget.generation` |
 | `BpmnRepairAgent` | `repair/internal/adapter/inbound/` | 6: `validate`, `applyDeterministicFixes`, `applyLlmLabelPatch`, `applyLlmStructuralPatch`, `applyFullLlmRewrite`, `finalize` | (chained inside generator path) | roles: `repair-label`, `repair-patch`, `repair-rewrite` |
-| `BpmnLayoutAgent` | `layout/...` | 3: `autoFixBpmnXml`, `layoutBpmnXml`, `validateFinalBpmnXml` | (chained) | GraalJS-backed; no LLM |
+| `BpmnLayoutAgent` | `layout/...` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | (chained) | GraalJS-backed; no LLM |
 | `BpmnAlignmentAgent` | `alignment/internal/adapter/inbound/` | 1: `checkAlignment` | `checkAlignment` | `bpmner.alignment.*`, role: `alignment-validator` |
-| `LlmRuleAgent` | `rules/internal/adapter/inbound/` | 1: `evaluateLlmRules` | `lintLlmRules` | `bpmner.lintBatchSize`, role: `linter` |
 
 ## End-to-end flow
 
-```
+```text
    ┌───────────────────────────────────────────────────────────────────────┐
    │ Input                                                                 │
    │   BpmnRequest (process description, optional output file, style)      │
@@ -77,8 +76,7 @@ The pipeline that runs end-to-end for a `BpmnRequest → BpmnResult` traversal s
                                  │
                                  ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │ BpmnLayoutAgent  (3 actions)                                         │
-   │   autoFixBpmnXml            GraalJS bounded XML cleanup               │
+   │ BpmnLayoutAgent  (2 actions)                                         │
    │   layoutBpmnXml             bpmn-auto-layout via GraalJS              │
    │   validateFinalBpmnXml      XSD + lint final check                    │
    │       ↓ FinalValidatedBpmnXml                                         │
@@ -130,7 +128,7 @@ That pair is how the planner threads a single evolving evaluation through the re
 The four repair actions are sorted by cost; the planner always picks the cheapest applicable action:
 
 | Action | Cost | Eligibility | What it does |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `validate` | 0 (initial) | Always | Seeds the first `BpmnRepairEvaluation`, normalises default flows, runs the validator. |
 | `applyDeterministicFixes` | 0.1 | `hasLocalFixable` (any `LOCAL_MODEL_FIX` diagnostic) | Dispatches each diagnostic to its declared Kotlin handler. No LLM call. |
 | `applyLlmLabelPatch` | 0.5 | `hasLlmLabelEligible` (any LABEL-scope diagnostic) | LLM produces a `BpmnRepairPatch` against label-only changes. |
@@ -155,7 +153,7 @@ This is intentional — replans are a control-flow signal, not work — but it m
 
 ### STUCK vs TERMINATED
 
-```
+```text
 ProcessExecutionStuckException        ProcessExecutionTerminatedException
 ─────────────────────────────         ─────────────────────────────────
 The planner cannot find any           Budget exhausted (Budget.actions = N)
@@ -198,7 +196,7 @@ typealias RepairKind = "LOCAL_MODEL_FIX" | "LLM_MODEL_PATCH" | "LLM_XML_REWRITE"
 ```
 
 | Value | Meaning | Repair action that handles it |
-|---|---|---|
+| --- | --- | --- |
 | `LOCAL_MODEL_FIX` | A registered Kotlin handler edits the parsed `BpmnDefinition`. No LLM call. | `applyDeterministicFixes` |
 | `LLM_MODEL_PATCH` | LLM produces a `BpmnRepairPatch`; `BpmnPatchApplier` applies the patch. Default for any rule without an explicit `kind`. | `applyLlmLabelPatch` (LABEL scope) or `applyLlmStructuralPatch` (OUTLINE/PHASE scope) |
 | `LLM_XML_REWRITE` | LLM rewrites the entire BPMN model. Last-resort tier. | `applyFullLlmRewrite` |

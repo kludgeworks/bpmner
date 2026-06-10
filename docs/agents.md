@@ -1,21 +1,20 @@
 # Agent Overview
 
-bpmner is composed of eight Embabel `@Agent` classes. Each one owns a bounded responsibility and exposes one or more `@Action` methods; the framework's GOAP planner chains them by type. This page is a quick lookup: what each agent is for, where it lives, and what configures it.
+bpmner is composed of seven Embabel `@Agent` classes. Each one owns a bounded responsibility and exposes one or more `@Action` methods; the framework's GOAP planner chains them by type. This page is a quick lookup: what each agent is for, where it lives, and what configures it.
 
 For the planner mechanics — how actions are chained, cost ordering, failure modes — see [`goap-lifecycle.md`](./goap-lifecycle.md).
 
 | Agent | File | Actions | Achieves goal | Configures |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `BpmnGenerationGateAgent` | `generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt` | 6: `draftBpmnRequest`, `resolveBpmnRequest`, `approveReadyRequest`, `askForClarification`, `applyClarificationAnswers`, `readinessBlocked` | `prepareBpmnGeneration` | `bpmner.readiness.*`, role: `readiness-assessor` |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` | `assessReadiness` | `bpmner.readiness.*`, `bpmner.budget.readiness`, role: `readiness-assessor` |
 | `BpmnContractAgent` | `contract/internal/adapter/inbound/BpmnContractAgent.kt` | 1: `extractProcessContract` | `extractProcessContract` | `bpmner.contract.*`, role: `contract-extractor` |
 | `BpmnGeneratorAgent` | `generation/internal/adapter/inbound/BpmnGeneratorAgent.kt` | 4: `createOutline`, `composeGraph`, `renderBpmnXml`, `finalizeBpmn` | `generateBpmn` (on `finalizeBpmn`) | role: `generator`, `bpmner.budget.generation`, `bpmner.logging.dump-artifacts` |
 | `BpmnRepairAgent` | `repair/internal/adapter/inbound/BpmnRepairAgent.kt` | 6: `validate`, `applyDeterministicFixes`, `applyLlmLabelPatch`, `applyLlmStructuralPatch`, `applyFullLlmRewrite`, `finalize` | (chained into the generator path) | roles: `repair-label`, `repair-patch`, `repair-rewrite`; `bpmner.repair.*` |
 | `BpmnAlignmentAgent` | `alignment/internal/adapter/inbound/BpmnAlignmentAgent.kt` | 1: `checkAlignment` | `checkAlignment` | `bpmner.alignment.*`, role: `alignment-validator` |
-| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 3: `autoFixBpmnXml`, `layoutBpmnXml`, `validateFinalBpmnXml` | (chained) | GraalJS-backed; no LLM |
-| `LlmRuleAgent` | `rules/internal/adapter/inbound/LlmRuleAgent.kt` | 1: `evaluateLlmRules` | `lintLlmRules` | `bpmner.lintBatchSize`, role: `linter` |
+| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | (chained) | GraalJS-backed; no LLM |
 
-Twenty-five `@Action` methods total. The `BpmnProgressProjectionObserver` maps pipeline progress to user-facing labels — see [`operator-guide.md`](./operator-guide.md#progress-events-sse).
+Twenty-three `@Action` methods total. The `BpmnProgressProjectionObserver` maps pipeline progress to user-facing labels — see [`operator-guide.md`](./operator-guide.md#progress-events-sse).
 
 ## How actions chain
 

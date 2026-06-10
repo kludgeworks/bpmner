@@ -9,7 +9,6 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.mapping.BpmnRuleAdapter
 import dev.groknull.bpmner.rules.internal.domain.mapping.MappedCheck
@@ -45,9 +44,6 @@ import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
  *  - **Deterministic** — wrapped in [DeterministicPklRule], evaluated via [SubCheckEvaluator]
  *    on the normal `RuleEngine` call.
  *  - **Composite** — wrapped in [CompositePklRule], delegates to [CompositeCheck].
- *  - **LLM** — wrapped in [LlmPklRule] with a no-op evaluate (the rule shows up in the
- *    registry so tooling can enumerate it), plus surfaced separately through
- *    [llmRuleSpecs] so a caller can build an `LlmRuleEvaluationRequest` for `LlmRuleAgent`.
  *
  * Rules with `checkPrimitive == null` (the ~15 deferred awaiting #196) or
  * `severity == "off"` are filtered out by [BpmnRuleAdapter.adapt] and logged.
@@ -67,10 +63,9 @@ internal class PklRuleCatalog(
     private val allRules: List<BpmnRule>
     private val byId: Map<String, BpmnRule>
     private val byAlias: Map<String, BpmnRule>
-    private val llmSpecs: List<LlmRuleSpec>
 
     init {
-        val (pklBpmn, pklLlm) = loadPklRules()
+        val pklBpmn = loadPklRules()
         val compiledIds = compiledRules.map { it.id }.toSet()
         val pklDeduped = pklBpmn.filterNot { rule ->
             val shadowed = rule.id in compiledIds
@@ -78,16 +73,6 @@ internal class PklRuleCatalog(
                 logger.warn(
                     "Pkl rule '{}' shadowed by compiled BpmnRule of the same id — Pkl version skipped",
                     rule.id,
-                )
-            }
-            shadowed
-        }
-        val llmDeduped = pklLlm.filterNot { spec ->
-            val shadowed = spec.metadata.id in compiledIds
-            if (shadowed) {
-                logger.warn(
-                    "Pkl LLM rule '{}' shadowed by compiled BpmnRule of the same id — LLM spec dropped",
-                    spec.metadata.id,
                 )
             }
             shadowed
@@ -102,13 +87,11 @@ internal class PklRuleCatalog(
             .flatMap { rule -> rule.metadata.aliases.map { alias -> alias to rule } }
             .filter { (alias, _) -> alias !in byId }
             .toMap()
-        llmSpecs = llmDeduped
 
         logger.info(
-            "PklRuleCatalog loaded: {} compiled + {} pkl deterministic + {} llm spec(s)",
+            "PklRuleCatalog loaded: {} compiled + {} pkl deterministic",
             compiledRules.size,
             pklDeduped.size,
-            llmSpecs.size,
         )
     }
 
@@ -118,17 +101,9 @@ internal class PklRuleCatalog(
 
     override fun ruleByIdOrAlias(id: String): BpmnRule? = byId[id] ?: byAlias[id]
 
-    /**
-     * Pkl-loaded rules whose `checkPrimitive == "LlmCheckRule"`. Consumers (e.g. a pipeline
-     * step that wants to invoke `LlmRuleAgent`) build an `LlmRuleEvaluationRequest` from this
-     * list. The deterministic engine path does not run these specs.
-     */
-    fun llmRuleSpecs(): List<LlmRuleSpec> = llmSpecs
-
-    private fun loadPklRules(): Pair<List<BpmnRule>, List<LlmRuleSpec>> {
+    private fun loadPklRules(): List<BpmnRule> {
         val rules = evaluatePklRules()
         val bpmn = mutableListOf<BpmnRule>()
-        val llm = mutableListOf<LlmRuleSpec>()
         var skipped = 0
         for (generated in rules) {
             val adapted = BpmnRuleAdapter.adapt(generated)
@@ -142,11 +117,6 @@ internal class PklRuleCatalog(
 
                 is MappedCheck.Composite ->
                     bpmn += CompositePklRule(adapted.metadata, mc.config, nlp)
-
-                is MappedCheck.Llm -> {
-                    bpmn += LlmPklRule(adapted.metadata)
-                    llm += LlmRuleSpec(adapted.metadata, mc.config)
-                }
             }
         }
         if (skipped > 0) {
@@ -155,7 +125,7 @@ internal class PklRuleCatalog(
                 skipped,
             )
         }
-        return bpmn to llm
+        return bpmn
     }
 
     private fun evaluatePklRules(): List<PklBpmnRule> {
@@ -193,15 +163,4 @@ private class CompositePklRule(
     override val id: String = metadata.id
 
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck.evaluate(ctx, metadata, config, nlp)
-}
-
-private class LlmPklRule(
-    override val metadata: RuleMetadata,
-) : BpmnRule {
-    override val id: String = metadata.id
-
-    // LlmCheckRule rules are evaluated outside the deterministic RuleEngine via LlmRuleAgent —
-    // see [PklRuleCatalog.llmRuleSpecs]. The wrapper still lives in the registry so tooling
-    // that enumerates "all rules" sees the LLM ones too.
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = emptyList()
 }

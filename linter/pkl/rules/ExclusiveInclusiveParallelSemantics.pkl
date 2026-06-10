@@ -41,8 +41,3 @@ staticConfig = new {
 // the new path routes the heuristic XOR-vs-OR-vs-AND judgement to LlmRuleAgent. Splitting
 // the rule into two would mean two ids and two diagnostics; keeping it as one LLM-routed
 // rule is the simpler shape until that split is justified.
-checkPrimitive = "LlmCheckRule"
-checkConfig = new CheckPrimitive.LlmCheckRule {
-  prompt =
-    "Check gateway semantics. Exclusive (XOR) gateways pick exactly one branch based on mutually-exclusive conditions. Inclusive (OR) gateways evaluate every branch's condition independently and activate any subset that is true — use these when the source describes independent optional add-ons that may apply singly, together, or not at all ('either, both, or neither'). Parallel (AND) gateways fork unconditionally and reconverge at a join; outgoing flows must NOT carry conditions or default-only markers, and a diverging or converging parallel gateway must have at least two flows on the diverging/converging side. Treat the XOR-vs-OR-vs-AND choice as a modelling-intent decision unless structural evidence (conditions on outgoing flows, cardinality) makes it invalid."
-}

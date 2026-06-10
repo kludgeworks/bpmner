@@ -20,8 +20,5 @@ errorMessages = new {
     "Use Receive Task for explicit participant interaction; use Intermediate Message Event for passive events."
 }
 
-checkPrimitive = "LlmCheckRule"
-checkConfig = new CheckPrimitive.LlmCheckRule {
-  prompt =
-    "Detect message-driven waits where the description implies an explicit participant interaction versus a passive event."
-}
+checkPrimitive = null
+checkConfig = null

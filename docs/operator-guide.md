@@ -9,7 +9,7 @@ Every `bpmner.*` YAML key, default, range, when to tune.
 ### Budgets
 
 | Key | Default | Range | When to tune |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `bpmner.budget.generation` | `100` | ≥ 1 | Bump if the generation+repair loop terminates with `ProcessExecutionTerminatedException` on inputs you believe are tractable. Lower at your peril — the budget covers generation AND the entire repair loop in one process. |
 | `bpmner.budget.readiness` | `20` | ≥ 1 | Rarely tuned. Readiness has no repair loop; 20 is generous. |
 
@@ -18,7 +18,7 @@ Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](..
 ### Rule profile + severity overrides
 
 | Key | Default | Effect |
-|---|---|---|
+| --- | --- | --- |
 | `bpmner.rules.profile` | `recommended` | Named profile loaded at startup. Built-in profiles: `recommended` (declared severities, nothing disabled) and `strict` (every WARNING-default rule bumped to ERROR). Unknown profile name fails startup with the list of available profiles. |
 | `bpmner.rules.severity-overrides` | `{}` | Per-rule escape hatch applied **on top of** the active profile. User entries always win — the profile is the baseline, this map is per-deployment surgery. Keys are bare rule ids (e.g. `act-verb-object-name`); values are one of `error`, `warning`, `info`, `off`. |
 
@@ -40,7 +40,7 @@ bpmner:
 bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapping resolves the role to a concrete LLM. The roles bpmner uses:
 
 | Role | Used by | Default model |
-|---|---|---|
+| --- | --- | --- |
 | `generator` | `BpmnGeneratorAgent.createOutline` | `gpt-4.1` |
 | `repair-label` | `BpmnRepairAgent.applyLlmLabelPatch` | `gpt-4.1-nano` |
 | `repair-patch` | `BpmnRepairAgent.applyLlmStructuralPatch` | `gpt-4.1-mini` |
@@ -48,7 +48,6 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 | `readiness-assessor` | `BpmnReadinessAgent.assessReadiness` | (profile default) |
 | `contract-extractor` | `BpmnContractAgent.extractProcessContract` | (profile default) |
 | `alignment-validator` | `BpmnAlignmentAgent.checkAlignment` | (profile default) |
-| `linter` | `LlmRuleAgent.evaluateLlmRules` | (profile default) |
 
 Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, `application-deepseek.yaml`, and `application-llama.yaml`. The simplest way to run is `mise run bpmner-cli --provider <provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama` (Llama on Cerebras via the OpenRouter proxy); the task reads that provider's API key from 1Password (`op://bpmner/<provider>/api-key`) and sets `SPRING_PROFILES_ACTIVE` for you (add `--web` or `--verbose` to layer on those profiles). To run `bazel` directly instead, pass `--spring.profiles.active=<provider>` (or set `SPRING_PROFILES_ACTIVE`) and ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, or `OPENROUTER_API_KEY`).
 
@@ -57,7 +56,7 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 ### Logging + diagnostics
 
 | Key | Default | Effect |
-|---|---|---|
+| --- | --- | --- |
 | `bpmner.logging.dir` | `${BPMNER_LOG_DIR:${LOG_DIR:${BUILD_WORKING_DIRECTORY:${user.dir}}/logs}}` | Directory for run artifact dumps. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, every intermediate artifact (outline JSON, rendered XML, repair attempts) is logged at DEBUG with a length cap. Off for production. Override via env: `BPMNER_LOGGING_DUMP_ARTIFACTS=true`. |
 | `bpmner.logging.artifact-preview-length` | `8000` | Truncation cap for dumped artifacts (characters). |
@@ -67,7 +66,7 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on. Every field matters:
 
 | Field | Type | What it tells you |
-|---|---|---|
+| --- | --- | --- |
 | `source` | `GRAPH` / `XSD` / `LINT` / `RENDER` | Which validator found it. `GRAPH` = `BpmnDefinitionValidator` (structural); `XSD` = schema; `LINT` = Pkl rule engine; `RENDER` = the renderer failed before validation. |
 | `message` | string | Human-readable description. Often quotes the offending element id. |
 | `severity` | `ERROR` / `WARNING` / `INFO` | Only `ERROR` is blocking. Repair fires on blocking diagnostics. |
@@ -89,7 +88,7 @@ bpmner emits structured log lines (SLF4J, bracketed placeholders) and Spring `@E
 
 `BpmnerRunSummaryListener` logs one line per agent process completion:
 
-```
+```text
 Process bpmner-1234 completed in 38.5s actions=12 models=[gpt-4.1×3, gpt-4.1-mini×2] tokens=prompt=15234 completion=2891 cost=$0.18
 ```
 
@@ -97,7 +96,7 @@ Process bpmner-1234 completed in 38.5s actions=12 models=[gpt-4.1×3, gpt-4.1-mi
 
 `BpmnRepairAgent.validate` and `revalidateAndAdvance` log one line per attempt:
 
-```
+```text
 Validation summary: graph=0, xsd=0, lint=2, repairScope=label=2, accepted=false, repairs=1
 ```
 
@@ -132,6 +131,7 @@ Surface: `AgentPlatformBpmnAgentInvoker.generate()` throws this for synchronous 
 Meaning: the planner can't find any applicable action. The most common cause is that every remaining diagnostic has `kind = UNFIXABLE` — no repair tier matches.
 
 Diagnose:
+
 1. Look at the per-validation summary log line. If `repairScope` is empty and `accepted=false`, you're stuck.
 2. Grep the run for `UNFIXABLE` diagnostics. Their `message` field tells you what bpmner gave up on.
 3. Decide: is the diagnostic actually unfixable (a logic error the user must fix), or is the rule's `kind` mis-classified? If the latter, change the Pkl rule's `Repair.kind` and add a handler.
@@ -145,6 +145,7 @@ Meaning: `Budget(actions = N)` exhausted before reaching the goal. **Important**
 Common cause: an LLM action keeps returning *almost-correct* outputs, none of which fully resolve `diagnosticsResolved`. Each attempt is one budget action.
 
 Diagnose:
+
 1. Grep for `Validation summary` lines. Count them — that's roughly the budget consumed.
 2. Look at the diagnostic counts trend. If they're decreasing slowly, the LLM is making progress and you might just need a higher budget. If they're stable or oscillating, escalation isn't working.
 3. Check the repairScope distribution. If it stays at `full_process` and `applyFullLlmRewrite` keeps running without resolving, the LLM may need a stricter prompt — or the diagnostics may need a different `repairScope` so a cheaper tier can pick them up.
@@ -154,6 +155,7 @@ Diagnose:
 Surface: thrown by `BpmnAlignmentAgent.checkAlignment`. Embabel records the failed process state; synchronous programmatic callers see the typed exception from `AgentPlatformBpmnAgentInvoker.generate()`.
 
 Two flavours, distinguished by `report` nullability:
+
 - **`report != null`** — alignment model examined the BPMN and found problems. Read `report.issues` for the breakdown.
 - **`report == null`** — alignment model itself failed (LLM call threw `InvalidLlmReturnFormatException` or `InvalidLlmReturnTypeException`). The exception message has the framework detail; the BPMN was never actually checked. Retry usually fixes this.
 
@@ -165,7 +167,7 @@ Phrase to grep for in logs: `Repair attempt N` (the per-attempt summary). If you
 
 Surface: startup fails fast with:
 
-```
+```text
 Unknown rule profile 'foo'. Available profiles: recommended, strict.
 Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one.
 ```

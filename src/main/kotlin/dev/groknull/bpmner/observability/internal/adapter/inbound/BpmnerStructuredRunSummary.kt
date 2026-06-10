@@ -11,7 +11,6 @@ import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.ProcessOutline
-import dev.groknull.bpmner.repair.AutoFixedBpmnXml
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
@@ -116,7 +115,7 @@ internal class BpmnerStructuredRunSummaryFactory {
     ): BpmnerStructuredRunSummary {
         val usage = process.usage()
         val artifacts = process.blackboard.objects.toArtifacts()
-        val autoFix = artifacts.autoFixed?.autoFixResult ?: artifacts.autoFixResult
+        val autoFix = artifacts.autoFixResult
         val definition = artifacts.rendered?.definition ?: artifacts.outline?.definition
 
         return BpmnerStructuredRunSummary(
@@ -169,7 +168,6 @@ private data class BlackboardArtifacts(
     val outline: ProcessOutline? = null,
     val rendered: RenderedBpmn? = null,
     val validated: ValidatedBpmnXml? = null,
-    val autoFixed: AutoFixedBpmnXml? = null,
     val final: FinalValidatedBpmnXml? = null,
     val autoFixResult: BpmnAutoFixResult? = null,
 )
@@ -184,7 +182,6 @@ private fun List<Any>.toArtifacts(): BlackboardArtifacts {
                 is ProcessOutline -> artifacts.copy(outline = obj)
                 is RenderedBpmn -> artifacts.copy(rendered = obj)
                 is ValidatedBpmnXml -> artifacts.copy(validated = obj)
-                is AutoFixedBpmnXml -> artifacts.copy(autoFixed = obj)
                 is FinalValidatedBpmnXml -> artifacts.copy(final = obj)
                 is BpmnAutoFixResult -> artifacts.copy(autoFixResult = obj)
                 else -> artifacts

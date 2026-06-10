@@ -46,7 +46,6 @@ internal class PklRuleCatalogTest {
         // gets skipped at adapt time — but the loader itself must complete cleanly.
         val catalog = PklRuleCatalog(emptyList(), nlp)
         catalog.activeRules()
-        catalog.llmRuleSpecs()
     }
 
     @Test

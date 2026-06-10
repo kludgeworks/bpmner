@@ -14,7 +14,6 @@ import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class BpmnLayoutAgentTest {
@@ -22,22 +21,6 @@ class BpmnLayoutAgentTest {
         xsdValidator: BpmnXsdValidationPort,
         layoutService: BpmnLayoutService = RecordingLayoutService(),
     ): BpmnLayoutAgent = BpmnLayoutAgent(layoutService, xsdValidator)
-
-    // ---------------------------------------------------------------
-    // autoFixBpmnXml: passthrough (bpmnlint auto-fix retired in #243)
-    // ---------------------------------------------------------------
-
-    @Test
-    fun `auto-fix passes input through unchanged`() {
-        val agent = buildLayoutAgent(RecordingXsdValidator(listOf(emptyList())))
-
-        val definition = testBpmnDefinition()
-        val result = agent.autoFixBpmnXml(ValidatedBpmnXml(definition, "<definitions />"))
-
-        assertEquals("<definitions />", result.xml)
-        assertEquals(definition, result.definition)
-        assertNull(result.autoFixResult, "passthrough must not synthesize an auto-fix result")
-    }
 
     // ---------------------------------------------------------------
     // layoutBpmnXml
@@ -49,8 +32,7 @@ class BpmnLayoutAgentTest {
         val agent = buildLayoutAgent(RecordingXsdValidator(listOf(emptyList())), layoutService)
 
         val definition = testBpmnDefinition()
-        val autoFixed = agent.autoFixBpmnXml(ValidatedBpmnXml(definition, "<definitions />"))
-        val laidOut = agent.layoutBpmnXml(autoFixed)
+        val laidOut = agent.layoutBpmnXml(ValidatedBpmnXml(definition, "<definitions />"))
 
         assertEquals("<definitions laid-out=\"true\" />", laidOut.xml)
         assertEquals(listOf("<definitions />"), layoutService.xmls)

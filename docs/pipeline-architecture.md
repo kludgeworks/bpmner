@@ -25,7 +25,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
 
 ## End-to-end pipeline
 
-```
+```text
            ┌──────────────────────┐             ┌──────────────────────┐
            │ Shell UserInput via  │             │ Web/programmatic     │
            │ Embabel x / execute  │             │ BpmnRequest +        │
@@ -102,11 +102,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
             ┌─────────────────────────────────────────────────────────┐
             │            BpmnLayoutAgent  (layout/)                   │
             │                                                         │
-            │  autoFixBpmnXml                                         │
-            │     │ bounded pre-layout cleanup                        │
-            │     │ XSD-validates output; falls back on rejection     │
-            │     ▼                                                   │
-            │  AutoFixedBpmnXml ─► layoutBpmnXml                      │
+            │  ValidatedBpmnXml ─► layoutBpmnXml                      │
             │     │ deterministic layout via embedded bpmn-auto-layout│
             │     ▼                                                   │
             │  LayoutedBpmnXml ─► validateFinalBpmnXml                │
@@ -144,7 +140,7 @@ The LLM produces an object with explicit semantic fields (nodes, sequences). Thi
 
 `BpmnRepairAgent` is a six-action Embabel GOAP agent. The planner picks the cheapest applicable action each iteration; a `BpmnRepairEvaluation` blackboard threads through every action via `outputBinding = "repairEval"` + `@RequireNameMatch("repairEval")` so the loop accumulates state across iterations.
 
-```
+```text
 RenderedBpmn ──► validate (cost 0) ──► BpmnRepairEvaluation ──► repairEval blackboard
                                                 │
                                                 ▼
@@ -198,8 +194,7 @@ The Pkl repair contract — what each `RepairKind` means, how rules declare thei
 
 | Action | Input → Output | What happens |
 | --- | --- | --- |
-| `autoFixBpmnXml` | `ValidatedBpmnXml → AutoFixedBpmnXml` | Bounded pre-layout XML cleanup via the GraalJS-hosted `BpmnLayoutPort` cleanup pass. XSD-validates the result; if the cleaned XML is XSD-invalid, the original validated XML is kept. This stage does only narrow structural cleanup, not rule-driven fixes — those run earlier inside `BpmnRepairAgent`. |
-| `layoutBpmnXml` | `AutoFixedBpmnXml → LayoutedBpmnXml` | `BpmnLayoutPort` runs the embedded `bpmn-auto-layout` JS bundle in GraalJS to assign deterministic diagram coordinates (waypoints, shape bounds). |
+| `layoutBpmnXml` | `ValidatedBpmnXml → LayoutedBpmnXml` | `BpmnLayoutPort` runs the embedded `bpmn-auto-layout` JS bundle in GraalJS to assign deterministic diagram coordinates (waypoints, shape bounds). |
 | `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | XSD-validates the layouted XML against the Camunda BPMN schema. Semantic lint rules already ran pre-layout and don't repeat here. XSD failure throws `BpmnLayoutCorruptionException` — the agent does **not** re-enter repair. |
 
 Final validation is intentionally narrow: it catches structural corruption from the layout library itself. Semantic correctness was settled by the repair loop; if the auto-layout pass somehow breaks the XML schema, that's a layout-engine bug, not something the LLM should be asked to fix.
