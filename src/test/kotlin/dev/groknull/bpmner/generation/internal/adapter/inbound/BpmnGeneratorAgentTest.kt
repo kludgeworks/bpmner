@@ -147,7 +147,6 @@ class BpmnGeneratorAgentTest {
         fidelityChecker = BpmnContractFidelityChecker(),
         defaultFlowAssigner = DefaultFlowAssigner(),
         eventPublisher = ApplicationEventPublisher {},
-        contractRenderer = ProcessContractMarkdownRenderer(),
         promptFactory = BpmnGeneratorPromptFactory(ProcessContractMarkdownRenderer()),
     )
 

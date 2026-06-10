@@ -26,6 +26,7 @@ internal class BpmnGenerationGatePromptFactory {
 
             User instruction:
             ${userInput.content}
+
         """.trimIndent()
     }
 
