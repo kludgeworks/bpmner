@@ -42,6 +42,7 @@ import java.util.concurrent.TimeUnit
 @EnabledForLiveLlmProfile
 @ExtendWith(
     SmokeTestSummaryExtension::class,
+    SmokeDiagnosticCapture::class,
     SmokeResultRecorder::class,
 )
 @SpringBootTest

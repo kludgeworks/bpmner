@@ -35,8 +35,11 @@ data class SmokeRunResult(
     val llmTimeMs: Long,
     val toolCallCount: Int,
     val stageBreakdown: Map<String, StageStats>,
+    val diagnostics: List<SmokeDiagnostic> = emptyList(),
+    val diagnosticSummary: Map<String, Int> = emptyMap(),
     val testFingerprint: String,
     val promptFingerprint: String,
+    val promptBaselineHash: String?,
     val embabelVersion: String?,
     val runComplete: Boolean,
 )
@@ -47,4 +50,18 @@ data class StageStats(
     val promptTokens: Int,
     val completionTokens: Int,
     val llmCalls: Int,
+)
+
+/** Aggregated diagnostic emitted by the smoke test harness for repeated parse/retry/validation issues. */
+data class SmokeDiagnostic(
+    val kind: String,
+    val exceptionClass: String?,
+    val messageSignature: String,
+    val messageHash: String,
+    val targetType: String?,
+    val fieldPath: String?,
+    val agentName: String?,
+    val model: String?,
+    val count: Int,
+    val sample: String,
 )
