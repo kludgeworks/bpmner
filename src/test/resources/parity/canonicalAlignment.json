@@ -12,23 +12,23 @@
       "type" : "SERVICE_TASK",
       "name" : "Run credit check"
     }, {
-      "id" : "dec-credit-score-check",
+      "id" : "dec-score-check",
       "type" : "EXCLUSIVE_GATEWAY",
-      "name" : "Credit score sufficient for automatic approval?"
+      "name" : "Is the credit score acceptable?"
     }, {
       "id" : "act-auto-approve",
       "type" : "SERVICE_TASK",
-      "name" : "Auto-approve application"
+      "name" : "Approve application automatically"
     }, {
       "id" : "act-underwriter-review",
       "type" : "USER_TASK",
       "name" : "Review application"
     }, {
-      "id" : "end-auto-approved",
+      "id" : "end-approved",
       "type" : "END_EVENT",
-      "name" : "Application automatically approved"
+      "name" : "Application approved"
     }, {
-      "id" : "end-underwriter-reviewed",
+      "id" : "end-reviewed",
       "type" : "END_EVENT",
       "name" : "Application reviewed by underwriter"
     } ],
@@ -41,36 +41,36 @@
     }, {
       "id" : "Flow_2",
       "sourceRef" : "act-run-credit-check",
-      "targetRef" : "dec-credit-score-check",
+      "targetRef" : "dec-score-check",
       "name" : null,
       "conditionExpression" : null
     }, {
       "id" : "Flow_3",
-      "sourceRef" : "dec-credit-score-check",
+      "sourceRef" : "dec-score-check",
       "targetRef" : "act-auto-approve",
-      "name" : "Score >= 700",
-      "conditionExpression" : "credit score >= 700"
+      "name" : "Score acceptable",
+      "conditionExpression" : "credit score is acceptable"
     }, {
       "id" : "Flow_4",
-      "sourceRef" : "dec-credit-score-check",
+      "sourceRef" : "dec-score-check",
       "targetRef" : "act-underwriter-review",
-      "name" : "Score < 700",
-      "conditionExpression" : "credit score < 700"
+      "name" : "Score not acceptable",
+      "conditionExpression" : null
     }, {
       "id" : "Flow_5",
       "sourceRef" : "act-auto-approve",
-      "targetRef" : "end-auto-approved",
+      "targetRef" : "end-approved",
       "name" : null,
       "conditionExpression" : null
     }, {
       "id" : "Flow_6",
       "sourceRef" : "act-underwriter-review",
-      "targetRef" : "end-underwriter-reviewed",
+      "targetRef" : "end-reviewed",
       "name" : null,
       "conditionExpression" : null
     } ],
     "unreachableElementIds" : [ ]
   },
   "issues" : [ ],
-  "rationale" : "The generated BPMN fully aligns with the process contract: all activities, the decision gateway with both branches, artifacts, actors, end states, and sequence flows are correctly represented with no missing, extra, or contradicted elements."
+  "rationale" : "All contract activities, decisions, branches, artifacts, actors, and end states are fully represented in the generated BPMN with no extra or missing elements."
 }
