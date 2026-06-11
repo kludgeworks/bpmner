@@ -16,12 +16,11 @@ import org.springframework.shell.standard.ShellOption
 /**
  * Dedicated shell entrypoint that runs the BPMN pipeline without the `-o` flag.
  *
- * Embabel's built-in `x`/`execute` defaults to **closed mode** (one agent in isolation), which gets
- * stuck because the BPMN pipeline spans several agents (gate → contract → generator → alignment →
- * repair → layout). **Open mode** (`x ... -o`) composes across all agents and works. This command
- * delegates to embabel's `execute` with open mode forced on, reusing its goal composition,
- * interactive clarification (HITL) loop, and result formatting — so `generate "<description>"` just
- * works.
+ * Embabel's built-in `x`/`execute` defaults to closed mode. Now that the pipeline
+ * is orchestrated by a single `BpmnGenerationAgent`, closed mode works correctly and
+ * we do not need to force open mode. This command delegates to embabel's `execute`
+ * in closed mode, reusing its goal composition, interactive clarification (HITL) loop,
+ * and result formatting — so `generate "<description>"` just works.
  *
  * [ShellCommands] is resolved through an [ObjectProvider] so this bean instantiates even in contexts
  * where the embabel shell is not active (e.g. non-shell `@SpringBootTest` contexts); the provider is
@@ -46,7 +45,7 @@ internal class BpmnShellCommands(
     ): String {
         val rendered = shellCommands.getObject().execute(
             intent = intentFor(description, outputFile),
-            open = true,
+            open = false,
             showPrompts = false,
             showLlmResponses = false,
             debug = false,
@@ -74,7 +73,8 @@ internal class BpmnShellCommands(
     // filename is easy to miss. Recover it from BpmnResult.content's marker and echo it as the very
     // last line. The marker is contiguous within embabel's (block-coloured) output, so it matches
     // directly; if absent (clarification/error), the result is returned unchanged.
-    private fun withTrailingOutputLocation(rendered: String): String {
+    private fun withTrailingOutputLocation(rendered: String?): String {
+        if (rendered == null) return ""
         val outputPath = OUTPUT_LOCATION.find(rendered)?.groupValues?.get(1)?.trim()
         return if (outputPath.isNullOrBlank()) rendered else "$rendered\n\nWrote BPMN to: $outputPath"
     }

@@ -136,9 +136,32 @@ _TAGS = {
     )
     for s in glob(
         ["kotlin/**/*Test.kt"],
-        exclude = ["kotlin/**/*SmokeTest.kt"],
+        exclude = [
+            "kotlin/**/*SmokeTest.kt",
+            "kotlin/**/*CaptureGoldenFixturesTest.kt",
+        ],
     )
 ]]
+
+java_junit5_test(
+    name = "CaptureGoldenFixturesTest",
+    timeout = "eternal",
+    env_inherit = [
+        "OPENAI_API_KEY",
+        "ANTHROPIC_API_KEY",
+        "GEMINI_API_KEY",
+        "MISTRAL_API_KEY",
+        "DEEPSEEK_API_KEY",
+        "OPENROUTER_API_KEY",
+        "SPRING_PROFILES_ACTIVE",
+    ],
+    tags = [
+        "live-llm",
+        "no-remote",
+    ],
+    test_class = "dev.groknull.bpmner.orchestration.CaptureGoldenFixturesTest",
+    runtime_deps = JUNIT5_DEPS + [":bpmner_tests_lib"],
+)
 
 # --- Live-LLM smoke tests (unique attributes; excluded from the glob above) ---
 

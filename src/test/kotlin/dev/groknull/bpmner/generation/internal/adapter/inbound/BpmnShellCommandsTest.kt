@@ -23,17 +23,17 @@ class BpmnShellCommandsTest {
     }
 
     @Test
-    fun `generate delegates to embabel execute forcing open mode`() {
+    fun `generate delegates to embabel execute in closed mode`() {
         val shellCommands = mock(ShellCommands::class.java)
-        // Forced open mode (2nd arg = true); every other flag off except the default showPlanning.
+        // Closed mode (2nd arg = false); every other flag off except the default showPlanning.
         `when`(
-            shellCommands.execute("Make toast", true, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
         ).thenReturn("Generated BPMN")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
 
         assertEquals("Generated BPMN", result)
-        verify(shellCommands).execute("Make toast", true, false, false, false, false, false, false, true, null)
+        verify(shellCommands).execute("Make toast", false, false, false, false, false, false, false, true, null)
     }
 
     @Test
@@ -41,13 +41,13 @@ class BpmnShellCommandsTest {
         val shellCommands = mock(ShellCommands::class.java)
         val expectedIntent = "Make toast\n\nWrite the generated BPMN to the file: toast.bpmn"
         `when`(
-            shellCommands.execute(expectedIntent, true, false, false, false, false, false, false, true, null),
+            shellCommands.execute(expectedIntent, false, false, false, false, false, false, false, true, null),
         ).thenReturn("ok")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast", "toast.bpmn")
 
         assertEquals("ok", result)
-        verify(shellCommands).execute(expectedIntent, true, false, false, false, false, false, false, true, null)
+        verify(shellCommands).execute(expectedIntent, false, false, false, false, false, false, false, true, null)
     }
 
     @Test
@@ -65,7 +65,7 @@ class BpmnShellCommandsTest {
             Tool usage:
             """.trimIndent()
         `when`(
-            shellCommands.execute("Make toast", true, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
         ).thenReturn(rendered)
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
@@ -77,7 +77,7 @@ class BpmnShellCommandsTest {
     fun `no trailing line is added when nothing was generated`() {
         val shellCommands = mock(ShellCommands::class.java)
         `when`(
-            shellCommands.execute("Make toast", true, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
         ).thenReturn("I'm sorry. I don't know how to proceed.")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")

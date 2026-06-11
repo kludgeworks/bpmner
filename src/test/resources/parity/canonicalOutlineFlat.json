@@ -1,0 +1,197 @@
+{
+  "processId" : "Process_credit_application",
+  "processName" : "Credit application process",
+  "nodes" : [ {
+    "id" : "StartEvent_1",
+    "type" : "START_EVENT",
+    "name" : "Credit application received",
+    "eventDefinition" : {
+      "type" : "MESSAGE",
+      "timerKind" : null,
+      "expression" : null,
+      "messageRef" : "Message_CreditApplication",
+      "signalRef" : null,
+      "errorRef" : null,
+      "escalationRef" : null
+    },
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-run-credit-check",
+    "type" : "SERVICE_TASK",
+    "name" : "Run credit check",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "dec-credit-score",
+    "type" : "EXCLUSIVE_GATEWAY",
+    "name" : "Is the credit score at least 700?",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-approve-application",
+    "type" : "SERVICE_TASK",
+    "name" : "Approve application",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-underwriter-review",
+    "type" : "USER_TASK",
+    "name" : "Review application as underwriter",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "end-approved",
+    "type" : "END_EVENT",
+    "name" : "Application approved",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "end-underwriter-review-complete",
+    "type" : "END_EVENT",
+    "name" : "Underwriter review complete",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  } ],
+  "sequences" : [ {
+    "id" : "Flow_1",
+    "sourceRef" : "StartEvent_1",
+    "targetRef" : "act-run-credit-check",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_2",
+    "sourceRef" : "act-run-credit-check",
+    "targetRef" : "dec-credit-score",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_3",
+    "sourceRef" : "dec-credit-score",
+    "targetRef" : "act-approve-application",
+    "name" : "Score at least 700",
+    "conditionExpression" : "score >= 700",
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_4",
+    "sourceRef" : "dec-credit-score",
+    "targetRef" : "act-underwriter-review",
+    "name" : "Score below 700",
+    "conditionExpression" : null,
+    "isDefault" : true,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_5",
+    "sourceRef" : "act-approve-application",
+    "targetRef" : "end-approved",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_6",
+    "sourceRef" : "act-underwriter-review",
+    "targetRef" : "end-underwriter-review-complete",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  } ],
+  "messages" : [ {
+    "id" : "Message_CreditApplication",
+    "name" : "Credit application"
+  } ],
+  "signals" : [ ],
+  "errors" : [ ],
+  "escalations" : [ ],
+  "annotations" : [ ],
+  "groups" : [ ],
+  "associations" : [ ],
+  "dataObjects" : [ ],
+  "dataStores" : [ ],
+  "dataAssociations" : [ ],
+  "participants" : [ {
+    "id" : "Participant_credit_application",
+    "name" : "Credit application process",
+    "processRef" : "Process_credit_application"
+  } ],
+  "lanes" : [ {
+    "id" : "Lane_system",
+    "name" : "System",
+    "participantId" : "Participant_credit_application",
+    "flowNodeRefs" : [ "StartEvent_1", "act-run-credit-check", "dec-credit-score", "act-approve-application", "end-approved" ]
+  }, {
+    "id" : "Lane_underwriter",
+    "name" : "Underwriter",
+    "participantId" : "Participant_credit_application",
+    "flowNodeRefs" : [ "act-underwriter-review", "end-underwriter-review-complete" ]
+  } ],
+  "messageFlows" : [ ]
+}

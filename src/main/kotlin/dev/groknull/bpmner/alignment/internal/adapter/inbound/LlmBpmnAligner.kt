@@ -5,18 +5,14 @@
 
 package dev.groknull.bpmner.alignment.internal.adapter.inbound
 
-import com.embabel.agent.api.annotation.AchievesGoal
-import com.embabel.agent.api.annotation.Action
-import com.embabel.agent.api.annotation.Agent
-import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
-import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
@@ -29,37 +25,20 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
-import org.jmolecules.architecture.hexagonal.Application
+import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.ApplicationEventPublisher
+import org.springframework.stereotype.Component
 
-@Application
-@Agent(description = "Verify semantic alignment between process contract and generated BPMN")
-internal class BpmnAlignmentAgent(
+@PrimaryAdapter
+@Component
+internal class LlmBpmnAligner(
     private val config: BpmnConfig,
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
     private val contractRenderer: ProcessContractMarkdownRenderer,
     private val eventPublisher: ApplicationEventPublisher,
-) {
-    @AchievesGoal(
-        description = "Verify semantic alignment between process contract and generated BPMN",
-        export =
-        Export(
-            name = "checkAlignment",
-            remote = true,
-            startingInputTypes = [
-                BpmnRequest::class,
-                ReadyBpmnContext::class,
-                ValidatedProcessContract::class,
-                FinalValidatedBpmnXml::class,
-            ],
-        ),
-    )
-    @Action(
-        description = "Verify semantic alignment between process contract and generated BPMN",
-        actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
-    )
-    fun checkAlignment(
+) : BpmnAligner {
+    override fun align(
         ready: ReadyBpmnContext,
         contract: ValidatedProcessContract,
         bpmn: FinalValidatedBpmnXml,
@@ -100,9 +79,10 @@ internal class BpmnAlignmentAgent(
         contract: ProcessContract,
         summary: BpmnDefinitionSummary,
     ): AlignmentFindings = try {
-        promptRunner
+        val result = promptRunner
             .creating(AlignmentFindings::class.java)
             .fromTemplate("bpmner/check_alignment", templateModel(request, contract, summary))
+        result
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnAlignmentException(
             message = "Alignment model failed to produce a structured report: ${e.message}",

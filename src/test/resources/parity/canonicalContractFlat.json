@@ -1,0 +1,131 @@
+{
+  "id" : "contract-credit-application",
+  "processName" : "Credit application process",
+  "summary" : "Process that runs a credit check when a customer submits a credit application, approves it automatically if the score is at least 700, or routes it to a human underwriter for review otherwise.",
+  "start" : {
+    "trigger" : {
+      "type" : "MESSAGE",
+      "description" : "Customer submits a credit application",
+      "timerKind" : null,
+      "expression" : null,
+      "messageName" : "credit application submitted",
+      "signalName" : null
+    },
+    "sourceIds" : [ "ev-1" ]
+  },
+  "activities" : [ {
+    "id" : "act-run-credit-check",
+    "name" : "Run credit check",
+    "kind" : "SERVICE",
+    "actorId" : null,
+    "sourceIds" : [ "ev-1" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ ],
+    "dataOutputIds" : [ ]
+  }, {
+    "id" : "act-approve-application",
+    "name" : "Approve application",
+    "kind" : "SERVICE",
+    "actorId" : null,
+    "sourceIds" : [ "ev-2" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ ],
+    "dataOutputIds" : [ ]
+  }, {
+    "id" : "act-underwriter-review",
+    "name" : "Review application as underwriter",
+    "kind" : "USER",
+    "actorId" : "actor-underwriter",
+    "sourceIds" : [ "ev-3" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ ],
+    "dataOutputIds" : [ ]
+  } ],
+  "decisions" : [ {
+    "id" : "dec-credit-score",
+    "question" : "Is the credit score at least 700?",
+    "branches" : [ {
+      "id" : "br-approved",
+      "label" : "Score at least 700",
+      "kind" : "CONDITIONAL",
+      "condition" : "score >= 700",
+      "triggerKind" : null,
+      "triggerDetail" : null,
+      "nextRef" : "act-approve-application"
+    }, {
+      "id" : "br-underwriter",
+      "label" : "Score below 700",
+      "kind" : "DEFAULT",
+      "condition" : null,
+      "triggerKind" : null,
+      "triggerDetail" : null,
+      "nextRef" : "act-underwriter-review"
+    } ],
+    "kind" : "EXCLUSIVE",
+    "sourceIds" : [ "ev-2", "ev-3" ]
+  } ],
+  "actors" : [ {
+    "id" : "actor-underwriter",
+    "name" : "Underwriter",
+    "role" : "Reviews credit applications that do not meet the automatic approval threshold"
+  } ],
+  "artifacts" : [ ],
+  "endStates" : [ {
+    "id" : "end-approved",
+    "name" : "Application approved",
+    "kind" : "NORMAL",
+    "sourceIds" : [ "ev-2" ],
+    "errorCode" : null,
+    "messageName" : null,
+    "signalName" : null,
+    "escalationCode" : null
+  }, {
+    "id" : "end-underwriter-review-complete",
+    "name" : "Underwriter review complete",
+    "kind" : "NORMAL",
+    "sourceIds" : [ "ev-3" ],
+    "errorCode" : null,
+    "messageName" : null,
+    "signalName" : null,
+    "escalationCode" : null
+  } ],
+  "intermediateThrows" : [ ],
+  "subProcesses" : [ ],
+  "eventSubProcesses" : [ ],
+  "assumptions" : [ {
+    "id" : "asm-1",
+    "text" : "The automatic approval path ends normally after the application is approved; no further steps or notifications are described in the source.",
+    "sourceIds" : [ "ev-2" ]
+  }, {
+    "id" : "asm-2",
+    "text" : "The underwriter review path ends normally once the underwriter completes their review; the outcome of that review (e.g. approve or decline) is not described in the source.",
+    "sourceIds" : [ "ev-3" ]
+  }, {
+    "id" : "asm-3",
+    "text" : "No exception handling (e.g. credit check failure, timeout) is described in the source; none has been modelled.",
+    "sourceIds" : [ "ev-1" ]
+  }, {
+    "id" : "asm-4",
+    "text" : "No input or output data artifacts (e.g. application form, credit report) are explicitly named in the source; none have been modelled.",
+    "sourceIds" : [ "ev-1" ]
+  }, {
+    "id" : "asm-5",
+    "text" : "The start trigger is treated as a MESSAGE event (an inbound submission from the customer); the source does not specify a technical trigger mechanism.",
+    "sourceIds" : [ "ev-1" ]
+  } ]
+}
