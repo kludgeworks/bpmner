@@ -30,8 +30,8 @@ internal class AgentPlatformBpmnAgentInvoker(
         assessment: ProcessInputAssessment,
     ): BpmnResult {
         val agent =
-            agentPlatform.agents().find { it.name == GENERATE_BPMN_GOAL_NAME }
-                ?: error("Agent platform has no agent exporting goal '$GENERATE_BPMN_GOAL_NAME'")
+            agentPlatform.agents().find { it.name == GENERATION_AGENT_NAME }
+                ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
         val process =
             agentPlatform.createAgentProcessFrom(
                 agent,
@@ -59,8 +59,8 @@ internal class AgentPlatformBpmnAgentInvoker(
         assessment: ProcessInputAssessment,
     ): String {
         val agent =
-            agentPlatform.agents().find { it.name == GENERATE_BPMN_GOAL_NAME }
-                ?: error("Agent platform has no agent exporting goal '$GENERATE_BPMN_GOAL_NAME'")
+            agentPlatform.agents().find { it.name == GENERATION_AGENT_NAME }
+                ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
         val process =
             agentPlatform.createAgentProcessFrom(
                 agent,
@@ -89,6 +89,6 @@ internal class AgentPlatformBpmnAgentInvoker(
     )
 
     companion object {
-        private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"
+        private const val GENERATION_AGENT_NAME = "BpmnGenerationAgent"
     }
 }

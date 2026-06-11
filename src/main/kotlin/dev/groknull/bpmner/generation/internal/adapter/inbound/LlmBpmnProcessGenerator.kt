@@ -13,6 +13,8 @@ import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnFidelitySeverity
 import dev.groknull.bpmner.generation.BpmnProcessGenerator
@@ -20,17 +22,15 @@ import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.ProcessOutline
 import dev.groknull.bpmner.generation.ValidatedOutline
+import dev.groknull.bpmner.generation.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
-import dev.groknull.bpmner.generation.BpmnRenderer
-import org.springframework.context.ApplicationEventPublisher
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @PrimaryAdapter
@@ -41,10 +41,14 @@ internal class LlmBpmnProcessGenerator(
     private val fidelityChecker: BpmnContractFidelityChecker,
     private val defaultFlowAssigner: DefaultFlowAssigner,
     private val contractRenderer: ProcessContractMarkdownRenderer,
-    private val bpmnConverter: BpmnRenderer,
+    private val graphRenderer: BpmnGraphRenderer,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnProcessGenerator {
     private val logger = LoggerFactory.getLogger(LlmBpmnProcessGenerator::class.java)
+
+    companion object {
+        private const val MAIN_PHASE_OWNER = "generateBpmn"
+    }
 
     /**
      * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
@@ -130,6 +134,55 @@ internal class LlmBpmnProcessGenerator(
         return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
     }
 
+    override fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
+        val definition = outline.definition
+
+        val objectOwners = buildMap {
+            put("process", MAIN_PHASE_OWNER)
+            definition.nodes.forEach { put("nodes[id=${it.id}]", MAIN_PHASE_OWNER) }
+            definition.sequences.forEach { put("sequences[id=${it.id}]", MAIN_PHASE_OWNER) }
+        }
+        val composed = dev.groknull.bpmner.core.ComposedProcessGraph(
+            definition = definition,
+            objectOwnersByObjectRef = objectOwners,
+        )
+        logger.info(
+            "Composition summary: nodes={}, edges={}, subprocesses={}",
+            definition.nodes.size,
+            definition.sequences.size,
+            outline.outline.metrics.subprocessCount,
+        )
+
+        val elementOwners = buildMap {
+            put(definition.processId, objectOwners.getValue("process"))
+            definition.nodes.forEach { node ->
+                val owner = objectOwners.getValue("nodes[id=${node.id}]")
+                put(node.id, owner)
+                put("${node.id}_di", owner)
+            }
+            definition.sequences.forEach { edge ->
+                val owner = objectOwners.getValue("sequences[id=${edge.id}]")
+                put(edge.id, owner)
+                put("${edge.id}_di", owner)
+            }
+        }
+        val owned = dev.groknull.bpmner.core.OwnedElementGraph(
+            composedGraph = composed,
+            elementOwnersByElementId = elementOwners,
+            objectOwnersByObjectRef = objectOwners,
+        )
+
+        val graph = LaidOutProcessGraph(ownedGraph = owned, definition = definition)
+        logArtifactDump("graph", graph)
+        return graph
+    }
+
+    override fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
+        val rendered = graphRenderer.render(graph)
+        eventPublisher.publishEvent(dev.groknull.bpmner.generation.BpmnGeneratedEvent(ready.request, rendered))
+        return rendered
+    }
+
     private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {
         if (outline.definition.processId.isBlank()) {
             add(
@@ -175,47 +228,4 @@ internal class LlmBpmnProcessGenerator(
             "- ${advice.kind}: ${advice.shape}\n    examples: $examples\n    avoid:    $avoid"
         },
     )
-
-    override fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
-        val definition = outline.definition
-
-        val mainPhaseOwner = "system"
-
-        val objectOwners = buildMap {
-            put("process", mainPhaseOwner)
-            definition.nodes.forEach { put("nodes[id=${it.id}]", mainPhaseOwner) }
-            definition.sequences.forEach { put("sequences[id=${it.id}]", mainPhaseOwner) }
-        }
-        val composed = dev.groknull.bpmner.core.ComposedProcessGraph(
-            definition = definition,
-            objectOwnersByObjectRef = objectOwners,
-        )
-
-        val elementOwners = buildMap {
-            put(definition.processId, objectOwners.getValue("process"))
-            definition.nodes.forEach { node ->
-                val owner = objectOwners.getValue("nodes[id=${node.id}]")
-                put(node.id, owner)
-                put("${node.id}_di", owner)
-            }
-            definition.sequences.forEach { edge ->
-                val owner = objectOwners.getValue("sequences[id=${edge.id}]")
-                put(edge.id, owner)
-                put("${edge.id}_di", owner)
-            }
-        }
-        val owned = dev.groknull.bpmner.core.OwnedElementGraph(
-            composedGraph = composed,
-            elementOwnersByElementId = elementOwners,
-            objectOwnersByObjectRef = objectOwners,
-        )
-
-        return LaidOutProcessGraph(ownedGraph = owned, definition = definition)
-    }
-
-    override fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
-        val rendered = bpmnConverter.render(graph)
-        eventPublisher.publishEvent(dev.groknull.bpmner.generation.BpmnGeneratedEvent(ready.request, rendered))
-        return rendered
-    }
 }
