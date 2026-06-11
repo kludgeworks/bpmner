@@ -23,7 +23,6 @@ import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnProcessGenerator
-import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.BpmnRequestDrafter
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
@@ -37,14 +36,10 @@ import dev.groknull.bpmner.repair.BpmnRepairer
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
-import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
-import org.springframework.context.ApplicationEventPublisher
 import java.io.File
 
-@Application
 @Agent(description = "Single idiomatic agent for happy-path BPMN generation")
-@Suppress("LongParameterList")
 internal class BpmnGenerationAgent(
     private val requestDrafter: BpmnRequestDrafter,
     private val requestResolver: BpmnRequestResolver,
@@ -56,9 +51,7 @@ internal class BpmnGenerationAgent(
     private val xsdValidationPort: BpmnXsdValidationPort,
     private val aligner: BpmnAligner,
     private val flowAssigner: DefaultFlowAssigner,
-    private val bpmnConverter: BpmnRenderer,
     private val config: BpmnConfig,
-    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnGenerationAgent::class.java)
 
@@ -90,47 +83,11 @@ internal class BpmnGenerationAgent(
     }
 
     @Action fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
-        val definition = outline.definition
-
-        val mainPhaseOwner = "system"
-
-        val objectOwners = buildMap {
-            put("process", mainPhaseOwner)
-            definition.nodes.forEach { put("nodes[id=${it.id}]", mainPhaseOwner) }
-            definition.sequences.forEach { put("sequences[id=${it.id}]", mainPhaseOwner) }
-        }
-        val composed = dev.groknull.bpmner.core.ComposedProcessGraph(
-            definition = definition,
-            objectOwnersByObjectRef = objectOwners,
-        )
-
-        val elementOwners = buildMap {
-            put(definition.processId, objectOwners.getValue("process"))
-            definition.nodes.forEach { node ->
-                val owner = objectOwners.getValue("nodes[id=${node.id}]")
-                put(node.id, owner)
-                put("${node.id}_di", owner)
-            }
-            definition.sequences.forEach { edge ->
-                val owner = objectOwners.getValue("sequences[id=${edge.id}]")
-                put(edge.id, owner)
-                put("${edge.id}_di", owner)
-            }
-        }
-        val owned = dev.groknull.bpmner.core.OwnedElementGraph(
-            composedGraph = composed,
-            elementOwnersByElementId = elementOwners,
-            objectOwnersByObjectRef = objectOwners,
-        )
-
-        return LaidOutProcessGraph(ownedGraph = owned, definition = definition)
+        return processGenerator.composeGraph(outline)
     }
 
     @Action fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
-        val rendered = bpmnConverter.render(graph)
-        logArtifactDump("rendered-bpmn-xml", rendered.xml)
-        eventPublisher.publishEvent(dev.groknull.bpmner.generation.BpmnGeneratedEvent(ready.request, rendered))
-        return rendered
+        return processGenerator.render(ready, graph)
     }
 
     @Action
@@ -168,7 +125,6 @@ internal class BpmnGenerationAgent(
         description = "Generate a complete BPMN definition from user input",
         export = Export(
             name = "generateBpmn",
-            remote = true,
             startingInputTypes = [UserInput::class, BpmnRequest::class],
         ),
     )
@@ -184,22 +140,5 @@ internal class BpmnGenerationAgent(
             xml = aligned.xml,
             alignmentReport = aligned.alignmentReport,
         )
-    }
-
-    private fun logArtifactDump(
-        artifactType: String,
-        content: Any,
-    ) {
-        if (logger.isDebugEnabled) {
-            val asString =
-                when (content) {
-                    is String -> content
-                    else -> content.toString() // We don't have objectMapper here, but toString should be fine or just ignore. Wait, I should implement it.
-                }
-            logger.debug(
-                "=== ARTIFACT DUMP ($artifactType) ===\n{}\n=== END ARTIFACT DUMP ===",
-                asString,
-            )
-        }
     }
 }
