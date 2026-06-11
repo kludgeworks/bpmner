@@ -6,7 +6,7 @@
     "elements" : [ {
       "id" : "StartEvent_1",
       "type" : "START_EVENT",
-      "name" : "Credit application received"
+      "name" : "Credit application submitted"
     }, {
       "id" : "act-run-credit-check",
       "type" : "SERVICE_TASK",
@@ -14,7 +14,7 @@
     }, {
       "id" : "dec-credit-score-check",
       "type" : "EXCLUSIVE_GATEWAY",
-      "name" : "Credit score sufficient?"
+      "name" : "Credit score sufficient for automatic approval?"
     }, {
       "id" : "act-auto-approve",
       "type" : "SERVICE_TASK",
@@ -24,11 +24,11 @@
       "type" : "USER_TASK",
       "name" : "Review application"
     }, {
-      "id" : "end-approved",
+      "id" : "end-auto-approved",
       "type" : "END_EVENT",
-      "name" : "Application approved"
+      "name" : "Application automatically approved"
     }, {
-      "id" : "end-reviewed",
+      "id" : "end-underwriter-reviewed",
       "type" : "END_EVENT",
       "name" : "Application reviewed by underwriter"
     } ],
@@ -55,22 +55,22 @@
       "sourceRef" : "dec-credit-score-check",
       "targetRef" : "act-underwriter-review",
       "name" : "Score < 700",
-      "conditionExpression" : null
+      "conditionExpression" : "credit score < 700"
     }, {
       "id" : "Flow_5",
       "sourceRef" : "act-auto-approve",
-      "targetRef" : "end-approved",
+      "targetRef" : "end-auto-approved",
       "name" : null,
       "conditionExpression" : null
     }, {
       "id" : "Flow_6",
       "sourceRef" : "act-underwriter-review",
-      "targetRef" : "end-reviewed",
+      "targetRef" : "end-underwriter-reviewed",
       "name" : null,
       "conditionExpression" : null
     } ],
     "unreachableElementIds" : [ ]
   },
   "issues" : [ ],
-  "rationale" : "The generated BPMN fully aligns with the process contract: all activities, the exclusive gateway with correct branching conditions, both end states, and the message start event assumption are properly represented with matching IDs and semantics."
+  "rationale" : "The generated BPMN fully aligns with the process contract: all activities, the decision gateway with both branches, artifacts, actors, end states, and sequence flows are correctly represented with no missing, extra, or contradicted elements."
 }
