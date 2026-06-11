@@ -1,7 +1,7 @@
 {
   "id" : "contract-credit-application",
   "processName" : "Credit Application Process",
-  "summary" : "Process that runs a credit check when a customer submits a credit application, automatically approves it if the score is at least 700, or routes it to a human underwriter for manual review otherwise.",
+  "summary" : "Process that runs a credit check when a customer submits a credit application, then either approves it automatically if the score is acceptable or routes it to a human underwriter for review.",
   "start" : {
     "trigger" : {
       "type" : "MESSAGE",
@@ -29,7 +29,7 @@
     "dataOutputIds" : [ "art-credit-score" ]
   }, {
     "id" : "act-auto-approve",
-    "name" : "Auto-approve application",
+    "name" : "Approve application automatically",
     "kind" : "SERVICE",
     "actorId" : null,
     "sourceIds" : [ "src-1" ],
@@ -57,21 +57,21 @@
     "dataOutputIds" : [ "art-approval-decision" ]
   } ],
   "decisions" : [ {
-    "id" : "dec-credit-score-check",
-    "question" : "Is the credit score at least 700?",
+    "id" : "dec-score-check",
+    "question" : "Is the credit score acceptable?",
     "branches" : [ {
-      "id" : "br-score-pass",
-      "label" : "Score >= 700",
+      "id" : "br-score-acceptable",
+      "label" : "Score acceptable",
       "kind" : "CONDITIONAL",
-      "condition" : "credit score >= 700",
+      "condition" : "credit score is acceptable",
       "triggerKind" : null,
       "triggerDetail" : null,
       "nextRef" : "act-auto-approve"
     }, {
-      "id" : "br-score-fail",
-      "label" : "Score < 700",
-      "kind" : "CONDITIONAL",
-      "condition" : "credit score < 700",
+      "id" : "br-score-not-acceptable",
+      "label" : "Score not acceptable",
+      "kind" : "DEFAULT",
+      "condition" : null,
       "triggerKind" : null,
       "triggerDetail" : null,
       "nextRef" : "act-underwriter-review"
@@ -86,23 +86,23 @@
   } ],
   "artifacts" : [ {
     "id" : "art-credit-application",
-    "name" : "Credit application",
+    "name" : "Credit Application",
     "kind" : "DATA_OBJECT",
     "description" : "The credit application submitted by the customer"
   }, {
     "id" : "art-credit-score",
-    "name" : "Credit score",
+    "name" : "Credit Score",
     "kind" : "DATA_OBJECT",
     "description" : "The credit score produced by the credit check"
   }, {
     "id" : "art-approval-decision",
-    "name" : "Approval decision",
+    "name" : "Approval Decision",
     "kind" : "DATA_OBJECT",
-    "description" : "The outcome of the credit application review — approved automatically or by the underwriter"
+    "description" : "The outcome of the credit application review, either automatic or manual"
   } ],
   "endStates" : [ {
-    "id" : "end-auto-approved",
-    "name" : "Application automatically approved",
+    "id" : "end-approved",
+    "name" : "Application approved",
     "kind" : "NORMAL",
     "sourceIds" : [ "src-1" ],
     "errorCode" : null,
@@ -110,7 +110,7 @@
     "signalName" : null,
     "escalationCode" : null
   }, {
-    "id" : "end-underwriter-reviewed",
+    "id" : "end-reviewed",
     "name" : "Application reviewed by underwriter",
     "kind" : "NORMAL",
     "sourceIds" : [ "src-1" ],
@@ -123,16 +123,12 @@
   "subProcesses" : [ ],
   "eventSubProcesses" : [ ],
   "assumptions" : [ {
-    "id" : "asm-1",
-    "text" : "The credit check is performed by an automated system service; no specific external provider is named in the source.",
+    "id" : "asn-1",
+    "text" : "The threshold for automatic approval (acceptable credit score) is determined by business rules not specified in the source text; modelled as a conditional branch on the EXCLUSIVE gateway.",
     "sourceIds" : [ "src-1" ]
   }, {
-    "id" : "asm-2",
-    "text" : "The process ends separately after automatic approval and after underwriter review, as no subsequent shared steps are described in the source.",
-    "sourceIds" : [ "src-1" ]
-  }, {
-    "id" : "asm-3",
-    "text" : "The underwriter review produces a final decision without a further approval gateway, as the source does not describe additional steps after the manual review.",
+    "id" : "asn-2",
+    "text" : "The underwriter review results in a separate end state rather than looping back to automatic approval, as the source does not describe a post-review routing step.",
     "sourceIds" : [ "src-1" ]
   } ]
 }

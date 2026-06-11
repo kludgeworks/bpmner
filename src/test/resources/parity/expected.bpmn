@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="bpmner" exporterVersion="0.0.1" id="definitions_bed51d88-7b86-49e1-8bda-938353fe278f" targetNamespace="https://groknull.dev/bpmner">
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="bpmner" exporterVersion="0.0.1" id="definitions_9f99b18e-5335-47ab-9f12-d0f782886f93" targetNamespace="https://groknull.dev/bpmner">
   <bpmn:collaboration xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Collaboration_Process_credit_application"><bpmn:participant id="Participant_credit_application" name="Credit Application Process" processRef="Process_credit_application"/></bpmn:collaboration><process camunda:historyTimeToLive="P180D" id="Process_credit_application" isExecutable="true" name="Credit Application Process"><bpmn:laneSet xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="LaneSet_Process_credit_application"><bpmn:lane id="Lane_system" name="System"><bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef><bpmn:flowNodeRef>act-run-credit-check</bpmn:flowNodeRef><bpmn:flowNodeRef>dec-score-check</bpmn:flowNodeRef><bpmn:flowNodeRef>act-auto-approve</bpmn:flowNodeRef><bpmn:flowNodeRef>end-approved</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_underwriter" name="Underwriter"><bpmn:flowNodeRef>act-underwriter-review</bpmn:flowNodeRef><bpmn:flowNodeRef>end-reviewed</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
     <startEvent id="StartEvent_1" name="Credit application submitted">
       <outgoing>Flow_1</outgoing>
@@ -30,7 +30,7 @@
     <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="act-run-credit-check"/>
     <sequenceFlow id="Flow_2" sourceRef="act-run-credit-check" targetRef="dec-score-check"/>
     <sequenceFlow id="Flow_3" name="Score acceptable" sourceRef="dec-score-check" targetRef="act-auto-approve">
-      <conditionExpression id="conditionExpression_d852405f-d0f1-4921-8691-b02008abc237">credit score is acceptable</conditionExpression>
+      <conditionExpression id="conditionExpression_0f2c0553-b007-4287-a282-fd81f25cdbb8">credit score is acceptable</conditionExpression>
     </sequenceFlow>
     <sequenceFlow id="Flow_4" name="Score not acceptable" sourceRef="dec-score-check" targetRef="act-underwriter-review"/>
     <sequenceFlow id="Flow_5" sourceRef="act-auto-approve" targetRef="end-approved"/>

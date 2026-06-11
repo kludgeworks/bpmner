@@ -72,5 +72,5 @@
     "unreachableElementIds" : [ ]
   },
   "issues" : [ ],
-  "rationale" : "All contract activities, decisions, branches, artifacts, actors, and end states are fully represented in the generated BPMN with no extra or missing elements."
+  "rationale" : "The generated BPMN fully aligns with the contract: all activities, the exclusive gateway with both branches, both end states, and all actors are correctly represented with no extra or missing elements."
 }
