@@ -171,6 +171,7 @@ jobs:
           cp "$logs/test.outputs/smoke-results.jsonl" "$dest/" 2>/dev/null || true
           cp "$logs/test.xml" "$dest/" 2>/dev/null || true
           cp -R "$logs/test_attempts" "$dest/" 2>/dev/null || true
+          cp src/test/resources/prompt-baselines.json "$dest/" 2>/dev/null || true
           echo "Collected for ${{ matrix.provider }}:"
           ls -la "$dest" || true
 

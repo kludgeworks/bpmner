@@ -45,8 +45,25 @@ class SmokeRunResultTest {
                     "extraction" to
                         StageStats(model = "sonnet", promptTokens = 1000, completionTokens = 240, llmCalls = 1),
                 ),
+                diagnostics =
+                listOf(
+                    SmokeDiagnostic(
+                        kind = "llm_parse_error",
+                        exceptionClass = "KotlinInvalidNullException",
+                        messageSignature = "missing SourceEvidence id",
+                        messageHash = "beadfeed",
+                        targetType = "dev.groknull.bpmner.core.SourceEvidence",
+                        fieldPath = "id",
+                        agentName = "readiness",
+                        model = "deepseek-chat",
+                        count = 2,
+                        sample = "SourceEvidence id is missing",
+                    ),
+                ),
+                diagnosticSummary = mapOf("llm_parse_error" to 2),
                 testFingerprint = "aaaa",
                 promptFingerprint = "bbbb",
+                promptBaselineHash = "cccc",
                 embabelVersion = "0.4.0",
                 runComplete = true,
             )

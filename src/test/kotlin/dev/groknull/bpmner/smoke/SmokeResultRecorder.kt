@@ -84,6 +84,7 @@ class SmokeResultRecorder :
         message: String?,
     ) {
         val snap = capture(context)?.snapshot()
+        val diagnostics = enrichDiagnosticModels(SmokeDiagnosticCapture.snapshot(), snap)
         val testMethod = context.displayName
         val signature = failureSignature(outcome, testMethod, message)
         rows.add(
@@ -109,8 +110,11 @@ class SmokeResultRecorder :
                 llmTimeMs = snap?.llmTimeMs ?: 0,
                 toolCallCount = snap?.toolCallCount ?: 0,
                 stageBreakdown = snap?.stageBreakdown ?: emptyMap(),
+                diagnostics = diagnostics,
+                diagnosticSummary = diagnostics.groupingBy { it.kind }.fold(0) { total, diagnostic -> total + diagnostic.count },
                 testFingerprint = testClassFingerprint(context),
                 promptFingerprint = cachedPromptFingerprint,
+                promptBaselineHash = cachedPromptBaselineHash,
                 embabelVersion = LlmInvocation::class.java.`package`?.implementationVersion,
                 runComplete = false,
             ),
@@ -118,6 +122,30 @@ class SmokeResultRecorder :
     }
 
     private fun capture(context: ExtensionContext): PerTestEventCapture? = bean(context, PerTestEventCapture::class.java)
+
+    private fun enrichDiagnosticModels(
+        diagnostics: List<SmokeDiagnostic>,
+        snap: PerTestEventCapture.Capture?,
+    ): List<SmokeDiagnostic> {
+        if (snap == null) return diagnostics
+        return diagnostics.map { diagnostic ->
+            val model = diagnostic.model ?: modelForDiagnostic(diagnostic, snap)
+            if (model == null) diagnostic else diagnostic.copy(model = model)
+        }
+    }
+
+    private fun modelForDiagnostic(
+        diagnostic: SmokeDiagnostic,
+        snap: PerTestEventCapture.Capture,
+    ): String? {
+        diagnostic.agentName?.let { agentName ->
+            snap.stageBreakdown[agentName]?.model?.let { return it }
+            snap.stageBreakdown.entries.firstOrNull { (stage, _) ->
+                agentName.contains(stage) || stage.contains(agentName)
+            }?.value?.model?.let { return it }
+        }
+        return snap.servedModel
+    }
 
     private fun <T : Any> bean(
         context: ExtensionContext,
@@ -176,6 +204,12 @@ class SmokeResultRecorder :
         }
     }
 
+    private val cachedPromptBaselineHash: String? by lazy {
+        SmokeResultRecorder::class.java.classLoader.getResource(PROMPT_BASELINES)?.let { url ->
+            runCatching { sha256(url.readBytes()) }.getOrNull()
+        }
+    }
+
     private fun env(name: String): String? = System.getenv(name)?.takeIf { it.isNotBlank() }
 
     private fun outputDir(): Path = Path.of(
@@ -194,6 +228,7 @@ class SmokeResultRecorder :
         const val MAX_MESSAGE = 2000
         const val MAX_SIGNATURE = 160
         const val UNKNOWN = "unknown"
+        const val PROMPT_BASELINES = "prompt-baselines.json"
         val VOCAB_PROMPTS =
             listOf(
                 "prompts/bpmner/assess_readiness.jinja",
