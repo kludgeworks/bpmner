@@ -1,34 +1,79 @@
 # Agent Overview
 
-bpmner is composed of seven Embabel `@Agent` classes. Each one owns a bounded responsibility and exposes one or more `@Action` methods; the framework's GOAP planner chains them by type. This page is a quick lookup: what each agent is for, where it lives, and what configures it.
+bpmner is built around a single orchestrating Embabel `@Agent` plus two narrow support agents. The orchestrator owns the end-to-end `generateBpmn` goal; each of its `@Action` methods is a thin shim that delegates to a public **port**, and the real work lives behind those ports in plain Spring components. This is a deliberate change from the earlier design, where every pipeline stage was its own `@Agent` chained by the GOAP planner.
 
-For the planner mechanics — how actions are chained, cost ordering, failure modes — see [`goap-lifecycle.md`](./goap-lifecycle.md).
+> Historical note: the per-stage agents (`BpmnGenerationGateAgent`, contract, generator, repair, alignment) were consolidated into the single `BpmnGenerationAgent` orchestrator. The names below are the only agents that exist today.
 
-| Agent | File | Actions | Achieves goal | Configures |
+For the planner mechanics — how the orchestrator's actions are chained, cost ordering, failure modes — see [`goap-lifecycle.md`](./goap-lifecycle.md).
+
+## The three agents
+
+| Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
-| `BpmnGenerationGateAgent` | `generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt` | 6: `draftBpmnRequest`, `resolveBpmnRequest`, `approveReadyRequest`, `askForClarification`, `applyClarificationAnswers`, `readinessBlocked` | `prepareBpmnGeneration` | `bpmner.readiness.*`, role: `readiness-assessor` |
-| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` | `assessReadiness` | `bpmner.readiness.*`, `bpmner.budget.readiness`, role: `readiness-assessor` |
-| `BpmnContractAgent` | `contract/internal/adapter/inbound/BpmnContractAgent.kt` | 1: `extractProcessContract` | `extractProcessContract` | `bpmner.contract.*`, role: `contract-extractor` |
-| `BpmnGeneratorAgent` | `generation/internal/adapter/inbound/BpmnGeneratorAgent.kt` | 4: `createOutline`, `composeGraph`, `renderBpmnXml`, `finalizeBpmn` | `generateBpmn` (on `finalizeBpmn`) | role: `generator`, `bpmner.budget.generation`, `bpmner.logging.dump-artifacts` |
-| `BpmnRepairAgent` | `repair/internal/adapter/inbound/BpmnRepairAgent.kt` | 6: `validate`, `applyDeterministicFixes`, `applyLlmLabelPatch`, `applyLlmStructuralPatch`, `applyFullLlmRewrite`, `finalize` | (chained into the generator path) | roles: `repair-label`, `repair-patch`, `repair-rewrite`; `bpmner.repair.*` |
-| `BpmnAlignmentAgent` | `alignment/internal/adapter/inbound/BpmnAlignmentAgent.kt` | 1: `checkAlignment` | `checkAlignment` | `bpmner.alignment.*`, role: `alignment-validator` |
-| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | (chained) | GraalJS-backed; no LLM |
+| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 12 typed shims: `draft`, `resolve`, `assessReadiness`, `provideReadyContext`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish` | `generateBpmn` (on `finish`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
+| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. |
+| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline — see below. |
 
-Twenty-three `@Action` methods total. The `BpmnProgressProjectionObserver` maps pipeline progress to user-facing labels — see [`operator-guide.md`](./operator-guide.md#progress-events-sse).
+The `BpmnProgressProjectionObserver` maps action names to user-facing labels — see [`operator-guide.md`](./operator-guide.md#progress-events-sse).
+
+## `BpmnGenerationAgent` — the orchestrator
+
+`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes twelve `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` + `ProcessInputAssessment` (web/programmatic) through to a `BpmnResult`.
+
+Each action delegates to a public port; the port is implemented as a plain Spring component in its owning module (the LLM-backed ones are `@PrimaryAdapter @Component` under each module's `internal/adapter/inbound/`):
+
+| Action | Input → Output | Port | Implementation |
+| --- | --- | --- | --- |
+| `draft` | `(UserInput, OperationContext) → BpmnRequestDraft` | `BpmnRequestDrafter` | `LlmBpmnRequestDrafter` (`generation/`) — LLM extracts a structured draft from shell prose. |
+| `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`core/`) — deterministic: resolves description/style-guide/output paths via `InputPathResolver`. |
+| `assessReadiness` | `BpmnRequest → ProcessInputAssessment` | `BpmnReadinessInvoker` | `AgentPlatformBpmnReadinessInvoker` (`readiness/`) — runs `BpmnReadinessAgent` as a scoped sub-process. |
+| `provideReadyContext` | `(BpmnRequest, ProcessInputAssessment) → ReadyBpmnContext` | (inline) | Requires `verdict == READY`; wraps request + assessment into `ReadyBpmnContext`. |
+| `extractContract` | `(ReadyBpmnContext, OperationContext) → ValidatedProcessContract` | `ProcessContractExtractor` | `LlmProcessContractExtractor` (`contract/`) — distils a source-grounded `ProcessContract`. |
+| `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract, OperationContext) → ValidatedOutline` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` (`generation/`) — LLM produces a typed `BpmnDefinition` outline. |
+| `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` — deterministic composition/ownership. |
+| `render` | `(ReadyBpmnContext, LaidOutProcessGraph) → RenderedBpmn` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator`, which delegates rendering to the domain `@Component` `BpmnGraphRenderer` (holds the `BpmnRenderer` secondary port). |
+| `validate` | `(ReadyBpmnContext, LaidOutProcessGraph, RenderedBpmn, ValidatedProcessContract) → ValidatedBpmnXml` | `BpmnRepairer` | `DefaultBpmnRepairer` (`repair/`) — **validate-only**: a single validation pass (`BpmnRepairAdvancer.initialEvaluation`). |
+| `layout` | `ValidatedBpmnXml → FinalValidatedBpmnXml` | (inline) | Calls `BpmnLayoutPort` + `BpmnXsdValidationPort` directly; `error(...)`s on XSD-invalid output. Does **not** route through `BpmnLayoutAgent`. |
+| `align` | `(ReadyBpmnContext, ValidatedProcessContract, FinalValidatedBpmnXml, OperationContext) → AlignedBpmnXml` | `BpmnAligner` | `LlmBpmnAligner` (`alignment/`) — semantic comparison vs the contract. `FIRE_ONCE`. |
+| `finish` | `(ReadyBpmnContext, AlignedBpmnXml) → BpmnResult` | (inline) | Writes the output file (mkdirs parent, skips blank paths), returns `BpmnResult(status = GENERATED)`. Carries `@AchievesGoal(name = "generateBpmn")`. `FIRE_ONCE`. |
+
+The `layout`, `align`, and `finish` actions are annotated `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`.
+
+## `BpmnReadinessAgent` — scoped readiness sub-process
+
+`BpmnReadinessAgent` exposes a single action, `assessReadiness` (`BpmnRequest → ProcessInputAssessment`), annotated `@AchievesGoal(name = "assessReadiness")`. It is **not** part of the orchestrator's plan. Instead, the orchestrator's `assessReadiness` action calls `BpmnReadinessInvoker`, whose implementation `AgentPlatformBpmnReadinessInvoker` creates a fresh agent process bound to **only** `BpmnReadinessAgent`:
+
+```kotlin
+val agent = agentPlatform.agents().find { it.name == "BpmnReadinessAgent" } ...
+val process = agentPlatform.createAgentProcessFrom(agent, ProcessOptions(
+    budget = Budget(actions = config.budget.readiness), ephemeral = true, ...
+), request)
+```
+
+The single-agent binding is load-bearing: a whole-platform plan for `ProcessInputAssessment` would also match the orchestrator's own `assessReadiness` action (which calls this invoker), so an unscoped sub-process could re-select it and recurse without bound. Scoping the sub-process to the readiness agent removes that goal collision.
+
+## `BpmnLayoutAgent` — standalone layout agent
+
+`BpmnLayoutAgent` is a self-contained agent that owns the post-validation layout pipeline:
+
+| Action | Input → Output | What happens |
+| --- | --- | --- |
+| `layoutBpmnXml` | `ValidatedBpmnXml → LayoutedBpmnXml` | Runs the embedded `bpmn-auto-layout` JS bundle (GraalJS, no LLM) via `BpmnLayoutPort` to assign diagram coordinates. |
+| `validateFinalBpmnXml` | `LayoutedBpmnXml → FinalValidatedBpmnXml` | XSD-validates the layouted XML and checks BPMNDI completeness (one diagram/plane, shapes/edges for every node/sequence). Throws `BpmnLayoutCorruptionException` on failure. Carries `@AchievesGoal(name = "finalizeLayout")`. |
+
+Although this agent exists and achieves its own goal, the orchestrator's `layout` action **does not use it** — the orchestrator runs the same `BpmnLayoutPort` + XSD check inline. `BpmnLayoutAgent` remains available as a standalone, separately-invokable layout goal.
 
 ## How actions chain
 
-Actions never name each other directly. The planner threads outputs to inputs by type — `BpmnGeneratorAgent.createOutline` returns `ValidatedOutline`, `BpmnGeneratorAgent.composeGraph` takes `ValidatedOutline`, the planner connects them. The same mechanism crosses agent boundaries: `BpmnGeneratorAgent.renderBpmnXml` returns `RenderedBpmn`; `BpmnRepairAgent.validate` takes `RenderedBpmn`; cross-agent chain established without any explicit wiring.
+Actions never name each other directly. The planner threads outputs to inputs **by type**: `createOutline` returns `ValidatedOutline`, `composeGraph` takes `ValidatedOutline`, the planner connects them. Because the whole happy path now lives on one orchestrator, the chain is a single linear sequence of distinct types from `BpmnRequestDraft` through to `BpmnResult` — there is no blackboard name-matching (`@RequireNameMatch`) anywhere in the deployed plan.
 
-The repair agent is the one exception: its six actions all return the same type (`BpmnRepairEvaluation`) and the planner needs `outputBinding = "repairEval"` + `@RequireNameMatch("repairEval")` to thread one evolving instance through all six. See [`goap-lifecycle.md`](./goap-lifecycle.md#blackboard-threading).
+## Adding a new pipeline step
 
-## Adding a new agent
+To add a stage to the happy path:
 
-If you're adding a new pipeline stage as a new agent:
-
-1. Define new domain types in `core/` (input and output of the new agent).
-2. Create the `@Agent` class under `<module>/internal/adapter/inbound/`.
-3. Annotate one or more `@Action` methods. The planner picks them up at startup; no explicit registration.
-4. If the new agent should achieve a top-level goal, annotate one action with `@AchievesGoal(name = "...")`.
-5. Add the agent to the table above and add labels to `BpmnProgressProjectionObserver.ACTION_LABELS` for every new action.
-6. Add a `*ModuleTest` to cover the new module's Spring wiring.
+1. Define the new domain types in `core/` (or the owning module) for the step's input and output.
+2. Add the real logic behind a public **port** in the owning module (a `@PrimaryAdapter @Component` if it is LLM-backed, a plain `@Component` otherwise).
+3. Add a thin `@Action` to `BpmnGenerationAgent` that delegates to the port. The planner picks it up by type at startup; no explicit registration.
+4. If the new step needs a separately-invokable goal, give its agent action an `@AchievesGoal(...)`.
+5. Add a label for every new action name to `BpmnProgressProjectionObserver.ACTION_LABELS`.
+6. Add a `*ModuleTest` to cover the new module's Spring wiring; `BpmnerModulithTest` verifies module boundaries.

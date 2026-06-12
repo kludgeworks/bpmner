@@ -13,12 +13,9 @@ import org.springframework.stereotype.Component
 /**
  * Thin domain service that owns the [BpmnRenderer] secondary port.
  *
- * The deterministic graph→XML render previously sat inline in
- * [dev.groknull.bpmner.generation.internal.adapter.inbound.LlmBpmnProcessGenerator],
- * but a `@PrimaryAdapter` may not depend on a `@SecondaryPort` under the hexagonal
- * architecture rule (BpmnerModulithTest). Holding the port in a plain domain `@Component`
- * here — mirroring `repair/internal/domain/BpmnRepairAdvancer` — keeps the inbound adapter
- * clean while the generator delegates the actual render.
+ * A `@PrimaryAdapter` may not depend on a `@SecondaryPort` under the hexagonal architecture rule
+ * (BpmnerModulithTest), so the port lives in a plain domain `@Component` here — mirroring
+ * `repair/internal/domain/BpmnRepairAdvancer` — and `LlmBpmnProcessGenerator` delegates rendering to it.
  */
 @Component
 internal class BpmnGraphRenderer(

@@ -26,9 +26,8 @@ import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
-import org.w3c.dom.Element
-import java.io.ByteArrayInputStream
-import javax.xml.parsers.DocumentBuilderFactory
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 
 /**
  * End-to-end offline test of the generation pipeline: the LLM stages are stubbed with the canned
@@ -53,7 +52,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 )
 class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
     @Autowired
-    private lateinit var agentPlatform: AgentPlatform
+    private lateinit var platform: AgentPlatform
 
     @Autowired
     private lateinit var objectMapper: ObjectMapper
@@ -77,6 +76,8 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         @Suppress("UNCHECKED_CAST")
         return null as T
     }
+
+    private fun assertXml(xml: String): XmlAssert = assertThat(xml).withNamespaceContext(NAMESPACES)
 
     @Test
     fun pipelineProducesStructurallyCompleteBpmnFromCannedStages() {
@@ -102,7 +103,7 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         whenCreateObject({ true }, AlignmentFindings::class.java)
             .thenReturn(loadFixtureObject("canonicalAlignment.json"))
 
-        val result = AgentPlatformTypedOps(agentPlatform).transform(
+        val result = AgentPlatformTypedOps(platform).transform(
             PromptFixtures.canonicalRequest,
             BpmnResult::class.java,
             ProcessOptions(budget = Budget(actions = 15), ephemeral = true),
@@ -112,48 +113,41 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         val xml = result.xml
         assertTrue(!xml.isNullOrBlank(), "expected non-blank BPMN xml")
 
-        val dom = parse(xml!!)
-
-        // Exactly one process, and the flow-node / sequence-flow / lane shape the outline implies.
-        assertEquals(1, dom.count("process"), "expected exactly one <process>")
-        assertEquals(1, dom.count("startEvent"), "start events")
-        assertEquals(2, dom.count("endEvent"), "end events")
-        assertEquals(2, dom.count("serviceTask"), "service tasks")
-        assertEquals(1, dom.count("userTask"), "user tasks")
-        assertEquals(1, dom.count("exclusiveGateway"), "exclusive gateways")
-        assertEquals(6, dom.count("sequenceFlow"), "sequence flows")
-        assertEquals(2, dom.count("lane"), "lanes")
+        // Exactly one process, and the flow-node / sequence-flow / lane shape the canned outline implies.
+        assertXml(xml!!).nodesByXPath("//bpmn:process").hasSize(1)
+        assertXml(xml).nodesByXPath("//bpmn:startEvent").hasSize(1)
+        assertXml(xml).nodesByXPath("//bpmn:endEvent").hasSize(2)
+        assertXml(xml).nodesByXPath("//bpmn:serviceTask").hasSize(2)
+        assertXml(xml).nodesByXPath("//bpmn:userTask").hasSize(1)
+        assertXml(xml).nodesByXPath("//bpmn:exclusiveGateway").hasSize(1)
+        assertXml(xml).nodesByXPath("//bpmn:sequenceFlow").hasSize(6)
+        assertXml(xml).nodesByXPath("//bpmn:lane").hasSize(2)
 
         // Every id from the canned outline survives compose → render → layout into the rendered model.
         val expectedIds = listOf(
             "Process_credit_application",
-            "StartEvent_1", "act-run-credit-check", "dec-score-check", "act-auto-approve",
-            "act-underwriter-review", "end-approved", "end-reviewed",
-            "Flow_1", "Flow_2", "Flow_3", "Flow_4", "Flow_5", "Flow_6",
+            "StartEvent_1",
+            "act-run-credit-check",
+            "dec-score-check",
+            "act-auto-approve",
+            "act-underwriter-review",
+            "end-approved",
+            "end-reviewed",
+            "Flow_1",
+            "Flow_2",
+            "Flow_3",
+            "Flow_4",
+            "Flow_5",
+            "Flow_6",
         )
         expectedIds.forEach { id ->
-            assertTrue(dom.ids.contains(id), "missing element id in rendered BPMN: $id")
+            assertXml(xml).nodesByXPath("//*[@id='$id']").exist()
         }
     }
 
-    private class Dom(private val localNameCounts: Map<String, Int>, val ids: Set<String>) {
-        fun count(localName: String): Int = localNameCounts[localName] ?: 0
-    }
-
-    private fun parse(xml: String): Dom {
-        val doc = DocumentBuilderFactory.newInstance()
-            .apply { isNamespaceAware = true }
-            .newDocumentBuilder()
-            .parse(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        val counts = mutableMapOf<String, Int>()
-        val ids = mutableSetOf<String>()
-        val all = doc.getElementsByTagName("*")
-        for (i in 0 until all.length) {
-            val el = all.item(i) as Element
-            val localName = el.localName ?: el.nodeName.substringAfter(':')
-            counts[localName] = (counts[localName] ?: 0) + 1
-            el.getAttribute("id").takeIf { it.isNotEmpty() }?.let { ids.add(it) }
-        }
-        return Dom(counts, ids)
+    private companion object {
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+        )
     }
 }

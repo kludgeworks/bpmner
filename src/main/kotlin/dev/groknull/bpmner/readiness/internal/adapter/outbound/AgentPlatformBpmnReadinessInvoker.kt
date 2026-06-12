@@ -27,10 +27,9 @@ internal class AgentPlatformBpmnReadinessInvoker(
     /**
      * Runs the readiness assessment as a sub-process scoped to **only** [BpmnReadinessAgent].
      *
-     * A whole-platform plan for `ProcessInputAssessment` (the previous `AgentPlatformTypedOps.transform`)
-     * also matches the orchestrator's `assessReadiness` action — which calls this invoker again — so the
-     * readiness sub-process could re-select it and recurse without bound. Binding the process to the
-     * single readiness agent removes that goal collision.
+     * A whole-platform plan for `ProcessInputAssessment` also matches the orchestrator's `assessReadiness`
+     * action — which calls this invoker — so the readiness sub-process could re-select it and recurse
+     * without bound. Binding the process to the single readiness agent removes that goal collision.
      */
     override fun assess(request: BpmnRequest): ProcessInputAssessment {
         val agent = agentPlatform.agents().find { it.name == READINESS_AGENT_NAME }
