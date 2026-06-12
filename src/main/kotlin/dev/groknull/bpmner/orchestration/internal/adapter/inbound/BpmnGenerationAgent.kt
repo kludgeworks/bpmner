@@ -105,7 +105,8 @@ internal class BpmnGenerationAgent(
         val layouted = LayoutedBpmnXml(definition = validated.definition, xml = layoutedXml)
         val xsdIssues = xsdValidationPort.validateDetailed(layouted.xml)
         if (xsdIssues.isNotEmpty()) {
-            error("Auto-layout produced structurally invalid BPMN: " + xsdIssues.joinToString("; ") { it.message ?: "" })
+            val details = xsdIssues.mapNotNull { it.message }.joinToString("; ").ifBlank { "Unknown XSD validation error" }
+            error("Auto-layout produced structurally invalid BPMN: $details")
         }
         return FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml)
     }
@@ -132,7 +133,11 @@ internal class BpmnGenerationAgent(
         ready: ReadyBpmnContext,
         aligned: AlignedBpmnXml,
     ): dev.groknull.bpmner.generation.BpmnResult {
-        ready.request.outputFile?.let { File(it).writeText(aligned.xml, Charsets.UTF_8) }
+        ready.request.outputFile?.takeIf { it.isNotBlank() }?.let { filePath ->
+            val file = File(filePath)
+            file.parentFile?.mkdirs()
+            file.writeText(aligned.xml, Charsets.UTF_8)
+        }
         return BpmnResult(
             outputFile = ready.request.outputFile,
             status = BpmnGenerationStatus.GENERATED,
