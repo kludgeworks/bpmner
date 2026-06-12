@@ -1,0 +1,230 @@
+{
+  "processId" : "Process_credit_application",
+  "processName" : "Credit Application Process",
+  "nodes" : [ {
+    "id" : "StartEvent_1",
+    "type" : "START_EVENT",
+    "name" : "Credit application submitted",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-run-credit-check",
+    "type" : "SERVICE_TASK",
+    "name" : "Run credit check",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "dec-score-check",
+    "type" : "EXCLUSIVE_GATEWAY",
+    "name" : "Is the credit score acceptable?",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-auto-approve",
+    "type" : "SERVICE_TASK",
+    "name" : "Approve application automatically",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "act-underwriter-review",
+    "type" : "USER_TASK",
+    "name" : "Review application",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "end-approved",
+    "type" : "END_EVENT",
+    "name" : "Application approved",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  }, {
+    "id" : "end-reviewed",
+    "type" : "END_EVENT",
+    "name" : "Application reviewed by underwriter",
+    "eventDefinition" : null,
+    "isInterrupting" : null,
+    "decisionRef" : null,
+    "messageRef" : null,
+    "attachedToRef" : null,
+    "cancelActivity" : null,
+    "multiInstance" : null,
+    "standardLoop" : null,
+    "triggeredByEvent" : null,
+    "calledElement" : null,
+    "parentRef" : null
+  } ],
+  "sequences" : [ {
+    "id" : "Flow_1",
+    "sourceRef" : "StartEvent_1",
+    "targetRef" : "act-run-credit-check",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_2",
+    "sourceRef" : "act-run-credit-check",
+    "targetRef" : "dec-score-check",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_3",
+    "sourceRef" : "dec-score-check",
+    "targetRef" : "act-auto-approve",
+    "name" : "Score acceptable",
+    "conditionExpression" : "credit score is acceptable",
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_4",
+    "sourceRef" : "dec-score-check",
+    "targetRef" : "act-underwriter-review",
+    "name" : "Score not acceptable",
+    "conditionExpression" : null,
+    "isDefault" : true,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_5",
+    "sourceRef" : "act-auto-approve",
+    "targetRef" : "end-approved",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  }, {
+    "id" : "Flow_6",
+    "sourceRef" : "act-underwriter-review",
+    "targetRef" : "end-reviewed",
+    "name" : null,
+    "conditionExpression" : null,
+    "isDefault" : false,
+    "parentRef" : null
+  } ],
+  "messages" : [ ],
+  "signals" : [ ],
+  "errors" : [ ],
+  "escalations" : [ ],
+  "annotations" : [ ],
+  "groups" : [ ],
+  "associations" : [ ],
+  "dataObjects" : [ {
+    "id" : "art-credit-application",
+    "name" : "Credit Application"
+  }, {
+    "id" : "art-credit-score",
+    "name" : "Credit Score"
+  }, {
+    "id" : "art-approval-decision",
+    "name" : "Approval Decision"
+  } ],
+  "dataStores" : [ ],
+  "dataAssociations" : [ {
+    "id" : "DataAssoc_1",
+    "sourceRef" : "act-run-credit-check",
+    "targetRef" : "art-credit-application",
+    "direction" : "READ"
+  }, {
+    "id" : "DataAssoc_2",
+    "sourceRef" : "act-run-credit-check",
+    "targetRef" : "art-credit-score",
+    "direction" : "WRITE"
+  }, {
+    "id" : "DataAssoc_3",
+    "sourceRef" : "act-auto-approve",
+    "targetRef" : "art-credit-score",
+    "direction" : "READ"
+  }, {
+    "id" : "DataAssoc_4",
+    "sourceRef" : "act-auto-approve",
+    "targetRef" : "art-approval-decision",
+    "direction" : "WRITE"
+  }, {
+    "id" : "DataAssoc_5",
+    "sourceRef" : "act-underwriter-review",
+    "targetRef" : "art-credit-application",
+    "direction" : "READ"
+  }, {
+    "id" : "DataAssoc_6",
+    "sourceRef" : "act-underwriter-review",
+    "targetRef" : "art-credit-score",
+    "direction" : "READ"
+  }, {
+    "id" : "DataAssoc_7",
+    "sourceRef" : "act-underwriter-review",
+    "targetRef" : "art-approval-decision",
+    "direction" : "WRITE"
+  } ],
+  "participants" : [ {
+    "id" : "Participant_credit_application",
+    "name" : "Credit Application Process",
+    "processRef" : "Process_credit_application"
+  } ],
+  "lanes" : [ {
+    "id" : "Lane_system",
+    "name" : "System",
+    "participantId" : "Participant_credit_application",
+    "flowNodeRefs" : [ "StartEvent_1", "act-run-credit-check", "dec-score-check", "act-auto-approve", "end-approved" ]
+  }, {
+    "id" : "Lane_underwriter",
+    "name" : "Underwriter",
+    "participantId" : "Participant_credit_application",
+    "flowNodeRefs" : [ "act-underwriter-review", "end-reviewed" ]
+  } ],
+  "messageFlows" : [ ]
+}

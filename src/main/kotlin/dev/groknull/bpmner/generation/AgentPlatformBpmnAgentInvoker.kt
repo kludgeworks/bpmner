@@ -7,12 +7,9 @@ package dev.groknull.bpmner.generation
 
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
 import com.embabel.agent.api.event.AgenticEventListener
-import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
-import com.embabel.agent.core.Goal
 import com.embabel.agent.core.ProcessOptions
-import com.embabel.agent.spi.common.Constants
 import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -32,11 +29,12 @@ internal class AgentPlatformBpmnAgentInvoker(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): BpmnResult {
-        val resultClass = BpmnResult::class.java
-        val goalAgent = synthesizeResultAgent(resultClass)
+        val agent =
+            agentPlatform.agents().find { it.name == GENERATION_AGENT_NAME }
+                ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
         val process =
             agentPlatform.createAgentProcessFrom(
-                goalAgent,
+                agent,
                 syncGenerationProcessOptions(),
                 request,
                 assessment,
@@ -53,7 +51,7 @@ internal class AgentPlatformBpmnAgentInvoker(
         // exception surface above. The TypedOps consolidation can revisit when/if Embabel
         // changes TypedOps to use `fromProcessStatus()` internally.
         val execution = AgentProcessExecution.fromProcessStatus(request, process)
-        return resultClass.cast(execution.output)
+        return BpmnResult::class.java.cast(execution.output)
     }
 
     override fun startAsync(
@@ -61,8 +59,8 @@ internal class AgentPlatformBpmnAgentInvoker(
         assessment: ProcessInputAssessment,
     ): String {
         val agent =
-            agentPlatform.agents().find { it.name == GENERATE_BPMN_GOAL_NAME }
-                ?: error("Agent platform has no agent exporting goal '$GENERATE_BPMN_GOAL_NAME'")
+            agentPlatform.agents().find { it.name == GENERATION_AGENT_NAME }
+                ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
         val process =
             agentPlatform.createAgentProcessFrom(
                 agent,
@@ -73,20 +71,6 @@ internal class AgentPlatformBpmnAgentInvoker(
         agentPlatform.start(process)
         return process.id
     }
-
-    // Seed both request and readiness assessment; AgentPlatformTypedOps supports one input binding.
-    private fun synthesizeResultAgent(resultClass: Class<*>): Agent = agentPlatform
-        .createAgent(
-            name = "goal-${resultClass.simpleName}",
-            provider = Constants.EMBABEL_PROVIDER,
-            description = "Goal agent for ${resultClass.simpleName}",
-        ).withSingleGoal(
-            Goal(
-                name = "create-${resultClass.simpleName}",
-                description = "Create ${resultClass.simpleName}",
-                satisfiedBy = resultClass,
-            ),
-        )
 
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
     // is short-lived and never queried for status — Phase 5 (#220) made this explicit.
@@ -105,6 +89,6 @@ internal class AgentPlatformBpmnAgentInvoker(
     )
 
     companion object {
-        private const val GENERATE_BPMN_GOAL_NAME = "generateBpmn"
+        private const val GENERATION_AGENT_NAME = "BpmnGenerationAgent"
     }
 }

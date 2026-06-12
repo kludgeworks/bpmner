@@ -136,7 +136,9 @@ _TAGS = {
     )
     for s in glob(
         ["kotlin/**/*Test.kt"],
-        exclude = ["kotlin/**/*SmokeTest.kt"],
+        exclude = [
+            "kotlin/**/*SmokeTest.kt",
+        ],
     )
 ]]
 

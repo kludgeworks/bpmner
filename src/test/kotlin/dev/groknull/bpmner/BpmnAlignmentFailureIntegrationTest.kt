@@ -33,7 +33,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnXsdValidator
+import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -56,7 +56,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 )
 class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
-    private lateinit var bpmnXsdValidator: BpmnXsdValidator
+    private lateinit var bpmnXsdValidationPort: BpmnXsdValidationPort
 
     @MockitoBean
     private lateinit var bpmnLintingPort: BpmnLintingPort
@@ -66,16 +66,22 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `alignment failure blocks the pipeline`() {
-        `when`(bpmnXsdValidator.validateDetailed(org.mockito.ArgumentMatchers.anyString()))
+        `when`(bpmnXsdValidationPort.validateDetailed(org.mockito.ArgumentMatchers.anyString()))
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
             .`when`(bpmnLintingPort)
             .lint(anyDefinition())
 
         whenCreateObject(
+            { it.contains("Return only a structured ProcessInputAssessment") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(validAssessment())
+
+        whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
             FlatProcessContract::class.java,
         ).thenReturn(validFlatContract())
+
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, FlatBpmnDefinition::class.java)
             .thenReturn(validFlatDefinition())
 
@@ -98,7 +104,7 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             assertThrows<BpmnAlignmentException> {
                 bpmnAgentInvoker.generate(
                     BpmnRequest(
-                        processDescription = "Unused",
+                        processDescription = "When a user submits an order, we process it and then it is completed.",
                         outputFile = "ignored.bpmn",
                     ),
                     validAssessment(),
@@ -106,8 +112,6 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             }
 
         assertTrue(error.message!!.contains("Generated BPMN does not align with process contract"))
-        // `report` is non-null on the "FAILED verdict" path; null is only used when the alignment
-        // model itself failed to produce a structured response (a separate test would cover that).
         assertEquals(AlignmentVerdict.FAILED, error.report!!.verdict)
     }
 

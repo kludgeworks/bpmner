@@ -5,12 +5,9 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import com.embabel.agent.api.annotation.AchievesGoal
-import com.embabel.agent.api.annotation.Action
-import com.embabel.agent.api.annotation.Agent
-import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.contract.ContractIssueSeverity
+import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
@@ -19,33 +16,20 @@ import dev.groknull.bpmner.core.BpmnConfig
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import org.jmolecules.architecture.hexagonal.Application
+import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
+import org.springframework.stereotype.Component
 
-@Application
-@Agent(description = "Extract a source-grounded process contract from natural-language input")
-internal class BpmnContractAgent(
+@PrimaryAdapter
+@Component
+internal class LlmProcessContractExtractor(
     private val config: BpmnConfig,
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
-) {
-    private val logger = LoggerFactory.getLogger(BpmnContractAgent::class.java)
+) : ProcessContractExtractor {
+    private val logger = LoggerFactory.getLogger(LlmProcessContractExtractor::class.java)
 
-    @AchievesGoal(
-        description = "Extract a source-grounded process contract from natural-language input",
-        export =
-        Export(
-            name = "extractProcessContract",
-            remote = true,
-            startingInputTypes = [
-                ReadyBpmnContext::class,
-            ],
-        ),
-    )
-    @Action(
-        description = "Extract a source-grounded process contract from a BPMN request and readiness assessment",
-    )
-    fun extractProcessContract(
+    override fun extract(
         ready: ReadyBpmnContext,
         context: OperationContext,
     ): ValidatedProcessContract {

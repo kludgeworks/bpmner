@@ -1,0 +1,76 @@
+{
+  "verdict" : "ALIGNED",
+  "bpmnSummary" : {
+    "processId" : "Process_credit_application",
+    "processName" : "Credit Application Process",
+    "elements" : [ {
+      "id" : "StartEvent_1",
+      "type" : "START_EVENT",
+      "name" : "Credit application submitted"
+    }, {
+      "id" : "act-run-credit-check",
+      "type" : "SERVICE_TASK",
+      "name" : "Run credit check"
+    }, {
+      "id" : "dec-score-check",
+      "type" : "EXCLUSIVE_GATEWAY",
+      "name" : "Is the credit score acceptable?"
+    }, {
+      "id" : "act-auto-approve",
+      "type" : "SERVICE_TASK",
+      "name" : "Approve application automatically"
+    }, {
+      "id" : "act-underwriter-review",
+      "type" : "USER_TASK",
+      "name" : "Review application"
+    }, {
+      "id" : "end-approved",
+      "type" : "END_EVENT",
+      "name" : "Application approved"
+    }, {
+      "id" : "end-reviewed",
+      "type" : "END_EVENT",
+      "name" : "Application reviewed by underwriter"
+    } ],
+    "flows" : [ {
+      "id" : "Flow_1",
+      "sourceRef" : "StartEvent_1",
+      "targetRef" : "act-run-credit-check",
+      "name" : null,
+      "conditionExpression" : null
+    }, {
+      "id" : "Flow_2",
+      "sourceRef" : "act-run-credit-check",
+      "targetRef" : "dec-score-check",
+      "name" : null,
+      "conditionExpression" : null
+    }, {
+      "id" : "Flow_3",
+      "sourceRef" : "dec-score-check",
+      "targetRef" : "act-auto-approve",
+      "name" : "Score acceptable",
+      "conditionExpression" : "credit score is acceptable"
+    }, {
+      "id" : "Flow_4",
+      "sourceRef" : "dec-score-check",
+      "targetRef" : "act-underwriter-review",
+      "name" : "Score not acceptable",
+      "conditionExpression" : null
+    }, {
+      "id" : "Flow_5",
+      "sourceRef" : "act-auto-approve",
+      "targetRef" : "end-approved",
+      "name" : null,
+      "conditionExpression" : null
+    }, {
+      "id" : "Flow_6",
+      "sourceRef" : "act-underwriter-review",
+      "targetRef" : "end-reviewed",
+      "name" : null,
+      "conditionExpression" : null
+    } ],
+    "unreachableElementIds" : [ ]
+  },
+  "issues" : [ ],
+  "rationale" : "The generated BPMN fully aligns with the contract: all activities, the exclusive gateway with both branches, both end states, and all actors are correctly represented with no extra or missing elements."
+}

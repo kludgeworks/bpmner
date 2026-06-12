@@ -1,0 +1,134 @@
+{
+  "id" : "contract-credit-application",
+  "processName" : "Credit Application Process",
+  "summary" : "Process that runs a credit check when a customer submits a credit application, then either approves it automatically if the score is acceptable or routes it to a human underwriter for review.",
+  "start" : {
+    "trigger" : {
+      "type" : "MESSAGE",
+      "description" : "Customer submits a credit application",
+      "timerKind" : null,
+      "expression" : null,
+      "messageName" : "credit application submitted",
+      "signalName" : null
+    },
+    "sourceIds" : [ "src-1" ]
+  },
+  "activities" : [ {
+    "id" : "act-run-credit-check",
+    "name" : "Run credit check",
+    "kind" : "SERVICE",
+    "actorId" : null,
+    "sourceIds" : [ "src-1" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ "art-credit-application" ],
+    "dataOutputIds" : [ "art-credit-score" ]
+  }, {
+    "id" : "act-auto-approve",
+    "name" : "Approve application automatically",
+    "kind" : "SERVICE",
+    "actorId" : null,
+    "sourceIds" : [ "src-1" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ "art-credit-score" ],
+    "dataOutputIds" : [ "art-approval-decision" ]
+  }, {
+    "id" : "act-underwriter-review",
+    "name" : "Review application",
+    "kind" : "USER",
+    "actorId" : "actor-underwriter",
+    "sourceIds" : [ "src-1" ],
+    "decisionName" : null,
+    "messageName" : null,
+    "calledElement" : null,
+    "iteration" : null,
+    "boundaryEvents" : [ ],
+    "loop" : null,
+    "dataInputIds" : [ "art-credit-application", "art-credit-score" ],
+    "dataOutputIds" : [ "art-approval-decision" ]
+  } ],
+  "decisions" : [ {
+    "id" : "dec-score-check",
+    "question" : "Is the credit score acceptable?",
+    "branches" : [ {
+      "id" : "br-score-acceptable",
+      "label" : "Score acceptable",
+      "kind" : "CONDITIONAL",
+      "condition" : "credit score is acceptable",
+      "triggerKind" : null,
+      "triggerDetail" : null,
+      "nextRef" : "act-auto-approve"
+    }, {
+      "id" : "br-score-not-acceptable",
+      "label" : "Score not acceptable",
+      "kind" : "DEFAULT",
+      "condition" : null,
+      "triggerKind" : null,
+      "triggerDetail" : null,
+      "nextRef" : "act-underwriter-review"
+    } ],
+    "kind" : "EXCLUSIVE",
+    "sourceIds" : [ "src-1" ]
+  } ],
+  "actors" : [ {
+    "id" : "actor-underwriter",
+    "name" : "Underwriter",
+    "role" : "Human underwriter who reviews credit applications that do not meet the automatic approval threshold"
+  } ],
+  "artifacts" : [ {
+    "id" : "art-credit-application",
+    "name" : "Credit Application",
+    "kind" : "DATA_OBJECT",
+    "description" : "The credit application submitted by the customer"
+  }, {
+    "id" : "art-credit-score",
+    "name" : "Credit Score",
+    "kind" : "DATA_OBJECT",
+    "description" : "The credit score produced by the credit check"
+  }, {
+    "id" : "art-approval-decision",
+    "name" : "Approval Decision",
+    "kind" : "DATA_OBJECT",
+    "description" : "The outcome of the credit application review, either automatic or manual"
+  } ],
+  "endStates" : [ {
+    "id" : "end-approved",
+    "name" : "Application approved",
+    "kind" : "NORMAL",
+    "sourceIds" : [ "src-1" ],
+    "errorCode" : null,
+    "messageName" : null,
+    "signalName" : null,
+    "escalationCode" : null
+  }, {
+    "id" : "end-reviewed",
+    "name" : "Application reviewed by underwriter",
+    "kind" : "NORMAL",
+    "sourceIds" : [ "src-1" ],
+    "errorCode" : null,
+    "messageName" : null,
+    "signalName" : null,
+    "escalationCode" : null
+  } ],
+  "intermediateThrows" : [ ],
+  "subProcesses" : [ ],
+  "eventSubProcesses" : [ ],
+  "assumptions" : [ {
+    "id" : "asn-1",
+    "text" : "The threshold for automatic approval (acceptable credit score) is determined by business rules not specified in the source text; modelled as a conditional branch on the EXCLUSIVE gateway.",
+    "sourceIds" : [ "src-1" ]
+  }, {
+    "id" : "asn-2",
+    "text" : "The underwriter review results in a separate end state rather than looping back to automatic approval, as the source does not describe a post-review routing step.",
+    "sourceIds" : [ "src-1" ]
+  } ]
+}
