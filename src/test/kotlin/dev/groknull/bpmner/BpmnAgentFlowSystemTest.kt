@@ -45,7 +45,6 @@ import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
@@ -76,7 +75,6 @@ import kotlin.io.path.readText
     ],
 )
 @SpringBootTest
-@Disabled("Clarification loop non-functional until #4")
 class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     @MockitoBean
     private lateinit var bpmnXsdValidator: BpmnXsdValidator
