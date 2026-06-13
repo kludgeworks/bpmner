@@ -2,7 +2,7 @@
 	"strictness": 2,
 	"commentTypes": ["logic", "syntax", "style"],
 	"triggerOnUpdates": true,
-	"triggerOnDrafts": false,
+	"triggerOnDrafts": true,
 	"statusCheck": true,
 	"statusCommentsEnabled": true,
 	"updateExistingSummaryComment": true,
@@ -75,9 +75,9 @@
 			"severity": "medium",
 			"scope": ["src/test/**/*.kt"],
 			"rule": "When reviewing tests that generate or validate BPMN XML, do not allow string-based assertions like `assertContains(xml, \"<tag>\")` or `xml.contains(\"attr\")`. All structural XML validation must use `XMLUnit` XPath assertions via `assertXml(xml).nodesByXPath(...)` or `assertXml(xml).valueByXPath(...)`. Fail the review if legacy string-matching is introduced for XML payloads."
-    },
-    {
-      "id": "smoke-covers-new-contract-vocabulary",
+		},
+		{
+			"id": "smoke-covers-new-contract-vocabulary",
 			"severity": "medium",
 			"scope": [
 				"src/main/kotlin/dev/groknull/bpmner/contract/BpmnContractTypes.kt",
