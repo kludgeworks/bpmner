@@ -7,7 +7,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [ main ]
   workflow_dispatch:
     inputs:
@@ -78,8 +78,8 @@ jobs:
   smoke-tests:
     runs-on: ubuntu-latest
     needs: [lint, test-unit]
-    # Skip on fork PRs — org secrets not available to external contributors
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Skip on fork PRs (org secrets not available) and draft PRs
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.event.pull_request.draft == false)
     strategy:
       fail-fast: false    # one flaky provider doesn't cancel the others
       matrix:
