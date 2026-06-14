@@ -233,13 +233,23 @@ data class BpmnLoggingConfig(
  * because the repair loop chains into the generation goal in one GOAP plan; lowering [generation] below today's ceiling
  * risks budget exhaustion on inputs that need substantial repair before reaching the
  * `generateBpmn` goal. Readiness is a separate, much smaller pipeline (no repair loop).
+ *
+ * [maxRepairIterations] bounds the [BpmnRepairLoop]: the loop exits as soon as there are no
+ * blocking diagnostics or the iteration count reaches this ceiling, whichever comes first.
+ * Keep this well below [generation] so a stuck repair loop cannot exhaust the entire GOAP budget.
  */
 data class BpmnBudgetConfig(
     @field:Min(1)
     val generation: Int = 100,
     @field:Min(1)
     val readiness: Int = 20,
-)
+    @field:Min(1)
+    val maxRepairIterations: Int = DEFAULT_MAX_REPAIR_ITERATIONS,
+) {
+    companion object {
+        const val DEFAULT_MAX_REPAIR_ITERATIONS = 5
+    }
+}
 
 data class BpmnRulesConfig(
     // Named rule profile loaded at startup from `linter/pkl/profiles/{Name}Profile.pkl`.

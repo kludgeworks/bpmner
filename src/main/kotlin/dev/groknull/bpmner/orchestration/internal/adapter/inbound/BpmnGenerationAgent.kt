@@ -9,6 +9,7 @@ import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
+import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.domain.io.UserInput
@@ -95,8 +96,9 @@ internal class BpmnGenerationAgent(
         g: LaidOutProcessGraph,
         r: RenderedBpmn,
         c: ValidatedProcessContract,
+        ctx: ActionContext,
     ): ValidatedBpmnXml {
-        return repairer.validateInitial(ready, g, r, c)
+        return repairer.validateInitial(ready, g, r, c, ctx)
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
