@@ -2,7 +2,7 @@
 
 This document describes how bpmner's agent pipeline executes — how Embabel's planner chooses actions, how the framework surfaces failure modes — and the contract that Pkl rules use to declare their repair capability.
 
-The happy path now runs on a **single orchestrating agent**, `BpmnGenerationAgent`. There is no longer an iterative repair GOAP loop in the deployed plan; validation runs a single pass. The GOAP framework concepts below still apply — they govern how the orchestrator's twelve actions are planned and how the two support agents (`BpmnReadinessAgent`, `BpmnLayoutAgent`) run.
+The happy path now runs on a **single orchestrating agent**, `BpmnGenerationAgent`. The validation stage executes an iterative repair loop inside the `BpmnRepairer` port using Embabel's `RepeatUntilAcceptable` mechanism (rather than a top-level GOAP loop in the plan). The GOAP framework concepts below still apply — they govern how the orchestrator's twelve actions are planned and how the two support agents (`BpmnReadinessAgent`, `BpmnLayoutAgent`) run.
 
 ## What is GOAP, in this codebase
 
@@ -12,7 +12,7 @@ The planner uses **cost-based A\*** over the action graph: at each tick it picks
 
 Three signals shape execution:
 
-- **`ReplanRequestedException`** — an action can request that the planner replan from the current blackboard, skipping (blacklisting) this action for the next cycle. Used by the `repair/` domain's dormant fingerprint guards (see [The repair machinery](#the-repair-machinery-dormant)).
+- **`ReplanRequestedException`** — an action can request that the planner replan. In the repair loop, the no-progress and stuck fingerprint guards throw this exception, which is caught at the `BpmnRepairLoop` boundary and converted into a non-improving result to avoid aborting the sub-process while still halting progress on loops (see [The repair machinery](#the-repair-machinery)).
 - **`ProcessExecutionStuckException`** — no applicable action exists for the goal. Thrown when the planner can't find a viable path forward.
 - **`ProcessExecutionTerminatedException`** — `Budget(actions = N)` exhausted before a goal was reached.
 
@@ -49,7 +49,7 @@ See [`agents.md`](./agents.md) for the per-action port delegation table.
    │   createOutline        → ValidatedOutline                            │
    │   composeGraph         → LaidOutProcessGraph                         │
    │   render               → RenderedBpmn                                │
-   │   validate             single pass → ValidatedBpmnXml                 │
+   │   validate             repair loop → ValidatedBpmnXml                 │
    │   layout               inline → FinalValidatedBpmnXml                 │
    │   align                → AlignedBpmnXml                              │
    │   finish  @AchievesGoal(generateBpmn) → BpmnResult                   │
@@ -83,25 +83,24 @@ return ProcessInputAssessment::class.java.cast(
 
 Binding the sub-process to **only** `BpmnReadinessAgent` is load-bearing. A whole-platform plan for `ProcessInputAssessment` would also match the orchestrator's own `assessReadiness` action (which calls this very invoker), so an unscoped sub-process could re-select it and recurse without bound. Scoping to the readiness agent removes that goal collision. The sub-process uses its own tighter `Budget(actions = bpmner.budget.readiness)` (default `20`).
 
-## The `validate` action — a single pass
+## The `validate` action — repair loop
 
-The orchestrator's `validate` action delegates to the `BpmnRepairer` port (`DefaultBpmnRepairer`), which calls `BpmnRepairAdvancer.initialEvaluation(...)`:
+The orchestrator's `validate` action delegates to the `BpmnRepairer` port (`DefaultBpmnRepairer`), which executes an iterative repair loop via `BpmnRepairLoop` if the initial evaluation is not diagnostics-clean:
 
 1. **Pre-flight scan** for unrecognized parser fallbacks; any are surfaced as `UNFIXABLE` diagnostics before Jackson serialisation.
 2. **Normalise default flows** (`DefaultFlowAssigner`).
 3. **Evaluate** via `BpmnContractAwareValidator`, which composes the `BpmnValidator` pipeline (structural + XSD + lint) with the `BpmnContractFidelityChecker` (contract→BPMN topology, only when the base evaluation has no blocking diagnostics).
+4. **Iterative Repair** via `RepeatUntilAcceptable`: runs cost-aware repair appliers (local fix, LLM label patch, LLM structural patch, or full LLM rewrite) for up to `maxRepairIterations` attempts or until no blocking diagnostics remain.
 
-`validateInitial` then returns a `ValidatedBpmnXml(definition, xml, diagnostics, repairAttempts)` and publishes either `BpmnValidationPassedEvent` (clean) or `BpmnValidationFailedEvent` (diagnostics remain). Either way the orchestrator proceeds — **the LLM is not re-prompted to fix diagnostics here.** There is no iterative repair loop in the deployed plan.
+`validateInitial` then returns a `ValidatedBpmnXml(definition, xml, diagnostics, repairAttempts)` and publishes either `BpmnValidationPassedEvent` (clean) or `BpmnValidationFailedEvent` (diagnostics remain).
 
-## The repair machinery (dormant)
+## The repair machinery
 
-The `repair/` module still contains the richer, iterative-repair infrastructure that an earlier design wired into a dedicated GOAP loop. It is **not invoked by the current pipeline** — only `initialEvaluation` is reachable from the orchestrator. It is retained as the basis for a possible future iterative-repair pass:
+The `repair/` module contains the iterative-repair infrastructure that is wired into the `RepeatUntilAcceptable` sub-process:
 
 - `BpmnRepairAdvancer.revalidateAndAdvance(...)` — re-stamps default flows, fingerprint-guards against no-progress / repeated-output / stuck-blocking states (throwing `ReplanRequestedException` via `RepairReplans.signal(...)`), re-renders, re-validates, and appends to attempt history.
 - `BpmnLocalFixApplier` / `BpmnLlmRepairApplier` — deterministic and LLM-driven repair appliers (`applyLlmLabelPatch` / `applyLlmStructuralPatch` / `applyFullLlmRewrite`).
-- `BpmnRepairEvaluation`'s eligibility predicates (`hasLocalFixable`, `hasLlmEligible`, `hasLlmLabelEligible`, `hasLlmStructuralEligible`) that a planner would consult to pick a repair tier.
-
-Treat these as future work: they are present in the codebase but no `@Agent` action calls them today.
+- `BpmnRepairEvaluation`'s eligibility predicates (`hasLocalFixable`, `hasLlmEligible`, `hasLlmLabelEligible`, `hasLlmStructuralEligible`) that the loop uses to select the appropriate repair tier.
 
 ## Stuck vs Terminated
 
@@ -118,7 +117,7 @@ Both are produced by `AgentProcessExecution.fromProcessStatus(request, process)`
 
 ## The Pkl-side repair contract
 
-Even though the iterative repair loop is dormant, the **diagnostic classification** it relied on is still live: `BpmnDiagnosticNormalizer` stamps every diagnostic with a `RepairKind`, a `RepairSafety`, and (for local fixes) a handler name, all sourced from each rule's Pkl `Repair` block.
+The **diagnostic classification** the repair loop relies on is sourced from each rule's Pkl `Repair` block via `BpmnDiagnosticNormalizer`:
 
 Every rule declares a `Repair` block in its Pkl module (`linter/pkl/schema/BpmnRule.pkl`):
 

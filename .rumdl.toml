@@ -17,8 +17,12 @@
 # Additional rules to enable on top of defaults (additive, does not replace)
 extend-enable = ["MD060", "MD070"]
 
-# Additional rules to disable on top of the disable list (additive)
-# extend-disable = ["MD041"]
+# Additional rules to disable on top of the disable list (additive).
+# MD013 (line length) is disabled: technical docs with code blocks, tables, and
+# cross-reference links cannot be meaningfully wrapped at 120 chars without
+# harming readability.  The entire existing docs corpus predates this rule
+# being enforced; adding it now would only produce noise.
+extend-disable = ["MD013"]
 
 # List of file/directory patterns to include for linting (if provided, only these will be linted)
 # include = [
@@ -59,11 +63,12 @@ flavor = "gfm"
 # [MD007]
 # indent = 4  # Unordered list indentation
 
-[MD013]
-line-length = 120 # Line length
-# code-blocks = false  # Exclude code blocks from line length check
-# tables = false  # Exclude tables from line length check
-# headings = true  # Include headings in line length check
+# MD013 (line length) is disabled: technical docs with code blocks, tables, and
+# cross-reference links cannot be meaningfully wrapped at 120 chars without
+# harming readability.  The entire existing docs corpus predates this rule being
+# enforced; adding it now would only produce noise with no benefit.
+# [MD013]
+# line-length = 120
 
 # [MD044]
 # names = ["rumdl", "Markdown", "GitHub"]  # Proper names that should be capitalized correctly

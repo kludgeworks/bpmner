@@ -21,7 +21,7 @@ All four come from `org.jmolecules.architecture.hexagonal`. The DDD building blo
 
 The pattern is consistent across `generation/`, `validation/`, `repair/`, `layout/`, and `observability/`:
 
-```
+```text
 <module>/
 ├── <PrimaryPort>.kt          # @PrimaryPort interfaces (use-cases)
 ├── <SecondaryPort>.kt        # @SecondaryPort interfaces (SPIs)
@@ -47,7 +47,7 @@ A `@PrimaryPort` interface always has an implementation in `internal/domain/` th
 
 `validation/` is the cleanest illustration because every role appears exactly once.
 
-```
+```text
 validation/
 ├── BpmnValidator.kt            @PrimaryPort   (use-case API)
 ├── BpmnLintingPort.kt          @SecondaryPort (rule-evaluation SPI)
@@ -96,7 +96,7 @@ interface BpmnValidator {
 }
 ```
 
-`BpmnValidator` is the **only** thing other modules import from `validation`. The `repair` module's `BpmnRepairAgent` depends on `BpmnContractAwareValidator` (an internal wrapper around `BpmnValidator`), not on `BpmnEvaluationPipeline` or any other internal type.
+`BpmnValidator` is the **only** thing other modules import from `validation`. The `repair` module's `BpmnRepairAdvancer` depends on `BpmnContractAwareValidator` (an internal wrapper around `BpmnValidator`), not on `BpmnEvaluationPipeline` or any other internal type.
 
 ### Secondary port — what `validation` needs
 
@@ -220,7 +220,7 @@ The pattern is uniform enough to be useful, and bent in exactly the places where
 
 ### Secondary ports inside `internal/domain/`
 
-```
+```text
 repair/internal/domain/BpmnRepairPorts.kt    contains:
   @SecondaryPort internal interface BpmnRepairPromptPort
   @SecondaryPort internal interface BpmnPatchApplicationPort

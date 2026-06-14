@@ -41,13 +41,13 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 
 | Role | Used by | Default model |
 | --- | --- | --- |
-| `generator` | `BpmnGeneratorAgent.createOutline` | `gpt-4.1` |
-| `repair-label` | `BpmnRepairAgent.applyLlmLabelPatch` | `gpt-4.1-nano` |
-| `repair-patch` | `BpmnRepairAgent.applyLlmStructuralPatch` | `gpt-4.1-mini` |
-| `repair-rewrite` | `BpmnRepairAgent.applyFullLlmRewrite` | `gpt-4.1` |
+| `generator` | `BpmnGenerationAgent.createOutline` | `gpt-4.1` |
+| `repair-label` | `BpmnLlmRepairApplier.applyLlmLabelPatch` | `gpt-4.1-nano` |
+| `repair-patch` | `BpmnLlmRepairApplier.applyLlmStructuralPatch` | `gpt-4.1-mini` |
+| `repair-rewrite` | `BpmnLlmRepairApplier.applyFullLlmRewrite` | `gpt-4.1` |
 | `readiness-assessor` | `BpmnReadinessAgent.assessReadiness` | (profile default) |
-| `contract-extractor` | `BpmnContractAgent.extractProcessContract` | (profile default) |
-| `alignment-validator` | `BpmnAlignmentAgent.checkAlignment` | (profile default) |
+| `contract-extractor` | `LlmProcessContractExtractor` | (profile default) |
+| `alignment-validator` | `LlmBpmnAligner` | (profile default) |
 
 Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, `application-deepseek.yaml`, and `application-llama.yaml`. The simplest way to run is `mise run bpmner-cli --provider <provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama` (Llama on Cerebras via the OpenRouter proxy); the task reads that provider's API key from 1Password (`op://bpmner/<provider>/api-key`) and sets `SPRING_PROFILES_ACTIVE` for you (add `--web` or `--verbose` to layer on those profiles). To run `bazel` directly instead, pass `--spring.profiles.active=<provider>` (or set `SPRING_PROFILES_ACTIVE`) and ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, or `OPENROUTER_API_KEY`).
 
@@ -94,7 +94,7 @@ Process bpmner-1234 completed in 38.5s actions=12 models=[gpt-4.1×3, gpt-4.1-mi
 
 ### Per-validation summary
 
-`BpmnRepairAgent.validate` and `revalidateAndAdvance` log one line per attempt:
+`BpmnEvaluationPipeline` logs one line per validation attempt:
 
 ```text
 Validation summary: graph=0, xsd=0, lint=2, repairScope=label=2, accepted=false, repairs=1

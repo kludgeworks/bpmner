@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.repair
 
+import com.embabel.agent.api.common.ActionContext
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
@@ -19,5 +20,6 @@ fun interface BpmnRepairer {
         graph: LaidOutProcessGraph,
         rendered: RenderedBpmn,
         contract: ValidatedProcessContract,
+        context: ActionContext,
     ): ValidatedBpmnXml
 }
