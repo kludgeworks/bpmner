@@ -166,7 +166,7 @@ sealed interface ReadinessStage
 data class Assessing(
     val request: BpmnRequest,
     val assessment: ProcessInputAssessment,
-    val round: Int, // G3: carried explicitly; net-new field
+    val round: Int, // clarification rounds completed so far
 ) : ReadinessStage {
 
     // Branch: READY → proceed; not-ready + INTERACTIVE + rounds left → ask;
@@ -219,24 +219,41 @@ data class Blocked(
     )
 }
 
-private const val MAX_ROUNDS = 3 // G3 "max-3-rounds"; net-new constant
+private const val MAX_ROUNDS = 3 // max clarification rounds before Blocked
 
 private fun promptFrom(assessment: ProcessInputAssessment): String {
-    return assessment.clarificationQuestions.joinToString("\n") { it.questionText }
+    val questions = assessment.clarificationQuestions
+    return if (questions.isEmpty()) {
+        assessment.rationale.ifBlank { "Please provide clarification." }
+    } else {
+        questions.joinToString("\n") { it.questionText }
+    }
 }
 
 private fun BpmnRequest.withClarification(
     answers: BpmnClarificationAnswers,
     assessment: ProcessInputAssessment,
 ): BpmnRequest {
-    val newExchanges = assessment.clarificationQuestions.map { question ->
+    val genericExchange =
         ClarificationExchange(
-            questionId = question.id,
-            questionText = question.questionText,
+            questionId = "generic",
+            questionText = assessment.rationale.ifBlank { "Please provide clarification." },
             answerText = answers.answers,
         )
-    }
+    val newExchanges =
+        assessment.clarificationQuestions.map { question ->
+            ClarificationExchange(
+                questionId = question.id,
+                questionText = question.questionText,
+                answerText = answers.answers,
+            )
+        }
+    val exchangesToAdd =
+        when {
+            newExchanges.isEmpty() -> listOf(genericExchange)
+            else -> newExchanges
+        }
     return this.copy(
-        clarificationHistory = this.clarificationHistory + newExchanges,
+        clarificationHistory = this.clarificationHistory + exchangesToAdd,
     )
 }

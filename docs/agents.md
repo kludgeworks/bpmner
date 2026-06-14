@@ -10,7 +10,7 @@ For the planner mechanics — how the orchestrator's actions are chained, cost o
 
 | Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
-| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 12 typed shims: `draft`, `resolve`, `assessReadiness`, `provideReadyContext`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish` | `generateBpmn` (on `finish`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
+| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 13 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess` | `generateBpmn` (on `finish`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline — see below. |
 
@@ -18,7 +18,7 @@ The `BpmnProgressProjectionObserver` maps action names to user-facing labels —
 
 ## `BpmnGenerationAgent` — the orchestrator
 
-`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes twelve `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` + `ProcessInputAssessment` (web/programmatic) through to a `BpmnResult`.
+`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes thirteen `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` + `ProcessInputAssessment` (web/programmatic) through to a `BpmnResult`.
 
 Each action delegates to a public port; the port is implemented as a plain Spring component in its owning module (the LLM-backed ones are `@PrimaryAdapter @Component` under each module's `internal/adapter/inbound/`):
 
@@ -27,7 +27,7 @@ Each action delegates to a public port; the port is implemented as a plain Sprin
 | `draft` | `(UserInput, OperationContext) → BpmnRequestDraft` | `BpmnRequestDrafter` | `LlmBpmnRequestDrafter` (`generation/`) — LLM extracts a structured draft from shell prose. |
 | `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`core/`) — deterministic: resolves description/style-guide/output paths via `InputPathResolver`. |
 | `assessReadiness` | `BpmnRequest → ProcessInputAssessment` | `BpmnReadinessInvoker` | `AgentPlatformBpmnReadinessInvoker` (`readiness/`) — runs `BpmnReadinessAgent` as a scoped sub-process. |
-| `provideReadyContext` | `(BpmnRequest, ProcessInputAssessment) → ReadyBpmnContext` | (inline) | Requires `verdict == READY`; wraps request + assessment into `ReadyBpmnContext`. |
+| `startAssessing` | `(BpmnRequest, ProcessInputAssessment) → Assessing` | (inline) | Wraps request + assessment into `Assessing` state for the `@State` machine. |
 | `extractContract` | `(ReadyBpmnContext, OperationContext) → ValidatedProcessContract` | `ProcessContractExtractor` | `LlmProcessContractExtractor` (`contract/`) — distils a source-grounded `ProcessContract`. |
 | `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract, OperationContext) → ValidatedOutline` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` (`generation/`) — LLM produces a typed `BpmnDefinition` outline. |
 | `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` — deterministic composition/ownership. |
@@ -36,8 +36,23 @@ Each action delegates to a public port; the port is implemented as a plain Sprin
 | `layout` | `ValidatedBpmnXml → FinalValidatedBpmnXml` | (inline) | Calls `BpmnLayoutPort` + `BpmnXsdValidationPort` directly; `error(...)`s on XSD-invalid output. Does **not** route through `BpmnLayoutAgent`. |
 | `align` | `(ReadyBpmnContext, ValidatedProcessContract, FinalValidatedBpmnXml, OperationContext) → AlignedBpmnXml` | `BpmnAligner` | `LlmBpmnAligner` (`alignment/`) — semantic comparison vs the contract. `FIRE_ONCE`. |
 | `finish` | `(ReadyBpmnContext, AlignedBpmnXml) → BpmnResult` | (inline) | Writes the output file (mkdirs parent, skips blank paths), returns `BpmnResult(status = GENERATED)`. Carries `@AchievesGoal(name = "generateBpmn")`. `FIRE_ONCE`. |
+| `reassess` | `(AwaitingClarification, BpmnClarificationAnswers) → Assessing` | (inline) | Loops back into `Assessing` after a clarification answer; updates request and increments round counter. `clearBlackboard = true`. |
 
-The `layout`, `align`, and `finish` actions are annotated `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`.
+The `layout`, `align`, `finish`, and `reassess` actions are annotated `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`.
+
+### `@State` machine
+
+The orchestrator uses a `@State` machine for readiness/clarification loops. The machine state methods (`assess`, `ask`, `proceed`, `terminate`) live inside the state records as nested `@Action`s; `reassess` is an outer-class method that loops back into `Assessing`.
+
+The state machine actions `assess`, `ask`, `proceed`, and `terminate` all share the same `generateBpmn` goal as their enclosing agent. `terminate` in the `Blocked` state produces a `BpmnResult(status = NEEDS_CLARIFICATION)` to indicate the process cannot proceed without user input. The `clearBlackboard = true` flag on `assess` and `reassess` ensures the loop re-enters the machine with fresh context after each clarification answer.
+
+| State | Action | Input → Output | What happens |
+| --- | --- | --- | --- |
+| `Assessing` | `assess` | `Assessing → ReadinessStage` | Branches to `Ready`, `AwaitingClarification`, or `Blocked` based on `verdict`, `mode`, and `round` count. `clearBlackboard = true`. |
+| `AwaitingClarification` | `ask` | `AwaitingClarification → BpmnClarificationAnswers` | Pauses and waits for typed user answers via `WaitFor.formSubmission`. |
+| `Ready` | `proceed` | `Ready → ReadyBpmnContext` | Feeds existing downstream chain. |
+| `Blocked` | `terminate` | `Blocked → BpmnResult` | Terminates with `NEEDS_CLARIFICATION` status. |
+| (outer class) | `reassess` | `(AwaitingClarification, BpmnClarificationAnswers) → Assessing` | Updates request with answers, reassesses, and returns `Assessing`. `clearBlackboard = true`. |
 
 ## `BpmnReadinessAgent` — scoped readiness sub-process
 

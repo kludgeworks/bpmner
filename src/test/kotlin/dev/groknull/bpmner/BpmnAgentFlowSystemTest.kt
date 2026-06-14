@@ -44,7 +44,6 @@ import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidator
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import org.mockito.ArgumentMatchers.any
@@ -57,6 +56,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.xmlunit.assertj.XmlAssert
+import org.xmlunit.assertj.XmlAssert.assertThat
 import java.nio.file.Path
 import kotlin.io.path.readText
 
@@ -142,7 +143,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             )
 
         assertEquals(outputFile.toString(), result.outputFile)
-        assertTrue(result.xml!!.contains("<process"))
+        assertXml(result.xml!!).nodesByXPath("/bpmn:definitions/bpmn:process").exist()
         assertEquals(result.xml, outputFile.readText())
         verify(bpmnXsdValidator, times(2)).validateDetailed(anyString())
         // BpmnLayoutAgent.autoFixBpmnXml stopped calling lint() in #243 (passthrough);
@@ -216,7 +217,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
         assertEquals(BpmnGenerationStatus.GENERATED, result.status)
         assertEquals(outputFile.toString(), result.outputFile)
-        assertTrue(result.xml!!.contains("<process"))
+        assertXml(result.xml!!).nodesByXPath("/bpmn:definitions/bpmn:process").exist()
         assertEquals(result.xml, outputFile.readText())
     }
 
@@ -370,5 +371,11 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             @Suppress("UNCHECKED_CAST")
             return null as T
         }
+
+        private val NAMESPACES = mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+        )
+
+        private fun assertXml(xml: String): XmlAssert = assertThat(xml).withNamespaceContext(NAMESPACES)
     }
 }
