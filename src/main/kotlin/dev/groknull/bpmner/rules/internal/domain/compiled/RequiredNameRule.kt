@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -30,7 +31,7 @@ internal class RequiredNameRule : BpmnRule {
         id = id,
         name = "Required Names",
         slug = "required-names",
-        category = "Definition",
+        category = RuleCategory.Definition,
         intent = "Ensure BPMN elements that require business-readable labels have names.",
         forModellers = "Name activities, events, and gateways when the notation requires a label.",
         forAI = "Populate name fields for nodes that require labels under the BPMN naming policy.",

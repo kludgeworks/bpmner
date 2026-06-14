@@ -1,0 +1,14 @@
+module dev.groknull.bpmner.pkl.BpmnerLintConfig
+
+typealias Severity = "error" | "warning" | "info" | "off"
+
+/// Shadow-only lint configuration scaffold packaged with the runtime resources.
+/// Runtime startup uses profile Pkl modules and does not evaluate this module.
+profile: String = "recommended"
+
+severityOverrides: Mapping<String, Severity> = new {
+  ["act-verb-object-name"] = "off"
+  ["act-activity-label-capitalization"] = "off"
+  ["name-no-element-type-words"] = "off"
+  ["name-uncommon-abbreviations"] = "off"
+}

@@ -13,6 +13,7 @@ import dev.groknull.bpmner.api.BpmnSendTask
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -35,7 +36,7 @@ internal class TaskPayloadRule : BpmnRule {
         id = id,
         name = "Task Payloads",
         slug = "task-payloads",
-        category = "Definition",
+        category = RuleCategory.Definition,
         intent = "Ensure task payload references are present and resolve to known catalog entries where applicable.",
         forModellers = "Reference an existing message or decision from specialized tasks.",
         forAI = "Set messageRef on send/receive tasks and decisionRef on business rule tasks.",

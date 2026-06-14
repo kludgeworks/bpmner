@@ -55,7 +55,7 @@ class BpmnRuleContractTest {
             id = id,
             name = "Test Require Named Nodes",
             slug = "test-require-named-nodes",
-            category = "Test",
+            category = RuleCategory.General,
             intent = "Exercise the BpmnRule contract in tests.",
             forModellers = "Test metadata for modellers.",
             forAI = "Test metadata for AI.",
