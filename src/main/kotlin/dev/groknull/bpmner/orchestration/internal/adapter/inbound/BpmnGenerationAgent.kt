@@ -76,7 +76,7 @@ internal class BpmnGenerationAgent(
         return Assessing(request, assessment, round = 0)
     }
 
-    @Action(clearBlackboard = true)
+    @Action(clearBlackboard = true, actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
     fun reassess(state: AwaitingClarification, answers: BpmnClarificationAnswers): Assessing {
         val next = state.request.withClarification(answers, state.assessment)
         return Assessing(next, readinessInvoker.assess(next), state.round + 1)
