@@ -72,6 +72,25 @@ internal class AgentPlatformBpmnAgentInvoker(
         return process.id
     }
 
+    /**
+     * Web-path overload: seeds only the [BpmnRequest]; the agent's `assessReadiness` action
+     * (the `@State` machine) runs inside the process. Clarification surfaces as an in-process
+     * `WaitFor` form over SSE — never a pre-computed 422 outcome.
+     */
+    override fun startAsync(request: BpmnRequest): String {
+        val agent =
+            agentPlatform.agents().find { it.name == GENERATION_AGENT_NAME }
+                ?: error("Agent platform has no agent named '$GENERATION_AGENT_NAME'")
+        val process =
+            agentPlatform.createAgentProcessFrom(
+                agent,
+                asyncGenerationProcessOptions(),
+                request,
+            )
+        agentPlatform.start(process)
+        return process.id
+    }
+
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
     // is short-lived and never queried for status — Phase 5 (#220) made this explicit.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
