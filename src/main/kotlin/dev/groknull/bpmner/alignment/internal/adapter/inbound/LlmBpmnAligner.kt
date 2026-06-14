@@ -58,9 +58,7 @@ internal class LlmBpmnAligner(
     }
 
     /**
-     * Phase 5 (#220): `createObject` returns non-null per Embabel's contract; null-defences here
-     * previously smuggled "model didn't respond" through a synthetic AlignmentIssue. Translate the
-     * framework's typed exceptions at this seam so the failure type stays legible —
+     * Translates the framework's typed exceptions at this seam so the failure type stays legible —
      * [BpmnAlignmentException] with `report = null` means "the alignment model failed," not
      * "the model examined the BPMN and found problems." Extracted from [checkAlignment] so detekt's
      * `ThrowsCount` discipline holds at the action method.

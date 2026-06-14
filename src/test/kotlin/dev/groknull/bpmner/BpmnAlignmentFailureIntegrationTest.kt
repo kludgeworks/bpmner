@@ -10,6 +10,7 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
@@ -42,6 +43,7 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.doReturn
+import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.TestPropertySource
@@ -128,9 +130,20 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
      */
     @Test
     fun `BpmnAlignmentException with null report is structurally distinct from verdict failure`() {
-        // Infra failure shape: LlmBpmnAligner wraps InvalidLlmReturnFormatException as report=null.
+        // Infra failure shape: BpmnAlignmentException(report=null) must be distinguishable from
+        // verdict failure (BpmnAlignmentException(report != null)). Verdict failure has a non-null
+        // report with FAILED verdict; infra failure has null report.
+        val verdictFailureReport = mock<BpmnAlignmentReport>()
+        `when`(verdictFailureReport.verdict).thenReturn(AlignmentVerdict.FAILED)
+        val verdictFailure = BpmnAlignmentException(
+            message = "Alignment failed",
+            report = verdictFailureReport,
+        )
+        assertNotNull(verdictFailure.report)
+        assertEquals(AlignmentVerdict.FAILED, verdictFailure.report!!.verdict)
+
         val infraFailure = BpmnAlignmentException(
-            message = "Alignment model failed to produce a structured report: simulated",
+            message = "Alignment model failed to produce a structured report",
             report = null,
         )
         assertNull(infraFailure.report)
