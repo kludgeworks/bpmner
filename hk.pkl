@@ -65,7 +65,7 @@ hooks {
     steps {
       ["check_conventional_commit"] = (Builtins.check_conventional_commit) {
         check =
-          "hk util check-conventional-commit --allowed-types feat,fix,docs,refactor,chore {{commit_msg_file}}"
+          "hk util check-conventional-commit --allowed-types feat,fix,docs,refactor,chore,build {{commit_msg_file}}"
       }
     }
   }

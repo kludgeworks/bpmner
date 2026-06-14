@@ -21,6 +21,7 @@ rumdl = "latest"
 "github:detekt/detekt" = { version = "1.23.8", asset_pattern = "detekt-cli-{version}.zip", bin_path = "detekt-cli-{version}/bin", filter_bins = "detekt-cli" }
 actionlint = "latest"
 "github:google/addlicense" = "latest"
+coursier = "latest"
 
 [env]
 HK_MISE = 1
@@ -35,4 +36,4 @@ lockfile = true
 includes = [".mise/tasks.toml", "tasks.toml", "mise-tasks"]
 
 [hooks]
-postinstall = "hk install --mise && vale sync"
+postinstall = "hk install --mise && vale sync && cs launch org.jetbrains.bsp:bazel-bsp:3.2.0 -M org.jetbrains.bsp.bazel.install.Install"
