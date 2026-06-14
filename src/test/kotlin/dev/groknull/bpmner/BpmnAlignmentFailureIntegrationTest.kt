@@ -26,6 +26,7 @@ import dev.groknull.bpmner.core.EvidenceSourceType
 import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.core.SourceEvidence
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
+import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
@@ -36,7 +37,8 @@ import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.LintIssue
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.Mockito.doReturn
@@ -65,7 +67,7 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Test
-    fun `alignment failure blocks the pipeline`() {
+    fun `alignment failure yields a typed ALIGNMENT_FAILED result`() {
         `when`(bpmnXsdValidationPort.validateDetailed(org.mockito.ArgumentMatchers.anyString()))
             .thenReturn(emptyList())
         doReturn(emptyList<LintIssue>())
@@ -85,7 +87,8 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, FlatBpmnDefinition::class.java)
             .thenReturn(validFlatDefinition())
 
-        // Mock alignment failure
+        // Mock alignment failure: UNSUPPORTED issue → AlignmentVerdict.FAILED via BpmnAlignmentPostChecker
+        // (blockOnUnsupportedElements = true by default, BpmnAlignmentConfig).
         whenCreateObject({ true }, AlignmentFindings::class.java)
             .thenReturn(
                 AlignmentFindings(
@@ -100,19 +103,38 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
                 ),
             )
 
-        val error =
-            assertThrows<BpmnAlignmentException> {
-                bpmnAgentInvoker.generate(
-                    BpmnRequest(
-                        processDescription = "When a user submits an order, we process it and then it is completed.",
-                        outputFile = "ignored.bpmn",
-                    ),
-                    validAssessment(),
-                )
-            }
+        // Doc §3.2, §1 G5: FAILED verdict → typed BpmnResult(status=ALIGNMENT_FAILED), no throw.
+        val result =
+            bpmnAgentInvoker.generate(
+                BpmnRequest(
+                    processDescription = "When a user submits an order, we process it and then it is completed.",
+                    outputFile = "ignored.bpmn",
+                ),
+                validAssessment(),
+            )
 
-        assertTrue(error.message!!.contains("Generated BPMN does not align with process contract"))
-        assertEquals(AlignmentVerdict.FAILED, error.report!!.verdict)
+        assertEquals(BpmnGenerationStatus.ALIGNMENT_FAILED, result.status)
+        assertNotNull(result.alignmentReport)
+        assertEquals(AlignmentVerdict.FAILED, result.alignmentReport!!.verdict)
+    }
+
+    /**
+     * Doc §8 risk #3 / plan §5 gate 8: the malformed-LLM-response path (report=null) in
+     * [dev.groknull.bpmner.alignment.internal.adapter.inbound.LlmBpmnAligner.requestAlignmentFindings]
+     * must remain a [BpmnAlignmentException] distinct from the verdict path.
+     * [BpmnAlignmentException] with [BpmnAlignmentException.report] = null signals "the model
+     * didn't respond" (infra failure), while report != null signals "the model examined the BPMN
+     * and found problems." The two are structurally distinct and must not be conflated.
+     */
+    @Test
+    fun `BpmnAlignmentException with null report is structurally distinct from verdict failure`() {
+        // Infra failure shape: LlmBpmnAligner wraps InvalidLlmReturnFormatException as report=null.
+        val infraFailure = BpmnAlignmentException(
+            message = "Alignment model failed to produce a structured report: simulated",
+            report = null,
+        )
+        assertNull(infraFailure.report)
+        assertThrows<BpmnAlignmentException> { throw infraFailure }
     }
 
     private fun anyDefinition(): BpmnDefinition = anyNonNull()

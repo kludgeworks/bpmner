@@ -13,5 +13,10 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 @PrimaryPort
 fun interface BpmnAligner {
-    fun align(ready: ReadyBpmnContext, contract: ValidatedProcessContract, bpmn: FinalValidatedBpmnXml, context: OperationContext): AlignedBpmnXml
+    fun align(
+        ready: ReadyBpmnContext,
+        contract: ValidatedProcessContract,
+        bpmn: FinalValidatedBpmnXml,
+        context: OperationContext,
+    ): BpmnAlignmentReport
 }
