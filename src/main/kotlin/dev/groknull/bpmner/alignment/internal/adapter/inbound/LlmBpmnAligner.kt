@@ -60,7 +60,7 @@ internal class LlmBpmnAligner(
     /**
      * Translates the framework's typed exceptions at this seam so the failure type stays legible —
      * [BpmnAlignmentException] with `report = null` means "the alignment model failed," not
-     * "the model examined the BPMN and found problems." Extracted from [checkAlignment] so detekt's
+     * "the model examined the BPMN and found problems." Extracted from [align] so detekt's
      * `ThrowsCount` discipline holds at the action method.
      */
     private fun requestAlignmentFindings(
