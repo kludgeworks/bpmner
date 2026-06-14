@@ -15,6 +15,7 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.SubCheckConfig
 
+// DSL entry points intentionally expose rule metadata fields directly so rule definitions stay explicit.
 @Suppress("LongParameterList")
 internal fun primitiveRule(
     name: String,
@@ -53,6 +54,7 @@ internal fun primitiveRule(
     nlp = nlp,
 )
 
+// DSL entry points intentionally expose rule metadata fields directly so rule definitions stay explicit.
 @Suppress("LongParameterList")
 internal fun compositeRule(
     name: String,
@@ -94,6 +96,7 @@ internal fun compositeRule(
     )
 }
 
+// DSL entry points intentionally expose rule metadata fields directly so rule definitions stay explicit.
 @Suppress("LongParameterList")
 internal fun llmRule(
     name: String,
@@ -145,6 +148,7 @@ internal class CompositeRuleBuilder {
     )
 }
 
+// The helper mirrors RuleMetadata's shape to keep id derivation centralized without hiding fields.
 @Suppress("LongParameterList")
 private fun ruleMetadata(
     name: String,

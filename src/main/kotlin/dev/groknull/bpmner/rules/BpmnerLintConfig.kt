@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.rules
 
 /**
- * Shadow-only future lint config shape matching the planned `bpmner.pkl` template.
- * Runtime loading still uses Pkl profiles through RuleProfileFactory in this stage.
+ * Shadow-only lint config shape matching the packaged `bpmner.pkl` template.
+ * Runtime loading uses Pkl profiles through RuleProfileFactory; this type is not a startup config source.
  */
 data class BpmnerLintConfig(
     val profile: String = "recommended",

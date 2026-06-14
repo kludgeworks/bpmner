@@ -2,8 +2,8 @@ module dev.groknull.bpmner.pkl.BpmnerLintConfig
 
 typealias Severity = "error" | "warning" | "info" | "off"
 
-/// Future user-facing lint configuration scaffold. This module is packaged for parity work but
-/// is not evaluated by runtime startup in issue #377.
+/// Shadow-only lint configuration scaffold packaged with the runtime resources.
+/// Runtime startup uses profile Pkl modules and does not evaluate this module.
 profile: String = "recommended"
 
 severityOverrides: Mapping<String, Severity> = new {
