@@ -4,7 +4,7 @@
 
 This document maps the end-to-end pipeline. The Embabel GOAP planner — how the orchestrator's actions are chained, how failure modes surface as typed exceptions — has its own deeper dive in [`goap-lifecycle.md`](./goap-lifecycle.md). The Pkl repair contract (RepairKind, RepairSafety, handler registration) is documented there too.
 
-> The pipeline used to be a chain of per-stage `@Agent` classes (gate, contract, generator, repair, alignment) plus an iterative repair GOAP loop. Those were consolidated into the single `BpmnGenerationAgent` orchestrator; the old per-stage logic now lives behind public ports. The iterative repair loop is no longer wired in — validation runs a single pass (see [Stage: Validate](#stage-validate-repair)).
+> The pipeline used to be a chain of per-stage `@Agent` classes (gate, contract, generator, repair, alignment) plus an iterative repair GOAP loop. Those were consolidated into the single `BpmnGenerationAgent` orchestrator; the old per-stage logic now lives behind public ports. The validation stage runs an iterative repair loop inside the `BpmnRepairer` port, driven by Embabel's `RepeatUntilAcceptable` mechanism (see [Stage: Validate](#stage-validate-repair)).
 
 ## Module map
 
@@ -18,7 +18,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `readiness/` | Guardrail 1: heuristic + LLM input assessment, ready-state handoff, scoped readiness sub-process. | `BpmnReadinessAgent`, `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`, `ReadyBpmnContext`. |
 | `contract/` | Guardrail 2: extraction of source-grounded process contracts, multi-source evidence tracking. | `ProcessContractExtractor` (port), `LlmProcessContractExtractor`, `ProcessContract`, `ValidatedProcessContract`. |
 | `generation/` | Request drafting, typed LLM generation, structural composition, XML rendering, agent invocation, file writing. | `BpmnRequestDrafter` (port), `LlmBpmnRequestDrafter`, `BpmnProcessGenerator` (port), `LlmBpmnProcessGenerator`, `BpmnGraphRenderer`, `BpmnRenderer` (port), `BpmnAgentInvoker`, `AgentPlatformBpmnAgentInvoker`, `BpmnResult`, `BpmnGeneratedEvent`. |
-| `repair/` | Validation of the rendered definition (single pass). Contract-aware validation wrapper + diagnostic classification. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairAdvancer`, `BpmnContractAwareValidator`. |
+| `repair/` | Validation and iterative repair of the rendered definition. Contract-aware validation wrapper, diagnostic classification, and `RepeatUntilAcceptable` repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`, `BpmnContractAwareValidator`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
 | `layout/` | Deterministic auto-layout and final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
 | `alignment/` | Guardrail 3: semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAligner` (port), `LlmBpmnAligner`, `AlignedBpmnXml`, `AlignmentVerdict`. |
@@ -57,7 +57,7 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
    │     ▼                                                                 │
    │  render              → RenderedBpmn  (BpmnGraphRenderer→BpmnRenderer)  │
    │     ▼                  emits BpmnGeneratedEvent                       │
-   │  validate            single pass → ValidatedBpmnXml   (BpmnRepairer)   │
+   │  validate            repair loop → ValidatedBpmnXml   (BpmnRepairer)   │
    │     ▼                                                                 │
    │  layout              inline BpmnLayoutPort + XSD → FinalValidatedBpmnXml│
    │     ▼                  throws on XSD-invalid output                   │
@@ -94,27 +94,26 @@ Both entrypoints reach the `generateBpmn` goal by resolving the orchestrator **b
 
 The LLM produces an object with explicit semantic fields (nodes, sequences). XML rendering happens *after* generation; it's a deterministic step, not the first thing the LLM sees. Diagram coordinates are deliberately absent — they are computed downstream by the auto-layout stage so the LLM can never produce a layout that fights the layout engine.
 
-## Stage: Validate (repair `/`) {#stage-validate-repair}
+## Stage: Validate & Repair (repair `/`) {#stage-validate-repair}
 
-The orchestrator's `validate` action delegates to the `BpmnRepairer` port, implemented by `DefaultBpmnRepairer`. **This is validate-only.** It calls `BpmnRepairAdvancer.initialEvaluation(...)`, which runs a single validation pass and returns a `ValidatedBpmnXml`:
+The orchestrator's `validate` action delegates to the `BpmnRepairer` port, implemented by `DefaultBpmnRepairer`. It performs an initial evaluation and, if diagnostics remain, executes an iterative `RepeatUntilAcceptable` repair loop (defined in `BpmnRepairLoop`) before returning a `ValidatedBpmnXml`:
 
 ```text
 (graph, rendered, contract) ──► BpmnRepairAdvancer.initialEvaluation
         │
-        ├─ pre-flight: scan for unrecognized parser fallbacks → UNFIXABLE diagnostics
-        ├─ normalise default flows (DefaultFlowAssigner)
-        └─ BpmnContractAwareValidator.evaluate
-                 │
-                 ├─ BpmnValidator pipeline   structural + XSD + lint diagnostics
-                 └─ BpmnContractFidelityChecker  contract→BPMN topology (only if not blocking)
-        │
-        ▼
-   BpmnRepairEvaluation ──► ValidatedBpmnXml(definition, xml, diagnostics, repairAttempts)
+        ├── [Already clean] ───────────────────────────────────────────┐
+        │                                                              │
+        └── [Diagnostics remain] ──► BpmnRepairLoop (RUA sub-process) ──┼──► ValidatedBpmnXml
+                                            │                          │
+                                            ├── LocalFixApplier        │
+                                            ├── LlmLabelPatch          │
+                                            ├── LlmStructuralPatch     │
+                                            └── FullLlmRewrite         │
 ```
 
-`DefaultBpmnRepairer.validateInitial(...)` publishes a `BpmnValidationPassedEvent` when the pass is clean and a `BpmnValidationFailedEvent` when diagnostics remain; either way it returns the `ValidatedBpmnXml` and the pipeline proceeds. There is **no iterative repair loop**: the LLM is not re-prompted to fix diagnostics here.
+The repair loop uses cost-aware escalation to select and apply fixes (Deterministic Local → LLM Label → LLM Structural → Full LLM Rewrite). It exits early if all blocking diagnostics are resolved, or terminates after exhausting the configured `maxRepairIterations`.
 
-> The diagnostic *classification* machinery (`RepairKind` stamping, contract-aware fidelity diagnostics, the `BpmnRepairAdvancer.revalidateAndAdvance` fingerprint guards, and the LLM patch/rewrite appliers) still exists in the `repair/` module, but it is **not wired into the deployed plan** — it is dormant infrastructure for a future iterative-repair pass, not current behaviour. The Pkl repair contract is documented in [`goap-lifecycle.md`](./goap-lifecycle.md#the-pkl-side-repair-contract).
+`DefaultBpmnRepairer.validateInitial(...)` publishes a `BpmnValidationPassedEvent` when the final evaluation is clean and a `BpmnValidationFailedEvent` when diagnostics remain. The Pkl repair contract is documented in [`goap-lifecycle.md`](./goap-lifecycle.md#the-pkl-side-repair-contract).
 
 ## Stage: Layout (inline; `layout/`)
 
@@ -168,7 +167,7 @@ The `validation`/`repair` path emits `BpmnValidationPassedEvent` and `BpmnValida
 | `bpmner.generator` / `bpmner.contractExtractor` / … | role-based personas | Each `Actor<Persona>` carries a `Persona` + `LlmOptions.withLlmForRole(...)` slot. |
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, emits truncated previews of every intermediate artifact at DEBUG. |
 
-Model role bindings (`generator`, `contract-extractor`, `readiness-assessor`, `alignment-validator`, `linter`, and the dormant `repairer` / `repair-label` / `repair-patch` / `repair-rewrite` slots) are resolved by the active Spring profile (`anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama`). See the top-level `README.md` for invocation.
+Model role bindings (`generator`, `contract-extractor`, `readiness-assessor`, `alignment-validator`, `linter`, and the `repairer` / `repair-label` / `repair-patch` / `repair-rewrite` slots) are resolved by the active Spring profile (`anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama`). See the top-level `README.md` for invocation.
 
 ## Observability surface
 
@@ -200,4 +199,4 @@ Where to put cross-cutting code:
 - **One orchestrator, thin actions.** The happy path is a single linear plan on `BpmnGenerationAgent`; each action is a typed shim over a port. The logic is testable per-port without standing up the whole agent platform.
 - **The LLM runs in a few bounded places** (request drafting, readiness, contract extraction, outline generation, alignment). Everything else is deterministic, which keeps the failure surface small.
 - **Layout is a terminal, deterministic stage.** Auto-layout runs after validation and is XSD-checked; a layout-engine corruption throws rather than re-entering generation.
-- **Validation is a single pass today.** The orchestrator validates the rendered definition once and proceeds; the richer iterative-repair machinery in `repair/` is retained but not wired in.
+- **Validation runs an iterative repair loop.** The orchestrator invokes `BpmnRepairer` which drives the `RepeatUntilAcceptable` loop across the cost-tiered repair appliers until the definition is clean or the iteration budget is exhausted.

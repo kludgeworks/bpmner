@@ -101,6 +101,9 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
 
     private fun <T> anyNonNull(): T {
         ArgumentMatchers.any<T>()
+        // False positive: Mockito's any() matcher returns null at runtime but the generic
+        // return type satisfies the call-site expectation.  The cast is the canonical
+        // Kotlin-Mockito bridge pattern and is safe in the Mockito stub context.
         @Suppress("UNCHECKED_CAST")
         return null as T
     }

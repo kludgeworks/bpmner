@@ -91,7 +91,7 @@ internal class BpmnRepairLoop(
                     llmRepairApplier.applyLlmStructuralPatch(prior, context, structuralCandidates(prior))
 
                 prior.hasLlmEligible ->
-                    llmRepairApplier.applyFullLlmRewrite(prior, context, prior.diagnostics)
+                    llmRepairApplier.applyFullLlmRewrite(prior, context, rewriteCandidates(prior))
 
                 else -> prior // nothing applicable; evaluator rejects, loop ends
             }
@@ -131,6 +131,15 @@ internal class BpmnRepairLoop(
             d.kind != RepairKind.UNFIXABLE &&
                 (d.repairScope == BpmnRepairScope.OUTLINE || d.repairScope == BpmnRepairScope.PHASE)
         }
+    }
+
+    /**
+     * Candidates passed to [BpmnLlmRepairApplier.applyFullLlmRewrite].  UNFIXABLE diagnostics
+     * are excluded — they cannot be repaired regardless of the approach, so including them
+     * would give the LLM an impossible goal and distort the rewrite prompt (plan §2.5).
+     */
+    private fun rewriteCandidates(eval: BpmnRepairEvaluation): List<BpmnDiagnostic> {
+        return eval.diagnostics.filter { it.kind != RepairKind.UNFIXABLE }
     }
 
     private companion object {
