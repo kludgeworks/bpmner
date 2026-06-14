@@ -36,4 +36,4 @@ lockfile = true
 includes = [".mise/tasks.toml", "tasks.toml", "mise-tasks"]
 
 [hooks]
-postinstall = 'hk install --mise && vale sync && [[ -n "${CI}" ]] || cs launch org.jetbrains.bsp:bazel-bsp:3.2.0 -M org.jetbrains.bsp.bazel.install.Install'
+postinstall = 'hk install --mise && vale sync && { [[ -n "${CI}" ]] || cs launch org.jetbrains.bsp:bazel-bsp:3.2.0 -M org.jetbrains.bsp.bazel.install.Install; }'
