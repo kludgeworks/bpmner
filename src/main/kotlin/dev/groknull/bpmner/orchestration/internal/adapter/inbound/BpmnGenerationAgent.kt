@@ -9,17 +9,21 @@ import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
+import com.embabel.agent.api.annotation.State
 import com.embabel.agent.api.common.ActionContext
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.ActionRetryPolicy
+import com.embabel.agent.core.hitl.WaitFor
 import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.BpmnAligner
+import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.core.BpmnRequestDraft
 import dev.groknull.bpmner.core.BpmnRequestResolver
+import dev.groknull.bpmner.core.ClarificationExchange
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.core.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
@@ -29,6 +33,7 @@ import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
+import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -67,9 +72,14 @@ internal class BpmnGenerationAgent(
     }
 
     @Action
-    fun provideReadyContext(request: BpmnRequest, assessment: ProcessInputAssessment): ReadyBpmnContext {
-        require(assessment.verdict == ReadinessVerdict.READY) { "Not ready: ${assessment.verdict}" }
-        return ReadyBpmnContext(request, assessment)
+    fun startAssessing(request: BpmnRequest, assessment: ProcessInputAssessment): Assessing {
+        return Assessing(request, assessment, round = 0)
+    }
+
+    @Action(clearBlackboard = true, actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
+    fun reassess(state: AwaitingClarification, answers: BpmnClarificationAnswers): Assessing {
+        val next = state.request.withClarification(answers, state.assessment)
+        return Assessing(next, readinessInvoker.assess(next), state.round + 1)
     }
 
     @Action
@@ -147,4 +157,103 @@ internal class BpmnGenerationAgent(
             alignmentReport = aligned.alignmentReport,
         )
     }
+}
+
+// Sealed supertype for polymorphic state returns (lore: "parent interface").
+sealed interface ReadinessStage
+
+@State
+data class Assessing(
+    val request: BpmnRequest,
+    val assessment: ProcessInputAssessment,
+    val round: Int, // clarification rounds completed so far
+) : ReadinessStage {
+
+    // Branch: READY → proceed; not-ready + INTERACTIVE + rounds left → ask;
+    // SINGLE_SHOT or rounds exhausted → Blocked. clearBlackboard=true so the
+    // loop can re-enter Assessing after an answer (lore §4.19.4).
+    @Action(clearBlackboard = true)
+    fun assess(): ReadinessStage = when {
+        assessment.verdict == ReadinessVerdict.READY ->
+            Ready(ReadyBpmnContext(request, assessment))
+        request.mode == GenerationMode.SINGLE_SHOT || round >= MAX_ROUNDS ->
+            Blocked(request, assessment) // SINGLE_SHOT blocks immediately
+        else -> AwaitingClarification(request, assessment, round)
+    }
+}
+
+@State
+data class AwaitingClarification(
+    val request: BpmnRequest,
+    val assessment: ProcessInputAssessment,
+    val round: Int,
+) : ReadinessStage {
+
+    // Pauses the process into WAITING and asks for typed answers (lore §4.19.9).
+    @Action
+    fun ask(): BpmnClarificationAnswers = WaitFor.formSubmission(promptFrom(assessment), BpmnClarificationAnswers::class.java)
+}
+
+@State
+data class Ready(val ready: ReadyBpmnContext) : ReadinessStage {
+    @Action fun proceed(): ReadyBpmnContext = ready // feeds existing downstream chain
+}
+
+@State
+data class Blocked(
+    val request: BpmnRequest,
+    val assessment: ProcessInputAssessment,
+) : ReadinessStage {
+    @AchievesGoal(
+        description = "Terminate with needs clarification",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = request.outputFile,
+        status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
+        readinessReport = assessment,
+    )
+}
+
+private const val MAX_ROUNDS = 3 // max clarification rounds before Blocked
+
+private fun promptFrom(assessment: ProcessInputAssessment): String {
+    val questions = assessment.clarificationQuestions
+    return if (questions.isEmpty()) {
+        assessment.rationale.ifBlank { "Please provide clarification." }
+    } else {
+        questions.joinToString("\n") { it.questionText }
+    }
+}
+
+private fun BpmnRequest.withClarification(
+    answers: BpmnClarificationAnswers,
+    assessment: ProcessInputAssessment,
+): BpmnRequest {
+    val genericExchange =
+        ClarificationExchange(
+            questionId = "generic",
+            questionText = assessment.rationale.ifBlank { "Please provide clarification." },
+            answerText = answers.answers,
+        )
+    val newExchanges =
+        assessment.clarificationQuestions.map { question ->
+            ClarificationExchange(
+                questionId = question.id,
+                questionText = question.questionText,
+                answerText = answers.answers,
+            )
+        }
+    val exchangesToAdd =
+        when {
+            newExchanges.isEmpty() -> listOf(genericExchange)
+            else -> newExchanges
+        }
+    return this.copy(
+        clarificationHistory = this.clarificationHistory + exchangesToAdd,
+    )
 }
