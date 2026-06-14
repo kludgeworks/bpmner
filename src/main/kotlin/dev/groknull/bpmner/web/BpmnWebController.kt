@@ -5,12 +5,10 @@
 
 package dev.groknull.bpmner.web
 
-import dev.groknull.bpmner.generation.BpmnResult
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.springframework.context.annotation.Profile
-import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
@@ -35,11 +33,6 @@ data class WebGenerationResponse(
     val sseUrl: String,
 )
 
-data class WebGenerationBlockedResponse(
-    val status: String,
-    val reportFile: String?,
-)
-
 @RestController
 @RequestMapping("/api/bpmn")
 @Profile("web")
@@ -49,25 +42,13 @@ class BpmnWebController(
     @PostMapping("/generations")
     fun startGeneration(
         @Valid @RequestBody request: WebGenerationRequest,
-    ): ResponseEntity<Any> {
-        return when (val outcome = generationStarter.start(request)) {
-            is WebGenerationStartOutcome.Started -> {
-                ResponseEntity.accepted().body(
-                    WebGenerationResponse(
-                        processId = outcome.processId,
-                        sseUrl = "events/process/${outcome.processId}",
-                    ),
-                )
-            }
-
-            is WebGenerationStartOutcome.Blocked -> {
-                ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(blockedBody(outcome.result))
-            }
-        }
+    ): ResponseEntity<WebGenerationResponse> {
+        val processId = generationStarter.start(request)
+        return ResponseEntity.accepted().body(
+            WebGenerationResponse(
+                processId = processId,
+                sseUrl = "events/process/$processId",
+            ),
+        )
     }
-
-    private fun blockedBody(result: BpmnResult): WebGenerationBlockedResponse = WebGenerationBlockedResponse(
-        status = result.status.name,
-        reportFile = result.reportFile,
-    )
 }

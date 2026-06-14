@@ -5,10 +5,7 @@
 
 package dev.groknull.bpmner.web
 
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnResult
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
@@ -22,14 +19,14 @@ class BpmnWebControllerTest {
     private val controller = BpmnWebController(generationStarter)
 
     @Test
-    fun `accepted with relative sseUrl when readiness is ready`() {
+    fun `accepted with relative sseUrl when generation starts`() {
         `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
-            .thenReturn(WebGenerationStartOutcome.Started("test-process-123"))
+            .thenReturn("test-process-123")
 
         val response = controller.startGeneration(WebGenerationRequest(processDescription = "Order is shipped"))
 
         assertEquals(HttpStatus.ACCEPTED, response.statusCode)
-        val body = response.body as WebGenerationResponse
+        val body = response.body!!
         assertEquals("test-process-123", body.processId)
         assertEquals("events/process/test-process-123", body.sseUrl)
     }
@@ -37,7 +34,7 @@ class BpmnWebControllerTest {
     @Test
     fun `delegates process description and inline style guide to starter`() {
         `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
-            .thenReturn(WebGenerationStartOutcome.Started("p-1"))
+            .thenReturn("p-1")
 
         controller.startGeneration(
             WebGenerationRequest(
@@ -51,45 +48,5 @@ class BpmnWebControllerTest {
         val request = captor.value
         assertEquals("Order is shipped", request.processDescription)
         assertEquals("Use verb-object task names", request.styleGuide)
-    }
-
-    @Test
-    fun `returns 422 with report file when readiness blocks for clarification`() {
-        val blocked =
-            BpmnResult(
-                outputFile = null,
-                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                xml = null,
-                reportFile = "/tmp/readiness.md",
-            )
-        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
-            .thenReturn(WebGenerationStartOutcome.Blocked(blocked))
-
-        val response = controller.startGeneration(WebGenerationRequest(processDescription = "Make it nicer"))
-
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
-        val body = response.body as WebGenerationBlockedResponse
-        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION.name, body.status)
-        assertEquals("/tmp/readiness.md", body.reportFile)
-    }
-
-    @Test
-    fun `returns 422 with status when readiness rejects workflow-less input`() {
-        val blocked =
-            BpmnResult(
-                outputFile = null,
-                status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                xml = null,
-                reportFile = null,
-            )
-        `when`(generationStarter.start(any() ?: WebGenerationRequest("fallback")))
-            .thenReturn(WebGenerationStartOutcome.Blocked(blocked))
-
-        val response = controller.startGeneration(WebGenerationRequest(processDescription = "Cherry blossoms drift"))
-
-        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY, response.statusCode)
-        val body = response.body as WebGenerationBlockedResponse
-        assertEquals(BpmnGenerationStatus.NEEDS_CLARIFICATION.name, body.status)
-        assertNull(body.reportFile)
     }
 }

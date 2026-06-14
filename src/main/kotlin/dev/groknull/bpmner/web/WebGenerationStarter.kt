@@ -8,59 +8,28 @@ package dev.groknull.bpmner.web
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.core.BpmnRequest
 import dev.groknull.bpmner.generation.BpmnAgentInvoker
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnResult
-import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
-import dev.groknull.bpmner.readiness.ReadinessReportWriter
-import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.springframework.stereotype.Service
-
-sealed interface WebGenerationStartOutcome {
-    data class Started(
-        val processId: String,
-    ) : WebGenerationStartOutcome
-
-    data class Blocked(
-        val result: BpmnResult,
-    ) : WebGenerationStartOutcome
-}
 
 @Service
 class WebGenerationStarter(
     private val agentInvoker: BpmnAgentInvoker,
-    private val readinessInvoker: BpmnReadinessInvoker,
-    private val readinessReportWriter: ReadinessReportWriter,
 ) {
-    fun start(request: WebGenerationRequest): WebGenerationStartOutcome {
+    /**
+     * Starts an async BPMN generation process and returns its process ID.
+     *
+     * The process runs in [GenerationMode.INTERACTIVE] so the agent's `assessReadiness`
+     * `@State` machine can pause into a `WaitFor.formSubmission` when clarification is needed
+     * and surface it over SSE — there is no synchronous 422 `Blocked` branch (architecture G6,
+     * ADR-8 option b).
+     */
+    fun start(request: WebGenerationRequest): String {
         val bpmnRequest =
             BpmnRequest(
                 processDescription = request.processDescription,
                 styleGuide = request.styleGuide?.trim()?.takeIf { it.isNotEmpty() },
                 outputFile = null,
-                mode = GenerationMode.SINGLE_SHOT,
+                mode = GenerationMode.INTERACTIVE,
             )
-        val assessment = readinessInvoker.assess(bpmnRequest)
-        return when (assessment.verdict) {
-            ReadinessVerdict.READY -> WebGenerationStartOutcome.Started(
-                agentInvoker.startAsync(bpmnRequest, assessment),
-            )
-
-            ReadinessVerdict.NEEDS_CLARIFICATION -> {
-                val reportPath =
-                    readinessReportWriter.writeReport(
-                        originalInput = bpmnRequest.processDescription,
-                        assessment = assessment,
-                        outputFile = bpmnRequest.outputFile,
-                    )
-                WebGenerationStartOutcome.Blocked(
-                    BpmnResult(
-                        outputFile = bpmnRequest.outputFile,
-                        status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
-                        readinessReport = assessment,
-                        reportFile = reportPath,
-                    ),
-                )
-            }
-        }
+        return agentInvoker.startAsync(bpmnRequest)
     }
 }
