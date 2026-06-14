@@ -10,6 +10,7 @@ import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -30,7 +31,7 @@ internal class DuplicateIdRule : BpmnRule {
         id = id,
         name = "Duplicate IDs",
         slug = "duplicate-ids",
-        category = "Definition",
+        category = RuleCategory.Definition,
         intent = "Ensure node and sequence-flow identifiers are unique after trimming whitespace.",
         forModellers = "Give every element and flow a unique id.",
         forAI = "Generate unique ids for every node and sequenceFlow.",

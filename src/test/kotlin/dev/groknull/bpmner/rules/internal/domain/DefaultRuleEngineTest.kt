@@ -7,6 +7,7 @@ package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -65,7 +66,7 @@ class DefaultRuleEngineTest {
             id = id,
             name = "Test Rule",
             slug = id,
-            category = "Test",
+            category = RuleCategory.General,
             intent = "Test rule.",
             forModellers = "Test rule.",
             forAI = "Test rule.",

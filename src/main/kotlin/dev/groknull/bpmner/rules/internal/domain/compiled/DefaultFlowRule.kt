@@ -12,6 +12,7 @@ import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
@@ -34,7 +35,7 @@ internal class DefaultFlowRule : BpmnRule {
         id = id,
         name = "Default Flows",
         slug = "default-flows",
-        category = "Definition",
+        category = RuleCategory.Definition,
         intent =
         "Ensure BPMN default sequence flows are only used from exclusive or inclusive gateways" +
             " and are unique per source.",

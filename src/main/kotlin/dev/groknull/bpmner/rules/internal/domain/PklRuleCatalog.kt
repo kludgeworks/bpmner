@@ -5,19 +5,11 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.mapping.BpmnRuleAdapter
 import dev.groknull.bpmner.rules.internal.domain.mapping.MappedCheck
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
-import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheck
-import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
-import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
-import dev.groknull.bpmner.rules.internal.domain.primitives.SubCheckEvaluator
-import dev.groknull.bpmner.rules.internal.domain.primitives.toPrimitiveModelContext
 import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin
 import org.pkl.config.kotlin.to
@@ -41,9 +33,9 @@ import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
  * ```
  *
  * Three rule families come out of one Pkl evaluation:
- *  - **Deterministic** — wrapped in [DeterministicPklRule], evaluated via [SubCheckEvaluator]
+ *  - **Deterministic** — wrapped in [DeterministicRule], evaluated via primitive sub-checks
  *    on the normal `RuleEngine` call.
- *  - **Composite** — wrapped in [CompositePklRule], delegates to [CompositeCheck].
+ *  - **Composite** — wrapped in [CompositeRule], delegates to composite evaluation.
  *
  * Rules with `checkPrimitive == null` (the ~15 deferred awaiting #196) or
  * `severity == "off"` are filtered out by [BpmnRuleAdapter.adapt] and logged.
@@ -113,10 +105,10 @@ internal class PklRuleCatalog(
             }
             when (val mc = adapted.mappedCheck) {
                 is MappedCheck.Deterministic ->
-                    bpmn += DeterministicPklRule(adapted.metadata, mc.config, nlp)
+                    bpmn += DeterministicRule(adapted.metadata, mc.config, nlp)
 
                 is MappedCheck.Composite ->
-                    bpmn += CompositePklRule(adapted.metadata, mc.config, nlp)
+                    bpmn += CompositeRule(adapted.metadata, mc.config, nlp)
             }
         }
         if (skipped > 0) {
@@ -138,29 +130,4 @@ internal class PklRuleCatalog(
     companion object {
         const val RULES_INDEX_URI = "modulepath:/linter/pkl/RulesIndex.pkl"
     }
-}
-
-private class DeterministicPklRule(
-    override val metadata: RuleMetadata,
-    private val config: DeterministicCheckConfig,
-    private val nlp: BpmnNlp,
-) : BpmnRule {
-    override val id: String = metadata.id
-
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = SubCheckEvaluator.evaluate(
-        ctx.toPrimitiveModelContext(),
-        metadata,
-        config,
-        nlp,
-    )
-}
-
-private class CompositePklRule(
-    override val metadata: RuleMetadata,
-    private val config: CompositeCheckConfig,
-    private val nlp: BpmnNlp,
-) : BpmnRule {
-    override val id: String = metadata.id
-
-    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = CompositeCheck.evaluate(ctx, metadata, config, nlp)
 }

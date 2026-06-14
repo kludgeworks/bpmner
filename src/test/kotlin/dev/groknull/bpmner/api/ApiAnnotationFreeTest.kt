@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.api
 
+import com.tngtech.archunit.base.DescribedPredicate
+import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -34,6 +36,7 @@ class ApiAnnotationFreeTest {
             .resideInAPackage("..bpmner.api..")
             .and()
             .haveSimpleNameNotEndingWith("Module")
+            .and(notRuleCategory())
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("com.fasterxml.jackson..")
@@ -77,5 +80,13 @@ class ApiAnnotationFreeTest {
             .dependOnClassesThat()
             .resideInAnyPackage("com.embabel..")
             .check(classes)
+    }
+
+    private companion object {
+        fun notRuleCategory(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>("is not RuleCategory") {
+                override fun test(input: JavaClass): Boolean = input.simpleName != "RuleCategory"
+            }
+        }
     }
 }

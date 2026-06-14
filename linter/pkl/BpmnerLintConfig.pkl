@@ -1,0 +1,14 @@
+module dev.groknull.bpmner.pkl.BpmnerLintConfig
+
+typealias Severity = "error" | "warning" | "info" | "off"
+
+/// Future user-facing lint configuration scaffold. This module is packaged for parity work but
+/// is not evaluated by runtime startup in issue #377.
+profile: String = "recommended"
+
+severityOverrides: Mapping<String, Severity> = new {
+  ["act-verb-object-name"] = "off"
+  ["act-activity-label-capitalization"] = "off"
+  ["name-no-element-type-words"] = "off"
+  ["name-uncommon-abbreviations"] = "off"
+}
