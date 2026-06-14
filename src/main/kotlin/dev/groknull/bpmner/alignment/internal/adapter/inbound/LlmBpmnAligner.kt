@@ -9,12 +9,11 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
-import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
@@ -43,7 +42,7 @@ internal class LlmBpmnAligner(
         contract: ValidatedProcessContract,
         bpmn: FinalValidatedBpmnXml,
         context: OperationContext,
-    ): AlignedBpmnXml {
+    ): BpmnAlignmentReport {
         val request = ready.request
         val summary = summarizer.summarize(bpmn.definition)
         val promptRunner =
@@ -55,22 +54,13 @@ internal class LlmBpmnAligner(
         val report = postChecker.apply(findings, summary)
         eventPublisher.publishEvent(BpmnAlignmentCheckedEvent(request, report))
 
-        if (report.verdict == AlignmentVerdict.FAILED) {
-            throw BpmnAlignmentException(
-                message = "Generated BPMN does not align with process contract: ${report.rationale}",
-                report = report,
-            )
-        }
-
-        return AlignedBpmnXml(xml = bpmn.xml, alignmentReport = report)
+        return report
     }
 
     /**
-     * Phase 5 (#220): `createObject` returns non-null per Embabel's contract; null-defences here
-     * previously smuggled "model didn't respond" through a synthetic AlignmentIssue. Translate the
-     * framework's typed exceptions at this seam so the failure type stays legible —
+     * Translates the framework's typed exceptions at this seam so the failure type stays legible —
      * [BpmnAlignmentException] with `report = null` means "the alignment model failed," not
-     * "the model examined the BPMN and found problems." Extracted from [checkAlignment] so detekt's
+     * "the model examined the BPMN and found problems." Extracted from [align] so detekt's
      * `ThrowsCount` discipline holds at the action method.
      */
     private fun requestAlignmentFindings(

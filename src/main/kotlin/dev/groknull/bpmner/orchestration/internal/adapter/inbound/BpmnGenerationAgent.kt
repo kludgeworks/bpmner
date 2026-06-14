@@ -15,8 +15,9 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.ActionRetryPolicy
 import com.embabel.agent.core.hitl.WaitFor
 import com.embabel.agent.domain.io.UserInput
-import dev.groknull.bpmner.alignment.AlignedBpmnXml
+import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
+import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -129,10 +130,17 @@ internal class BpmnGenerationAgent(
         c: ValidatedProcessContract,
         x: FinalValidatedBpmnXml,
         ctx: OperationContext,
-    ): AlignedBpmnXml {
+    ): BpmnAlignmentReport {
         return aligner.align(ready, c, x, ctx)
     }
 
+    // Critique gate (doc §3.2, §1 G5, §9): alignment is not a throwing step.
+    // PASSED verdict (ALIGNED / PARTIALLY_ALIGNED) → write file, return GENERATED.
+    // FAILED verdict → return typed ALIGNMENT_FAILED carrying the report, no file write.
+    // A single action with verdict check inside satisfies the GOAP runtime planner:
+    // @Condition + pre= on two separate goal actions causes both conditions to evaluate FALSE
+    // when BpmnAlignmentReport is not yet on the blackboard, making the planner stuck.
+    // (doc §8 risk #1 mitigation: typed inputs alone gate the action; verdict branch is internal.)
     @AchievesGoal(
         description = "Generate a complete BPMN definition from user input",
         export = Export(
@@ -143,24 +151,41 @@ internal class BpmnGenerationAgent(
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
     fun finish(
         ready: ReadyBpmnContext,
-        aligned: AlignedBpmnXml,
-    ): dev.groknull.bpmner.generation.BpmnResult {
+        x: FinalValidatedBpmnXml,
+        report: BpmnAlignmentReport,
+    ): BpmnResult {
+        if (report.verdict == AlignmentVerdict.FAILED) {
+            // doc §3.2: FAILED → typed BpmnResult(status=ALIGNMENT_FAILED), no file write.
+            return BpmnResult(
+                outputFile = ready.request.outputFile,
+                status = BpmnGenerationStatus.ALIGNMENT_FAILED,
+                xml = x.xml,
+                alignmentReport = report,
+            )
+        }
+        // PASSED (ALIGNED / PARTIALLY_ALIGNED) → write file, return GENERATED.
         ready.request.outputFile?.takeIf { it.isNotBlank() }?.let { filePath ->
             val file = File(filePath)
             file.parentFile?.mkdirs()
-            file.writeText(aligned.xml, Charsets.UTF_8)
+            file.writeText(x.xml, Charsets.UTF_8)
         }
         return BpmnResult(
             outputFile = ready.request.outputFile,
             status = BpmnGenerationStatus.GENERATED,
-            xml = aligned.xml,
-            alignmentReport = aligned.alignmentReport,
+            xml = x.xml,
+            alignmentReport = report,
         )
     }
 }
 
 // Sealed supertype for polymorphic state returns (lore: "parent interface").
 sealed interface ReadinessStage
+
+// State that wraps ReadyBpmnContext for the state machine
+@State
+data class Ready(val ready: ReadyBpmnContext) : ReadinessStage {
+    @Action fun proceed(): ReadyBpmnContext = ready // feeds existing downstream chain
+}
 
 @State
 data class Assessing(
@@ -169,7 +194,7 @@ data class Assessing(
     val round: Int, // clarification rounds completed so far
 ) : ReadinessStage {
 
-    // Branch: READY → proceed; not-ready + INTERACTIVE + rounds left → ask;
+    // Branch: READY → Ready; not-ready + INTERACTIVE + rounds left → ask;
     // SINGLE_SHOT or rounds exhausted → Blocked. clearBlackboard=true so the
     // loop can re-enter Assessing after an answer (lore §4.19.4).
     @Action(clearBlackboard = true)
@@ -192,11 +217,6 @@ data class AwaitingClarification(
     // Pauses the process into WAITING and asks for typed answers (lore §4.19.9).
     @Action
     fun ask(): BpmnClarificationAnswers = WaitFor.formSubmission(promptFrom(assessment), BpmnClarificationAnswers::class.java)
-}
-
-@State
-data class Ready(val ready: ReadyBpmnContext) : ReadinessStage {
-    @Action fun proceed(): ReadyBpmnContext = ready // feeds existing downstream chain
 }
 
 @State

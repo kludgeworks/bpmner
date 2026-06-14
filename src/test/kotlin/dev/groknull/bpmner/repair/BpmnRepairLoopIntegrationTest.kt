@@ -11,7 +11,6 @@ import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import com.embabel.agent.core.ReplanRequestedException
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.alignment.AlignedBpmnXml
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.api.GenerationMode
@@ -180,7 +179,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         `when`(layoutPort.layout(anyNonNull())).thenReturn("<process/>")
         `when`(xsdValidationPort.validateDetailed(anyNonNull())).thenReturn(emptyList())
         `when`(aligner.align(anyNonNull(), anyNonNull(), anyNonNull(), anyNonNull())).thenReturn(
-            AlignedBpmnXml(xml = "<process/>", alignmentReport = mock(BpmnAlignmentReport::class.java)),
+            mock(BpmnAlignmentReport::class.java),
         )
         org.mockito.Mockito.clearInvocations(localFixApplier, llmRepairApplier, advancer)
     }
