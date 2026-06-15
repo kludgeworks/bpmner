@@ -25,6 +25,46 @@ import org.springframework.context.annotation.Configuration
 @Suppress("MaxLineLength")
 internal class NameRuleConfig {
     @Bean
+    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
+        name = "Business Meaningful Label",
+        category = RuleCategory.Name,
+        intent = "Encourage business-readable labels over technical identifiers.",
+        forModellers = "Choose names that are meaningful to business stakeholders and avoid technical shorthand, code names, and implementation identifiers.",
+        forAI = "Detect labels containing technical patterns such as underscores, slash paths, alphanumeric codes, or configured technical tokens.",
+        targetElements = listOf(
+            "bpmn:Task",
+            "bpmn:SubProcess",
+            "bpmn:CallActivity",
+            "bpmn:StartEvent",
+            "bpmn:IntermediateCatchEvent",
+            "bpmn:IntermediateThrowEvent",
+            "bpmn:EndEvent",
+            "bpmn:ExclusiveGateway",
+            "bpmn:InclusiveGateway",
+            "bpmn:ParallelGateway",
+            "bpmn:ComplexGateway",
+            "bpmn:DataObjectReference",
+            "bpmn:DataStoreReference",
+        ),
+        errorMessages = mapOf(
+            "default" to "Label appears technical/cryptic; prefer business-meaningful wording",
+        ),
+        check = PropertyPatternCheckConfig(
+            property = "name",
+            pattern = "^(?!.*[_/])(?!.*[a-z][A-Z])(?!.*\\d).+$",
+            patternDescription = "labels should be business-readable (no underscores, slash paths, camelCase, or digits)",
+            forbiddenVocabulary = listOf("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj"),
+        ),
+        nlp = nlp,
+        severity = RuleSeverity.WARNING,
+        repair = RepairMetadata(
+            kind = RepairKind.LOCAL_MODEL_FIX,
+            safety = RepairSafety.SAFE_AUTOMATIC,
+            handler = "expandAbbreviations",
+        ),
+    )
+
+    @Bean
     fun nameNoElementTypeWords(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "No Element Type Words",
         category = RuleCategory.Name,
@@ -48,31 +88,6 @@ internal class NameRuleConfig {
         ),
         errorMessages = mapOf(
             "default" to "Element name must not include its BPMN element type",
-        ),
-        check = VocabularyCheckConfig(
-            property = "name",
-            mode = VocabularyMode.FORBID,
-            words = listOf("activity", "process", "event"),
-        ),
-        nlp = nlp,
-        severity = RuleSeverity.ERROR,
-        repair = RepairMetadata(
-            kind = RepairKind.LOCAL_MODEL_FIX,
-            safety = RepairSafety.SAFE_AUTOMATIC,
-            handler = "stripTypeWords",
-        ),
-    )
-
-    @Bean
-    fun nameNoTypeWordsInDataName(nlp: BpmnNlp): BpmnRule = primitiveRule(
-        name = "No Type Words In Data Name",
-        category = RuleCategory.Name,
-        intent = "Keep data element names business-oriented and noun-based.",
-        forModellers = "Name data objects and data stores with business noun phrases, without redundant BPMN type words such as activity, process, or event.",
-        forAI = "Detect data object and data store names that include discouraged BPMN type words.",
-        targetElements = listOf("bpmn:DataObject", "bpmn:DataStore"),
-        errorMessages = mapOf(
-            "default" to "Data element name must be a business noun phrase, not an element-type label",
         ),
         check = VocabularyCheckConfig(
             property = "name",
