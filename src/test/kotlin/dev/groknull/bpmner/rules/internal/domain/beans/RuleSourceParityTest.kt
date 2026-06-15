@@ -24,16 +24,15 @@ import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredEventsRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredNameRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.TaskPayloadRule
-import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlpConfig
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
-import org.springframework.core.env.MapPropertySource
 import java.util.stream.Stream
 
 /**
@@ -58,6 +57,7 @@ import java.util.stream.Stream
 internal class RuleSourceParityTest {
     private lateinit var pklRegistry: RuleRegistry
     private lateinit var beanRegistry: RuleRegistry
+    private lateinit var beanContext: AnnotationConfigApplicationContext
 
     @BeforeAll
     fun setUp() {
@@ -75,37 +75,17 @@ internal class RuleSourceParityTest {
         // Build the Pkl catalog directly — same idiom as PklRuleCatalogTest.
         pklRegistry = PklRuleCatalog(compiledRules, nlp)
 
-        // Build the bean registry via an isolated Spring context with bpmner.rules.source=kotlin.
-        // Same idiom as BeanRuleRegistryConstructionTest — no @SpringBootTest conflict needed.
-        beanRegistry = AnnotationConfigApplicationContext().use { context ->
-            context.environment.propertySources.addFirst(
-                MapPropertySource("test", mapOf("bpmner.rules.source" to "kotlin")),
-            )
-            context.register(
-                BpmnNlpConfig::class.java,
-                ActivityRuleConfig::class.java,
-                ArtifactRuleConfig::class.java,
-                AssociationRuleConfig::class.java,
-                DataRuleConfig::class.java,
-                EventRuleConfig::class.java,
-                FlowRuleConfig::class.java,
-                GatewayRuleConfig::class.java,
-                GeneralRuleConfig::class.java,
-                LaneRuleConfig::class.java,
-                MessageRuleConfig::class.java,
-                NameRuleConfig::class.java,
-                PoolRuleConfig::class.java,
-                BeanRuleRegistry::class.java,
-                DanglingEdgeRule::class.java,
-                DefaultFlowRule::class.java,
-                DuplicateIdRule::class.java,
-                EventDefinitionRule::class.java,
-                RequiredEventsRule::class.java,
-                RequiredNameRule::class.java,
-                TaskPayloadRule::class.java,
-            )
-            context.refresh()
-            context.getBean(BeanRuleRegistry::class.java)
+        // Build the bean registry via an isolated Spring context with bpmner.rules.source=kotlin
+        // (shared helper; see BeanRuleRegistryConstructionTest). The context is held open for the
+        // whole class and closed in tearDown so the registry's beans stay live during evaluation.
+        beanContext = bpmnerKotlinRuleContext()
+        beanRegistry = beanContext.getBean(BeanRuleRegistry::class.java)
+    }
+
+    @AfterAll
+    fun tearDown() {
+        if (::beanContext.isInitialized) {
+            beanContext.close()
         }
     }
 
@@ -118,9 +98,11 @@ internal class RuleSourceParityTest {
         val pklIds = pklRegistry.activeRules().map { it.id }.toSet()
         val beanIds = beanRegistry.activeRules().map { it.id }.toSet()
 
-        // The live count is 47 (40 Pkl-derived + 7 compiled) — NOT the stale issue prose "54".
-        // Derive the expected total from the PklRuleCatalog (source of truth), not a hardcode.
-        assertThat(pklIds).describedAs("Pkl catalog rule count").hasSize(pklIds.size)
+        // Guard that the Pkl catalog actually loaded rules — the id-set comparison below is only
+        // meaningful when both catalogs are non-empty. The live total is 47 (40 Pkl-derived + 7
+        // compiled), but the gate compares the two catalogs' live id sets rather than hardcoding a
+        // count (NOT the stale issue prose "54"; see ADR-376-003).
+        assertThat(pklIds).describedAs("Pkl catalog rule ids").isNotEmpty()
         assertThat(beanIds)
             .describedAs(
                 "Bean catalog must expose exactly the same ids as Pkl catalog.\n" +

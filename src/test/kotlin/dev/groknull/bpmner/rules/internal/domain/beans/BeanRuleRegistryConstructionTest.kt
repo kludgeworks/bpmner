@@ -5,53 +5,14 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DefaultFlowRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DuplicateIdRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredEventsRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredNameRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.TaskPayloadRule
-import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlpConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.springframework.context.annotation.AnnotationConfigApplicationContext
-import org.springframework.core.env.MapPropertySource
 
 internal class BeanRuleRegistryConstructionTest {
     @Test
     @Suppress("LongMethod")
     fun `kotlin bean registry loads active rules with unique ids`() {
-        AnnotationConfigApplicationContext().use { context ->
-            context.environment.propertySources.addFirst(
-                MapPropertySource("test", mapOf("bpmner.rules.source" to "kotlin")),
-            )
-            context.register(
-                BpmnNlpConfig::class.java,
-                ActivityRuleConfig::class.java,
-                ArtifactRuleConfig::class.java,
-                AssociationRuleConfig::class.java,
-                DataRuleConfig::class.java,
-                EventRuleConfig::class.java,
-                FlowRuleConfig::class.java,
-                GatewayRuleConfig::class.java,
-                GeneralRuleConfig::class.java,
-                LaneRuleConfig::class.java,
-                MessageRuleConfig::class.java,
-                NameRuleConfig::class.java,
-                PoolRuleConfig::class.java,
-                BeanRuleRegistry::class.java,
-                DanglingEdgeRule::class.java,
-                DefaultFlowRule::class.java,
-                DuplicateIdRule::class.java,
-                EventDefinitionRule::class.java,
-                RequiredEventsRule::class.java,
-                RequiredNameRule::class.java,
-                TaskPayloadRule::class.java,
-            )
-
-            context.refresh()
-
+        bpmnerKotlinRuleContext().use { context ->
             val rules = context.getBean(BeanRuleRegistry::class.java).activeRules()
             val ids = rules.map { it.id }
 
