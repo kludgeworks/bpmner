@@ -89,6 +89,7 @@ _TIMEOUTS = {
     "GenerationModuleTest": "moderate",
     "PklRuleCatalogTest": "moderate",
     "RepairStartupValidationTest": "moderate",
+    "RuleSourceParityTest": "moderate",
     "ValidationModuleTest": "moderate",
 }
 
