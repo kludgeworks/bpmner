@@ -24,14 +24,9 @@ import org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class NameRuleConfig {
-    @Bean
-    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
-        name = "Business Meaningful Label",
-        category = RuleCategory.Name,
-        intent = "Encourage business-readable labels over technical identifiers.",
-        forModellers = "Choose names that are meaningful to business stakeholders and avoid technical shorthand, code names, and implementation identifiers.",
-        forAI = "Detect labels containing technical patterns such as underscores, slash paths, alphanumeric codes, or configured technical tokens.",
-        targetElements = listOf(
+    companion object {
+        // DSL string literals shared across all three @Bean methods in this class.
+        private val NAMED_ELEMENTS = listOf(
             "bpmn:Task",
             "bpmn:SubProcess",
             "bpmn:CallActivity",
@@ -45,7 +40,17 @@ internal class NameRuleConfig {
             "bpmn:ComplexGateway",
             "bpmn:DataObjectReference",
             "bpmn:DataStoreReference",
-        ),
+        )
+    }
+
+    @Bean
+    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
+        name = "Business Meaningful Label",
+        category = RuleCategory.Name,
+        intent = "Encourage business-readable labels over technical identifiers.",
+        forModellers = "Choose names that are meaningful to business stakeholders and avoid technical shorthand, code names, and implementation identifiers.",
+        forAI = "Detect labels containing technical patterns such as underscores, slash paths, alphanumeric codes, or configured technical tokens.",
+        targetElements = NAMED_ELEMENTS,
         errorMessages = mapOf(
             "default" to "Label appears technical/cryptic; prefer business-meaningful wording",
         ),
@@ -71,21 +76,7 @@ internal class NameRuleConfig {
         intent = "Avoid redundant BPMN element type words in labels.",
         forModellers = "Do not include words such as activity, process, or event in element names because the BPMN shape already indicates the type.",
         forAI = "Detect named BPMN elements whose labels include redundant element type words.",
-        targetElements = listOf(
-            "bpmn:Task",
-            "bpmn:SubProcess",
-            "bpmn:CallActivity",
-            "bpmn:StartEvent",
-            "bpmn:IntermediateCatchEvent",
-            "bpmn:IntermediateThrowEvent",
-            "bpmn:EndEvent",
-            "bpmn:ExclusiveGateway",
-            "bpmn:InclusiveGateway",
-            "bpmn:ParallelGateway",
-            "bpmn:ComplexGateway",
-            "bpmn:DataObjectReference",
-            "bpmn:DataStoreReference",
-        ),
+        targetElements = NAMED_ELEMENTS,
         errorMessages = mapOf(
             "default" to "Element name must not include its BPMN element type",
         ),
@@ -110,21 +101,7 @@ internal class NameRuleConfig {
         intent = "Reduce ambiguity from obscure abbreviations in BPMN labels.",
         forModellers = "Avoid uncommon abbreviations in labels, or explain them with an annotation or glossary.",
         forAI = "Detect uppercase abbreviations that are not on the common acronym allow-list and ask for a clearer label or explanation.",
-        targetElements = listOf(
-            "bpmn:Task",
-            "bpmn:SubProcess",
-            "bpmn:CallActivity",
-            "bpmn:StartEvent",
-            "bpmn:IntermediateCatchEvent",
-            "bpmn:IntermediateThrowEvent",
-            "bpmn:EndEvent",
-            "bpmn:ExclusiveGateway",
-            "bpmn:InclusiveGateway",
-            "bpmn:ParallelGateway",
-            "bpmn:ComplexGateway",
-            "bpmn:DataObjectReference",
-            "bpmn:DataStoreReference",
-        ),
+        targetElements = NAMED_ELEMENTS,
         errorMessages = mapOf(
             "default" to "Avoid uncommon abbreviations in labels or explain them via annotation/glossary",
         ),

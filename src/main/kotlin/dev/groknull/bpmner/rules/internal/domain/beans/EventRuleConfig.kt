@@ -30,6 +30,22 @@ import org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class EventRuleConfig {
+    companion object {
+        // DSL string literals shared across multiple @Bean methods in this class.
+        private const val BPMN_BOUNDARY_EVENT = "bpmn:BoundaryEvent"
+        private const val BPMN_START_EVENT = "bpmn:StartEvent"
+        private const val BPMN_INTERMEDIATE_CATCH = "bpmn:IntermediateCatchEvent"
+        private const val BPMN_INTERMEDIATE_THROW = "bpmn:IntermediateThrowEvent"
+        private const val BPMN_END_EVENT = "bpmn:EndEvent"
+        private val ALL_EVENT_TYPES = listOf(
+            BPMN_START_EVENT,
+            BPMN_INTERMEDIATE_CATCH,
+            BPMN_INTERMEDIATE_THROW,
+            BPMN_END_EVENT,
+        )
+        private val INTERMEDIATE_EVENTS = listOf(BPMN_INTERMEDIATE_CATCH, BPMN_INTERMEDIATE_THROW)
+    }
+
     @Bean
     fun evtBoundaryEventConstraints(nlp: BpmnNlp): BpmnRule = compositeRule(
         name = "Boundary Event Constraints",
@@ -37,7 +53,7 @@ internal class EventRuleConfig {
         intent = "Enforce valid boundary event attachment and flow cardinality.",
         forModellers = "Attach boundary events to tasks or subprocesses, do not give them incoming sequence flow, and use exactly one outgoing sequence flow.",
         forAI = "Detect detached boundary events, boundary events with incoming flow or wrong outgoing count, and non-interrupting error boundary events.",
-        targetElements = listOf("bpmn:BoundaryEvent"),
+        targetElements = listOf(BPMN_BOUNDARY_EVENT),
         errorMessages = mapOf(
             "detached" to "Boundary event must be attached to a task or subprocess",
             "incoming" to "Boundary event must not have incoming sequence flow",
@@ -51,7 +67,7 @@ internal class EventRuleConfig {
         sub(
             "detached",
             ElementConstraintCheckConfig(
-                element = "bpmn:BoundaryEvent",
+                element = BPMN_BOUNDARY_EVENT,
                 mode = ElementConstraintMode.BOUNDARY_ATTACHED,
             ),
         )
@@ -62,18 +78,18 @@ internal class EventRuleConfig {
         sub(
             "outgoing",
             ElementConstraintCheckConfig(
-                element = "bpmn:BoundaryEvent",
+                element = BPMN_BOUNDARY_EVENT,
                 mode = ElementConstraintMode.BOUNDARY_SINGLE_OUTGOING,
             ),
         )
         sub(
             "errorInterrupting",
             ElementConstraintCheckConfig(
-                element = "bpmn:BoundaryEvent",
+                element = BPMN_BOUNDARY_EVENT,
                 mode = ElementConstraintMode.BOUNDARY_ERROR_INTERRUPTING,
             ),
         )
-        targetTypes("bpmn:BoundaryEvent")
+        targetTypes(BPMN_BOUNDARY_EVENT)
     }
 
     @Bean
@@ -83,12 +99,7 @@ internal class EventRuleConfig {
         intent = "Encourage event labels to describe states or happenings rather than process actions.",
         forModellers = "Name events as things that happen or states that are reached, not as actions performed by the process.",
         forAI = "Detect event labels whose first token is POS-tagged as a verb and suggest state-style wording.",
-        targetElements = listOf(
-            "bpmn:StartEvent",
-            "bpmn:IntermediateCatchEvent",
-            "bpmn:IntermediateThrowEvent",
-            "bpmn:EndEvent",
-        ),
+        targetElements = ALL_EVENT_TYPES,
         errorMessages = mapOf(
             "default" to "Event name should describe a state/happening, not an action",
         ),
@@ -107,12 +118,7 @@ internal class EventRuleConfig {
         intent = "Encourage event labels to follow noun plus state or result wording.",
         forModellers = "Name events with a noun and a clear resulting state, such as Request approved or Order received.",
         forAI = "Detect event labels that lack both a noun or proper noun and a state-like token such as an adjective or past participle.",
-        targetElements = listOf(
-            "bpmn:StartEvent",
-            "bpmn:IntermediateCatchEvent",
-            "bpmn:IntermediateThrowEvent",
-            "bpmn:EndEvent",
-        ),
+        targetElements = ALL_EVENT_TYPES,
         errorMessages = mapOf(
             "default" to "Event name should follow a noun + state/result pattern (e.g. Request approved)",
         ),
@@ -131,7 +137,7 @@ internal class EventRuleConfig {
         intent = "Ensure error end events propagate to matching parent boundary error handlers.",
         forModellers = "Place error end events inside subprocesses and provide a matching error boundary event on the parent subprocess.",
         forAI = "Detect error end events outside subprocesses or without a matching parent boundary error event using the same error name or code.",
-        targetElements = listOf("bpmn:EndEvent"),
+        targetElements = listOf(BPMN_END_EVENT),
         errorMessages = mapOf(
             "outsideSubprocess" to "Error end event must be placed inside a subprocess",
             "missingBoundary" to "Error end event must match an error boundary event on its parent subprocess",
@@ -149,7 +155,7 @@ internal class EventRuleConfig {
         intent = "Ensure intermediate events describe states or happenings rather than work.",
         forModellers = "Use intermediate events for things that happen while activities perform the work.",
         forAI = "Detect intermediate catch or throw event labels that start with a verb or auxiliary and suggest state-style wording or a task.",
-        targetElements = listOf("bpmn:IntermediateCatchEvent", "bpmn:IntermediateThrowEvent"),
+        targetElements = INTERMEDIATE_EVENTS,
         errorMessages = mapOf(
             "default" to "Intermediate event name should describe a state, not an action",
         ),
@@ -168,7 +174,7 @@ internal class EventRuleConfig {
         intent = "Ensure link intermediate events are named and paired correctly.",
         forModellers = "Use throwing and catching link intermediate events in matched pairs with the same reference name in the same scope.",
         forAI = "Detect link events without names or without a named throw/catch counterpart in the same scope.",
-        targetElements = listOf("bpmn:IntermediateThrowEvent", "bpmn:IntermediateCatchEvent"),
+        targetElements = INTERMEDIATE_EVENTS,
         errorMessages = mapOf(
             "missingName" to "Link event must have a name and a matching pair in the same scope",
             "missingCounterpart" to "Link event must have a named throw/catch counterpart in the same scope",
@@ -186,7 +192,7 @@ internal class EventRuleConfig {
         intent = "Ensure message-start semantics are modeled as inter-pool communication.",
         forModellers = "When a process starts through a message start event, model the incoming message flow from the external participant.",
         forAI = "Detect message start events that do not have an incoming message flow from another pool.",
-        targetElements = listOf("bpmn:StartEvent"),
+        targetElements = listOf(BPMN_START_EVENT),
         errorMessages = mapOf(
             "default" to "Message start event must have an incoming message flow from another pool",
         ),
@@ -202,7 +208,7 @@ internal class EventRuleConfig {
         intent = "Enforce BPMN start-event structure.",
         forModellers = "Start events initiate the process and must not have incoming sequence flows.",
         forAI = "Validate that every start event has zero incoming sequence flows.",
-        targetElements = listOf("bpmn:StartEvent"),
+        targetElements = listOf(BPMN_START_EVENT),
         errorMessages = mapOf(
             "default" to "Start event must not have incoming sequence flow",
         ),
@@ -223,14 +229,14 @@ internal class EventRuleConfig {
         intent = "Ensure timer start events define the time condition that starts the process.",
         forModellers = "Use a timer start event only when the process waits for a specific date, duration, or cycle before starting.",
         forAI = "Detect timer start events with no timer expression or with more than one timer expression. General start-event incoming-flow checks are handled by the start-no-incoming rule.",
-        targetElements = listOf("bpmn:StartEvent"),
+        targetElements = listOf(BPMN_START_EVENT),
         errorMessages = mapOf(
             "default" to "Timer start event must define exactly one timer expression",
             "missingTimerExpression" to "Timer start event must define a date, duration, or cycle",
             "multipleTimerExpressions" to "Timer start event must define only one timer expression",
         ),
         check = ElementConstraintCheckConfig(
-            element = "bpmn:StartEvent",
+            element = BPMN_START_EVENT,
             mode = ElementConstraintMode.TIMER_EXPRESSION,
         ),
         nlp = nlp,

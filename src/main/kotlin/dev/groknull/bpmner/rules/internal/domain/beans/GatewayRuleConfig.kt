@@ -32,6 +32,25 @@ import org.springframework.context.annotation.Configuration
 @ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class GatewayRuleConfig {
+    companion object {
+        // DSL string literals shared across multiple @Bean methods in this class.
+        private const val BPMN_EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
+        private const val BPMN_INCLUSIVE_GATEWAY = "bpmn:InclusiveGateway"
+        private const val BPMN_PARALLEL_GATEWAY = "bpmn:ParallelGateway"
+        private const val BPMN_COMPLEX_GATEWAY = "bpmn:ComplexGateway"
+        private val EXCLUSIVE_INCLUSIVE_PARALLEL = listOf(
+            BPMN_EXCLUSIVE_GATEWAY,
+            BPMN_INCLUSIVE_GATEWAY,
+            BPMN_PARALLEL_GATEWAY,
+        )
+        private val EXCLUSIVE_INCLUSIVE = listOf(BPMN_EXCLUSIVE_GATEWAY, BPMN_INCLUSIVE_GATEWAY)
+        private val EXCLUSIVE_INCLUSIVE_COMPLEX = listOf(
+            BPMN_EXCLUSIVE_GATEWAY,
+            BPMN_INCLUSIVE_GATEWAY,
+            BPMN_COMPLEX_GATEWAY,
+        )
+    }
+
     @Bean
     fun gwConvergingGatewayUnnamed(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "Converging Gateway Unnamed",
@@ -39,7 +58,7 @@ internal class GatewayRuleConfig {
         intent = "Keep converging gateway labels empty so decision wording stays on the diverging side.",
         forModellers = "Do not name converging exclusive, inclusive, or parallel gateways; use a text annotation if convergence needs explanation.",
         forAI = "Detect converging exclusive, inclusive, or parallel gateways with labels and remove the label when auto-fixing.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ParallelGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE_PARALLEL,
         errorMessages = mapOf(
             "default" to "Converging gateway should remain unnamed",
         ),
@@ -60,7 +79,7 @@ internal class GatewayRuleConfig {
         intent = "Encourage question-style naming on diverging exclusive and inclusive gateways.",
         forModellers = "Name diverging exclusive and inclusive gateways with a question that expresses the decision.",
         forAI = "Detect diverging exclusive and inclusive gateways with missing names or names that are not interrogative.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE,
         errorMessages = mapOf(
             "default" to "Diverging exclusive/inclusive gateway should be named as a question",
         ),
@@ -109,7 +128,7 @@ internal class GatewayRuleConfig {
         intent = "Keep gateway labels focused on decision conditions rather than work execution.",
         forModellers = "Model work as an activity before the gateway; use the gateway only to evaluate the resulting condition.",
         forAI = "Detect diverging gateway labels that start with action verbs or configured work verbs.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ComplexGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE_COMPLEX,
         errorMessages = mapOf(
             "default" to "Gateway label should describe a decision condition, not perform work",
         ),
@@ -134,7 +153,7 @@ internal class GatewayRuleConfig {
         intent = "Prevent a single gateway from acting as both a join and a fork.",
         forModellers = "Use separate converging and diverging gateways instead of one gateway with multiple incoming and multiple outgoing flows.",
         forAI = "Detect exclusive, inclusive, or parallel gateways with at least two incoming and at least two outgoing flows.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ParallelGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE_PARALLEL,
         errorMessages = mapOf(
             "default" to "Gateway acts as both join and fork; split into separate converging and diverging gateways",
         ),
@@ -155,7 +174,7 @@ internal class GatewayRuleConfig {
         intent = "Remove passthrough gateways that carry no routing decision.",
         forModellers = "Avoid gateways with exactly one incoming and one outgoing flow because they do not split or merge control flow.",
         forAI = "Detect exclusive, inclusive, or parallel gateways with a single incoming and single outgoing flow.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ParallelGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE_PARALLEL,
         errorMessages = mapOf(
             "default" to "Gateway has a single incoming and single outgoing flow and can be removed",
         ),
@@ -195,7 +214,7 @@ internal class GatewayRuleConfig {
         intent = "Require outcome labels on diverging gateway branches.",
         forModellers = "Name outgoing flows from diverging exclusive, inclusive, and complex gateways with short outcome labels.",
         forAI = "Detect unnamed outgoing sequence flows from diverging exclusive, inclusive, or complex gateways.",
-        targetElements = listOf("bpmn:ExclusiveGateway", "bpmn:InclusiveGateway", "bpmn:ComplexGateway"),
+        targetElements = EXCLUSIVE_INCLUSIVE_COMPLEX,
         errorMessages = mapOf(
             "default" to "Sequence flow from diverging gateway must have an outcome label",
         ),
