@@ -89,7 +89,6 @@ internal class EventRuleConfig {
                 mode = ElementConstraintMode.BOUNDARY_ERROR_INTERRUPTING,
             ),
         )
-        targetTypes(BPMN_BOUNDARY_EVENT)
     }
 
     @Bean

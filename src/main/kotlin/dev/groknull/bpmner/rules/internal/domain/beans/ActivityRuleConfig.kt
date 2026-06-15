@@ -158,6 +158,5 @@ internal class ActivityRuleConfig {
                 posClass = NlpPosTag.VERB,
             ),
         )
-        targetTypes(BPMN_TASK, BPMN_SUB_PROCESS, BPMN_CALL_ACTIVITY)
     }
 }
