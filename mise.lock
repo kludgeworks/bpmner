@@ -142,6 +142,40 @@ url = "https://github.com/bazelbuild/buildtools/releases/download/v8.5.1/buildif
 checksum = "sha256:f4ecb9c73de2bc38b845d4ee27668f6248c4813a6647db4b4931a7556052e4e1"
 url = "https://github.com/bazelbuild/buildtools/releases/download/v8.5.1/buildifier-windows-amd64.exe"
 
+[[tools.coursier]]
+version = "2.1.24"
+backend = "github:coursier/coursier"
+
+[tools.coursier."platforms.linux-arm64"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/coursier.jar"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274915"
+
+[tools.coursier."platforms.linux-arm64-musl"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/coursier.jar"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274915"
+
+[tools.coursier."platforms.linux-x64"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/cs-x86_64-pc-linux-static-sdk.zip"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274947"
+
+[tools.coursier."platforms.linux-x64-musl"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/cs-x86_64-pc-linux-static-sdk.zip"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274947"
+
+[tools.coursier."platforms.macos-arm64"]
+checksum = "blake3:5c33f392eb8943ad03c7211cc323bf2647eb78544101ca3aba658f2dfb683648"
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/cs-aarch64-apple-darwin-sdk.zip"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274921"
+provenance = "github-attestations"
+
+[tools.coursier."platforms.macos-x64"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/cs-x86_64-apple-darwin-sdk.zip"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274929"
+
+[tools.coursier."platforms.windows-x64"]
+url = "https://github.com/coursier/coursier/releases/download/v2.1.24/cs-x86_64-pc-win32.zip"
+url_api = "https://api.github.com/repos/coursier/coursier/releases/assets/219274961"
+
 [[tools."github:detekt/detekt"]]
 version = "1.23.8"
 backend = "github:detekt/detekt"
