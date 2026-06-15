@@ -37,7 +37,7 @@ internal class BpmnLayoutAgent(
 
     @AchievesGoal(
         description = "Apply auto-layout and final validation to validated BPMN XML",
-        export = Export(name = "finalizeLayout", remote = true, startingInputTypes = [LayoutedBpmnXml::class]),
+        export = Export(name = "finalizeLayout", startingInputTypes = [LayoutedBpmnXml::class]),
     )
     @Action(description = "XSD-validate the final layouted BPMN XML")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {

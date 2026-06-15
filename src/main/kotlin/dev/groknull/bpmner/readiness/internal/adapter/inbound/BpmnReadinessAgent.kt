@@ -28,7 +28,7 @@ internal class BpmnReadinessAgent(
 
     @AchievesGoal(
         description = "Assess raw BPMN generation input for process readiness",
-        export = Export(name = "assessReadiness", remote = true, startingInputTypes = [BpmnRequest::class]),
+        export = Export(name = "assessReadiness", startingInputTypes = [BpmnRequest::class]),
     )
     @Action(
         description = "Assess raw BPMN generation input for process readiness",

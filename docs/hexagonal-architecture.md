@@ -173,30 +173,25 @@ Two things to note:
 
 ### Embabel primary adapter
 
-Shell users enter through Embabel Shell's built-in `x` / `execute` command. That places `UserInput` on the blackboard; `BpmnGenerationGateAgent` extracts a `BpmnRequestDraft`, resolves it to a `BpmnRequest`, gates readiness, and emits `ReadyBpmnContext` for the downstream pipeline.
+Shell users enter through Embabel Shell's built-in `x` / `execute` command. That places `UserInput` on the blackboard; `BpmnGenerationAgent` (the single orchestrator in `orchestration/`) drafts and resolves the request, runs readiness assessment as a scoped sub-process, and drives the full generation pipeline via a `@State` machine for clarification.
 
-`src/main/kotlin/dev/groknull/bpmner/generation/internal/adapter/inbound/BpmnGenerationGateAgent.kt`:
+`src/main/kotlin/dev/groknull/bpmner/orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt`:
 
 ```kotlin
 @Application
-@Agent(description = "Resolve shell BPMN requests and gate generation on readiness")
-internal class BpmnGenerationGateAgent {
-    @Action
-    fun draftBpmnRequest(userInput: UserInput, context: OperationContext): BpmnRequestDraft = TODO()
-
-    @Action
-    fun resolveBpmnRequest(draft: BpmnRequestDraft): BpmnRequest = TODO()
-
-    @AchievesGoal(
-        export = Export(
-            name = "prepareBpmnGeneration",
-            startingInputTypes = [UserInput::class, BpmnRequest::class],
-        ),
-    )
-    @Action(pre = ["assessmentReady"])
-    fun approveReadyRequest(request: BpmnRequest, assessment: ProcessInputAssessment): ReadyBpmnContext = TODO()
+@Agent(description = "Single idiomatic agent for happy-path BPMN generation")
+internal class BpmnGenerationAgent(...) {
+    @Action fun draft(userInput: UserInput, context: OperationContext): BpmnRequestDraft = ...
+    @Action fun resolve(draft: BpmnRequestDraft): BpmnRequest = ...
+    @Action fun assessReadiness(request: BpmnRequest): ProcessInputAssessment = ...
+    @Action fun startAssessing(request: BpmnRequest, assessment: ProcessInputAssessment): Assessing = ...
+    // ... extractContract, createOutline, composeGraph, render, validate, layout, align
+    @AchievesGoal(export = Export(name = "generateBpmn"))
+    @Action fun finish(ready: ReadyBpmnContext, x: FinalValidatedBpmnXml, report: BpmnAlignmentReport): BpmnResult = ...
 }
 ```
+
+The per-stage agents (`BpmnGenerationGateAgent`, contract, generator, repair, alignment) were consolidated into this single orchestrator; their logic now lives behind public ports.
 
 ### Public secondary port for process starts
 
@@ -205,14 +200,15 @@ internal class BpmnGenerationGateAgent {
 ```kotlin
 @SecondaryPort
 interface BpmnAgentInvoker {
-    fun generate(request: BpmnRequest): BpmnResult
-    fun startAsync(request: BpmnRequest, assessment: ProcessInputAssessment): AgentProcess
+    fun generate(request: BpmnRequest, assessment: ProcessInputAssessment): BpmnResult
+    fun startAsync(request: BpmnRequest): AgentProcess          // web-only Tripper overload
+    fun startAsync(request: BpmnRequest, assessment: ProcessInputAssessment): AgentProcess  // CLI seam
 }
 ```
 
-This port is public because `web/` starts an async agent process after performing HTTP readiness checks. The concrete implementation, `AgentPlatformBpmnAgentInvoker`, lives in `generation/` and is the only adapter that drives the Embabel agent platform.
+This port is public because `web/` starts an async agent process via the Tripper `JourneyController` pattern. The concrete implementation, `AgentPlatformBpmnAgentInvoker`, lives in `generation/` and is the only adapter that drives the Embabel agent platform.
 
-The web adapter does not duplicate shell behavior. It assesses readiness up front, returns HTTP 422 when blocked, and otherwise seeds the agent process with `BpmnRequest + ProcessInputAssessment`; `BpmnGenerationGateAgent.approveReadyRequest` converts that pair to the same `ReadyBpmnContext` used by shell starts.
+The web adapter (`BpmnWebController` → `WebGenerationStarter`) uses the web-only `startAsync(request)` overload: it sets the process mode to `INTERACTIVE`, returns `202 {processId, sseUrl}`, and lets readiness assessment run inside the async agent process — **no synchronous pre-check, no HTTP 422**. Clarification surfaces as an in-process `WaitFor.formSubmission` over SSE. The synchronous `generate(request, assessment)` and the legacy `startAsync(request, assessment)` overloads remain for the CLI/shell seam.
 
 ## Where the pattern bends
 
