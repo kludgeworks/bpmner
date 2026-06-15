@@ -86,6 +86,7 @@ kt_jvm_library(
         "@maven//:org_jmolecules_jmolecules_onion_architecture",
         "@maven//:org_pkl_lang_pkl_config_java",
         "@maven//:org_pkl_lang_pkl_config_kotlin",
+        "@maven//:org_springframework_boot_spring_boot_autoconfigure",
         "@maven//:org_springframework_boot_spring_boot_loader",
         "@maven//:org_springframework_boot_spring_boot_starter",
         "@maven//:org_springframework_boot_spring_boot_starter_web",

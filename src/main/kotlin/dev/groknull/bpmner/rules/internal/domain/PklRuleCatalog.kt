@@ -16,6 +16,7 @@ import org.pkl.config.kotlin.to
 import org.pkl.core.ModuleSource
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.stereotype.Component
 import java.net.URI
 import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
@@ -44,6 +45,7 @@ import dev.groknull.bpmner.pkl.BpmnRule as PklBpmnRule
  * dropped with a warning. This is the contract from #241.3.
  */
 @Component
+@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "pkl", matchIfMissing = true)
 internal class PklRuleCatalog(
     compiledRules: List<BpmnRule>,
     private val nlp: BpmnNlp,

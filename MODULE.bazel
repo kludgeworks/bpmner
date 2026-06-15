@@ -82,6 +82,7 @@ maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
 maven.install(
     artifacts = [
         "org.springframework.boot:spring-boot-loader:" + SPRING_BOOT_VERSION,
+        "org.springframework.boot:spring-boot-autoconfigure:" + SPRING_BOOT_VERSION,
         "org.springframework.boot:spring-boot-starter:" + SPRING_BOOT_VERSION,
         "org.springframework.boot:spring-boot-starter-test:" + SPRING_BOOT_VERSION,
         "com.embabel.agent:embabel-agent-starter-openai:" + EMBABEL_VERSION,
