@@ -18,7 +18,7 @@ The `BpmnProgressProjectionObserver` maps action names to user-facing labels —
 
 ## `BpmnGenerationAgent` — the orchestrator
 
-`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes thirteen `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` + `ProcessInputAssessment` (web/programmatic) through to a `BpmnResult`.
+`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes thirteen `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` (web, INTERACTIVE mode via the web-only `startAsync(request)` overload) through to a `BpmnResult`. The legacy `BpmnRequest` + `ProcessInputAssessment` pair is the CLI/shell seam and is left intact.
 
 Each action delegates to a public port; the port is implemented as a plain Spring component in its owning module (the LLM-backed ones are `@PrimaryAdapter @Component` under each module's `internal/adapter/inbound/`):
 
