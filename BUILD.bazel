@@ -32,6 +32,10 @@ sonarqube(
 
 buildifier_test(
     name = "buildifier_check",
+    exclude_patterns = [
+        "./.bazelbsp/*",
+        "./.bsp/*",
+    ],
     no_sandbox = True,
     tags = ["local"],
     workspace = "//:WORKSPACE",
