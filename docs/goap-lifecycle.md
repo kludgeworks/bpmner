@@ -2,7 +2,7 @@
 
 This document describes how bpmner's agent pipeline executes — how Embabel's planner chooses actions, how the framework surfaces failure modes — and the contract that Pkl rules use to declare their repair capability.
 
-The happy path now runs on a **single orchestrating agent**, `BpmnGenerationAgent`. The validation stage executes an iterative repair loop inside the `BpmnRepairer` port using Embabel's `RepeatUntilAcceptable` mechanism (rather than a top-level GOAP loop in the plan). The GOAP framework concepts below still apply — they govern how the orchestrator's twelve actions are planned and how the two support agents (`BpmnReadinessAgent`, `BpmnLayoutAgent`) run.
+The happy path now runs on a **single orchestrating agent**, `BpmnGenerationAgent`. The validation stage executes an iterative repair loop inside the `BpmnRepairer` port using Embabel's `RepeatUntilAcceptable` mechanism (rather than a top-level GOAP loop in the plan). The GOAP framework concepts below still apply — they govern how the orchestrator's thirteen actions are planned and how the two support agents (`BpmnReadinessAgent`, `BpmnLayoutAgent`) run.
 
 ## What is GOAP, in this codebase
 
@@ -24,7 +24,7 @@ There are exactly **three** deployed `@Agent` classes. Only the orchestrator par
 
 | Agent | File | Actions | Achieves goal | Role in the run |
 | --- | --- | --- | --- | --- |
-| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/` | 12: `draft`, `resolve`, `assessReadiness`, `provideReadyContext`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish` | `generateBpmn` (on `finish`) | The orchestrator. Plans the whole happy path. |
+| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/` | 13: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess` | `generateBpmn` (on `finish`) | The orchestrator. Plans the whole happy path via a `@State` machine for readiness/clarification. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/` | 1: `assessReadiness` | `assessReadiness` | Run as a **scoped sub-process** by the orchestrator's `assessReadiness` action. |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent. **Not** used by the orchestrator (layout runs inline). |
 
@@ -35,23 +35,23 @@ See [`agents.md`](./agents.md) for the per-action port delegation table.
 ```text
    ┌───────────────────────────────────────────────────────────────────────┐
    │ Starting input                                                        │
-   │   Shell: UserInput   |   Web/programmatic: BpmnRequest + assessment   │
+   │   Shell: UserInput   |   Web: BpmnRequest (async, INTERACTIVE mode)   │
    └─────────────────────────────┬─────────────────────────────────────────┘
                                  ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │ BpmnGenerationAgent  (single GOAP plan, 12 actions)                  │
+   │ BpmnGenerationAgent  (single GOAP plan, 13 actions)                  │
    │                                                                       │
    │   draft                → BpmnRequestDraft                             │
    │   resolve              → BpmnRequest                                  │
    │   assessReadiness      → ProcessInputAssessment   (scoped sub-process)│
-   │   provideReadyContext  require READY → ReadyBpmnContext               │
+   │   startAssessing       → Assessing   (@State machine entry)           │
    │   extractContract      → ValidatedProcessContract                     │
    │   createOutline        → ValidatedOutline                            │
    │   composeGraph         → LaidOutProcessGraph                         │
    │   render               → RenderedBpmn                                │
    │   validate             repair loop → ValidatedBpmnXml                 │
    │   layout               inline → FinalValidatedBpmnXml                 │
-   │   align                → AlignedBpmnXml                              │
+   │   align                → BpmnAlignmentReport                         │
    │   finish  @AchievesGoal(generateBpmn) → BpmnResult                   │
    └───────────────────────────────────────────────────────────────────────┘
 ```
@@ -62,7 +62,7 @@ The orchestrator's `assessReadiness` action does not chain `BpmnReadinessAgent` 
 
 Actions never name each other directly. The planner threads outputs to inputs **by type**: if some action returns `ValidatedOutline` and a later action takes `ValidatedOutline` as a parameter, the planner connects them. Because the whole happy path lives on one agent, the chain is a single linear sequence of distinct types — there is no blackboard name-matching (`@RequireNameMatch`) in the deployed plan.
 
-Three of the orchestrator's terminal actions are marked `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE` — `layout`, `align`, and `finish` — so a failure there is not retried by the planner.
+Four of the orchestrator's actions are marked `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE` — `layout`, `align`, `finish`, and `reassess` — so a failure there is not retried by the planner.
 
 ## Scoped readiness sub-process
 
@@ -181,7 +181,7 @@ Even with a single orchestrator and a single-pass validate, GOAP earns its keep:
 
 ## Cross-references
 
-- Agent file paths, the 12-action port table, and `@AchievesGoal` exports: see [`agents.md`](./agents.md).
+- Agent file paths, the 13-action port table, and `@AchievesGoal` exports: see [`agents.md`](./agents.md).
 - Pipeline overview, module map, and the inline-layout / validate-only stages: see [`pipeline-architecture.md`](./pipeline-architecture.md).
 - Operator-facing tuning (budgets, profiles, severity overrides, troubleshooting): see [`operator-guide.md`](./operator-guide.md).
 - Module structure, ports, and jMolecules roles: see [`hexagonal-architecture.md`](./hexagonal-architecture.md).

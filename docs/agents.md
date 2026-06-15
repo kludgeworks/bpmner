@@ -18,7 +18,7 @@ The `BpmnProgressProjectionObserver` maps action names to user-facing labels —
 
 ## `BpmnGenerationAgent` — the orchestrator
 
-`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes thirteen `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` + `ProcessInputAssessment` (web/programmatic) through to a `BpmnResult`.
+`BpmnGenerationAgent` (`@Agent(description = "Single idiomatic agent for happy-path BPMN generation")`) is constructed from nine ports and exposes thirteen `@Action` methods. The planner threads them by type from a starting `UserInput` (shell) or `BpmnRequest` (web, INTERACTIVE mode via the web-only `startAsync(request)` overload) through to a `BpmnResult`. The legacy `BpmnRequest` + `ProcessInputAssessment` pair is the CLI/shell seam and is left intact.
 
 Each action delegates to a public port; the port is implemented as a plain Spring component in its owning module (the LLM-backed ones are `@PrimaryAdapter @Component` under each module's `internal/adapter/inbound/`):
 
@@ -34,8 +34,8 @@ Each action delegates to a public port; the port is implemented as a plain Sprin
 | `render` | `(ReadyBpmnContext, LaidOutProcessGraph) → RenderedBpmn` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator`, which delegates rendering to the domain `@Component` `BpmnGraphRenderer` (holds the `BpmnRenderer` secondary port). |
 | `validate` | `(ReadyBpmnContext, LaidOutProcessGraph, RenderedBpmn, ValidatedProcessContract) → ValidatedBpmnXml` | `BpmnRepairer` | `DefaultBpmnRepairer` (`repair/`) — **validate-only**: a single validation pass (`BpmnRepairAdvancer.initialEvaluation`). |
 | `layout` | `ValidatedBpmnXml → FinalValidatedBpmnXml` | (inline) | Calls `BpmnLayoutPort` + `BpmnXsdValidationPort` directly; `error(...)`s on XSD-invalid output. Does **not** route through `BpmnLayoutAgent`. |
-| `align` | `(ReadyBpmnContext, ValidatedProcessContract, FinalValidatedBpmnXml, OperationContext) → AlignedBpmnXml` | `BpmnAligner` | `LlmBpmnAligner` (`alignment/`) — semantic comparison vs the contract. `FIRE_ONCE`. |
-| `finish` | `(ReadyBpmnContext, AlignedBpmnXml) → BpmnResult` | (inline) | Writes the output file (mkdirs parent, skips blank paths), returns `BpmnResult(status = GENERATED)`. Carries `@AchievesGoal(name = "generateBpmn")`. `FIRE_ONCE`. |
+| `align` | `(ReadyBpmnContext, ValidatedProcessContract, FinalValidatedBpmnXml, OperationContext) → BpmnAlignmentReport` | `BpmnAligner` | `LlmBpmnAligner` (`alignment/`) — semantic comparison vs the contract. Returns a report; does **not** throw on verdict. `FIRE_ONCE`. |
+| `finish` | `(ReadyBpmnContext, FinalValidatedBpmnXml, BpmnAlignmentReport) → BpmnResult` | (inline) | Critique gate: if `verdict == FAILED` → `BpmnResult(status = ALIGNMENT_FAILED)`, no file write. Otherwise writes the output file (mkdirs parent, skips blank paths), returns `BpmnResult(status = GENERATED)`. Carries `@AchievesGoal(name = "generateBpmn")`. `FIRE_ONCE`. |
 | `reassess` | `(AwaitingClarification, BpmnClarificationAnswers) → Assessing` | (inline) | Loops back into `Assessing` after a clarification answer; updates request and increments round counter. `clearBlackboard = true`. |
 
 The `layout`, `align`, `finish`, and `reassess` actions are annotated `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`.

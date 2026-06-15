@@ -21,7 +21,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `repair/` | Validation and iterative repair of the rendered definition. Contract-aware validation wrapper, diagnostic classification, and `RepeatUntilAcceptable` repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`, `BpmnContractAwareValidator`. |
 | `validation/` | Diagnostic discovery: BPMN definition checks, XSD validation, in-process rule-engine evaluation, capability stamping. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `BpmnRuleGuidancePort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`, `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`. |
 | `layout/` | Deterministic auto-layout and final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
-| `alignment/` | Guardrail 3: semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAligner` (port), `LlmBpmnAligner`, `AlignedBpmnXml`, `AlignmentVerdict`. |
+| `alignment/` | Guardrail 3: semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
 | `config/` | OpenAI-compatible provider model configuration; startup agent-deployment validation. | `OpenRouterModelsConfig`, `AgentDeploymentValidator`. |
 
@@ -29,13 +29,13 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
 
 ## End-to-end pipeline
 
-`BpmnGenerationAgent` exposes twelve thin `@Action` methods. The planner threads them by type from the starting input through to a `BpmnResult`. Every action delegates to a public port (or runs a small inline step); the real work lives behind those ports.
+`BpmnGenerationAgent` exposes thirteen thin `@Action` methods. The planner threads them by type from the starting input through to a `BpmnResult`. Every action delegates to a public port (or runs a small inline step); the real work lives behind those ports.
 
 ```text
    ┌──────────────────────────┐            ┌────────────────────────────────┐
-   │ Shell: generate "<desc>" │            │ Web/programmatic               │
-   │   → UserInput            │            │   → BpmnRequest +              │
-   │                          │            │     ProcessInputAssessment     │
+   │ Shell: generate "<desc>" │            │ Web (Tripper JourneyController)│
+   │   → UserInput            │            │   → BpmnRequest  (async,       │
+   │                          │            │     INTERACTIVE mode)          │
    └────────────┬─────────────┘            └───────────────┬────────────────┘
                 ▼                                          ▼
    ┌───────────────────────────────────────────────────────────────────────┐
@@ -47,8 +47,9 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
    │     ▼                                                                 │
    │  assessReadiness     scoped sub-process → ProcessInputAssessment      │
    │     ▼                                          (BpmnReadinessInvoker)  │
-   │  provideReadyContext require READY → ReadyBpmnContext                 │
-   │     ▼                                                                 │
+   │  startAssessing      → Assessing  (@State machine entry)              │
+   │     ▼  (state machine: Ready → ReadyBpmnContext; AwaitingClarification│
+   │         → WaitFor.formSubmission over SSE; Blocked → NEEDS_CLARIF.)  │
    │  extractContract     LLM → ValidatedProcessContract                   │
    │     ▼                                          (ProcessContractExtractor)│
    │  createOutline       LLM → ValidatedOutline      (BpmnProcessGenerator)│
@@ -61,9 +62,10 @@ Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter p
    │     ▼                                                                 │
    │  layout              inline BpmnLayoutPort + XSD → FinalValidatedBpmnXml│
    │     ▼                  throws on XSD-invalid output                   │
-   │  align               LLM → AlignedBpmnXml             (BpmnAligner)    │
-   │     ▼                                                                 │
+   │  align               LLM → BpmnAlignmentReport       (BpmnAligner)    │
+   │     ▼                  critique gate: no throw on verdict              │
    │  finish  @AchievesGoal(generateBpmn)  writes file → BpmnResult        │
+   │            verdict==FAILED → ALIGNMENT_FAILED (no file write)         │
    └───────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -74,7 +76,7 @@ The arrows between domain types are exact: each action declares its input and ou
 Both entrypoints reach the `generateBpmn` goal by resolving the orchestrator **by name** (`"BpmnGenerationAgent"`) on the `AgentPlatform`:
 
 - **Shell** — `BpmnShellCommands` (`generation/internal/adapter/inbound/`) exposes `generate` / `gen` / `g`. It delegates to Embabel's `execute` in **closed mode**, seeding `UserInput` from the prose; the orchestrator's `draft`/`resolve` actions turn that into a `BpmnRequest`.
-- **Web/programmatic** — `BpmnWebController` → `WebGenerationStarter` runs readiness assessment first (via `BpmnReadinessInvoker`), and on `READY` calls `BpmnAgentInvoker.startAsync(request, assessment)`. The implementation `AgentPlatformBpmnAgentInvoker` (`generation/AgentPlatformBpmnAgentInvoker.kt`) finds the agent named `BpmnGenerationAgent` and runs it, seeding the plan with the `BpmnRequest` + `ProcessInputAssessment`. Its `generate(...)` counterpart drives the synchronous path.
+- **Web (Tripper `JourneyController`)** — `BpmnWebController` → `WebGenerationStarter` calls the web-only `BpmnAgentInvoker.startAsync(request)` overload. There is **no synchronous readiness pre-check and no HTTP 422**; readiness assessment runs inside the async agent process. `WebGenerationStarter` sets the process mode to `INTERACTIVE`, and the controller returns `202 {processId, sseUrl}`. Clarification surfaces as an in-process `WaitFor.formSubmission` over SSE. The implementation `AgentPlatformBpmnAgentInvoker` (`generation/AgentPlatformBpmnAgentInvoker.kt`) finds the agent named `BpmnGenerationAgent` and seeds the plan with only `BpmnRequest`. The synchronous `generate(request, assessment)` and the legacy `startAsync(request, assessment)` overloads remain for the CLI/shell seam.
 
 `AgentPlatformBpmnAgentInvoker` reads the goal output via `AgentProcessExecution.fromProcessStatus(request, process)`, which returns the `BpmnResult` on `COMPLETED` and throws the framework's typed status exceptions on non-completed states (see [`goap-lifecycle.md`](./goap-lifecycle.md#stuck-vs-terminated)).
 
@@ -135,7 +137,7 @@ FinalValidatedBpmnXml
 
 ## Stage: Alignment (`alignment/`)
 
-The `align` action delegates to the `BpmnAligner` port (`LlmBpmnAligner`): an LLM compares the final BPMN against the `ValidatedProcessContract`, flagging invented tasks, missing branches, or unsupported end states. It returns an `AlignedBpmnXml` carrying the alignment report. The action is `FIRE_ONCE` — a model failure on alignment is not retried.
+The `align` action delegates to the `BpmnAligner` port (`LlmBpmnAligner`): an LLM compares the final BPMN against the `ValidatedProcessContract`, flagging invented tasks, missing branches, or unsupported end states. It returns a `BpmnAlignmentReport` — a **critique gate**, not a throwing step. The action is `FIRE_ONCE` — a model failure on alignment is not retried. The `finish` action reads the report: if `verdict == FAILED` it returns `BpmnResult(status = ALIGNMENT_FAILED)` without writing a file; otherwise it writes the output and returns `BpmnResult(status = GENERATED)`.
 
 ## Stage: Finish (`orchestration/`)
 
