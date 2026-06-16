@@ -186,7 +186,7 @@ class RuleProfileFactoryTest {
     }
 
     @Test
-    fun `config uri does not affect profile or severity source in stage 5a`() {
+    fun `config uri does not affect profile or severity resolution`() {
         val profile = build(configUri = "file:/tmp/team-bpmner.pkl")
 
         assertTrue(profile.severityOverrides.isEmpty())

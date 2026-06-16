@@ -69,4 +69,27 @@ internal class ConventionsLoaderTest {
 
         assertThat(error.message).contains("must be a file: URI")
     }
+
+    @Test
+    fun `malformed pkl override fails startup loudly`(@TempDir tempDir: Path) {
+        val pklFile = tempDir.resolve("broken-bpmner.pkl")
+        pklFile.toFile().writeText(
+            """
+            profile = "recommended"
+            severityOverrides = new Mapping<String, String> {}
+            discouragedLeadingVerbs = List("coordinate")
+            elementTypeWords = List("step")
+            allowedAcronyms = List("VIP")
+            technicalTokens = List("impl")
+            discouragedBpmnTypes = List("bpmn:Transaction"
+            """.trimIndent(),
+        )
+
+        val error = assertThrows(IllegalStateException::class.java) {
+            loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())))
+        }
+
+        assertThat(error.message).contains("Failed to evaluate BPMN lint config")
+        assertThat(error.message).contains(pklFile.toUri().toString())
+    }
 }
