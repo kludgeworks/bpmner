@@ -60,4 +60,13 @@ internal class ConventionsLoaderTest {
         assertThat(error.message).contains("Invalid BPMN lint config URI")
         assertThat(error.message).contains("not a uri")
     }
+
+    @Test
+    fun `configured override must be file uri`() {
+        val error = assertThrows(IllegalStateException::class.java) {
+            loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = "modulepath:/linter/pkl/bpmner.pkl")))
+        }
+
+        assertThat(error.message).contains("must be a file: URI")
+    }
 }

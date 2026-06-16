@@ -8,9 +8,9 @@ package dev.groknull.bpmner.rules
 /**
  * Modelling-team lint configuration loaded from the packaged `bpmner.pkl` template at startup.
  *
- * Convention lists drive Kotlin-authored rule beans and deterministic repair handlers. Profile
- * and severity fields stay present for the later profile migration stage; #381 deliberately keeps
- * runtime profile/severity decisions in `application.yml`.
+ * Convention lists drive Kotlin-authored rule beans and deterministic repair handlers. Runtime
+ * profile and severity decisions are read from `BpmnRulesConfig.profile` and
+ * `BpmnRulesConfig.severityOverrides`, not from this source.
  */
 data class BpmnerLintConfig(
     val profile: String = "recommended",

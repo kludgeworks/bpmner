@@ -270,6 +270,6 @@ data class BpmnRulesConfig(
     val severityOverrides: Map<String, String?> = emptyMap(),
     // Modeller-owned lint convention source. Defaults to the packaged
     // `modulepath:/linter/pkl/bpmner.pkl`; set `bpmner.rules.config-uri` to a `file:` URI to load
-    // team-specific word lists. Profile and severity still come from the fields above until #382.
+    // team-specific word lists. Profile and severity are read from the fields above.
     val configUri: String? = null,
 )

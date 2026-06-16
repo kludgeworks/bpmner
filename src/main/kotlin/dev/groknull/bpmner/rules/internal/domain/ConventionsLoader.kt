@@ -24,10 +24,11 @@ internal class ConventionsLoader {
 
     @Bean
     fun bpmnerLintConfig(config: BpmnConfig): BpmnerLintConfig {
-        val uri = config.rules.configUri?.trim()?.takeIf { it.isNotEmpty() } ?: DEFAULT_CONFIG_URI
+        val uri = config.rules.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
+            ?: URI.create(DEFAULT_CONFIG_URI)
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
-                evaluator.evaluate(ModuleSource.uri(URI.create(uri)))
+                evaluator.evaluate(ModuleSource.uri(uri))
             }
         } catch (e: IllegalArgumentException) {
             throw IllegalStateException("Invalid BPMN lint config URI '$uri'.", e)
@@ -50,7 +51,7 @@ internal class ConventionsLoader {
         )
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
-            uri,
+            uri.toString(),
             lintConfig.elementTypeWords.size,
             lintConfig.allowedAcronyms.size,
         )
@@ -59,5 +60,17 @@ internal class ConventionsLoader {
 
     companion object {
         const val DEFAULT_CONFIG_URI = "modulepath:/linter/pkl/bpmner.pkl"
+
+        private fun fileOverrideUri(raw: String): URI {
+            val uri = try {
+                URI.create(raw)
+            } catch (e: IllegalArgumentException) {
+                throw IllegalStateException("Invalid BPMN lint config URI '$raw'.", e)
+            }
+            check(uri.scheme == "file") {
+                "BPMN lint config override must be a file: URI, was '$raw'."
+            }
+            return uri
+        }
     }
 }
