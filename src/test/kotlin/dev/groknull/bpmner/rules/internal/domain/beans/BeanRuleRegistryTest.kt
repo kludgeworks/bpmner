@@ -3,6 +3,15 @@
  * SPDX-License-Identifier: MIT
  */
 
+package dev.groknull.bpmner.rules.internal.domain.beans
+
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
+
 /**
  * Test coverage for [BeanRuleRegistry] against the live Spring bean registry.
  *
@@ -25,15 +34,6 @@
  * @see RuleSourceParityTest
  * @see BpmnRuleContractTest
  */
-package dev.groknull.bpmner.rules.internal.domain.beans
-
-import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
-import org.springframework.context.annotation.AnnotationConfigApplicationContext
-
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class BeanRuleRegistryTest {
     private lateinit var registry: BeanRuleRegistry
