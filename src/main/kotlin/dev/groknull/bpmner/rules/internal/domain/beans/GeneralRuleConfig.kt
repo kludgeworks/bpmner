@@ -8,6 +8,7 @@ package dev.groknull.bpmner.rules.internal.domain.beans
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.internal.domain.llmRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
@@ -41,24 +42,13 @@ internal class GeneralRuleConfig {
     )
 
     @Bean
-    fun genBpmnSubset(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun genBpmnSubset(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "BPMN Subset",
         category = RuleCategory.General,
         intent = "Keep models within the supported BPMN subset.",
         forModellers = "Use only the BPMN elements described in the supported BPMN subset and avoid unsupported exotic BPMN constructs.",
         forAI = "Detect discouraged BPMN types that are outside the supported subset and propose supported replacements.",
-        targetElements = listOf(
-            "bpmn:Choreography",
-            "bpmn:ChoreographyTask",
-            "bpmn:SubChoreography",
-            "bpmn:CallChoreography",
-            "bpmn:Conversation",
-            "bpmn:ConversationLink",
-            "bpmn:ConversationAssociation",
-            "bpmn:Transaction",
-            "bpmn:CompensateEventDefinition",
-            "bpmn:EscalationEventDefinition",
-        ),
+        targetElements = lintConfig.discouragedBpmnTypes,
         errorMessages = mapOf(
             "default" to "Element type is outside the supported BPMN subset",
         ),

@@ -2,8 +2,8 @@ module dev.groknull.bpmner.pkl.BpmnerLintConfig
 
 typealias Severity = "error" | "warning" | "info" | "off"
 
-/// Shadow-only lint configuration scaffold packaged with the runtime resources.
-/// Runtime startup uses profile Pkl modules and does not evaluate this module.
+/// Lint configuration scaffold packaged with the runtime resources.
+/// `bpmner.pkl` amends this module and is evaluated once at startup for convention lists.
 profile: String = "recommended"
 
 severityOverrides: Mapping<String, Severity> = new {
@@ -12,3 +12,25 @@ severityOverrides: Mapping<String, Severity> = new {
   ["name-no-element-type-words"] = "off"
   ["name-uncommon-abbreviations"] = "off"
 }
+
+discouragedLeadingVerbs: List<String> = List("handle", "manage", "process", "perform", "do")
+
+elementTypeWords: List<String> = List("activity", "process", "event")
+
+allowedAcronyms: List<String> = List("BPMN", "ACME", "SLA", "API", "IT")
+
+technicalTokens: List<String> = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
+
+discouragedBpmnTypes: List<String> =
+  List(
+    "bpmn:Choreography",
+    "bpmn:ChoreographyTask",
+    "bpmn:SubChoreography",
+    "bpmn:CallChoreography",
+    "bpmn:Conversation",
+    "bpmn:ConversationLink",
+    "bpmn:ConversationAssociation",
+    "bpmn:Transaction",
+    "bpmn:CompensateEventDefinition",
+    "bpmn:EscalationEventDefinition",
+  )

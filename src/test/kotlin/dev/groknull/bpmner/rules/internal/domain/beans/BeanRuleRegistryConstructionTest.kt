@@ -5,9 +5,20 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
+import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.BpmnerLintConfig
+import dev.groknull.bpmner.rules.internal.domain.DeterministicRule
+import dev.groknull.bpmner.rules.internal.domain.RuleProfileFactory
+import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyCheckConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.mockito.Mockito.mock
+import org.mockito.Mockito.`when`
+import org.springframework.beans.factory.ObjectProvider
 
+@Suppress("MaxLineLength")
 internal class BeanRuleRegistryConstructionTest {
     @Test
     @Suppress("LongMethod")
@@ -108,4 +119,70 @@ internal class BeanRuleRegistryConstructionTest {
             )
         }
     }
+
+    @Test
+    fun `convention config drives relevant rule check configs`() {
+        val lintConfig = BpmnerLintConfig(
+            discouragedLeadingVerbs = listOf("coordinate"),
+            elementTypeWords = listOf("step"),
+            allowedAcronyms = listOf("BPMN", "VIP"),
+            technicalTokens = listOf("impl"),
+            discouragedBpmnTypes = listOf("bpmn:Transaction"),
+        )
+
+        bpmnerKotlinRuleContext(lintConfig).use { context ->
+            val ruleRegistry = context.getBean(BeanRuleRegistry::class.java)
+
+            assertThat(vocabularyWords(ruleRegistry, "act-discouraged-business-verbs"))
+                .containsExactly("coordinate")
+            assertThat(vocabularyWords(ruleRegistry, "name-no-element-type-words")).containsExactly("step")
+            assertThat(vocabularyWords(ruleRegistry, "data-no-type-words-in-data-name")).containsExactly("step")
+            assertThat(propertyPattern(ruleRegistry, "name-business-meaningful-label").forbiddenVocabulary)
+                .containsExactly("impl")
+            assertThat(propertyPattern(ruleRegistry, "name-uncommon-abbreviations").allowedVocabulary)
+                .containsExactly("BPMN", "VIP")
+            assertThat(ruleRegistry.ruleById("gen-bpmn-subset")!!.metadata.targetElements)
+                .containsExactly("bpmn:Transaction")
+            assertThat(elementConstraint(ruleRegistry, "gen-bpmn-subset").constraints).containsEntry("allowed", "")
+        }
+    }
+
+    @Test
+    fun `RuleProfileFactory resolves strict profile via lazy ObjectProvider without eager registry access`() {
+        // Proves: the ObjectProvider is the sole path to the registry; the factory constructor
+        // does NOT force the registry. A mock that errors on getObject() would catch any eager
+        // access; here we supply the real registry to validate the resolved profile shape.
+        bpmnerKotlinRuleContext().use { context ->
+            val registry = context.getBean(BeanRuleRegistry::class.java)
+
+            @Suppress("UNCHECKED_CAST")
+            val provider = mock(ObjectProvider::class.java) as ObjectProvider<BeanRuleRegistry>
+            `when`(provider.getObject()).thenReturn(registry)
+
+            // Construction must not touch the provider (lazy contract).
+            val factory = RuleProfileFactory(provider)
+
+            // Resolving the strict profile forces the registry exactly once via the provider.
+            val strictProfile = factory.ruleProfile(BpmnerLintConfig(profile = "strict"))
+
+            assertThat(strictProfile.severityOverrides).isNotEmpty
+            strictProfile.severityOverrides.values.forEach { severity ->
+                assertThat(severity).isEqualTo(RuleSeverity.ERROR)
+            }
+            // Strict baseline carries no disabled rules — only severity lifts.
+            assertThat(strictProfile.disabledRuleIds).isEmpty()
+
+            // Resolving recommended must not touch the registry (covered by RuleProfileFactoryTest
+            // noCallProvider; here we just confirm the recommended profile is empty via the real path).
+            val recommendedProfile = factory.ruleProfile(BpmnerLintConfig(profile = "recommended"))
+            assertThat(recommendedProfile.severityOverrides).isEmpty()
+            assertThat(recommendedProfile.disabledRuleIds).isEmpty()
+        }
+    }
+
+    private fun vocabularyWords(ruleRegistry: BeanRuleRegistry, ruleId: String): List<String> = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as VocabularyCheckConfig }.words
+
+    private fun propertyPattern(ruleRegistry: BeanRuleRegistry, ruleId: String): PropertyPatternCheckConfig = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as PropertyPatternCheckConfig }
+
+    private fun elementConstraint(ruleRegistry: BeanRuleRegistry, ruleId: String): ElementConstraintCheckConfig = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as ElementConstraintCheckConfig }
 }

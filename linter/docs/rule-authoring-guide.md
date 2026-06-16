@@ -3,7 +3,7 @@
 bpmner has three tiers of rule authoring, mapped to where the rule executes and how it's deployed.
 
 | Tier | Where rules live | What they execute as | Deployment |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | **1** | `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compiled/` | Compiled Kotlin `@Component` `BpmnRule` beans | Part of the bpmner JAR |
 | **2** | `linter/pkl/rules/*.pkl` | Pkl declarations adapted to `BpmnRule` at startup | Bundled in the bpmner JAR (today) |
 | **3** | Plugin JAR with `BpmnRule` beans | Compiled Kotlin in an external JAR | **Not yet implemented** — see "Tier 3" below |
@@ -13,6 +13,7 @@ The three tiers share one interface — `BpmnRule` in [`api/BpmnRule.kt`](../../
 ## Tier 1 — Compiled Kotlin rules
 
 Use this tier when:
+
 - The rule needs to operate on the typed `BpmnDefinition` graph with custom Kotlin logic.
 - It can't be expressed via the Pkl check primitives (`PropertyEquals`, `PropertyPattern`, `Composite`, the NLP primitives).
 - It needs access to a Kotlin domain service (e.g. ownership lookup, fingerprint computation).
@@ -53,7 +54,7 @@ Find it under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compile
 ### `RuleMetadata` essentials
 
 | Field | Required? | What it does |
-|---|---|---|
+| --- | --- | --- |
 | `id` | yes | Stable rule identifier (e.g. `def-dangling-edges`). Used as the key for severity overrides. |
 | `name` / `slug` / `category` | yes | Surface metadata for docs and listings. |
 | `intent` | yes | One-line statement of what the rule enforces. |
@@ -105,6 +106,7 @@ The handler name in the rule's `repair.handler` field must match the `@Component
 ### Testing
 
 In-tree convention:
+
 - One test class per rule in `src/test/kotlin/.../rules/...Test.kt`.
 - Build a minimal `BpmnDefinitionContext` from `TestBpmnFixtures`.
 - Assert on the emitted `RuleDiagnostic` list.
@@ -114,6 +116,7 @@ See `TopologyHandlersTest`, `RequiredEventsRuleTest`, `DanglingEdgeRule` tests f
 ## Tier 2 — Pkl rules
 
 Use this tier when:
+
 - The rule can be expressed via one of the bundled check primitives (`PropertyEquals`, `PropertyPattern`, `NlpClassification`, `Composite`, ...).
 - You want to declare the rule without writing Kotlin.
 - The rule is content-rule rather than structural (label conventions, naming patterns, advisory linting).
@@ -159,7 +162,7 @@ See `linter/pkl/rules/` for the catalog — every file there is an example.
 ### Available check primitives
 
 | Primitive | What it checks |
-|---|---|
+| --- | --- |
 | `PresenceCheck` | Emits one diagnostic for each targeted element that exists |
 | `PropertyEquals` | Element's named property has a specific value |
 | `PropertyPattern` | Element's named property matches/violates a regex |
@@ -174,12 +177,26 @@ Definitions live in `linter/pkl/schema/CheckPrimitive.pkl`. The Kotlin-side disp
 
 `id = category.shortCode + slug` is computed in the Pkl schema. Category short codes: `act`, `art`, `assoc`, `data`, `evt`, `flow`, `gen`, `gtw`, `lane`, `msg`, `name`, `pool`. So `name = "Business Meaningful Label"` + `category = RuleCategory.Name` → `id = "name-business-meaningful-label"`. Use that id in severity overrides and profile files.
 
+## Shared convention lists (`BpmnerLintConfig.pkl`)
+
+The top-level `linter/pkl/BpmnerLintConfig.pkl` schema defines the modeller-owned convention lists that are loaded from `bpmner.pkl` and injected into Kotlin rule beans. Keep the Kotlin mirror in `BpmnerLintConfig.kt` aligned with the Pkl fields and defaults.
+
+| Field | Kotlin consumer |
+| --- | --- |
+| `discouragedLeadingVerbs` | `ActivityRuleConfig.actDiscouragedBusinessVerbs` |
+| `elementTypeWords` | `NameRuleConfig.nameNoElementTypeWords`, `DataRuleConfig.dataNoTypeWordsInDataName`, and `StripTypeWordsHandler` |
+| `allowedAcronyms` | `NameRuleConfig.nameUncommonAbbreviations` |
+| `technicalTokens` | `NameRuleConfig.nameBusinessMeaningfulLabel` |
+| `discouragedBpmnTypes` | `GeneralRuleConfig.genBpmnSubset` |
+
+The packaged `linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and is the default `modulepath:` source. Team-specific convention files should amend the same template and be supplied to the application with `bpmner.rules.config-uri=file:/absolute/path/to/bpmner.pkl`.
+
 ### Adding a new Pkl rule
 
 1. Create `linter/pkl/rules/<PascalName>.pkl` amending `BpmnRule.pkl`.
 2. Re-run `bazel build //linter/pkl:rules_index_pkl` — the `rules_index` macro regenerates `RulesIndex.pkl` from the glob. No hand-listing.
 3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/<PascalName>Test.kt` (see next section).
-4. If the rule is `severity = "warning"` and you ship to the `strict` profile, no action — `StrictProfile.pkl` auto-includes it via a Pkl for-comprehension over `RulesIndex.rules`.
+4. If the rule is `severity = "warning"`, no extra step is needed for the `strict` profile — `RuleProfileFactory.computeStrictBaseline()` reads the live `BeanRuleRegistry` at startup and automatically promotes every WARNING-severity rule to ERROR. New Pkl rules are registered in the bean catalog by the `PklRuleCatalog` loader, so they appear in the strict baseline without any manual maintenance.
 
 ### Writing a per-rule test
 
@@ -217,7 +234,7 @@ internal class MyRuleTest {
 Helpers available on `PklRuleTestSupport`:
 
 | Helper | Purpose |
-|---|---|
+| --- | --- |
 | `loadRule(ruleId)` | Returns the production `BpmnRule`. Fails fast if the id isn't in the registry — usually because the rule is deferred (`checkPrimitive == null`) or `severity = "off"`. |
 | `context(nodes, edges?)` | Builds a `BpmnDefinitionContext`. When `edges` is null, nodes are chained in order. |
 | `assertFires(rule, ctx, expectedElementIds, expectedDiagnosticCode?)` | Asserts the rule fires on exactly the listed elements (order-insensitive). Optionally pins the diagnostic code (needed for composite rules). |
@@ -231,7 +248,7 @@ Cover positive (rule fires) and negative (rule doesn't fire) cases per detection
 Some rules check document-level metadata that the XML parser surfaces *outside* the per-node walk:
 
 | Signal | Source | Helper argument | Worked example |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | BPMNDI diagram count | `BpmnDefinition.diagramCount` | `context(nodes, diagramCount = N)` | `NoDuplicateDiagramsTest` (#282) |
 | Unrecognized BPMN element types (Choreography, Conversation, Transaction, etc.) | `BpmnUnrecognizedNode` in `nodes` | Pass `BpmnUnrecognizedNode("id", null, "bpmn:<Type>")` directly in the `nodes` list | `BpmnSubsetTest` (#282) |
 | Unrecognized event-definition types (e.g. `bpmn:CompensateEventDefinition`) | `BpmnUnrecognizedEventDefinition` carried by a `BpmnEvent` | `BpmnStartEvent(eventDefinition = BpmnUnrecognizedEventDefinition("bpmn:<Type>"))` | `BpmnSubsetTest` (#282) |
@@ -258,7 +275,7 @@ The dedicated follow-up issue tracks switching the launcher and reconciling with
 
 ## Choosing a tier
 
-```
+```text
                     ┌──────────────────────────────────────────────┐
                     │  Does the rule need bespoke Kotlin logic     │
                     │  or access to a Kotlin domain service?        │

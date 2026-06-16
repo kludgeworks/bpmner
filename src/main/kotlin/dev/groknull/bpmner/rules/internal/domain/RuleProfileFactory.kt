@@ -6,65 +6,80 @@
 package dev.groknull.bpmner.rules.internal.domain
 
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.RuleProfile
-import org.pkl.config.java.ConfigEvaluator
-import org.pkl.config.kotlin.forKotlin
-import org.pkl.config.kotlin.to
-import org.pkl.core.ModuleSource
-import org.pkl.core.PklException
+import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.ObjectProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.io.support.PathMatchingResourcePatternResolver
-import java.io.IOException
-import java.net.URI
 
 /**
  * Produces the application-wide [RuleProfile] by composing two layers:
  *
- *  1. **Named profile baseline** — loaded from `linter/pkl/profiles/{Name}Profile.pkl` based on
- *     `bpmner.rules.profile` (defaults to `recommended`). `RecommendedProfile.pkl` is the
- *     identity profile; `StrictProfile.pkl` bumps every WARNING-default rule to ERROR via the
- *     Pkl `amends` chain.
- *  2. **User overrides** — parsed from `bpmner.rules.severity-overrides`. **User entries always
- *     win** over the profile's entries; the profile is the baseline, the YAML map is the escape
- *     hatch. Unknown rule ids survive into the profile and silently never match anything at
- *     evaluation time — this factory deliberately does not consult [RuleRegistry] so the
- *     rule-config pipeline has no startup-order dependency on rule loading.
+ *  1. **Named profile baseline** — computed in Kotlin from the active bean registry.
+ *     `recommended` is the identity profile (no overrides, no disabled rules). `strict` bumps
+ *     every WARNING-default rule to ERROR, computed on demand over the live [BeanRuleRegistry]
+ *     via a lazy [ObjectProvider] (only the `strict` branch forces the registry — no eager
+ *     edge, no Spring startup-order dependency). Profile name is read from `bpmner.pkl` via
+ *     [BpmnerLintConfig.profile] (defaults to `recommended`).
+ *  2. **User overrides** — parsed from `bpmner.pkl`'s [BpmnerLintConfig.severityOverrides].
+ *     **User entries always win** over the profile's entries; the profile is the baseline,
+ *     the user map is the escape hatch.
  *
  * Value parsing for both layers normalises the four legal strings — `error`, `warning`, `info`,
  * `off` (case-insensitive; `warn` is accepted as a synonym for `warning`). `off` adds the rule
  * id to [RuleProfile.disabledRuleIds]; the other three add to [RuleProfile.severityOverrides].
  *
- * **Failure modes** (both loud, both fail startup):
- *  - **Unknown profile name.** The configured profile name doesn't match any
- *    `linter/pkl/profiles/{Name}Profile.pkl` resource on the classpath. The error message lists
- *    every discoverable profile.
- *  - **Malformed profile module.** The profile resource exists but Pkl can't evaluate it
- *    (syntax error, missing import, type-constraint violation). The underlying [PklException]
- *    is chained as the cause; the message names the URI and the offending profile.
+ * **Override-key validation.** User-supplied override and disabled-rule keys are validated
+ * against the live bean id set (executable rules + LLM specs). Unknown keys are reported via
+ * a WARN log message and silently no-op at evaluation time. This validation runs inside
+ * [ruleProfile], not during construction, so the registry is never touched eagerly.
  *
- * A malformed entry in the user's severity-overrides map produces a WARN log line and is
- * otherwise ignored — startup is never failed by a typo in one map entry. Profile-file errors
- * are stricter because the catalog itself is structurally wrong, not just one entry.
+ * **Failure modes** (all loud, all fail startup):
+ *  - **Unknown profile name.** The configured profile name doesn't match any built-in profile.
+ *    The error message lists every available profile.
+ *  - **Unknown override key.** A key in [BpmnerLintConfig.severityOverrides] doesn't match any
+ *    known rule id. A WARN log message lists the offending keys — the entry silently no-ops at
+ *    evaluation time (the rule id never matches anything). This is intentional: module test
+ *    contexts and custom rule registries may see a subset of the full catalog, so a hard failure
+ *    here would break valid partial-context startup scenarios.
+ *  - **Unrecognised severity value.** A value in [BpmnerLintConfig.severityOverrides] doesn't
+ *    match `error`, `warning`, `warn`, `info`, or `off` — produces a WARN log line and is
+ *    otherwise ignored (startup is not failed by a single bad value; keys are stricter than
+ *    values because a typo in a key silently disables nothing, while a bad value is caught by
+ *    logging).
  */
 @Configuration
-internal class RuleProfileFactory {
+internal class RuleProfileFactory(
+    private val beanRegistryProvider: ObjectProvider<BeanRuleRegistry>,
+) {
     private val logger = LoggerFactory.getLogger(RuleProfileFactory::class.java)
-    private val resourceResolver = PathMatchingResourcePatternResolver(javaClass.classLoader)
 
     @Bean
-    fun ruleProfile(config: BpmnConfig): RuleProfile {
-        val profileName = config.rules.profile.trim()
-        val available = discoverAvailableProfiles()
-        check(profileName in available) {
+    fun ruleProfile(lintConfig: BpmnerLintConfig): RuleProfile {
+        val profileName = lintConfig.profile.trim()
+        check(profileName in AVAILABLE_PROFILES) {
             "Unknown rule profile '$profileName'. Available profiles: " +
-                "${available.sorted().joinToString(", ")}. " +
-                "Drop a {Name}Profile.pkl file into linter/pkl/profiles/ to add a new one."
+                "${AVAILABLE_PROFILES.sorted().joinToString(", ")}. " +
+                "Set 'profile' in bpmner.pkl to one of the available profiles."
         }
-        val baseline = loadNamedProfile(profileName)
-        val (userOverrides, userDisabled) = parseUserOverrides(config.rules.severityOverrides)
+
+        val baseline: RuleProfile = when (profileName) {
+            PROFILE_RECOMMENDED -> RuleProfile.EMPTY
+            PROFILE_STRICT -> computeStrictBaseline(beanRegistryProvider.getObject())
+            else -> error("Unhandled profile '$profileName' — this is a bug; update the when() branch")
+        }
+
+        val (userOverrides, userDisabled) = parseUserOverrides(lintConfig.severityOverrides)
+
+        // Validate override keys against the live bean id set before merging.
+        // Only touch the registry if there are any keys to validate — this avoids an eager
+        // ObjectProvider.getObject() call when the user has no overrides configured.
+        val allOverrideKeys = userOverrides.keys + userDisabled
+        if (allOverrideKeys.isNotEmpty()) {
+            validateOverrideKeys(allOverrideKeys, beanRegistryProvider.getObject())
+        }
 
         // User overrides win — they're the per-deployment escape hatch on top of the profile.
         val mergedOverrides = baseline.severityOverrides + userOverrides
@@ -82,67 +97,41 @@ internal class RuleProfileFactory {
         return RuleProfile(severityOverrides = mergedOverrides, disabledRuleIds = mergedDisabled)
     }
 
-    // Walks the classpath for `linter/pkl/profiles/{Name}Profile.pkl` resources and returns the
-    // set of available profile names — the filename's stem with the `Profile.pkl` suffix stripped
-    // and the first letter lowercased. Replaces a hand-maintained list that would silently
-    // diverge from the Bazel `profiles/*.pkl` glob.
-    private fun discoverAvailableProfiles(): Set<String> {
-        val resources = try {
-            resourceResolver.getResources("classpath*:$PROFILE_RESOURCE_PATTERN")
-        } catch (e: IOException) {
-            // Don't swallow — an empty set here causes `ruleProfile()` to emit a misleading
-            // "Unknown rule profile 'recommended'. Available profiles: ." error that blames
-            // the operator's YAML config when the real cause is a classpath I/O failure
-            // (e.g. shaded JAR, broken classloader). Surface the real cause.
-            throw IllegalStateException(
-                "Failed to enumerate rule-profile resources from the classpath. " +
-                    "Check that linter/pkl/profiles/ is packaged in the application JAR.",
-                e,
-            )
-        }
-        return resources
-            .mapNotNull { it.filename }
-            .filter { it.endsWith(PROFILE_FILENAME_SUFFIX) }
-            .map { it.removeSuffix(PROFILE_FILENAME_SUFFIX).replaceFirstChar { c -> c.lowercase() } }
-            .filter { it.isNotBlank() }
-            .toSet()
+    /**
+     * Computes the `strict` baseline: every executable rule whose declared severity is
+     * [RuleSeverity.WARNING] gets an override to [RuleSeverity.ERROR]. INFO- and ERROR-default
+     * rules are left untouched. Only called when the `strict` profile is selected.
+     */
+    private fun computeStrictBaseline(registry: BeanRuleRegistry): RuleProfile {
+        val overrides = registry.activeRules()
+            .filter { it.metadata.severity == RuleSeverity.WARNING }
+            .associate { it.id to RuleSeverity.ERROR }
+        return RuleProfile(severityOverrides = overrides, disabledRuleIds = emptySet())
     }
 
-    private fun loadNamedProfile(name: String): RuleProfile {
-        // Existence has already been verified by `discoverAvailableProfiles` in `ruleProfile`.
-        // Any failure here is a real evaluation problem — surface the Pkl detail, do NOT mask
-        // it as "unknown profile" (which would send a developer chasing a name typo when the
-        // real cause is a syntax error or bad import inside the module).
-        val uri = profileUri(name)
-        val pkl = try {
-            ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
-                evaluator.evaluate(ModuleSource.uri(URI.create(uri)))
-            }
-        } catch (e: PklException) {
-            throw IllegalStateException(
-                "Failed to evaluate rule profile '$name' from $uri. The module is on the classpath " +
-                    "but could not be parsed or evaluated. Inspect the file for syntax errors, " +
-                    "missing imports, or type-constraint violations.",
-                e,
+    /**
+     * Checks that every key in [overrideKeys] (union of severity-override ids and disabled-rule
+     * ids) is a known rule id in the live bean registry (executable rules + LLM specs). Unknown
+     * keys are reported via a WARN log message — they silently no-op at evaluation time (the
+     * rule id never matches anything). A hard failure is not used here because Spring Modulith
+     * module tests and partial-context startup scenarios may load a subset of the full catalog.
+     */
+    private fun validateOverrideKeys(overrideKeys: Set<String>, registry: BeanRuleRegistry) {
+        val knownIds = (registry.activeRules().map { it.id } + registry.llmRuleSpecs().map { it.metadata.id }).toSet()
+        val unknown = overrideKeys - knownIds
+        if (unknown.isNotEmpty()) {
+            logger.warn(
+                "bpmner.pkl severityOverrides contains unknown rule id(s): {}. " +
+                    "These entries will silently no-op at evaluation time.",
+                unknown.sorted().joinToString(", "),
             )
         }
-        val severityOverridesRaw: Map<String, String> = pkl.get("severityOverrides").to()
-        val disabledRuleIdsRaw: List<String> = pkl.get("disabledRuleIds").to()
-
-        val (overrides, disabled) = parseRawOverrides(
-            source = "profile '$name'",
-            raw = severityOverridesRaw.mapValues<String, String, String?> { it.value },
-        )
-        return RuleProfile(
-            severityOverrides = overrides,
-            disabledRuleIds = disabled + disabledRuleIdsRaw.toSet(),
-        )
     }
 
     private fun parseUserOverrides(
         raw: Map<String, String?>,
     ): Pair<Map<String, RuleSeverity>, Set<String>> = parseRawOverrides(
-        source = "bpmner.rules.severity-overrides",
+        source = "bpmner.pkl severityOverrides",
         raw = raw,
     )
 
@@ -180,10 +169,10 @@ internal class RuleProfileFactory {
     }
 
     companion object {
-        private const val PROFILE_RESOURCE_PATTERN = "linter/pkl/profiles/*Profile.pkl"
-        private const val PROFILE_FILENAME_SUFFIX = "Profile.pkl"
-        private const val PROFILE_URI_TEMPLATE = "modulepath:/linter/pkl/profiles/%sProfile.pkl"
+        private const val PROFILE_RECOMMENDED = "recommended"
+        private const val PROFILE_STRICT = "strict"
 
-        private fun profileUri(name: String): String = PROFILE_URI_TEMPLATE.format(name.replaceFirstChar { it.titlecase() })
+        /** Built-in profiles. Adding a new profile requires a Kotlin `when` branch above. */
+        val AVAILABLE_PROFILES: Set<String> = setOf(PROFILE_RECOMMENDED, PROFILE_STRICT)
     }
 }

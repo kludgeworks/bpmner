@@ -28,21 +28,6 @@ bpmner:
     # Default off. Override via env (`BPMNER_LOGGING_DUMP_ARTIFACTS=true`) or a dev/diagnostic
     # profile when investigating a failing run — intermediate XML is verbose at production scale.
     dump-artifacts: ${BPMNER_LOGGING_DUMP_ARTIFACTS:false}
-  rules:
-    # Per-rule severity overrides. Keys are bare rule ids; values are one of
-    # `error`, `warning`, `info`, `off`. See `RuleProfileFactory` (#242).
-    #
-    # Values MUST be quoted: in YAML 1.1 (which SnakeYAML follows by default),
-    # bare `off`/`no`/`on`/`yes` are boolean literals. Spring Boot's binder
-    # would convert the resulting Boolean to the string "false"/"true", which
-    # the factory doesn't recognise — the rule would silently stay enabled.
-    #
-    # All three rules below were `off` in the pre-2G `bpmner.lint.rules` block
-    # (deleted in PR #267). Their Pkl-declared severities are `warning`,
-    # `warning`, and `error` respectively, so without the override they fire
-    # on real runs — see #268 item D for the decision.
-    severity-overrides:
-      "act-verb-object-name": "off"              # #168 — business-verb allowlist too narrow; LLM cycles on camelCase composites
-      "act-activity-label-capitalization": "off" # #170 — generator emits id-as-name (PascalCase); rule fires on every task
-      "name-no-element-type-words": "off"        # #170 — same root cause; this one is `error` severity, so re-enabling can block production
-      "name-uncommon-abbreviations": "off"       # opt-in rule; ships disabled by default. Operators flip to warning/error via their own override
+  # Rule profile and per-rule severity overrides are now sourced from bpmner.pkl (via
+  # BpmnerLintConfig). To override the conventions source, set bpmner.rules.config-uri to a
+  # file: URI pointing at a local bpmner.pkl that amends the packaged BpmnerLintConfig.pkl.

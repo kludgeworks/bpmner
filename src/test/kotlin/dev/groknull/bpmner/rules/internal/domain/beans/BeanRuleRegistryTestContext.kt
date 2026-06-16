@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.DefaultFlowRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.DuplicateIdRule
@@ -26,7 +27,10 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * the CPD copy/paste gate. The caller owns the returned context's lifecycle (close it via
  * `use {}` or an `@AfterAll` teardown).
  */
-internal fun bpmnerKotlinRuleContext(): AnnotationConfigApplicationContext = AnnotationConfigApplicationContext().apply {
+internal fun bpmnerKotlinRuleContext(
+    lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
+): AnnotationConfigApplicationContext = AnnotationConfigApplicationContext().apply {
+    beanFactory.registerSingleton("bpmnerLintConfig", lintConfig)
     register(
         BpmnNlpConfig::class.java,
         ActivityRuleConfig::class.java,
