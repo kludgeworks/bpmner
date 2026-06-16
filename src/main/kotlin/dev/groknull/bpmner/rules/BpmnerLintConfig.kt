@@ -6,11 +6,17 @@
 package dev.groknull.bpmner.rules
 
 /**
- * Modelling-team lint configuration loaded from the packaged `bpmner.pkl` template at startup.
+ * Modelling-team lint configuration loaded from the packaged `bpmner.pkl` template at startup
+ * by [dev.groknull.bpmner.rules.internal.domain.ConventionsLoader].
  *
- * Convention lists drive Kotlin-authored rule beans and deterministic repair handlers. Runtime
- * profile and severity decisions are read from `BpmnRulesConfig.profile` and
- * `BpmnRulesConfig.severityOverrides`, not from this source.
+ * [profile] selects the built-in rule profile (`recommended` or `strict`); [severityOverrides]
+ * provides per-rule severity adjustments on top of the profile. Both are consumed by
+ * [dev.groknull.bpmner.rules.internal.domain.RuleProfileFactory] to produce the active
+ * [dev.groknull.bpmner.rules.RuleProfile] at startup.
+ *
+ * The convention lists ([discouragedLeadingVerbs], [elementTypeWords], [allowedAcronyms],
+ * [technicalTokens], [discouragedBpmnTypes]) drive Kotlin-authored rule beans and deterministic
+ * repair handlers.
  */
 data class BpmnerLintConfig(
     val profile: String = "recommended",
