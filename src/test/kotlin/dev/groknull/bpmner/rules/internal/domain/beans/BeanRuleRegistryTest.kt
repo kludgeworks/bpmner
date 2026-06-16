@@ -3,10 +3,30 @@
  * SPDX-License-Identifier: MIT
  */
 
+/**
+ * Test coverage for [BeanRuleRegistry] against the live Spring bean registry.
+ *
+ * This class ports the *reachable* Pkl-native facts from `SchemaTest.pkl` (intent non-blank),
+ * `InvalidAutofixLLM.pkl` (LLM rules must not carry local repair kind), and `RulesIndexTest.pkl`
+ * (non-empty ruleset).
+ *
+ * **Retired facts** (per plan #384, stage-gate 8 "JUnit **or** explicitly retired with rationale"):
+ * - `RuleMetadata.init` `require(errorMessages.isNotEmpty())` - construction-enforced; covered by
+ *   [BpmnRuleContractTest.kt:134] (`RuleMetadata rejects empty error messages at construction time`)
+ * - `BeanRuleRegistry.init` uniqueness checks - construction-enforced; covered by
+ *   [BeanRuleRegistryConstructionTest.kt:24,34-37]
+ * - `BeanRuleRegistry.init` LLM resolvability - unconditionally non-null by construction (union
+ *   `byId` map); covered by [BeanRuleRegistryConstructionTest.kt:34-37]
+ * - `RuleCategory` typed enum - compile-time tautology; cannot fail
+ * - `repair.handler` coupling for `LOCAL_MODEL_FIX` - a production invariant outside #384's scope;
+ *   see plan §Non-goals
+ *
+ * @see BeanRuleRegistryConstructionTest
+ * @see RuleSourceParityTest
+ * @see BpmnRuleContractTest
+ */
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RuleCategory
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -42,39 +62,13 @@ internal class BeanRuleRegistryTest {
     }
 
     @Test
-    fun `every rule defines at least one error message`() {
-        val allRules = registry.activeRules() + registry.llmRuleSpecs()
-
-        for (rule in allRules) {
-            assertThat(rule.metadata.errorMessages).describedAs("errorMessages for rule ${rule.id}").isNotEmpty()
-        }
-    }
-
-    @Test
-    fun `every rule has a valid category`() {
-        val allRules = registry.activeRules() + registry.llmRuleSpecs()
-
-        for (rule in allRules) {
-            assertThat(RuleCategory.entries).contains(rule.metadata.category)
-        }
-    }
-
-    @Test
-    fun `LLM rules carry no LOCAL_MODEL_FIX repair`() {
+    fun `LLM rules carry no local repair kind`() {
         val llmSpecs = registry.llmRuleSpecs()
 
         for (spec in llmSpecs) {
-            assertThat(spec.metadata.repair.kind).describedAs("repair.kind for LLM rule ${spec.id}")
-                .isNotEqualTo(RepairKind.LOCAL_MODEL_FIX)
+            val repairKind = spec.metadata.repair.kind
+            assertThat(repairKind.isLocal()).describedAs("repair.kind.isLocal() for LLM rule ${spec.id}").isFalse()
         }
-    }
-
-    @Test
-    fun `rule ids are unique`() {
-        val allRules = registry.activeRules() + registry.llmRuleSpecs()
-        val allIds = allRules.map { it.id }
-
-        assertThat(allIds).doesNotHaveDuplicates()
     }
 
     @Test
@@ -82,14 +76,5 @@ internal class BeanRuleRegistryTest {
         val activeRules = registry.activeRules()
 
         assertThat(activeRules).isNotEmpty()
-    }
-
-    @Test
-    fun `LLM specs are resolvable by id`() {
-        val llmSpecs = registry.llmRuleSpecs()
-
-        for (spec in llmSpecs) {
-            assertThat(registry.ruleByIdOrAlias(spec.id)).isNotNull
-        }
     }
 }
