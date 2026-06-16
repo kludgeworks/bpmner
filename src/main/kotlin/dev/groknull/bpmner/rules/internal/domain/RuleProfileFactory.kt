@@ -32,9 +32,9 @@ import org.springframework.context.annotation.Configuration
  * id to [RuleProfile.disabledRuleIds]; the other three add to [RuleProfile.severityOverrides].
  *
  * **Override-key validation.** User-supplied override and disabled-rule keys are validated
- * against the live bean id set (executable rules + LLM specs). Unknown keys fail startup with
- * a message listing the offending ids. This validation runs inside [ruleProfile], not during
- * construction, so the registry is never touched eagerly.
+ * against the live bean id set (executable rules + LLM specs). Unknown keys are reported via
+ * a WARN log message and silently no-op at evaluation time. This validation runs inside
+ * [ruleProfile], not during construction, so the registry is never touched eagerly.
  *
  * **Failure modes** (all loud, all fail startup):
  *  - **Unknown profile name.** The configured profile name doesn't match any built-in profile.

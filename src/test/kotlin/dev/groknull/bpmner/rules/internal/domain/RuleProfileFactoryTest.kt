@@ -13,14 +13,18 @@ import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.beans.bpmnerKotlinRuleContext
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.TestInstance.Lifecycle
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.ObjectProvider
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 /**
  * Unit tests for [RuleProfileFactory]. The factory composes two layers:
@@ -28,19 +32,33 @@ import org.springframework.beans.factory.ObjectProvider
  *  - **User overrides** parsed from [BpmnerLintConfig.severityOverrides].
  *
  * User entries always win on key collision. Override keys are validated against the live
- * bean id set — unknown keys fail startup.
+ * bean id set — unknown keys are reported via WARN log and silently no-op at evaluation time.
  *
  * Profile name and severity overrides are sourced from [BpmnerLintConfig] (from `bpmner.pkl`);
  * the factory no longer reads `BpmnConfig.rules.profile` or `BpmnConfig.rules.severityOverrides`.
  */
+@TestInstance(Lifecycle.PER_CLASS)
 class RuleProfileFactoryTest {
     /**
+     * Backing context for [realRegistry]. Captured once (PER_CLASS lifecycle) and closed in
+     * [teardown] to prevent resource leaks across test methods.
+     */
+    private var registryContext: AnnotationConfigApplicationContext? = null
+
+    /**
      * A real registry built from the isolated Kotlin bean context. Used for tests that need
-     * the actual bean id set (strict snapshot, override-key validation). Shared across tests
-     * via a lazy val to avoid CPD from repeated context-construction boilerplate.
+     * the actual bean id set (strict snapshot, override-key validation). Shared across all
+     * test methods via a lazy val — the context is created once and closed in [teardown].
      */
     private val realRegistry: BeanRuleRegistry by lazy {
-        bpmnerKotlinRuleContext().getBean(BeanRuleRegistry::class.java)
+        val ctx = bpmnerKotlinRuleContext()
+        registryContext = ctx
+        ctx.getBean(BeanRuleRegistry::class.java)
+    }
+
+    @AfterAll
+    fun teardown() {
+        registryContext?.close()
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -72,7 +90,7 @@ class RuleProfileFactoryTest {
     }
 
     // -------------------------------------------------------------------------
-    // User-overrides parsing (behaviour preserved from pre-#382)
+    // User-overrides parsing
 
     @Test
     fun `empty config yields the recommended profile with no overrides`() {
@@ -146,13 +164,12 @@ class RuleProfileFactoryTest {
     }
 
     // -------------------------------------------------------------------------
-    // Override-key validation (#382: unknown keys are reported via WARN log, not silently skipped)
+    // Override-key validation (unknown keys are reported via WARN log, not silently skipped)
 
     @Test
     fun `unknown rule id in severityOverrides survives into profile and is logged as WARN`() {
         // Unknown keys are logged as WARN and survive into the resolved profile — they silently
-        // no-op at rule evaluation time because no rule with that id exists. This preserves the
-        // pre-#382 behaviour while making unknown keys observable via logging (not silent).
+        // no-op at rule evaluation time because no rule with that id exists.
         val profile = build(severityOverrides = mapOf("totally-not-a-rule" to "off"))
 
         // The key survives (evaluated as disabled, but never matches any rule at runtime).
@@ -169,7 +186,7 @@ class RuleProfileFactoryTest {
 
     @Test
     fun `the four shipped off defaults are valid bean ids and pass key validation`() {
-        // These ids were previously in application.yaml; they are now in bpmner.pkl.
+        // These rule ids ship as disabled-by-default in bpmner.pkl severityOverrides.
         // Verify they resolve cleanly against the live registry.
         val profile = build(
             severityOverrides = mapOf(
