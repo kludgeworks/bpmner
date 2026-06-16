@@ -45,6 +45,13 @@ internal class BeanRuleRegistry(
             "BeanRuleRegistry: duplicate rule ids in LLM rule specs: $duplicateLlmIds"
         }
 
+        // Validate no id collision between executable rules and LLM specs — a collision
+        // would silently shadow one entry in byId (last-write-wins in associateBy).
+        val crossSetCollisions = executableIds.toSet().intersect(llmIds.toSet())
+        require(crossSetCollisions.isEmpty()) {
+            "BeanRuleRegistry: rule ids appear in both executable rules and LLM specs: $crossSetCollisions"
+        }
+
         val resolvableRules = executableRules + llmRuleSpecs
 
         // Build id-to-rule map from executable rules plus metadata-only LLM wrappers.

@@ -24,7 +24,7 @@ internal class GeneralRuleConfig {
     // Deferred LLM metadata rules are added as LlmRuleSpec beans.
     // These are excluded from activeRules() but remain resolvable via ruleByIdOrAlias for markdown.
     @Bean
-    fun genBusinessClarityOverTechnicalDetail(_nlp: BpmnNlp): LlmRuleSpec = llmRule(
+    fun genBusinessClarityOverTechnicalDetail(): LlmRuleSpec = llmRule(
         name = "Business Clarity Over Technical Detail",
         category = RuleCategory.General,
         intent = "Keep BPMN diagrams focused on business behavior rather than implementation mechanics.",

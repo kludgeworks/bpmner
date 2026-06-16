@@ -35,7 +35,7 @@ internal class GatewayRuleConfig {
     // Deferred LLM metadata rules are added as LlmRuleSpec beans.
     // These are excluded from activeRules() but remain resolvable via ruleByIdOrAlias for markdown.
     @Bean
-    fun gtwExclusiveInclusiveParallelSemantics(_nlp: BpmnNlp): LlmRuleSpec = llmRule(
+    fun gtwExclusiveInclusiveParallelSemantics(): LlmRuleSpec = llmRule(
         name = "Exclusive Inclusive Parallel Semantics",
         category = RuleCategory.Gateway,
         intent = "Keep gateway type choices aligned with BPMN token semantics.",

@@ -169,16 +169,49 @@ internal class RuleSourceParityTest {
             .isEmpty()
     }
 
-    @ParameterizedTest(name = "fixture diagnostics match expected for {0}")
-    @MethodSource("fixtureNames")
-    fun `Tier-1 (e) - diagnostic sets are valid for fixture`(fixturePath: String) {
+    /**
+     * Snapshot assertion for `order-a-beer.bpmn` diagnostics (set-compared).
+     *
+     * Expected diagnostics derived from the bean engine run at the time the #380 parity gate
+     * was converted from Pkl-vs-bean comparison to a bean-only regression snapshot. The Pkl
+     * catalog produced the same diagnostics before cutover (confirmed by the prior parity test).
+     *
+     * If this test fails after a deliberate rule change, update the snapshot here and record
+     * the reason in the commit message.
+     */
+    @Test
+    fun `Tier-1 (e) - order-a-beer diagnostic set matches snapshot`() {
+        val xml = loadFixture("/bpmn/order-a-beer.bpmn")
+        val definition = BpmnXmlToDefinitionConverter().parse(xml)
+        val diags = runEngine(beanRegistry, definition)
+
+        // Each entry is "ruleId|elementId|diagnosticCode" for precise set-comparison.
+        val expected = setOf(
+            "act-verb-object-name|Task_AskBartender|missingVerb",
+            "act-verb-object-name|Task_ConsiderMood|missingVerb",
+            "act-verb-object-name|Task_ConsiderSpecialty|missingVerb",
+            "act-verb-object-name|Task_ReadDescriptors|missingVerb",
+            "act-verb-object-name|Task_ScanCategories|missingVerb",
+        )
+        val actual = diags.map { "${it.ruleId}|${it.elementId}|${it.diagnosticCode}" }.toSet()
+
+        assertThat(actual)
+            .describedAs(
+                "Bean-registry diagnostics for order-a-beer.bpmn must match snapshot.\n" +
+                    "Only in expected: %s\nOnly in actual: %s",
+                expected - actual,
+                actual - expected,
+            )
+            .isEqualTo(expected)
+    }
+
+    @ParameterizedTest(name = "fixture diagnostics non-empty for {0}")
+    @MethodSource("additionalFixtureNames")
+    fun `Tier-1 (e) - additional fixture diagnostics are non-empty`(fixturePath: String) {
         val xml = loadFixture(fixturePath)
         val definition = BpmnXmlToDefinitionConverter().parse(xml)
-
-        val beanDiags = runEngine(beanRegistry, definition)
-
-        // Basic sanity: engine runs and produces diagnostics
-        assertThat(beanDiags).isNotEmpty().describedAs("Diagnostics should be generated for $fixturePath")
+        val diags = runEngine(beanRegistry, definition)
+        assertThat(diags).isNotEmpty().describedAs("Diagnostics should be generated for $fixturePath")
     }
 
     // -----------------------------------------------------------------------------------------
@@ -196,8 +229,7 @@ internal class RuleSourceParityTest {
 
     companion object {
         @JvmStatic
-        fun fixtureNames(): Stream<String> = Stream.of(
-            "/bpmn/order-a-beer.bpmn",
+        fun additionalFixtureNames(): Stream<String> = Stream.of(
             "/bpmn/valid-process.bpmn",
             "/bpmn/no-start-event.bpmn",
         )
