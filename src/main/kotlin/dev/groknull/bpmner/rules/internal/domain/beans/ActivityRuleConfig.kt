@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.internal.domain.compositeRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
@@ -63,7 +64,7 @@ internal class ActivityRuleConfig {
     )
 
     @Bean
-    fun actDiscouragedBusinessVerbs(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun actDiscouragedBusinessVerbs(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "Discouraged Business Verbs",
         category = RuleCategory.Activity,
         intent = "Avoid generic activity verbs that hide the real business action.",
@@ -76,7 +77,7 @@ internal class ActivityRuleConfig {
         check = VocabularyCheckConfig(
             property = "name",
             mode = VocabularyMode.FORBID_LEADING,
-            words = listOf("handle", "manage", "process", "perform", "do"),
+            words = lintConfig.discouragedLeadingVerbs,
         ),
         nlp = nlp,
         severity = RuleSeverity.WARNING,

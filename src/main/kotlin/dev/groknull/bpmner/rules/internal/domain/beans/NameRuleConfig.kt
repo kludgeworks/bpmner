@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
@@ -42,7 +43,7 @@ internal class NameRuleConfig {
     }
 
     @Bean
-    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun nameBusinessMeaningfulLabel(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "Business Meaningful Label",
         category = RuleCategory.Name,
         intent = "Encourage business-readable labels over technical identifiers.",
@@ -56,7 +57,7 @@ internal class NameRuleConfig {
             property = "name",
             pattern = "^(?!.*[_/])(?!.*[a-z][A-Z])(?!.*\\d).+$",
             patternDescription = "labels should be business-readable (no underscores, slash paths, camelCase, or digits)",
-            forbiddenVocabulary = listOf("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj"),
+            forbiddenVocabulary = lintConfig.technicalTokens,
         ),
         nlp = nlp,
         severity = RuleSeverity.WARNING,
@@ -68,7 +69,7 @@ internal class NameRuleConfig {
     )
 
     @Bean
-    fun nameNoElementTypeWords(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun nameNoElementTypeWords(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "No Element Type Words",
         category = RuleCategory.Name,
         intent = "Avoid redundant BPMN element type words in labels.",
@@ -81,7 +82,7 @@ internal class NameRuleConfig {
         check = VocabularyCheckConfig(
             property = "name",
             mode = VocabularyMode.FORBID,
-            words = listOf("activity", "process", "event"),
+            words = lintConfig.elementTypeWords,
         ),
         nlp = nlp,
         severity = RuleSeverity.ERROR,
@@ -93,7 +94,7 @@ internal class NameRuleConfig {
     )
 
     @Bean
-    fun nameUncommonAbbreviations(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun nameUncommonAbbreviations(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "Uncommon Abbreviations",
         category = RuleCategory.Name,
         intent = "Reduce ambiguity from obscure abbreviations in BPMN labels.",
@@ -107,7 +108,7 @@ internal class NameRuleConfig {
             property = "name",
             pattern = "^(?!.*\\b[A-Z]{2,}\\b).+$",
             patternDescription = "labels should not contain uncommon uppercase abbreviations",
-            allowedVocabulary = listOf("BPMN", "ACME", "SLA", "API", "IT"),
+            allowedVocabulary = lintConfig.allowedAcronyms,
         ),
         nlp = nlp,
         severity = RuleSeverity.WARNING,

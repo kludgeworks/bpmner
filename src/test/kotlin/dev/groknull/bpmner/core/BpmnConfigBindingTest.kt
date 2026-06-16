@@ -15,7 +15,10 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
 import kotlin.test.assertIs
 
-@SpringBootTest(classes = [BpmnConfigBindingTest.Config::class])
+@SpringBootTest(
+    classes = [BpmnConfigBindingTest.Config::class],
+    properties = ["bpmner.rules.config-uri=file:/tmp/team-bpmner.pkl"],
+)
 class BpmnConfigBindingTest {
     @EnableConfigurationProperties(BpmnConfig::class)
     class Config
@@ -46,6 +49,11 @@ class BpmnConfigBindingTest {
     @Test
     fun `legacy repairer actor still binds for backward compatibility`() {
         assertActorRole(config.repairer, persona = "BPMN Repair Specialist", role = "repairer")
+    }
+
+    @Test
+    fun `rules config-uri binds for team bpmner pkl override`() {
+        assertEquals("file:/tmp/team-bpmner.pkl", config.rules.configUri)
     }
 
     private fun assertActorRole(
