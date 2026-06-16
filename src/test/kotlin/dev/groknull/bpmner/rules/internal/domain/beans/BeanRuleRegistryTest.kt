@@ -8,88 +8,88 @@ package dev.groknull.bpmner.rules.internal.domain.beans
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RuleCategory
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class BeanRuleRegistryTest {
+    private lateinit var registry: BeanRuleRegistry
+    private lateinit var context: AnnotationConfigApplicationContext
+
+    @BeforeAll
+    fun setUp() {
+        context = bpmnerKotlinRuleContext()
+        registry = context.getBean(BeanRuleRegistry::class.java)
+    }
+
+    @AfterAll
+    fun tearDown() {
+        if (::context.isInitialized) {
+            context.close()
+        }
+    }
+
     @Test
     fun `every rule has a non-blank intent`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val allRules = registry.activeRules() + registry.llmRuleSpecs()
+        val allRules = registry.activeRules() + registry.llmRuleSpecs()
 
-            for (rule in allRules) {
-                assertThat(rule.metadata.intent).describedAs("intent for rule ${rule.id}").isNotBlank()
-            }
+        for (rule in allRules) {
+            assertThat(rule.metadata.intent).describedAs("intent for rule ${rule.id}").isNotBlank()
         }
     }
 
     @Test
     fun `every rule defines at least one error message`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val allRules = registry.activeRules() + registry.llmRuleSpecs()
+        val allRules = registry.activeRules() + registry.llmRuleSpecs()
 
-            for (rule in allRules) {
-                assertThat(rule.metadata.errorMessages).describedAs("errorMessages for rule ${rule.id}").isNotEmpty()
-            }
+        for (rule in allRules) {
+            assertThat(rule.metadata.errorMessages).describedAs("errorMessages for rule ${rule.id}").isNotEmpty()
         }
     }
 
     @Test
     fun `every rule has a valid category`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val allRules = registry.activeRules() + registry.llmRuleSpecs()
+        val allRules = registry.activeRules() + registry.llmRuleSpecs()
 
-            for (rule in allRules) {
-                assertThat(RuleCategory.entries).contains(rule.metadata.category)
-            }
+        for (rule in allRules) {
+            assertThat(RuleCategory.entries).contains(rule.metadata.category)
         }
     }
 
     @Test
     fun `LLM rules carry no LOCAL_MODEL_FIX repair`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val llmSpecs = registry.llmRuleSpecs()
+        val llmSpecs = registry.llmRuleSpecs()
 
-            for (spec in llmSpecs) {
-                assertThat(spec.metadata.repair.kind).describedAs("repair.kind for LLM rule ${spec.id}")
-                    .isNotEqualTo(RepairKind.LOCAL_MODEL_FIX)
-            }
+        for (spec in llmSpecs) {
+            assertThat(spec.metadata.repair.kind).describedAs("repair.kind for LLM rule ${spec.id}")
+                .isNotEqualTo(RepairKind.LOCAL_MODEL_FIX)
         }
     }
 
     @Test
     fun `rule ids are unique`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val allRules = registry.activeRules() + registry.llmRuleSpecs()
-            val allIds = allRules.map { it.id }
+        val allRules = registry.activeRules() + registry.llmRuleSpecs()
+        val allIds = allRules.map { it.id }
 
-            assertThat(allIds).doesNotHaveDuplicates()
-        }
+        assertThat(allIds).doesNotHaveDuplicates()
     }
 
     @Test
     fun `registry emits at least one rule`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val activeRules = registry.activeRules()
+        val activeRules = registry.activeRules()
 
-            assertThat(activeRules).isNotEmpty()
-        }
+        assertThat(activeRules).isNotEmpty()
     }
 
     @Test
     fun `LLM specs are resolvable by id`() {
-        bpmnerKotlinRuleContext().use { context ->
-            val registry = context.getBean(BeanRuleRegistry::class.java)
-            val llmSpecs = registry.llmRuleSpecs()
+        val llmSpecs = registry.llmRuleSpecs()
 
-            for (spec in llmSpecs) {
-                assertThat(registry.ruleByIdOrAlias(spec.id)).isNotNull
-            }
+        for (spec in llmSpecs) {
+            assertThat(registry.ruleByIdOrAlias(spec.id)).isNotNull
         }
     }
 }
