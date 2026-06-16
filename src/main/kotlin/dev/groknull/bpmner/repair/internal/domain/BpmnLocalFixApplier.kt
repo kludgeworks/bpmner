@@ -79,7 +79,7 @@ internal class BpmnLocalFixApplier(
     private fun handlerConfigFor(diagnostic: BpmnDiagnostic): HandlerConfig {
         val ruleId = diagnostic.rule?.let(BpmnLintRuleIds::bareRuleId) ?: return HandlerConfig.EMPTY
         val meta = ruleRegistry.ruleByIdOrAlias(ruleId)?.metadata ?: return HandlerConfig.EMPTY
-        return HandlerConfig(staticConfig = meta.staticConfig, replacementMap = meta.repair.replacementMap)
+        return HandlerConfig(replacementMap = meta.repair.replacementMap)
     }
 
     private data class LocalFixCandidate(

@@ -121,11 +121,16 @@ _TAGS = {
     "ValidationModuleTest": ["spring-context"],
 }
 
+_DATA = {
+    "HandlerSourceSanityTest": ["//src:analysis_srcs"],
+}
+
 # One java_junit5_test per *Test.kt. Live-LLM smoke tests carry unique
 # attributes (env_inherit, data, no-remote) and are declared explicitly below.
 [java_junit5_test(
     name = name,
     timeout = _TIMEOUTS.get(name, "short"),
+    data = _DATA.get(name, []),
     shard_count = _SHARD_COUNTS.get(name, 1),
     tags = _TAGS.get(name, []),
     test_class = src.replace("kotlin/", "").replace(".kt", "").replace("/", "."),
