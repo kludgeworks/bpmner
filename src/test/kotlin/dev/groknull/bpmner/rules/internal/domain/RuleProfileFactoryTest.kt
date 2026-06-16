@@ -30,9 +30,10 @@ class RuleProfileFactoryTest {
     private fun build(
         profile: String = "recommended",
         severityOverrides: Map<String, String?> = emptyMap(),
+        configUri: String? = null,
     ): RuleProfile {
         val config = BpmnConfig(
-            rules = BpmnRulesConfig(profile = profile, severityOverrides = severityOverrides),
+            rules = BpmnRulesConfig(profile = profile, severityOverrides = severityOverrides, configUri = configUri),
         )
         return factory.ruleProfile(config)
     }
@@ -182,5 +183,13 @@ class RuleProfileFactoryTest {
         )
 
         assertTrue("some-rule" in profile.disabledRuleIds)
+    }
+
+    @Test
+    fun `config uri does not affect profile or severity resolution`() {
+        val profile = build(configUri = "file:/tmp/team-bpmner.pkl")
+
+        assertTrue(profile.severityOverrides.isEmpty())
+        assertTrue(profile.disabledRuleIds.isEmpty())
     }
 }

@@ -11,6 +11,7 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyCheckConfig
@@ -22,7 +23,7 @@ import org.springframework.context.annotation.Configuration
 @Suppress("MaxLineLength")
 internal class DataRuleConfig {
     @Bean
-    fun dataNoTypeWordsInDataName(nlp: BpmnNlp): BpmnRule = primitiveRule(
+    fun dataNoTypeWordsInDataName(nlp: BpmnNlp, lintConfig: BpmnerLintConfig): BpmnRule = primitiveRule(
         name = "No Type Words In Data Name",
         category = RuleCategory.Data,
         intent = "Keep data element names business-oriented and noun-based.",
@@ -35,7 +36,7 @@ internal class DataRuleConfig {
         check = VocabularyCheckConfig(
             property = "name",
             mode = VocabularyMode.FORBID,
-            words = listOf("activity", "process", "event"),
+            words = lintConfig.elementTypeWords,
         ),
         nlp = nlp,
         severity = RuleSeverity.ERROR,

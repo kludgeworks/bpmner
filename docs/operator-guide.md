@@ -21,6 +21,7 @@ Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](..
 | --- | --- | --- |
 | `bpmner.rules.profile` | `recommended` | Named profile loaded at startup. Built-in profiles: `recommended` (declared severities, nothing disabled) and `strict` (every WARNING-default rule bumped to ERROR). Unknown profile name fails startup with the list of available profiles. |
 | `bpmner.rules.severity-overrides` | `{}` | Per-rule escape hatch applied **on top of** the active profile. User entries always win — the profile is the baseline, this map is per-deployment surgery. Keys are bare rule ids (e.g. `act-verb-object-name`); values are one of `error`, `warning`, `info`, `off`. |
+| `bpmner.rules.config-uri` | `modulepath:/linter/pkl/bpmner.pkl` | Modeller-owned convention source for word lists used by selected naming rules and the `stripTypeWords` local repair handler. Leave unset for packaged defaults; set to a `file:` URI for a team-specific `bpmner.pkl`. |
 
 Worked example — strict on a known-quiet rule, with a few escape-hatch carveouts:
 
@@ -34,6 +35,32 @@ bpmner:
 ```
 
 **YAML 1.1 gotcha**: the literal `off` (and `on`, `yes`, `no`) is parsed as a boolean by SnakeYAML before Spring Boot's binder sees it. Spring then converts the Boolean to the string `"false"` / `"true"`, which the override parser doesn't recognise — the rule silently stays enabled. **Always quote severity values**: `"off"`, `"warning"`, `"error"`, `"info"`. The existing rule overrides in `application.yaml` follow this pattern.
+
+### Rule conventions (`bpmner.pkl`)
+
+The packaged `modulepath:/linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and supplies the default convention lists used by Kotlin-authored rule beans. To customise those lists, create a local Pkl file that amends the packaged template and point `bpmner.rules.config-uri` at it with a `file:` URI:
+
+```pkl
+amends "modulepath:/linter/pkl/BpmnerLintConfig.pkl"
+
+elementTypeWords = List("activity", "process", "event", "step")
+allowedAcronyms = List("BPMN", "SLA", "API", "CRM")
+technicalTokens = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
+discouragedLeadingVerbs = List("handle", "manage", "process", "perform", "do")
+discouragedBpmnTypes = List("bpmn:Transaction")
+```
+
+The convention fields are:
+
+| Field | Used by |
+| --- | --- |
+| `discouragedLeadingVerbs` | `act-discouraged-business-verbs` |
+| `elementTypeWords` | `name-no-element-type-words`, `data-no-type-words-in-data-name`, and `stripTypeWords` repair |
+| `allowedAcronyms` | `name-uncommon-abbreviations` allowed vocabulary |
+| `technicalTokens` | `name-business-meaningful-label` forbidden vocabulary |
+| `discouragedBpmnTypes` | `gen-bpmn-subset` target elements |
+
+Profile and severity decisions are not read from `bpmner.pkl` at runtime; they come from `bpmner.rules.profile` and `bpmner.rules.severity-overrides`.
 
 ### LLM role bindings
 

@@ -18,7 +18,10 @@ PKL_RULE_SRCS = glob(["rules/*.pkl"])
 
 PKL_PROFILE_SRCS = glob(["profiles/*.pkl"])
 
-PKL_TOP_LEVEL_SRCS = ["BpmnerLintConfig.pkl"]
+PKL_TOP_LEVEL_SRCS = [
+    "BpmnerLintConfig.pkl",
+    "bpmner.pkl",
+]
 
 pkl_library(
     name = "schema",

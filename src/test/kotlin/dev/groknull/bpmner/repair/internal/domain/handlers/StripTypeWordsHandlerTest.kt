@@ -12,13 +12,14 @@ import dev.groknull.bpmner.core.BpmnStartEvent
 import dev.groknull.bpmner.core.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class StripTypeWordsHandlerTest {
-    private val handler = StripTypeWordsHandler()
-    private val defaultConfig = HandlerConfig(staticConfig = mapOf("discouragedWords" to listOf("activity", "process", "event")))
+    private val handler = StripTypeWordsHandler(BpmnerLintConfig())
+    private val defaultConfig = HandlerConfig.EMPTY
 
     @Test
     fun `handler name matches Pkl repair handler field`() {
@@ -53,25 +54,23 @@ class StripTypeWordsHandlerTest {
     }
 
     @Test
-    fun `no ops when staticConfig is missing`() {
+    fun `ignores per-diagnostic staticConfig and uses injected conventions`() {
         val ops = handler.buildPatch(definitionWithTask("Approve Order Activity"), "Task_1", HandlerConfig.EMPTY)
-        assertTrue(ops.isEmpty(), "Missing config must be a no-op, not silently use a default")
+        assertEquals("Approve Order", ops.single().name)
     }
 
     @Test
-    fun `no ops when discouragedWords list is empty`() {
-        val emptyConfig = HandlerConfig(staticConfig = mapOf("discouragedWords" to emptyList<String>()))
-        val ops = handler.buildPatch(definitionWithTask("Approve Order Activity"), "Task_1", emptyConfig)
+    fun `no ops when injected elementTypeWords list is empty`() {
+        val emptyHandler = StripTypeWordsHandler(BpmnerLintConfig(elementTypeWords = emptyList()))
+        val ops = emptyHandler.buildPatch(definitionWithTask("Approve Order Activity"), "Task_1", defaultConfig)
         assertTrue(ops.isEmpty())
     }
 
     @Test
-    fun `filters non-string elements out of the discouragedWords list`() {
-        // JVM erasure means a mixed-type List would pass an unchecked `as? List<String>` cast and
-        // ClassCastException on iteration. The handler walks the iterable and keeps only strings.
-        val mixedConfig = HandlerConfig(staticConfig = mapOf("discouragedWords" to listOf("activity", 42, null, "process")))
-        val ops = handler.buildPatch(definitionWithTask("Approve Order Activity Process"), "Task_1", mixedConfig)
-        assertEquals("Approve Order", ops.single().name, "Non-string entries must be ignored, not crash the handler")
+    fun `custom injected elementTypeWords are used`() {
+        val customHandler = StripTypeWordsHandler(BpmnerLintConfig(elementTypeWords = listOf("step")))
+        val ops = customHandler.buildPatch(definitionWithTask("Approve Order Step"), "Task_1", defaultConfig)
+        assertEquals("Approve Order", ops.single().name)
     }
 
     @Test

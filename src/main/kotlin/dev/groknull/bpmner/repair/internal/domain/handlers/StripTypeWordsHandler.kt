@@ -10,18 +10,21 @@ import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
+import dev.groknull.bpmner.rules.BpmnerLintConfig
 import org.springframework.stereotype.Component
 
 /**
- * Removes discouraged type-words ("activity", "process", "event", ...) from a node's name. Mirrors
- * `stripTypeWords` in `linter/src/auto-fix/registry.ts`. The word list is supplied by the rule's
- * Pkl `staticConfig.discouragedWords` and reaches this handler through [HandlerConfig.staticConfig].
+ * Removes configured type-words ("activity", "process", "event", ...) from a node's name. Mirrors
+ * `stripTypeWords` in `linter/src/auto-fix/registry.ts`. The word list is supplied by
+ * [BpmnerLintConfig.elementTypeWords] so rules and repair share one conventions source.
  *
- * No-op (returns empty ops) when: node is missing, current name is blank, no `discouragedWords` is
+ * No-op (returns empty ops) when: node is missing, current name is blank, no element type words are
  * configured, the regex would produce an unchanged string, or stripping would leave an empty name.
  */
 @Component
-internal class StripTypeWordsHandler : BpmnLocalModelFixHandler {
+internal class StripTypeWordsHandler(
+    private val lintConfig: BpmnerLintConfig,
+) : BpmnLocalModelFixHandler {
     override val handlerName: String = "stripTypeWords"
 
     @Suppress("ReturnCount") // Guard clauses keep each no-op path locally obvious.
@@ -34,7 +37,7 @@ internal class StripTypeWordsHandler : BpmnLocalModelFixHandler {
         val raw = node.name?.trim().orEmpty()
         if (raw.isEmpty()) return emptyList()
 
-        val words = discouragedWords(config) ?: return emptyList()
+        val words = lintConfig.elementTypeWords
         if (words.isEmpty()) return emptyList()
         val pattern = wordRemovalPattern(words)
 
@@ -47,21 +50,12 @@ internal class StripTypeWordsHandler : BpmnLocalModelFixHandler {
         return listOf(BpmnPatchOperation(type = BpmnPatchOperationType.SET_NODE_NAME, nodeId = elementId, name = fixed))
     }
 
-    private fun discouragedWords(config: HandlerConfig): List<String>? {
-        val raw = config.staticConfig?.get(DISCOURAGED_WORDS_KEY) ?: return null
-        // Cannot use `raw as? List<String>` directly — JVM erasure makes the generic check
-        // unenforceable, so a list containing non-strings would pass the cast and then blow up
-        // on iteration. Walk the iterable and keep only the String elements.
-        return (raw as? Iterable<*>)?.mapNotNull { it as? String }
-    }
-
     private fun wordRemovalPattern(words: List<String>): Regex {
         val alternation = words.joinToString("|") { Regex.escape(it) }
         return Regex("\\b($alternation)\\b", RegexOption.IGNORE_CASE)
     }
 
     private companion object {
-        const val DISCOURAGED_WORDS_KEY = "discouragedWords"
         val MULTI_SPACE = Regex("\\s{2,}")
     }
 }

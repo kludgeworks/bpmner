@@ -5,9 +5,15 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
+import dev.groknull.bpmner.rules.BpmnerLintConfig
+import dev.groknull.bpmner.rules.internal.domain.DeterministicRule
+import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
+import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyCheckConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
+@Suppress("MaxLineLength")
 internal class BeanRuleRegistryConstructionTest {
     @Test
     @Suppress("LongMethod")
@@ -108,4 +114,37 @@ internal class BeanRuleRegistryConstructionTest {
             )
         }
     }
+
+    @Test
+    fun `convention config drives relevant rule check configs`() {
+        val lintConfig = BpmnerLintConfig(
+            discouragedLeadingVerbs = listOf("coordinate"),
+            elementTypeWords = listOf("step"),
+            allowedAcronyms = listOf("BPMN", "VIP"),
+            technicalTokens = listOf("impl"),
+            discouragedBpmnTypes = listOf("bpmn:Transaction"),
+        )
+
+        bpmnerKotlinRuleContext(lintConfig).use { context ->
+            val ruleRegistry = context.getBean(BeanRuleRegistry::class.java)
+
+            assertThat(vocabularyWords(ruleRegistry, "act-discouraged-business-verbs"))
+                .containsExactly("coordinate")
+            assertThat(vocabularyWords(ruleRegistry, "name-no-element-type-words")).containsExactly("step")
+            assertThat(vocabularyWords(ruleRegistry, "data-no-type-words-in-data-name")).containsExactly("step")
+            assertThat(propertyPattern(ruleRegistry, "name-business-meaningful-label").forbiddenVocabulary)
+                .containsExactly("impl")
+            assertThat(propertyPattern(ruleRegistry, "name-uncommon-abbreviations").allowedVocabulary)
+                .containsExactly("BPMN", "VIP")
+            assertThat(ruleRegistry.ruleById("gen-bpmn-subset")!!.metadata.targetElements)
+                .containsExactly("bpmn:Transaction")
+            assertThat(elementConstraint(ruleRegistry, "gen-bpmn-subset").constraints).containsEntry("allowed", "")
+        }
+    }
+
+    private fun vocabularyWords(ruleRegistry: BeanRuleRegistry, ruleId: String): List<String> = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as VocabularyCheckConfig }.words
+
+    private fun propertyPattern(ruleRegistry: BeanRuleRegistry, ruleId: String): PropertyPatternCheckConfig = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as PropertyPatternCheckConfig }
+
+    private fun elementConstraint(ruleRegistry: BeanRuleRegistry, ruleId: String): ElementConstraintCheckConfig = (ruleRegistry.ruleById(ruleId) as DeterministicRule).config.let { it as ElementConstraintCheckConfig }
 }
