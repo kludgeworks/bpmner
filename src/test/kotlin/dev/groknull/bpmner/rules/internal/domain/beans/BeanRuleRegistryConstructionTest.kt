@@ -13,16 +13,32 @@ internal class BeanRuleRegistryConstructionTest {
     @Suppress("LongMethod")
     fun `kotlin bean registry loads active rules with unique ids`() {
         bpmnerKotlinRuleContext().use { context ->
-            val rules = context.getBean(BeanRuleRegistry::class.java).activeRules()
-            val ids = rules.map { it.id }
+            val ruleRegistry = context.getBean(BeanRuleRegistry::class.java)
+            val activeRules = ruleRegistry.activeRules()
+            val activeIds = activeRules.map { it.id }
+            val llmSpecs = ruleRegistry.llmRuleSpecs()
+            val llmIds = llmSpecs.map { it.metadata.id }
 
-            assertThat(rules).hasSize(47)
-            assertThat(ids).doesNotHaveDuplicates()
-            assertThat(ids).contains("msg-message-flow-name-pattern")
+            // Executable rules: 40 bean + 7 compiled = 47
+            assertThat(activeRules).hasSize(47)
+            assertThat(activeIds).doesNotHaveDuplicates()
+
+            // LLM rule specs: 2 metadata-only rules (excluded from activeRules)
+            assertThat(llmSpecs).hasSize(2)
+            assertThat(llmIds).contains(
+                "gen-business-clarity-over-technical-detail",
+                "gtw-exclusive-inclusive-parallel-semantics",
+            )
+
+            // LLM specs are resolvable by id but are excluded from activeRules().
+            for (llmId in llmIds) {
+                assertThat(ruleRegistry.ruleByIdOrAlias(llmId)).isNotNull
+                assertThat(activeIds).doesNotContain(llmId)
+            }
 
             // All 40 active Pkl-derived bean ids (excluding 9 deferred rules).
             // Includes the 7 compiled Kotlin rules in the total count.
-            assertThat(ids).contains(
+            assertThat(activeIds).contains(
                 // Activity (5)
                 "act-activity-label-capitalization",
                 "act-discouraged-business-verbs",
@@ -78,7 +94,7 @@ internal class BeanRuleRegistryConstructionTest {
             )
 
             // The 9 deferred/no-primitive rules must be absent.
-            assertThat(ids).doesNotContain(
+            assertThat(activeIds).doesNotContain(
                 "art-information-item-vs-application-component",
                 "data-envelope-icon-usage",
                 "def-business-process-element-usage",
@@ -86,6 +102,7 @@ internal class BeanRuleRegistryConstructionTest {
                 "evt-send-task-vs-throwing-message-event",
                 "evt-signal-events-broadcast-only-when-needed",
                 "act-task-vs-subprocess-vs-call-activity",
+                // LLM specs are deferred but not executable, so they're also absent from activeIds
                 "gen-business-clarity-over-technical-detail",
                 "gtw-exclusive-inclusive-parallel-semantics",
             )

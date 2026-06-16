@@ -8,19 +8,38 @@ package dev.groknull.bpmner.rules.internal.domain.beans
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.LlmRuleSpec
+import dev.groknull.bpmner.rules.internal.domain.llmRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.CardinalityCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ElementConstraintMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class GeneralRuleConfig {
+    // Deferred LLM metadata rules are added as LlmRuleSpec beans.
+    // These are excluded from activeRules() but remain resolvable via ruleByIdOrAlias for markdown.
+    @Bean
+    fun genBusinessClarityOverTechnicalDetail(): LlmRuleSpec = llmRule(
+        name = "Business Clarity Over Technical Detail",
+        category = RuleCategory.General,
+        intent = "Keep BPMN diagrams focused on business behavior rather than implementation mechanics.",
+        forModellers = "Prefer clear business outcomes, responsibilities, and decisions over technical implementation details that obscure the process.",
+        forAI = "Review labels and structure for business readability. Flag technical detail only when it dominates or obscures business intent.",
+        targetElements = listOf("bpmn:Definitions", "bpmn:Process", "bpmn:FlowElement"),
+        errorMessages = mapOf(
+            "default" to "Business clarity over technical detail requires contextual review",
+        ),
+        severity = RuleSeverity.INFO,
+        staticConfig = mapOf(
+            "cookbookCode" to "GEN-02",
+        ),
+    )
+
     @Bean
     fun genBpmnSubset(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "BPMN Subset",

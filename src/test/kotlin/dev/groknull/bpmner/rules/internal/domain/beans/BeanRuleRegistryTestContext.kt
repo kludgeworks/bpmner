@@ -14,12 +14,12 @@ import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredNameRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.TaskPayloadRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlpConfig
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
-import org.springframework.core.env.MapPropertySource
 
 /**
  * Builds and refreshes an isolated [AnnotationConfigApplicationContext] wired for the
- * Kotlin bean rule source (`bpmner.rules.source=kotlin`): the 12 category `@Configuration`
- * classes, [BeanRuleRegistry], the 7 compiled `@Component` rules, and [BpmnNlpConfig].
+ * Kotlin bean rule source: the 12 category `@Configuration`
+ * classes, [BeanRuleRegistry], the 7 compiled `@Component` rules, the 2 LLM rule spec beans,
+ * and [BpmnNlpConfig].
  *
  * Shared by [BeanRuleRegistryConstructionTest] and [RuleSourceParityTest] so the bean
  * registration list lives in exactly one place — duplicating it across both tests trips
@@ -27,9 +27,6 @@ import org.springframework.core.env.MapPropertySource
  * `use {}` or an `@AfterAll` teardown).
  */
 internal fun bpmnerKotlinRuleContext(): AnnotationConfigApplicationContext = AnnotationConfigApplicationContext().apply {
-    environment.propertySources.addFirst(
-        MapPropertySource("test", mapOf("bpmner.rules.source" to "kotlin")),
-    )
     register(
         BpmnNlpConfig::class.java,
         ActivityRuleConfig::class.java,

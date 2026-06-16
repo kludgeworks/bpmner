@@ -13,12 +13,10 @@ import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.AssociationDirection
 import dev.groknull.bpmner.rules.internal.domain.primitives.PresenceCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.RequiredAssociationCheckConfig
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class ArtifactRuleConfig {
     @Bean

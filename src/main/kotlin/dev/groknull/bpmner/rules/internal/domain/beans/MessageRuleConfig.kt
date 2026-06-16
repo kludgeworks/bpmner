@@ -15,12 +15,10 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.NlpPosTag
 import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class MessageRuleConfig {
     @Bean

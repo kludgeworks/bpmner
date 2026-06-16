@@ -11,6 +11,8 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.LlmRuleSpec
+import dev.groknull.bpmner.rules.internal.domain.llmRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityCheckConfig
@@ -24,14 +26,42 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechCheckCon
 import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.TopologyCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.TopologyMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class GatewayRuleConfig {
+    // Deferred LLM metadata rules are added as LlmRuleSpec beans.
+    // These are excluded from activeRules() but remain resolvable via ruleByIdOrAlias for markdown.
+    @Bean
+    fun gtwExclusiveInclusiveParallelSemantics(): LlmRuleSpec = llmRule(
+        name = "Exclusive Inclusive Parallel Semantics",
+        category = RuleCategory.Gateway,
+        intent = "Keep gateway type choices aligned with BPMN token semantics.",
+        forModellers =
+        "Use exclusive gateways for exactly one path, inclusive gateways for one or more paths, and parallel gateways when all paths proceed together.",
+        forAI =
+        "Enforce deterministic parallel-gateway structure from XML. Treat XOR versus OR versus AND selection as a modelling-intent decision unless explicit structural evidence makes it invalid.",
+        targetElements =
+        listOf(
+            "bpmn:ExclusiveGateway",
+            "bpmn:InclusiveGateway",
+            "bpmn:ParallelGateway",
+        ),
+        errorMessages = mapOf(
+            "default" to "Gateway semantics should match exclusive, inclusive, or parallel behavior",
+            "parallelCondition" to "Parallel gateway outgoing sequence flow must not be conditional or default-only",
+            "parallelSplitCardinality" to "Parallel diverging gateway should have at least two outgoing sequence flows",
+            "parallelJoinCardinality" to "Parallel converging gateway should have at least two incoming sequence flows",
+        ),
+        severity = RuleSeverity.WARNING,
+        staticConfig = mapOf(
+            "deterministicChecks" to listOf("parallelCondition", "parallelSplitCardinality", "parallelJoinCardinality"),
+            "heuristicChecks" to listOf("xor-vs-or-business-intent", "matching-split-join-context"),
+        ),
+    )
+
     companion object {
         // DSL string literals shared across multiple @Bean methods in this class.
         private const val BPMN_EXCLUSIVE_GATEWAY = "bpmn:ExclusiveGateway"
