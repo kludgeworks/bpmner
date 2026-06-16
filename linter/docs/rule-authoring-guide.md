@@ -196,7 +196,7 @@ The packaged `linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and is the de
 1. Create `linter/pkl/rules/<PascalName>.pkl` amending `BpmnRule.pkl`.
 2. Re-run `bazel build //linter/pkl:rules_index_pkl` — the `rules_index` macro regenerates `RulesIndex.pkl` from the glob. No hand-listing.
 3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/<PascalName>Test.kt` (see next section).
-4. If the rule is `severity = "warning"` and you ship to the `strict` profile, no action — `StrictProfile.pkl` auto-includes it via a Pkl for-comprehension over `RulesIndex.rules`.
+4. If the rule is `severity = "warning"`, no extra step is needed for the `strict` profile — `RuleProfileFactory.computeStrictBaseline()` reads the live `BeanRuleRegistry` at startup and automatically promotes every WARNING-severity rule to ERROR. New Pkl rules are registered in the bean catalog by the `PklRuleCatalog` loader, so they appear in the strict baseline without any manual maintenance.
 
 ### Writing a per-rule test
 
