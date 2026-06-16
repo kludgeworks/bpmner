@@ -20,12 +20,10 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.PartOfSpeechMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PropertyPatternCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.VocabularyMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class ActivityRuleConfig {
     companion object {

@@ -20,10 +20,9 @@ import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
  * isn't a sub-type) or `LlmCheckRuleConfig` (also not). What used to be a runtime
  * `rule-config-error` for those two cases is now caught at compile time.
  *
- * The [nlp] parameter is the application-wide [BpmnNlp] facade — threaded here from
- * [dev.groknull.bpmner.rules.internal.domain.PklRuleCatalog] so the NLP-aware primitives
- * (Phase 3, #218) have access without each one being Spring-managed individually. Non-NLP
- * primitives ignore it.
+ * The [nlp] parameter is the application-wide [BpmnNlp] facade — threaded here so the NLP-aware
+ * primitives (Phase 3, #218) have access without each one being Spring-managed individually.
+ * Non-NLP primitives ignore it.
  *
  * Pure object: no DI, no Spring, no Embabel. Primitives are instantiated fresh per call —
  * they're stateless data carriers, so the cost is a single object allocation per dispatch.

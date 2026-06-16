@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.validation.internal.domain
 
 import com.embabel.agent.api.common.PromptRunner
-import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.core.BpmnDefinition
 import dev.groknull.bpmner.core.LaidOutProcessGraph
 import dev.groknull.bpmner.rules.RuleRegistry
@@ -29,7 +28,7 @@ internal class LlmValidator(
         _graph: LaidOutProcessGraph,
         _promptRunner: PromptRunner,
     ): List<BpmnDiagnostic> {
-        val llmRules = ruleRegistry.activeRules().filter(::isLlmJudged)
+        val llmRules = ruleRegistry.llmRuleSpecs()
         if (llmRules.isEmpty()) return emptyList()
 
         // In production this would invoke an LLM agent for heuristic validation.
@@ -40,20 +39,18 @@ internal class LlmValidator(
     }
 
     override fun getLlmRuleGuidance(): String {
-        val llmRules = ruleRegistry.activeRules().filter(::isLlmJudged)
+        val llmRules = ruleRegistry.llmRuleSpecs()
         if (llmRules.isEmpty()) return ""
 
         return buildString {
             appendLine("General Workflow Rule Guidance (Heuristic):")
             for (rule in llmRules) {
                 val metadata = rule.metadata
-                appendLine("## ${rule.id}: ${metadata.name}")
+                appendLine("## ${rule.metadata.id}: ${metadata.name}")
                 appendLine("Intent: ${metadata.intent}")
                 appendLine("Guidance: ${metadata.forAI}")
                 appendLine()
             }
         }
     }
-
-    private fun isLlmJudged(rule: BpmnRule): Boolean = rule.metadata.checkPrimitive == "LlmCheckRule"
 }

@@ -176,8 +176,8 @@ internal enum class PartOfSpeechMode {
 
 /**
  * Pkl-side mirror of [dev.groknull.bpmner.rules.internal.domain.nlp.PosTag]. Lives in this
- * file so the Pkl config DSL doesn't need to import the `nlp` package — the loader maps
- * one to the other in [dev.groknull.bpmner.rules.internal.domain.mapping.CheckConfigMapper].
+ * file so the Pkl config DSL doesn't need to import the `nlp` package. The Pkl-to-Kotlin
+ * bridge (`CheckConfigMapper`) was removed in #380.
  */
 internal enum class NlpPosTag {
     VERB,

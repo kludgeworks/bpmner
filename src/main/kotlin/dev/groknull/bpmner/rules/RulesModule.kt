@@ -16,11 +16,9 @@ import org.springframework.modulith.ApplicationModule
  * - `RuleRegistry` for rule discovery
  * - `RuleProfile` for severity overrides
  * - Default implementations in `internal/domain/`
- * - The LLM rule agent in `internal/adapter/inbound/` — a GOAP-shaped `@Agent` that
- *   evaluates `LlmCheckRule`-typed Pkl rules via Embabel's `PromptRunner`. This is why
- *   the module depends on `core` (for `BpmnConfig.linter`) in addition to `api`.
+ * - LLM rule metadata specs (`LlmRuleSpec`) for guidance generation.
  *
- * Populated by Phase 1D (#212) and Phase 2 work (#239, #240).
+ * Populated by Phase 1D (#212) and Phase 2 work (#239, #240, #380).
  */
-@ApplicationModule(allowedDependencies = ["api", "core", "pkl"])
+@ApplicationModule(allowedDependencies = ["api", "core"])
 internal object RulesModule

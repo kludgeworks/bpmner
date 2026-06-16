@@ -10,6 +10,7 @@ import dev.groknull.bpmner.api.RepairMetadata
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.DeterministicCheckConfig
@@ -48,7 +49,6 @@ internal fun primitiveRule(
         deprecated = deprecated,
         replacedBy = replacedBy,
         deprecationReason = deprecationReason,
-        checkPrimitive = check::class.simpleName?.removeSuffix("Config"),
     ),
     config = check,
     nlp = nlp,
@@ -89,7 +89,6 @@ internal fun compositeRule(
             deprecated = deprecated,
             replacedBy = replacedBy,
             deprecationReason = deprecationReason,
-            checkPrimitive = "CompositeCheck",
         ),
         config = builder.build(),
         nlp = nlp,
@@ -112,7 +111,8 @@ internal fun llmRule(
     deprecated: Boolean = false,
     replacedBy: List<String> = emptyList(),
     deprecationReason: String? = null,
-): LlmRuleSpec = LlmRule(
+    staticConfig: Map<String, Any> = emptyMap(),
+): LlmRuleSpec = LlmRuleSpec(
     metadata = ruleMetadata(
         name = name,
         category = category,
@@ -128,22 +128,17 @@ internal fun llmRule(
         replacedBy = replacedBy,
         deprecationReason = deprecationReason,
     ),
+    staticConfig = staticConfig,
 )
 
 internal class CompositeRuleBuilder {
     private val subChecks = mutableListOf<SubCheckConfig>()
-    private val targetTypes = mutableListOf<String>()
-
-    fun targetTypes(vararg types: String) {
-        targetTypes += types
-    }
-
     fun sub(diagnosticCode: String, check: DeterministicCheckConfig) {
         subChecks += SubCheckConfig(diagnosticCode, check)
     }
 
     fun build(): CompositeCheckConfig = CompositeCheckConfig(
-        targetTypes = targetTypes.toList(),
+        targetTypes = emptyList(),
         subChecks = subChecks.toList(),
     )
 }
@@ -164,7 +159,6 @@ private fun ruleMetadata(
     deprecated: Boolean,
     replacedBy: List<String>,
     deprecationReason: String?,
-    checkPrimitive: String? = null,
 ): RuleMetadata {
     val slug = slug(name)
     return RuleMetadata(
@@ -179,7 +173,6 @@ private fun ruleMetadata(
         errorMessages = errorMessages,
         severity = severity,
         repair = repair,
-        checkPrimitive = checkPrimitive,
         aliases = aliases,
         deprecated = deprecated,
         replacedBy = replacedBy,

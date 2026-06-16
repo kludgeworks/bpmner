@@ -12,12 +12,10 @@ import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.ConnectivityMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 internal class FlowRuleConfig {
     @Bean
     fun flowDivergingFlowOutcomeLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(

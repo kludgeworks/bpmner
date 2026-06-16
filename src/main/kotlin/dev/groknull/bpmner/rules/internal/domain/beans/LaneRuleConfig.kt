@@ -13,12 +13,10 @@ import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PoolLabelMode
 import dev.groknull.bpmner.rules.internal.domain.primitives.PresenceCheckConfig
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class LaneRuleConfig {
     @Bean

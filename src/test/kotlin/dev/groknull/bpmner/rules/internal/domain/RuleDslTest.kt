@@ -85,7 +85,7 @@ internal class RuleDslTest {
     }
 
     @Test
-    fun `composite rule records sub checks`() {
+    fun `composite rule records sub checks without DSL target type narrowing`() {
         val rule = compositeRule(
             name = "Composite Sample",
             category = RuleCategory.Event,
@@ -96,13 +96,12 @@ internal class RuleDslTest {
             errorMessages = mapOf("missing" to "Event is missing."),
             nlp = nlp,
         ) {
-            targetTypes("bpmn:StartEvent")
             sub("missing", PresenceCheckConfig)
         }
 
         val composite = assertIs<CompositeRule>(rule)
         assertEquals("evt-composite-sample", composite.id)
-        assertEquals(listOf("bpmn:StartEvent"), composite.config.targetTypes)
+        assertEquals(emptyList(), composite.config.targetTypes)
         assertEquals("missing", composite.config.subChecks.single().diagnosticCode)
     }
 
@@ -122,6 +121,5 @@ internal class RuleDslTest {
         assertFalse(spec.metadata.deprecated)
         assertEquals(emptyList(), spec.metadata.replacedBy)
         assertNull(spec.metadata.deprecationReason)
-        assertNull(spec.metadata.checkPrimitive)
     }
 }

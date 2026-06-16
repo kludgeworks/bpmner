@@ -36,12 +36,6 @@ internal class CompositeRule(
     override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> = evaluateComposite(ctx, metadata, config, nlp)
 }
 
-internal data class LlmRule(
-    val metadata: RuleMetadata,
-)
-
-internal typealias LlmRuleSpec = LlmRule
-
 internal fun evaluateDeterministic(
     ctx: BpmnDefinitionContext,
     metadata: RuleMetadata,

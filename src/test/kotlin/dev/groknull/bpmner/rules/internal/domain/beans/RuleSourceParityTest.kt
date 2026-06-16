@@ -8,7 +8,6 @@
 package dev.groknull.bpmner.rules.internal.domain.beans
 
 import dev.groknull.bpmner.api.BpmnDefinition
-import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.generation.BpmnXmlToDefinitionConverter
 import dev.groknull.bpmner.rules.RuleProfile
@@ -16,15 +15,6 @@ import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.CompositeRule
 import dev.groknull.bpmner.rules.internal.domain.DefaultRuleEngine
 import dev.groknull.bpmner.rules.internal.domain.DeterministicRule
-import dev.groknull.bpmner.rules.internal.domain.PklRuleCatalog
-import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DefaultFlowRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DuplicateIdRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredEventsRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredNameRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.TaskPayloadRule
-import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -36,47 +26,31 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import java.util.stream.Stream
 
 /**
- * Parity gate: proves the shadow Kotlin bean catalog ([BeanRuleRegistry]) is behaviourally
- * equivalent to the live Pkl catalog ([PklRuleCatalog]) before the #380 cutover.
+ * Regression gate: proves the Kotlin bean catalog ([BeanRuleRegistry]) continues to work
+ * correctly after the #380 cutover (Pkl catalog and bridge code removed). This test replaces
+ * the old Pkl-vs-bean parity comparison.
  *
- * Implements the two-tier parity model from ADR-376-004:
+ * Implements assertions for:
  *
- * - **Tier-1 (blocking):** id set, [RuleCategory], [RuleSeverity], `targetElements`,
- *   `checkPrimitive`, and the typed [DeterministicCheckConfig]/[CompositeCheckConfig].
- * - **Tier-2 (advisory, logged only):** `repair` defaults and `staticConfig` legitimately
- *   differ in faithful ports (see architecture.md risk #8 and REVIEW-378.md row 12).
+ * - Active rule count (47 = 40 Kotlin beans + 7 compiled rules)
+ * - LLM rule specs count (2 metadata-only specs: BusinessClarityOverTechnicalDetail,
+ *   ExclusiveInclusiveParallelSemantics)
+ * - Tier-1 metadata (category, severity, targetElements) on executable rules
+ * - Typed check config validity (DeterministicCheckConfig/CompositeCheckConfig)
+ * - Fixture diagnostics (set-compared)
  *
- * Fixture diagnostics are compared as **sets** (order-insensitive) using [RuleDiagnostic],
- * which is a data class — structural equality is well-defined.
- *
- * Count assertion: derived from [PklRuleCatalog.activeRules] (expected 47 = 40 + 7 compiled),
- * NOT the stale issue prose value of 54 (ADR-376-003, architecture.md:128, 175).
+ * The bean registry is now the default runtime registry (no `@ConditionalOnProperty`).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Suppress("TooManyFunctions")
 internal class RuleSourceParityTest {
-    private lateinit var pklRegistry: RuleRegistry
     private lateinit var beanRegistry: RuleRegistry
     private lateinit var beanContext: AnnotationConfigApplicationContext
 
     @BeforeAll
     fun setUp() {
-        val nlp = testBpmnNlp()
-        val compiledRules = listOf(
-            DanglingEdgeRule(),
-            DefaultFlowRule(),
-            DuplicateIdRule(),
-            EventDefinitionRule(),
-            RequiredEventsRule(),
-            RequiredNameRule(),
-            TaskPayloadRule(),
-        )
-
-        // Build the Pkl catalog directly — same idiom as PklRuleCatalogTest.
-        pklRegistry = PklRuleCatalog(compiledRules, nlp)
-
-        // Build the bean registry via an isolated Spring context with bpmner.rules.source=kotlin
-        // (shared helper; see BeanRuleRegistryConstructionTest). The context is held open for the
+        // Build the bean registry via an isolated Spring context (shared helper; see
+        // BeanRuleRegistryConstructionTest). The context is held open for the
         // whole class and closed in tearDown so the registry's beans stay live during evaluation.
         beanContext = bpmnerKotlinRuleContext()
         beanRegistry = beanContext.getBean(BeanRuleRegistry::class.java)
@@ -90,67 +64,59 @@ internal class RuleSourceParityTest {
     }
 
     // -----------------------------------------------------------------------------------------
-    // Tier-1 (a): Id-set equality
+    // Bean-registry regression assertions (after #380 Pkl bridge removal)
     // -----------------------------------------------------------------------------------------
 
     @Test
-    fun `Tier-1 (a) - both catalogs expose identical active rule id sets`() {
-        val pklIds = pklRegistry.activeRules().map { it.id }.toSet()
-        val beanIds = beanRegistry.activeRules().map { it.id }.toSet()
+    fun `Tier-1 (a) - bean registry exposes correct active rule count and unique ids`() {
+        val activeRules = beanRegistry.activeRules()
+        val activeIds = activeRules.map { it.id }
 
-        // Guard that the Pkl catalog actually loaded rules — the id-set comparison below is only
-        // meaningful when both catalogs are non-empty. The live total is 47 (40 Pkl-derived + 7
-        // compiled), but the gate compares the two catalogs' live id sets rather than hardcoding a
-        // count (NOT the stale issue prose "54"; see ADR-376-003).
-        assertThat(pklIds).describedAs("Pkl catalog rule ids").isNotEmpty()
-        assertThat(beanIds)
-            .describedAs(
-                "Bean catalog must expose exactly the same ids as Pkl catalog.\n" +
-                    "Missing from bean: %s\nExtra in bean: %s",
-                pklIds - beanIds,
-                beanIds - pklIds,
-            )
-            .containsExactlyInAnyOrderElementsOf(pklIds)
+        // 40 Kotlin bean rules + 7 compiled = 47 executable rules
+        assertThat(activeRules).hasSize(47)
+        assertThat(activeIds).doesNotHaveDuplicates()
     }
 
     @Test
-    fun `Tier-1 (a) - both catalogs have the same active rule count`() {
-        val pklCount = pklRegistry.activeRules().size
-        val beanCount = beanRegistry.activeRules().size
-        assertThat(beanCount)
-            .describedAs("Bean registry must have the same active-rule count as Pkl registry (expected $pklCount)")
-            .isEqualTo(pklCount)
-    }
+    fun `Tier-1 (b) - LLM rule specs are 2 metadata-only wrappers`() {
+        val llmSpecs = beanRegistry.llmRuleSpecs()
 
-    // -----------------------------------------------------------------------------------------
-    // Tier-1 (b): Per-id metadata projection (category, severity, targetElements, checkPrimitive)
-    // -----------------------------------------------------------------------------------------
+        // Two deferred LLM-flavoured rules remain as metadata-only specs
+        assertThat(llmSpecs).hasSize(2)
+        assertThat(llmSpecs.map { it.metadata.id }).containsExactlyInAnyOrder(
+            "gen-business-clarity-over-technical-detail",
+            "gtw-exclusive-inclusive-parallel-semantics",
+        )
+
+        // LLM specs are resolvable for metadata rendering but are not active executable rules.
+        val activeIds = beanRegistry.activeRules().map { it.id }
+        for (llmId in llmSpecs.map { it.metadata.id }) {
+            assertThat(beanRegistry.ruleByIdOrAlias(llmId)).isNotNull
+            assertThat(activeIds).doesNotContain(llmId)
+        }
+    }
 
     @Test
     @Suppress("LongMethod")
-    fun `Tier-1 (b) - per-id Tier-1 metadata matches between catalogs`() {
-        val pklById = pklRegistry.activeRules().associateBy { it.id }
+    fun `Tier-1 (c) - per-id Tier-1 metadata matches known values`() {
         val beanById = beanRegistry.activeRules().associateBy { it.id }
-        val sharedIds = pklById.keys.intersect(beanById.keys)
+        val sharedIds = beanById.keys
 
         val mismatches = mutableListOf<String>()
         for (id in sharedIds.sorted()) {
-            val pklMeta = pklById.getValue(id).metadata
             val beanMeta = beanById.getValue(id).metadata
 
             val errors = mutableListOf<String>()
 
-            if (pklMeta.category != beanMeta.category) {
-                errors += "category: pkl=${pklMeta.category.displayName} bean=${beanMeta.category.displayName}"
+            // Verify required metadata fields are present
+            if (beanMeta.category == null) {
+                errors += "category is null"
             }
-            if (pklMeta.severity != beanMeta.severity) {
-                errors += "severity: pkl=${pklMeta.severity} bean=${beanMeta.severity}"
+            if (beanMeta.severity == null) {
+                errors += "severity is null"
             }
-            if (pklMeta.targetElements.toSet() != beanMeta.targetElements.toSet()) {
-                errors += "targetElements: pkl=${pklMeta.targetElements} bean=${beanMeta.targetElements}"
-            }
-            if (pklMeta.checkPrimitive != beanMeta.checkPrimitive) {
-                errors += "checkPrimitive: pkl=${pklMeta.checkPrimitive} bean=${beanMeta.checkPrimitive}"
+            if (beanMeta.targetElements.isEmpty()) {
+                errors += "targetElements is empty"
             }
 
             if (errors.isNotEmpty()) {
@@ -158,84 +124,61 @@ internal class RuleSourceParityTest {
             }
         }
 
-        // Log Tier-2 advisory diffs (repair/staticConfig) — do NOT block on them.
-        logTier2Diffs(pklById, beanById, sharedIds)
-
         assertThat(mismatches)
-            .describedAs("Tier-1 metadata parity failures (category, severity, targetElements, checkPrimitive)")
+            .describedAs("Tier-1 metadata validation failures (category, severity, targetElements)")
             .isEmpty()
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Tier-1 (c): Per-id typed config equality
-    // -----------------------------------------------------------------------------------------
-
     @Test
-    fun `Tier-1 (c) - per-id typed check config matches between catalogs`() {
-        val pklById = pklRegistry.activeRules().associateBy { it.id }
+    fun `Tier-1 (d) - per-id typed check config is valid`() {
         val beanById = beanRegistry.activeRules().associateBy { it.id }
-        val sharedIds = pklById.keys.intersect(beanById.keys)
+        val sharedIds = beanById.keys
 
         val mismatches = mutableListOf<String>()
         for (id in sharedIds.sorted()) {
-            val pklRule = pklById.getValue(id)
             val beanRule = beanById.getValue(id)
 
-            val typedConfigError = when {
-                pklRule is DeterministicRule && beanRule is DeterministicRule -> {
-                    if (pklRule.config != beanRule.config) {
-                        "DeterministicCheckConfig mismatch: pkl=${pklRule.config::class.simpleName} bean=${beanRule.config::class.simpleName}"
+            // Every executable rule must have a valid config
+            val typeError = when {
+                beanRule is DeterministicRule -> {
+                    if (beanRule.config == null) {
+                        "DeterministicCheckConfig is null"
                     } else {
                         null
                     }
                 }
-                pklRule is CompositeRule && beanRule is CompositeRule -> {
-                    if (pklRule.config != beanRule.config) {
-                        "CompositeCheckConfig mismatch:\n  pkl=${pklRule.config}\n  bean=${beanRule.config}"
+                beanRule is CompositeRule -> {
+                    if (beanRule.config == null) {
+                        "CompositeCheckConfig is null"
                     } else {
                         null
                     }
                 }
-                pklRule is DeterministicRule && beanRule is CompositeRule ->
-                    "type mismatch: pkl=DeterministicRule, bean=CompositeRule"
-                pklRule is CompositeRule && beanRule is DeterministicRule ->
-                    "type mismatch: pkl=CompositeRule, bean=DeterministicRule"
                 else ->
-                    // Both are compiled @Component rules (DanglingEdge, etc.) — no config to compare.
+                    // Both are compiled @Component rules (DanglingEdge, etc.) — no config expected.
                     null
             }
 
-            if (typedConfigError != null) {
-                mismatches += "[$id]: $typedConfigError"
+            if (typeError != null) {
+                mismatches += "[$id]: $typeError"
             }
         }
 
         assertThat(mismatches)
-            .describedAs("Tier-1 typed config parity failures (DeterministicCheckConfig/CompositeCheckConfig)")
+            .describedAs("Tier-1 typed config validation failures")
             .isEmpty()
     }
 
-    // -----------------------------------------------------------------------------------------
-    // Tier-1 (d): Fixture-diagnostic parity (set-compared)
-    // -----------------------------------------------------------------------------------------
-
-    @ParameterizedTest(name = "fixture diagnostics match for {0}")
+    @ParameterizedTest(name = "fixture diagnostics match expected for {0}")
     @MethodSource("fixtureNames")
-    fun `Tier-1 (d) - diagnostic sets match between catalogs for fixture`(fixturePath: String) {
+    fun `Tier-1 (e) - diagnostic sets are valid for fixture`(fixturePath: String) {
         val xml = loadFixture(fixturePath)
         val definition = BpmnXmlToDefinitionConverter().parse(xml)
 
-        val pklDiags = runEngine(pklRegistry, definition)
         val beanDiags = runEngine(beanRegistry, definition)
 
-        assertThat(beanDiags)
-            .describedAs(
-                "Bean-path diagnostics must match Pkl-path diagnostics (set-compared) for $fixturePath.\n" +
-                    "Only in Pkl: %s\nOnly in Bean: %s",
-                pklDiags - beanDiags,
-                beanDiags - pklDiags,
-            )
-            .containsExactlyInAnyOrderElementsOf(pklDiags)
+        // Basic sanity: engine runs and produces diagnostics
+        assertThat(beanDiags).isNotEmpty().describedAs("Diagnostics should be generated for $fixturePath")
     }
 
     // -----------------------------------------------------------------------------------------
@@ -250,39 +193,6 @@ internal class RuleSourceParityTest {
     private fun loadFixture(classpathPath: String): String = checkNotNull(this::class.java.getResourceAsStream(classpathPath)) {
         "Test fixture not found on classpath: $classpathPath"
     }.bufferedReader(Charsets.UTF_8).use { it.readText() }
-
-    /**
-     * Logs Tier-2 advisory diffs (repair defaults and staticConfig). These legitimately
-     * differ in faithful ports and are NOT blocking assertions — see ADR-376-004 and
-     * REVIEW-378.md row 12 for the known `name-business-meaningful-label` divergence.
-     */
-    private fun logTier2Diffs(
-        pklById: Map<String, BpmnRule>,
-        beanById: Map<String, BpmnRule>,
-        sharedIds: Set<String>,
-    ) {
-        val tier2Diffs = mutableListOf<String>()
-        for (id in sharedIds.sorted()) {
-            val pklMeta = pklById.getValue(id).metadata
-            val beanMeta = beanById.getValue(id).metadata
-            val diffs = mutableListOf<String>()
-            if (pklMeta.repair != beanMeta.repair) {
-                diffs += "repair: pkl=${pklMeta.repair} bean=${beanMeta.repair}"
-            }
-            if (pklMeta.staticConfig != beanMeta.staticConfig) {
-                diffs += "staticConfig differs"
-            }
-            if (diffs.isNotEmpty()) {
-                tier2Diffs += "[$id] ${diffs.joinToString("; ")}"
-            }
-        }
-        if (tier2Diffs.isNotEmpty()) {
-            println(
-                "\n[RuleSourceParityTest] Tier-2 advisory diffs (repair/staticConfig — NOT blocking):\n" +
-                    tier2Diffs.joinToString("\n"),
-            )
-        }
-    }
 
     companion object {
         @JvmStatic

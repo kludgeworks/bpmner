@@ -12,7 +12,7 @@ package dev.groknull.bpmner.api
  *
  * Implementations live in three tiers (see [#208](https://github.com/kludgeworks/bpmner/issues/208)):
  *  - **Tier 1 — compiled Kotlin rules** in `rules/internal/domain/compiled/` (#213).
- *  - **Tier 2 — Pkl-authored rules** discovered by `PklCatalogLoader` at startup.
+ *  - **Tier 2 — Kotlin bean rules** declared in `rules/internal/domain/beans/` (#376).
  *  - **Tier 3 — plugin JARs** loaded via Spring Boot `loader.path` on the JVM distribution.
  *
  * Documented (not annotated) as the Spring Modulith extension point: the `api` package

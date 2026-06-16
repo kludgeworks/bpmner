@@ -22,12 +22,10 @@ import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShape
 import dev.groknull.bpmner.rules.internal.domain.primitives.GrammaticalShapeCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingCheckConfig
 import dev.groknull.bpmner.rules.internal.domain.primitives.PairingMode
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
-@ConditionalOnProperty(name = ["bpmner.rules.source"], havingValue = "kotlin")
 @Suppress("MaxLineLength")
 internal class EventRuleConfig {
     companion object {
