@@ -56,10 +56,6 @@ internal class GatewayRuleConfig {
             "parallelJoinCardinality" to "Parallel converging gateway should have at least two incoming sequence flows",
         ),
         severity = RuleSeverity.WARNING,
-        staticConfig = mapOf(
-            "deterministicChecks" to listOf("parallelCondition", "parallelSplitCardinality", "parallelJoinCardinality"),
-            "heuristicChecks" to listOf("xor-vs-or-business-intent", "matching-split-join-context"),
-        ),
     )
 
     companion object {

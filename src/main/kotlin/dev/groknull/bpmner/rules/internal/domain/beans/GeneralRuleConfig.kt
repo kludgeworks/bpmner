@@ -36,9 +36,6 @@ internal class GeneralRuleConfig {
             "default" to "Business clarity over technical detail requires contextual review",
         ),
         severity = RuleSeverity.INFO,
-        staticConfig = mapOf(
-            "cookbookCode" to "GEN-02",
-        ),
     )
 
     @Bean

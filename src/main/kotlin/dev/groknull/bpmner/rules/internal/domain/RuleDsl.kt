@@ -111,7 +111,6 @@ internal fun llmRule(
     deprecated: Boolean = false,
     replacedBy: List<String> = emptyList(),
     deprecationReason: String? = null,
-    staticConfig: Map<String, Any> = emptyMap(),
 ): LlmRuleSpec = LlmRuleSpec(
     metadata = ruleMetadata(
         name = name,
@@ -128,7 +127,6 @@ internal fun llmRule(
         replacedBy = replacedBy,
         deprecationReason = deprecationReason,
     ),
-    staticConfig = staticConfig,
 )
 
 internal class CompositeRuleBuilder {

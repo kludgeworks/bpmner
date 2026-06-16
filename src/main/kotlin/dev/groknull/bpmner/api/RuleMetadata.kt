@@ -25,7 +25,6 @@ data class RuleMetadata(
     val errorMessages: Map<String, String>,
     val severity: RuleSeverity = RuleSeverity.WARNING,
     val repair: RepairMetadata = RepairMetadata(),
-    val staticConfig: Map<String, Any>? = null,
     val aliases: List<String> = emptyList(),
     val deprecated: Boolean = false,
     val replacedBy: List<String> = emptyList(),

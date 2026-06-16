@@ -18,7 +18,6 @@ import dev.groknull.bpmner.api.RuleMetadata
  */
 data class LlmRuleSpec(
     override val metadata: RuleMetadata,
-    val staticConfig: Map<String, Any> = emptyMap(),
 ) : BpmnRule {
     override val id: String = metadata.id
 
