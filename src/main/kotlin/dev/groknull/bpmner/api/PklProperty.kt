@@ -18,7 +18,6 @@ package dev.groknull.bpmner.api
  *
  * Retention is BINARY for downstream compiled consumers.
  */
-@Suppress("kotlin:S1133") // annotation is still used in BpmnDomain.kt; removed when usages are migrated
 @Deprecated(
     message = "This annotation was used by pkl-enum-gen. The codegen tool was removed in #386 " +
         "(2026-06); annotated properties are now statically defined in Kotlin bean configs. " +
