@@ -79,33 +79,7 @@ internal class RuleDocsGoldenTest {
                 }
             }
         } else if (ruleDocsUrl.protocol == "jar") {
-            val parts = ruleDocsUrl.toString().split("!", limit = 2)
-            val jarPathString = parts[0]
-            val internalPath = parts[1]
-            val uri = java.net.URI.create(jarPathString)
-            var created = false
-            val fs = try {
-                java.nio.file.FileSystems.getFileSystem(uri)
-            } catch (ignored: FileSystemNotFoundException) {
-                created = true
-                java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
-            }
-            try {
-                val ruleDocsDir = fs.getPath(internalPath)
-                Files.list(ruleDocsDir).use { paths ->
-                    paths.forEach { path ->
-                        val filename = path.fileName.toString()
-                        if (filename.endsWith(".md")) {
-                            val content = Files.readString(path, StandardCharsets.UTF_8)
-                            goldenFiles[filename] = content
-                        }
-                    }
-                }
-            } finally {
-                if (created) {
-                    fs.close()
-                }
-            }
+            loadGoldenFilesFromJar(ruleDocsUrl, goldenFiles)
         } else {
             throw AssertionError("Expected 'rule-docs' resource to be a file system directory or jar, but was: $ruleDocsUrl")
         }
@@ -126,6 +100,39 @@ internal class RuleDocsGoldenTest {
             assertThat(actualContent)
                 .describedAs("Content mismatch for $filename. Run `bazel run //src/test:update_rule_docs` to regenerate.")
                 .isEqualTo(expectedContent)
+        }
+    }
+
+    private fun loadGoldenFilesFromJar(
+        ruleDocsUrl: java.net.URL,
+        goldenFiles: MutableMap<String, String>,
+    ) {
+        val jarConnection = ruleDocsUrl.openConnection() as java.net.JarURLConnection
+        val jarPathString = "jar:" + jarConnection.jarFileURL.toString()
+        val entryName = jarConnection.entryName ?: ""
+        val internalPath = if (entryName.startsWith("/")) entryName else "/$entryName"
+        val uri = java.net.URI.create(jarPathString)
+        var created = false
+        val fs = try {
+            java.nio.file.FileSystems.getFileSystem(uri)
+        } catch (ignored: FileSystemNotFoundException) {
+            created = true
+            java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
+        }
+        try {
+            val ruleDocsDir = fs.getPath(internalPath)
+            val mdPaths = Files.list(ruleDocsDir).use { paths ->
+                paths.filter { it.fileName.toString().endsWith(".md") }.toList()
+            }
+            for (path in mdPaths) {
+                val filename = path.fileName.toString()
+                val content = Files.readString(path, StandardCharsets.UTF_8)
+                goldenFiles[filename] = content
+            }
+        } finally {
+            if (created) {
+                fs.close()
+            }
         }
     }
 }
