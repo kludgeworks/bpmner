@@ -57,6 +57,13 @@ java_binary(
     runtime_deps = [":bpmner_tests_lib"],
 )
 
+java_binary(
+    name = "update_rule_docs",
+    main_class = "dev.groknull.bpmner.rules.internal.domain.docs.UpdateRuleDocs",
+    visibility = ["//visibility:public"],
+    runtime_deps = [":bpmner_tests_lib"],
+)
+
 filegroup(
     name = "analysis_srcs",
     srcs = glob(["kotlin/**/*.kt"]),
