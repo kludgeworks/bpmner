@@ -8,8 +8,8 @@ package dev.groknull.bpmner.api
 /**
  * Metadata describing a BPMN validation rule.
  *
- * This structure mirrors the `RepairMetadata` class that rules use to declare
- * their repair behavior.
+ * This structure contains a `RepairMetadata` instance via its `repair` field
+ * that rules use to declare their repair behavior.
  */
 data class RuleMetadata(
     val id: String,

@@ -169,7 +169,7 @@ See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` for the c
 | `Composite` | AND/OR of sub-checks; lets you compose multiple primitives |
 | `LlmCheckRule` | The check runs as an LLM prompt against the definition. Used for advisory rules that need semantic judgment. |
 
-Definitions live in `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/CheckPrimitive.kt`. The Kotlin-side dispatcher (`MappedCheck`) handles each variant.
+Definitions live in `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/PrimitiveConfig.kt`. The Kotlin-side dispatcher (`MappedCheck`) handles each variant.
 
 ### Rule id
 
