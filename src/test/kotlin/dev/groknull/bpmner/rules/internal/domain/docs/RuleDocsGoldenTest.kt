@@ -79,7 +79,7 @@ internal class RuleDocsGoldenTest {
                 }
             }
         } else if (ruleDocsUrl.protocol == "jar") {
-            val parts = ruleDocsUrl.toString().split("!")
+            val parts = ruleDocsUrl.toString().split("!", limit = 2)
             val jarPathString = parts[0]
             val internalPath = parts[1]
             val uri = java.net.URI.create(jarPathString)
