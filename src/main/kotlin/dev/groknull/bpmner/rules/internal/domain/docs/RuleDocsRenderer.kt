@@ -14,12 +14,10 @@ import dev.groknull.bpmner.rules.LlmRuleSpec
  *
  * The renderer is a **pure function** `List<BpmnRule> -> Map<String, String>` returning
  * `"<id>.md" -> markdown` and `"README.md" -> index`. It reproduces the field set and
- * ordering of the legacy `MarkdownGenerator.pkl` template exactly.
+ * ordering of the original Pkl-based docs generator template exactly.
  *
  * No Spring imports, no agent/LLM boot, no network calls — fully deterministic output
  * (sorted by rule id, stable map iteration).
- *
- * @see MarkdownGenerator.pkl
  */
 internal object RuleDocsRenderer {
 
