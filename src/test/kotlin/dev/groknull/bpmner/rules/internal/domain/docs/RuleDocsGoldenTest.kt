@@ -12,6 +12,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import java.io.InputStream
 import java.nio.charset.StandardCharsets
 
@@ -35,71 +36,68 @@ import java.nio.charset.StandardCharsets
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 internal class RuleDocsGoldenTest {
 
-    private lateinit var context: java.lang.AutoCloseable
+    private lateinit var registry: BeanRuleRegistry
+    private lateinit var context: AnnotationConfigApplicationContext
 
     @BeforeAll
     fun setUp() {
-        context = bpmnerKotlinRuleContext().use { it }
+        context = bpmnerKotlinRuleContext()
+        registry = context.getBean(BeanRuleRegistry::class.java)
     }
 
     @AfterAll
     fun tearDown() {
-        context.close()
+        if (::context.isInitialized) {
+            context.close()
+        }
     }
 
     @Test
-    @Suppress("LongMethod")
+    @Suppress("LongMethod", "NestedBlockDepth")
     fun `rule docs match golden files`() {
-        // Build context and collect all rules (both executable and LLM spec beans)
-        val ctx = bpmnerKotlinRuleContext()
-        try {
-            val registry = ctx.getBean(BeanRuleRegistry::class.java)
-            val rules = registry.activeRules() + registry.llmRuleSpecs()
+        val rules = registry.activeRules() + registry.llmRuleSpecs()
 
-            // Render all docs
-            val rendered = RuleDocsRenderer.render(rules)
+        // Render all docs
+        val rendered = RuleDocsRenderer.render(rules)
 
-            // Load golden files from classpath
-            // The resources are included in the test JAR via resources = glob(["resources/**"])
-            // so they appear as "rule-docs/act-activity-label-capitalization.md" etc.
-            val goldenFiles = mutableMapOf<String, String>()
-            val goldenRuleIds = rules.map { it.metadata.id }
+        // Load golden files from classpath
+        // The resources are included in the test JAR via resources = glob(["resources/**"])
+        // so they appear as "rule-docs/act-activity-label-capitalization.md" etc.
+        val goldenFiles = mutableMapOf<String, String>()
+        val goldenRuleIds = rules.map { it.metadata.id }
 
-            for (ruleId in goldenRuleIds) {
-                val resourceName = "rule-docs/$ruleId.md"
-                val stream: InputStream? = javaClass.classLoader.getResourceAsStream(resourceName)
-                if (stream != null) {
-                    val content = stream.reader(StandardCharsets.UTF_8).use { it.readText() }
-                    goldenFiles["$ruleId.md"] = content
-                    stream.close()
-                }
+        for (ruleId in goldenRuleIds) {
+            val resourceName = "rule-docs/$ruleId.md"
+            val stream: InputStream? = javaClass.classLoader.getResourceAsStream(resourceName)
+            if (stream != null) {
+                val content = stream.reader(StandardCharsets.UTF_8).use { it.readText() }
+                goldenFiles["$ruleId.md"] = content
             }
+        }
 
-            // Also load README.md
-            val readmeStream: InputStream? = javaClass.classLoader.getResourceAsStream("rule-docs/README.md")
-            if (readmeStream != null) {
-                val content = readmeStream.reader(StandardCharsets.UTF_8).use { it.readText() }
-                goldenFiles["README.md"] = content
-                readmeStream.close()
-            }
+        // Also load README.md
+        val readmeStream: InputStream? = javaClass.classLoader.getResourceAsStream("rule-docs/README.md")
+        if (readmeStream != null) {
+            val content = readmeStream.reader(StandardCharsets.UTF_8).use { it.readText() }
+            goldenFiles["README.md"] = content
+        }
 
-            // Assert set equality of filenames
-            val renderedFilenames = rendered.keys.toSortedSet()
-            val goldenFilenames = goldenFiles.keys.toSortedSet()
-            assertThat(renderedFilenames).isEqualTo(goldenFilenames)
-                .describedAs("Golden files have orphan/missing entries vs rendered")
+        // Assert set equality of filenames
+        val renderedFilenames = rendered.keys.toSortedSet()
+        val goldenFilenames = goldenFiles.keys.toSortedSet()
+        assertThat(renderedFilenames)
+            .describedAs("Golden files have orphan/missing entries vs rendered")
+            .isEqualTo(goldenFilenames)
 
-            // Assert content equality for each file
-            for ((filename, expectedContent) in rendered) {
-                val actualContent = goldenFiles[filename]
-                assertThat(actualContent)
-                    .describedAs("Golden file for $filename")
-                    .isNotNull
-                assertThat(actualContent).isEqualTo(expectedContent)
-                    .describedAs("Content mismatch for $filename. Run `bazel run //src/test:update_rule_docs` to regenerate.")
-            }
-        } finally {
-            ctx.close()
+        // Assert content equality for each file
+        for ((filename, expectedContent) in rendered) {
+            val actualContent = goldenFiles[filename]
+            assertThat(actualContent)
+                .describedAs("Golden file for $filename")
+                .isNotNull
+            assertThat(actualContent)
+                .describedAs("Content mismatch for $filename. Run `bazel run //src/test:update_rule_docs` to regenerate.")
+                .isEqualTo(expectedContent)
         }
     }
 }

@@ -21,6 +21,8 @@ import dev.groknull.bpmner.rules.LlmRuleSpec
  */
 internal object RuleDocsRenderer {
 
+    private val MARKDOWN_ESCAPE_REGEX = Regex("[\\[\\]()]")
+
     /**
      * Renders documentation for all rules.
      *
@@ -41,6 +43,7 @@ internal object RuleDocsRenderer {
      * @param rule The rule to render (supports both [BpmnRule] and [LlmRuleSpec]).
      * @return Markdown content for the rule's `"<id>.md"` file.
      */
+    @Suppress("LongMethod")
     private fun renderOne(rule: BpmnRule): String {
         val cookbookCode = getCookbookCode(rule)
         val aliases = if (rule.metadata.aliases.isNotEmpty()) {
@@ -157,8 +160,7 @@ internal object RuleDocsRenderer {
      * Extracts the cookbook code from a rule.
      *
      * Reads from `LlmRuleSpec.staticConfig` when available (LLM rules), otherwise from
-     * `RuleMetadata.staticConfig` as a fallback. This keeps #385 independent of #383
-     * (which will delete `RuleMetadata.staticConfig` but keep `LlmRuleSpec.staticConfig`).
+     * `RuleMetadata.staticConfig` as a fallback. This supports both configuration styles.
      */
     private fun getCookbookCode(rule: BpmnRule): String? {
         return when (rule) {
@@ -176,7 +178,7 @@ internal object RuleDocsRenderer {
      */
     private fun escapeMarkdown(text: String): String {
         // Escape special characters that could break markdown formatting
-        return text.replace(Regex("[\\[\\]()]"), "\\\\$0")
+        return text.replace(MARKDOWN_ESCAPE_REGEX, "\\\\$0")
     }
 
     /**
