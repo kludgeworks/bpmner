@@ -8,7 +8,6 @@ markdownlint-disable: MD013
 - **Category**: General
 - **Severity**: INFO
 - **Target Elements**: `bpmn:Definitions`, `bpmn:Process`, `bpmn:FlowElement`
-- **Cookbook Code**: `GEN-02`
 
 ## Intent
 

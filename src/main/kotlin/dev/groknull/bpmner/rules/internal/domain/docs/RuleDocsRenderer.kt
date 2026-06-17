@@ -7,14 +7,13 @@ package dev.groknull.bpmner.rules.internal.domain.docs
 
 import dev.groknull.bpmner.api.BpmnRule
 import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.rules.LlmRuleSpec
 
 /**
  * Renders BPMN rule documentation in Markdown format from [RuleMetadata] beans.
  *
  * The renderer is a **pure function** `List<BpmnRule> -> Map<String, String>` returning
  * `"<id>.md" -> markdown` and `"README.md" -> index`. It reproduces the field set and
- * ordering of the original Pkl-based docs generator template exactly.
+ * ordering of the rule documentation fields exactly.
  *
  * No Spring imports, no agent/LLM boot, no network calls — fully deterministic output
  * (sorted by rule id, stable map iteration).
@@ -26,7 +25,7 @@ internal object RuleDocsRenderer {
     /**
      * Renders documentation for all rules.
      *
-     * @param rules List of rules to render (supports both [BpmnRule] and [LlmRuleSpec]).
+     * @param rules List of rules to render.
      * @return Map of filename to markdown content, containing one `"<id>.md"` per rule
      *   plus a `"README.md"` index.
      */
@@ -40,14 +39,14 @@ internal object RuleDocsRenderer {
     /**
      * Renders documentation for a single rule.
      *
-     * @param rule The rule to render (supports both [BpmnRule] and [LlmRuleSpec]).
+     * @param rule The rule to render.
      * @return Markdown content for the rule's `"<id>.md"` file.
      */
     // Suppressed because splitting the sequential construction of Markdown sections into smaller methods
     // would hurt readability and coherence of the document template.
     @Suppress("LongMethod")
     private fun renderOne(rule: BpmnRule): String {
-        val cookbookCode = getCookbookCode(rule)
+        val cookbookCode: String? = null
         val aliases = if (rule.metadata.aliases.isNotEmpty()) {
             "- **Legacy Aliases**: `${rule.metadata.aliases.joinToString("`, `")}`\n"
         } else {
@@ -156,19 +155,6 @@ internal object RuleDocsRenderer {
             .map { it.trimEnd() }
             .dropWhileLast { it.isEmpty() }
             .joinToString("\n") + "\n"
-    }
-
-    /**
-     * Extracts the cookbook code from a rule.
-     *
-     * Reads from `LlmRuleSpec.staticConfig` when available (LLM rules), otherwise from
-     * `RuleMetadata.staticConfig` as a fallback. This supports both configuration styles.
-     */
-    private fun getCookbookCode(rule: BpmnRule): String? {
-        return when (rule) {
-            is LlmRuleSpec -> rule.staticConfig["cookbookCode"] as? String
-            else -> rule.metadata.staticConfig?.get("cookbookCode") as? String
-        }
     }
 
     private fun cookbookCodeLine(cookbookCode: String?): String {

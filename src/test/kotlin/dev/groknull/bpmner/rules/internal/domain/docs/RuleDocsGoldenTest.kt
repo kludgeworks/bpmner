@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import java.nio.charset.StandardCharsets
+import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.Paths
 
@@ -85,7 +86,7 @@ internal class RuleDocsGoldenTest {
             var created = false
             val fs = try {
                 java.nio.file.FileSystems.getFileSystem(uri)
-            } catch (ignored: Exception) {
+            } catch (ignored: FileSystemNotFoundException) {
                 created = true
                 java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
             }
