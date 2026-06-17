@@ -5,7 +5,7 @@ bpmner has three tiers of rule authoring, mapped to where the rule executes and 
 | Tier | Where rules live | What they execute as | Deployment |
 | --- | --- | --- | --- |
 | **1** | `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compiled/` | Compiled Kotlin `@Component` `BpmnRule` beans | Part of the bpmner JAR |
-| **2** | `linter/pkl/rules/*.pkl` | Pkl declarations adapted to `BpmnRule` at startup | Bundled in the bpmner JAR (today) |
+| **2** | `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/*RuleConfig.kt` | Kotlin rule beans registered in `BeanRuleRegistry` | Bundled in the bpmner JAR (today) |
 | **3** | Plugin JAR with `BpmnRule` beans | Compiled Kotlin in an external JAR | **Not yet implemented** — see "Tier 3" below |
 
 The three tiers share one interface — `BpmnRule` in [`api/BpmnRule.kt`](../../src/main/kotlin/dev/groknull/bpmner/api/BpmnRule.kt) — and the same diagnostic types ([`api/RuleDiagnostic.kt`](../../src/main/kotlin/dev/groknull/bpmner/api/RuleDiagnostic.kt)). The choice between tiers is about *who authors* the rule and *how it's deployed*, not what it can express.
@@ -123,7 +123,7 @@ Use this tier when:
 
 ### Anatomy
 
-A Tier 2 rule is a `.pkl` file under `linter/pkl/rules/` that `amends BpmnRule.pkl`:
+A Tier 2 rule is a `.pkl` file under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` that `amends BpmnRule.pkl`:
 
 ```pkl
 amends "../schema/BpmnRule.pkl"
@@ -157,7 +157,7 @@ repair {
 }
 ```
 
-See `linter/pkl/rules/` for the catalog — every file there is an example.
+See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` for the catalog — every file there is an example.
 
 ### Available check primitives
 
@@ -171,7 +171,7 @@ See `linter/pkl/rules/` for the catalog — every file there is an example.
 | `Composite` | AND/OR of sub-checks; lets you compose multiple primitives |
 | `LlmCheckRule` | The check runs as an LLM prompt against the definition. Used for advisory rules that need semantic judgment. |
 
-Definitions live in `linter/pkl/schema/CheckPrimitive.pkl`. The Kotlin-side dispatcher (`MappedCheck`) handles each variant.
+Definitions live in `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/CheckPrimitive.kt`. The Kotlin-side dispatcher (`MappedCheck`) handles each variant.
 
 ### Rule id, automatically derived
 
@@ -193,8 +193,8 @@ The packaged `linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and is the de
 
 ### Adding a new Pkl rule
 
-1. Create `linter/pkl/rules/<PascalName>.pkl` amending `BpmnRule.pkl`.
-2. Re-run `bazel build //linter/pkl:rules_index_pkl` — the `rules_index` macro regenerates `RulesIndex.pkl` from the glob. No hand-listing.
+1. Create `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/<PascalName>.pkl` amending `BpmnRule.pkl`.
+2. Run `gradle compileKotlin` to build. Rules are registered in `BeanRuleRegistry`.
 3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/<PascalName>Test.kt` (see next section).
 4. If the rule is `severity = "warning"`, no extra step is needed for the `strict` profile — `RuleProfileFactory.computeStrictBaseline()` reads the live `BeanRuleRegistry` at startup and automatically promotes every WARNING-severity rule to ERROR. New Pkl rules are registered in the bean catalog by the `PklRuleCatalog` loader, so they appear in the strict baseline without any manual maintenance.
 

@@ -28,8 +28,8 @@ package dev.groknull.bpmner.rules.internal.domain.primitives
  * (no nesting) or an `LlmCheckRuleConfig` (different evaluation tier) at compile time —
  * what was a runtime `rule-config-error` is now caught by the Kotlin type system.
  *
- * Pkl-side enforcement of the same constraint lives in `CheckPrimitive.pkl`'s `SubCheck`
- * doc comment; this sealed hierarchy is the in-process backstop.
+ * See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/` for the
+ * authoritative shape. This sealed hierarchy is the runtime check.
  */
 internal sealed interface DeterministicCheckConfig
 
@@ -221,8 +221,8 @@ internal enum class GrammaticalShape {
 }
 
 /**
- * Composite primitive config — composes deterministic sub-checks. See
- * [linter/pkl/schema/CheckPrimitive.pkl](linter/pkl/schema/CheckPrimitive.pkl) for the
+ * Composite primitive config — composes deterministic sub-checks.
+ * See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/` for the
  * authoritative shape. Note that `CompositeCheckConfig` itself is NOT a
  * `DeterministicCheckConfig` — nesting is rejected by the type system (you cannot pass a
  * `CompositeCheckConfig` to a `SubCheckConfig.config` field).

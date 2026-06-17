@@ -2,109 +2,19 @@
 # SPDX-License-Identifier: MIT
 
 load("@rules_java//java:defs.bzl", "java_library")
-load("@rules_pkl//pkl:defs.bzl", "pkl_eval", "pkl_java_library", "pkl_library", "pkl_test")
-load(":rules_index.bzl", "rules_index")
 
 package(default_visibility = ["//linter:__subpackages__"])
-
-PKL_SCHEMA_SRCS = glob(["schema/*.pkl"])
-
-PKL_GENERATED_SCHEMA_SRCS = [
-    "schema/generated/NodeProperty.pkl",
-    "schema/generated/NodeTypeName.pkl",
-]
-
-PKL_RULE_SRCS = glob(["rules/*.pkl"])
-
-PKL_PROFILE_SRCS = glob(
-    ["profiles/*.pkl"],
-    allow_empty = True,
-)
 
 PKL_TOP_LEVEL_SRCS = [
     "BpmnerLintConfig.pkl",
     "bpmner.pkl",
 ]
 
-pkl_library(
-    name = "schema",
-    srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS,
-)
-
-rules_index(
-    name = "rules_index_pkl",
-    srcs = PKL_RULE_SRCS,
-    out = "RulesIndex.pkl",
-)
-
-pkl_library(
-    name = "rules_index",
-    srcs = [":rules_index_pkl"] + PKL_RULE_SRCS + PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS,
-)
-
-# Profile modules (recommended / strict + future) and their schema. Bundled as runtime
-# resources so the Kotlin `RuleProfileFactory` can load them via
-# `modulepath:/linter/pkl/profiles/{name}.pkl` at startup.
-pkl_library(
-    name = "profiles",
-    srcs = PKL_PROFILE_SRCS + PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [":rules_index_pkl"] + PKL_RULE_SRCS,
-)
-
-# Generates Java POJOs from the rule schema for runtime consumption by PklRuleCatalog (2D-b).
-# In 2D-a this is wired but unused — generated classes appear on the bpmner_core classpath but
-# no Kotlin code imports them yet.
-pkl_java_library(
-    name = "rule_types_java",
-    srcs = [
-        "schema/BpmnRule.pkl",
-        "schema/CheckPrimitive.pkl",
-        "schema/RuleCategory.pkl",
-    ],
-    visibility = ["//src:__subpackages__"],
-)
-
 # Packages the .pkl source files as classpath resources so the runtime ConfigEvaluator can
-# load RulesIndex.pkl via `modulepath:/linter/pkl/RulesIndex.pkl` and follow its explicit
-# imports of rules/*.pkl and ../schema/*.pkl. Workspace-relative paths are preserved (no
-# resource_strip_prefix) so the in-Pkl relative imports resolve correctly.
+# load bpmner.pkl via `modulepath:/linter/pkl/bpmner.pkl` at startup. Workspace-relative
+# paths are preserved (no resource_strip_prefix).
 java_library(
     name = "pkl_runtime_resources",
-    resources = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + PKL_RULE_SRCS + PKL_PROFILE_SRCS + PKL_TOP_LEVEL_SRCS + [":rules_index_pkl"],
+    resources = PKL_TOP_LEVEL_SRCS,
     visibility = ["//src:__subpackages__"],
-)
-
-genrule(
-    name = "generated_enums",
-    srcs = ["//src:main/kotlin/dev/groknull/bpmner/core/BpmnDomain.kt"],
-    outs = [
-        "schema/generated/NodeProperty.pkl",
-        "schema/generated/NodeTypeName.pkl",
-    ],
-    cmd = "$(location //tools/pkl-enum-gen) --input $(location //src:main/kotlin/dev/groknull/bpmner/core/BpmnDomain.kt) --out-dir $(RULEDIR)/schema/generated",
-    tools = ["//tools/pkl-enum-gen"],
-)
-
-pkl_eval(
-    name = "uncommon_abbreviations_fixture_json",
-    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + ["test-fixtures/UncommonAbbreviations.pkl"],
-    outs = ["uncommon_abbreviations.json"],
-    entrypoints = ["test-fixtures/UncommonAbbreviations.pkl"],
-    format = "json",
-)
-
-pkl_test(
-    name = "schema_test",
-    srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [
-        ":rules_index_pkl",
-    ] + PKL_RULE_SRCS + [
-        "test-fixtures/GeneratedEnumsTest.pkl",
-        "test-fixtures/RulesIndexTest.pkl",
-        "test-fixtures/SchemaTest.pkl",
-        "test-fixtures/UncommonAbbreviations.pkl",
-    ],
-    entrypoints = [
-        "test-fixtures/SchemaTest.pkl",
-        "test-fixtures/GeneratedEnumsTest.pkl",
-        "test-fixtures/RulesIndexTest.pkl",
-    ],
 )

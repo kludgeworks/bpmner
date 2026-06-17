@@ -14,8 +14,8 @@ package dev.groknull.bpmner.api
  * - [LLM_MODEL_PATCH] / [LLM_XML_REWRITE] — repair requires the language model.
  * - [UNFIXABLE] — the diagnostic must be surfaced to the user; no automated repair applies.
  *
- * Mirrors the `RepairKind` typealias in [BpmnRule.pkl](linter/pkl/schema/BpmnRule.pkl) so that
- * Pkl-authored rule metadata round-trips into Kotlin via `RepairKind.valueOf(...)`.
+ * Mirrors the legacy Pkl schema. All rules are now implemented as Kotlin bean classes
+ * registered in `BeanRuleRegistry`.
  */
 enum class RepairKind {
     LOCAL_MODEL_FIX,

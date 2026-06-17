@@ -119,7 +119,7 @@ Both are produced by `AgentProcessExecution.fromProcessStatus(request, process)`
 
 The **diagnostic classification** the repair loop relies on is sourced from each rule's Pkl `Repair` block via `BpmnDiagnosticNormalizer`:
 
-Every rule declares a `Repair` block in its Pkl module (`linter/pkl/schema/BpmnRule.pkl`):
+Every rule declares a `Repair` block in its Kotlin bean config (`src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/*RuleConfig.kt`).
 
 ```pkl
 class Repair {
