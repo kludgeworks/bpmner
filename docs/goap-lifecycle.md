@@ -176,4 +176,4 @@ Even with a single orchestrator and a single-pass validate, GOAP earns its keep:
 - Pipeline overview, module map, and the inline-layout / validate-only stages: see [`pipeline-architecture.md`](./pipeline-architecture.md).
 - Operator-facing tuning (budgets, profiles, severity overrides, troubleshooting): see [`operator-guide.md`](./operator-guide.md).
 - Module structure, ports, and jMolecules roles: see [`hexagonal-architecture.md`](./hexagonal-architecture.md).
-- Writing a new rule (Tier 1 Kotlin, Tier 2 Pkl): see [`../linter/docs/rule-authoring-guide.md`](../linter/docs/rule-authoring-guide.md).
+- Writing a new rule (Tier 1 Kotlin, Tier 2 Kotlin bean): see [`../linter/docs/rule-authoring-guide.md`](../linter/docs/rule-authoring-guide.md).
