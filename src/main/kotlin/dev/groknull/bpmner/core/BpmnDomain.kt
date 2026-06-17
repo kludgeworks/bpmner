@@ -14,7 +14,6 @@ import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.DataFlowDirection
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.api.MultiInstanceMode
-import dev.groknull.bpmner.api.PklProperty
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -208,7 +207,6 @@ data object BpmnNoneEventDefinition :
 data class BpmnTimerEventDefinition(
     override val timerKind: BpmnTimerKind,
     @field:NotBlank
-    @get:PklProperty("expression")
     override val expression: String,
 ) : BpmnEventDefinition,
     ApiBpmnTimerEventDefinition
@@ -293,7 +291,6 @@ data class BpmnUnrecognizedEventDefinition(
 sealed interface BpmnNode : ApiBpmnNode {
     override val id: String
 
-    @get:PklProperty("name")
     override val name: String?
 
     // Narrow the inherited api.BpmnNode.withName(): api.BpmnNode return type so that
@@ -329,14 +326,12 @@ private const val PARENT_REF_DESCRIPTION: String =
         "either one at a time (SEQUENTIAL) or all concurrently (PARALLEL).",
 )
 data class MultiInstanceLoopCharacteristics(
-    @get:PklProperty("mode")
     @get:JsonPropertyDescription(
         "SEQUENTIAL = items handled one at a time (renders isSequential=true); " +
             "PARALLEL = items handled concurrently (renders isSequential=false).",
     )
     override val mode: MultiInstanceMode,
     @field:NotBlank
-    @get:PklProperty("collectionDescription")
     @get:JsonPropertyDescription(
         "Human-readable description of the collection iterated over, e.g. " +
             "\"each line item on the packing slip\". The 'for each X' phrase from the source.",
@@ -354,18 +349,15 @@ data class MultiInstanceLoopCharacteristics(
         "(testBefore=false, body runs once then the condition is tested).",
 )
 data class StandardLoopCharacteristics(
-    @get:PklProperty("testBefore")
     @get:JsonPropertyDescription(
         "true = while-loop (condition tested before each iteration); " +
             "false = until-loop (body runs once, then the condition is tested).",
     )
     override val testBefore: Boolean = true,
-    @get:PklProperty("loopCondition")
     @get:JsonPropertyDescription(
         "Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".",
     )
     override val loopCondition: String? = null,
-    @get:PklProperty("loopMaximum")
     @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times")
     override val loopMaximum: Int? = null,
 ) : ApiStandardLoopCharacteristics
@@ -377,7 +369,6 @@ data class BpmnStartEvent(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
-    @get:PklProperty("eventDefinition")
     @get:JsonPropertyDescription("Nested BPMN event definition; NONE represents a plain start event")
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
     @get:JsonPropertyDescription("Whether this start interrupts its enclosing scope; event subprocess starts may set false")
@@ -396,11 +387,9 @@ data class BpmnUserTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -417,11 +406,9 @@ data class BpmnServiceTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -438,11 +425,9 @@ data class BpmnScriptTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -459,18 +444,15 @@ data class BpmnBusinessRuleTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
-    @get:PklProperty("decisionRef")
     @get:JsonPropertyDescription(
         "Identifier of the decision (e.g. DMN decision id, rule-set name) that this task evaluates. " +
             "Free-form string until a typed decision catalogue exists; non-blank.",
     )
     override val decisionRef: String,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -487,17 +469,14 @@ data class BpmnSendTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
-    @get:PklProperty("messageRef")
     @get:JsonPropertyDescription(
         "Id of the BpmnMessageRef in the process-level message catalogue that this send task emits.",
     )
     override val messageRef: String,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -519,11 +498,9 @@ data class BpmnReceiveTask(
     )
     override val messageRef: String,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -540,11 +517,9 @@ data class BpmnManualTask(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:Valid
-    @get:PklProperty("multiInstance")
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
     @field:Valid
-    @get:PklProperty("standardLoop")
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
@@ -645,10 +620,8 @@ data class BpmnBoundaryEvent(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
-    @get:PklProperty("attachedToRef")
     @get:JsonPropertyDescription("BPMN id of the activity this boundary event is attached to")
     override val attachedToRef: String,
-    @get:PklProperty("cancelActivity")
     @get:JsonPropertyDescription("Whether the boundary event cancels the attached activity when it fires")
     override val cancelActivity: Boolean = true,
     @field:Valid
@@ -687,7 +660,6 @@ data class BpmnSubProcess(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
-    @get:PklProperty("triggeredByEvent")
     @get:JsonPropertyDescription(
         "false for an ordinary embedded subprocess; true for an event subprocess (triggered by an " +
             "inner event start rather than an incoming sequence flow).",
@@ -708,7 +680,6 @@ data class BpmnCallActivity(
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
     @field:NotBlank
-    @get:PklProperty("calledElement")
     @get:JsonPropertyDescription(
         "Id of the process this call activity invokes (the called process). The called process is " +
             "defined separately — typically in another file or the runtime catalogue — and is " +

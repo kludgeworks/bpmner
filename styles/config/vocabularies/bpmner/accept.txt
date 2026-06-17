@@ -1,5 +1,6 @@
 Bazel
 Bazelisk
+config
 detekt
 ktlint
 Qodana

@@ -10,19 +10,17 @@ package dev.groknull.bpmner.api
  * repaired:
  *
  * - [LOCAL_MODEL_FIX] — deterministic, in-process repair handler.
- * - [LOCAL_XML_FIX] — deprecated; collapsed into [LOCAL_MODEL_FIX] in Phase 2F (#243).
+ * - [LOCAL_XML_FIX] — deprecated; collapsed into [LOCAL_MODEL_FIX].
  * - [LLM_MODEL_PATCH] / [LLM_XML_REWRITE] — repair requires the language model.
  * - [UNFIXABLE] — the diagnostic must be surfaced to the user; no automated repair applies.
  *
- * Mirrors the `RepairKind` typealias in [BpmnRule.pkl](linter/pkl/schema/BpmnRule.pkl) so that
- * Pkl-authored rule metadata round-trips into Kotlin via `RepairKind.valueOf(...)`.
+ * Rules declare their repair strategy via `RepairMetadata` in their Kotlin bean config.
  */
 enum class RepairKind {
     LOCAL_MODEL_FIX,
 
     @Deprecated(
-        message = "Collapsed into LOCAL_MODEL_FIX in Phase 2F (#243). Delete in Phase 3 once " +
-            "PklRuleCapabilityAdapter no longer round-trips the legacy string.",
+        message = "Collapsed into LOCAL_MODEL_FIX. Delete in Phase 3 once legacy consumers are gone.",
         replaceWith = ReplaceWith("LOCAL_MODEL_FIX"),
     )
     LOCAL_XML_FIX,

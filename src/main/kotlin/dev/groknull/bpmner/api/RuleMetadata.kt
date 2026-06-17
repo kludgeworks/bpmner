@@ -6,12 +6,10 @@
 package dev.groknull.bpmner.api
 
 /**
- * Metadata describing a BPMN validation rule, aligned with the
- * [BpmnRule.pkl](linter/pkl/schema/BpmnRule.pkl) schema.
+ * Metadata describing a BPMN validation rule.
  *
- * This structure will be Pkl-codegen'd in Phase 2. For now it is a hand-maintained
- * Kotlin data class that mirrors the Pkl schema closely enough that Phase 2 can
- * replace it without discarding the shape.
+ * This structure contains a `RepairMetadata` instance via its `repair` field
+ * that rules use to declare their repair behavior.
  */
 data class RuleMetadata(
     val id: String,
@@ -36,7 +34,7 @@ data class RuleMetadata(
 }
 
 /**
- * Repair strategy metadata for a rule, matching the `Repair` class in `BpmnRule.pkl`.
+ * Repair strategy metadata for a rule.
  */
 data class RepairMetadata(
     val kind: RepairKind = RepairKind.LLM_MODEL_PATCH,
