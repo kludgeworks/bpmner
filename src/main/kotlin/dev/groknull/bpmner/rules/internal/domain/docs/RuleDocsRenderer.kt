@@ -46,7 +46,6 @@ internal object RuleDocsRenderer {
     // would hurt readability and coherence of the document template.
     @Suppress("LongMethod")
     private fun renderOne(rule: BpmnRule): String {
-        val cookbookCode: String? = null
         val aliases = if (rule.metadata.aliases.isNotEmpty()) {
             "- **Legacy Aliases**: `${rule.metadata.aliases.joinToString("`, `")}`\n"
         } else {
@@ -96,7 +95,6 @@ internal object RuleDocsRenderer {
             append("- **Category**: ${rule.metadata.category.displayName}\n")
             append("- **Severity**: ${rule.metadata.severity.name}\n")
             append("- **Target Elements**: `${rule.metadata.targetElements.joinToString("`, `")}`\n")
-            append(cookbookCodeLine(cookbookCode))
             append(aliases)
             append(deprecation)
             append("\n")
@@ -155,10 +153,6 @@ internal object RuleDocsRenderer {
             .map { it.trimEnd() }
             .dropWhileLast { it.isEmpty() }
             .joinToString("\n") + "\n"
-    }
-
-    private fun cookbookCodeLine(cookbookCode: String?): String {
-        return if (cookbookCode != null) "- **Cookbook Code**: `$cookbookCode`\n" else ""
     }
 
     /**
