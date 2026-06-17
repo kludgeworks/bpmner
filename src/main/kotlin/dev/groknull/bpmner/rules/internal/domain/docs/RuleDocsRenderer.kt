@@ -43,6 +43,8 @@ internal object RuleDocsRenderer {
      * @param rule The rule to render (supports both [BpmnRule] and [LlmRuleSpec]).
      * @return Markdown content for the rule's `"<id>.md"` file.
      */
+    // Suppressed because splitting the sequential construction of Markdown sections into smaller methods
+    // would hurt readability and coherence of the document template.
     @Suppress("LongMethod")
     private fun renderOne(rule: BpmnRule): String {
         val cookbookCode = getCookbookCode(rule)

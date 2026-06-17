@@ -13,8 +13,9 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
-import java.io.InputStream
 import java.nio.charset.StandardCharsets
+import java.nio.file.Files
+import java.nio.file.Paths
 
 /**
  * Golden-file test for rule documentation rendering.
@@ -60,26 +61,52 @@ internal class RuleDocsGoldenTest {
         // Render all docs
         val rendered = RuleDocsRenderer.render(rules)
 
-        // Load golden files from classpath
-        // The resources are included in the test JAR via resources = glob(["resources/**"])
-        // so they appear as "rule-docs/act-activity-label-capitalization.md" etc.
+        // Load golden files from classpath resource directory
         val goldenFiles = mutableMapOf<String, String>()
-        val goldenRuleIds = rules.map { it.metadata.id }
+        val ruleDocsUrl = javaClass.classLoader.getResource("rule-docs")
+            ?: throw AssertionError("Resource directory 'rule-docs' not found on classpath")
 
-        for (ruleId in goldenRuleIds) {
-            val resourceName = "rule-docs/$ruleId.md"
-            val stream: InputStream? = javaClass.classLoader.getResourceAsStream(resourceName)
-            if (stream != null) {
-                val content = stream.reader(StandardCharsets.UTF_8).use { it.readText() }
-                goldenFiles["$ruleId.md"] = content
+        if (ruleDocsUrl.protocol == "file") {
+            val ruleDocsDir = Paths.get(ruleDocsUrl.toURI())
+            Files.list(ruleDocsDir).use { paths ->
+                paths.forEach { path ->
+                    val filename = path.fileName.toString()
+                    if (filename.endsWith(".md")) {
+                        val content = Files.readString(path, StandardCharsets.UTF_8)
+                        goldenFiles[filename] = content
+                    }
+                }
             }
-        }
-
-        // Also load README.md
-        val readmeStream: InputStream? = javaClass.classLoader.getResourceAsStream("rule-docs/README.md")
-        if (readmeStream != null) {
-            val content = readmeStream.reader(StandardCharsets.UTF_8).use { it.readText() }
-            goldenFiles["README.md"] = content
+        } else if (ruleDocsUrl.protocol == "jar") {
+            val parts = ruleDocsUrl.toString().split("!")
+            val jarPathString = parts[0]
+            val internalPath = parts[1]
+            val uri = java.net.URI.create(jarPathString)
+            var created = false
+            val fs = try {
+                java.nio.file.FileSystems.getFileSystem(uri)
+            } catch (ignored: Exception) {
+                created = true
+                java.nio.file.FileSystems.newFileSystem(uri, emptyMap<String, Any>())
+            }
+            try {
+                val ruleDocsDir = fs.getPath(internalPath)
+                Files.list(ruleDocsDir).use { paths ->
+                    paths.forEach { path ->
+                        val filename = path.fileName.toString()
+                        if (filename.endsWith(".md")) {
+                            val content = Files.readString(path, StandardCharsets.UTF_8)
+                            goldenFiles[filename] = content
+                        }
+                    }
+                }
+            } finally {
+                if (created) {
+                    fs.close()
+                }
+            }
+        } else {
+            throw AssertionError("Expected 'rule-docs' resource to be a file system directory or jar, but was: $ruleDocsUrl")
         }
 
         // Assert set equality of filenames

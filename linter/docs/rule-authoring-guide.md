@@ -273,6 +273,18 @@ What's missing is the **deployment mechanism**:
 
 The dedicated follow-up issue tracks switching the launcher and reconciling with Bazel's runfiles isolation. Until then, treat Tier 3 as design intent: the contract is stable, the deployment is pending.
 
+## Documenting Rules
+
+All rules in the catalog are documented under `src/test/resources/rule-docs/`. The documentation is checked in as golden files, and a unit test (`RuleDocsGoldenTest`) asserts that the checked-in files match the rule metadata.
+
+When you add a new rule, or update an existing rule's metadata (such as intent, guidance, name, etc.), you must regenerate the documentation:
+
+```bash
+bazel run //src/test:update_rule_docs
+```
+
+Commit the generated/updated Markdown files along with your code changes.
+
 ## Choosing a tier
 
 ```text
