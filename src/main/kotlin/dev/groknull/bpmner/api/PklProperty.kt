@@ -7,12 +7,21 @@ package dev.groknull.bpmner.api
 
 /**
  * Marks a property whose name (or nested path, e.g. `eventDefinition.expression`) is exposed
- * to Pkl rule definitions through the generated `NodeProperty.pkl` type alias. Annotated
- * properties are now statically defined in Kotlin bean configs.
+ * to rule definitions.
  *
- * Retention is BINARY for downstream compiled consumers; the generator itself reads Kotlin source
- * files in Bazel and does not require runtime reflection.
+ * This annotation was used by `pkl-enum-gen` to generate Kotlin enum constants from Pkl source.
+ * The codegen tool was removed in #386; annotated properties are now statically defined in
+ * Kotlin bean configs (`*RuleConfig.kt`).
+ *
+ * The annotation is deprecated with no replacement. Existing usages are preserved for
+ * compatibility but serve no functional purpose.
+ *
+ * Retention is BINARY for downstream compiled consumers.
  */
+@Deprecated(
+    message = "This annotation was used by pkl-enum-gen. The codegen tool was removed; " +
+        "annotated properties are now statically defined in Kotlin bean configs.",
+)
 @Retention(AnnotationRetention.BINARY)
 @Target(AnnotationTarget.PROPERTY, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.FIELD)
 annotation class PklProperty(

@@ -62,7 +62,7 @@ Find it under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compile
 | `targetElements` | yes | BPMN element types this rule applies to. |
 | `errorMessages` | yes | Map from `diagnosticCode` to human-readable message. A rule can emit multiple codes. |
 | `severity` | optional (defaults `WARNING`) | Default severity. The active profile + user overrides modify this. |
-| `repair` | optional (defaults `LLM_MODEL_PATCH`) | `RepairKind` + `RepairSafety` + handler name. See the [GOAP lifecycle doc](../../docs/goap-lifecycle.md#the-pkl-side-repair-contract). |
+| `repair` | optional (defaults `LLM_MODEL_PATCH`) | `RepairKind` + `RepairSafety` + handler name. See the [GOAP lifecycle doc](../../docs/goap-lifecycle.md#the-repair-contract). |
 | `aliases` | optional | Alternative ids for backward compatibility. |
 
 ### Emitting a diagnostic
@@ -113,51 +113,49 @@ In-tree convention:
 
 See `TopologyHandlersTest`, `RequiredEventsRuleTest`, `DanglingEdgeRule` tests for examples.
 
-## Tier 2 — Pkl rules
+## Tier 2 — Kotlin rule beans
 
 Use this tier when:
 
 - The rule can be expressed via one of the bundled check primitives (`PropertyEquals`, `PropertyPattern`, `NlpClassification`, `Composite`, ...).
-- You want to declare the rule without writing Kotlin.
+- You want to declare the rule without writing Kotlin logic.
 - The rule is content-rule rather than structural (label conventions, naming patterns, advisory linting).
 
 ### Anatomy
 
-A Tier 2 rule is a `.pkl` file under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` that `amends BpmnRule.pkl`:
+A Tier 2 rule is a Kotlin bean config class under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` that extends `BpmnRule` and is registered in `BeanRuleRegistry`:
 
-```pkl
-amends "../schema/BpmnRule.pkl"
+```kotlin
+@Component
+internal class BusinessMeaningfulLabelRule(
+    private val config: NameRuleConfig,
+) : BpmnRule {
+    override val id: String = "name-business-meaningful-label"
+    override val metadata: RuleMetadata = RuleMetadata(
+        id = id,
+        name = "Business Meaningful Label",
+        slug = "business-meaningful-label",
+        category = RuleCategory.Name,
+        intent = "Encourage business-readable labels over technical identifiers.",
+        forModellers = "Choose names meaningful to business stakeholders...",
+        forAI = "Detect labels containing technical patterns such as underscores...",
+        targetElements = listOf("bpmn:Task", "bpmn:SubProcess"),
+        severity = RuleSeverity.WARNING,
+        errorMessages = mapOf(
+            "name-business-meaningful-label" to "Label contains technical patterns; prefer a business-readable name."
+        ),
+        repair = RepairMetadata(
+            kind = RepairKind.LLM_MODEL_PATCH
+        ),
+    )
 
-import "../schema/RuleCategory.pkl"
-import "../schema/CheckPrimitive.pkl"
-
-name = "Business Meaningful Label"
-category = RuleCategory.Name
-
-intent = "Encourage business-readable labels over technical identifiers."
-forModellers = "Choose names meaningful to business stakeholders..."
-forAI = "Detect labels containing technical patterns such as underscores..."
-
-targetElements = List("bpmn:Task", "bpmn:SubProcess")
-severity = "warning"
-
-errorMessages = Mapping(
-  "name-business-meaningful-label" -> "Label contains technical patterns; prefer a business-readable name."
-)
-
-checkPrimitive = "PropertyPattern"
-checkConfig = new CheckPrimitive.PropertyPatternConfig {
-  property = "name"
-  pattern = "[A-Z][a-z]+(?:[A-Z][a-z]+)*"
-  description = "PascalCase technical labels are not business-readable"
-}
-
-repair {
-  kind = "LLM_MODEL_PATCH"
+    override fun evaluate(ctx: BpmnDefinitionContext): List<RuleDiagnostic> {
+        // check logic using config.nameBusinessMeaningfulLabel
+    }
 }
 ```
 
-See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` for the catalog — every file there is an example.
+See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` for the catalog — every `*RuleConfig.kt` file there is an example.
 
 ### Available check primitives
 
@@ -173,9 +171,9 @@ See `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/` for the c
 
 Definitions live in `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/primitives/CheckPrimitive.kt`. The Kotlin-side dispatcher (`MappedCheck`) handles each variant.
 
-### Rule id, automatically derived
+### Rule id
 
-`id = category.shortCode + slug` is computed in the Pkl schema. Category short codes: `act`, `art`, `assoc`, `data`, `evt`, `flow`, `gen`, `gtw`, `lane`, `msg`, `name`, `pool`. So `name = "Business Meaningful Label"` + `category = RuleCategory.Name` → `id = "name-business-meaningful-label"`. Use that id in severity overrides and profile files.
+Each rule defines its own `id` in the `RuleMetadata`. Use the `RuleCategory` enum to derive a prefix (e.g. `Name.shortCode = "name"`), then construct a stable `id` (e.g. `name-business-meaningful-label`). Use that id in severity overrides and profile files.
 
 ## Shared convention lists (`BpmnerLintConfig.pkl`)
 
@@ -191,29 +189,29 @@ The top-level `linter/pkl/BpmnerLintConfig.pkl` schema defines the modeller-owne
 
 The packaged `linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and is the default `modulepath:` source. Team-specific convention files should amend the same template and be supplied to the application with `bpmner.rules.config-uri=file:/absolute/path/to/bpmner.pkl`.
 
-### Adding a new Pkl rule
+### Adding a new Kotlin rule bean
 
-1. Create `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/<PascalName>.pkl` amending `BpmnRule.pkl`.
-2. Run `gradle compileKotlin` to build. Rules are registered in `BeanRuleRegistry`.
-3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/<PascalName>Test.kt` (see next section).
-4. If the rule is `severity = "warning"`, no extra step is needed for the `strict` profile — `RuleProfileFactory.computeStrictBaseline()` reads the live `BeanRuleRegistry` at startup and automatically promotes every WARNING-severity rule to ERROR. New Pkl rules are registered in the bean catalog by the `PklRuleCatalog` loader, so they appear in the strict baseline without any manual maintenance.
+1. Create `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/<PascalName>RuleConfig.kt` implementing `BpmnRule` and annotated with `@Component`.
+2. Run `bazel build //...` to build. Rules are registered in `BeanRuleRegistry` via Spring component scan.
+3. Write a **per-rule test class** in `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/<PascalName>RuleConfigTest.kt` (see next section).
+4. If the rule has `severity = RuleSeverity.WARNING`, no extra step is needed for the `strict` profile — `RuleProfileFactory.computeStrictBaseline()` reads the live `BeanRuleRegistry` at startup and automatically promotes every WARNING-severity rule to ERROR.
 
 ### Writing a per-rule test
 
-Every active Pkl rule should have a dedicated test class under `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/pkl/`. The class uses `PklRuleTestSupport` to load the **production** rule from the live `PklRuleCatalog` — no synthetic configuration, no hand-built primitive instance. This is the consistency point: every test exercises what production exercises.
+Every active Kotlin rule bean should have a dedicated test class under `src/test/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/`. The test instantiates the production rule and its dependencies directly — no synthetic configuration, no registry lookup. This is the consistency point: every test exercises what production exercises.
 
 Worked examples shipped with the codebase:
 
-- `ActivityLabelCapitalizationTest.kt` — single `PropertyPatternCheck` rule (regex-only)
-- `BusinessMeaningfulLabelTest.kt` — `PropertyPatternCheck` with `forbiddenVocabulary`
-- `UncommonAbbreviationsTest.kt` — `PropertyPatternCheck` with `allowedVocabulary` + repair-metadata round-trip
-- `VerbObjectNameTest.kt` — `CompositeCheck` binding two sub-checks (`tooShort` + `missingVerb`)
+- `ActivityLabelCapitalizationRuleConfigTest.kt` — single `PropertyPatternCheck` rule (regex-only)
+- `BusinessMeaningfulLabelRuleConfigTest.kt` — `PropertyPatternCheck` with `forbiddenVocabulary`
+- `UncommonAbbreviationsRuleConfigTest.kt` — `PropertyPatternCheck` with `allowedVocabulary` + repair-metadata round-trip
+- `VerbObjectNameRuleConfigTest.kt` — `CompositeCheck` binding two sub-checks (`tooShort` + `missingVerb`)
 
 The canonical shape:
 
 ```kotlin
-internal class MyRuleTest {
-    private val rule = loadRule("<rule-id>")
+internal class MyRuleConfigTest {
+    private val rule = MyRuleConfig().createRule()
 
     @Test
     fun `clean case passes`() {
@@ -231,11 +229,11 @@ internal class MyRuleTest {
 }
 ```
 
-Helpers available on `PklRuleTestSupport`:
+Helpers available on the test base class:
 
 | Helper | Purpose |
 | --- | --- |
-| `loadRule(ruleId)` | Returns the production `BpmnRule`. Fails fast if the id isn't in the registry — usually because the rule is deferred (`checkPrimitive == null`) or `severity = "off"`. |
+| `loadRule(ruleId)` | Returns the production `BpmnRule` from `BeanRuleRegistry`. Fails fast if the id isn't registered. |
 | `context(nodes, edges?)` | Builds a `BpmnDefinitionContext`. When `edges` is null, nodes are chained in order. |
 | `assertFires(rule, ctx, expectedElementIds, expectedDiagnosticCode?)` | Asserts the rule fires on exactly the listed elements (order-insensitive). Optionally pins the diagnostic code (needed for composite rules). |
 | `assertSilent(rule, ctx)` | Asserts the rule emits no diagnostics. |
@@ -255,7 +253,7 @@ Some rules check document-level metadata that the XML parser surfaces *outside* 
 
 The parser-as-structure / rule-as-policy refactor (#282) means **every type the parser sees flows through the same path** — typed nodes go into `nodes`, unrecognized ones go in via `BpmnUnrecognizedNode`, and the rule engine treats them uniformly. Tests don't need helper extensions for new exotic types; construct the appropriate sealed subtype directly.
 
-### Filesystem-deployed Pkl rules (not yet supported)
+### Filesystem-deployed rules (not yet supported)
 
 A `bpmner.rules.custom-dir` setting for filesystem rule discovery is tracked separately and is not currently wired. Today, Tier 2 rules ship in the bpmner JAR.
 
