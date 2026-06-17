@@ -22,7 +22,11 @@ extend-enable = ["MD060", "MD070"]
 # cross-reference links cannot be meaningfully wrapped at 120 chars without
 # harming readability.  The entire existing docs corpus predates this rule
 # being enforced; adding it now would only produce noise.
-extend-disable = ["MD013"]
+# MD041 is disabled because we use YAML front matter (required for markdownlint
+# disable comments) as the first line in golden files.
+# MD032 is disabled because the template uses inline list formatting (no blank
+# line before list items in sub-sections) which is consistent and readable.
+extend-disable = ["MD013", "MD032", "MD041"]
 
 # List of file/directory patterns to include for linting (if provided, only these will be linted)
 # include = [

@@ -92,15 +92,6 @@ pkl_eval(
     format = "json",
 )
 
-pkl_eval(
-    name = "generated_docs",
-    srcs = PKL_SCHEMA_SRCS + PKL_RULE_SRCS + [
-        "MarkdownGenerator.pkl",
-    ],
-    entrypoints = ["MarkdownGenerator.pkl"],
-    multiple_outputs = True,
-)
-
 pkl_test(
     name = "schema_test",
     srcs = PKL_SCHEMA_SRCS + PKL_GENERATED_SCHEMA_SRCS + [

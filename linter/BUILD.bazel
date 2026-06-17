@@ -17,6 +17,5 @@ js_library(
         "README.md",
         "docs/template.md",
         "docs/toolbox.md",
-        "//linter/pkl:generated_docs",
     ],
 )
