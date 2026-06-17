@@ -7,7 +7,8 @@ package dev.groknull.bpmner.api
 
 /**
  * Metadata describing a BPMN validation rule, aligned with the
- * [BpmnRule.pkl](linter/pkl/schema/BpmnRule.pkl) schema.
+ * [BpmnRule](src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/beans/BpmnRule.kt)
+ * Kotlin bean.
  *
  * This structure will be Pkl-codegen'd in Phase 2. For now it is a hand-maintained
  * Kotlin data class that mirrors the Pkl schema closely enough that Phase 2 can
