@@ -251,7 +251,7 @@ The module is a *one-way sink*. It receives events but never asks any other modu
 class BpmnerArchitectureTest {
     private val classes =
         ClassFileImporter()
-            .withImportOption(ImportOption.DoNotIncludeTests())
+            .withImportOption(excludeBazelTestClasses)
             .importPackages("dev.groknull.bpmner")
 
     @Test
@@ -265,6 +265,14 @@ class BpmnerArchitectureTest {
     }
 }
 ```
+
+`ImportOption.DoNotIncludeTests()` only recognises Maven/Gradle/IntelliJ test-class
+paths (`target/test-classes`, `build/classes/test`, `out/test`). Bazel emits test
+classes to `bazel-out/.../bin/src/test/*_tests_lib*.jar`, which slips through that
+filter. `excludeBazelTestClasses` is a project-local `DescribedPredicate` (defined in
+`src/test/kotlin/dev/groknull/bpmner/`) that filters at the classpath-entry level and
+catches Bazel output paths. `BpmnerModulithTest` passes the same predicate to
+`ApplicationModules.of(…, excludeBazelTestClasses)` for the same reason.
 
 `ensureOnionSimple()` checks the onion-architecture rules (a generalisation that subsumes the hexagonal layering): domain code may not depend on adapter code, adapters may not bypass ports, and so on. `JMoleculesDddRules.all()` checks the DDD building-block rules around `@Service`, `@Repository`, `@DomainEvent`, etc.
 
