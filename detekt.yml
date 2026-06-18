@@ -30,8 +30,10 @@ complexity:
   TooManyFunctions:
     active: true
     ignoreOverridden: true
-    # Embabel's planner creates one Action/Condition per annotated method, so framework-dispatched
-    # methods are a structural floor, not a cohesion smell — exclude them from the function count.
+    # Framework-dispatched methods are a structural floor, not a cohesion smell:
+    # - Action / Condition: Embabel's planner creates one planning node per annotated method.
+    # - Test: JUnit discovers and dispatches each @Test method independently.
+    # Exclude all three from the function count to avoid spurious TooManyFunctions violations.
     ignoreAnnotatedFunctions: ['Action', 'Condition', 'Test']
   LongParameterList:
     active: true

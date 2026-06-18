@@ -131,28 +131,26 @@ class BpmnerArchitectureTest {
      *    as the only `internal/domain` classes with out-of-policy framework annotations. This
      *    rule makes the policy machine-verifiable.
      *
-     * 2. **Signals S4 completion** — when S4 relocates these couplings out of `internal/domain`,
+     * 2. **Signals relocation** — when these couplings are moved out of `internal/domain`,
      *    this test goes RED, confirming the relocation succeeded and triggering an update/removal
-     *    of the pin per ADR-002 §D-enforce ("tightened… after S4").
+     *    of the pin per ADR-002 §D-enforce.
+     *    TODO(#424) update or remove pin after relocation is complete
      *
      * Scope: production code only (the shared `classes` field uses `excludeBazelTestClasses`).
      *
-     * **Why not a blanket ban?** — The ~15 `@Configuration`/`@Bean` beans introduced by #376
-     * (`ConventionsLoader`, `beans/ActivityRuleConfig.kt`, and similar, etc.) are explicitly
-     * permitted per ADR-002 §D-policy (NG3 in PLAN-S2 §5). The rule pins ONLY the 2 named
-     * classes by FQN; no package-level `@Configuration` ban is applied.
+     * **Why not a blanket ban?** — The `@Configuration`/`@Bean` beans in
+     * `rules/internal/domain/beans/` (`ConventionsLoader`, `ActivityRuleConfig`, etc.) are
+     * explicitly permitted per ADR-002 §D-policy (NG3 in PLAN-S2 §5). The rule pins ONLY
+     * the 2 named classes by FQN; no package-level `@Configuration` ban is applied.
      *
-     * Named couplings (post-#376 state; set shrank 3→2 when `PklRuleCatalog` was deleted
-     * by #427 — see ARCHITECTURE ADR-4):
+     * Named couplings (2 classes, per ADR-002 §D-policy):
      *
      * - `BpmnLocalRepairCapabilityValidator` (`repair.internal.domain`) —
      *   `@Component` + `@EventListener`(`ContextRefreshedEvent`); startup validation hook.
      * - `RuleProfileFactory` (`rules.internal.domain`) —
      *   `@Configuration` + `@Bean`; profile selection orchestration.
      *
-     * Both are currently green (annotations present). S4 removes them; this test then goes RED.
-     *
-     * @see ARCHITECTURE §5 S2 / S4; ADR-002 §D-policy / §D-enforce; PLAN-S2 §1 deliverable 2
+     * @see ARCHITECTURE §5 S2; ADR-002 §D-policy / §D-enforce; PLAN-S2 §1 deliverable 2
      */
     @Test
     fun `named deep couplings retain their out-of-policy annotations (pin for S4)`() {
@@ -168,13 +166,14 @@ class BpmnerArchitectureTest {
             .because(
                 "BpmnLocalRepairCapabilityValidator is pinned as the @EventListener deep coupling " +
                     "in repair/internal/domain per ADR-002 §D-policy. " +
-                    "S4 will relocate it; this test turning RED confirms that relocation.",
+                    "This test turning RED confirms that the coupling has been relocated. " +
+                    "TODO(#424) update or remove pin after relocation is complete.",
             )
             .check(classes)
 
         // Pin 2b: RuleProfileFactory must have the @Configuration class annotation.
         // Pins by FQN to target exactly this class without blanket-banning @Configuration
-        // in internal/domain (which would also flag the legitimately-placed #376 beans).
+        // in internal/domain (which would also flag the permitted beans in rules/internal/domain/beans/).
         classes()
             .that()
             .haveFullyQualifiedName(
@@ -184,15 +183,16 @@ class BpmnerArchitectureTest {
             .because(
                 "RuleProfileFactory is pinned as the @Configuration deep coupling " +
                     "in rules/internal/domain per ADR-002 §D-policy. " +
-                    "S4 will relocate it; this test turning RED confirms that relocation.",
+                    "This test turning RED confirms that the coupling has been relocated. " +
+                    "TODO(#424) update or remove pin after relocation is complete.",
             )
             .check(classes)
 
         // Guard 2c: @EventListener must not spread to other internal/domain classes.
-        // Unlike @Configuration (legitimately used by the #376 beans), @EventListener is a
-        // startup-lifecycle annotation with no legitimate use in internal/domain beyond the
-        // named BpmnLocalRepairCapabilityValidator. This guard catches silent regression
-        // without requiring a blanket @Configuration ban.
+        // Unlike @Configuration (legitimately used by beans in rules/internal/domain/beans/),
+        // @EventListener is a startup-lifecycle annotation with no legitimate use in
+        // internal/domain beyond the named BpmnLocalRepairCapabilityValidator. This guard
+        // catches silent regression without requiring a blanket @Configuration ban.
         noClasses()
             .that()
             .resideInAPackage("..internal.domain..")
@@ -212,11 +212,12 @@ class BpmnerArchitectureTest {
      * Proves that the framework-purity guards are not vacuous:
      *
      * - Pin 2a (positive): verifies BpmnLocalRepairCapabilityValidator actually HAS @EventListener,
-     *   so the pin is load-bearing. When S4 removes it, the pin in the main test goes RED.
+     *   so the pin is load-bearing. If the annotation is absent, update or remove this pin.
      *
      * - Guard 2c (negative): verifies the @EventListener guard correctly passes over a
-     *   sub-package that has @Configuration/@Bean beans (the permitted #376 pattern) but no
-     *   @EventListener — proving no false positives against the permitted bean pattern.
+     *   sub-package that has @Configuration/@Bean beans (the permitted pattern in
+     *   rules/internal/domain/beans/) but no @EventListener — proving no false positives
+     *   against the permitted bean pattern.
      *
      * The merged tree is always green. The proof establishes RED→GREEN:
      * pin 2a would fail if the annotation were absent; guard 2c would fail if an unexpected
@@ -226,8 +227,8 @@ class BpmnerArchitectureTest {
     fun `framework-purity rule is proven on planted evidence (not vacuous)`() {
         // Proof 2a — positive pin is load-bearing:
         // Import repair.internal.domain and assert the annotated method exists.
-        // If this assertion fails, S4 may have already run or the class was renamed —
-        // both conditions require updating the pin in the main test.
+        // If this assertion fails, the coupling was relocated or the class was renamed —
+        // update the pin in the main test accordingly.
         val repairDomainClasses =
             ClassFileImporter()
                 .withImportOption(excludeBazelTestClasses)
@@ -246,14 +247,14 @@ class BpmnerArchitectureTest {
         assertThat(hasEventListener)
             .describedAs(
                 "BpmnLocalRepairCapabilityValidator must have a method annotated with @EventListener " +
-                    "(the out-of-policy deep coupling S4 will relocate). " +
-                    "Failure means S4 ran early or the class was renamed — update pin 2a accordingly.",
+                    "(the out-of-policy deep coupling per ADR-002 §D-policy). " +
+                    "Failure means the coupling was relocated or the class was renamed — update pin 2a accordingly.",
             )
             .isTrue()
 
-        // Proof 2c — guard has no false positives against the permitted #376 @Configuration beans:
-        // The rules.internal.domain.beans sub-package has ~13 @Configuration classes introduced
-        // by #376 (ActivityRuleConfig, EventRuleConfig, etc.) — these are PERMITTED per
+        // Proof 2c — guard has no false positives against the permitted @Configuration beans:
+        // The rules.internal.domain.beans sub-package has @Configuration classes
+        // (ActivityRuleConfig, EventRuleConfig, etc.) — these are PERMITTED per
         // ADR-002 §D-policy (NG3). The @EventListener guard must NOT flag them.
         // Import only the beans sub-package and verify the guard is silent (no violations).
         val rulesBeanClasses =
@@ -283,8 +284,8 @@ class BpmnerArchitectureTest {
                         SimpleConditionEvent.violated(
                             item,
                             "${item.fullName} is missing @${annotationTypeName.substringAfterLast('.')} — " +
-                                "S4 may have relocated this class or the annotation was removed. " +
-                                "Update or remove this pin after S4 completes.",
+                                "the class may have been relocated or the annotation was removed. " +
+                                "TODO(#424) update or remove this pin after relocation is complete.",
                         ),
                     )
                 }
@@ -310,8 +311,8 @@ class BpmnerArchitectureTest {
                             item,
                             "${item.fullName} has no method annotated with " +
                                 "@${annotationTypeName.substringAfterLast('.')} — " +
-                                "S4 may have relocated this coupling or the method was removed. " +
-                                "Update or remove this pin after S4 completes.",
+                                "the coupling may have been relocated or the method was removed. " +
+                                "TODO(#424) update or remove this pin after relocation is complete.",
                         ),
                     )
                 }

@@ -20,9 +20,8 @@ import org.junit.jupiter.api.Test
 
 class BpmnerModuleBoundariesTest {
     // Use the shared excludeBazelTestClasses helper (from BpmnerArchUnitImports.kt).
-    // Combine with DoNotIncludeTests() so only production classes are scanned:
-    // the cross-module internal rule is prod-scoped in S2 (test scope is widened in S5
-    // after the test-side reaches are fixed — ARCHITECTURE §5 S2/S5, NG1).
+    // Combine with DoNotIncludeTests() so only production classes are scanned.
+    // TODO(#424) widen to test scope after S5 fixes test-side reaches
     private val importer =
         ClassFileImporter()
             .withImportOption(ImportOption.DoNotIncludeTests())
@@ -68,9 +67,8 @@ class BpmnerModuleBoundariesTest {
      * the single-predicate design flaw where excluding all 10 modules from "outsiders" would
      * prevent any cross-module reach from being flagged (REVIEW-S2 rows #1 / #3).
      *
-     * Scoped to **prod** classes only in S2 (DoNotIncludeTests + excludeBazelTestClasses above).
-     * The test-side reaches are enumerated and fixed in S5, which then widens this rule to test
-     * scope (ARCHITECTURE §5 S2/S5; ADR-002 §D-enforce; NG1 in PLAN-S2).
+     * Scoped to **prod** classes only (DoNotIncludeTests + excludeBazelTestClasses above).
+     * TODO(#424) widen to test scope after S5 fixes test-side reaches
      *
      * Verified green at ab75950: prod cross-module internal reach count = 0 (ARCHITECTURE §0.A).
      */
