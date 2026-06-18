@@ -157,10 +157,8 @@ data class BpmnDefinition(
      *
      * Returns a (possibly empty) list of error messages following the
      * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
-     *
-     * The three checks mirror the identically-named predicates that lived in
-     * `validation/BpmnDefinitionValidator` before this stage; `BpmnDefinitionValidator` now
-     * delegates to this method rather than duplicating the logic.
+     * [dev.groknull.bpmner.validation.BpmnDefinitionValidator] delegates to this method for
+     * these structural checks and handles non-intrinsic policy checks itself.
      *
      * Checks performed:
      * - No duplicate node ids or edge ids in [nodes] / [sequences].

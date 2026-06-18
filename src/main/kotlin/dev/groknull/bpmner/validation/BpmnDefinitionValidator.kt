@@ -39,7 +39,7 @@ internal class BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
-        // Model-intrinsic structural checks are owned by the domain type itself (G2, S3).
+        // Model-intrinsic structural checks are owned by the domain type itself.
         // BpmnDefinition.validateStructure() covers: duplicate ids, edge ref integrity,
         // and required top-level START/END events.
         errors.addAll(definition.validateStructure())
