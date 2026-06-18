@@ -34,6 +34,11 @@ import org.springframework.stereotype.Component
 
 @Service
 @Component
+// BpmnDefinitionValidator implements the non-intrinsic (policy/naming/orchestration) checks that
+// cannot live on the domain type itself. The model-intrinsic structural checks (duplicate ids,
+// edge ref integrity, required START/END) are delegated to BpmnDefinition.validateStructure().
+// The function count reflects this deliberate split: intrinsic behaviour on the domain object,
+// policy enforcement here. Collapsing these into fewer functions would blur that boundary.
 @Suppress("TooManyFunctions")
 internal class BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
@@ -138,14 +143,15 @@ internal class BpmnDefinitionValidator {
     }
 
     // A sequence flow lives wholly in one scope: its parentRef must match both endpoints' parentRef.
-    // BPMN forbids a flow crossing a subprocess boundary. Dangling endpoints are left to validateEdges.
+    // BPMN forbids a flow crossing a subprocess boundary. Dangling endpoints are reported by
+    // BpmnDefinition.validateStructure() (the edge ref integrity check).
     private fun validateFlowsStayInScope(
         definition: BpmnDefinition,
         nodesById: Map<String, BpmnNode>,
         errors: MutableList<String>,
     ) {
         definition.sequences.forEach { edge ->
-            // Dangling endpoints are reported by validateEdges; only check scope when both resolve.
+            // Dangling endpoints are reported by BpmnDefinition.validateStructure(); only check scope when both resolve.
             val source = nodesById[edge.sourceRef] ?: return@forEach
             val target = nodesById[edge.targetRef] ?: return@forEach
             if (source.parentRef != edge.parentRef || target.parentRef != edge.parentRef) {
@@ -530,7 +536,7 @@ internal class BpmnDefinitionValidator {
         defaultsBySource.forEach { (sourceId, defaults) ->
             val source = nodesById[sourceId]
             // An orphan isDefault edge (sourceRef points to no node) is also invalid here.
-            // The separate validateEdges pass surfaces the missing-sourceRef issue too, but
+            // BpmnDefinition.validateStructure() surfaces the missing-sourceRef issue too, but
             // this rule still owns the "isDefault is only valid on EXCLUSIVE_GATEWAY or
             // INCLUSIVE_GATEWAY" guarantee and must fire on the orphan case to be complete.
             if (source == null || (source !is BpmnExclusiveGateway && source !is BpmnInclusiveGateway)) {
