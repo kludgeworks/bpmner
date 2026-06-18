@@ -167,39 +167,30 @@ data class BpmnDefinition(
      * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
      *   (i.e. [BpmnNode.parentRef] == null for both).
      */
-    fun validateStructure(): List<String> = buildList {
-        // Duplicate ids
-        val nodeIds = nodes.map { it.id.trim() }
-        val edgeIds = sequences.map { it.id.trim() }
-        nodeIds.groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys.forEach { add("duplicate node id: $it") }
-        edgeIds.groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys.forEach { add("duplicate edge id: $it") }
-
-        // Edge reference integrity
+    fun validateStructure(): List<String> {
         val nodeIdSet = nodes.map { it.id }.toSet()
-        sequences.forEach { edge ->
-            val label = edge.id.ifBlank { "<blank>" }
-            if (edge.sourceRef !in nodeIdSet) {
-                add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
+        return buildList {
+            addAll(duplicateIdErrors(nodes.map { it.id.trim() }, "node"))
+            addAll(duplicateIdErrors(sequences.map { it.id.trim() }, "edge"))
+            sequences.forEach { edge -> addAll(edgeReferenceErrors(edge, nodeIdSet)) }
+            if (nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
+                add("definition must contain at least one START_EVENT")
             }
-            if (edge.targetRef !in nodeIdSet) {
-                add("edge $label targetRef '${edge.targetRef}' does not match any node id")
-            }
-            if (edge.sourceRef == edge.targetRef) {
-                add("edge $label must not self-reference source and target")
+            if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
+                add("definition must contain at least one END_EVENT")
             }
         }
+    }
 
-        // Required top-level events
-        if (nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
-            add("definition must contain at least one START_EVENT")
-        }
-        if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
-            add("definition must contain at least one END_EVENT")
-        }
+    private fun duplicateIdErrors(ids: List<String>, kind: String): List<String> = ids.groupBy { it }
+        .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+        .keys.map { "duplicate $kind id: $it" }
+
+    private fun edgeReferenceErrors(edge: BpmnEdge, nodeIdSet: Set<String>): List<String> = buildList {
+        val label = edge.id.ifBlank { "<blank>" }
+        if (edge.sourceRef !in nodeIdSet) add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
+        if (edge.targetRef !in nodeIdSet) add("edge $label targetRef '${edge.targetRef}' does not match any node id")
+        if (edge.sourceRef == edge.targetRef) add("edge $label must not self-reference source and target")
     }
 }
 
