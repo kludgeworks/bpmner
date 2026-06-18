@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import com.google.devtools.build.runfiles.Runfiles
 import org.springframework.beans.factory.annotation.Autowired

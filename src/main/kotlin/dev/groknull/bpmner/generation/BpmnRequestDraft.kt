@@ -3,11 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.generation
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import jakarta.validation.constraints.Size
 
 @JsonClassDescription("Draft BPMN generation request extracted from natural-language shell input")

@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.core.ClasspathResourceResolver
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.XsdValidationIssue
+import dev.groknull.bpmner.validation.internal.adapter.outbound.ClasspathResourceResolver
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

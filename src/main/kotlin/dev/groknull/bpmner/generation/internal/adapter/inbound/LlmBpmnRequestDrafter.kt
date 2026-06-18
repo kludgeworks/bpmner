@@ -9,7 +9,7 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.domain.io.UserInput
 import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequestDraft
+import dev.groknull.bpmner.generation.BpmnRequestDraft
 import dev.groknull.bpmner.generation.BpmnRequestDrafter
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.stereotype.Component
