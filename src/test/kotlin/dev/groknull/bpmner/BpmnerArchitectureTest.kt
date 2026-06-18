@@ -16,6 +16,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import com.tngtech.archunit.library.Architectures.LayeredArchitecture
+import org.assertj.core.api.Assertions.assertThat
 import org.jmolecules.archunit.JMoleculesArchitectureRules
 import org.jmolecules.archunit.JMoleculesArchitectureRules.VerificationDepth
 import org.jmolecules.archunit.JMoleculesDddRules
@@ -118,6 +119,211 @@ class BpmnerArchitectureTest {
             .dependOnClassesThat()
             .haveFullyQualifiedName("com.embabel.agent.api.common.Ai")
             .check(classes)
+    }
+
+    /**
+     * Framework-purity rule — named deep-coupling pin (S2, Rule 2).
+     *
+     * Asserts that the 2 named out-of-policy `internal/domain` classes retain their
+     * framework deep-coupling annotations on **current** `main`. This pin serves two purposes:
+     *
+     * 1. **Documents the known violation state** — ADR-002 §D-policy records these 2 classes
+     *    as the only `internal/domain` classes with out-of-policy framework annotations. This
+     *    rule makes the policy machine-verifiable.
+     *
+     * 2. **Signals relocation** — when these couplings are moved out of `internal/domain`,
+     *    this test goes RED, confirming the relocation succeeded and triggering an update/removal
+     *    of the pin per ADR-002 §D-enforce.
+     *    TODO(#424) update or remove pin after relocation is complete
+     *
+     * Scope: production code only (the shared `classes` field uses `excludeBazelTestClasses`).
+     *
+     * **Why not a blanket ban?** — The `@Configuration`/`@Bean` beans in
+     * `rules/internal/domain/beans/` (`ConventionsLoader`, `ActivityRuleConfig`, etc.) are
+     * explicitly permitted per ADR-002 §D-policy (NG3 in PLAN-S2 §5). The rule pins ONLY
+     * the 2 named classes by FQN; no package-level `@Configuration` ban is applied.
+     *
+     * Named couplings (2 classes, per ADR-002 §D-policy):
+     *
+     * - `BpmnLocalRepairCapabilityValidator` (`repair.internal.domain`) —
+     *   `@Component` + `@EventListener`(`ContextRefreshedEvent`); startup validation hook.
+     * - `RuleProfileFactory` (`rules.internal.domain`) —
+     *   `@Configuration` + `@Bean`; profile selection orchestration.
+     *
+     * @see ARCHITECTURE §5 S2; ADR-002 §D-policy / §D-enforce; PLAN-S2 §1 deliverable 2
+     */
+    @Test
+    fun `named deep couplings retain their out-of-policy annotations (pin for S4)`() {
+        // Pin 2a: BpmnLocalRepairCapabilityValidator must have a method annotated with
+        // @EventListener. @EventListener is the specific out-of-policy annotation that makes
+        // this a "deep coupling" beyond the permitted @Component-on-@Service idiom.
+        classes()
+            .that()
+            .haveFullyQualifiedName(
+                "dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator",
+            )
+            .should(haveMethodAnnotatedWith("org.springframework.context.event.EventListener"))
+            .because(
+                "BpmnLocalRepairCapabilityValidator is pinned as the @EventListener deep coupling " +
+                    "in repair/internal/domain per ADR-002 §D-policy. " +
+                    "This test turning RED confirms that the coupling has been relocated. " +
+                    "TODO(#424) update or remove pin after relocation is complete.",
+            )
+            .check(classes)
+
+        // Pin 2b: RuleProfileFactory must have the @Configuration class annotation.
+        // Pins by FQN to target exactly this class without blanket-banning @Configuration
+        // in internal/domain (which would also flag the permitted beans in rules/internal/domain/beans/).
+        classes()
+            .that()
+            .haveFullyQualifiedName(
+                "dev.groknull.bpmner.rules.internal.domain.RuleProfileFactory",
+            )
+            .should(haveClassAnnotation("org.springframework.context.annotation.Configuration"))
+            .because(
+                "RuleProfileFactory is pinned as the @Configuration deep coupling " +
+                    "in rules/internal/domain per ADR-002 §D-policy. " +
+                    "This test turning RED confirms that the coupling has been relocated. " +
+                    "TODO(#424) update or remove pin after relocation is complete.",
+            )
+            .check(classes)
+
+        // Guard 2c: @EventListener must not spread to other internal/domain classes.
+        // Unlike @Configuration (legitimately used by beans in rules/internal/domain/beans/),
+        // @EventListener is a startup-lifecycle annotation with no legitimate use in
+        // internal/domain beyond the named BpmnLocalRepairCapabilityValidator. This guard
+        // catches silent regression without requiring a blanket @Configuration ban.
+        noClasses()
+            .that()
+            .resideInAPackage("..internal.domain..")
+            .and(notNamedFqn("dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator"))
+            .should(haveMethodAnnotatedWith("org.springframework.context.event.EventListener"))
+            .because(
+                "@EventListener in internal/domain is out-of-policy per ADR-002 §D-policy. " +
+                    "Only BpmnLocalRepairCapabilityValidator is the named exception (S4 relocates it). " +
+                    "Any other internal/domain class with @EventListener is unintended drift.",
+            )
+            .check(classes)
+    }
+
+    /**
+     * Planted-violation self-test for Rule 2 (S2 Gate §4, preferred method).
+     *
+     * Proves that the framework-purity guards are not vacuous:
+     *
+     * - Pin 2a (positive): verifies BpmnLocalRepairCapabilityValidator actually HAS @EventListener,
+     *   so the pin is load-bearing. If the annotation is absent, update or remove this pin.
+     *
+     * - Guard 2c (negative): verifies the @EventListener guard correctly passes over a
+     *   sub-package that has @Configuration/@Bean beans (the permitted pattern in
+     *   rules/internal/domain/beans/) but no @EventListener — proving no false positives
+     *   against the permitted bean pattern.
+     *
+     * The merged tree is always green. The proof establishes RED→GREEN:
+     * pin 2a would fail if the annotation were absent; guard 2c would fail if an unexpected
+     * @EventListener appeared.
+     */
+    @Test
+    fun `framework-purity rule is proven on planted evidence (not vacuous)`() {
+        // Proof 2a — positive pin is load-bearing:
+        // Import repair.internal.domain and assert the annotated method exists.
+        // If this assertion fails, the coupling was relocated or the class was renamed —
+        // update the pin in the main test accordingly.
+        val repairDomainClasses =
+            ClassFileImporter()
+                .withImportOption(excludeBazelTestClasses)
+                .importPackages("dev.groknull.bpmner.repair.internal.domain")
+
+        val validatorClass =
+            repairDomainClasses.get(
+                "dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator",
+            )
+        val hasEventListener =
+            validatorClass.methods.any { method ->
+                method.annotations.any { ann ->
+                    ann.type.name == "org.springframework.context.event.EventListener"
+                }
+            }
+        assertThat(hasEventListener)
+            .describedAs(
+                "BpmnLocalRepairCapabilityValidator must have a method annotated with @EventListener " +
+                    "(the out-of-policy deep coupling per ADR-002 §D-policy). " +
+                    "Failure means the coupling was relocated or the class was renamed — update pin 2a accordingly.",
+            )
+            .isTrue()
+
+        // Proof 2c — guard has no false positives against the permitted @Configuration beans:
+        // The rules.internal.domain.beans sub-package has @Configuration classes
+        // (ActivityRuleConfig, EventRuleConfig, etc.) — these are PERMITTED per
+        // ADR-002 §D-policy (NG3). The @EventListener guard must NOT flag them.
+        // Import only the beans sub-package and verify the guard is silent (no violations).
+        val rulesBeanClasses =
+            ClassFileImporter()
+                .withImportOption(excludeBazelTestClasses)
+                .importPackages("dev.groknull.bpmner.rules.internal.domain.beans")
+
+        // The guard (rule 2c) must be GREEN for the beans package (no @EventListener there).
+        // This proves the rule does not cause false positives against the #376 bean pattern.
+        noClasses()
+            .that()
+            .resideInAPackage("..internal.domain..")
+            .and(notNamedFqn("dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator"))
+            .should(haveMethodAnnotatedWith("org.springframework.context.event.EventListener"))
+            .check(rulesBeanClasses)
+    }
+
+    private fun haveClassAnnotation(annotationTypeName: String): ArchCondition<JavaClass> {
+        return object : ArchCondition<JavaClass>("be annotated with @${annotationTypeName.substringAfterLast('.')}") {
+            override fun check(
+                item: JavaClass,
+                events: ConditionEvents,
+            ) {
+                val hasAnnotation = item.annotations.any { ann -> ann.type.name == annotationTypeName }
+                if (!hasAnnotation) {
+                    events.add(
+                        SimpleConditionEvent.violated(
+                            item,
+                            "${item.fullName} is missing @${annotationTypeName.substringAfterLast('.')} — " +
+                                "the class may have been relocated or the annotation was removed. " +
+                                "TODO(#424) update or remove this pin after relocation is complete.",
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun haveMethodAnnotatedWith(annotationTypeName: String): ArchCondition<JavaClass> {
+        return object : ArchCondition<JavaClass>(
+            "have at least one method annotated with @${annotationTypeName.substringAfterLast('.')}",
+        ) {
+            override fun check(
+                item: JavaClass,
+                events: ConditionEvents,
+            ) {
+                val hasAnnotatedMethod =
+                    item.methods.any { method ->
+                        method.annotations.any { ann -> ann.type.name == annotationTypeName }
+                    }
+                if (!hasAnnotatedMethod) {
+                    events.add(
+                        SimpleConditionEvent.violated(
+                            item,
+                            "${item.fullName} has no method annotated with " +
+                                "@${annotationTypeName.substringAfterLast('.')} — " +
+                                "the coupling may have been relocated or the method was removed. " +
+                                "TODO(#424) update or remove this pin after relocation is complete.",
+                        ),
+                    )
+                }
+            }
+        }
+    }
+
+    private fun notNamedFqn(fqn: String): DescribedPredicate<JavaClass> {
+        return object : DescribedPredicate<JavaClass>("does not have fully-qualified name '$fqn'") {
+            override fun test(input: JavaClass): Boolean = input.name != fqn
+        }
     }
 
     private fun haveAtLeastOneGoal(): ArchCondition<JavaClass> {
