@@ -32,8 +32,6 @@ import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
-private const val BLANK_EDGE_ID_LABEL = "<blank>"
-
 @Service
 @Component
 @Suppress("TooManyFunctions")
@@ -41,10 +39,12 @@ internal class BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
-        validateDuplicateIds(definition, errors)
+        // Model-intrinsic structural checks are owned by the domain type itself (G2, S3).
+        // BpmnDefinition.validateStructure() covers: duplicate ids, edge ref integrity,
+        // and required top-level START/END events.
+        errors.addAll(definition.validateStructure())
+
         validateNames(definition, errors)
-        validateEdges(definition, errors)
-        validateRequiredEvents(definition, errors)
         validateSubProcesses(definition, errors)
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
@@ -52,26 +52,6 @@ internal class BpmnDefinitionValidator {
         validateSwimlanes(definition, errors)
 
         return errors
-    }
-
-    private fun validateDuplicateIds(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        val nodeIds = definition.nodes.map { it.id.trim() }
-        val edgeIds = definition.sequences.map { it.id.trim() }
-
-        nodeIds
-            .groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys
-            .forEach { errors.add("duplicate node id: $it") }
-
-        edgeIds
-            .groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys
-            .forEach { errors.add("duplicate edge id: $it") }
     }
 
     private fun validateNames(
@@ -89,40 +69,6 @@ internal class BpmnDefinitionValidator {
             if (requiresName && node.name.isNullOrBlank()) {
                 errors.add(BpmnNodeNamingPolicy.missingNameMessage(node))
             }
-        }
-    }
-
-    private fun validateEdges(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        val nodeIdSet = definition.nodes.map { it.id }.toSet()
-        definition.sequences.forEach { edge ->
-            if (edge.sourceRef !in nodeIdSet) {
-                errors.add(
-                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} sourceRef '${edge.sourceRef}' does not match any node id",
-                )
-            }
-            if (edge.targetRef !in nodeIdSet) {
-                errors.add(
-                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} targetRef '${edge.targetRef}' does not match any node id",
-                )
-            }
-            if (edge.sourceRef == edge.targetRef) {
-                errors.add("edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} must not self-reference source and target")
-            }
-        }
-    }
-
-    private fun validateRequiredEvents(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        if (definition.nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
-            errors.add("definition must contain at least one START_EVENT")
-        }
-        if (definition.nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
-            errors.add("definition must contain at least one END_EVENT")
         }
     }
 

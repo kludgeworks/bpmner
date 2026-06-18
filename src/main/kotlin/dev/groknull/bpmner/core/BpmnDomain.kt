@@ -149,7 +149,61 @@ data class BpmnDefinition(
     // benign extra field on serialize and an unknown field on deserialize (skipped).
     @field:com.fasterxml.jackson.annotation.JsonIgnore
     override val diagramCount: Int = 0,
-) : ApiBpmnDefinition
+) : ApiBpmnDefinition {
+
+    /**
+     * Model-intrinsic structural validation — checks that are pure properties of the graph
+     * topology itself, with no external policy or naming knowledge required.
+     *
+     * Returns a (possibly empty) list of error messages following the
+     * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
+     *
+     * The three checks mirror the identically-named predicates that lived in
+     * `validation/BpmnDefinitionValidator` before this stage; `BpmnDefinitionValidator` now
+     * delegates to this method rather than duplicating the logic.
+     *
+     * Checks performed:
+     * - No duplicate node ids or edge ids in [nodes] / [sequences].
+     * - Every edge's [BpmnEdge.sourceRef] and [BpmnEdge.targetRef] resolve to a node id;
+     *   a self-referencing edge (sourceRef == targetRef) is also flagged.
+     * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
+     *   (i.e. [BpmnNode.parentRef] == null for both).
+     */
+    fun validateStructure(): List<String> = buildList {
+        // Duplicate ids
+        val nodeIds = nodes.map { it.id.trim() }
+        val edgeIds = sequences.map { it.id.trim() }
+        nodeIds.groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys.forEach { add("duplicate node id: $it") }
+        edgeIds.groupBy { it }
+            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+            .keys.forEach { add("duplicate edge id: $it") }
+
+        // Edge reference integrity
+        val nodeIdSet = nodes.map { it.id }.toSet()
+        sequences.forEach { edge ->
+            val label = edge.id.ifBlank { "<blank>" }
+            if (edge.sourceRef !in nodeIdSet) {
+                add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
+            }
+            if (edge.targetRef !in nodeIdSet) {
+                add("edge $label targetRef '${edge.targetRef}' does not match any node id")
+            }
+            if (edge.sourceRef == edge.targetRef) {
+                add("edge $label must not self-reference source and target")
+            }
+        }
+
+        // Required top-level events
+        if (nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
+            add("definition must contain at least one START_EVENT")
+        }
+        if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
+            add("definition must contain at least one END_EVENT")
+        }
+    }
+}
 
 data class BpmnMessageRef(
     @field:NotBlank
