@@ -32,7 +32,7 @@ complexity:
     ignoreOverridden: true
     # Embabel's planner creates one Action/Condition per annotated method, so framework-dispatched
     # methods are a structural floor, not a cohesion smell — exclude them from the function count.
-    ignoreAnnotatedFunctions: ['Action', 'Condition']
+    ignoreAnnotatedFunctions: ['Action', 'Condition', 'Test']
   LongParameterList:
     active: true
     constructorThreshold: 10
