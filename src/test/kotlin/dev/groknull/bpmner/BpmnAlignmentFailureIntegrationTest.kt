@@ -74,10 +74,9 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
             ProcessInputAssessment::class.java,
         ).thenReturn(validAssessment())
 
-        @Suppress("UNCHECKED_CAST")
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
         ).thenReturn(FlatContractTestFixtures.minimalContract())
 
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, FlatBpmnDefinition::class.java)

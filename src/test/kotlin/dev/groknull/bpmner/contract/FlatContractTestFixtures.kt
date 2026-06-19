@@ -28,9 +28,11 @@ object FlatContractTestFixtures {
     /**
      * The runtime class of [FlatProcessContract], exposed for use in `whenCreateObject`
      * mocking without requiring callers to import the internal type.
+     * Cast once here as [Class]<[Any]> so callers need no `@Suppress("UNCHECKED_CAST")`.
      */
     @JvmField
-    val FLAT_PROCESS_CONTRACT_CLASS: Class<*> = FlatProcessContract::class.java
+    @Suppress("UNCHECKED_CAST")
+    val FLAT_PROCESS_CONTRACT_CLASS: Class<Any> = FlatProcessContract::class.java as Class<Any>
 
     /**
      * A minimal valid [FlatProcessContract] suitable for mocking LLM output in e2e/integration

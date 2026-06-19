@@ -146,10 +146,9 @@ internal object PromptFixtures {
 
     // Use the contract module's published test fixture class to avoid reaching into
     // contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
-    @Suppress("UNCHECKED_CAST")
     val contract: PromptSite<Any> = site(
         template = "bpmner/extract_contract",
-        outputType = FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
+        outputType = FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
         contribution = requestContribution,
     ) { contractExtractionModel() }
 

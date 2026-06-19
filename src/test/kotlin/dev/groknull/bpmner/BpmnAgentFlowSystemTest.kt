@@ -97,10 +97,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
         // 1. Mock Contract — use the contract module's published test fixture to avoid
         //    reaching into contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
-        @Suppress("UNCHECKED_CAST")
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
         ).thenReturn(FlatContractTestFixtures.makeToastContract())
 
         // 2. Mock Generation
@@ -183,10 +182,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ProcessInputAssessment::class.java,
         ).thenReturn(assessment)
 
-        @Suppress("UNCHECKED_CAST")
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
         ).thenReturn(FlatContractTestFixtures.makeToastContract())
 
         whenCreateObject(

@@ -74,11 +74,10 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         return objectMapper.readValue(json)
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun loadContractFixtureObject(name: String): Any {
         val json = BpmnGenerationPipelineTest::class.java.getResource("/parity/$name")?.readText()
             ?: error("Fixture not found: /parity/$name")
-        return objectMapper.readValue(json, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>)
+        return objectMapper.readValue(json, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS)
     }
 
     // Mockito's any() returns a Java platform-typed null; passing it straight to a non-null Kotlin
@@ -110,8 +109,7 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
 
         // Use the contract module's published test fixture to avoid reaching into
         // contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
-        @Suppress("UNCHECKED_CAST")
-        whenCreateObject({ true }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>)
+        whenCreateObject({ true }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS)
             .thenReturn(loadContractFixtureObject("canonicalContractFlat.json"))
 
         whenCreateObject({ true }, FlatBpmnDefinition::class.java)

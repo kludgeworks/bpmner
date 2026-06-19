@@ -117,9 +117,8 @@ class ExtractContractTemplateTest {
 
         // Use the contract module's published test fixture to obtain FlatProcessContract.class
         // without reaching into contract.internal (S5 — ARCHITECTURE §5 S5, §1.5).
-        @Suppress("UNCHECKED_CAST")
         val schema = FilteringJacksonOutputConverter(
-            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
             jacksonObjectMapper(),
             Predicate { true },
         ).format

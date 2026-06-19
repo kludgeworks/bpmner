@@ -7,7 +7,6 @@ package dev.groknull.bpmner.rules
 
 import dev.groknull.bpmner.rules.internal.domain.DefaultRuleEngine
 import dev.groknull.bpmner.rules.internal.domain.InMemoryRuleRegistry
-import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry
 import dev.groknull.bpmner.rules.internal.domain.beans.bpmnerKotlinRuleContext
 import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
 import dev.groknull.bpmner.rules.internal.domain.compiled.DefaultFlowRule
@@ -71,19 +70,4 @@ object RulesTestFixtures {
     fun fullBeanRuleContext(
         lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
     ): AnnotationConfigApplicationContext = bpmnerKotlinRuleContext(lintConfig)
-
-    /**
-     * Returns a [RuleRegistry] populated from the full Kotlin bean rule source.
-     * The returned registry exposes only the [RuleRegistry] root interface.
-     *
-     * Note: the caller is responsible for ensuring the context is closed after use.
-     * Prefer [fullBeanRuleContext] when the context lifetime needs explicit management.
-     */
-    @JvmStatic
-    fun fullBeanRegistry(
-        lintConfig: BpmnerLintConfig = BpmnerLintConfig(),
-    ): RuleRegistry {
-        val ctx = bpmnerKotlinRuleContext(lintConfig)
-        return ctx.getBean(BeanRuleRegistry::class.java)
-    }
 }
