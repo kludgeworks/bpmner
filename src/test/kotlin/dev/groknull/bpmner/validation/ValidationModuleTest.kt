@@ -12,6 +12,15 @@ import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
 
+/**
+ * Validates that the `validation` module context bootstraps and exposes its root-package ports.
+ *
+ * BootstrapMode.ALL_DEPENDENCIES: the `validation` module depends on `rules`, which requires
+ * the full `BeanRuleRegistry` Spring wiring and its `*RuleConfig` `@Configuration` beans. These
+ * are transitive dependencies of `rules` (e.g. the `BpmnNlpConfig` and category rule configs).
+ * ALL_DEPENDENCIES ensures the full transitive Spring context is available so every `rules` bean
+ * can be wired into `validation`'s context. (S5 — ARCHITECTURE §5 S5, G8)
+ */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
     properties = [

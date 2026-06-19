@@ -5,9 +5,8 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.rules.internal.domain.InMemoryRuleRegistry
-import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry
-import dev.groknull.bpmner.rules.internal.domain.beans.bpmnerKotlinRuleContext
+import dev.groknull.bpmner.rules.RuleRegistry
+import dev.groknull.bpmner.rules.RulesTestFixtures
 import dev.groknull.bpmner.validation.internal.domain.LlmValidator
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterAll
@@ -23,6 +22,10 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * Plan exit gate 7 + arch §162-167, §243-255: the guidance text must remain populated and
  * structurally correct when `llmRuleSpecs()` is the source instead of the removed
  * `checkPrimitive`-based `isLlmJudged` filter.
+ *
+ * The rule context is obtained via [RulesTestFixtures.fullBeanRuleContext] — the published
+ * `rules` root test fixture — so this test does not reach into `rules.internal.*` directly
+ * (S5 — ARCHITECTURE §5 S5, §1.5).
  */
 @Suppress("DEPRECATION")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -32,8 +35,10 @@ internal class LlmValidatorGuidanceTest {
 
     @BeforeAll
     fun setUp() {
-        beanContext = bpmnerKotlinRuleContext()
-        val registry = beanContext.getBean(BeanRuleRegistry::class.java)
+        // Use the rules module's published test fixture to build the Spring context,
+        // avoiding direct imports from rules.internal (S5 — ARCHITECTURE §5 S5, §1.5).
+        beanContext = RulesTestFixtures.fullBeanRuleContext()
+        val registry = beanContext.getBean(RuleRegistry::class.java)
         validator = LlmValidator(registry)
     }
 
@@ -73,8 +78,8 @@ internal class LlmValidatorGuidanceTest {
 
     @Test
     fun `getLlmRuleGuidance returns empty string when registry has no LLM specs`() {
-        // Use a registry stub that returns empty llmRuleSpecs (default on InMemoryRuleRegistry)
-        val emptyRegistry = InMemoryRuleRegistry(emptyList())
+        // Use an empty registry from the rules module's published test fixture.
+        val emptyRegistry = RulesTestFixtures.emptyRegistry()
         val emptyValidator = LlmValidator(emptyRegistry)
 
         assertThat(emptyValidator.getLlmRuleGuidance()).isEmpty()

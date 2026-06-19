@@ -16,9 +16,9 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.asPromptContributor
@@ -144,9 +144,12 @@ internal object PromptFixtures {
     // excluded — this probe tracks the drift-prone surface: template + request contribution + schema.
     private val requestContribution: () -> String = { canonicalRequest.asPromptContributor().contribution() }
 
-    val contract: PromptSite<FlatProcessContract> = site(
+    // Use the contract module's published test fixture class to avoid reaching into
+    // contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
+    @Suppress("UNCHECKED_CAST")
+    val contract: PromptSite<Any> = site(
         template = "bpmner/extract_contract",
-        outputType = FlatProcessContract::class.java,
+        outputType = FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>,
         contribution = requestContribution,
     ) { contractExtractionModel() }
 

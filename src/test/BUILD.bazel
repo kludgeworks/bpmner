@@ -82,6 +82,7 @@ JUNIT5_DEPS = [
 # New test files are picked up automatically — there is no file list to maintain.
 _TIMEOUTS = {
     "AgentDeploymentValidationBootTest": "moderate",
+    "AlignmentModuleTest": "moderate",
     "BpmnAgentFlowSystemTest": "moderate",
     "BpmnConfigBindingTest": "moderate",
     "BpmnContractFidelityCheckerTest": "moderate",
@@ -93,10 +94,17 @@ _TIMEOUTS = {
     "BpmnXmlToDefinitionConverterTest": "moderate",
     "BpmnerModuleBoundariesTest": "moderate",
     "BpmnerModulithTest": "moderate",
+    "ContractModuleTest": "moderate",
     "GenerationModuleTest": "moderate",
+    "LayoutModuleTest": "moderate",
+    "ObservabilityModuleTest": "moderate",
+    "OrchestrationModuleTest": "moderate",
     "PklRuleCatalogTest": "moderate",
+    "ReadinessModuleTest": "moderate",
+    "RepairModuleTest": "moderate",
     "RepairStartupValidationTest": "moderate",
     "RuleSourceParityTest": "moderate",
+    "RulesModuleTest": "moderate",
     "ValidationModuleTest": "moderate",
 }
 
@@ -115,6 +123,7 @@ _SHARD_COUNTS = {
 
 _TAGS = {
     "AgentDeploymentValidationBootTest": ["spring-context"],
+    "AlignmentModuleTest": ["spring-context"],
     "BpmnAgentFlowSystemTest": ["spring-context"],
     "BpmnConfigBindingTest": ["spring-context"],
     "BpmnGuardrailSystemTest": ["spring-context"],
@@ -123,8 +132,15 @@ _TAGS = {
     "BpmnWebControllerTest": ["spring-context"],
     "BpmnerModuleBoundariesTest": ["spring-context"],
     "BpmnerModulithTest": ["spring-context"],
+    "ContractModuleTest": ["spring-context"],
     "GenerationModuleTest": ["spring-context"],
+    "LayoutModuleTest": ["spring-context"],
+    "ObservabilityModuleTest": ["spring-context"],
+    "OrchestrationModuleTest": ["spring-context"],
+    "ReadinessModuleTest": ["spring-context"],
+    "RepairModuleTest": ["spring-context"],
     "RepairStartupValidationTest": ["spring-context"],
+    "RulesModuleTest": ["spring-context"],
     "ValidationModuleTest": ["spring-context"],
 }
 

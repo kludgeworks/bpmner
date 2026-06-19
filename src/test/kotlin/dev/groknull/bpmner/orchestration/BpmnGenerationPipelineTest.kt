@@ -1,3 +1,8 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
 package dev.groknull.bpmner.orchestration
 
 import com.embabel.agent.api.common.AgentPlatformTypedOps
@@ -8,7 +13,7 @@ import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
@@ -69,6 +74,13 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         return objectMapper.readValue(json)
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun loadContractFixtureObject(name: String): Any {
+        val json = BpmnGenerationPipelineTest::class.java.getResource("/parity/$name")?.readText()
+            ?: error("Fixture not found: /parity/$name")
+        return objectMapper.readValue(json, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>)
+    }
+
     // Mockito's any() returns a Java platform-typed null; passing it straight to a non-null Kotlin
     // parameter trips Kotlin's null check. Returning a genuine non-null T sidesteps it.
     private fun <T> anyNonNull(): T {
@@ -96,8 +108,12 @@ class BpmnGenerationPipelineTest : EmbabelMockitoIntegrationTest() {
         whenCreateObject({ true }, ProcessInputAssessment::class.java)
             .thenReturn(readyAssessment)
 
-        whenCreateObject({ true }, FlatProcessContract::class.java)
-            .thenReturn(loadFixtureObject("canonicalContractFlat.json"))
+        // Use the contract module's published test fixture to avoid reaching into
+        // contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
+        @Suppress("UNCHECKED_CAST")
+        whenCreateObject({ true }, FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS as Class<Any>)
+            .thenReturn(loadContractFixtureObject("canonicalContractFlat.json"))
+
         whenCreateObject({ true }, FlatBpmnDefinition::class.java)
             .thenReturn(loadFixtureObject("canonicalOutlineFlat.json"))
         whenCreateObject({ true }, AlignmentFindings::class.java)

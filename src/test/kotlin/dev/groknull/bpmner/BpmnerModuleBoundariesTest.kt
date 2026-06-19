@@ -8,7 +8,6 @@ package dev.groknull.bpmner
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.ConditionEvents
@@ -19,12 +18,12 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class BpmnerModuleBoundariesTest {
-    // Use the shared excludeBazelTestClasses helper (from BpmnerArchUnitImports.kt).
-    // Combine with DoNotIncludeTests() so only production classes are scanned.
-    // TODO(#424) widen to test scope after S5 fixes test-side reaches
+    // Use the shared excludeBazelTestClasses helper (from BpmnerArchUnitImports.kt) to exclude
+    // Bazel test JARs from the Kotlin synthetic-class noise filter. Both prod AND test classes
+    // are now scanned (DoNotIncludeTests() removed, S5 — ARCHITECTURE §1.10, §5 S5, G4):
+    // test-side cross-module internal reaches are fixed, so the boundary rule is safe to widen.
     private val importer =
         ClassFileImporter()
-            .withImportOption(ImportOption.DoNotIncludeTests())
             .withImportOption(excludeBazelTestClasses)
     private val classes =
         importer
@@ -67,7 +66,7 @@ class BpmnerModuleBoundariesTest {
     }
 
     /**
-     * Cross-module internal boundary rule (S2, Rule 1).
+     * Cross-module internal boundary rule (S2, Rule 1 — widened to test scope in S5).
      *
      * For each of the 10 internal-bearing modules `<m>`, no class outside module `<m>` may
      * depend on any class in `dev.groknull.bpmner.<m>.internal..`.
@@ -79,13 +78,14 @@ class BpmnerModuleBoundariesTest {
      * the single-predicate design flaw where excluding all 10 modules from "outsiders" would
      * prevent any cross-module reach from being flagged (REVIEW-S2 rows #1 / #3).
      *
-     * Scoped to **prod** classes only (DoNotIncludeTests + excludeBazelTestClasses above).
-     * TODO(#424) widen to test scope after S5 fixes test-side reaches
+     * Scoped to **prod AND test** classes (S5 widens to test scope — ARCHITECTURE §1.10,
+     * §5 S5, G4). All 11 test-side cross-module reaches in PLAN-S5 §0 are fixed before
+     * this widen, satisfying ARCHITECTURE §6 risk 3 ("fix files first, widen second").
      *
      * Verified green at ab75950: prod cross-module internal reach count = 0 (ARCHITECTURE §0.A).
      */
     @Test
-    fun `no prod class accesses another module's internal package`() {
+    fun `no class accesses another module's internal package`() {
         for (module in INTERNAL_BEARING_MODULES) {
             perModuleInternalRule(module).check(classes)
         }
@@ -117,9 +117,9 @@ class BpmnerModuleBoundariesTest {
      */
     @Test
     fun `cross-module internal rule is proven non-vacuous for each module (planted-violation proof)`() {
+        // Widen proof to include both prod and test classes (S5 — ARCHITECTURE §1.10, §5 S5).
         val prodClasses =
             ClassFileImporter()
-                .withImportOption(ImportOption.DoNotIncludeTests())
                 .withImportOption(excludeBazelTestClasses)
                 .importPackages("dev.groknull.bpmner")
 

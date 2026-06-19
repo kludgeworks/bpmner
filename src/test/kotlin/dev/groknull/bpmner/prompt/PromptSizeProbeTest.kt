@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.prompt
 
-import dev.groknull.bpmner.repair.internal.adapter.outbound.RepairFixtures
+import dev.groknull.bpmner.repair.RepairTestFixtures
 import org.junit.jupiter.api.DynamicTest
 import org.junit.jupiter.api.TestFactory
 import kotlin.test.fail
@@ -21,8 +21,10 @@ import kotlin.test.fail
  * probe still reports a self-describing name in the test output without a dedicated `@Test`
  * method per call-site.
  *
- * Canonical inputs live in [PromptFixtures] and [RepairFixtures] so the update binary and the
- * behaviour test can reuse them.
+ * Canonical inputs live in [PromptFixtures] and [RepairTestFixtures] so the update binary and
+ * the behaviour test can reuse them. Uses [RepairTestFixtures] (the `repair` module's published
+ * root test fixture) instead of reaching directly into `repair.internal.adapter.outbound`
+ * (S5 — ARCHITECTURE §5 S5, §1.5).
  */
 class PromptSizeProbeTest {
     private val ratchet = PromptBaselineRatchet.fromClasspath()
@@ -41,8 +43,8 @@ class PromptSizeProbeTest {
             probe("alignmentFullPayload") { PromptFixtures.alignment.fullPayload().length },
             probe("readinessPrompt") { PromptFixtures.readiness.render().length },
             probe("readinessFullPayload") { PromptFixtures.readiness.fullPayload().length },
-            probe("repairPatchPrompt") { RepairFixtures.renderPatchFeedback().length },
-            probe("repairFullPrompt") { RepairFixtures.renderFullFeedback().length },
+            probe("repairPatchPrompt") { RepairTestFixtures.renderPatchFeedback().length },
+            probe("repairFullPrompt") { RepairTestFixtures.renderFullFeedback().length },
         )
     }
 }
