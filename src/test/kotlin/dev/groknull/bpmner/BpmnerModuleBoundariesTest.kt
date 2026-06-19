@@ -67,7 +67,7 @@ class BpmnerModuleBoundariesTest {
     }
 
     /**
-     * Cross-module internal boundary rule (S2, Rule 1 — widened to test scope in S5).
+     * Cross-module internal boundary rule (S2, Rule 1 — scoped to prod and test classes).
      *
      * For each of the 10 internal-bearing modules `<m>`, no class outside module `<m>` may
      * depend on any class in `dev.groknull.bpmner.<m>.internal..`.
