@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -5,18 +5,18 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnBusinessRuleTask
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnExclusiveGateway
-import dev.groknull.bpmner.core.BpmnManualTask
-import dev.groknull.bpmner.core.BpmnMessageRef
-import dev.groknull.bpmner.core.BpmnReceiveTask
-import dev.groknull.bpmner.core.BpmnScriptTask
-import dev.groknull.bpmner.core.BpmnSendTask
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnExclusiveGateway
+import dev.groknull.bpmner.domain.BpmnManualTask
+import dev.groknull.bpmner.domain.BpmnMessageRef
+import dev.groknull.bpmner.domain.BpmnReceiveTask
+import dev.groknull.bpmner.domain.BpmnScriptTask
+import dev.groknull.bpmner.domain.BpmnSendTask
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUserTask
 
 /**
  * Shared test fixtures for generation package tests.

@@ -5,11 +5,12 @@
 
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ClarificationExchange
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.generation.asPromptContributor
 import dev.groknull.bpmner.generation.generationPrompt
+import dev.groknull.bpmner.readiness.ClarificationExchange
+import dev.groknull.bpmner.readiness.MissingProcessArea
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -35,7 +36,7 @@ class BpmnRequestTest {
                 clarificationHistory = clarifications,
             )
 
-        val contribution = request.contribution()
+        val contribution = request.asPromptContributor().contribution()
 
         assertFalse(contribution.contains("q-trigger"), "contribution should not mention question id")
         assertFalse(contribution.contains("What starts the process?"), "contribution should not include question text")
@@ -51,7 +52,7 @@ class BpmnRequestTest {
         // annotations (NODE_ID_DESCRIPTION), BpmnDefinitionValidator, and generate_bpmn.jinja, so
         // they must not appear in the system-message contribution.
         assertTrue(
-            BpmnRequest(processDescription = "Ship the order").contribution().isEmpty(),
+            BpmnRequest(processDescription = "Ship the order").asPromptContributor().contribution().isEmpty(),
             "contribution should be empty when no style guide is supplied",
         )
 
@@ -59,7 +60,7 @@ class BpmnRequestTest {
             BpmnRequest(
                 processDescription = "Ship the order",
                 styleGuide = "Use sentence case for task names.",
-            ).contribution()
+            ).asPromptContributor().contribution()
 
         assertTrue(withGuide.contains("Use sentence case for task names."), "style guide should be carried")
         assertFalse(

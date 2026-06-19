@@ -7,9 +7,9 @@ package dev.groknull.bpmner
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
 import dev.groknull.bpmner.readiness.ClarificationQuestion
+import dev.groknull.bpmner.readiness.MissingProcessArea
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

@@ -7,7 +7,7 @@ package dev.groknull.bpmner.readiness
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 

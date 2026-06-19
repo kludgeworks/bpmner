@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.web
 
 import dev.groknull.bpmner.api.GenerationMode
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.BpmnAgentInvoker
 import org.springframework.stereotype.Service
 

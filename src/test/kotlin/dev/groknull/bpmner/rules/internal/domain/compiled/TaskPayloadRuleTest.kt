@@ -7,14 +7,14 @@ package dev.groknull.bpmner.rules.internal.domain.compiled
 
 import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnBusinessRuleTask
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnMessageRef
-import dev.groknull.bpmner.core.BpmnReceiveTask
-import dev.groknull.bpmner.core.BpmnSendTask
-import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnMessageRef
+import dev.groknull.bpmner.domain.BpmnReceiveTask
+import dev.groknull.bpmner.domain.BpmnSendTask
+import dev.groknull.bpmner.domain.BpmnStartEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

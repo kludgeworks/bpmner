@@ -7,8 +7,8 @@ package dev.groknull.bpmner.repair.internal.adapter.outbound
 
 import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.api.typeName
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnNode
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 

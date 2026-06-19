@@ -6,10 +6,10 @@
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.mockito.Mockito.mock

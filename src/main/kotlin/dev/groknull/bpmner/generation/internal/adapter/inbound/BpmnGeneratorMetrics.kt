@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.inbound
 
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnExclusiveGateway
-import dev.groknull.bpmner.core.BpmnInclusiveGateway
-import dev.groknull.bpmner.core.BpmnParallelGateway
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnExclusiveGateway
+import dev.groknull.bpmner.domain.BpmnInclusiveGateway
+import dev.groknull.bpmner.domain.BpmnParallelGateway
 import dev.groknull.bpmner.generation.OutlineMetrics
 import org.springframework.stereotype.Component
 

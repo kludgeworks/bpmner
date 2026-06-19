@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnElementIndex
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnModelFactory
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance

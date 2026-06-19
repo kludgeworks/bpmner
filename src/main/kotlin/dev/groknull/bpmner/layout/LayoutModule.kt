@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * visual coordinates. Triggers downstream repair via re-validation when the
  * laid-out form surfaces additional structural issues.
  */
-@ApplicationModule(allowedDependencies = ["api", "core", "repair", "validation"])
+@ApplicationModule(allowedDependencies = ["api", "domain", "repair", "validation"])
 internal object LayoutModule

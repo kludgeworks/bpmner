@@ -7,9 +7,9 @@ package dev.groknull.bpmner.readiness
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
-import dev.groknull.bpmner.core.SourceEvidence
+import dev.groknull.bpmner.readiness.MissingProcessArea
+import dev.groknull.bpmner.readiness.ReadinessDimension
+import dev.groknull.bpmner.readiness.SourceEvidence
 import jakarta.validation.Valid
 import jakarta.validation.constraints.Min
 import jakarta.validation.constraints.NotBlank

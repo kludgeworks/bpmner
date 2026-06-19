@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
-import dev.groknull.bpmner.core.MissingProcessArea
+import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter

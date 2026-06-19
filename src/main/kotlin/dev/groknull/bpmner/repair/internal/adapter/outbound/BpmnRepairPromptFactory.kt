@@ -10,13 +10,13 @@ import com.embabel.chat.Message
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
 import com.embabel.common.textio.template.TemplateRenderer
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.generationPrompt
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
 import dev.groknull.bpmner.repair.internal.domain.BpmnUnrecognizedElementScanner
+import dev.groknull.bpmner.rules.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation

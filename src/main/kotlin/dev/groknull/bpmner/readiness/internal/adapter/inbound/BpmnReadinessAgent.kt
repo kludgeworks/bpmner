@@ -10,8 +10,9 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
+import com.embabel.common.ai.prompt.PromptContributor
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
@@ -40,7 +41,10 @@ internal class BpmnReadinessAgent(
         request: BpmnRequest,
         context: OperationContext,
     ): ProcessInputAssessment {
-        val promptRunner = config.readinessAssessor.promptRunner(context).withPromptContributor(request)
+        val requestContribution = request.styleGuide?.let { "## Style guide\n\n$it" } ?: ""
+        val promptRunner = config.readinessAssessor
+            .promptRunner(context)
+            .withPromptContributor(PromptContributor.fixed(requestContribution))
         val modelAssessment = promptRunner
             .creating(ProcessInputAssessment::class.java)
             .fromTemplate("bpmner/assess_readiness", templateModel(request))

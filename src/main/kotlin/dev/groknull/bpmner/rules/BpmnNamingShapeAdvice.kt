@@ -3,7 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.rules
+
+import dev.groknull.bpmner.domain.*
 
 /**
  * Kind-aware naming-shape advice for the generator and repair prompts. Codifies the
@@ -30,7 +32,7 @@ package dev.groknull.bpmner.core
  * default (no advice). Add an explicit `is` arm above the `else` when introducing a new
  * canonical subtype.
  */
-internal object BpmnNamingShapeAdvice {
+object BpmnNamingShapeAdvice {
     data class Advice(
         val kind: String,
         val shape: String,

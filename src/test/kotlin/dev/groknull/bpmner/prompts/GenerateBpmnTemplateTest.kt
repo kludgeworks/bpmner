@@ -19,8 +19,8 @@ import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.rules.BpmnNamingShapeAdvice
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

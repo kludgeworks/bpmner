@@ -11,11 +11,11 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUserTask
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -170,7 +170,7 @@ class CompositeCheckTest {
     )
 
     private fun context(
-        nodes: List<dev.groknull.bpmner.core.BpmnNode>,
+        nodes: List<dev.groknull.bpmner.domain.BpmnNode>,
         edges: List<BpmnEdge>? = null,
     ): BpmnDefinitionContext {
         val actualEdges = edges ?: nodes.zipWithNext().mapIndexed { index, (source, target) ->

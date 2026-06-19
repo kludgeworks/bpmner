@@ -7,8 +7,8 @@ package dev.groknull.bpmner.generation
 
 import com.embabel.agent.api.common.OperationContext
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.hexagonal.PrimaryPort

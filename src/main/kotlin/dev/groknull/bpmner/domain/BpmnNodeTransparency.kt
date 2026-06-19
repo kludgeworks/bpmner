@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
 /**
  * Whether [this] node is "semantically transparent" — it carries no business meaning of its

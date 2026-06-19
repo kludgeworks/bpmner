@@ -7,7 +7,7 @@ package dev.groknull.bpmner.validation
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnDefinition
 import org.springframework.stereotype.Component
 import java.security.MessageDigest
 

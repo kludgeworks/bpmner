@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
 import jakarta.validation.Valid
+import org.springframework.ai.tool.annotation.Tool
 
 internal const val MAIN_PHASE_OWNER = "phase:main"
 
@@ -38,6 +39,7 @@ data class LaidOutProcessGraph(
 
     fun ownerForObjectRef(objectRef: String?): String? = ownedGraph.ownerForObjectRef(objectRef)
 
+    @Tool
     fun validateOwnership(): List<String> = buildList {
         if (ownedGraph.objectOwnersByObjectRef.isEmpty()) return@buildList
         definition.nodes.forEach { node ->

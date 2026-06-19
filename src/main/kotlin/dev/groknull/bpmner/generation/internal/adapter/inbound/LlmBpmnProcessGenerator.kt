@@ -7,14 +7,13 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.BpmnFidelitySeverity
 import dev.groknull.bpmner.generation.BpmnProcessGenerator
@@ -25,6 +24,7 @@ import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.generation.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
+import dev.groknull.bpmner.rules.BpmnNamingShapeAdvice
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnRepairScope
@@ -142,7 +142,7 @@ internal class LlmBpmnProcessGenerator(
             definition.nodes.forEach { put("nodes[id=${it.id}]", MAIN_PHASE_OWNER) }
             definition.sequences.forEach { put("sequences[id=${it.id}]", MAIN_PHASE_OWNER) }
         }
-        val composed = dev.groknull.bpmner.core.ComposedProcessGraph(
+        val composed = dev.groknull.bpmner.domain.ComposedProcessGraph(
             definition = definition,
             objectOwnersByObjectRef = objectOwners,
         )
@@ -166,7 +166,7 @@ internal class LlmBpmnProcessGenerator(
                 put("${edge.id}_di", owner)
             }
         }
-        val owned = dev.groknull.bpmner.core.OwnedElementGraph(
+        val owned = dev.groknull.bpmner.domain.OwnedElementGraph(
             composedGraph = composed,
             elementOwnersByElementId = elementOwners,
             objectOwnersByObjectRef = objectOwners,

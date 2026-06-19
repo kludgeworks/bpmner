@@ -25,9 +25,9 @@ import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnRequestDraft

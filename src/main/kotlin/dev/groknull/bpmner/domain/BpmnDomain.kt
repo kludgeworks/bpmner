@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
-import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -50,6 +49,8 @@ import dev.groknull.bpmner.api.BpmnParallelGateway as ApiBpmnParallelGateway
 import dev.groknull.bpmner.api.BpmnParticipant as ApiBpmnParticipant
 import dev.groknull.bpmner.api.BpmnReceiveTask as ApiBpmnReceiveTask
 import dev.groknull.bpmner.api.BpmnRequest as ApiBpmnRequest
+import dev.groknull.bpmner.api.ClarificationExchange as ApiClarificationExchange
+import org.springframework.ai.tool.annotation.Tool
 import dev.groknull.bpmner.api.BpmnScriptTask as ApiBpmnScriptTask
 import dev.groknull.bpmner.api.BpmnSendTask as ApiBpmnSendTask
 import dev.groknull.bpmner.api.BpmnServiceTask as ApiBpmnServiceTask
@@ -76,16 +77,8 @@ data class BpmnRequest(
     override val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
-    override val clarificationHistory: List<ClarificationExchange> = emptyList(),
-) : ApiBpmnRequest,
-    PromptContributor {
-    // Contributes only the per-request style guide. BPMN generation rules are owned elsewhere:
-    // node-id / type-prefix conventions by NODE_ID_DESCRIPTION on FlatBpmnNode; id-uniqueness,
-    // reference resolution, and the >=1 START/END requirement by BpmnDefinitionValidator;
-    // sourceRef!=targetRef and conditionExpression guidance by generate_bpmn.jinja. Each template
-    // states its own role, so no system-level role framing is added here.
-    override fun contribution(): String = styleGuide?.let { "## Style guide\n\n$it" } ?: ""
-}
+    override val clarificationHistory: List<ApiClarificationExchange> = emptyList(),
+) : ApiBpmnRequest
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 data class BpmnDefinition(
@@ -167,6 +160,7 @@ data class BpmnDefinition(
      * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
      *   (i.e. [BpmnNode.parentRef] == null for both).
      */
+    @Tool
     fun validateStructure(): List<String> {
         val nodeIdSet = nodes.map { it.id }.toSet()
         return buildList {

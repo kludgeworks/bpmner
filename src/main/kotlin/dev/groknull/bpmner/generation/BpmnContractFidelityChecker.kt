@@ -20,34 +20,34 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.kindName
 import dev.groknull.bpmner.contract.loop
-import dev.groknull.bpmner.core.BpmnBusinessRuleTask
-import dev.groknull.bpmner.core.BpmnCallActivity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnErrorEventDefinition
-import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.core.BpmnEventBasedGateway
-import dev.groknull.bpmner.core.BpmnEventDefinition
-import dev.groknull.bpmner.core.BpmnExclusiveGateway
-import dev.groknull.bpmner.core.BpmnInclusiveGateway
-import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.core.BpmnManualTask
-import dev.groknull.bpmner.core.BpmnMessageEventDefinition
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnNoneEventDefinition
-import dev.groknull.bpmner.core.BpmnParallelGateway
-import dev.groknull.bpmner.core.BpmnReceiveTask
-import dev.groknull.bpmner.core.BpmnScriptTask
-import dev.groknull.bpmner.core.BpmnSendTask
-import dev.groknull.bpmner.core.BpmnServiceTask
-import dev.groknull.bpmner.core.BpmnSignalEventDefinition
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnSubProcess
-import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.core.BpmnTimerEventDefinition
-import dev.groknull.bpmner.core.BpmnUserTask
-import dev.groknull.bpmner.core.isSemanticallyTransparent
+import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
+import dev.groknull.bpmner.domain.BpmnCallActivity
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
+import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.domain.BpmnEventBasedGateway
+import dev.groknull.bpmner.domain.BpmnEventDefinition
+import dev.groknull.bpmner.domain.BpmnExclusiveGateway
+import dev.groknull.bpmner.domain.BpmnInclusiveGateway
+import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.domain.BpmnManualTask
+import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
+import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
+import dev.groknull.bpmner.domain.BpmnParallelGateway
+import dev.groknull.bpmner.domain.BpmnReceiveTask
+import dev.groknull.bpmner.domain.BpmnScriptTask
+import dev.groknull.bpmner.domain.BpmnSendTask
+import dev.groknull.bpmner.domain.BpmnServiceTask
+import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnSubProcess
+import dev.groknull.bpmner.domain.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
+import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.domain.isSemanticallyTransparent
 import dev.groknull.bpmner.generation.BpmnFidelityCode
 import dev.groknull.bpmner.generation.BpmnFidelityIssue
 import dev.groknull.bpmner.generation.BpmnFidelityReport
@@ -62,7 +62,7 @@ import org.springframework.stereotype.Component
  *
  * Operates under the unified-id convention established in PR #180: a contract decision's id
  * IS the BPMN gateway node's id, verbatim. Element kind is carried by the [BpmnNode] subtype
- * (see the sealed hierarchy in [dev.groknull.bpmner.core.BpmnDomain]), not by an id prefix.
+ * (see the sealed hierarchy in [dev.groknull.bpmner.domain.BpmnDomain]), not by an id prefix.
  * Resolution is exact-match; no string-shape heuristics.
  *
  * Per-decision checks (each fires independently):

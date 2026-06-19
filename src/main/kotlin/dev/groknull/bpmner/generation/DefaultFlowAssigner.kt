@@ -7,8 +7,8 @@ package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

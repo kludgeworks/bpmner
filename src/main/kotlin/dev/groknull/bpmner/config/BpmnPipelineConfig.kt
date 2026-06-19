@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.config
 
-import dev.groknull.bpmner.core.BpmnAlignmentConfig
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnContractConfig
-import dev.groknull.bpmner.core.BpmnReadinessConfig
+import dev.groknull.bpmner.config.BpmnAlignmentConfig
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.config.BpmnContractConfig
+import dev.groknull.bpmner.config.BpmnReadinessConfig
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 

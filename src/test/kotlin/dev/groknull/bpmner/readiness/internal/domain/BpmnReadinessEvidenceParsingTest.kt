@@ -56,7 +56,7 @@ class BpmnReadinessEvidenceParsingTest {
 
         val checked =
             BpmnReadinessPostChecker().apply(
-                dev.groknull.bpmner.core.BpmnRequest(
+                dev.groknull.bpmner.domain.BpmnRequest(
                     "An employee submits a purchase request, then it is reviewed, and finally it is completed.",
                 ),
                 assessment,

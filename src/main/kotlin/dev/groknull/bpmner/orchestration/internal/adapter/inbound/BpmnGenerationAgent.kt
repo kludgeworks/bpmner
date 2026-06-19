@@ -21,10 +21,9 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.api.GenerationMode
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.ClarificationExchange
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnProcessGenerator
 import dev.groknull.bpmner.generation.BpmnRequestDraft
@@ -36,6 +35,7 @@ import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
+import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext

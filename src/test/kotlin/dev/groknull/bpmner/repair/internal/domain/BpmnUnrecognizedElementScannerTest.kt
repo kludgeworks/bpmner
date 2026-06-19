@@ -6,14 +6,14 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.core.BpmnUnrecognizedNode
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
+import dev.groknull.bpmner.domain.BpmnUserTask
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import kotlin.test.Test

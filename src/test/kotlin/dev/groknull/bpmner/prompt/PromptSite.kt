@@ -22,7 +22,7 @@ import java.util.function.Predicate
  * that bpmner uses everywhere.
  *
  * [contribution] is the `PromptContributor` text the agent attaches via
- * `.withPromptContributor(request)` — it ships in the system message alongside the schema, so
+ * `.withPromptContributor(...)` — it ships in the system message alongside the schema, so
  * [fullPayload] must include it to reflect what the LLM actually receives. Defaults to empty for
  * sites that carry no request contribution.
  */

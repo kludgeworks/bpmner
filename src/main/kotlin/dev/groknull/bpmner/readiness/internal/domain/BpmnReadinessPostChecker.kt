@@ -5,12 +5,12 @@
 
 package dev.groknull.bpmner.readiness.internal.domain
 
-import dev.groknull.bpmner.core.BpmnReadinessConfig
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.MissingProcessArea
-import dev.groknull.bpmner.core.ReadinessDimension
+import dev.groknull.bpmner.config.BpmnReadinessConfig
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ClarificationQuestion
+import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 

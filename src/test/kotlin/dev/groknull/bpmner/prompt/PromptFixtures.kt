@@ -11,6 +11,7 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -18,14 +19,14 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnNamingShapeAdvice
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.SourceEvidence
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.asPromptContributor
+import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.SourceEvidence
+import dev.groknull.bpmner.rules.BpmnNamingShapeAdvice
 
 /**
  * Canonical inputs + per-site [PromptSite] bundles shared between [PromptSizeProbeTest] and
@@ -136,12 +137,12 @@ internal object PromptFixtures {
         )
 
     // contract / alignment / readiness agents attach the BpmnRequest as a PromptContributor
-    // (`.withPromptContributor(request)`), so its `contribution()` ships in their system message
+    // (`.withPromptContributor(...)`), so its `contribution()` ships in their system message
     // and must be measured in fullPayload(). The generation agent does NOT
     // (BpmnGeneratorAgent.kt:82 is a bare `promptRunner(context)`), so its site carries no
     // request contribution. Personas (also contributors) are stable config and intentionally
     // excluded — this probe tracks the drift-prone surface: template + request contribution + schema.
-    private val requestContribution: () -> String = { canonicalRequest.contribution() }
+    private val requestContribution: () -> String = { canonicalRequest.asPromptContributor().contribution() }
 
     val contract: PromptSite<FlatProcessContract> = site(
         template = "bpmner/extract_contract",

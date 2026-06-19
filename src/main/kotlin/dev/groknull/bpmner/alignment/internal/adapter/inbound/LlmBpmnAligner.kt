@@ -9,6 +9,7 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.core.support.InvalidLlmReturnTypeException
+import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
@@ -17,11 +18,11 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -48,7 +49,7 @@ internal class LlmBpmnAligner(
         val promptRunner =
             config.alignmentValidator
                 .promptRunner(context)
-                .withPromptContributor(request)
+                .withPromptContributor(PromptContributor.fixed(request.styleGuide?.let { "## Style guide\n\n$it" } ?: ""))
         val findings = requestAlignmentFindings(promptRunner, request, contract.contract, summary)
 
         val report = postChecker.apply(findings, summary)
