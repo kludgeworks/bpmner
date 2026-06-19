@@ -331,8 +331,8 @@ sealed interface BpmnNode : ApiBpmnNode {
     override val name: String?
 
     // Narrow the inherited api.BpmnNode.withName(): api.BpmnNode return type so that
-    // call sites typed as `core.BpmnNode` see the more specific return type and can pass
-    // results to `core.BpmnDefinition.copy(nodes = ...)` without a cast.
+    // call sites typed as `domain.BpmnNode` see the more specific return type and can pass
+    // results to `domain.BpmnDefinition.copy(nodes = ...)` without a cast.
     override fun withName(name: String?): BpmnNode
 }
 
