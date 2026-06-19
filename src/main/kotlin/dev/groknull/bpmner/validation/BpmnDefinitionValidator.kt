@@ -32,19 +32,24 @@ import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
 import org.jmolecules.ddd.annotation.Service
 import org.springframework.stereotype.Component
 
-private const val BLANK_EDGE_ID_LABEL = "<blank>"
-
 @Service
 @Component
+// BpmnDefinitionValidator implements the non-intrinsic (policy/naming/orchestration) checks that
+// cannot live on the domain type itself. The model-intrinsic structural checks (duplicate ids,
+// edge ref integrity, required START/END) are delegated to BpmnDefinition.validateStructure().
+// The function count reflects this deliberate split: intrinsic behaviour on the domain object,
+// policy enforcement here. Collapsing these into fewer functions would blur that boundary.
 @Suppress("TooManyFunctions")
 internal class BpmnDefinitionValidator {
     fun validate(definition: BpmnDefinition): List<String> {
         val errors = mutableListOf<String>()
 
-        validateDuplicateIds(definition, errors)
+        // Model-intrinsic structural checks are owned by the domain type itself.
+        // BpmnDefinition.validateStructure() covers: duplicate ids, edge ref integrity,
+        // and required top-level START/END events.
+        errors.addAll(definition.validateStructure())
+
         validateNames(definition, errors)
-        validateEdges(definition, errors)
-        validateRequiredEvents(definition, errors)
         validateSubProcesses(definition, errors)
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
@@ -52,26 +57,6 @@ internal class BpmnDefinitionValidator {
         validateSwimlanes(definition, errors)
 
         return errors
-    }
-
-    private fun validateDuplicateIds(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        val nodeIds = definition.nodes.map { it.id.trim() }
-        val edgeIds = definition.sequences.map { it.id.trim() }
-
-        nodeIds
-            .groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys
-            .forEach { errors.add("duplicate node id: $it") }
-
-        edgeIds
-            .groupBy { it }
-            .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
-            .keys
-            .forEach { errors.add("duplicate edge id: $it") }
     }
 
     private fun validateNames(
@@ -89,40 +74,6 @@ internal class BpmnDefinitionValidator {
             if (requiresName && node.name.isNullOrBlank()) {
                 errors.add(BpmnNodeNamingPolicy.missingNameMessage(node))
             }
-        }
-    }
-
-    private fun validateEdges(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        val nodeIdSet = definition.nodes.map { it.id }.toSet()
-        definition.sequences.forEach { edge ->
-            if (edge.sourceRef !in nodeIdSet) {
-                errors.add(
-                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} sourceRef '${edge.sourceRef}' does not match any node id",
-                )
-            }
-            if (edge.targetRef !in nodeIdSet) {
-                errors.add(
-                    "edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} targetRef '${edge.targetRef}' does not match any node id",
-                )
-            }
-            if (edge.sourceRef == edge.targetRef) {
-                errors.add("edge ${edge.id.ifBlank { BLANK_EDGE_ID_LABEL }} must not self-reference source and target")
-            }
-        }
-    }
-
-    private fun validateRequiredEvents(
-        definition: BpmnDefinition,
-        errors: MutableList<String>,
-    ) {
-        if (definition.nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
-            errors.add("definition must contain at least one START_EVENT")
-        }
-        if (definition.nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
-            errors.add("definition must contain at least one END_EVENT")
         }
     }
 
@@ -192,14 +143,15 @@ internal class BpmnDefinitionValidator {
     }
 
     // A sequence flow lives wholly in one scope: its parentRef must match both endpoints' parentRef.
-    // BPMN forbids a flow crossing a subprocess boundary. Dangling endpoints are left to validateEdges.
+    // BPMN forbids a flow crossing a subprocess boundary. Dangling endpoints are reported by
+    // BpmnDefinition.validateStructure() (the edge ref integrity check).
     private fun validateFlowsStayInScope(
         definition: BpmnDefinition,
         nodesById: Map<String, BpmnNode>,
         errors: MutableList<String>,
     ) {
         definition.sequences.forEach { edge ->
-            // Dangling endpoints are reported by validateEdges; only check scope when both resolve.
+            // Dangling endpoints are reported by BpmnDefinition.validateStructure(); only check scope when both resolve.
             val source = nodesById[edge.sourceRef] ?: return@forEach
             val target = nodesById[edge.targetRef] ?: return@forEach
             if (source.parentRef != edge.parentRef || target.parentRef != edge.parentRef) {
@@ -584,7 +536,7 @@ internal class BpmnDefinitionValidator {
         defaultsBySource.forEach { (sourceId, defaults) ->
             val source = nodesById[sourceId]
             // An orphan isDefault edge (sourceRef points to no node) is also invalid here.
-            // The separate validateEdges pass surfaces the missing-sourceRef issue too, but
+            // BpmnDefinition.validateStructure() surfaces the missing-sourceRef issue too, but
             // this rule still owns the "isDefault is only valid on EXCLUSIVE_GATEWAY or
             // INCLUSIVE_GATEWAY" guarantee and must fire on the orphan case to be complete.
             if (source == null || (source !is BpmnExclusiveGateway && source !is BpmnInclusiveGateway)) {

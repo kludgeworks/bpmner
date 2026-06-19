@@ -149,7 +149,50 @@ data class BpmnDefinition(
     // benign extra field on serialize and an unknown field on deserialize (skipped).
     @field:com.fasterxml.jackson.annotation.JsonIgnore
     override val diagramCount: Int = 0,
-) : ApiBpmnDefinition
+) : ApiBpmnDefinition {
+
+    /**
+     * Model-intrinsic structural validation — checks that are pure properties of the graph
+     * topology itself, with no external policy or naming knowledge required.
+     *
+     * Returns a (possibly empty) list of error messages following the
+     * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
+     * [dev.groknull.bpmner.validation.BpmnDefinitionValidator] delegates to this method for
+     * these structural checks and handles non-intrinsic policy checks itself.
+     *
+     * Checks performed:
+     * - No duplicate node ids or edge ids in [nodes] / [sequences].
+     * - Every edge's [BpmnEdge.sourceRef] and [BpmnEdge.targetRef] resolve to a node id;
+     *   a self-referencing edge (sourceRef == targetRef) is also flagged.
+     * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
+     *   (i.e. [BpmnNode.parentRef] == null for both).
+     */
+    fun validateStructure(): List<String> {
+        val nodeIdSet = nodes.map { it.id }.toSet()
+        return buildList {
+            addAll(duplicateIdErrors(nodes.map { it.id.trim() }, "node"))
+            addAll(duplicateIdErrors(sequences.map { it.id.trim() }, "edge"))
+            sequences.forEach { edge -> addAll(edgeReferenceErrors(edge, nodeIdSet)) }
+            if (nodes.none { it is BpmnStartEvent && it.parentRef == null }) {
+                add("definition must contain at least one START_EVENT")
+            }
+            if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
+                add("definition must contain at least one END_EVENT")
+            }
+        }
+    }
+
+    private fun duplicateIdErrors(ids: List<String>, kind: String): List<String> = ids.groupBy { it }
+        .filter { (id, all) -> id.isNotBlank() && all.size > 1 }
+        .keys.map { "duplicate $kind id: $it" }
+
+    private fun edgeReferenceErrors(edge: BpmnEdge, nodeIdSet: Set<String>): List<String> = buildList {
+        val label = edge.id.ifBlank { "<blank>" }
+        if (edge.sourceRef !in nodeIdSet) add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
+        if (edge.targetRef !in nodeIdSet) add("edge $label targetRef '${edge.targetRef}' does not match any node id")
+        if (edge.sourceRef == edge.targetRef) add("edge $label must not self-reference source and target")
+    }
+}
 
 data class BpmnMessageRef(
     @field:NotBlank

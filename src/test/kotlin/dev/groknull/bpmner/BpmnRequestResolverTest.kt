@@ -6,9 +6,9 @@
 package dev.groknull.bpmner
 
 import dev.groknull.bpmner.api.GenerationMode
-import dev.groknull.bpmner.core.BpmnRequestDraft
-import dev.groknull.bpmner.core.BpmnRequestResolver
-import dev.groknull.bpmner.core.InputPathResolver
+import dev.groknull.bpmner.generation.BpmnRequestDraft
+import dev.groknull.bpmner.generation.BpmnRequestResolver
+import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

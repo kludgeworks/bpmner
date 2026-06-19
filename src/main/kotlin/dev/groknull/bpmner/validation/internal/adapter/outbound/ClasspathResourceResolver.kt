@@ -3,14 +3,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.validation.internal.adapter.outbound
 
 import org.w3c.dom.ls.LSInput
 import org.w3c.dom.ls.LSResourceResolver
 import java.io.InputStream
 import java.io.Reader
 
-class ClasspathResourceResolver : LSResourceResolver {
+internal class ClasspathResourceResolver : LSResourceResolver {
     override fun resolveResource(
         type: String?,
         namespaceURI: String?,

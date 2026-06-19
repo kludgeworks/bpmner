@@ -7,7 +7,6 @@ package dev.groknull.bpmner.generation
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.domain.io.UserInput
-import dev.groknull.bpmner.core.BpmnRequestDraft
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 @PrimaryPort
