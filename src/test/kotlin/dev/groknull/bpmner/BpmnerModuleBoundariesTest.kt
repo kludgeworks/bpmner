@@ -42,6 +42,17 @@ class BpmnerModuleBoundariesTest {
     }
 
     @Test
+    fun `domain does not depend on forbidden framework prompt or io types`() {
+        val rule =
+            noClasses()
+                .that()
+                .resideInAPackage("..bpmner.domain..")
+                .should()
+                .dependOnClassesThat(forbiddenDomainDependencyClass())
+        rule.check(classes)
+    }
+
+    @Test
     fun `domain contains only the approved kernel types`() {
         val rule =
             classes()
@@ -300,6 +311,37 @@ class BpmnerModuleBoundariesTest {
                     return true
                 }
             }
+        }
+
+        fun forbiddenDomainDependencyClass(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>(
+                "is forbidden framework, prompt-construction, or IO glue for the domain kernel",
+            ) {
+                override fun test(input: JavaClass): Boolean {
+                    val pkg = input.packageName
+                    val forbiddenSpring = pkg.startsWith("org.springframework") && !isApprovedSpringDependency(input)
+                    val forbiddenPromptGlue = pkg.startsWith("com.embabel.common.ai.prompt")
+                    val forbiddenIo = pkg == "java.io" || pkg.startsWith("java.io.")
+                    val forbiddenNioFiles = pkg == "java.nio.file" || pkg.startsWith("java.nio.file.")
+                    return listOf(
+                        nonDomainDependencyClass().test(input),
+                        forbiddenSpring,
+                        forbiddenPromptGlue,
+                        forbiddenIo,
+                        forbiddenNioFiles,
+                    ).any { it }
+                }
+            }
+        }
+
+        fun isApprovedSpringDependency(input: JavaClass): Boolean {
+            val approvedDependencyNames = setOf(
+                "org.springframework.ai.tool.annotation.Tool",
+                "org.springframework.ai.tool.execution.DefaultToolCallResultConverter",
+                "org.springframework.modulith.ApplicationModule",
+            )
+            return input.fullName in approvedDependencyNames ||
+                input.fullName.startsWith("org.springframework.modulith.ApplicationModule${'$'}")
         }
     }
 }

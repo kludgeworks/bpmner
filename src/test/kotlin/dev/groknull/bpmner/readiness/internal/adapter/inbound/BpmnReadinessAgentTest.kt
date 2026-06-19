@@ -6,7 +6,9 @@
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.config.BpmnRequestPromptContributor
 import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
@@ -23,7 +25,7 @@ class BpmnReadinessAgentTest {
         val context = FakeOperationContext()
         context.expectResponse(assessment(ReadinessVerdict.READY, 92))
         val eventPublisher = mock(ApplicationEventPublisher::class.java)
-        val agent = BpmnReadinessAgent(BpmnConfig(), eventPublisher)
+        val agent = BpmnReadinessAgent(BpmnConfig(), fixedPromptContributor(), eventPublisher)
 
         val result =
             agent.assessReadiness(
@@ -51,4 +53,8 @@ class BpmnReadinessAgentTest {
         },
         rationale = "Model rationale.",
     )
+
+    private fun fixedPromptContributor(): BpmnRequestPromptContributor = object : BpmnRequestPromptContributor {
+        override fun contributionFor(styleGuide: String?): PromptContributor = PromptContributor.fixed("")
+    }
 }

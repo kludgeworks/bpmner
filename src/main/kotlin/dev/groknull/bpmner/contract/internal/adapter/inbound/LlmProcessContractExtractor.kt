@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
-import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.config.BpmnRequestPromptContributor
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -27,6 +27,7 @@ internal class LlmProcessContractExtractor(
     private val config: BpmnConfig,
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
+    private val requestPromptContributor: BpmnRequestPromptContributor,
 ) : ProcessContractExtractor {
     private val logger = LoggerFactory.getLogger(LlmProcessContractExtractor::class.java)
 
@@ -39,7 +40,7 @@ internal class LlmProcessContractExtractor(
         val promptRunner =
             config.contractExtractor
                 .promptRunner(context)
-                .withPromptContributor(PromptContributor.fixed(request.styleGuide?.let { "## Style guide\n\n$it" } ?: ""))
+                .withPromptContributor(requestPromptContributor.contributionFor(request.styleGuide))
 
         val flat = promptRunner
             .creating(FlatProcessContract::class.java)

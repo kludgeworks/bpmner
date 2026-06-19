@@ -8,6 +8,7 @@ package dev.groknull.bpmner.repair
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairSafety
 import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.repair.internal.adapter.inbound.BpmnRepairCapabilityStartupListener
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalRepairCapabilityValidator
@@ -70,6 +71,11 @@ class RepairStartupValidationTest {
             lintingPort: BpmnLintingPort,
             registry: BpmnLocalModelFixHandlerRegistry,
         ): BpmnLocalRepairCapabilityValidator = BpmnLocalRepairCapabilityValidator(lintingPort, registry)
+
+        @Bean
+        internal open fun startupListener(
+            validator: BpmnLocalRepairCapabilityValidator,
+        ): BpmnRepairCapabilityStartupListener = BpmnRepairCapabilityStartupListener(validator)
     }
 
     private object MissingHandlerLintingPort : BpmnLintingPort {
