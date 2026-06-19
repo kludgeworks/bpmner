@@ -105,7 +105,7 @@ interface BpmnValidator {
 ```kotlin
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnDefinition
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
@@ -237,9 +237,9 @@ These are SPIs the repair domain *needs*, but they are private to the module. Pl
 
 The module is a *one-way sink*. It receives events but never asks any other module for anything, so it has nothing to declare as an SPI.
 
-### `core/` and `config/` use no hexagonal annotations
+### `domain/` and `config/` use no hexagonal annotations
 
-`core/` holds shared data classes (`BpmnDefinition`, `BpmnDiagnostic`, `RepairKind`, …) — DDD values, not bounded behaviour. `config/` holds Spring `@ConfigurationProperties` and platform configuration. Neither owns a use-case, so the hexagonal role markers don't apply.
+`domain/` holds the pure BPMN graph kernel and cross-tier DTOs (`BpmnDefinition`, `BpmnRequest`, `RenderedBpmn`, …) — DDD values and safe diagnostics, not bounded use-case behaviour. `config/` holds Spring `@ConfigurationProperties` and platform configuration. Neither owns a use-case, so the hexagonal role markers don't apply.
 
 ## How the rules are enforced
 
@@ -288,7 +288,7 @@ A few decision points that come up often:
 - **Adding a brand-new module** (say, an export module) — create `export/` with `BpmnExportUseCase` (`@PrimaryPort`), `BpmnExportTargetPort` (`@SecondaryPort`), an `internal/domain/` service and `internal/adapter/{inbound,outbound}/` adapters. The architecture and Modulith tests pick up the new module without configuration.
 - **Cross-module event** (something one module emits, others react to) — `@DomainEvent` in the emitting module's public package. Listeners are `@PrimaryAdapter` in the consuming module.
 
-If a new piece of code doesn't fit any of these roles, that usually means it belongs in `core/` (data) or `config/` (Spring infrastructure), not in a module.
+If a new piece of code doesn't fit any of these roles, that usually means it belongs in `domain/` (pure BPMN graph/request/render data) or `config/` (Spring infrastructure), not in a feature module.
 
 ## Reading the codebase faster
 

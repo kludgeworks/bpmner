@@ -13,7 +13,7 @@ Every `bpmner.*` YAML key, default, range, when to tune.
 | `bpmner.budget.generation` | `100` | ≥ 1 | Bump if the generation+repair loop terminates with `ProcessExecutionTerminatedException` on inputs you believe are tractable. Lower at your peril — the budget covers generation AND the entire repair loop in one process. |
 | `bpmner.budget.readiness` | `20` | ≥ 1 | Rarely tuned. Readiness has no repair loop; 20 is generous. |
 
-Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt).
+Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/config/BpmnConfig.kt).
 
 ### Rule profile + severity overrides
 
@@ -78,7 +78,7 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 
 Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, `application-deepseek.yaml`, and `application-llama.yaml`. The simplest way to run is `mise run bpmner-cli --provider <provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama` (Llama on Cerebras via the OpenRouter proxy); the task reads that provider's API key from 1Password (`op://bpmner/<provider>/api-key`) and sets `SPRING_PROFILES_ACTIVE` for you (add `--web` or `--verbose` to layer on those profiles). To run `bazel` directly instead, pass `--spring.profiles.active=<provider>` (or set `SPRING_PROFILES_ACTIVE`) and ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, or `OPENROUTER_API_KEY`).
 
-The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/core/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
+The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/config/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
 
 ### Logging + diagnostics
 

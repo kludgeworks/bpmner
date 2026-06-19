@@ -9,7 +9,7 @@ import org.springframework.modulith.ApplicationModule
 
 /**
  * Config module — Spring `@ConfigurationProperties` bindings and the pipeline-wide
- * configuration glue. Reads from [dev.groknull.bpmner.domain]; nothing else.
+ * configuration glue. It intentionally declares no internal module dependencies.
  */
 @ApplicationModule(allowedDependencies = [])
 internal object ConfigModule

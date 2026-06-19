@@ -25,7 +25,7 @@ Each action delegates to a public port; the port is implemented as a plain Sprin
 | Action | Input → Output | Port | Implementation |
 | --- | --- | --- | --- |
 | `draft` | `(UserInput, OperationContext) → BpmnRequestDraft` | `BpmnRequestDrafter` | `LlmBpmnRequestDrafter` (`generation/`) — LLM extracts a structured draft from shell prose. |
-| `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`core/`) — deterministic: resolves description/style-guide/output paths via `InputPathResolver`. |
+| `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`generation/`) — deterministic: resolves description/style-guide/output paths via `InputPathResolver`. |
 | `assessReadiness` | `BpmnRequest → ProcessInputAssessment` | `BpmnReadinessInvoker` | `AgentPlatformBpmnReadinessInvoker` (`readiness/`) — runs `BpmnReadinessAgent` as a scoped sub-process. |
 | `startAssessing` | `(BpmnRequest, ProcessInputAssessment) → Assessing` | (inline) | Wraps request + assessment into `Assessing` state for the `@State` machine. |
 | `extractContract` | `(ReadyBpmnContext, OperationContext) → ValidatedProcessContract` | `ProcessContractExtractor` | `LlmProcessContractExtractor` (`contract/`) — distils a source-grounded `ProcessContract`. |
@@ -86,7 +86,7 @@ Actions never name each other directly. The planner threads outputs to inputs **
 
 To add a stage to the happy path:
 
-1. Define the new domain types in `core/` (or the owning module) for the step's input and output.
+1. Define the new domain types in `domain/` (or the owning module) for the step's input and output.
 2. Add the real logic behind a public **port** in the owning module (a `@PrimaryAdapter @Component` if it is LLM-backed, a plain `@Component` otherwise).
 3. Add a thin `@Action` to `BpmnGenerationAgent` that delegates to the port. The planner picks it up by type at startup; no explicit registration.
 4. If the new step needs a separately-invokable goal, give its agent action an `@AchievesGoal(...)`.
