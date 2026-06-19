@@ -6,6 +6,7 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
+import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
@@ -19,21 +20,20 @@ import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
 import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
-import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.EvidenceSourceType
-import dev.groknull.bpmner.core.ReadinessDimension
-import dev.groknull.bpmner.core.SourceEvidence
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnNode
 import dev.groknull.bpmner.generation.FlatBpmnNodeKind
+import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
+import dev.groknull.bpmner.readiness.SourceEvidence
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import dev.groknull.bpmner.validation.BpmnXsdValidationPort
 import dev.groknull.bpmner.validation.LintIssue

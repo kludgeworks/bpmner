@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnDefinition
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic

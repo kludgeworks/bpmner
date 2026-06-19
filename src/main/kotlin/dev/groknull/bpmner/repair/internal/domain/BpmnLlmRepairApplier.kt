@@ -14,9 +14,10 @@ import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.domain.BpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
+import dev.groknull.bpmner.generation.asPromptContributor
 import dev.groknull.bpmner.generation.toSealed
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import org.slf4j.LoggerFactory
@@ -114,7 +115,7 @@ internal class BpmnLlmRepairApplier(
         operationContext: OperationContext,
         actor: Actor<Persona>,
     ): PromptRunner {
-        val baseRunner = actor.promptRunner(operationContext).withPromptContributor(repairEval.request)
+        val baseRunner = actor.promptRunner(operationContext).withPromptContributor(repairEval.request.asPromptContributor())
         val docsPrompt = promptFactory.lintRuleDocsPrompt(repairEval.diagnostics)
         return if (docsPrompt != null) baseRunner.withPromptContributor(docsPrompt) else baseRunner
     }

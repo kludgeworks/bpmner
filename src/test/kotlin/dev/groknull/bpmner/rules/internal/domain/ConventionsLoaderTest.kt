@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRulesConfig
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.config.BpmnRulesConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test

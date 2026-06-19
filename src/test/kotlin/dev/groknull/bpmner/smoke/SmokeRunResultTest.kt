@@ -52,7 +52,7 @@ class SmokeRunResultTest {
                         exceptionClass = "KotlinInvalidNullException",
                         messageSignature = "missing SourceEvidence id",
                         messageHash = "beadfeed",
-                        targetType = "dev.groknull.bpmner.core.SourceEvidence",
+                        targetType = "dev.groknull.bpmner.readiness.SourceEvidence",
                         fieldPath = "id",
                         agentName = "readiness",
                         model = "deepseek-chat",

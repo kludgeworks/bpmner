@@ -3,7 +3,27 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.rules
+
+import dev.groknull.bpmner.domain.BpmnBoundaryEvent
+import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
+import dev.groknull.bpmner.domain.BpmnCallActivity
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnExclusiveGateway
+import dev.groknull.bpmner.domain.BpmnInclusiveGateway
+import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.domain.BpmnManualTask
+import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.domain.BpmnParallelGateway
+import dev.groknull.bpmner.domain.BpmnReceiveTask
+import dev.groknull.bpmner.domain.BpmnScriptTask
+import dev.groknull.bpmner.domain.BpmnSendTask
+import dev.groknull.bpmner.domain.BpmnServiceTask
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnSubProcess
+import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
+import dev.groknull.bpmner.domain.BpmnUserTask
 
 /**
  * Kind-aware naming-shape advice for the generator and repair prompts. Codifies the
@@ -30,7 +50,7 @@ package dev.groknull.bpmner.core
  * default (no advice). Add an explicit `is` arm above the `else` when introducing a new
  * canonical subtype.
  */
-internal object BpmnNamingShapeAdvice {
+object BpmnNamingShapeAdvice {
     data class Advice(
         val kind: String,
         val shape: String,

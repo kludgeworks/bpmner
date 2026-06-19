@@ -19,7 +19,7 @@ class SmokeDiagnosticCaptureTest {
                 loggerName = "com.embabel.agent.spi.support.springai.ExceptionWrappingConverter",
                 message =
                 "Error com.fasterxml.jackson.module.kotlin.KotlinInvalidNullException: " +
-                    "Instantiation of [simple type, class dev.groknull.bpmner.core.SourceEvidence] " +
+                    "Instantiation of [simple type, class dev.groknull.bpmner.readiness.SourceEvidence] " +
                     "value failed for JSON property id due to missing value for creator parameter id",
             )
 
@@ -27,7 +27,7 @@ class SmokeDiagnosticCaptureTest {
         requireNotNull(diagnostic)
         assertEquals("llm_parse_error", diagnostic.kind)
         assertEquals("com.fasterxml.jackson.module.kotlin.KotlinInvalidNullException", diagnostic.exceptionClass)
-        assertEquals("dev.groknull.bpmner.core.SourceEvidence", diagnostic.targetType)
+        assertEquals("dev.groknull.bpmner.readiness.SourceEvidence", diagnostic.targetType)
         assertEquals("id", diagnostic.fieldPath)
         assertEquals(1, diagnostic.count)
     }

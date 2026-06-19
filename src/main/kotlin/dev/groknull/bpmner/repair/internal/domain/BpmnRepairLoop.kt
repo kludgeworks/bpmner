@@ -10,7 +10,7 @@ import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableBuilder
 import com.embabel.agent.api.common.workflow.loop.TextFeedback
 import com.embabel.agent.core.ReplanRequestedException
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRepairScope

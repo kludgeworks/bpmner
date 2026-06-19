@@ -11,10 +11,10 @@ import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleDiagnostic
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnStartEvent
 import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertEquals

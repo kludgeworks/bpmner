@@ -7,12 +7,12 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import dev.groknull.bpmner.api.BpmnTimerKind
 import dev.groknull.bpmner.api.DataFlowDirection
-import dev.groknull.bpmner.core.BpmnDataAssociation
-import dev.groknull.bpmner.core.BpmnDataObject
-import dev.groknull.bpmner.core.BpmnDataStore
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnLane
-import dev.groknull.bpmner.core.BpmnParticipant
+import dev.groknull.bpmner.domain.BpmnDataAssociation
+import dev.groknull.bpmner.domain.BpmnDataObject
+import dev.groknull.bpmner.domain.BpmnDataStore
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnLane
+import dev.groknull.bpmner.domain.BpmnParticipant
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.generation.FlatBpmnEventDefinition
 import dev.groknull.bpmner.generation.FlatBpmnEventDefinitionKind

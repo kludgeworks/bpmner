@@ -6,15 +6,15 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.core.BpmnErrorEventDefinition
-import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.core.BpmnEventDefinition
-import dev.groknull.bpmner.core.BpmnMessageEventDefinition
-import dev.groknull.bpmner.core.BpmnNoneEventDefinition
-import dev.groknull.bpmner.core.BpmnSignalEventDefinition
-import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.core.BpmnTimerEventDefinition
-import dev.groknull.bpmner.core.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
+import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.domain.BpmnEventDefinition
+import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
+import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
+import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
+import dev.groknull.bpmner.domain.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
+import dev.groknull.bpmner.domain.BpmnUnrecognizedEventDefinition
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 

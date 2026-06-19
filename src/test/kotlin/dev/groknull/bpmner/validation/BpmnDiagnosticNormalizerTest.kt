@@ -7,12 +7,12 @@ package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.api.RepairKind
 import dev.groknull.bpmner.api.RepairSafety
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnElementIndex
-import dev.groknull.bpmner.core.ComposedProcessGraph
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.OwnedElementGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnElementIndex
+import dev.groknull.bpmner.domain.ComposedProcessGraph
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.OwnedElementGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnAutoFixResult
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability

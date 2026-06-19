@@ -17,11 +17,12 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
+import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.config.BpmnRequestPromptContributor
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.core.BpmnConfig
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -35,6 +36,7 @@ internal class LlmBpmnAligner(
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
     private val contractRenderer: ProcessContractMarkdownRenderer,
+    private val requestPromptContributor: BpmnRequestPromptContributor,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnAligner {
     override fun align(
@@ -48,7 +50,7 @@ internal class LlmBpmnAligner(
         val promptRunner =
             config.alignmentValidator
                 .promptRunner(context)
-                .withPromptContributor(request)
+                .withPromptContributor(requestPromptContributor.contributionFor(request.styleGuide))
         val findings = requestAlignmentFindings(promptRunner, request, contract.contract, summary)
 
         val report = postChecker.apply(findings, summary)

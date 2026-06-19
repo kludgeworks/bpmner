@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.validation.internal.domain
 
 import com.embabel.agent.api.common.PromptRunner
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
 import dev.groknull.bpmner.rules.RuleRegistry
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnRuleGuidancePort

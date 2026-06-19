@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 

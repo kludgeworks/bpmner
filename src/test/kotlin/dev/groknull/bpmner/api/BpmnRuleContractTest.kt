@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.api
 
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

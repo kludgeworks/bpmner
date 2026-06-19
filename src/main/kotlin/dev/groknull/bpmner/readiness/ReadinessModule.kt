@@ -9,7 +9,7 @@ import org.springframework.modulith.ApplicationModule
 
 /**
  * Readiness module — owns the readiness dimensions and readiness-classification logic.
- * Depends only on [dev.groknull.bpmner.core] for the BPMN domain model.
+ * Depends only on [dev.groknull.bpmner.domain] for the BPMN domain model.
  */
-@ApplicationModule(allowedDependencies = ["core"])
+@ApplicationModule(allowedDependencies = ["api", "config", "domain"])
 internal object ReadinessModule

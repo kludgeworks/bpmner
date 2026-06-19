@@ -7,9 +7,9 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

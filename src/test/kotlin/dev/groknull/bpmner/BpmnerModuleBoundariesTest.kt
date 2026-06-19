@@ -31,26 +31,38 @@ class BpmnerModuleBoundariesTest {
             .importPackages("dev.groknull.bpmner")
 
     @Test
-    fun `core does not depend on other internal modules`() {
+    fun `domain does not depend on other modules except api`() {
         val rule =
             noClasses()
                 .that()
-                .resideInAPackage("..bpmner.core..")
+                .resideInAPackage("..bpmner.domain..")
                 .should()
-                .dependOnClassesThat(internalNonCoreClass())
+                .dependOnClassesThat(nonDomainDependencyClass())
         rule.check(classes)
     }
 
     @Test
-    fun `core only retains foundational types - no domain-named feature types`() {
+    fun `domain does not depend on forbidden framework prompt or io types`() {
+        val rule =
+            noClasses()
+                .that()
+                .resideInAPackage("..bpmner.domain..")
+                .should()
+                .dependOnClassesThat(forbiddenDomainDependencyClass())
+        rule.check(classes)
+    }
+
+    @Test
+    fun `domain contains only the approved kernel types`() {
         val rule =
             classes()
                 .that()
-                .resideInAPackage("..bpmner.core..")
+                .resideInAPackage("..bpmner.domain..")
                 .and()
                 .haveSimpleNameNotEndingWith("Kt")
-                .and(notAllowedInCore())
-                .should(notHaveDomainName())
+                .and(notAllowedInDomain())
+                .should(beRejectedFromDomain())
+                .allowEmptyShould(true)
         rule.check(classes)
     }
 
@@ -148,43 +160,78 @@ class BpmnerModuleBoundariesTest {
         }
     }
 
-    private fun notHaveDomainName(): ArchCondition<JavaClass> {
-        return object : ArchCondition<JavaClass>("not have a domain-flavored name") {
+    private fun beRejectedFromDomain(): ArchCondition<JavaClass> {
+        return object : ArchCondition<JavaClass>("be one of the approved domain kernel classes") {
             override fun check(
                 item: JavaClass,
                 events: ConditionEvents,
             ) {
-                if (DOMAIN_NAME_PATTERN.containsMatchIn(item.simpleName)) {
-                    events.add(
-                        SimpleConditionEvent.violated(
-                            item,
-                            "${item.fullName} lives in core but has a domain-flavored name. Move it to its " +
-                                "owning module, or add it to CORE_ALLOWLIST with justification.",
-                        ),
-                    )
-                }
+                events.add(
+                    SimpleConditionEvent.violated(
+                        item,
+                        "${item.fullName} is not part of the approved domain kernel allowlist.",
+                    ),
+                )
             }
         }
     }
 
     private companion object {
-        val DOMAIN_NAME_PATTERN =
-            Regex(
-                "(?i).*(report|verdict|assessment|attempt|capability|guardrail|" +
-                    "alignment|readiness|contract|repair|lint|diagnostic).*",
-            )
-
-        // Names that legitimately remain in core (kernel primitives reachable from BpmnRequest /
-        // the BPMN domain model). The Config entries are a known smell - each could move with
-        // its module once BpmnConfig itself is decomposed into per-module @ConfigurationProperties.
-        val CORE_ALLOWLIST: Set<String> =
+        val DOMAIN_ALLOWLIST: Set<String> =
             setOf(
-                "AlignmentClassification",
-                "ReadinessDimension",
-                "BpmnAlignmentConfig",
-                "BpmnContractConfig",
-                "BpmnReadinessConfig",
-                "ClarificationExchange",
+                "BpmnAssociation",
+                "BpmnBoundaryEvent",
+                "BpmnBusinessRuleTask",
+                "BpmnCallActivity",
+                "BpmnDataAssociation",
+                "BpmnDataObject",
+                "BpmnDataStore",
+                "BpmnDefinition",
+                "BpmnEdge",
+                "BpmnElementIndex",
+                "BpmnEndEvent",
+                "BpmnErrorEventDefinition",
+                "BpmnErrorRef",
+                "BpmnEscalationEventDefinition",
+                "BpmnEscalationRef",
+                "BpmnEventBasedGateway",
+                "BpmnEventDefinition",
+                "BpmnExclusiveGateway",
+                "BpmnGroup",
+                "BpmnInclusiveGateway",
+                "BpmnIntermediateCatchEvent",
+                "BpmnIntermediateThrowEvent",
+                "BpmnLane",
+                "BpmnManualTask",
+                "BpmnMessageEventDefinition",
+                "BpmnMessageFlow",
+                "BpmnMessageRef",
+                "BpmnNode",
+                "BpmnNoneEventDefinition",
+                "BpmnParallelGateway",
+                "BpmnParticipant",
+                "BpmnReceiveTask",
+                "BpmnRequest",
+                "BpmnScriptTask",
+                "BpmnSendTask",
+                "BpmnServiceTask",
+                "BpmnSignalEventDefinition",
+                "BpmnSignalRef",
+                "BpmnStartEvent",
+                "BpmnSubProcess",
+                "BpmnTerminateEventDefinition",
+                "BpmnTextAnnotation",
+                "BpmnTimerEventDefinition",
+                "BpmnUnrecognizedEventDefinition",
+                "BpmnUnrecognizedNode",
+                "BpmnUserTask",
+                "ComposedProcessGraph",
+                "DomainModule",
+                "LaidOutProcessGraph",
+                "MultiInstanceLoopCharacteristics",
+                "OwnedElementGraph",
+                "RenderedBpmn",
+                "StandardLoopCharacteristics",
             )
 
         // The 10 modules that have an internal/ layer (api, core, config, web do not).
@@ -247,24 +294,54 @@ class BpmnerModuleBoundariesTest {
             }
         }
 
-        fun notAllowedInCore(): DescribedPredicate<JavaClass> {
-            return object : DescribedPredicate<JavaClass>("is not on the core allowlist") {
-                override fun test(input: JavaClass): Boolean = input.simpleName !in CORE_ALLOWLIST
+        fun notAllowedInDomain(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>("is not on the domain allowlist") {
+                override fun test(input: JavaClass): Boolean = input.simpleName !in DOMAIN_ALLOWLIST
             }
         }
 
-        fun internalNonCoreClass(): DescribedPredicate<JavaClass> {
+        fun nonDomainDependencyClass(): DescribedPredicate<JavaClass> {
             return object : DescribedPredicate<JavaClass>("is in another bpmner module") {
                 override fun test(input: JavaClass): Boolean {
                     val pkg = input.packageName
                     if (!pkg.startsWith("dev.groknull.bpmner")) return false
-                    if (pkg == "dev.groknull.bpmner.core" || pkg.startsWith("dev.groknull.bpmner.core.")) return false
-                    // api/ is the shared kernel: annotation-free POKOs that every module
-                    // (including core) is permitted to depend on.
+                    if (pkg == "dev.groknull.bpmner.domain" || pkg.startsWith("dev.groknull.bpmner.domain.")) return false
+                    // api/ is the frozen external contract domain is permitted to depend on.
                     if (pkg == "dev.groknull.bpmner.api" || pkg.startsWith("dev.groknull.bpmner.api.")) return false
                     return true
                 }
             }
+        }
+
+        fun forbiddenDomainDependencyClass(): DescribedPredicate<JavaClass> {
+            return object : DescribedPredicate<JavaClass>(
+                "is forbidden framework, prompt-construction, or IO glue for the domain kernel",
+            ) {
+                override fun test(input: JavaClass): Boolean {
+                    val pkg = input.packageName
+                    val forbiddenSpring = pkg.startsWith("org.springframework") && !isApprovedSpringDependency(input)
+                    val forbiddenPromptGlue = pkg.startsWith("com.embabel.common.ai.prompt")
+                    val forbiddenIo = pkg == "java.io" || pkg.startsWith("java.io.")
+                    val forbiddenNioFiles = pkg == "java.nio.file" || pkg.startsWith("java.nio.file.")
+                    return listOf(
+                        nonDomainDependencyClass().test(input),
+                        forbiddenSpring,
+                        forbiddenPromptGlue,
+                        forbiddenIo,
+                        forbiddenNioFiles,
+                    ).any { it }
+                }
+            }
+        }
+
+        fun isApprovedSpringDependency(input: JavaClass): Boolean {
+            val approvedDependencyNames = setOf(
+                "org.springframework.ai.tool.annotation.Tool",
+                "org.springframework.ai.tool.execution.DefaultToolCallResultConverter",
+                "org.springframework.modulith.ApplicationModule",
+            )
+            return input.fullName in approvedDependencyNames ||
+                input.fullName.startsWith("org.springframework.modulith.ApplicationModule${'$'}")
         }
     }
 }

@@ -6,14 +6,14 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.MultiInstanceMode
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnNode
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnSubProcess
-import dev.groknull.bpmner.core.BpmnUserTask
-import dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnSubProcess
+import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.domain.MultiInstanceLoopCharacteristics
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test

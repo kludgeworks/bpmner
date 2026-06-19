@@ -5,13 +5,13 @@
 
 package dev.groknull.bpmner.alignment.internal.domain
 
+import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
-import dev.groknull.bpmner.core.AlignmentClassification
-import dev.groknull.bpmner.core.BpmnAlignmentConfig
+import dev.groknull.bpmner.config.BpmnAlignmentConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 

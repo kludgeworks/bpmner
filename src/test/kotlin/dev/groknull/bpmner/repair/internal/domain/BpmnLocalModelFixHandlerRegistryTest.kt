@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnDefinition
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

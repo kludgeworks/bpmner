@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnDefinition
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 

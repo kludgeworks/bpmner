@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnNode
 
 internal data class BpmnRepairPatch(
     val operations: List<BpmnPatchOperation> = emptyList(),

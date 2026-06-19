@@ -8,7 +8,7 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.domain.io.UserInput
 import com.embabel.chat.UserMessage
-import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.generation.BpmnRequestDraft
 import dev.groknull.bpmner.generation.BpmnRequestDrafter
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter

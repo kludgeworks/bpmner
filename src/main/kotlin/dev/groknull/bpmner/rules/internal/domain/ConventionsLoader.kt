@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.core.BpmnConfig
+import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.rules.BpmnerLintConfig
 import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin

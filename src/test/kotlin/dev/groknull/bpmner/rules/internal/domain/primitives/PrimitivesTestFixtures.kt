@@ -9,10 +9,10 @@ import dev.groknull.bpmner.api.BpmnDefinitionContext
 import dev.groknull.bpmner.api.RuleCategory
 import dev.groknull.bpmner.api.RuleMetadata
 import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnGroup
-import dev.groknull.bpmner.core.BpmnNode
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnGroup
+import dev.groknull.bpmner.domain.BpmnNode
 
 /**
  * Shared test helpers for primitive rule tests.

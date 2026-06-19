@@ -7,7 +7,7 @@ package dev.groknull.bpmner.alignment
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.core.AlignmentClassification
+import dev.groknull.bpmner.alignment.AlignmentClassification
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty

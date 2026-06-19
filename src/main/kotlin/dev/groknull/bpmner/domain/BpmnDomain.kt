@@ -3,9 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
-import com.embabel.common.ai.prompt.PromptContributor
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
@@ -18,6 +17,7 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
+import org.springframework.ai.tool.annotation.Tool
 import dev.groknull.bpmner.api.BpmnAssociation as ApiBpmnAssociation
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
 import dev.groknull.bpmner.api.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
@@ -63,6 +63,7 @@ import dev.groknull.bpmner.api.BpmnTimerEventDefinition as ApiBpmnTimerEventDefi
 import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition as ApiBpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.api.BpmnUnrecognizedNode as ApiBpmnUnrecognizedNode
 import dev.groknull.bpmner.api.BpmnUserTask as ApiBpmnUserTask
+import dev.groknull.bpmner.api.ClarificationExchange as ApiClarificationExchange
 import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics as ApiMultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.api.StandardLoopCharacteristics as ApiStandardLoopCharacteristics
 
@@ -76,16 +77,8 @@ data class BpmnRequest(
     override val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
-    override val clarificationHistory: List<ClarificationExchange> = emptyList(),
-) : ApiBpmnRequest,
-    PromptContributor {
-    // Contributes only the per-request style guide. BPMN generation rules are owned elsewhere:
-    // node-id / type-prefix conventions by NODE_ID_DESCRIPTION on FlatBpmnNode; id-uniqueness,
-    // reference resolution, and the >=1 START/END requirement by BpmnDefinitionValidator;
-    // sourceRef!=targetRef and conditionExpression guidance by generate_bpmn.jinja. Each template
-    // states its own role, so no system-level role framing is added here.
-    override fun contribution(): String = styleGuide?.let { "## Style guide\n\n$it" } ?: ""
-}
+    override val clarificationHistory: List<ApiClarificationExchange> = emptyList(),
+) : ApiBpmnRequest
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 data class BpmnDefinition(
@@ -167,6 +160,7 @@ data class BpmnDefinition(
      * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
      *   (i.e. [BpmnNode.parentRef] == null for both).
      */
+    @Tool
     fun validateStructure(): List<String> {
         val nodeIdSet = nodes.map { it.id }.toSet()
         return buildList {
@@ -337,8 +331,8 @@ sealed interface BpmnNode : ApiBpmnNode {
     override val name: String?
 
     // Narrow the inherited api.BpmnNode.withName(): api.BpmnNode return type so that
-    // call sites typed as `core.BpmnNode` see the more specific return type and can pass
-    // results to `core.BpmnDefinition.copy(nodes = ...)` without a cast.
+    // call sites typed as `domain.BpmnNode` see the more specific return type and can pass
+    // results to `domain.BpmnDefinition.copy(nodes = ...)` without a cast.
     override fun withName(name: String?): BpmnNode
 }
 

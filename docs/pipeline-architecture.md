@@ -12,8 +12,8 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 
 | Module | Owns | Key public types |
 | --- | --- | --- |
-| `core/` | Shared domain model, request resolution, fingerprints, naming policy. No Spring visibility restrictions. | `BpmnRequest`, `BpmnRequestDraft`, `BpmnRequestResolver`, `BpmnDefinition`, `BpmnConfig`, `LaidOutProcessGraph`, `RenderedBpmn`. |
 | `api/` | Stable cross-cutting enums/value types shared with the rules surface. | `RepairKind`, `RepairSafety`, `RuleMetadata`. |
+| `domain/` | Pure BPMN graph kernel and cross-tier request/render DTOs. | `BpmnRequest`, `BpmnDefinition`, `LaidOutProcessGraph`, `RenderedBpmn`, `BpmnElementIndex`. |
 | `orchestration/` | The single `generateBpmn` orchestrator: action shims that delegate to each module's public port. | `BpmnGenerationAgent`. |
 | `readiness/` | Guardrail 1: heuristic + LLM input assessment, ready-state handoff, scoped readiness sub-process. | `BpmnReadinessAgent`, `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadinessVerdict`, `ReadyBpmnContext`. |
 | `contract/` | Guardrail 2: extraction of source-grounded process contracts, multi-source evidence tracking. | `ProcessContractExtractor` (port), `LlmProcessContractExtractor`, `ProcessContract`, `ValidatedProcessContract`. |
@@ -23,7 +23,7 @@ The codebase is a Spring Modulith application under `dev.groknull.bpmner.*`. Eac
 | `layout/` | Deterministic auto-layout and final post-layout validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
 | `alignment/` | Guardrail 3: semantic comparison of generated BPMN vs process contract, invented-task detection. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`, `AlignmentVerdict`. |
 | `observability/` | Process-finished summary, validation event logging, per-attempt observers, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
-| `config/` | OpenAI-compatible provider model configuration; startup agent-deployment validation. | `OpenRouterModelsConfig`, `AgentDeploymentValidator`. |
+| `config/` | OpenAI-compatible provider model configuration; startup agent-deployment validation. | `BpmnConfig`, `OpenRouterModelsConfig`, `AgentDeploymentValidator`. |
 
 Module boundaries are verified by `BpmnerModulithTest`; the `internal` adapter packages under each module are not importable from outside.
 
@@ -183,7 +183,7 @@ All use SLF4J at INFO with bracketed parameter placeholders, so they are queryab
 
 To add a step between, say, composition and rendering:
 
-1. Define the new domain types in `core/` (or the owning module) for the step's input and output.
+1. Define the new domain types in `domain/` (or the owning module) for the step's input and output.
 2. Put the real logic behind a public **port** in the owning module (a `@PrimaryAdapter @Component` if LLM-backed, a plain `@Component` otherwise).
 3. Add a thin `@Action` to `BpmnGenerationAgent` that delegates to the port — the platform resolves the chain by type, so as long as your output type matches the next existing step's input, no rewiring is needed.
 4. Add a `*ModuleTest` to cover the new module's Spring wiring and a focused unit test for the new logic.
@@ -191,7 +191,7 @@ To add a step between, say, composition and rendering:
 
 Where to put cross-cutting code:
 
-- Pure domain types and validation rules: `core/`, `api/`, `validation/`, `rules/`.
+- Pure domain types and validation rules: `domain/`, `api/`, `validation/`, `rules/`.
 - LLM-bound logic: a `@PrimaryAdapter` port impl in the owning module.
 - Deterministic post-processing of XML: `layout/`.
 - Anything that should fire on validation outcomes: a new listener in `observability/`.

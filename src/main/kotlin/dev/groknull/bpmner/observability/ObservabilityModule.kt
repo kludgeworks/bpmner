@@ -16,6 +16,6 @@ import org.springframework.modulith.ApplicationModule
 // observability transitively depends on api via api.GenerationMode (exposed through
 // generation.BpmnResult / similar types passed around in observability event handlers).
 @ApplicationModule(
-    allowedDependencies = ["alignment", "api", "core", "generation", "readiness", "repair", "validation"],
+    allowedDependencies = ["alignment", "api", "domain", "generation", "readiness", "repair", "validation"],
 )
 internal object ObservabilityModule

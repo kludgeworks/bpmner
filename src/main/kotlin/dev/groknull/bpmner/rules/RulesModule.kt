@@ -20,5 +20,5 @@ import org.springframework.modulith.ApplicationModule
  *
  * Populated by Phase 1D (#212) and Phase 2 work (#239, #240, #380).
  */
-@ApplicationModule(allowedDependencies = ["api", "core"])
+@ApplicationModule(allowedDependencies = ["api", "config", "domain"])
 internal object RulesModule

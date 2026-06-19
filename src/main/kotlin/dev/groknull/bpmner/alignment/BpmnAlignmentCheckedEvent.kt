@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.alignment
 
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import org.jmolecules.event.annotation.DomainEvent
 
 @DomainEvent

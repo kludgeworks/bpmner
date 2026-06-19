@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.readiness
 
 import com.fasterxml.jackson.annotation.JsonAlias
 import com.fasterxml.jackson.annotation.JsonClassDescription
@@ -101,17 +101,6 @@ enum class MissingProcessArea {
 
     @JsonAlias("TRACEABILITY_TO_SOURCE")
     SOURCE_TRACE,
-}
-
-enum class AlignmentClassification {
-    SUPPORTED,
-    ASSUMED,
-    UNSUPPORTED,
-    COVERED,
-    PARTIALLY_COVERED,
-    MISSING,
-    EXTRA,
-    CONTRADICTED,
 }
 
 enum class EvidenceSourceType {

@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentProcess
+import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
-import dev.groknull.bpmner.core.AlignmentClassification
 import dev.groknull.bpmner.generation.BpmnGeneratedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.domain
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import jakarta.validation.Valid

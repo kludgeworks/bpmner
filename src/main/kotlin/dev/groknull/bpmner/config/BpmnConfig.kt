@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.core
+package dev.groknull.bpmner.config
 
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.config.models.anthropic.withAnthropicCaching

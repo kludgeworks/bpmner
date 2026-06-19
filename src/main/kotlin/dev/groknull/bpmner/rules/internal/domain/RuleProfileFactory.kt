@@ -11,8 +11,6 @@ import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Configuration
 
 /**
  * Produces the application-wide [RuleProfile] by composing two layers:
@@ -50,13 +48,11 @@ import org.springframework.context.annotation.Configuration
  *    values because a typo in a key silently disables nothing, while a bad value is caught by
  *    logging).
  */
-@Configuration
 internal class RuleProfileFactory(
     private val beanRegistryProvider: ObjectProvider<BeanRuleRegistry>,
 ) {
     private val logger = LoggerFactory.getLogger(RuleProfileFactory::class.java)
 
-    @Bean
     fun ruleProfile(lintConfig: BpmnerLintConfig): RuleProfile {
         val profileName = lintConfig.profile.trim()
         check(profileName in AVAILABLE_PROFILES) {

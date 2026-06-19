@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.core.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull

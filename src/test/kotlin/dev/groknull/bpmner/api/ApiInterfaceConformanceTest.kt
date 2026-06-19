@@ -5,35 +5,35 @@
 
 package dev.groknull.bpmner.api
 
-import dev.groknull.bpmner.core.BpmnBoundaryEvent
-import dev.groknull.bpmner.core.BpmnBusinessRuleTask
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnErrorEventDefinition
-import dev.groknull.bpmner.core.BpmnErrorRef
-import dev.groknull.bpmner.core.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.core.BpmnEscalationRef
-import dev.groknull.bpmner.core.BpmnExclusiveGateway
-import dev.groknull.bpmner.core.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.core.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.core.BpmnManualTask
-import dev.groknull.bpmner.core.BpmnMessageEventDefinition
-import dev.groknull.bpmner.core.BpmnMessageRef
-import dev.groknull.bpmner.core.BpmnNoneEventDefinition
-import dev.groknull.bpmner.core.BpmnParallelGateway
-import dev.groknull.bpmner.core.BpmnReceiveTask
-import dev.groknull.bpmner.core.BpmnRequest
-import dev.groknull.bpmner.core.BpmnScriptTask
-import dev.groknull.bpmner.core.BpmnSendTask
-import dev.groknull.bpmner.core.BpmnServiceTask
-import dev.groknull.bpmner.core.BpmnSignalEventDefinition
-import dev.groknull.bpmner.core.BpmnSignalRef
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.core.BpmnTimerEventDefinition
-import dev.groknull.bpmner.core.BpmnUserTask
-import dev.groknull.bpmner.core.ClarificationExchange
+import dev.groknull.bpmner.domain.BpmnBoundaryEvent
+import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
+import dev.groknull.bpmner.domain.BpmnErrorRef
+import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.domain.BpmnEscalationRef
+import dev.groknull.bpmner.domain.BpmnExclusiveGateway
+import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.domain.BpmnManualTask
+import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
+import dev.groknull.bpmner.domain.BpmnMessageRef
+import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
+import dev.groknull.bpmner.domain.BpmnParallelGateway
+import dev.groknull.bpmner.domain.BpmnReceiveTask
+import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.BpmnScriptTask
+import dev.groknull.bpmner.domain.BpmnSendTask
+import dev.groknull.bpmner.domain.BpmnServiceTask
+import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
+import dev.groknull.bpmner.domain.BpmnSignalRef
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
+import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.readiness.ClarificationExchange
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import dev.groknull.bpmner.api.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
@@ -140,26 +140,26 @@ class ApiInterfaceConformanceTest {
 
     @Test
     fun `every BpmnEventDefinition subtype implements its api counterpart`() {
-        val none: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnNoneEventDefinition
+        val none: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnNoneEventDefinition
         assertTrue(none is ApiBpmnNoneEventDefinition)
 
-        val timer: dev.groknull.bpmner.core.BpmnEventDefinition =
+        val timer: dev.groknull.bpmner.domain.BpmnEventDefinition =
             BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = "PT5M")
         assertTrue(timer is ApiBpmnTimerEventDefinition)
 
-        val message: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnMessageEventDefinition(messageRef = "m")
+        val message: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnMessageEventDefinition(messageRef = "m")
         assertTrue(message is ApiBpmnMessageEventDefinition)
 
-        val signal: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnSignalEventDefinition(signalRef = "s")
+        val signal: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnSignalEventDefinition(signalRef = "s")
         assertTrue(signal is ApiBpmnSignalEventDefinition)
 
-        val error: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnErrorEventDefinition(errorRef = "e")
+        val error: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnErrorEventDefinition(errorRef = "e")
         assertTrue(error is ApiBpmnErrorEventDefinition)
 
-        val escalation: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnEscalationEventDefinition(escalationRef = "esc")
+        val escalation: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnEscalationEventDefinition(escalationRef = "esc")
         assertTrue(escalation is ApiBpmnEscalationEventDefinition)
 
-        val terminate: dev.groknull.bpmner.core.BpmnEventDefinition = BpmnTerminateEventDefinition
+        val terminate: dev.groknull.bpmner.domain.BpmnEventDefinition = BpmnTerminateEventDefinition
         assertTrue(terminate is ApiBpmnTerminateEventDefinition)
     }
 
@@ -183,16 +183,16 @@ class ApiInterfaceConformanceTest {
 
     @Test
     fun `multi-instance, text annotation, and association types implement their api counterparts`() {
-        val coreMi = dev.groknull.bpmner.core.MultiInstanceLoopCharacteristics(
+        val coreMi = dev.groknull.bpmner.domain.MultiInstanceLoopCharacteristics(
             mode = MultiInstanceMode.PARALLEL,
             collectionDescription = "each reviewer",
         )
         assertTrue(coreMi as Any is MultiInstanceLoopCharacteristics)
 
-        val annotation = dev.groknull.bpmner.core.BpmnTextAnnotation(id = "ta", text = "note")
+        val annotation = dev.groknull.bpmner.domain.BpmnTextAnnotation(id = "ta", text = "note")
         assertTrue(annotation as Any is BpmnTextAnnotation)
 
-        val association = dev.groknull.bpmner.core.BpmnAssociation(id = "as", sourceRef = "a", targetRef = "ta")
+        val association = dev.groknull.bpmner.domain.BpmnAssociation(id = "as", sourceRef = "a", targetRef = "ta")
         assertTrue(association as Any is BpmnAssociation)
 
         // The cross-cutting `multiInstance` field is reachable through the api BpmnTask marker.

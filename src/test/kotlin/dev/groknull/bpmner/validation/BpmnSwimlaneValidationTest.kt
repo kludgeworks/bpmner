@@ -5,14 +5,14 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnLane
-import dev.groknull.bpmner.core.BpmnMessageFlow
-import dev.groknull.bpmner.core.BpmnParticipant
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUserTask
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnLane
+import dev.groknull.bpmner.domain.BpmnMessageFlow
+import dev.groknull.bpmner.domain.BpmnParticipant
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue

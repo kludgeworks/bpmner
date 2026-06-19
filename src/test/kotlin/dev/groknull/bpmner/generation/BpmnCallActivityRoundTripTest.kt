@@ -5,12 +5,12 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.core.BpmnCallActivity
-import dev.groknull.bpmner.core.BpmnDefinition
-import dev.groknull.bpmner.core.BpmnEdge
-import dev.groknull.bpmner.core.BpmnEndEvent
-import dev.groknull.bpmner.core.BpmnStartEvent
-import dev.groknull.bpmner.core.BpmnUnrecognizedNode
+import dev.groknull.bpmner.domain.BpmnCallActivity
+import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.domain.BpmnEdge
+import dev.groknull.bpmner.domain.BpmnEndEvent
+import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
 import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
 import kotlin.test.assertEquals

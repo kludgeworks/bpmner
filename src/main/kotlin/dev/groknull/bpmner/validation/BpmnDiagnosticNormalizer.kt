@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.core.LaidOutProcessGraph
-import dev.groknull.bpmner.core.RenderedBpmn
+import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
@@ -50,7 +50,7 @@ internal class BpmnDiagnosticNormalizer(
 
     fun normalizeLintDiagnostics(
         lintIssues: List<LintIssue>,
-        elementIndex: dev.groknull.bpmner.core.BpmnElementIndex,
+        elementIndex: dev.groknull.bpmner.domain.BpmnElementIndex,
         graph: LaidOutProcessGraph,
     ): List<BpmnDiagnostic> {
         val caps = lintingPort.lintRuleCapabilities()
