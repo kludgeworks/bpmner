@@ -79,9 +79,7 @@ class BpmnerModuleBoundariesTest {
      * the single-predicate design flaw where excluding all 10 modules from "outsiders" would
      * prevent any cross-module reach from being flagged (REVIEW-S2 rows #1 / #3).
      *
-     * Scoped to **prod AND test** classes (S5 widens to test scope — ARCHITECTURE §1.10,
-     * §5 S5, G4). All 11 test-side cross-module reaches in PLAN-S5 §0 are fixed before
-     * this widen, satisfying ARCHITECTURE §6 risk 3 ("fix files first, widen second").
+     * Scoped to **prod AND test** classes (ARCHITECTURE §1.10, §5 S5, G4).
      *
      * Verified green at ab75950: prod cross-module internal reach count = 0 (ARCHITECTURE §0.A).
      */
@@ -118,7 +116,7 @@ class BpmnerModuleBoundariesTest {
      */
     @Test
     fun `cross-module internal rule is proven non-vacuous for each module (planted-violation proof)`() {
-        // Widen proof to include both prod and test classes (S5 — ARCHITECTURE §1.10, §5 S5).
+        // Includes both prod and test classes (ARCHITECTURE §1.10, §5 S5).
         val allClasses =
             ClassFileImporter()
                 .withImportOption(excludeBazelTestClasses)
