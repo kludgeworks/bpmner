@@ -32,7 +32,7 @@
 				"src/main/kotlin/**/internal/adapter/inbound/**/*.kt",
 				"src/main/kotlin/dev/groknull/bpmner/**/AgentPlatform*.kt"
 			],
-			"rule": "If an Embabel @Agent, @Action, @AchievesGoal, action count, role, or action chaining behavior changes, docs/agents.md must be updated in the same PR or the PR must clearly explain why no documentation update is needed."
+			"rule": "If an Embabel @Agent, @Action, @AchievesGoal, action count, role, or action chaining behavior changes, docs/architecture.md (§3 Agent design and control flow) must be updated in the same PR or the PR must clearly explain why no documentation update is needed."
 		},
 		{
 			"id": "pipeline-docs-track-stage-contracts",
@@ -44,7 +44,7 @@
 				"src/main/kotlin/dev/groknull/bpmner/layout/**/*.kt",
 				"src/main/kotlin/dev/groknull/bpmner/alignment/**/*.kt"
 			],
-			"rule": "If pipeline stage order, typed handoffs, repair loop behavior, validation responsibilities, layout behavior, alignment behavior, or failure modes change, docs/pipeline-architecture.md and docs/goap-lifecycle.md must stay consistent with the implementation."
+			"rule": "If pipeline stage order, typed handoffs, repair loop behavior, validation responsibilities, layout behavior, alignment behavior, or failure modes change, docs/architecture.md (§4 GOAP lifecycle and §5 End-to-end pipeline) must stay consistent with the implementation."
 		},
 		{
 			"id": "operator-docs-track-runtime-config",

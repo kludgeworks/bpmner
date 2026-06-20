@@ -62,7 +62,7 @@ Find it under `src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/compile
 | `targetElements` | yes | BPMN element types this rule applies to. |
 | `errorMessages` | yes | Map from `diagnosticCode` to human-readable message. A rule can emit multiple codes. |
 | `severity` | optional (defaults `WARNING`) | Default severity. The active profile + user overrides modify this. |
-| `repair` | optional (defaults `LLM_MODEL_PATCH`) | `RepairKind` + `RepairSafety` + handler name. See the [GOAP lifecycle doc](../../docs/goap-lifecycle.md#the-repair-contract). |
+| `repair` | optional (defaults `LLM_MODEL_PATCH`) | `RepairKind` + `RepairSafety` + handler name. See the [repair contract section](../../docs/architecture.md#the-repair--pkl-contract). |
 | `aliases` | optional | Alternative ids for backward compatibility. |
 
 ### Emitting a diagnostic

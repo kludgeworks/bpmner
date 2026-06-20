@@ -13,6 +13,7 @@ import org.pkl.config.kotlin.to
 import org.pkl.core.ModuleSource
 import org.pkl.core.PklException
 import org.slf4j.LoggerFactory
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.net.URI
@@ -23,6 +24,7 @@ internal class ConventionsLoader {
     private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
 
     @Bean
+    @ConditionalOnMissingBean
     fun bpmnerLintConfig(config: BpmnConfig): BpmnerLintConfig {
         val uri = config.rules.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
             ?: URI.create(DEFAULT_CONFIG_URI)

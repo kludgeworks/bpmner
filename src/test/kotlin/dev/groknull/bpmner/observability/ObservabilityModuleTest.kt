@@ -16,13 +16,14 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `observability` module context bootstraps successfully.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `observability` module is a purely-outbound event-listener
- * module that depends on alignment, generation, readiness, repair, and validation modules, each
- * with their own transitive Spring beans. ALL_DEPENDENCIES ensures every transitive Spring bean
- * in the dependency graph is wired so the event listeners can reference the correct event types.
- * The module exposes no root-package ports; context startup is the meaningful assertion.
+ * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `observability`
+ * is a purely-outbound event-listener module that consumes the full pipeline event graph
+ * (`BpmnAlignmentCheckedEvent`, `BpmnReadinessAssessedEvent`, `BpmnRepairCompletedEvent`, etc.).
+ * ALL_DEPENDENCIES ensures every event-type class in the transitive closure is wired so the
+ * listeners can reference them at startup. DIRECT_DEPENDENCIES would not cover the full event
+ * graph. The module exposes no root-package ports; context startup is the meaningful assertion.
  * API keys are stubbed so no live LLM call is made at startup.
- * (S5 — ARCHITECTURE §5 S5, G8; §1.8 observability is a cross-cutting sink)
+ * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8; §1.8 observability)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

@@ -15,11 +15,13 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `repair` module depends on contract, generation, rules,
- * and validation modules, each with their own transitive Spring beans (BeanRuleRegistry, rule
- * configs, XSD validator, BpmnDefinitionToXmlConverter, etc.). ALL_DEPENDENCIES ensures every
- * transitive Spring bean is wired. API keys are stubbed so no live LLM call is made at startup.
- * (S5 — ARCHITECTURE §5 S5, G8)
+ * BootstrapMode.ALL_DEPENDENCIES: `repair` grants `rules`, and `rules`'s `DIRECT_DEPENDENCIES`
+ * bootstrap does not include the `config` package (see `BLOCKER-S7.md` §5.B — Spring Modulith
+ * 1.4.1 does not add `dev.groknull.bpmner.config` to the scan set for the `rules` module even
+ * though `rules/RulesModule` declares `config` in its `allowedDependencies`). `BpmnConfig` is
+ * therefore not available when `repair` bootstraps `rules` under isolation. Remains on
+ * `ALL_DEPENDENCIES` until the architect resolves the `rules`/`config` bootstrap gap.
+ * API keys are stubbed so no live LLM call is made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

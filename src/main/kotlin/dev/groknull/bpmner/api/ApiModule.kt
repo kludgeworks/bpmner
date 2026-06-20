@@ -14,7 +14,7 @@ import org.springframework.modulith.ApplicationModule
  */
 // Strict leaf: `allowedDependencies = []` actively forbids any dependency on another
 // bpmner module. Bare `@ApplicationModule` would leave the dependency list unrestricted
-// (per the annotation's Javadoc), letting an accidental `import dev.groknull.bpmner.core.*`
+// (per the annotation's Javadoc), letting an accidental `import dev.groknull.bpmner.domain.*`
 // in the api module silently pass `modules.verify()`.
 @ApplicationModule(allowedDependencies = [])
 internal object ApiModule

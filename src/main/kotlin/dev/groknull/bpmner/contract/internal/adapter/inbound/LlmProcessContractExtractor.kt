@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.config.BpmnRequestPromptContributor
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -15,6 +15,7 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
@@ -27,7 +28,6 @@ internal class LlmProcessContractExtractor(
     private val config: BpmnConfig,
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
-    private val requestPromptContributor: BpmnRequestPromptContributor,
 ) : ProcessContractExtractor {
     private val logger = LoggerFactory.getLogger(LlmProcessContractExtractor::class.java)
 
@@ -40,7 +40,7 @@ internal class LlmProcessContractExtractor(
         val promptRunner =
             config.contractExtractor
                 .promptRunner(context)
-                .withPromptContributor(requestPromptContributor.contributionFor(request.styleGuide))
+                .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
         val flat = promptRunner
             .creating(FlatProcessContract::class.java)

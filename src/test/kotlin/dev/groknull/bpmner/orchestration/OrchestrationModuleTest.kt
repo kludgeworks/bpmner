@@ -16,14 +16,16 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `orchestration` module context bootstraps and wires the GOAP agent.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `orchestration` module is the application-layer coordinator
- * (ARCHITECTURE §1.8) and depends on alignment, contract, generation, layout, readiness, repair,
- * and validation modules — the full pipeline. ALL_DEPENDENCIES ensures every transitive Spring
- * bean is wired so the BpmnGenerationAgent's @Action and GOAP wiring resolves at startup without
- * a live LLM call. DIRECT_DEPENDENCIES would not suffice because the orchestrator's actions
- * require beans from the full transitive closure (e.g. BpmnRepairer, BpmnLayoutPort, BpmnAligner).
+ * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `orchestration`
+ * is the full-pipeline coordinator (ARCHITECTURE §1.8). It depends on alignment, contract,
+ * generation, layout, readiness, repair, and validation — the complete GOAP action graph.
+ * ALL_DEPENDENCIES ensures every transitive bean is wired so `BpmnGenerationAgent`'s `@Action`
+ * and GOAP wiring resolve at startup. DIRECT_DEPENDENCIES would not suffice because the
+ * orchestrator's actions require beans from the full transitive closure (e.g. `BpmnRepairer`,
+ * `BpmnLayoutPort`, `BpmnAligner`). `AgentDeploymentValidator` is now in
+ * `orchestration.internal.adapter.inbound` (ADR-22 Track A) and resolves without a stub.
  * API keys are stubbed so no live LLM call is made at startup.
- * (S5 — ARCHITECTURE §5 S5, G8; §1.8 orchestration is the application layer)
+ * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8; §1.8 orchestration)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

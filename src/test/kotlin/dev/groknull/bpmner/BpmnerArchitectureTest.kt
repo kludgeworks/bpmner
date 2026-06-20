@@ -168,8 +168,8 @@ class BpmnerArchitectureTest {
                         SimpleConditionEvent.violated(
                             item,
                             "${item.fullName} is missing @${annotationTypeName.substringAfterLast('.')} — " +
-                                "the class may have been relocated or the annotation was removed. " +
-                                "TODO(#424) update or remove this pin after relocation is complete.",
+                                "the class may have been relocated or the annotation was removed; " +
+                                "update or remove this pin if the FQN changed.",
                         ),
                     )
                 }
@@ -195,8 +195,8 @@ class BpmnerArchitectureTest {
                             item,
                             "${item.fullName} has no method annotated with " +
                                 "@${annotationTypeName.substringAfterLast('.')} — " +
-                                "the coupling may have been relocated or the method was removed. " +
-                                "TODO(#424) update or remove this pin after relocation is complete.",
+                                "the coupling may have been relocated or the method was removed; " +
+                                "update or remove this pin if the FQN changed.",
                         ),
                     )
                 }

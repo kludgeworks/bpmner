@@ -1,6 +1,6 @@
 # Operator Guide
 
-This guide is for someone deploying bpmner or tuning it for a specific environment. It assumes you've read the [README](../README.md) and at least skimmed [`pipeline-architecture.md`](./pipeline-architecture.md). For internal mechanics see [`goap-lifecycle.md`](./goap-lifecycle.md).
+This guide is for someone deploying bpmner or tuning it for a specific environment. It assumes you've read the [README](../README.md) and at least skimmed the [Architecture doc](./architecture.md). For internal pipeline and GOAP mechanics see the [architecture doc](./architecture.md).
 
 ## Configuration reference
 

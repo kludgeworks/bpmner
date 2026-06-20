@@ -15,11 +15,12 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `layout` module depends on repair and validation modules,
- * each with their own transitive Spring beans (rule engine, XSD validator, repair loop, etc.).
- * ALL_DEPENDENCIES ensures every transitive Spring bean in the dependency graph is wired.
- * API keys are stubbed so no live LLM call is made at startup.
- * (S5 — ARCHITECTURE §5 S5, G8)
+ * BootstrapMode.ALL_DEPENDENCIES: `layout` grants `validation` which grants `rules`. Since
+ * `rules`'s `DIRECT_DEPENDENCIES` bootstrap does not include the `config` package (see
+ * `BLOCKER-S7.md` §5.B), `BpmnConfig` is not available transitively and `layout` cannot
+ * flip to `DIRECT_DEPENDENCIES` yet. Remains on `ALL_DEPENDENCIES` until the architect
+ * resolves the `rules`/`config` bootstrap gap. API keys are stubbed so no live LLM call is
+ * made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
