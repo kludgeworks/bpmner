@@ -11,7 +11,7 @@ import com.fasterxml.jackson.core.util.Separators
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.node.ObjectNode
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
-import dev.groknull.bpmner.repair.internal.adapter.outbound.RepairFixtures
+import dev.groknull.bpmner.repair.RepairTestFixtures
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.LocalDate
@@ -29,6 +29,10 @@ import java.time.ZoneOffset
  *
  * Adds missing entries automatically. Does NOT remove entries no longer in [MEASUREMENTS] —
  * those need a deliberate manual deletion, since absence usually means a probe was renamed.
+ *
+ * Uses [RepairTestFixtures] (the `repair` module's published root test fixture) instead of
+ * reaching directly into `repair.internal.adapter.outbound.RepairFixtures`
+ * (S5 — ARCHITECTURE §5 S5, §1.5).
  */
 private const val BASELINES_PATH = "src/test/resources/prompt-baselines.json"
 
@@ -49,8 +53,8 @@ private val MEASUREMENTS: Map<String, () -> Int> = linkedMapOf(
     "alignmentFullPayload" to { PromptFixtures.alignment.fullPayload().length },
     "readinessPrompt" to { PromptFixtures.readiness.render().length },
     "readinessFullPayload" to { PromptFixtures.readiness.fullPayload().length },
-    "repairPatchPrompt" to { RepairFixtures.renderPatchFeedback().length },
-    "repairFullPrompt" to { RepairFixtures.renderFullFeedback().length },
+    "repairPatchPrompt" to { RepairTestFixtures.renderPatchFeedback().length },
+    "repairFullPrompt" to { RepairTestFixtures.renderFullFeedback().length },
 )
 
 fun main() {

@@ -8,7 +8,6 @@ package dev.groknull.bpmner
 import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
-import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.ArchCondition
 import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.ConditionEvents
@@ -19,12 +18,13 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 
 class BpmnerModuleBoundariesTest {
-    // Use the shared excludeBazelTestClasses helper (from BpmnerArchUnitImports.kt).
-    // Combine with DoNotIncludeTests() so only production classes are scanned.
-    // TODO(#424) widen to test scope after S5 fixes test-side reaches
+    // Use the shared excludeBazelTestClasses helper (from BpmnerArchUnitImports.kt) to exclude
+    // Bazel test JARs from the Kotlin synthetic-class noise filter. Both prod AND test classes
+    // are scanned — the importer applies only the Bazel-jar and Kotlin-synthetic filters so
+    // test classes are subjects of the cross-module internal boundary rule (ARCHITECTURE §1.10,
+    // §5 S5, G4).
     private val importer =
         ClassFileImporter()
-            .withImportOption(ImportOption.DoNotIncludeTests())
             .withImportOption(excludeBazelTestClasses)
     private val classes =
         importer
@@ -67,7 +67,7 @@ class BpmnerModuleBoundariesTest {
     }
 
     /**
-     * Cross-module internal boundary rule (S2, Rule 1).
+     * Cross-module internal boundary rule (S2, Rule 1 — scoped to prod and test classes).
      *
      * For each of the 10 internal-bearing modules `<m>`, no class outside module `<m>` may
      * depend on any class in `dev.groknull.bpmner.<m>.internal..`.
@@ -79,13 +79,12 @@ class BpmnerModuleBoundariesTest {
      * the single-predicate design flaw where excluding all 10 modules from "outsiders" would
      * prevent any cross-module reach from being flagged (REVIEW-S2 rows #1 / #3).
      *
-     * Scoped to **prod** classes only (DoNotIncludeTests + excludeBazelTestClasses above).
-     * TODO(#424) widen to test scope after S5 fixes test-side reaches
+     * Scoped to **prod AND test** classes (ARCHITECTURE §1.10, §5 S5, G4).
      *
      * Verified green at ab75950: prod cross-module internal reach count = 0 (ARCHITECTURE §0.A).
      */
     @Test
-    fun `no prod class accesses another module's internal package`() {
+    fun `no class accesses another module's internal package`() {
         for (module in INTERNAL_BEARING_MODULES) {
             perModuleInternalRule(module).check(classes)
         }
@@ -117,9 +116,9 @@ class BpmnerModuleBoundariesTest {
      */
     @Test
     fun `cross-module internal rule is proven non-vacuous for each module (planted-violation proof)`() {
-        val prodClasses =
+        // Includes both prod and test classes (ARCHITECTURE §1.10, §5 S5).
+        val allClasses =
             ClassFileImporter()
-                .withImportOption(ImportOption.DoNotIncludeTests())
                 .withImportOption(excludeBazelTestClasses)
                 .importPackages("dev.groknull.bpmner")
 
@@ -128,7 +127,7 @@ class BpmnerModuleBoundariesTest {
             val modulePrefix = "dev.groknull.bpmner.$module"
 
             // (a) Target set non-empty: at least one class lives in <module>.internal..
-            val internalClassCount = prodClasses.count { cls ->
+            val internalClassCount = allClasses.count { cls ->
                 cls.packageName.startsWith(internalPrefix)
             }
             assertThat(internalClassCount)
@@ -143,7 +142,7 @@ class BpmnerModuleBoundariesTest {
             //     outsider w.r.t. <module>. This proves the per-module rule's subject predicate
             //     (isOutsideModule(m)) correctly includes cross-module classes as subjects,
             //     not just root-package classes.
-            val outsiderCount = prodClasses.count { cls ->
+            val outsiderCount = allClasses.count { cls ->
                 val pkg = cls.packageName
                 // Must be in bpmner namespace but NOT inside this module
                 pkg.startsWith("dev.groknull.bpmner") &&

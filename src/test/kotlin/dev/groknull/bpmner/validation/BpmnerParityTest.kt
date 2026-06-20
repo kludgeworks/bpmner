@@ -25,16 +25,8 @@ import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
 import dev.groknull.bpmner.domain.BpmnStartEvent
 import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
 import dev.groknull.bpmner.domain.BpmnUserTask
-import dev.groknull.bpmner.rules.RuleProfile
-import dev.groknull.bpmner.rules.internal.domain.DefaultRuleEngine
-import dev.groknull.bpmner.rules.internal.domain.InMemoryRuleRegistry
-import dev.groknull.bpmner.rules.internal.domain.compiled.DanglingEdgeRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DefaultFlowRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.DuplicateIdRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredEventsRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.RequiredNameRule
-import dev.groknull.bpmner.rules.internal.domain.compiled.TaskPayloadRule
+import dev.groknull.bpmner.rules.RuleEngine
+import dev.groknull.bpmner.rules.RulesTestFixtures
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -42,7 +34,7 @@ import org.junit.jupiter.api.Test
 /**
  * Phase 1H (#216) parity gate.
  *
- * Asserts that the legacy [BpmnDefinitionValidator] and the new [DefaultRuleEngine] composing
+ * Asserts that the legacy [BpmnDefinitionValidator] and the new [RuleEngine] composing
  * the seven compiled rules from `rules/internal/domain/compiled/` produce the **same set of
  * triggered diagnosticCodes** for the same input. Parity is on the **set of codes**, not on
  * count and not on message text — see #216:
@@ -53,6 +45,10 @@ import org.junit.jupiter.api.Test
  *
  * `BpmnDefinitionValidator` stays alive as the parity oracle for Phase 1 (#216 explicit AC).
  * Its eventual deletion is Phase 2 work.
+ *
+ * The rule engine is obtained via [RulesTestFixtures.standardCompiledRuleEngine] — the
+ * published `rules` root test fixture — so this test does not reach into `rules.internal.*`
+ * directly (S5 — ARCHITECTURE §5 S5, §1.5).
  *
  * ### Translation contract
  *
@@ -70,21 +66,10 @@ import org.junit.jupiter.api.Test
 @Suppress("TooManyFunctions")
 class BpmnerParityTest {
     private val validator = BpmnDefinitionValidator()
-    private val engine =
-        DefaultRuleEngine(
-            InMemoryRuleRegistry(
-                listOf(
-                    DuplicateIdRule(),
-                    RequiredNameRule(),
-                    DanglingEdgeRule(),
-                    RequiredEventsRule(),
-                    EventDefinitionRule(),
-                    TaskPayloadRule(),
-                    DefaultFlowRule(),
-                ),
-            ),
-            RuleProfile.EMPTY,
-        )
+
+    // Obtain the rule engine via the rules module's published test fixture, avoiding
+    // direct imports from rules.internal (S5 — ARCHITECTURE §5 S5, §1.5).
+    private val engine: RuleEngine = RulesTestFixtures.standardCompiledRuleEngine()
 
     @Test
     fun `clean definition produces no diagnostics in either pipeline`() {

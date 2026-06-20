@@ -12,14 +12,7 @@ import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.domain.BpmnDefinition
 import dev.groknull.bpmner.domain.BpmnEdge
 import dev.groknull.bpmner.domain.BpmnRequest
@@ -83,8 +76,8 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
 
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatProcessContract::class.java,
-        ).thenReturn(validFlatContract())
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
+        ).thenReturn(FlatContractTestFixtures.minimalContract())
 
         whenCreateObject({ it.contains("Generate a BPMN definition object") }, FlatBpmnDefinition::class.java)
             .thenReturn(validFlatDefinition())
@@ -167,23 +160,6 @@ class BpmnAlignmentFailureIntegrationTest : EmbabelMockitoIntegrationTest() {
         ),
         evidence = listOf(SourceEvidence("ev1", "Unused", EvidenceSourceType.ORIGINAL_INPUT)),
         rationale = "Ready",
-    )
-
-    private fun validFlatContract() = FlatProcessContract(
-        id = "contract-1",
-        processName = "Dummy",
-        summary = "Summary",
-        start = FlatContractStart(
-            trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Trigger"),
-            sourceIds = listOf("ev1"),
-        ),
-        activities = listOf(
-            FlatContractActivity(id = "a1", name = "A1", kind = FlatActivityKind.SERVICE, sourceIds = listOf("ev1")),
-            FlatContractActivity(id = "a2", name = "A2", kind = FlatActivityKind.SERVICE, sourceIds = listOf("ev1")),
-        ),
-        endStates = listOf(
-            FlatContractEndState(id = "e1", name = "E1", kind = FlatEndStateKind.NORMAL, sourceIds = listOf("ev1")),
-        ),
     )
 
     private fun validFlatDefinition() = FlatBpmnDefinition(

@@ -17,15 +17,7 @@ import com.embabel.agent.spi.common.Constants
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.api.GenerationMode
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatActivityKind
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractActivity
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractEndState
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractStart
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatContractTrigger
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatEndStateKind
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatTriggerKind
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.domain.BpmnEdge
 import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
@@ -103,11 +95,12 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
                 rationale = "Ready",
             )
 
-        // 1. Mock Contract
+        // 1. Mock Contract — use the contract module's published test fixture to avoid
+        //    reaching into contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatProcessContract::class.java,
-        ).thenReturn(sampleFlatContract())
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
+        ).thenReturn(FlatContractTestFixtures.makeToastContract())
 
         // 2. Mock Generation
         whenCreateObject(
@@ -188,10 +181,12 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
             ProcessInputAssessment::class.java,
         ).thenReturn(assessment)
+
         whenCreateObject(
             { it.contains("Extract a source-grounded process contract") },
-            FlatProcessContract::class.java,
-        ).thenReturn(sampleFlatContract())
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
+        ).thenReturn(FlatContractTestFixtures.makeToastContract())
+
         whenCreateObject(
             { it.contains("Generate a BPMN definition object from the validated process contract") },
             FlatBpmnDefinition::class.java,
@@ -329,45 +324,10 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ),
         )
 
-        fun sampleFlatContract(): FlatProcessContract {
-            val sources = listOf("s1")
-            return FlatProcessContract(
-                id = "contract-1",
-                processName = "Make Toast",
-                summary = "Toast making process",
-                start = FlatContractStart(
-                    trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Hunger"),
-                    sourceIds = sources,
-                ),
-                activities = listOf(
-                    FlatContractActivity(
-                        id = "a1",
-                        name = "Get bread",
-                        kind = FlatActivityKind.SERVICE,
-                        sourceIds = sources,
-                    ),
-                    FlatContractActivity(
-                        id = "a2",
-                        name = "Toast bread",
-                        kind = FlatActivityKind.SERVICE,
-                        sourceIds = sources,
-                    ),
-                ),
-                endStates = listOf(
-                    FlatContractEndState(
-                        id = "e1",
-                        name = "Toast ready",
-                        kind = FlatEndStateKind.NORMAL,
-                        sourceIds = sources,
-                    ),
-                ),
-            )
-        }
-
-        fun anyDefinition(): BpmnDefinition = anyNonNull()
+        fun anyDefinition(): dev.groknull.bpmner.domain.BpmnDefinition = anyNonNull()
 
         fun <T> anyNonNull(): T {
-            org.mockito.ArgumentMatchers.any<T>()
+            any<T>()
             @Suppress("UNCHECKED_CAST")
             return null as T
         }

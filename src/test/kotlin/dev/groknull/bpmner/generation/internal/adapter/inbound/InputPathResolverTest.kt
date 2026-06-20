@@ -3,10 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner
+package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import com.google.devtools.build.runfiles.Runfiles
-import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -18,6 +17,11 @@ import kotlin.io.path.createFile
 import kotlin.io.path.pathString
 import kotlin.io.path.writeText
 
+/**
+ * Relocated from root `bpmner` package to `generation.internal.adapter.inbound` (same-module
+ * reach) so that the import of [InputPathResolver] is within the `generation` module's own
+ * internal boundary (S5 — ARCHITECTURE §5 S5, §1.5).
+ */
 class InputPathResolverTest {
     @Test
     fun `absolute filesystem path resolves and reads`(

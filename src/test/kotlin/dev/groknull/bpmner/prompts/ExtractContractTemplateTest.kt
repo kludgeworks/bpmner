@@ -11,7 +11,7 @@ import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.contract.internal.adapter.inbound.FlatProcessContract
+import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.EvidenceSourceType
@@ -115,8 +115,10 @@ class ExtractContractTemplateTest {
             "decision-kind prose is not rendered into the template",
         )
 
+        // Use the contract module's published test fixture to obtain FlatProcessContract.class
+        // without reaching into contract.internal (S5 — ARCHITECTURE §5 S5, §1.5).
         val schema = FilteringJacksonOutputConverter(
-            FlatProcessContract::class.java,
+            FlatContractTestFixtures.FLAT_PROCESS_CONTRACT_CLASS,
             jacksonObjectMapper(),
             Predicate { true },
         ).format

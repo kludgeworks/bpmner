@@ -3,11 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner
+package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.api.GenerationMode
-import dev.groknull.bpmner.generation.BpmnRequestDraft
-import dev.groknull.bpmner.generation.BpmnRequestResolver
 import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -16,6 +14,11 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 import kotlin.io.path.writeText
 
+/**
+ * Relocated from root `bpmner` package to `generation` (same-module) so that the import of
+ * [InputPathResolver] is within the `generation` module's own internal boundary
+ * (S5 — ARCHITECTURE §5 S5, §1.5).
+ */
 class BpmnRequestResolverTest {
     @Test
     fun `shell draft resolves inline prose with default output`(
