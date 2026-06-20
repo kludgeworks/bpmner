@@ -35,10 +35,12 @@ import org.springframework.stereotype.Component
  * repairs flow through Kotlin handlers under `DeterministicTopologyRepairStrategy` instead
  * (`LOCAL_MODEL_FIX` kind).
  */
-// NOTE: @SecondaryAdapter intentionally omitted. This adapter calls RuleEngine (@PrimaryPort from
-// rules/) which violates the jMolecules ensureHexagonal(LENIENT) rule for @SecondaryAdapter layer.
-// It is an Anti-Corruption Layer that does not fit the pure hexagonal secondary-adapter shape;
-// see ARCHITECTURE ADR-20 §9 Track C C1 blocker (pending architect decision).
+// NOTE: @SecondaryAdapter is deliberately absent (ADR-23 Decision 2). This adapter calls
+// RuleEngine and RuleRegistry, both @PrimaryPort interfaces in rules/, which violates the
+// jMolecules ensureHexagonal(LENIENT) rule for the @SecondaryAdapter layer. This adapter is
+// an Anti-Corruption Layer (ACL) over rules' driving surface, not a pure secondary adapter.
+// The ACL shape is enforced by a BpmnerArchitectureTest pin: RuleEngineLintingAdapter is the
+// sole validation class permitted to depend on rules' @PrimaryPorts.
 @Component
 internal class RuleEngineLintingAdapter(
     private val ruleEngine: RuleEngine,

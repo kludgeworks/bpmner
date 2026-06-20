@@ -15,12 +15,13 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: `layout` grants `validation` which grants `rules`. Since
- * `rules`'s `DIRECT_DEPENDENCIES` bootstrap does not include the `config` package (see
- * `BLOCKER-S7.md` §5.B), `BpmnConfig` is not available transitively and `layout` cannot
- * flip to `DIRECT_DEPENDENCIES`. The `rules`/`config` scan gap (BLOCKER-S7.md §5.B)
- * blocks the flip; the test remains on `ALL_DEPENDENCIES` pending an architect decision.
- * API keys are stubbed so no live LLM call is made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
+ * BootstrapMode.ALL_DEPENDENCIES: `BpmnConfig` is **two module hops** away from `layout`
+ * (`layout` → `validation` → `config`). Spring Modulith `DIRECT_DEPENDENCIES` only resolves
+ * one level deep, so the `config` package is not reachable and `BpmnConfig` cannot materialise
+ * under isolation. Flipping to `DIRECT_DEPENDENCIES` is a **§10 follow-on** after the
+ * `llm`/`config` dependency-depth reshape shortens the chain — it is not a Modulith upgrade
+ * (barred by N4). (ADR-23 Decision 1.2)
+ * API keys are stubbed so no live LLM call is made at startup.
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

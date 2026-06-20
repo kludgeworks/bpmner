@@ -351,11 +351,15 @@ For the full configuration reference see [`operator-guide.md`](./operator-guide.
 The boundary enforcement stack (see [adr-002-module-architecture.md](./adr-002-module-architecture.md)):
 
 - **`BpmnerModulithTest`** — `ApplicationModules.of(…, excludeBazelTestClasses).verify()`
-  checks acyclicity and declared boundaries. Module tests target `DIRECT_DEPENDENCIES` for 7
-  of 10 modules (ADR-22 gate 4‴; `generation`, `observability`, `orchestration` keep
-  `ALL_DEPENDENCIES` with documented rationale).
-- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 4 bespoke
-  pin rules, `excludeBazelTestClasses`.
+  checks acyclicity and declared boundaries. Module tests target `DIRECT_DEPENDENCIES` for **5
+  of 10** modules (`validation`, `readiness`, `contract`, `alignment`, `rules`; ADR-23 Decision
+  1); `layout` and `repair` keep `ALL_DEPENDENCIES` because their required beans are two module
+  hops away (§10 follow-on); `generation`, `observability`, `orchestration` keep
+  `ALL_DEPENDENCIES` with documented rationale (deep transitive agent graph).
+- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 5 bespoke
+  pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `validation` class
+  permitted to depend on `rules` `@PrimaryPort`s — ADR-23 Decision 2),
+  `excludeBazelTestClasses`.
 - **`BpmnerModuleBoundariesTest`** — per-module cross-`internal` rules + three `domain`
   guards: `domain does not depend on other modules except api`, `domain does not depend on
   forbidden framework prompt or io types` (`forbiddenPromptGlue` bans `com.embabel.common.ai.prompt`

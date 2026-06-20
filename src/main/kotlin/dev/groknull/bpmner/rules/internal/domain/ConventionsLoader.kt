@@ -18,14 +18,21 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import java.net.URI
 
-/** Loads modeller-owned lint conventions from `bpmner.pkl` once at startup. */
+/**
+ * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
+ *
+ * Constructor-injects [BpmnConfig] to create a `USES_COMPONENT` edge recognised by Spring
+ * Modulith, which adds `dev.groknull.bpmner.config` to the `rules` module's
+ * `DIRECT_DEPENDENCIES` bootstrap scan. `@EnableConfigurationProperties(BpmnConfig::class)`
+ * on `BpmnPipelineConfig` supplies the bean. (ADR-23 Decision 1.1)
+ */
 @Configuration
-internal class ConventionsLoader {
+internal class ConventionsLoader(private val config: BpmnConfig) {
     private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
 
     @Bean
     @ConditionalOnMissingBean
-    fun bpmnerLintConfig(config: BpmnConfig): BpmnerLintConfig {
+    fun bpmnerLintConfig(): BpmnerLintConfig {
         val uri = config.rules.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
             ?: URI.create(DEFAULT_CONFIG_URI)
         val pkl = try {

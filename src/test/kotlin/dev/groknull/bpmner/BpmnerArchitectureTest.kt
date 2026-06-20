@@ -121,6 +121,35 @@ class BpmnerArchitectureTest {
     }
 
     @Test
+    fun `only permitted validation classes may reach rules primary ports`() {
+        // ACL pin (ADR-23 Decision 2): RuleEngineLintingAdapter is the Anti-Corruption Layer over
+        // rules' @PrimaryPort interfaces (RuleEngine, RuleRegistry). Adding @SecondaryAdapter would
+        // yield 7 ensureHexagonal(LENIENT) violations — the omission is intentional.
+        // LlmValidator (@Deprecated) is a pre-existing second reacher of RuleRegistry; it is
+        // excluded here as a named, audited exception pending its removal in a follow-on phase.
+        // No other validation class may reach rules @PrimaryPorts directly.
+        noClasses()
+            .that()
+            .resideInAPackage("..validation..")
+            .and()
+            .doNotHaveSimpleName("RuleEngineLintingAdapter")
+            .and()
+            .doNotHaveSimpleName("LlmValidator")
+            .should()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("dev.groknull.bpmner.rules.RuleEngine")
+            .orShould()
+            .dependOnClassesThat()
+            .haveFullyQualifiedName("dev.groknull.bpmner.rules.RuleRegistry")
+            .because(
+                "Only RuleEngineLintingAdapter (ACL, ADR-23 Decision 2) and the deprecated " +
+                    "LlmValidator (audited exception, pending removal) may reach rules' " +
+                    "@PrimaryPorts; all other validation classes must go through BpmnLintingPort",
+            )
+            .check(classes)
+    }
+
+    @Test
     fun `internal domain classes are free of deep framework couplings`() {
         noClasses()
             .that()
