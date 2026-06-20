@@ -10,12 +10,10 @@ import org.springframework.modulith.ApplicationModule
 /**
  * Observability module — purely-outbound event listeners over the rest of the
  * pipeline. No other module imports observability; it consumes
- * generation/validation/repair/alignment/readiness events for metrics and
+ * generation/validation/alignment/readiness events for metrics and
  * tracing.
  */
-// observability transitively depends on api via api.GenerationMode (exposed through
-// generation.BpmnResult / similar types passed around in observability event handlers).
 @ApplicationModule(
-    allowedDependencies = ["alignment", "api", "domain", "generation", "readiness", "repair", "validation"],
+    allowedDependencies = ["alignment", "api", "domain", "generation", "readiness", "validation"],
 )
 internal object ObservabilityModule
