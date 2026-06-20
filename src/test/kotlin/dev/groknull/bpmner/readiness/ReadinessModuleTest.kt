@@ -23,7 +23,7 @@ import org.springframework.test.context.TestPropertySource
  * on `BpmnPipelineConfig`; it is no longer app-root-only, so it materialises under isolation.
  * Decision 2 — `AgentPlatformBpmnReadinessInvoker` constructor-injects embabel `AgentPlatform`;
  * `@EnableAgents` in the local `@TestConfiguration` supplies the real platform bean (wiring,
- * not a stub). The `BpmnRequestPromptContributor` seam has been deleted (ADR-21 Track A), so no
+ * not a stub). The `BpmnRequestPromptContributor` seam is absent (ADR-21 Track A deleted it), so no
  * contributor stub is required. API keys are stubbed so no live LLM call is made at startup.
  * (S7 — ADR-22 Decisions 1+2; ARCHITECTURE §5 S7, G8)
  */

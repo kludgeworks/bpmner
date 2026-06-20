@@ -20,13 +20,13 @@ import org.springframework.test.context.TestPropertySource
  * Validates that the `rules` module context bootstraps and exposes its root-package ports.
  *
  * BootstrapMode.ALL_DEPENDENCIES: ADR-22 Decision 1 (`@EnableConfigurationProperties(BpmnConfig::class)`
- * on `BpmnPipelineConfig`) was intended to register `BpmnConfig` under module isolation and flip
- * this test to `DIRECT_DEPENDENCIES`. In practice, Spring Modulith 1.4.1 does not include the
- * `config` base package in the `DIRECT_DEPENDENCIES` bootstrap set for the `rules` module (see
- * `BLOCKER-S7.md` §5.B finding — `config` appears in the scan only for modules that also grant
- * `validation` or have a direct import path via the scanned public package). Until this is resolved
- * by the architect, the test remains on `ALL_DEPENDENCIES`. The `@ConditionalOnMissingBean` on
- * `ConventionsLoader.bpmnerLintConfig` (ADR-20 §9 Track B) is in place and ready to activate.
+ * on `BpmnPipelineConfig`) registers `BpmnConfig` in `config`. Under Spring Modulith 1.4.1
+ * `DIRECT_DEPENDENCIES` isolation for `rules`, however, the `config` base package is not
+ * included in the scan set (BLOCKER-S7.md §5.B — `config` appears only for modules whose
+ * grant path resolves `validation` as an intermediate). The `rules`/`config` scan gap requires
+ * an architect decision; the test therefore remains on `ALL_DEPENDENCIES`. The
+ * `@ConditionalOnMissingBean` on `ConventionsLoader.bpmnerLintConfig` (ADR-20 §9 Track B)
+ * is in place and ready to activate once the gap is resolved.
  * API keys are stubbed so no live LLM call is made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)

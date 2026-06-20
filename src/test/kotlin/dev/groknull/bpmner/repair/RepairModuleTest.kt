@@ -19,8 +19,9 @@ import org.springframework.test.context.TestPropertySource
  * bootstrap does not include the `config` package (see `BLOCKER-S7.md` §5.B — Spring Modulith
  * 1.4.1 does not add `dev.groknull.bpmner.config` to the scan set for the `rules` module even
  * though `rules/RulesModule` declares `config` in its `allowedDependencies`). `BpmnConfig` is
- * therefore not available when `repair` bootstraps `rules` under isolation. Remains on
- * `ALL_DEPENDENCIES` until the architect resolves the `rules`/`config` bootstrap gap.
+ * therefore not available when `repair` bootstraps `rules` under isolation. The
+ * `rules`/`config` scan gap (BLOCKER-S7.md §5.B) blocks the flip; the test remains on
+ * `ALL_DEPENDENCIES` pending an architect decision.
  * API keys are stubbed so no live LLM call is made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)

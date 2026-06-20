@@ -18,9 +18,9 @@ import org.springframework.test.context.TestPropertySource
  * BootstrapMode.ALL_DEPENDENCIES: `layout` grants `validation` which grants `rules`. Since
  * `rules`'s `DIRECT_DEPENDENCIES` bootstrap does not include the `config` package (see
  * `BLOCKER-S7.md` §5.B), `BpmnConfig` is not available transitively and `layout` cannot
- * flip to `DIRECT_DEPENDENCIES` yet. Remains on `ALL_DEPENDENCIES` until the architect
- * resolves the `rules`/`config` bootstrap gap. API keys are stubbed so no live LLM call is
- * made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
+ * flip to `DIRECT_DEPENDENCIES`. The `rules`/`config` scan gap (BLOCKER-S7.md §5.B)
+ * blocks the flip; the test remains on `ALL_DEPENDENCIES` pending an architect decision.
+ * API keys are stubbed so no live LLM call is made at startup. (S7 deferred — BLOCKER-S7.md §5.B)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

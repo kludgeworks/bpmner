@@ -23,7 +23,7 @@ import org.springframework.test.context.TestPropertySource
  * on `BpmnPipelineConfig`; it materialises whenever `config` is in the bootstrap set.
  * Decision 2 — `contract` grants `readiness`, which bootstraps `AgentPlatformBpmnReadinessInvoker`
  * (a ctor-injected `AgentPlatform`); `@EnableAgents` supplies the real platform bean (wiring,
- * not a stub). The `BpmnRequestPromptContributor` seam has been deleted (ADR-21 Track A).
+ * not a stub). The `BpmnRequestPromptContributor` seam is absent (ADR-21 Track A deleted it).
  * API keys are stubbed so no live LLM call is made at startup.
  * (S7 — ADR-22 Decisions 1+2; ARCHITECTURE §5 S7, G8)
  */

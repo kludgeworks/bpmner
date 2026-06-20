@@ -21,9 +21,8 @@ import org.junit.jupiter.api.Test
  * boundary gate (#215), which is build-tooling metadata — not a runtime dependency that any
  * api consumer would observe. The exclusion is by simple-name suffix.
  *
- * The former `notRuleCategory()` carve-out has been removed: `RuleCategory`'s dormant
- * `@JsonValue` was deleted outright (ADR-22 Decision 3), so the entire `api` package is now
- * genuinely Jackson-free with no exception.
+ * `RuleCategory` carries no `@JsonValue` annotation (ADR-22 Decision 3); the entire `api`
+ * package is genuinely Jackson-free with no exception.
  */
 class ApiAnnotationFreeTest {
     private val classes =
