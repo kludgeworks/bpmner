@@ -9,8 +9,8 @@ import org.springframework.modulith.ApplicationModule
 
 /**
  * Layout module — graph layout pass that decorates the BPMN definition with
- * visual coordinates. Triggers downstream repair via re-validation when the
- * laid-out form surfaces additional structural issues.
+ * visual coordinates. Surfaces additional structural issues for downstream
+ * handling; the orchestrator invokes repair separately if needed.
  */
 @ApplicationModule(allowedDependencies = ["domain", "validation"])
 internal object LayoutModule

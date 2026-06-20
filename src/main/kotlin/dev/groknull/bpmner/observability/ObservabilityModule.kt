@@ -13,6 +13,8 @@ import org.springframework.modulith.ApplicationModule
  * generation/validation/alignment/readiness events for metrics and
  * tracing.
  */
+// api.GenerationMode is referenced via BpmnRequest.mode at bytecode level — no direct
+// import; verify() confirms this grant is load-bearing (removal fails ApplicationModules.verify()).
 @ApplicationModule(
     allowedDependencies = ["alignment", "api", "domain", "generation", "readiness", "validation"],
 )
