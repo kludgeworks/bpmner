@@ -32,7 +32,6 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
-import dev.groknull.bpmner.bpmn.BpmnDefinition as ConcreteBpmnDefinition
 
 @PrimaryAdapter
 @Component
@@ -136,7 +135,7 @@ internal class LlmBpmnProcessGenerator(
     }
 
     override fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
-        val definition = outline.definition as ConcreteBpmnDefinition
+        val definition = outline.definition
 
         val objectOwners = buildMap {
             put("process", MAIN_PHASE_OWNER)

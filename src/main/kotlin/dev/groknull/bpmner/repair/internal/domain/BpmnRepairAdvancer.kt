@@ -56,7 +56,7 @@ internal class BpmnRepairAdvancer(
             return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
         }
 
-        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition) as BpmnDefinition
+        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
         val normalisedRendered = rendered.copy(definition = normalisedDefinition)
         val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
         val evaluation = contractAwareValidator.evaluate(
@@ -96,7 +96,7 @@ internal class BpmnRepairAdvancer(
         appendedMessages: List<com.embabel.chat.Message>,
         promptText: String,
     ): BpmnRepairEvaluation {
-        val stamped = defaultFlowAssigner.assign(prior.contract, repaired) as BpmnDefinition
+        val stamped = defaultFlowAssigner.assign(prior.contract, repaired)
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
         val priorRecord = prior.history.last
             ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")

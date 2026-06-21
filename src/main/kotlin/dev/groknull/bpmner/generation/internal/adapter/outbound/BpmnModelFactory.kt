@@ -46,17 +46,14 @@ import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.UserTask
-import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
-
 internal object BpmnModelFactory {
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
     fun newFlowNode(
         modelInstance: BpmnModelInstance,
         node: BpmnNode,
     ): FlowNode {
-        val concreteNode: ConcreteNode = node as ConcreteNode
         val flowNode =
-            when (concreteNode) {
+            when (node) {
                 is BpmnStartEvent -> modelInstance.newInstance(StartEvent::class.java)
 
                 is BpmnUserTask -> modelInstance.newInstance(UserTask::class.java)
@@ -91,19 +88,19 @@ internal object BpmnModelFactory {
 
                 is BpmnSubProcess ->
                     modelInstance.newInstance(SubProcess::class.java).apply {
-                        setTriggeredByEvent(concreteNode.triggeredByEvent)
+                        setTriggeredByEvent(node.triggeredByEvent)
                     }
 
                 is BpmnCallActivity ->
                     modelInstance.newInstance(CallActivity::class.java).apply {
-                        calledElement = concreteNode.calledElement
+                        calledElement = node.calledElement
                     }
 
                 // Unrecognized nodes carry no Camunda model class. Callers are expected to
                 // filter them out before reaching the generator; reaching here is a contract
                 // violation.
                 is BpmnUnrecognizedNode -> error(
-                    "BpmnUnrecognizedNode '${concreteNode.id}' (${concreteNode.bpmnType}) " +
+                    "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) " +
                         "cannot be converted to a Camunda FlowNode. " +
                         "The generator pipeline must filter unrecognized nodes " +
                         "before reaching BpmnModelFactory.",

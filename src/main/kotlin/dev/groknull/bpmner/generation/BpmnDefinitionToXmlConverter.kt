@@ -52,7 +52,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         Bpmn.writeModelToStream(output, modelInstance)
         val xml = domPostProcessor.postProcess(output.toString(Charsets.UTF_8), definition)
         return RenderedBpmn(
-            definition = definition as BpmnDefinition,
+            definition = definition,
             xml = stripUnusedDiNamespaces(xml),
             elementIndex = buildElementIndex(definition),
         )

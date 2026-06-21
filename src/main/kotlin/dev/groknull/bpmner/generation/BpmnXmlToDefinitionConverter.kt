@@ -54,7 +54,6 @@ import java.io.ByteArrayInputStream
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
-import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 // The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
 // surfaces them with a single helper.
@@ -150,8 +149,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val artifacts = artifactsAndDataFrom(document)
         val collaboration = parseCollaboration(document)
 
-        @Suppress("UNCHECKED_CAST")
-        val allNodes = (typedNodes + unrecognizedExotics) as List<ConcreteNode>
+        val allNodes = typedNodes + unrecognizedExotics
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,

@@ -54,8 +54,6 @@ import dev.groknull.bpmner.generation.BpmnFidelityReport
 import dev.groknull.bpmner.generation.BpmnFidelitySeverity
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import dev.groknull.bpmner.bpmn.BpmnEdge as ConcreteEdge
-import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /**
  * Deterministically checks that a generated [BpmnDefinition] preserves the topology declared
@@ -309,8 +307,6 @@ internal class BpmnContractFidelityChecker {
         val seen = mutableSetOf(from.id)
         var frontier = direct.map { it.targetRef }.toSet() - from.id
 
-        @Suppress("UNCHECKED_CAST")
-        val concreteOutgoing = outgoingBySource as Map<String, List<ConcreteEdge>>
         repeat(MAX_REACHABILITY_HOPS) {
             if (frontier.isEmpty()) return false
             if (targetId in frontier) return true
@@ -322,8 +318,7 @@ internal class BpmnContractFidelityChecker {
                     .asSequence()
                     .filter { seen.add(it) }
                     .mapNotNull { nodeById[it] }
-                    .filterIsInstance<ConcreteNode>()
-                    .filter { it.isSemanticallyTransparent(concreteOutgoing) }
+                    .filter { it.isSemanticallyTransparent(outgoingBySource) }
                     .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
                     .map { it.targetRef }
                     .toSet()

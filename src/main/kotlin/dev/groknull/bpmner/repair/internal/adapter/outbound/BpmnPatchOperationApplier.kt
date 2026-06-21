@@ -11,8 +11,6 @@ import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.bpmn.typeName
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
-import dev.groknull.bpmner.bpmn.BpmnEdge as ConcreteBpmnEdge
-import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 internal sealed class OperationResult {
     data class Changed(
@@ -54,9 +52,8 @@ internal object BpmnPatchOperationApplier {
             return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.typeName}")
         }
         if (BpmnNodeNamingPolicy.normalize(node.name) == name) return OperationResult.Unchanged
-        @Suppress("UNCHECKED_CAST")
-        val updatedNodes = definition.nodes.map { if (it.id == nodeId) it.withName(name) else it } as List<ConcreteNode>
-        val updated = (definition as BpmnDefinition).copy(nodes = updatedNodes)
+        val updatedNodes = definition.nodes.map { if (it.id == nodeId) it.withName(name) else it }
+        val updated = definition.copy(nodes = updatedNodes)
         return OperationResult.Changed(updated)
     }
 
@@ -75,9 +72,9 @@ internal object BpmnPatchOperationApplier {
                 ?: return OperationResult.Invalid("SET_EDGE_LABEL: unknown edgeId '$edgeId'")
         if (edge.name == op.label) return OperationResult.Unchanged
         val updated =
-            (definition as BpmnDefinition).copy(
+            definition.copy(
                 sequences = definition.sequences.map {
-                    if (it.id == edgeId) (it as ConcreteBpmnEdge).copy(name = op.label) else it
+                    if (it.id == edgeId) it.copy(name = op.label) else it
                 },
             )
         return OperationResult.Changed(updated)
@@ -91,7 +88,7 @@ internal object BpmnPatchOperationApplier {
         if (definition.nodes.any { it.id == node.id }) {
             return OperationResult.Invalid("ADD_NODE: node id '${node.id}' already exists")
         }
-        return OperationResult.Changed((definition as BpmnDefinition).copy(nodes = definition.nodes + (node as ConcreteNode)))
+        return OperationResult.Changed(definition.copy(nodes = definition.nodes + node))
     }
 
     private fun applyRemoveNode(
@@ -109,9 +106,8 @@ internal object BpmnPatchOperationApplier {
                     "${referencingEdges.map { it.id }}",
             )
         }
-        @Suppress("UNCHECKED_CAST")
-        val filteredNodes = definition.nodes.filter { it.id != nodeId } as List<ConcreteNode>
-        return OperationResult.Changed((definition as BpmnDefinition).copy(nodes = filteredNodes))
+        val filteredNodes = definition.nodes.filter { it.id != nodeId }
+        return OperationResult.Changed(definition.copy(nodes = filteredNodes))
     }
 
     private fun applyReplaceNode(
@@ -130,8 +126,8 @@ internal object BpmnPatchOperationApplier {
                 ?: return OperationResult.Invalid("REPLACE_NODE: unknown nodeId '$nodeId'")
         if (existing == replacement) return OperationResult.Unchanged
         return OperationResult.Changed(
-            (definition as BpmnDefinition).copy(
-                nodes = definition.nodes.map { if (it.id == nodeId) (replacement as ConcreteNode) else it },
+            definition.copy(
+                nodes = definition.nodes.map { if (it.id == nodeId) replacement else it },
             ),
         )
     }
@@ -151,9 +147,8 @@ internal object BpmnPatchOperationApplier {
         if (edge.targetRef !in nodeIds) {
             return OperationResult.Invalid("ADD_EDGE: targetRef '${edge.targetRef}' does not reference a known node")
         }
-        @Suppress("UNCHECKED_CAST")
-        val newSequences = (definition.sequences + edge) as List<ConcreteBpmnEdge>
-        return OperationResult.Changed((definition as BpmnDefinition).copy(sequences = newSequences))
+        val newSequences = definition.sequences + edge
+        return OperationResult.Changed(definition.copy(sequences = newSequences))
     }
 
     private fun applyRemoveEdge(
@@ -164,9 +159,8 @@ internal object BpmnPatchOperationApplier {
         if (definition.sequences.none { it.id == edgeId }) {
             return OperationResult.Invalid("REMOVE_EDGE: unknown edgeId '$edgeId'")
         }
-        @Suppress("UNCHECKED_CAST")
-        val filteredSeqs = definition.sequences.filter { it.id != edgeId } as List<ConcreteBpmnEdge>
-        return OperationResult.Changed((definition as BpmnDefinition).copy(sequences = filteredSeqs))
+        val filteredSeqs = definition.sequences.filter { it.id != edgeId }
+        return OperationResult.Changed(definition.copy(sequences = filteredSeqs))
     }
 
     private fun applyReplaceEdge(
@@ -184,10 +178,9 @@ internal object BpmnPatchOperationApplier {
             definition.sequences.firstOrNull { it.id == edgeId }
                 ?: return OperationResult.Invalid("REPLACE_EDGE: unknown edgeId '$edgeId'")
         if (existing == replacement) return OperationResult.Unchanged
-        @Suppress("UNCHECKED_CAST")
-        val replacedSeqs = definition.sequences.map { if (it.id == edgeId) replacement else it } as List<ConcreteBpmnEdge>
+        val replacedSeqs = definition.sequences.map { if (it.id == edgeId) replacement else it }
         return OperationResult.Changed(
-            (definition as BpmnDefinition).copy(sequences = replacedSeqs),
+            definition.copy(sequences = replacedSeqs),
         )
     }
 }

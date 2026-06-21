@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
@@ -22,7 +21,7 @@ internal class BypassGatewayHandler : BpmnLocalModelFixHandler {
         elementId: String,
         config: HandlerConfig,
     ): List<BpmnPatchOperation> {
-        val incomingEdge = definition.sequences.singleOrNull { it.targetRef == elementId } as? BpmnEdge ?: return emptyList()
+        val incomingEdge = definition.sequences.singleOrNull { it.targetRef == elementId } ?: return emptyList()
         val outgoingEdge = definition.sequences.singleOrNull { it.sourceRef == elementId } ?: return emptyList()
         val updatedIncoming = incomingEdge.copy(targetRef = outgoingEdge.targetRef)
         return listOf(

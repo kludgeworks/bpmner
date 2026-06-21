@@ -51,7 +51,7 @@ internal class SplitJoinForkGatewayHandler : BpmnLocalModelFixHandler {
         val ops = mutableListOf<BpmnPatchOperation>()
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_NODE, node = joinGw)
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_EDGE, edge = joinToFork)
-        for (edge in incomingEdges.filterIsInstance<BpmnEdge>()) {
+        for (edge in incomingEdges) {
             val updated = edge.copy(targetRef = joinId)
             ops += BpmnPatchOperation(type = BpmnPatchOperationType.REPLACE_EDGE, edgeId = edge.id, edge = updated)
         }
