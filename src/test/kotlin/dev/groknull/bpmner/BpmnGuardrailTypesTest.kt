@@ -12,6 +12,8 @@ import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
@@ -21,8 +23,6 @@ import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.MissingProcessArea

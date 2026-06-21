@@ -17,19 +17,19 @@ import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.OwnedElementGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.conformance.BpmnAutoFixResult
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnEvaluation
+import dev.groknull.bpmner.conformance.BpmnFingerprintService
+import dev.groknull.bpmner.conformance.BpmnLintRuleCapability
+import dev.groknull.bpmner.conformance.BpmnLintingPort
+import dev.groknull.bpmner.conformance.BpmnRepairScope
+import dev.groknull.bpmner.conformance.BpmnRuleGuidancePort
+import dev.groknull.bpmner.conformance.GlobalDiagnostics
+import dev.groknull.bpmner.conformance.LintIssue
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
-import dev.groknull.bpmner.validation.BpmnDiagnosticSource
-import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnFingerprintService
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.BpmnRepairScope
-import dev.groknull.bpmner.validation.BpmnRuleGuidancePort
-import dev.groknull.bpmner.validation.GlobalDiagnostics
-import dev.groknull.bpmner.validation.LintIssue
 
 /**
  * Canonical inputs + factory wiring shared between [BpmnRepairPromptFactoryTest], the

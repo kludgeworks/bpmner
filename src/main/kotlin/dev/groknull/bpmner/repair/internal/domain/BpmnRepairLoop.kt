@@ -11,9 +11,9 @@ import com.embabel.agent.api.common.workflow.loop.TextFeedback
 import com.embabel.agent.core.ReplanRequestedException
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnRepairScope
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

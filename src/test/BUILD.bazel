@@ -59,7 +59,7 @@ java_binary(
 
 java_binary(
     name = "update_rule_docs",
-    main_class = "dev.groknull.bpmner.rules.internal.domain.docs.UpdateRuleDocs",
+    main_class = "dev.groknull.bpmner.ruleset.internal.domain.docs.UpdateRuleDocs",
     visibility = ["//visibility:public"],
     runtime_deps = [":bpmner_tests_lib"],
 )
@@ -83,6 +83,7 @@ JUNIT5_DEPS = [
 _TIMEOUTS = {
     "AgentDeploymentValidationBootTest": "moderate",
     "AlignmentModuleTest": "moderate",
+    "AuthoringModuleTest": "moderate",
     "BpmnAgentFlowSystemTest": "moderate",
     "BpmnConfigBindingTest": "moderate",
     "BpmnContractFidelityCheckerTest": "moderate",
@@ -94,18 +95,17 @@ _TIMEOUTS = {
     "BpmnXmlToDefinitionConverterTest": "moderate",
     "BpmnerModuleBoundariesTest": "moderate",
     "BpmnerModulithTest": "moderate",
+    "ConformanceModuleTest": "moderate",
     "ContractModuleTest": "moderate",
-    "GenerationModuleTest": "moderate",
     "LayoutModuleTest": "moderate",
-    "ObservabilityModuleTest": "moderate",
     "OrchestrationModuleTest": "moderate",
     "PklRuleCatalogTest": "moderate",
     "ReadinessModuleTest": "moderate",
     "RepairModuleTest": "moderate",
     "RepairStartupValidationTest": "moderate",
     "RuleSourceParityTest": "moderate",
-    "RulesModuleTest": "moderate",
-    "ValidationModuleTest": "moderate",
+    "RulesetModuleTest": "moderate",
+    "TelemetryModuleTest": "moderate",
 }
 
 # Large/slow classes worth fanning across RBE workers. shard_count is a latency
@@ -124,6 +124,7 @@ _SHARD_COUNTS = {
 _TAGS = {
     "AgentDeploymentValidationBootTest": ["spring-context"],
     "AlignmentModuleTest": ["spring-context"],
+    "AuthoringModuleTest": ["spring-context"],
     "BpmnAgentFlowSystemTest": ["spring-context"],
     "BpmnConfigBindingTest": ["spring-context"],
     "BpmnGuardrailSystemTest": ["spring-context"],
@@ -132,16 +133,15 @@ _TAGS = {
     "BpmnWebControllerTest": ["spring-context"],
     "BpmnerModuleBoundariesTest": ["spring-context"],
     "BpmnerModulithTest": ["spring-context"],
+    "ConformanceModuleTest": ["spring-context"],
     "ContractModuleTest": ["spring-context"],
-    "GenerationModuleTest": ["spring-context"],
     "LayoutModuleTest": ["spring-context"],
-    "ObservabilityModuleTest": ["spring-context"],
     "OrchestrationModuleTest": ["spring-context"],
     "ReadinessModuleTest": ["spring-context"],
     "RepairModuleTest": ["spring-context"],
     "RepairStartupValidationTest": ["spring-context"],
-    "RulesModuleTest": ["spring-context"],
-    "ValidationModuleTest": ["spring-context"],
+    "RulesetModuleTest": ["spring-context"],
+    "TelemetryModuleTest": ["spring-context"],
 }
 
 _DATA = {

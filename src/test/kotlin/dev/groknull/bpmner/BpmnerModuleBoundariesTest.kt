@@ -271,15 +271,15 @@ class BpmnerModuleBoundariesTest {
         val INTERNAL_BEARING_MODULES: List<String> =
             listOf(
                 "alignment",
+                "authoring",
+                "conformance",
                 "contract",
-                "generation",
                 "layout",
-                "observability",
                 "orchestration",
                 "readiness",
                 "repair",
-                "rules",
-                "validation",
+                "ruleset",
+                "telemetry",
             )
 
         /**

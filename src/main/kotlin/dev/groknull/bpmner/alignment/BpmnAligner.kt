@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.alignment
 
 import com.embabel.agent.api.common.OperationContext
+import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 @PrimaryPort

@@ -13,6 +13,6 @@ import org.springframework.modulith.ApplicationModule
  * fidelity check) and validation (lint / XSD / rule catalog) to do its work.
  */
 @ApplicationModule(
-    allowedDependencies = ["bpmn", "config", "contract", "generation", "readiness", "rules", "validation"],
+    allowedDependencies = ["authoring", "bpmn", "config", "conformance", "contract", "readiness", "ruleset"],
 )
 internal object RepairModule

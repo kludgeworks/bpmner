@@ -11,5 +11,5 @@ import org.springframework.modulith.ApplicationModule
  * Web module — HTTP entry point for the generation pipeline. The thinnest possible
  * adapter over the generation module.
  */
-@ApplicationModule(allowedDependencies = ["bpmn", "generation"])
+@ApplicationModule(allowedDependencies = ["authoring", "bpmn"])
 internal object WebModule

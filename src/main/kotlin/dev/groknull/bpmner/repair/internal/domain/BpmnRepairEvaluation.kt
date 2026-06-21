@@ -11,12 +11,12 @@ import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnEvaluation
+import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnEvaluation
-import dev.groknull.bpmner.validation.BpmnRepairScope
 
 /**
  * The shared blackboard threaded through every `@Action` of [BpmnRepairAgent] via

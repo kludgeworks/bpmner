@@ -14,7 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse

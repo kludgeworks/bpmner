@@ -1,0 +1,26 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.ruleset.internal.domain.primitives
+
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
+
+internal class RequiredPropertyCheck {
+    fun evaluate(
+        ctx: BpmnDefinitionContext,
+        metadata: RuleMetadata,
+        config: RequiredPropertyCheckConfig,
+    ): List<RuleDiagnostic> = evaluate(ctx.toPrimitiveModelContext(), metadata, config)
+
+    fun evaluate(
+        model: PrimitiveModelContext,
+        metadata: RuleMetadata,
+        config: RequiredPropertyCheckConfig,
+    ): List<RuleDiagnostic> = metadata.targetedElements(model)
+        .filter { it.property(config.property).isNullOrBlank() }
+        .map { metadata.diagnostic(it.id, config.property) }
+}

@@ -6,11 +6,11 @@
 package dev.groknull.bpmner.layout.internal.adapter.inbound
 
 import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
+import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
+import dev.groknull.bpmner.conformance.ValidatedBpmnXml
+import dev.groknull.bpmner.conformance.XsdValidationIssue
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
-import dev.groknull.bpmner.validation.ValidatedBpmnXml
-import dev.groknull.bpmner.validation.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

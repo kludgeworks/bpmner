@@ -18,19 +18,22 @@ import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnProcessGenerator
+import dev.groknull.bpmner.authoring.BpmnRequestDraft
+import dev.groknull.bpmner.authoring.BpmnRequestDrafter
+import dev.groknull.bpmner.authoring.BpmnRequestResolver
+import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
+import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
+import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnProcessGenerator
-import dev.groknull.bpmner.generation.BpmnRequestDraft
-import dev.groknull.bpmner.generation.BpmnRequestDrafter
-import dev.groknull.bpmner.generation.BpmnRequestResolver
-import dev.groknull.bpmner.generation.BpmnResult
-import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
@@ -40,9 +43,6 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnRepairer
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
-import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
-import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import java.io.File
 
 @Agent(description = "Single idiomatic agent for happy-path BPMN generation")

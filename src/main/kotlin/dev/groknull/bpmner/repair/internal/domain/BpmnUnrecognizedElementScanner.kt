@@ -10,9 +10,9 @@ import dev.groknull.bpmner.bpmn.BpmnEvent
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
-import dev.groknull.bpmner.validation.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 
 /**
  * Pre-flight scanner for unrecognized BPMN elements at the LLM repair boundary.
