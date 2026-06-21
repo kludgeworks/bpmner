@@ -9,12 +9,12 @@ import com.embabel.agent.api.annotation.AchievesGoal
 import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
+import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
+import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
+import dev.groknull.bpmner.conformance.ValidatedBpmnXml
+import dev.groknull.bpmner.conformance.XsdValidationIssue
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
-import dev.groknull.bpmner.validation.BpmnXsdValidationPort
-import dev.groknull.bpmner.validation.FinalValidatedBpmnXml
-import dev.groknull.bpmner.validation.ValidatedBpmnXml
-import dev.groknull.bpmner.validation.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.Application
 import org.slf4j.LoggerFactory
 

@@ -9,8 +9,8 @@ import com.embabel.chat.Message
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.validation.BpmnDiagnostic
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

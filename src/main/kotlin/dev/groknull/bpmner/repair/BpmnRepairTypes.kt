@@ -8,8 +8,8 @@ package dev.groknull.bpmner.repair
 import com.embabel.chat.Message
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnEvaluation
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnEvaluation
 
 data class BpmnRepairAttempt(
     val attemptNumber: Int,

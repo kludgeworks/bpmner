@@ -8,6 +8,6 @@ package dev.groknull.bpmner.orchestration
 import org.springframework.modulith.ApplicationModule
 
 @ApplicationModule(
-    allowedDependencies = ["alignment", "bpmn", "contract", "generation", "layout", "readiness", "repair", "validation"],
+    allowedDependencies = ["alignment", "authoring", "bpmn", "conformance", "contract", "layout", "readiness", "repair"],
 )
 object OrchestrationModule

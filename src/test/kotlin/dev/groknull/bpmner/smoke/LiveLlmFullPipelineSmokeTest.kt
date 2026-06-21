@@ -9,9 +9,9 @@ import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions

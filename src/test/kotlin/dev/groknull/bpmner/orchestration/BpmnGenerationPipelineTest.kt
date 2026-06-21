@@ -13,10 +13,10 @@ import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.alignment.AlignmentFindings
+import dev.groknull.bpmner.authoring.BpmnGenerationStatus
+import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.authoring.FlatBpmnDefinition
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.generation.BpmnGenerationStatus
-import dev.groknull.bpmner.generation.BpmnResult
-import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.prompt.PromptFixtures
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment

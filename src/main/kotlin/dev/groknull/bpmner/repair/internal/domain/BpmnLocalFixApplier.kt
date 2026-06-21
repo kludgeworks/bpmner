@@ -7,10 +7,10 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnLintRuleIds
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import dev.groknull.bpmner.rules.RuleRegistry
-import dev.groknull.bpmner.validation.BpmnDiagnostic
-import dev.groknull.bpmner.validation.BpmnLintRuleIds
+import dev.groknull.bpmner.ruleset.RuleRegistry
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

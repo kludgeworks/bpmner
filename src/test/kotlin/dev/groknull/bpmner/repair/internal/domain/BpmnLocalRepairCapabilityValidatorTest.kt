@@ -8,10 +8,10 @@ package dev.groknull.bpmner.repair.internal.domain
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairSafety
-import dev.groknull.bpmner.validation.BpmnAutoFixResult
-import dev.groknull.bpmner.validation.BpmnLintRuleCapability
-import dev.groknull.bpmner.validation.BpmnLintingPort
-import dev.groknull.bpmner.validation.LintIssue
+import dev.groknull.bpmner.conformance.BpmnAutoFixResult
+import dev.groknull.bpmner.conformance.BpmnLintRuleCapability
+import dev.groknull.bpmner.conformance.BpmnLintingPort
+import dev.groknull.bpmner.conformance.LintIssue
 import kotlin.test.Test
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue

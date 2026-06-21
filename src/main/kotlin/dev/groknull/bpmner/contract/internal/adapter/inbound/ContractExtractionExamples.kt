@@ -23,7 +23,7 @@ import dev.groknull.bpmner.contract.EventSubProcessTrigger
  * The framework renders them into the prompt in the same JSON shape the LLM must emit.
  * Node ids are named constants so a typo is a compile error.
  *
- * @see dev.groknull.bpmner.generation.internal.adapter.inbound.GenerationExamples
+ * @see dev.groknull.bpmner.authoring.internal.adapter.inbound.GenerationExamples
  */
 internal object ContractExtractionExamples {
 

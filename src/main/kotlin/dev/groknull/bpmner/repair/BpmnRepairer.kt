@@ -8,9 +8,9 @@ package dev.groknull.bpmner.repair
 import com.embabel.agent.api.common.ActionContext
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import dev.groknull.bpmner.validation.ValidatedBpmnXml
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 @PrimaryPort

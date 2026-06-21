@@ -12,7 +12,7 @@ import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 import dev.groknull.bpmner.repair.internal.domain.HandlerConfig
-import dev.groknull.bpmner.rules.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue

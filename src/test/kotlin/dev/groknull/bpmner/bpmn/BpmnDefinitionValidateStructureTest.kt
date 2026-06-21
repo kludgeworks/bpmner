@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
  *
  * Proves that the model-intrinsic structural checks (duplicate ids, edge reference integrity,
  * required top-level START/END events) live on the domain type itself — following the
- * [LaidOutProcessGraph.validateOwnership] idiom — and that [dev.groknull.bpmner.validation
+ * [LaidOutProcessGraph.validateOwnership] idiom — and that [dev.groknull.bpmner.conformance
  * .BpmnDefinitionValidator] delegates to this method rather than duplicating the predicate logic.
  */
 class BpmnDefinitionValidateStructureTest {

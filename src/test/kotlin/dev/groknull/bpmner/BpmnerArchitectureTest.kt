@@ -93,7 +93,7 @@ class BpmnerArchitectureTest {
         // without rippling into rule code.
         noClasses()
             .that()
-            .resideOutsideOfPackages("..rules.internal.domain.nlp..")
+            .resideOutsideOfPackages("..ruleset.internal.domain.nlp..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("opennlp.tools..")
@@ -130,17 +130,17 @@ class BpmnerArchitectureTest {
         // No other validation class may reach rules @PrimaryPorts directly.
         noClasses()
             .that()
-            .resideInAPackage("..validation..")
+            .resideInAPackage("..conformance..")
             .and()
             .doNotHaveSimpleName("RuleEngineLintingAdapter")
             .and()
             .doNotHaveSimpleName("LlmValidator")
             .should()
             .dependOnClassesThat()
-            .haveFullyQualifiedName("dev.groknull.bpmner.rules.RuleEngine")
+            .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleEngine")
             .orShould()
             .dependOnClassesThat()
-            .haveFullyQualifiedName("dev.groknull.bpmner.rules.RuleRegistry")
+            .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleRegistry")
             .because(
                 "Only RuleEngineLintingAdapter (ACL, ADR-23 Decision 2) and the deprecated " +
                     "LlmValidator (audited exception, pending removal) may reach rules' " +
@@ -161,7 +161,7 @@ class BpmnerArchitectureTest {
             .that()
             .resideInAPackage("..internal.domain..")
             .and()
-            .resideOutsideOfPackages("..rules.internal.domain.beans..")
+            .resideOutsideOfPackages("..ruleset.internal.domain.beans..")
             .should(haveClassAnnotation("org.springframework.context.annotation.Configuration"))
             .check(classes)
     }
@@ -179,7 +179,7 @@ class BpmnerArchitectureTest {
         classes()
             .that()
             .haveFullyQualifiedName(
-                "dev.groknull.bpmner.rules.internal.adapter.inbound.RuleProfileConfiguration",
+                "dev.groknull.bpmner.ruleset.internal.adapter.inbound.RuleProfileConfiguration",
             )
             .should(haveClassAnnotation("org.springframework.context.annotation.Configuration"))
             .check(classes)

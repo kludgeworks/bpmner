@@ -98,7 +98,7 @@ data class BpmnDefinition(
      *
      * Returns a (possibly empty) list of error messages following the
      * [LaidOutProcessGraph.validateOwnership] idiom: never throws, callers accumulate errors.
-     * [dev.groknull.bpmner.validation.BpmnDefinitionValidator] delegates to this method for
+     * [dev.groknull.bpmner.conformance.BpmnDefinitionValidator] delegates to this method for
      * these structural checks and handles non-intrinsic policy checks itself.
      *
      * Checks performed:
