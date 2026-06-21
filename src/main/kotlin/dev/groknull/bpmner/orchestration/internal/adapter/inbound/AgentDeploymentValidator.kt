@@ -9,6 +9,7 @@ import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.spi.validation.GoapPathToCompletionValidator
 import com.embabel.agent.spi.validation.PathToCompletionAgentValidator
+import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.event.ContextRefreshedEvent
@@ -45,6 +46,7 @@ internal class AgentDeploymentValidationException(
  * the validator's known false positives — cannot fail our startup. Validation runs on
  * [ContextRefreshedEvent], by which point `AgentDeployer` has deployed every agent.
  */
+@PrimaryAdapter
 @Component
 internal class AgentDeploymentValidator internal constructor(
     private val agentPlatform: AgentPlatform,
