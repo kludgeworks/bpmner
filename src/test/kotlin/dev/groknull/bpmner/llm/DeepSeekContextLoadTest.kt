@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.config
+package dev.groknull.bpmner.llm
 
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
