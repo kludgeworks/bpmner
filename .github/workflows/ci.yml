@@ -254,7 +254,8 @@ jobs:
             -Dsonar.organization=kludgeworks \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.token="${SONAR_TOKEN}" \
-            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat"
+            -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat" \
+            -Dsonar.coverage.exclusions="**/*Module.kt"
 
       - name: SonarCloud Scan — Web
         if: success() && steps.coverage.outcome == 'success'
