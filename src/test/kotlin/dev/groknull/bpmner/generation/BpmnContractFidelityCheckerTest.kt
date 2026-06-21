@@ -7,26 +7,26 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSubProcess
-import dev.groknull.bpmner.bpmn.internal.model.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnTimerEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
-import dev.groknull.bpmner.bpmn.internal.model.MultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.bpmn.internal.model.StandardLoopCharacteristics
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
@@ -1460,7 +1460,7 @@ private fun skipForwardContract(): ProcessContract {
 }
 
 /** `dec-route → [intermediate] → act-converge-target`; the intermediate node is supplied by the caller. */
-private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.bpmn.internal.model.BpmnNode): BpmnDefinition = BpmnDefinition(
+private fun skipForwardViaJoinDefinition(join: dev.groknull.bpmner.bpmn.BpmnNode): BpmnDefinition = BpmnDefinition(
     processId = "P",
     processName = "Skip via join",
     nodes =

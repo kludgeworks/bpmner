@@ -12,9 +12,9 @@ import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnGenerationStatus

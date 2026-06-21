@@ -46,6 +46,7 @@ import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.UserTask
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 internal object BpmnModelFactory {
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
@@ -53,8 +54,9 @@ internal object BpmnModelFactory {
         modelInstance: BpmnModelInstance,
         node: BpmnNode,
     ): FlowNode {
+        val concreteNode: ConcreteNode = node as ConcreteNode
         val flowNode =
-            when (node) {
+            when (concreteNode) {
                 is BpmnStartEvent -> modelInstance.newInstance(StartEvent::class.java)
 
                 is BpmnUserTask -> modelInstance.newInstance(UserTask::class.java)
@@ -89,20 +91,22 @@ internal object BpmnModelFactory {
 
                 is BpmnSubProcess ->
                     modelInstance.newInstance(SubProcess::class.java).apply {
-                        setTriggeredByEvent(node.triggeredByEvent)
+                        setTriggeredByEvent(concreteNode.triggeredByEvent)
                     }
 
                 is BpmnCallActivity ->
                     modelInstance.newInstance(CallActivity::class.java).apply {
-                        calledElement = node.calledElement
+                        calledElement = concreteNode.calledElement
                     }
 
                 // Unrecognized nodes carry no Camunda model class. Callers are expected to
                 // filter them out before reaching the generator; reaching here is a contract
                 // violation.
                 is BpmnUnrecognizedNode -> error(
-                    "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) cannot be converted to a Camunda FlowNode. " +
-                        "The generator pipeline must filter unrecognized nodes before reaching BpmnModelFactory.",
+                    "BpmnUnrecognizedNode '${concreteNode.id}' (${concreteNode.bpmnType}) " +
+                        "cannot be converted to a Camunda FlowNode. " +
+                        "The generator pipeline must filter unrecognized nodes " +
+                        "before reaching BpmnModelFactory.",
                 )
             }
         flowNode.id = node.id

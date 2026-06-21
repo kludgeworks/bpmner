@@ -20,8 +20,8 @@ import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
-import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.generation.BpmnGenerationStatus

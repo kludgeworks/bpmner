@@ -5,22 +5,22 @@
 
 package dev.groknull.bpmner.rules
 
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnManualTask
 import dev.groknull.bpmner.bpmn.BpmnNode
-import dev.groknull.bpmner.bpmn.internal.model.BpmnBoundaryEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnBusinessRuleTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnManualTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnReceiveTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnScriptTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSendTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull

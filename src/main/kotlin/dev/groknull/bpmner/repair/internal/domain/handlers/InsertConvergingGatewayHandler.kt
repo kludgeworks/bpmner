@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.isTask
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
@@ -45,7 +45,7 @@ internal class InsertConvergingGatewayHandler : BpmnLocalModelFixHandler {
         val ops = mutableListOf<BpmnPatchOperation>()
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_NODE, node = joinGw)
         ops += BpmnPatchOperation(type = BpmnPatchOperationType.ADD_EDGE, edge = joinToTask)
-        for (edge in incomingEdges) {
+        for (edge in incomingEdges.filterIsInstance<BpmnEdge>()) {
             val updated = edge.copy(targetRef = joinId)
             ops += BpmnPatchOperation(type = BpmnPatchOperationType.REPLACE_EDGE, edgeId = edge.id, edge = updated)
         }

@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnElementIndex
-import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.BpmnElementIndex
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.generation.internal.adapter.outbound.BpmnModelFactory
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -52,7 +52,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
         Bpmn.writeModelToStream(output, modelInstance)
         val xml = domPostProcessor.postProcess(output.toString(Charsets.UTF_8), definition)
         return RenderedBpmn(
-            definition = definition,
+            definition = definition as BpmnDefinition,
             xml = stripUnusedDiNamespaces(xml),
             elementIndex = buildElementIndex(definition),
         )

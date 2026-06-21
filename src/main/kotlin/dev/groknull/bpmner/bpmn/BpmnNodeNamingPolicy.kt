@@ -41,6 +41,10 @@ object BpmnNodeNamingPolicy {
             // join is a barrier. Labels would be noise; keep them optional.
             is BpmnParallelGateway -> false
 
+            // Event-based gateways wait on a competing set of events; the name should clarify
+            // what is being awaited.
+            is BpmnEventBasedGateway -> outgoingCount > 1
+
             // Tasks were already handled above via isTask(); these arms cover the marker
             // exhaustively for clarity even though they're unreachable.
             is BpmnUserTask,
@@ -64,11 +68,6 @@ object BpmnNodeNamingPolicy {
             // the BpmnSubset rule flags the unrecognized element wholesale; adding a name
             // complaint on top would be noise.
             is BpmnUnrecognizedNode -> false
-
-            // BpmnNode is non-sealed (see KDoc on BpmnNode) — the arms above cover every
-            // canonical subtype. A hand-rolled BpmnNode impl outside the marker hierarchy
-            // is treated as "requires a name" by default; safer than silently allowing blanks.
-            else -> true
         }
     }
 

@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.validation
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.validation.ValidatedBpmnXml
 
 data class BpmnEvaluation(

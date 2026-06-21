@@ -7,9 +7,9 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
-import dev.groknull.bpmner.bpmn.internal.model.withUpdatedDefinition
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.bpmn.withUpdatedDefinition
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.generation.BpmnRenderer
@@ -56,7 +56,7 @@ internal class BpmnRepairAdvancer(
             return shortCircuitUnrecognized(request, graph, rendered, contract, unrecognized)
         }
 
-        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition)
+        val normalisedDefinition = defaultFlowAssigner.assign(contract, rendered.definition) as BpmnDefinition
         val normalisedRendered = rendered.copy(definition = normalisedDefinition)
         val initialMessages = promptFactory.initialMessages(request, normalisedDefinition)
         val evaluation = contractAwareValidator.evaluate(
@@ -96,7 +96,7 @@ internal class BpmnRepairAdvancer(
         appendedMessages: List<com.embabel.chat.Message>,
         promptText: String,
     ): BpmnRepairEvaluation {
-        val stamped = defaultFlowAssigner.assign(prior.contract, repaired)
+        val stamped = defaultFlowAssigner.assign(prior.contract, repaired) as BpmnDefinition
         val stampedFingerprint = fingerprints.definitionFingerprint(stamped)
         val priorRecord = prior.history.last
             ?: error("revalidateAndAdvance called with empty history — initialEvaluation must run first")

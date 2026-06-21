@@ -5,13 +5,13 @@
 
 package dev.groknull.bpmner.alignment.internal.domain
 
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSubProcess
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

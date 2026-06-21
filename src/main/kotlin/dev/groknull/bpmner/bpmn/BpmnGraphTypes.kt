@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.bpmn.internal.model
+package dev.groknull.bpmner.bpmn
 
 import jakarta.validation.Valid
 import org.springframework.ai.tool.annotation.Tool

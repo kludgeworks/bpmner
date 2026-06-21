@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.generation
 
 import com.embabel.agent.api.common.OperationContext
-import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.generation.ValidatedOutline
 import dev.groknull.bpmner.readiness.ReadyBpmnContext

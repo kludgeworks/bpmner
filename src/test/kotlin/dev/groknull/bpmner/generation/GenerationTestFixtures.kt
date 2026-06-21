@@ -5,18 +5,18 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.bpmn.internal.model.BpmnBusinessRuleTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnManualTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageRef
-import dev.groknull.bpmner.bpmn.internal.model.BpmnReceiveTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnScriptTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSendTask
-import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnManualTask
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 
 /**
  * Shared test fixtures for generation package tests.

@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.generation
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import org.jmolecules.event.annotation.DomainEvent
 
 @DomainEvent

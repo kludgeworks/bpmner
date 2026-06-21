@@ -47,7 +47,7 @@ internal class BpmnDefinitionValidator {
         // Model-intrinsic structural checks are owned by the domain type itself.
         // BpmnDefinition.validateStructure() covers: duplicate ids, edge ref integrity,
         // and required top-level START/END events.
-        errors.addAll(definition.validateStructure())
+        errors.addAll((definition as BpmnDefinition).validateStructure())
 
         validateNames(definition, errors)
         validateSubProcesses(definition, errors)

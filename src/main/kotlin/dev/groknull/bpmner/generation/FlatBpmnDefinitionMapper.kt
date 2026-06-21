@@ -8,6 +8,7 @@ package dev.groknull.bpmner.generation
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
@@ -34,7 +35,7 @@ import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /*
  * Wire-format → sealed conversion at the BPMN generation + repair LLM boundary.
@@ -49,10 +50,11 @@ import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
  * `decisionRef` on a USER_TASK and we ignore rather than reject.
  */
 
+@Suppress("UNCHECKED_CAST")
 public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     processId = processId,
     processName = processName,
-    nodes = nodes.map { it.toSealed() },
+    nodes = nodes.map { it.toSealed() } as List<ConcreteNode>,
     sequences = sequences,
     messages = messages,
     signals = signals,

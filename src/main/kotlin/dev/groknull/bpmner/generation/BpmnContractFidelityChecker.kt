@@ -34,7 +34,7 @@ import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
-import dev.groknull.bpmner.bpmn.internal.model.isSemanticallyTransparent
+import dev.groknull.bpmner.bpmn.isSemanticallyTransparent
 import dev.groknull.bpmner.bpmn.typeName
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -54,6 +54,8 @@ import dev.groknull.bpmner.generation.BpmnFidelityReport
 import dev.groknull.bpmner.generation.BpmnFidelitySeverity
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import dev.groknull.bpmner.bpmn.BpmnEdge as ConcreteEdge
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /**
  * Deterministically checks that a generated [BpmnDefinition] preserves the topology declared
@@ -62,7 +64,7 @@ import org.springframework.stereotype.Component
  *
  * Operates under the unified-id convention established in PR #180: a contract decision's id
  * IS the BPMN gateway node's id, verbatim. Element kind is carried by the [BpmnNode] subtype
- * (see the sealed hierarchy in [dev.groknull.bpmner.bpmn.internal.model.BpmnDomain]), not by an id prefix.
+ * (see the sealed hierarchy in [dev.groknull.bpmner.bpmn.BpmnDomain]), not by an id prefix.
  * Resolution is exact-match; no string-shape heuristics.
  *
  * Per-decision checks (each fires independently):
@@ -306,6 +308,9 @@ internal class BpmnContractFidelityChecker {
         if (direct.any { it.targetRef == targetId }) return true
         val seen = mutableSetOf(from.id)
         var frontier = direct.map { it.targetRef }.toSet() - from.id
+
+        @Suppress("UNCHECKED_CAST")
+        val concreteOutgoing = outgoingBySource as Map<String, List<ConcreteEdge>>
         repeat(MAX_REACHABILITY_HOPS) {
             if (frontier.isEmpty()) return false
             if (targetId in frontier) return true
@@ -317,7 +322,8 @@ internal class BpmnContractFidelityChecker {
                     .asSequence()
                     .filter { seen.add(it) }
                     .mapNotNull { nodeById[it] }
-                    .filter { it.isSemanticallyTransparent(outgoingBySource) }
+                    .filterIsInstance<ConcreteNode>()
+                    .filter { it.isSemanticallyTransparent(concreteOutgoing) }
                     .flatMap { outgoingBySource[it.id].orEmpty().asSequence() }
                     .map { it.targetRef }
                     .toSet()

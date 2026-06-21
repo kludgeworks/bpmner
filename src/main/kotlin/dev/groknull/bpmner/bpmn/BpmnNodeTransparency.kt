@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.bpmn.internal.model
+package dev.groknull.bpmner.bpmn
 
 /**
  * Whether [this] node is "semantically transparent" — it carries no business meaning of its
@@ -18,10 +18,9 @@ package dev.groknull.bpmner.bpmn.internal.model
  * Today only one shape qualifies: an unnamed exclusive- or parallel-gateway node with exactly
  * one outbound edge — a pure converging join.
  *
- * The `when` covers every canonical [BpmnNode] subtype plus [BpmnUnrecognizedNode]; any other
- * implementation of the non-sealed [BpmnNode] interface falls through to `false` (opaque by
- * default — safer than silently treating an unknown node as routing-only). Add an explicit
- * `is` arm above the `else` when introducing a new canonical subtype with a different verdict.
+ * The `when` covers every canonical [BpmnNode] subtype plus [BpmnUnrecognizedNode]; since
+ * [BpmnNode] is now sealed, the compiler enforces exhaustiveness. Add an explicit
+ * `is` arm when introducing a new canonical subtype with a different verdict.
  *
  * @param outgoingBySource sequence edges grouped by `sourceRef`, used to check the single-
  *   outbound criterion. Callers typically build this once and pass it through.
@@ -59,11 +58,11 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
     // semantic content, so it is never a routing-only pass-through.
     is BpmnCallActivity -> false
 
+    // Event-based gateway routes based on whichever competing event fires first — it is a real
+    // routing decision, never a silent pass-through.
+    is BpmnEventBasedGateway -> false
+
     // Fallback for elements without a typed Kotlin class. Never transparent — not enough
     // information to treat an unrecognized node as a routing-only pass-through.
     is BpmnUnrecognizedNode -> false
-
-    // Safe default for any other (non-canonical) `BpmnNode` implementation. The interface
-    // is non-sealed, so the compiler cannot enforce exhaustiveness here.
-    else -> false
 }

@@ -8,8 +8,8 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -32,6 +32,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
+import dev.groknull.bpmner.bpmn.BpmnDefinition as ConcreteBpmnDefinition
 
 @PrimaryAdapter
 @Component
@@ -135,14 +136,14 @@ internal class LlmBpmnProcessGenerator(
     }
 
     override fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
-        val definition = outline.definition
+        val definition = outline.definition as ConcreteBpmnDefinition
 
         val objectOwners = buildMap {
             put("process", MAIN_PHASE_OWNER)
             definition.nodes.forEach { put("nodes[id=${it.id}]", MAIN_PHASE_OWNER) }
             definition.sequences.forEach { put("sequences[id=${it.id}]", MAIN_PHASE_OWNER) }
         }
-        val composed = dev.groknull.bpmner.bpmn.internal.model.ComposedProcessGraph(
+        val composed = dev.groknull.bpmner.bpmn.ComposedProcessGraph(
             definition = definition,
             objectOwnersByObjectRef = objectOwners,
         )
@@ -166,7 +167,7 @@ internal class LlmBpmnProcessGenerator(
                 put("${edge.id}_di", owner)
             }
         }
-        val owned = dev.groknull.bpmner.bpmn.internal.model.OwnedElementGraph(
+        val owned = dev.groknull.bpmner.bpmn.OwnedElementGraph(
             composedGraph = composed,
             elementOwnersByElementId = elementOwners,
             objectOwnersByObjectRef = objectOwners,

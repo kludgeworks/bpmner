@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.repair
 
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairSafety
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.repair.internal.adapter.inbound.BpmnRepairCapabilityStartupListener
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandlerRegistry

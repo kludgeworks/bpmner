@@ -5,37 +5,37 @@
 
 package dev.groknull.bpmner.generation
 
+import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataObject
+import dev.groknull.bpmner.bpmn.BpmnDataStore
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnGroup
+import dev.groknull.bpmner.bpmn.BpmnLane
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.DataFlowDirection
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
-import dev.groknull.bpmner.bpmn.internal.model.BpmnAssociation
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDataAssociation
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDataObject
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDataStore
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
-import dev.groknull.bpmner.bpmn.internal.model.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEscalationRef
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnGroup
-import dev.groknull.bpmner.bpmn.internal.model.BpmnLane
-import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageFlow
-import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageRef
-import dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnParticipant
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnSignalRef
-import dev.groknull.bpmner.bpmn.internal.model.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnTextAnnotation
-import dev.groknull.bpmner.bpmn.internal.model.BpmnTimerEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedNode
-import dev.groknull.bpmner.bpmn.internal.model.MultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.bpmn.internal.model.StandardLoopCharacteristics
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -54,6 +54,7 @@ import java.io.ByteArrayInputStream
 import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 // The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
 // surfaces them with a single helper.
@@ -148,10 +149,13 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         val artifacts = artifactsAndDataFrom(document)
         val collaboration = parseCollaboration(document)
+
+        @Suppress("UNCHECKED_CAST")
+        val allNodes = (typedNodes + unrecognizedExotics) as List<ConcreteNode>
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
-            nodes = typedNodes + unrecognizedExotics,
+            nodes = allNodes,
             sequences = sequences,
             messages = eventMetadata.messages,
             signals = eventMetadata.signals,

@@ -11,6 +11,7 @@ import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.ProcessContract
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
+import dev.groknull.bpmner.bpmn.BpmnEdge as ConcreteBpmnEdge
 
 /**
  * Deterministically propagates contract-side [DefaultBranch] semantics to the BPMN-side
@@ -47,8 +48,9 @@ internal class DefaultFlowAssigner {
                 .mapNotNull { decision -> resolveReplacement(decision, edgesBySource) }
                 .associateBy { it.id }
         if (replacements.isEmpty()) return definition
-        val newSequences = definition.sequences.map { replacements[it.id] ?: it }
-        return definition.copy(sequences = newSequences)
+        @Suppress("UNCHECKED_CAST")
+        val newSequences = definition.sequences.map { replacements[it.id] ?: it } as List<ConcreteBpmnEdge>
+        return (definition as BpmnDefinition).copy(sequences = newSequences)
     }
 
     /**
@@ -91,6 +93,6 @@ internal class DefaultFlowAssigner {
             )
             return null
         }
-        return match.copy(isDefault = true, conditionExpression = null)
+        return (match as ConcreteBpmnEdge).copy(isDefault = true, conditionExpression = null)
     }
 }

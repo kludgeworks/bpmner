@@ -7,11 +7,11 @@ package dev.groknull.bpmner.repair.internal.domain.handlers
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGateway
+import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnNode
-import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnInclusiveGateway
-import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 
 /**
  * Chooses the right kind of synthesized join gateway based on the upstream topology.

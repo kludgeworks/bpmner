@@ -3,146 +3,94 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.bpmn.internal.model
+package dev.groknull.bpmner.bpmn
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import dev.groknull.bpmner.bpmn.BpmnTimerKind
-import dev.groknull.bpmner.bpmn.DataFlowDirection
-import dev.groknull.bpmner.bpmn.GenerationMode
-import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.NotNull
 import org.springframework.ai.tool.annotation.Tool
-import dev.groknull.bpmner.bpmn.BpmnAssociation as ApiBpmnAssociation
-import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent as ApiBpmnBoundaryEvent
-import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask as ApiBpmnBusinessRuleTask
-import dev.groknull.bpmner.bpmn.BpmnCallActivity as ApiBpmnCallActivity
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation as ApiBpmnDataAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataObject as ApiBpmnDataObject
-import dev.groknull.bpmner.bpmn.BpmnDataStore as ApiBpmnDataStore
-import dev.groknull.bpmner.bpmn.BpmnDefinition as ApiBpmnDefinition
-import dev.groknull.bpmner.bpmn.BpmnEdge as ApiBpmnEdge
-import dev.groknull.bpmner.bpmn.BpmnEndEvent as ApiBpmnEndEvent
-import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition as ApiBpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnErrorRef as ApiBpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition as ApiBpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef as ApiBpmnEscalationRef
-import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway as ApiBpmnEventBasedGateway
-import dev.groknull.bpmner.bpmn.BpmnEventDefinition as ApiBpmnEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway as ApiBpmnExclusiveGateway
-import dev.groknull.bpmner.bpmn.BpmnGroup as ApiBpmnGroup
-import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway as ApiBpmnInclusiveGateway
-import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent as ApiBpmnIntermediateCatchEvent
-import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent as ApiBpmnIntermediateThrowEvent
-import dev.groknull.bpmner.bpmn.BpmnLane as ApiBpmnLane
-import dev.groknull.bpmner.bpmn.BpmnManualTask as ApiBpmnManualTask
-import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition as ApiBpmnMessageEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnMessageFlow as ApiBpmnMessageFlow
-import dev.groknull.bpmner.bpmn.BpmnMessageRef as ApiBpmnMessageRef
-import dev.groknull.bpmner.bpmn.BpmnNode as ApiBpmnNode
-import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition as ApiBpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnParallelGateway as ApiBpmnParallelGateway
-import dev.groknull.bpmner.bpmn.BpmnParticipant as ApiBpmnParticipant
-import dev.groknull.bpmner.bpmn.BpmnReceiveTask as ApiBpmnReceiveTask
-import dev.groknull.bpmner.bpmn.BpmnRequest as ApiBpmnRequest
-import dev.groknull.bpmner.bpmn.BpmnScriptTask as ApiBpmnScriptTask
-import dev.groknull.bpmner.bpmn.BpmnSendTask as ApiBpmnSendTask
-import dev.groknull.bpmner.bpmn.BpmnServiceTask as ApiBpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition as ApiBpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalRef as ApiBpmnSignalRef
-import dev.groknull.bpmner.bpmn.BpmnStartEvent as ApiBpmnStartEvent
-import dev.groknull.bpmner.bpmn.BpmnSubProcess as ApiBpmnSubProcess
-import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition as ApiBpmnTerminateEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnTextAnnotation as ApiBpmnTextAnnotation
-import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition as ApiBpmnTimerEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition as ApiBpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode as ApiBpmnUnrecognizedNode
-import dev.groknull.bpmner.bpmn.BpmnUserTask as ApiBpmnUserTask
-import dev.groknull.bpmner.bpmn.ClarificationExchange as ApiClarificationExchange
-import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics as ApiMultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics as ApiStandardLoopCharacteristics
 
 data class BpmnRequest(
     @get:JsonPropertyDescription("Natural-language description of the workflow to model")
-    override val processDescription: String,
+    val processDescription: String,
     @get:JsonPropertyDescription("Optional Markdown style guide that constrains naming and structure")
-    override val styleGuide: String? = null,
+    val styleGuide: String? = null,
     @get:JsonPropertyDescription("Optional BPMN output file path. Required for file generation mode.")
-    override val outputFile: String? = null,
-    override val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
+    val outputFile: String? = "output.bpmn",
+    val mode: GenerationMode = GenerationMode.SINGLE_SHOT,
     @field:Valid
     @get:JsonPropertyDescription("Ordered answered clarification history for this generation request")
-    override val clarificationHistory: List<ApiClarificationExchange> = emptyList(),
-) : ApiBpmnRequest
+    val clarificationHistory: List<ClarificationExchange> = emptyList(),
+)
 
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 data class BpmnDefinition(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable BPMN process id, e.g. Process_1")
-    override val processId: String,
+    val processId: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Human-readable BPMN process name")
-    override val processName: String,
+    val processName: String,
     @field:NotEmpty
     @field:Valid
     @get:JsonPropertyDescription("All BPMN nodes participating in the process graph")
-    override val nodes: List<BpmnNode>,
+    val nodes: List<BpmnNode>,
     @field:NotEmpty
     @field:Valid
     @get:JsonPropertyDescription("Directed sequence-flow edges connecting node ids")
-    override val sequences: List<BpmnEdge>,
+    val sequences: List<BpmnEdge>,
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN message declarations referenced by message event definitions")
-    override val messages: List<BpmnMessageRef> = emptyList(),
+    val messages: List<BpmnMessageRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN signal declarations referenced by signal event definitions")
-    override val signals: List<BpmnSignalRef> = emptyList(),
+    val signals: List<BpmnSignalRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN error declarations referenced by error event definitions")
-    override val errors: List<BpmnErrorRef> = emptyList(),
+    val errors: List<BpmnErrorRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
-    override val escalations: List<BpmnEscalationRef> = emptyList(),
+    val escalations: List<BpmnEscalationRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
-    override val annotations: List<BpmnTextAnnotation> = emptyList(),
+    val annotations: List<BpmnTextAnnotation> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Visual BPMN group artifacts. Groups carry no process semantics.")
-    override val groups: List<BpmnGroup> = emptyList(),
+    val groups: List<BpmnGroup> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
-    override val associations: List<BpmnAssociation> = emptyList(),
+    val associations: List<BpmnAssociation> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Data objects (transient information) flowing through the process")
-    override val dataObjects: List<BpmnDataObject> = emptyList(),
+    val dataObjects: List<BpmnDataObject> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Data stores (persisted information: databases, files, queues) the process reads or writes")
-    override val dataStores: List<BpmnDataStore> = emptyList(),
+    val dataStores: List<BpmnDataStore> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Read/write links between activities and data objects/stores")
-    override val dataAssociations: List<BpmnDataAssociation> = emptyList(),
+    val dataAssociations: List<BpmnDataAssociation> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription(
         "Participants (pools): white-box (processRef set, owns the process) or black-box (external, processRef null)",
     )
-    override val participants: List<BpmnParticipant> = emptyList(),
+    val participants: List<BpmnParticipant> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Lanes partitioning white-box pools by business role/performer")
-    override val lanes: List<BpmnLane> = emptyList(),
+    val lanes: List<BpmnLane> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Message flows between participants (across pools only)")
-    override val messageFlows: List<BpmnMessageFlow> = emptyList(),
+    val messageFlows: List<BpmnMessageFlow> = emptyList(),
     // Document-level BPMNDI diagram count surfaced by the XML parser. Not serialized for LLM
     // round-trip: defaulted to 0, no @JsonPropertyDescription, so Jackson treats it as a
     // benign extra field on serialize and an unknown field on deserialize (skipped).
     @field:com.fasterxml.jackson.annotation.JsonIgnore
-    override val diagramCount: Int = 0,
-) : ApiBpmnDefinition {
+    val diagramCount: Int = 0,
+) {
 
     /**
      * Model-intrinsic structural validation — checks that are pure properties of the graph
@@ -190,39 +138,39 @@ data class BpmnDefinition(
 
 data class BpmnMessageRef(
     @field:NotBlank
-    override val id: String,
+    val id: String,
     @field:NotBlank
-    override val name: String,
-) : ApiBpmnMessageRef
+    val name: String,
+)
 
 data class BpmnSignalRef(
     @field:NotBlank
-    override val id: String,
+    val id: String,
     @field:NotBlank
-    override val name: String,
-) : ApiBpmnSignalRef
+    val name: String,
+)
 
 data class BpmnErrorRef(
     @field:NotBlank
-    override val id: String,
+    val id: String,
     @field:NotBlank
-    override val code: String,
-    override val name: String? = null,
-) : ApiBpmnErrorRef
+    val code: String,
+    val name: String? = null,
+)
 
 data class BpmnEscalationRef(
     @field:NotBlank
-    override val id: String,
+    val id: String,
     @field:NotBlank
-    override val code: String,
-    override val name: String? = null,
-) : ApiBpmnEscalationRef
+    val code: String,
+    val name: String? = null,
+)
 
 data class BpmnGroup(
     @field:NotBlank
-    override val id: String,
-    override val name: String? = null,
-) : ApiBpmnGroup
+    val id: String,
+    val name: String? = null,
+)
 
 @JsonClassDescription("Reusable BPMN event definition carried by an event-position node")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -235,46 +183,37 @@ data class BpmnGroup(
     JsonSubTypes.Type(value = BpmnEscalationEventDefinition::class, name = "ESCALATION"),
     JsonSubTypes.Type(value = BpmnTerminateEventDefinition::class, name = "TERMINATE"),
 )
-sealed interface BpmnEventDefinition : ApiBpmnEventDefinition
+sealed interface BpmnEventDefinition
 
-data object BpmnNoneEventDefinition :
-    BpmnEventDefinition,
-    ApiBpmnNoneEventDefinition
+data object BpmnNoneEventDefinition : BpmnEventDefinition
 
 data class BpmnTimerEventDefinition(
-    override val timerKind: BpmnTimerKind,
+    val timerKind: BpmnTimerKind,
     @field:NotBlank
-    override val expression: String,
-) : BpmnEventDefinition,
-    ApiBpmnTimerEventDefinition
+    val expression: String,
+) : BpmnEventDefinition
 
 data class BpmnMessageEventDefinition(
     @field:NotBlank
-    override val messageRef: String,
-) : BpmnEventDefinition,
-    ApiBpmnMessageEventDefinition
+    val messageRef: String,
+) : BpmnEventDefinition
 
 data class BpmnSignalEventDefinition(
     @field:NotBlank
-    override val signalRef: String,
-) : BpmnEventDefinition,
-    ApiBpmnSignalEventDefinition
+    val signalRef: String,
+) : BpmnEventDefinition
 
 data class BpmnErrorEventDefinition(
     @field:NotBlank
-    override val errorRef: String,
-) : BpmnEventDefinition,
-    ApiBpmnErrorEventDefinition
+    val errorRef: String,
+) : BpmnEventDefinition
 
 data class BpmnEscalationEventDefinition(
     @field:NotBlank
-    override val escalationRef: String,
-) : BpmnEventDefinition,
-    ApiBpmnEscalationEventDefinition
+    val escalationRef: String,
+) : BpmnEventDefinition
 
-data object BpmnTerminateEventDefinition :
-    BpmnEventDefinition,
-    ApiBpmnTerminateEventDefinition
+data object BpmnTerminateEventDefinition : BpmnEventDefinition
 
 /**
  * Fallback for any event-definition typename the parser sees but doesn't have a typed class
@@ -284,24 +223,17 @@ data object BpmnTerminateEventDefinition :
  * out first.
  */
 data class BpmnUnrecognizedEventDefinition(
-    override val typeName: String,
-) : BpmnEventDefinition,
-    ApiBpmnUnrecognizedEventDefinition
+    val typeName: String,
+) : BpmnEventDefinition
 
 /**
  * Sealed BPMN node hierarchy. Each subtype corresponds to one BPMN element kind.
  *
  * The Jackson polymorphism annotations keep the LLM-facing JSON shape flat with an
- * explicit `type` discriminator string — identical to the shape produced before the
- * sealed refactor. On deserialize, Jackson dispatches `type` to the matching subtype;
- * on serialize, Jackson writes `type` as the discriminator. Kotlin code dispatches via
- * exhaustive `when (node)` blocks over the sealed subtypes, so the compiler catches any
- * site that forgets to handle a kind when a new subtype is introduced.
- *
- * Each concrete data class also implements its specific [dev.groknull.bpmner.bpmn]
- * counterpart (`bpmn.BpmnUserTask`, `bpmn.BpmnServiceTask`, …) so the rule engine and any
- * future Tier-3 plugin can program against the annotation-free bpmn hierarchy without
- * pulling Jackson/Jakarta into its classpath.
+ * explicit `type` discriminator string. On deserialize, Jackson dispatches `type` to the
+ * matching subtype; on serialize, Jackson writes `type` as the discriminator. Kotlin code
+ * dispatches via exhaustive `when (node)` blocks over the sealed subtypes, so the compiler
+ * catches any site that forgets to handle a kind when a new subtype is introduced.
  */
 @JsonClassDescription("BPMN node with semantic type")
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
@@ -325,15 +257,18 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
     JsonSubTypes.Type(value = BpmnCallActivity::class, name = "CALL_ACTIVITY"),
 )
-sealed interface BpmnNode : ApiBpmnNode {
-    override val id: String
+sealed interface BpmnNode {
+    val id: String
+    val name: String?
 
-    override val name: String?
+    /**
+     * Id of the [BpmnSubProcess] this node is nested inside, or `null` for a top-level node.
+     * `BpmnDefinition` stays flat — subprocess children live in the same flat `nodes` list and
+     * carry this back-reference; nesting is reconstructed only when rendering XML.
+     */
+    val parentRef: String?
 
-    // Narrow the inherited bpmn.BpmnNode.withName(): bpmn.BpmnNode return type so that
-    // call sites typed as `bpmn.internal.model.BpmnNode` see the more specific return type and can pass
-    // results to `bpmn.internal.model.BpmnDefinition.copy(nodes = ...)` without a cast.
-    override fun withName(name: String?): BpmnNode
+    fun withName(name: String?): BpmnNode
 }
 
 private const val NODE_ID_DESCRIPTION: String =
@@ -367,18 +302,18 @@ data class MultiInstanceLoopCharacteristics(
         "SEQUENTIAL = items handled one at a time (renders isSequential=true); " +
             "PARALLEL = items handled concurrently (renders isSequential=false).",
     )
-    override val mode: MultiInstanceMode,
+    val mode: MultiInstanceMode,
     @field:NotBlank
     @get:JsonPropertyDescription(
         "Human-readable description of the collection iterated over, e.g. " +
             "\"each line item on the packing slip\". The 'for each X' phrase from the source.",
     )
-    override val collectionDescription: String,
+    val collectionDescription: String,
     @get:JsonPropertyDescription("Optional fixed iteration count when the cardinality is statically known")
-    override val loopCardinality: Int? = null,
+    val loopCardinality: Int? = null,
     @get:JsonPropertyDescription("Optional early-exit predicate that stops iteration before all items are processed")
-    override val completionCondition: String? = null,
-) : ApiMultiInstanceLoopCharacteristics
+    val completionCondition: String? = null,
+)
 
 @JsonClassDescription(
     "Standard loop characteristics: the activity repeats until a condition is met — a while loop " +
@@ -390,14 +325,14 @@ data class StandardLoopCharacteristics(
         "true = while-loop (condition tested before each iteration); " +
             "false = until-loop (body runs once, then the condition is tested).",
     )
-    override val testBefore: Boolean = true,
+    val testBefore: Boolean = true,
     @get:JsonPropertyDescription(
         "Human-readable loop continue/exit condition, e.g. \"payment not yet successful\".",
     )
-    override val loopCondition: String? = null,
+    val loopCondition: String? = null,
     @get:JsonPropertyDescription("Optional cap on the number of iterations, e.g. retry up to 3 times")
-    override val loopMaximum: Int? = null,
-) : ApiStandardLoopCharacteristics
+    val loopMaximum: Int? = null,
+)
 
 data class BpmnStartEvent(
     @field:NotBlank
@@ -409,11 +344,11 @@ data class BpmnStartEvent(
     @get:JsonPropertyDescription("Nested BPMN event definition; NONE represents a plain start event")
     override val eventDefinition: BpmnEventDefinition = BpmnNoneEventDefinition,
     @get:JsonPropertyDescription("Whether this start interrupts its enclosing scope; event subprocess starts may set false")
-    override val isInterrupting: Boolean = true,
+    val isInterrupting: Boolean = true,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnStartEvent {
+    BpmnEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -432,7 +367,7 @@ data class BpmnUserTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnUserTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -451,7 +386,7 @@ data class BpmnServiceTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnServiceTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -470,7 +405,7 @@ data class BpmnScriptTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnScriptTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -485,7 +420,7 @@ data class BpmnBusinessRuleTask(
         "Identifier of the decision (e.g. DMN decision id, rule-set name) that this task evaluates. " +
             "Free-form string until a typed decision catalogue exists; non-blank.",
     )
-    override val decisionRef: String,
+    val decisionRef: String,
     @field:Valid
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
@@ -495,7 +430,7 @@ data class BpmnBusinessRuleTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnBusinessRuleTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -509,7 +444,7 @@ data class BpmnSendTask(
     @get:JsonPropertyDescription(
         "Id of the BpmnMessageRef in the process-level message catalogue that this send task emits.",
     )
-    override val messageRef: String,
+    val messageRef: String,
     @field:Valid
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
@@ -519,7 +454,7 @@ data class BpmnSendTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnSendTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -533,7 +468,7 @@ data class BpmnReceiveTask(
     @get:JsonPropertyDescription(
         "Id of the BpmnMessageRef in the process-level message catalogue that this receive task waits for.",
     )
-    override val messageRef: String,
+    val messageRef: String,
     @field:Valid
     @get:JsonPropertyDescription(MULTI_INSTANCE_DESCRIPTION)
     override val multiInstance: MultiInstanceLoopCharacteristics? = null,
@@ -543,7 +478,7 @@ data class BpmnReceiveTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnReceiveTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -562,7 +497,7 @@ data class BpmnManualTask(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnManualTask {
+    BpmnTask {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -575,7 +510,7 @@ data class BpmnExclusiveGateway(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnExclusiveGateway {
+    BpmnGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -588,7 +523,7 @@ data class BpmnInclusiveGateway(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnInclusiveGateway {
+    BpmnGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -601,7 +536,7 @@ data class BpmnParallelGateway(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnParallelGateway {
+    BpmnGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -614,7 +549,7 @@ data class BpmnEventBasedGateway(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnEventBasedGateway {
+    BpmnGateway {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -630,7 +565,7 @@ data class BpmnIntermediateCatchEvent(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnIntermediateCatchEvent {
+    BpmnEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -646,7 +581,7 @@ data class BpmnIntermediateThrowEvent(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnIntermediateThrowEvent {
+    BpmnEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -658,16 +593,16 @@ data class BpmnBoundaryEvent(
     override val name: String? = null,
     @field:NotBlank
     @get:JsonPropertyDescription("BPMN id of the activity this boundary event is attached to")
-    override val attachedToRef: String,
+    val attachedToRef: String,
     @get:JsonPropertyDescription("Whether the boundary event cancels the attached activity when it fires")
-    override val cancelActivity: Boolean = true,
+    val cancelActivity: Boolean = true,
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnBoundaryEvent {
+    BpmnEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -683,7 +618,7 @@ data class BpmnEndEvent(
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
-    ApiBpmnEndEvent {
+    BpmnEvent {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -701,11 +636,10 @@ data class BpmnSubProcess(
         "false for an ordinary embedded subprocess; true for an event subprocess (triggered by an " +
             "inner event start rather than an incoming sequence flow).",
     )
-    override val triggeredByEvent: Boolean = false,
+    val triggeredByEvent: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
-) : BpmnNode,
-    ApiBpmnSubProcess {
+) : BpmnNode {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -722,11 +656,10 @@ data class BpmnCallActivity(
             "defined separately — typically in another file or the runtime catalogue — and is " +
             "referenced here by id; it need not appear in this definition.",
     )
-    override val calledElement: String,
+    val calledElement: String,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
-) : BpmnNode,
-    ApiBpmnCallActivity {
+) : BpmnNode {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -741,10 +674,9 @@ data class BpmnCallActivity(
 data class BpmnUnrecognizedNode(
     override val id: String,
     override val name: String? = null,
-    override val bpmnType: String,
+    val bpmnType: String,
     override val parentRef: String? = null,
-) : BpmnNode,
-    ApiBpmnUnrecognizedNode {
+) : BpmnNode {
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
@@ -752,26 +684,26 @@ data class BpmnUnrecognizedNode(
 data class BpmnEdge(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique sequence-flow id, e.g. Flow_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Source node id")
-    override val sourceRef: String,
+    val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target node id")
-    override val targetRef: String,
+    val targetRef: String,
     @get:JsonPropertyDescription("Optional human-readable sequence-flow label")
-    override val name: String? = null,
+    val name: String? = null,
     @get:JsonPropertyDescription("Optional sequence-flow condition expression, typically used on gateway branches")
-    override val conditionExpression: String? = null,
+    val conditionExpression: String? = null,
     @get:JsonPropertyDescription(
         "Mark this edge as the BPMN default flow for an exclusive gateway. Default flows " +
             "are taken when no other branch's condition matches and must not carry a " +
             "condition expression themselves. At most one default flow per gateway.",
     )
-    override val isDefault: Boolean = false,
+    val isDefault: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
-    override val parentRef: String? = null,
-) : ApiBpmnEdge {
+    val parentRef: String? = null,
+) {
     init {
         require(!(isDefault && !conditionExpression.isNullOrBlank())) {
             "BpmnEdge $id: default edge must not carry a condition expression"
@@ -783,98 +715,98 @@ data class BpmnEdge(
 data class BpmnTextAnnotation(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique text-annotation id, e.g. TextAnnotation_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("The annotation's free text, e.g. \"For each line item on the slip\"")
-    override val text: String,
-) : ApiBpmnTextAnnotation
+    val text: String,
+)
 
 @JsonClassDescription("BPMN association edge linking a text annotation to the element it explains")
 data class BpmnAssociation(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique association id, e.g. Association_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Source element id (the annotated flow element, per BPMN convention)")
-    override val sourceRef: String,
+    val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target element id (the text annotation)")
-    override val targetRef: String,
-) : ApiBpmnAssociation
+    val targetRef: String,
+)
 
 @JsonClassDescription("BPMN data object: transient information flowing through the process")
 data class BpmnDataObject(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique data-object id, e.g. DataObject_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Business name of the data object, e.g. \"Order\"")
-    override val name: String,
-) : ApiBpmnDataObject
+    val name: String,
+)
 
 @JsonClassDescription("BPMN data store: persisted information (database, file, queue) the process reads or writes")
 data class BpmnDataStore(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique data-store id, e.g. DataStore_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Business name of the data store, e.g. \"Customer database\"")
-    override val name: String,
-) : ApiBpmnDataStore
+    val name: String,
+)
 
 @JsonClassDescription("Read/write link between an activity and a data object or store")
 data class BpmnDataAssociation(
     @field:NotBlank
     @get:JsonPropertyDescription("Unique data-association id, e.g. DataAssociation_1")
-    override val id: String,
+    val id: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Source activity id (the reader or writer)")
-    override val sourceRef: String,
+    val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target data object/store id")
-    override val targetRef: String,
+    val targetRef: String,
     @field:NotNull
     @get:JsonPropertyDescription("READ = activity consumes the data; WRITE = activity produces or updates it")
-    override val direction: DataFlowDirection,
-) : ApiBpmnDataAssociation
+    val direction: DataFlowDirection,
+)
 
 @JsonClassDescription("BPMN participant (pool): white-box owns a process, black-box is an external entity")
 data class BpmnParticipant(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable participant id, e.g. Participant_OrderSvc")
-    override val id: String,
+    val id: String,
     @get:JsonPropertyDescription("Pool label; for a white-box pool this is the process name")
-    override val name: String? = null,
+    val name: String? = null,
     @get:JsonPropertyDescription("Id of the process this pool owns; LEAVE NULL for a black-box (external) participant")
-    override val processRef: String? = null,
-) : ApiBpmnParticipant
+    val processRef: String? = null,
+)
 
 @JsonClassDescription("BPMN lane: partitions a white-box pool by business role or performer")
 data class BpmnLane(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable lane id, e.g. Lane_Sales")
-    override val id: String,
+    val id: String,
     @get:JsonPropertyDescription("Lane label — a business role or performer, e.g. \"Sales\"")
-    override val name: String? = null,
+    val name: String? = null,
     @get:JsonPropertyDescription(
         "Id of the participant (pool) this lane belongs to; null when the process has lanes but no surrounding collaboration",
     )
-    override val participantId: String? = null,
+    val participantId: String? = null,
     @get:JsonPropertyDescription("Ids of the flow nodes contained in this lane (node ids, not names)")
-    override val flowNodeRefs: List<String> = emptyList(),
-) : ApiBpmnLane
+    val flowNodeRefs: List<String> = emptyList(),
+)
 
 @JsonClassDescription("BPMN message flow between two participants (across pools only)")
 data class BpmnMessageFlow(
     @field:NotBlank
     @get:JsonPropertyDescription("Stable message-flow id, e.g. MessageFlow_1")
-    override val id: String,
+    val id: String,
     @get:JsonPropertyDescription("Optional label, e.g. \"Payment request\"")
-    override val name: String? = null,
+    val name: String? = null,
     @field:NotBlank
     @get:JsonPropertyDescription("Source: a flow-element id or a black-box participant id")
-    override val sourceRef: String,
+    val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target: a flow-element id or a black-box participant id")
-    override val targetRef: String,
-) : ApiBpmnMessageFlow
+    val targetRef: String,
+)

@@ -7,7 +7,7 @@ package dev.groknull.bpmner.observability.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnResult
 import dev.groknull.bpmner.generation.ProcessOutline

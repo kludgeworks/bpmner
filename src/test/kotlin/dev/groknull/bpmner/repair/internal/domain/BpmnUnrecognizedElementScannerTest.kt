@@ -5,21 +5,22 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedNode
-import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 internal class BpmnUnrecognizedElementScannerTest {
     @Test
@@ -110,10 +111,11 @@ internal class BpmnUnrecognizedElementScannerTest {
         assertNull(diag.repairScope)
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun definitionOf(vararg nodes: BpmnNode): BpmnDefinition = BpmnDefinition(
         processId = "Process_1",
         processName = "p",
-        nodes = nodes.toList(),
+        nodes = nodes.toList() as List<ConcreteNode>,
         sequences = emptyList(),
     )
 }
