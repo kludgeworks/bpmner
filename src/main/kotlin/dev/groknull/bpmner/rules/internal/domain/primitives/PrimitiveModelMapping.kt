@@ -378,5 +378,9 @@ private fun eventDefinitionProperties(
         is BpmnErrorEventDefinition -> put("errorRef", eventDefinition.errorRef)
 
         is BpmnEscalationEventDefinition -> put("escalationRef", eventDefinition.escalationRef)
+
+        is BpmnNoneEventDefinition -> Unit
+        is BpmnTerminateEventDefinition -> Unit
+        is BpmnUnrecognizedEventDefinition -> Unit
     }
 }

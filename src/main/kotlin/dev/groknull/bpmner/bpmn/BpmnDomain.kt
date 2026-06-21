@@ -754,6 +754,9 @@ data class BpmnDataStore(
     val name: String,
 )
 
+/** Direction of a [BpmnDataAssociation]: the activity reads from, or writes to, the data element. */
+enum class DataFlowDirection { READ, WRITE }
+
 @JsonClassDescription("Read/write link between an activity and a data object or store")
 data class BpmnDataAssociation(
     @field:NotBlank
