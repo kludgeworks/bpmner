@@ -5,9 +5,11 @@ name: PR title
 
 # Squash-merge uses the PR title as the commit subject, so the PR title is what lands on main.
 # Validate it as a conventional commit (same types as the hk commit-msg hook).
+# ready_for_review: re-validate when a draft PR is converted to ready, so a push that
+# landed while the PR was still draft does not bypass the check.
 on:
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, edited, synchronize, reopened, ready_for_review]
 
 permissions:
   pull-requests: read
