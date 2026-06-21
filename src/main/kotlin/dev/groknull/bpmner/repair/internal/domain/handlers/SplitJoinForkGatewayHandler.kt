@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnInclusiveGateway
-import dev.groknull.bpmner.domain.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnInclusiveGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType

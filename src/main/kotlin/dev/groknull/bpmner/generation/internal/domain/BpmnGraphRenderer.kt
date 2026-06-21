@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.generation.internal.domain
 
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
+import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnRenderer
 import org.springframework.stereotype.Component
 

@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.repair
 
 import com.embabel.chat.Message
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnEvaluation
 

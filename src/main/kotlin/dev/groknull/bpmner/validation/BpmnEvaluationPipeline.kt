@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.validation
 
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource
 import dev.groknull.bpmner.validation.BpmnEvaluation

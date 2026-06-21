@@ -5,12 +5,12 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.BpmnDefinition
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleEvaluation
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleEvaluation
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.RuleEngine
 import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry

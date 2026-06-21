@@ -11,9 +11,9 @@ import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.common.ai.prompt.PromptContributor
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker

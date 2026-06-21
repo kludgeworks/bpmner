@@ -12,6 +12,8 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
@@ -20,8 +22,6 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment

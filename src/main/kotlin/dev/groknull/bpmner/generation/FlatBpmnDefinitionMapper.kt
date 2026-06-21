@@ -5,36 +5,36 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.domain.BpmnBoundaryEvent
-import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
-import dev.groknull.bpmner.domain.BpmnCallActivity
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
-import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.domain.BpmnEventBasedGateway
-import dev.groknull.bpmner.domain.BpmnEventDefinition
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnInclusiveGateway
-import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.domain.BpmnManualTask
-import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
-import dev.groknull.bpmner.domain.BpmnParallelGateway
-import dev.groknull.bpmner.domain.BpmnReceiveTask
-import dev.groknull.bpmner.domain.BpmnScriptTask
-import dev.groknull.bpmner.domain.BpmnSendTask
-import dev.groknull.bpmner.domain.BpmnServiceTask
-import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnSubProcess
-import dev.groknull.bpmner.domain.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
-import dev.groknull.bpmner.domain.BpmnUserTask
-import dev.groknull.bpmner.domain.MultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.domain.StandardLoopCharacteristics
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnManualTask
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
+import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 
 /*
  * Wire-format → sealed conversion at the BPMN generation + repair LLM boundary.

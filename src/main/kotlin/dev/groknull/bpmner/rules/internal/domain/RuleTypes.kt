@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheck
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig

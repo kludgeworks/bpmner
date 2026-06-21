@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.readiness
 
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

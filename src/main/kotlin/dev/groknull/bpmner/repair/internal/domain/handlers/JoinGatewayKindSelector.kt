@@ -5,13 +5,13 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
-import dev.groknull.bpmner.api.BpmnGateway
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnInclusiveGateway
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnGateway
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnInclusiveGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
 
 /**
  * Chooses the right kind of synthesized join gateway based on the upstream topology.
@@ -80,7 +80,7 @@ internal object JoinGatewayKindSelector {
         nodeId: String,
         visited: MutableSet<String>,
         nodesById: Map<String, BpmnNode>,
-        incomingByTarget: Map<String, List<dev.groknull.bpmner.domain.BpmnEdge>>,
+        incomingByTarget: Map<String, List<BpmnEdge>>,
         queue: ArrayDeque<String>,
     ): BpmnNode? {
         val freshlyVisited = visited.add(nodeId)

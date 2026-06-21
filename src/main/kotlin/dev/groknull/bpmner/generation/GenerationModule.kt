@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * and default-flow assignment. Hosts the agent-platform invoker that drives LLM
  * generation.
  */
-@ApplicationModule(allowedDependencies = ["alignment", "api", "config", "contract", "domain", "readiness", "rules", "validation"])
+@ApplicationModule(allowedDependencies = ["alignment", "bpmn", "config", "contract", "readiness", "rules", "validation"])
 internal object GenerationModule

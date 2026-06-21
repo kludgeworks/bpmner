@@ -7,8 +7,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.api.BpmnDefinition
-import dev.groknull.bpmner.api.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
 import dev.groknull.bpmner.generation.BpmnXmlToDefinitionConverter
 import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.RuleRegistry

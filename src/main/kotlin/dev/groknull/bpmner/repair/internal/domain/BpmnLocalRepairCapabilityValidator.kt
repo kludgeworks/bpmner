@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.validation.BpmnLintRuleCapability
 import dev.groknull.bpmner.validation.BpmnLintingPort
 import org.slf4j.LoggerFactory

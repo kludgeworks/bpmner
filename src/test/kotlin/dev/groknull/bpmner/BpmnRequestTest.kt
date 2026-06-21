@@ -6,8 +6,8 @@
 package dev.groknull.bpmner
 
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.styleGuideContribution
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.generation.generationPrompt
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.MissingProcessArea

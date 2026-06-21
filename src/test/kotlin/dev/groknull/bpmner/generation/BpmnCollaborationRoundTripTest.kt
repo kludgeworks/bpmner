@@ -5,14 +5,14 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnLane
-import dev.groknull.bpmner.domain.BpmnMessageFlow
-import dev.groknull.bpmner.domain.BpmnParticipant
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnLane
+import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.internal.model.BpmnParticipant
+import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals

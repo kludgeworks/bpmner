@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 
 internal interface BpmnLocalModelFixHandler {
     val handlerName: String

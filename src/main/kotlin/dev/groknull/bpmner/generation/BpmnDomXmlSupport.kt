@@ -63,6 +63,6 @@ internal fun NodeList.elements(): Sequence<Element> = sequence {
     }
 }
 
-internal fun dev.groknull.bpmner.api.BpmnGroup.categoryId(): String = "Category_$id"
+internal fun dev.groknull.bpmner.bpmn.BpmnGroup.categoryId(): String = "Category_$id"
 
-internal fun dev.groknull.bpmner.api.BpmnGroup.categoryValueId(): String = "CategoryValue_$id"
+internal fun dev.groknull.bpmner.bpmn.BpmnGroup.categoryValueId(): String = "CategoryValue_$id"

@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain.compiled
 
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairSafety
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Test

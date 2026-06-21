@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.rules
 
-import dev.groknull.bpmner.api.BpmnDefinition
-import dev.groknull.bpmner.api.RuleEvaluation
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.RuleEvaluation
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
 /**

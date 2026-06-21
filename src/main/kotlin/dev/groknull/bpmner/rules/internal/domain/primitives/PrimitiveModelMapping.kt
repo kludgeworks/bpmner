@@ -5,44 +5,44 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnBoundaryEvent
-import dev.groknull.bpmner.api.BpmnBusinessRuleTask
-import dev.groknull.bpmner.api.BpmnCallActivity
-import dev.groknull.bpmner.api.BpmnDataObject
-import dev.groknull.bpmner.api.BpmnDataStore
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnEdge
-import dev.groknull.bpmner.api.BpmnEndEvent
-import dev.groknull.bpmner.api.BpmnErrorEventDefinition
-import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.api.BpmnEvent
-import dev.groknull.bpmner.api.BpmnEventBasedGateway
-import dev.groknull.bpmner.api.BpmnEventDefinition
-import dev.groknull.bpmner.api.BpmnExclusiveGateway
-import dev.groknull.bpmner.api.BpmnGroup
-import dev.groknull.bpmner.api.BpmnInclusiveGateway
-import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.api.BpmnManualTask
-import dev.groknull.bpmner.api.BpmnMessageEventDefinition
-import dev.groknull.bpmner.api.BpmnMessageFlow
-import dev.groknull.bpmner.api.BpmnNode
-import dev.groknull.bpmner.api.BpmnNoneEventDefinition
-import dev.groknull.bpmner.api.BpmnParallelGateway
-import dev.groknull.bpmner.api.BpmnReceiveTask
-import dev.groknull.bpmner.api.BpmnScriptTask
-import dev.groknull.bpmner.api.BpmnSendTask
-import dev.groknull.bpmner.api.BpmnServiceTask
-import dev.groknull.bpmner.api.BpmnSignalEventDefinition
-import dev.groknull.bpmner.api.BpmnStartEvent
-import dev.groknull.bpmner.api.BpmnSubProcess
-import dev.groknull.bpmner.api.BpmnTask
-import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.api.BpmnTextAnnotation
-import dev.groknull.bpmner.api.BpmnTimerEventDefinition
-import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.api.BpmnUnrecognizedNode
-import dev.groknull.bpmner.api.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnDataObject
+import dev.groknull.bpmner.bpmn.BpmnDataStore
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEvent
+import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnGroup
+import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnManualTask
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTask
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 
 // This is the single definition-to-primitive projection pipeline; splitting the local projections
 // would obscure the ordering of synthetic elements, typed nodes, artifacts, and flows.
@@ -337,7 +337,7 @@ private fun BpmnNode.bpmnTypeName(): String = when (this) {
 
 @Suppress("CyclomaticComplexMethod") // one arm per sealed BpmnEventDefinition subtype — the count IS the safety property
 private fun eventDefinitionProperties(
-    eventDefinition: dev.groknull.bpmner.api.BpmnEventDefinition,
+    eventDefinition: dev.groknull.bpmner.bpmn.BpmnEventDefinition,
 ): Map<String, String?> = buildMap {
     put(
         "eventDefinition",

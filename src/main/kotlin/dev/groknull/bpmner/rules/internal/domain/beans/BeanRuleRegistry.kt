@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.RuleRegistry
 import org.springframework.stereotype.Component

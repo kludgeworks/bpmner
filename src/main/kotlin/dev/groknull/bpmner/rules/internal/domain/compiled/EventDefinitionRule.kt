@@ -3,23 +3,23 @@
  * SPDX-License-Identifier: MIT
  */
 package dev.groknull.bpmner.rules.internal.domain.compiled
-import dev.groknull.bpmner.api.BpmnBoundaryEvent
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnEndEvent
-import dev.groknull.bpmner.api.BpmnEventDefinition
-import dev.groknull.bpmner.api.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.api.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.api.BpmnNoneEventDefinition
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.BpmnStartEvent
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairMetadata
-import dev.groknull.bpmner.api.RepairSafety
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.api.isTask
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairMetadata
+import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
+import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.bpmn.isTask
 import org.springframework.stereotype.Component
 /**
  * Validates the event-definition correctness invariants on every event-position node:

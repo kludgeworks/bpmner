@@ -11,11 +11,11 @@ import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.domain.BpmnRequest
 import kotlin.test.Test
 import kotlin.test.assertTrue
 

@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.repair.internal.domain.BpmnLocalModelFixHandler
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType

@@ -7,18 +7,18 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.domain.BpmnBoundaryEvent
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnGroup
-import dev.groknull.bpmner.domain.BpmnParallelGateway
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
-import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.bpmn.internal.model.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnGroup
+import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -393,7 +393,7 @@ class DeterministicPrimitivesTest {
         assertEquals(1, diagnostics.size)
         val diag = diagnostics.single()
         assertEquals("rule-config-error", diag.diagnosticCode)
-        assertEquals(dev.groknull.bpmner.api.RuleSeverity.ERROR, diag.severity)
+        assertEquals(dev.groknull.bpmner.bpmn.RuleSeverity.ERROR, diag.severity)
         assertTrue(diag.message.contains("[unclosed"), "config-error message should quote the offending pattern: ${diag.message}")
     }
 

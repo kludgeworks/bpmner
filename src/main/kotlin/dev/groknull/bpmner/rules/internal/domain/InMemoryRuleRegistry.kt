@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.BpmnRule
+import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.rules.RuleRegistry
 
 /**

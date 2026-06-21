@@ -6,12 +6,12 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import com.embabel.chat.Message
-import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
 import dev.groknull.bpmner.contract.ProcessContract
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.repair.BpmnAttemptHistory
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.validation.BpmnDiagnostic

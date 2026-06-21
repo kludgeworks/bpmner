@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.rules
 
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.RuleSeverity
 
 /**
  * Active rule profile consulted by [RuleEngine] during evaluation.

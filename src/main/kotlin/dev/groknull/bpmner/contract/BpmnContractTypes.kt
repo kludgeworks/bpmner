@@ -10,9 +10,9 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
-import dev.groknull.bpmner.api.BoundaryEventKind
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
@@ -466,7 +466,7 @@ enum class EventSubProcessTrigger { MESSAGE, TIMER, ERROR, ESCALATION, SIGNAL }
  * start event fires, rather than being reached by a sequence flow. Distinct from
  * [ContractActivity.SubProcess] (an embedded subprocess on the main flow) — it is deliberately NOT a
  * [ContractActivity] because it has no incoming/outgoing edges. Realized as a
- * [dev.groknull.bpmner.domain.BpmnSubProcess] with `triggeredByEvent = true` containing a typed inner
+ * [dev.groknull.bpmner.bpmn.internal.model.BpmnSubProcess] with `triggeredByEvent = true` containing a typed inner
  * start event matching [trigger]; [interrupting] maps to that start event's `isInterrupting`.
  *
  * Members in [containedActivityIds] are ordinary entries in `ProcessContract.activities`; the event
@@ -556,7 +556,7 @@ data class ContractDecision(
 /**
  * A branch out of a [ContractDecision].
  *
- * Mirrors the sealed-subtype pattern used by [dev.groknull.bpmner.domain.BpmnNode]:
+ * Mirrors the sealed-subtype pattern used by [dev.groknull.bpmner.bpmn.internal.model.BpmnNode]:
  * the `kind` discriminator dispatches to one of three subtypes, each
  * carrying exactly the fields it needs. Mutual exclusion between `condition` and "default" is a
  * type-system guarantee — there is no shape where both could coexist.
@@ -698,21 +698,21 @@ data class ContractArtifact(
  * `errorCode`, [Message] always carries a `messageName`, etc.
  *
  * Subtypes map 1:1 to BPMN end-event flavours rendered as
- * `<bpmn:endEvent>` with a matching [dev.groknull.bpmner.domain.BpmnEventDefinition] child:
+ * `<bpmn:endEvent>` with a matching [dev.groknull.bpmner.bpmn.internal.model.BpmnEventDefinition] child:
  *
- *  - [Normal] — vanilla path completion → [dev.groknull.bpmner.domain.BpmnNoneEventDefinition]
+ *  - [Normal] — vanilla path completion → [dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition]
  *  - [Terminate] — terminates the enclosing scope, killing all parallel tokens →
- *    [dev.groknull.bpmner.domain.BpmnTerminateEventDefinition]
+ *    [dev.groknull.bpmner.bpmn.internal.model.BpmnTerminateEventDefinition]
  *  - [Error] — raises a named error that propagates to the nearest matching boundary
  *    catcher (falls back to scope completion if uncaught per BPMN spec) →
- *    [dev.groknull.bpmner.domain.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
+ *    [dev.groknull.bpmner.bpmn.internal.model.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
  *  - [Message] — point-to-point send on completion →
- *    [dev.groknull.bpmner.domain.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
+ *    [dev.groknull.bpmner.bpmn.internal.model.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
  *  - [Signal] — broadcast to every subscribing process →
- *    [dev.groknull.bpmner.domain.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
+ *    [dev.groknull.bpmner.bpmn.internal.model.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
  *  - [Escalation] — non-error notification that propagates to an escalation catcher
  *    (per Camunda best practice: use for "report back" rather than "this failed") →
- *    [dev.groknull.bpmner.domain.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
+ *    [dev.groknull.bpmner.bpmn.internal.model.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
  *
  * Field naming follows the convention from [ContractTrigger]: Message/Signal carry
  * human-readable **names** (extracted from prose; mapped to catalogue ids at generation

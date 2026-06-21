@@ -5,16 +5,16 @@
 
 package dev.groknull.bpmner.rules.internal.domain.compiled
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnMessageRef
-import dev.groknull.bpmner.domain.BpmnReceiveTask
-import dev.groknull.bpmner.domain.BpmnSendTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.bpmn.internal.model.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.internal.model.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.internal.model.BpmnSendTask
+import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

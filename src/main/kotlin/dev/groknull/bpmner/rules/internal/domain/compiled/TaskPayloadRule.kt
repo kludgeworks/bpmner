@@ -5,18 +5,18 @@
 
 package dev.groknull.bpmner.rules.internal.domain.compiled
 
-import dev.groknull.bpmner.api.BpmnBusinessRuleTask
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnReceiveTask
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.BpmnSendTask
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairMetadata
-import dev.groknull.bpmner.api.RepairSafety
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairMetadata
+import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import org.springframework.stereotype.Component
 
 /**

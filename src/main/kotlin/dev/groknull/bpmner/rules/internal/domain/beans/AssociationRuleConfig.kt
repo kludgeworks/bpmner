@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitiveRule
 import dev.groknull.bpmner.rules.internal.domain.primitives.RequiredAssociationCheckConfig

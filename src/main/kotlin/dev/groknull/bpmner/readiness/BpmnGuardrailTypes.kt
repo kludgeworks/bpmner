@@ -11,7 +11,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.PositiveOrZero
-import dev.groknull.bpmner.api.ClarificationExchange as ApiClarificationExchange
+import dev.groknull.bpmner.bpmn.ClarificationExchange as ApiClarificationExchange
 
 /**
  * Readiness dimensions used by the readiness LLM to score the input prose.

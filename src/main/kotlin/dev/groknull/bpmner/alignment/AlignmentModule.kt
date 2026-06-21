@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * contract, surfaces alignment classifications and feeds them back into the
  * pipeline.
  */
-@ApplicationModule(allowedDependencies = ["api", "config", "contract", "domain", "readiness", "validation"])
+@ApplicationModule(allowedDependencies = ["bpmn", "config", "contract", "readiness", "validation"])
 internal object AlignmentModule

@@ -5,15 +5,15 @@
 
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnServiceTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.ComposedProcessGraph
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.OwnedElementGraph
+import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
+import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.internal.model.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.internal.model.ComposedProcessGraph
+import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.internal.model.OwnedElementGraph
 
 /**
  * Shared test fixtures for BPMN definitions and graphs to prevent duplication.

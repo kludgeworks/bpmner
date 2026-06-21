@@ -7,7 +7,7 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.RuleProfile
 import dev.groknull.bpmner.rules.internal.domain.beans.BeanRuleRegistry

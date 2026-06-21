@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import dev.groknull.bpmner.api.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop

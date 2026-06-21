@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain.handlers
 
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 
 internal object TopologyIds {
     fun fresh(
