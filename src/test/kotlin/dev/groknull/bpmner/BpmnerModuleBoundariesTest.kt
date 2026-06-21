@@ -265,8 +265,8 @@ class BpmnerModuleBoundariesTest {
                 "StandardLoopCharacteristics",
             )
 
-        // The 10 modules that have an internal/ layer (config, web do not at the top tier;
-        // bpmn's internal/model layer was collapsed into the root package in epic #451).
+        // The 10 modules that have an internal/ layer (bpmn's root package is the sole kernel;
+        // config and web have no internal/ layer at the top tier).
         // Source: ARCHITECTURE §3 / PLAN-S2 §0 verified facts.
         val INTERNAL_BEARING_MODULES: List<String> =
             listOf(

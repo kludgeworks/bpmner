@@ -16,7 +16,7 @@ import kotlin.reflect.KClass
  *
  * The field set mirrors the local variables that `validation.BpmnDefinitionValidator`
  * computes per call today. Future indexes (e.g. `edgesFrom`, `edgesTo`) can be added when
- * a compiled rule needs them — see #213 for the rule consolidation work.
+ * a compiled rule needs them — additional indexes can be added for future rule consolidation work.
  *
  * Indexes are evaluated eagerly when this object is constructed; they are immutable
  * snapshots of `definition` at that moment. Mutating `definition` after construction is
@@ -25,7 +25,7 @@ import kotlin.reflect.KClass
  * **Key normalisation**: every id index here uses **raw** ids exactly as they appear on
  * the definition. `nodeIds`, `sequenceIds`, `nodesById`, and the source-keyed maps below
  * are all consistent — `id in nodeIds` ↔ `id in nodesById` for the same id. The future
- * `DuplicateIdRule` (#213) is the one that needs trimmed comparison, and it'll do its own
+ * `DuplicateIdRule` is the one that needs trimmed comparison, and it'll do its own
  * `groupBy { it.id.trim() }` rather than asking this index to second-guess the raw input.
  */
 class BpmnDefinitionContext(
