@@ -13,11 +13,11 @@ import com.embabel.agent.core.ReplanRequestedException
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnElementIndex
-import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.internal.model.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.internal.model.RenderedBpmn
 import dev.groknull.bpmner.contract.ProcessContract

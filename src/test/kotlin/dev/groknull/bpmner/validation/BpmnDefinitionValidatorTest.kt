@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.validation
 
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.internal.model.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnBusinessRuleTask
@@ -19,7 +20,6 @@ import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnManualTask
 import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageRef
-import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.internal.model.BpmnScriptTask

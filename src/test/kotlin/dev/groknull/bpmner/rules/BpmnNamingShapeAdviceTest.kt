@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.rules
 
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
@@ -12,7 +13,6 @@ import dev.groknull.bpmner.bpmn.internal.model.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnManualTask
-import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.internal.model.BpmnReceiveTask

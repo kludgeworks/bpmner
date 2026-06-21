@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner
 
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.internal.model.ComposedProcessGraph

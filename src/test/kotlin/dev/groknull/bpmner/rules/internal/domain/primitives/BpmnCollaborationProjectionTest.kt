@@ -8,12 +8,12 @@
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnLane
 import dev.groknull.bpmner.bpmn.internal.model.BpmnMessageFlow
-import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnParticipant
 import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnUserTask

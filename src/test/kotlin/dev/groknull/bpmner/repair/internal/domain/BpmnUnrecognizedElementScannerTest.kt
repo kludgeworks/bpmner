@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.internal.model.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnUnrecognizedNode

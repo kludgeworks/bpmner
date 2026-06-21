@@ -6,13 +6,13 @@
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.RuleCategory
 import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.bpmn.internal.model.BpmnDefinition
 import dev.groknull.bpmner.bpmn.internal.model.BpmnEdge
 import dev.groknull.bpmner.bpmn.internal.model.BpmnGroup
-import dev.groknull.bpmner.bpmn.BpmnNode
 
 /**
  * Shared test helpers for primitive rule tests.
