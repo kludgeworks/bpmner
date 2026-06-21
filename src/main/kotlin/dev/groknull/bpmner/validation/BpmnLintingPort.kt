@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

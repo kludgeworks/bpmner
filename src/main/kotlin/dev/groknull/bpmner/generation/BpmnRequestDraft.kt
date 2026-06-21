@@ -7,8 +7,8 @@ package dev.groknull.bpmner.generation
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.api.GenerationMode
-import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import jakarta.validation.constraints.Size
 

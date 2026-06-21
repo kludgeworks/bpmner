@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RepairMetadata
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RepairMetadata
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleMetadata
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.LlmRuleSpec
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitives.CompositeCheckConfig

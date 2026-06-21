@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import kotlin.test.Test
 import kotlin.test.assertTrue

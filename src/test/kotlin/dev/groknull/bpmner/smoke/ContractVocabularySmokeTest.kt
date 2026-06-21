@@ -8,8 +8,9 @@ package dev.groknull.bpmner.smoke
 import com.embabel.agent.api.common.AgentPlatformTypedOps
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.ProcessOptions
-import dev.groknull.bpmner.api.BoundaryEventKind
-import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractBranch
@@ -23,7 +24,6 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.boundaryEvents
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.loop
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.junit.jupiter.api.Assertions.assertTrue

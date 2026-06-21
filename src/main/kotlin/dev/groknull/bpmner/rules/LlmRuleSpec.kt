@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.rules
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
 
 /**
  * Metadata-only LLM rule wrapper. It is intentionally excluded from [RuleRegistry.activeRules]

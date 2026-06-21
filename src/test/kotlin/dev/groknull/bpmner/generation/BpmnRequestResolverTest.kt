@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.generation.internal.adapter.inbound.InputPathResolver
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows

@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.rules.internal.domain
 
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairMetadata
-import dev.groknull.bpmner.api.RepairSafety
-import dev.groknull.bpmner.api.RuleCategory
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairMetadata
+import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.bpmn.RuleCategory
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import dev.groknull.bpmner.rules.internal.domain.primitives.PresenceCheckConfig
 import org.junit.jupiter.api.Test

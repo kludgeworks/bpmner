@@ -5,18 +5,18 @@
 
 package dev.groknull.bpmner.rules.internal.domain.compiled
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.BpmnErrorEventDefinition
-import dev.groknull.bpmner.api.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.api.BpmnEventDefinition
-import dev.groknull.bpmner.api.BpmnMessageEventDefinition
-import dev.groknull.bpmner.api.BpmnNoneEventDefinition
-import dev.groknull.bpmner.api.BpmnSignalEventDefinition
-import dev.groknull.bpmner.api.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.api.BpmnTimerEventDefinition
-import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ERROR_REF
 import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ESCALATION_REF
 import dev.groknull.bpmner.rules.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_MESSAGE_REF

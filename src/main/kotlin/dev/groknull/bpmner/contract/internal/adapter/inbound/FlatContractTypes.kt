@@ -7,9 +7,9 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.api.BoundaryEventKind
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption

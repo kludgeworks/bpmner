@@ -5,14 +5,15 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleMetadata
-import dev.groknull.bpmner.api.RuleSeverity
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnGroup
-import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnGroup
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleMetadata
+import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /**
  * Shared test helpers for primitive rule tests.
@@ -44,6 +45,7 @@ internal fun metadata(
  * Builds a [BpmnDefinitionContext] from a list of nodes with auto-generated linear sequence edges,
  * or explicit [edges] if provided.
  */
+@Suppress("UNCHECKED_CAST")
 internal fun context(
     nodes: List<BpmnNode>,
     edges: List<BpmnEdge>? = null,
@@ -57,7 +59,7 @@ internal fun context(
         BpmnDefinition(
             processId = "P",
             processName = "Process",
-            nodes = nodes,
+            nodes = nodes as List<ConcreteNode>,
             sequences = actualEdges.ifEmpty { listOf(BpmnEdge("f", nodes.first().id, nodes.last().id)) },
             groups = groups,
         ),

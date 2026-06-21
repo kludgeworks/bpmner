@@ -5,27 +5,27 @@
 
 package dev.groknull.bpmner.generation.internal.adapter.outbound
 
-import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.domain.BpmnBoundaryEvent
-import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
-import dev.groknull.bpmner.domain.BpmnCallActivity
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnEventBasedGateway
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnInclusiveGateway
-import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.domain.BpmnManualTask
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnParallelGateway
-import dev.groknull.bpmner.domain.BpmnReceiveTask
-import dev.groknull.bpmner.domain.BpmnScriptTask
-import dev.groknull.bpmner.domain.BpmnSendTask
-import dev.groknull.bpmner.domain.BpmnServiceTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnSubProcess
-import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
-import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnManualTask
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
+import dev.groknull.bpmner.bpmn.BpmnParallelGateway
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
@@ -46,7 +46,6 @@ import org.camunda.bpm.model.bpmn.instance.ServiceTask
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.UserTask
-
 internal object BpmnModelFactory {
     @Suppress("CyclomaticComplexMethod") // one arm per sealed subtype — the count IS the safety property
     fun newFlowNode(
@@ -101,8 +100,10 @@ internal object BpmnModelFactory {
                 // filter them out before reaching the generator; reaching here is a contract
                 // violation.
                 is BpmnUnrecognizedNode -> error(
-                    "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) cannot be converted to a Camunda FlowNode. " +
-                        "The generator pipeline must filter unrecognized nodes before reaching BpmnModelFactory.",
+                    "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) " +
+                        "cannot be converted to a Camunda FlowNode. " +
+                        "The generator pipeline must filter unrecognized nodes " +
+                        "before reaching BpmnModelFactory.",
                 )
             }
         flowNode.id = node.id

@@ -7,21 +7,22 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.BpmnDefinitionContext
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnLane
-import dev.groknull.bpmner.domain.BpmnMessageFlow
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnParticipant
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnLane
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.rules.internal.domain.nlp.testBpmnNlp
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /**
  * End-to-end projection coverage for #196: a real [BpmnDefinition] carrying participants, lanes, and
@@ -145,15 +146,19 @@ class BpmnCollaborationProjectionTest {
         participants: List<BpmnParticipant> = emptyList(),
         lanes: List<BpmnLane> = emptyList(),
         messageFlows: List<BpmnMessageFlow> = emptyList(),
-    ): BpmnDefinition = BpmnDefinition(
-        processId = "P",
-        processName = "Process",
-        nodes = baseNodes(),
-        sequences = listOf(BpmnEdge("f1", "StartEvent_1", "act-1"), BpmnEdge("f2", "act-1", "EndEvent_1")),
-        participants = participants,
-        lanes = lanes,
-        messageFlows = messageFlows,
-    )
+    ): BpmnDefinition {
+        @Suppress("UNCHECKED_CAST")
+        val concreteNodes = baseNodes() as List<ConcreteNode>
+        return BpmnDefinition(
+            processId = "P",
+            processName = "Process",
+            nodes = concreteNodes,
+            sequences = listOf(BpmnEdge("f1", "StartEvent_1", "act-1"), BpmnEdge("f2", "act-1", "EndEvent_1")),
+            participants = participants,
+            lanes = lanes,
+            messageFlows = messageFlows,
+        )
+    }
 
     private fun baseNodes(): List<BpmnNode> = listOf(
         BpmnStartEvent("StartEvent_1", "Start"),

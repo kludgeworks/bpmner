@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
-import dev.groknull.bpmner.api.BpmnNodeNamingPolicy
-import dev.groknull.bpmner.api.typeName
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
+import dev.groknull.bpmner.bpmn.typeName
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperation
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchOperationType
 
@@ -52,8 +52,8 @@ internal object BpmnPatchOperationApplier {
             return OperationResult.Invalid("SET_NODE_NAME name must not be blank for ${node.typeName}")
         }
         if (BpmnNodeNamingPolicy.normalize(node.name) == name) return OperationResult.Unchanged
-        val updated =
-            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) it.withName(name) else it })
+        val updatedNodes = definition.nodes.map { if (it.id == nodeId) it.withName(name) else it }
+        val updated = definition.copy(nodes = updatedNodes)
         return OperationResult.Changed(updated)
     }
 
@@ -73,7 +73,9 @@ internal object BpmnPatchOperationApplier {
         if (edge.name == op.label) return OperationResult.Unchanged
         val updated =
             definition.copy(
-                sequences = definition.sequences.map { if (it.id == edgeId) it.copy(name = op.label) else it },
+                sequences = definition.sequences.map {
+                    if (it.id == edgeId) it.copy(name = op.label) else it
+                },
             )
         return OperationResult.Changed(updated)
     }
@@ -104,7 +106,8 @@ internal object BpmnPatchOperationApplier {
                     "${referencingEdges.map { it.id }}",
             )
         }
-        return OperationResult.Changed(definition.copy(nodes = definition.nodes.filter { it.id != nodeId }))
+        val filteredNodes = definition.nodes.filter { it.id != nodeId }
+        return OperationResult.Changed(definition.copy(nodes = filteredNodes))
     }
 
     private fun applyReplaceNode(
@@ -123,7 +126,9 @@ internal object BpmnPatchOperationApplier {
                 ?: return OperationResult.Invalid("REPLACE_NODE: unknown nodeId '$nodeId'")
         if (existing == replacement) return OperationResult.Unchanged
         return OperationResult.Changed(
-            definition.copy(nodes = definition.nodes.map { if (it.id == nodeId) replacement else it }),
+            definition.copy(
+                nodes = definition.nodes.map { if (it.id == nodeId) replacement else it },
+            ),
         )
     }
 
@@ -142,7 +147,8 @@ internal object BpmnPatchOperationApplier {
         if (edge.targetRef !in nodeIds) {
             return OperationResult.Invalid("ADD_EDGE: targetRef '${edge.targetRef}' does not reference a known node")
         }
-        return OperationResult.Changed(definition.copy(sequences = definition.sequences + edge))
+        val newSequences = definition.sequences + edge
+        return OperationResult.Changed(definition.copy(sequences = newSequences))
     }
 
     private fun applyRemoveEdge(
@@ -153,7 +159,8 @@ internal object BpmnPatchOperationApplier {
         if (definition.sequences.none { it.id == edgeId }) {
             return OperationResult.Invalid("REMOVE_EDGE: unknown edgeId '$edgeId'")
         }
-        return OperationResult.Changed(definition.copy(sequences = definition.sequences.filter { it.id != edgeId }))
+        val filteredSeqs = definition.sequences.filter { it.id != edgeId }
+        return OperationResult.Changed(definition.copy(sequences = filteredSeqs))
     }
 
     private fun applyReplaceEdge(
@@ -171,8 +178,9 @@ internal object BpmnPatchOperationApplier {
             definition.sequences.firstOrNull { it.id == edgeId }
                 ?: return OperationResult.Invalid("REPLACE_EDGE: unknown edgeId '$edgeId'")
         if (existing == replacement) return OperationResult.Unchanged
+        val replacedSeqs = definition.sequences.map { if (it.id == edgeId) replacement else it }
         return OperationResult.Changed(
-            definition.copy(sequences = definition.sequences.map { if (it.id == edgeId) replacement else it }),
+            definition.copy(sequences = replacedSeqs),
         )
     }
 }

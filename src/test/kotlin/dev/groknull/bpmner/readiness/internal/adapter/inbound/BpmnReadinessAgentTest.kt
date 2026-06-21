@@ -6,8 +6,8 @@
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore

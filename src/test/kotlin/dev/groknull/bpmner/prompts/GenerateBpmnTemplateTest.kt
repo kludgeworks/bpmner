@@ -8,6 +8,7 @@
 package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
@@ -19,7 +20,6 @@ import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.rules.BpmnNamingShapeAdvice
 import kotlin.test.Test
 import kotlin.test.assertTrue

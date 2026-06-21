@@ -7,9 +7,9 @@ package dev.groknull.bpmner.generation.internal.adapter.inbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.BpmnContractFidelityChecker
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.generation.FlatBpmnDefinition

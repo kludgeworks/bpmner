@@ -7,9 +7,9 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
-import dev.groknull.bpmner.api.BoundaryEventKind
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.BoundaryEventKind
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent

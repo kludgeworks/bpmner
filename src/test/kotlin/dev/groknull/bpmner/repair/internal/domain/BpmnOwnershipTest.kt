@@ -7,17 +7,17 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnServiceTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnUserTask
-import dev.groknull.bpmner.domain.ComposedProcessGraph
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.OwnedElementGraph
-import dev.groknull.bpmner.domain.withUpdatedDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.ComposedProcessGraph
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.OwnedElementGraph
+import dev.groknull.bpmner.bpmn.withUpdatedDefinition
 import dev.groknull.bpmner.repair.internal.adapter.outbound.BpmnPatchApplier
 import dev.groknull.bpmner.repair.internal.domain.handlers.BypassGatewayHandler
 import dev.groknull.bpmner.repair.internal.domain.handlers.InsertConvergingGatewayHandler

@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * visual coordinates. Surfaces additional structural issues for downstream
  * handling; the orchestrator invokes repair separately if needed.
  */
-@ApplicationModule(allowedDependencies = ["domain", "validation"])
+@ApplicationModule(allowedDependencies = ["bpmn", "validation"])
 internal object LayoutModule

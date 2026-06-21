@@ -5,37 +5,37 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.api.DataFlowDirection
-import dev.groknull.bpmner.api.MultiInstanceMode
-import dev.groknull.bpmner.domain.BpmnAssociation
-import dev.groknull.bpmner.domain.BpmnDataAssociation
-import dev.groknull.bpmner.domain.BpmnDataObject
-import dev.groknull.bpmner.domain.BpmnDataStore
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
-import dev.groknull.bpmner.domain.BpmnErrorRef
-import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.domain.BpmnEscalationRef
-import dev.groknull.bpmner.domain.BpmnEventDefinition
-import dev.groknull.bpmner.domain.BpmnGroup
-import dev.groknull.bpmner.domain.BpmnLane
-import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
-import dev.groknull.bpmner.domain.BpmnMessageFlow
-import dev.groknull.bpmner.domain.BpmnMessageRef
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
-import dev.groknull.bpmner.domain.BpmnParticipant
-import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
-import dev.groknull.bpmner.domain.BpmnSignalRef
-import dev.groknull.bpmner.domain.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.domain.BpmnTextAnnotation
-import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
-import dev.groknull.bpmner.domain.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
-import dev.groknull.bpmner.domain.MultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.domain.StandardLoopCharacteristics
+import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataObject
+import dev.groknull.bpmner.bpmn.BpmnDataStore
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnGroup
+import dev.groknull.bpmner.bpmn.BpmnLane
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageFlow
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
+import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.DataFlowDirection
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import dev.groknull.bpmner.generation.BpmnXmlParser
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -148,10 +148,12 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         val artifacts = artifactsAndDataFrom(document)
         val collaboration = parseCollaboration(document)
+
+        val allNodes = typedNodes + unrecognizedExotics
         return BpmnDefinition(
             processId = process.id,
             processName = process.name?.takeIf { it.isNotBlank() } ?: process.id,
-            nodes = typedNodes + unrecognizedExotics,
+            nodes = allNodes,
             sequences = sequences,
             messages = eventMetadata.messages,
             signals = eventMetadata.signals,

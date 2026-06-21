@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import com.embabel.agent.api.common.ActionContext
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnRepairer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairAdvancer

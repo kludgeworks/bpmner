@@ -7,7 +7,7 @@ package dev.groknull.bpmner.contract
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.groknull.bpmner.api.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs

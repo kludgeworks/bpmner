@@ -5,12 +5,12 @@
 
 package dev.groknull.bpmner.rules.internal.domain.beans
 
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairMetadata
-import dev.groknull.bpmner.api.RepairSafety
-import dev.groknull.bpmner.api.RuleCategory
-import dev.groknull.bpmner.api.RuleSeverity
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairMetadata
+import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.bpmn.RuleCategory
+import dev.groknull.bpmner.bpmn.RuleSeverity
 import dev.groknull.bpmner.rules.BpmnerLintConfig
 import dev.groknull.bpmner.rules.internal.domain.compositeRule
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp

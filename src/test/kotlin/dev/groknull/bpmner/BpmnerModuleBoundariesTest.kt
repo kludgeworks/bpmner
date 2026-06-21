@@ -31,29 +31,29 @@ class BpmnerModuleBoundariesTest {
             .importPackages("dev.groknull.bpmner")
 
     @Test
-    fun `domain does not depend on other modules except api`() {
+    fun `bpmn does not depend on other modules`() {
         val rule =
             noClasses()
                 .that()
-                .resideInAPackage("..bpmner.domain..")
+                .resideInAPackage("..bpmner.bpmn..")
                 .should()
                 .dependOnClassesThat(nonDomainDependencyClass())
         rule.check(classes)
     }
 
     @Test
-    fun `domain does not depend on forbidden framework prompt or io types`() {
+    fun `bpmn does not depend on forbidden framework prompt or io types`() {
         val rule =
             noClasses()
                 .that()
-                .resideInAPackage("..bpmner.domain..")
+                .resideInAPackage("..bpmner.bpmn..")
                 .should()
                 .dependOnClassesThat(forbiddenDomainDependencyClass())
         rule.check(classes)
     }
 
     /**
-     * Kernel-minimality ratchet: the `domain` module may only contain the types listed in
+     * Kernel-minimality ratchet: the `bpmn` module may only contain the types listed in
      * [DOMAIN_ALLOWLIST]. This is the enforcement gate for the **placement-rule table**
      * (ARCHITECTURE ADR-20 §6), which decides where each type lives based on what language
      * it speaks (graph, request, render DTO) and which slices own it. Top-level Kotlin
@@ -63,11 +63,11 @@ class BpmnerModuleBoundariesTest {
      * placement bug. (ADR-20 §6; ADR-22 gate 9; ARCHITECTURE §1.9)
      */
     @Test
-    fun `domain contains only the approved kernel types`() {
+    fun `bpmn contains only the approved kernel types`() {
         val rule =
             classes()
                 .that()
-                .resideInAPackage("..bpmner.domain..")
+                .resideInAPackage("..bpmner.bpmn..")
                 .and()
                 .haveSimpleNameNotEndingWith("Kt")
                 .and(notAllowedInDomain())
@@ -170,7 +170,7 @@ class BpmnerModuleBoundariesTest {
     }
 
     private fun beRejectedFromDomain(): ArchCondition<JavaClass> {
-        return object : ArchCondition<JavaClass>("be one of the approved domain kernel classes") {
+        return object : ArchCondition<JavaClass>("be one of the approved bpmn kernel classes") {
             override fun check(
                 item: JavaClass,
                 events: ConditionEvents,
@@ -178,7 +178,7 @@ class BpmnerModuleBoundariesTest {
                 events.add(
                     SimpleConditionEvent.violated(
                         item,
-                        "${item.fullName} is not part of the approved domain kernel allowlist.",
+                        "${item.fullName} is not part of the approved bpmn kernel allowlist.",
                     ),
                 )
             }
@@ -188,6 +188,7 @@ class BpmnerModuleBoundariesTest {
     private companion object {
         val DOMAIN_ALLOWLIST: Set<String> =
             setOf(
+                "BoundaryEventKind",
                 "BpmnAssociation",
                 "BpmnBoundaryEvent",
                 "BpmnBusinessRuleTask",
@@ -196,6 +197,7 @@ class BpmnerModuleBoundariesTest {
                 "BpmnDataObject",
                 "BpmnDataStore",
                 "BpmnDefinition",
+                "BpmnDefinitionContext",
                 "BpmnEdge",
                 "BpmnElementIndex",
                 "BpmnEndEvent",
@@ -203,9 +205,11 @@ class BpmnerModuleBoundariesTest {
                 "BpmnErrorRef",
                 "BpmnEscalationEventDefinition",
                 "BpmnEscalationRef",
+                "BpmnEvent",
                 "BpmnEventBasedGateway",
                 "BpmnEventDefinition",
                 "BpmnExclusiveGateway",
+                "BpmnGateway",
                 "BpmnGroup",
                 "BpmnInclusiveGateway",
                 "BpmnIntermediateCatchEvent",
@@ -215,12 +219,15 @@ class BpmnerModuleBoundariesTest {
                 "BpmnMessageEventDefinition",
                 "BpmnMessageFlow",
                 "BpmnMessageRef",
+                "BpmnModule",
                 "BpmnNode",
+                "BpmnNodeNamingPolicy",
                 "BpmnNoneEventDefinition",
                 "BpmnParallelGateway",
                 "BpmnParticipant",
                 "BpmnReceiveTask",
                 "BpmnRequest",
+                "BpmnRule",
                 "BpmnScriptTask",
                 "BpmnSendTask",
                 "BpmnServiceTask",
@@ -228,22 +235,38 @@ class BpmnerModuleBoundariesTest {
                 "BpmnSignalRef",
                 "BpmnStartEvent",
                 "BpmnSubProcess",
+                "BpmnTask",
                 "BpmnTerminateEventDefinition",
                 "BpmnTextAnnotation",
                 "BpmnTimerEventDefinition",
+                "BpmnTimerKind",
                 "BpmnUnrecognizedEventDefinition",
                 "BpmnUnrecognizedNode",
                 "BpmnUserTask",
+                "ClarificationExchange",
                 "ComposedProcessGraph",
-                "DomainModule",
+                "DataFlowDirection",
+                "DiagnosticCode",
+                "GenerationMode",
                 "LaidOutProcessGraph",
                 "MultiInstanceLoopCharacteristics",
+                "MultiInstanceMode",
                 "OwnedElementGraph",
                 "RenderedBpmn",
+                "RepairDisposition",
+                "RepairKind",
+                "RepairMetadata",
+                "RepairSafety",
+                "RuleCategory",
+                "RuleDiagnostic",
+                "RuleEvaluation",
+                "RuleMetadata",
+                "RuleSeverity",
                 "StandardLoopCharacteristics",
             )
 
-        // The 10 modules that have an internal/ layer (api, core, config, web do not).
+        // The 10 modules that have an internal/ layer (bpmn's root package is the sole kernel;
+        // config and web have no internal/ layer at the top tier).
         // Source: ARCHITECTURE §3 / PLAN-S2 §0 verified facts.
         val INTERNAL_BEARING_MODULES: List<String> =
             listOf(
@@ -304,7 +327,7 @@ class BpmnerModuleBoundariesTest {
         }
 
         fun notAllowedInDomain(): DescribedPredicate<JavaClass> {
-            return object : DescribedPredicate<JavaClass>("is not on the domain allowlist") {
+            return object : DescribedPredicate<JavaClass>("is not on the bpmn allowlist") {
                 override fun test(input: JavaClass): Boolean = input.simpleName !in DOMAIN_ALLOWLIST
             }
         }
@@ -314,9 +337,8 @@ class BpmnerModuleBoundariesTest {
                 override fun test(input: JavaClass): Boolean {
                     val pkg = input.packageName
                     if (!pkg.startsWith("dev.groknull.bpmner")) return false
-                    if (pkg == "dev.groknull.bpmner.domain" || pkg.startsWith("dev.groknull.bpmner.domain.")) return false
-                    // api/ is the frozen external contract domain is permitted to depend on.
-                    if (pkg == "dev.groknull.bpmner.api" || pkg.startsWith("dev.groknull.bpmner.api.")) return false
+                    // bpmn/ is the frozen kernel; all sub-packages (including internal.model) are allowed.
+                    if (pkg == "dev.groknull.bpmner.bpmn" || pkg.startsWith("dev.groknull.bpmner.bpmn.")) return false
                     return true
                 }
             }
@@ -324,7 +346,7 @@ class BpmnerModuleBoundariesTest {
 
         fun forbiddenDomainDependencyClass(): DescribedPredicate<JavaClass> {
             return object : DescribedPredicate<JavaClass>(
-                "is forbidden framework, prompt-construction, or IO glue for the domain kernel",
+                "is forbidden framework, prompt-construction, or IO glue for the bpmn kernel",
             ) {
                 override fun test(input: JavaClass): Boolean {
                     val pkg = input.packageName

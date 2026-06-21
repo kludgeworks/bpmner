@@ -5,15 +5,15 @@
 
 package dev.groknull.bpmner.repair.internal.adapter.outbound
 
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.domain.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import kotlin.test.Test
 import kotlin.test.assertFailsWith

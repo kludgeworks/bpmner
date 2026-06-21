@@ -5,23 +5,23 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.api.BpmnTask
-import dev.groknull.bpmner.api.DataFlowDirection
-import dev.groknull.bpmner.api.MultiInstanceLoopCharacteristics
-import dev.groknull.bpmner.api.MultiInstanceMode
-import dev.groknull.bpmner.api.StandardLoopCharacteristics
-import dev.groknull.bpmner.domain.BpmnBoundaryEvent
-import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
-import dev.groknull.bpmner.domain.BpmnDataAssociation
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnEventDefinition
-import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnReceiveTask
-import dev.groknull.bpmner.domain.BpmnSendTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnDataAssociation
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnTask
+import dev.groknull.bpmner.bpmn.DataFlowDirection
+import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 

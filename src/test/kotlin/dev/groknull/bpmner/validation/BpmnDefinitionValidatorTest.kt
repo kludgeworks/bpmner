@@ -5,32 +5,33 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.api.BpmnTimerKind
-import dev.groknull.bpmner.domain.BpmnBoundaryEvent
-import dev.groknull.bpmner.domain.BpmnBusinessRuleTask
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnErrorEventDefinition
-import dev.groknull.bpmner.domain.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.domain.BpmnExclusiveGateway
-import dev.groknull.bpmner.domain.BpmnIntermediateCatchEvent
-import dev.groknull.bpmner.domain.BpmnIntermediateThrowEvent
-import dev.groknull.bpmner.domain.BpmnManualTask
-import dev.groknull.bpmner.domain.BpmnMessageEventDefinition
-import dev.groknull.bpmner.domain.BpmnMessageRef
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnNoneEventDefinition
-import dev.groknull.bpmner.domain.BpmnReceiveTask
-import dev.groknull.bpmner.domain.BpmnScriptTask
-import dev.groknull.bpmner.domain.BpmnSendTask
-import dev.groknull.bpmner.domain.BpmnSignalEventDefinition
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.BpmnTimerEventDefinition
-import dev.groknull.bpmner.domain.BpmnUserTask
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
+import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
+import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnManualTask
+import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnMessageRef
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnReceiveTask
+import dev.groknull.bpmner.bpmn.BpmnScriptTask
+import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 @Suppress("TooManyFunctions") // test class — each @Test method is one function
 class BpmnDefinitionValidatorTest {
@@ -492,6 +493,7 @@ class BpmnDefinitionValidatorTest {
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun minimalDefinition(
         start: BpmnNode = BpmnStartEvent("StartEvent_1", "Request received"),
         task: BpmnNode = BpmnUserTask("Task_1", "Validate request"),
@@ -500,7 +502,7 @@ class BpmnDefinitionValidatorTest {
     ) = BpmnDefinition(
         processId = "Process_1",
         processName = "Handle request",
-        nodes = listOf(start, task, end),
+        nodes = listOf(start, task, end) as List<ConcreteNode>,
         sequences =
         listOf(
             BpmnEdge("Flow_1", start.id, task.id),
@@ -583,6 +585,7 @@ class BpmnDefinitionValidatorTest {
         )
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun intermediateDefinition(intermediate: BpmnNode) = BpmnDefinition(
         processId = "Process_1",
         processName = "Handle request",
@@ -591,7 +594,7 @@ class BpmnDefinitionValidatorTest {
             BpmnStartEvent("StartEvent_1", "Request received"),
             intermediate,
             BpmnEndEvent("EndEvent_1", "Request completed"),
-        ),
+        ) as List<ConcreteNode>,
         sequences =
         listOf(
             BpmnEdge("Flow_1", "StartEvent_1", intermediate.id),

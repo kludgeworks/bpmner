@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.validation
 
-import dev.groknull.bpmner.api.RepairKind
-import dev.groknull.bpmner.api.RepairSafety
+import dev.groknull.bpmner.bpmn.RepairKind
+import dev.groknull.bpmner.bpmn.RepairSafety
 
 data class BpmnLintRuleCapability(
     val id: String,

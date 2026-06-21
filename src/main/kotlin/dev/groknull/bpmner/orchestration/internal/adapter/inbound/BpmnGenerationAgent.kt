@@ -18,12 +18,12 @@ import com.embabel.agent.domain.io.UserInput
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.GenerationMode
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnProcessGenerator
 import dev.groknull.bpmner.generation.BpmnRequestDraft

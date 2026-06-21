@@ -10,9 +10,9 @@ package dev.groknull.bpmner.prompts
 import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.MissingProcessArea

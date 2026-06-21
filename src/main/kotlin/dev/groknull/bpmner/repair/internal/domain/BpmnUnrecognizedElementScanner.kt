@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.api.BpmnDefinition
-import dev.groknull.bpmner.api.BpmnEvent
-import dev.groknull.bpmner.api.BpmnUnrecognizedEventDefinition
-import dev.groknull.bpmner.api.BpmnUnrecognizedNode
-import dev.groknull.bpmner.api.RepairKind
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEvent
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
+import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.validation.BpmnDiagnostic
 import dev.groknull.bpmner.validation.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.validation.BpmnDiagnosticSource

@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain.primitives
 
-import dev.groknull.bpmner.api.RuleDiagnostic
-import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.bpmn.RuleDiagnostic
+import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.rules.internal.domain.nlp.BpmnNlp
 
 /**

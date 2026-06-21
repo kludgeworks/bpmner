@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.rules.internal.domain.docs
 
-import dev.groknull.bpmner.api.BpmnRule
-import dev.groknull.bpmner.api.RuleMetadata
+import dev.groknull.bpmner.bpmn.BpmnRule
+import dev.groknull.bpmner.bpmn.RuleMetadata
 
 /**
  * Renders BPMN rule documentation in Markdown format from [RuleMetadata] beans.

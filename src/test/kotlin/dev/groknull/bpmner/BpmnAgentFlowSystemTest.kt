@@ -16,10 +16,10 @@ import com.embabel.agent.domain.io.UserInput
 import com.embabel.agent.spi.common.Constants
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.alignment.AlignmentFindings
-import dev.groknull.bpmner.api.GenerationMode
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnRequest
 import dev.groknull.bpmner.generation.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.generation.BpmnGenerationStatus
 import dev.groknull.bpmner.generation.BpmnRequestDraft
@@ -324,7 +324,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
             ),
         )
 
-        fun anyDefinition(): dev.groknull.bpmner.domain.BpmnDefinition = anyNonNull()
+        fun anyDefinition(): dev.groknull.bpmner.bpmn.BpmnDefinition = anyNonNull()
 
         fun <T> anyNonNull(): T {
             any<T>()

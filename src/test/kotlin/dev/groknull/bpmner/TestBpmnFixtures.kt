@@ -5,15 +5,16 @@
 
 package dev.groknull.bpmner
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnEdge
-import dev.groknull.bpmner.domain.BpmnEndEvent
-import dev.groknull.bpmner.domain.BpmnNode
-import dev.groknull.bpmner.domain.BpmnServiceTask
-import dev.groknull.bpmner.domain.BpmnStartEvent
-import dev.groknull.bpmner.domain.ComposedProcessGraph
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.OwnedElementGraph
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnNode
+import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.ComposedProcessGraph
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.OwnedElementGraph
+import dev.groknull.bpmner.bpmn.BpmnNode as ConcreteNode
 
 /**
  * Shared test fixtures for BPMN definitions and graphs to prevent duplication.
@@ -36,7 +37,7 @@ object TestBpmnFixtures {
         nodes =
         listOf(
             BpmnStartEvent("StartEvent_1", startName),
-            task,
+            task as ConcreteNode,
             BpmnEndEvent("EndEvent_1", endName),
         ),
         sequences =

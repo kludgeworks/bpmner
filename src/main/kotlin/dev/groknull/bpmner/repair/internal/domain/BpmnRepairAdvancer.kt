@@ -5,13 +5,13 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.bpmn.withUpdatedDefinition
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ValidatedProcessContract
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
-import dev.groknull.bpmner.domain.withUpdatedDefinition
 import dev.groknull.bpmner.generation.BpmnRenderer
 import dev.groknull.bpmner.generation.DefaultFlowAssigner
 import dev.groknull.bpmner.readiness.ReadyBpmnContext

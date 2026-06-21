@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.layout
 
-import dev.groknull.bpmner.domain.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnDefinition
 
 data class LayoutedBpmnXml(
     val definition: BpmnDefinition,

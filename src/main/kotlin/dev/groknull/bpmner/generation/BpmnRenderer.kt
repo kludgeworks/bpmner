@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.generation
 
-import dev.groknull.bpmner.domain.BpmnDefinition
-import dev.groknull.bpmner.domain.LaidOutProcessGraph
-import dev.groknull.bpmner.domain.RenderedBpmn
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.RenderedBpmn
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort
