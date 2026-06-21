@@ -8,15 +8,6 @@ package dev.groknull.bpmner.conformance
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.conformance.BpmnDiagnostic
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
-import dev.groknull.bpmner.conformance.BpmnLintRuleIds
-import dev.groknull.bpmner.conformance.BpmnLintingPort
-import dev.groknull.bpmner.conformance.BpmnRepairScope
-import dev.groknull.bpmner.conformance.LintIssue
-import dev.groknull.bpmner.conformance.XsdValidationIssue
-import dev.groknull.bpmner.conformance.format
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.conformance
 
-import dev.groknull.bpmner.conformance.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 
 @SecondaryPort

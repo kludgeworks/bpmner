@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.conformance
 
-import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
-import dev.groknull.bpmner.conformance.XsdValidationIssue
 import dev.groknull.bpmner.conformance.internal.adapter.outbound.ClasspathResourceResolver
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory

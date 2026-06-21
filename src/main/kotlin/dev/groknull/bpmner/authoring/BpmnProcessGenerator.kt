@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.authoring
 
 import com.embabel.agent.api.common.OperationContext
-import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.contract.ValidatedProcessContract

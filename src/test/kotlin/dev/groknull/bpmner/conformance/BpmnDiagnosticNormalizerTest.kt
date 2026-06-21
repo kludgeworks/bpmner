@@ -13,12 +13,6 @@ import dev.groknull.bpmner.bpmn.OwnedElementGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairSafety
-import dev.groknull.bpmner.conformance.BpmnAutoFixResult
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
-import dev.groknull.bpmner.conformance.BpmnLintRuleCapability
-import dev.groknull.bpmner.conformance.BpmnLintingPort
-import dev.groknull.bpmner.conformance.LintIssue
-import dev.groknull.bpmner.conformance.XsdValidationIssue
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

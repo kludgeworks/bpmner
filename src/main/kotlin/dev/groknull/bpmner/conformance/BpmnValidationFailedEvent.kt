@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import org.jmolecules.event.annotation.DomainEvent
 
 @DomainEvent

@@ -7,7 +7,6 @@ package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 
 data class BpmnEvaluation(
     val definition: BpmnDefinition,

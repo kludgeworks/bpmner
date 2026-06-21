@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.authoring
 
-import dev.groknull.bpmner.authoring.BpmnXmlParser
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnDataAssociation
 import dev.groknull.bpmner.bpmn.BpmnDataObject

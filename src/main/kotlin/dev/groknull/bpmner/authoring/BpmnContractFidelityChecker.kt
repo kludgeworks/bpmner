@@ -5,10 +5,6 @@
 
 package dev.groknull.bpmner.authoring
 
-import dev.groknull.bpmner.authoring.BpmnFidelityCode
-import dev.groknull.bpmner.authoring.BpmnFidelityIssue
-import dev.groknull.bpmner.authoring.BpmnFidelityReport
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
