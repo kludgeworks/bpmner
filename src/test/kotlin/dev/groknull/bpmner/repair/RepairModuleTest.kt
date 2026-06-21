@@ -15,11 +15,13 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `repair` module depends on contract, generation, rules,
- * and validation modules, each with their own transitive Spring beans (BeanRuleRegistry, rule
- * configs, XSD validator, BpmnDefinitionToXmlConverter, etc.). ALL_DEPENDENCIES ensures every
- * transitive Spring bean is wired. API keys are stubbed so no live LLM call is made at startup.
- * (S5 — ARCHITECTURE §5 S5, G8)
+ * BootstrapMode.ALL_DEPENDENCIES: the required beans are **two module hops** away from `repair`
+ * (`repair` → `generation` → `contract.ProcessContractMarkdownRenderer`). Spring Modulith
+ * `DIRECT_DEPENDENCIES` only resolves one level deep, so the transitive `contract` beans cannot
+ * materialise under isolation. Flipping to `DIRECT_DEPENDENCIES` is a **§10 follow-on** after
+ * the `llm`/`config` dependency-depth reshape shortens the chain — it is not a Modulith upgrade
+ * (barred by N4). (ADR-23 Decision 1.2)
+ * API keys are stubbed so no live LLM call is made at startup.
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

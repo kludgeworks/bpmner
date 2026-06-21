@@ -8,10 +8,6 @@ package dev.groknull.bpmner.rules
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Import
-import org.springframework.context.annotation.Primary
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
@@ -19,16 +15,14 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `rules` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `rules` module requires `BpmnerLintConfig` (produced by
- * `ConventionsLoader` from `config.BpmnConfig`). The `config` module is not available under
- * module isolation. `spring.main.allow-bean-definition-overriding=true` is scoped to this
- * test context only (via `@TestPropertySource`; it does not affect other tests) and permits
- * `RulesTestConfig.bpmnerLintConfig()` to replace `ConventionsLoader`'s definition. `@Primary`
- * is added so that if both definitions coexist, the injector selects the test bean explicitly.
- * API keys are stubbed as a precaution for config beans. (S5 — ARCHITECTURE §5 S5, G8)
+ * BootstrapMode.DIRECT_DEPENDENCIES: `ConventionsLoader` constructor-injects `BpmnConfig`,
+ * creating a `USES_COMPONENT` edge that adds `dev.groknull.bpmner.config` to the module's
+ * bootstrap scan. `@EnableConfigurationProperties(BpmnConfig::class)` on `BpmnPipelineConfig`
+ * supplies the bean; `@ConditionalOnMissingBean` on `bpmnerLintConfig` prevents double
+ * registration. No stub required. (ADR-23 Decision 1.1)
+ * API keys are stubbed so no live LLM call is made at startup.
  */
-@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
-@Import(RulesModuleTest.RulesTestConfig::class)
+@ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
@@ -36,24 +30,9 @@ import org.springframework.test.context.TestPropertySource
         "embabel.agent.platform.models.gemini.api-key=test-key",
         "embabel.agent.platform.models.mistralai.api-key=test-key",
         "embabel.agent.platform.models.deepseek.api-key=test-key",
-        "spring.main.allow-bean-definition-overriding=true",
     ],
 )
 class RulesModuleTest {
-    /**
-     * Provides a default `BpmnerLintConfig` bean for the test context, bypassing the
-     * `ConventionsLoader` factory method that requires `BpmnConfig` from the `config` module.
-     * Spring Modulith's module isolation does not include `config` module beans. `@Primary`
-     * ensures the injector selects this test bean when both definitions are registered
-     * (REVIEW-S5 row #11 — ARCHITECTURE §5 S5, G8).
-     */
-    @TestConfiguration
-    class RulesTestConfig {
-        @Bean
-        @Primary
-        fun bpmnerLintConfig(): BpmnerLintConfig = BpmnerLintConfig()
-    }
-
     @Autowired
     private lateinit var ruleEngine: RuleEngine
 

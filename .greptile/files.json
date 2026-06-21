@@ -5,20 +5,8 @@
 			"description": "Project overview, architecture pillars, model routing, build/test workflow"
 		},
 		{
-			"path": "docs/pipeline-architecture.md",
-			"description": "End-to-end BPMN generation, validation, repair, layout, and alignment pipeline"
-		},
-		{
-			"path": "docs/hexagonal-architecture.md",
-			"description": "Module boundary and port/adapter architecture rules"
-		},
-		{
-			"path": "docs/agents.md",
-			"description": "Embabel agent responsibilities and action graph"
-		},
-		{
-			"path": "docs/goap-lifecycle.md",
-			"description": "GOAP planner, repair loop, and action lifecycle details"
+			"path": "docs/architecture.md",
+			"description": "Consolidated architecture: context map, hexagonal design, agent design, GOAP lifecycle, end-to-end pipeline, module map, enforcement"
 		},
 		{
 			"path": "docs/operator-guide.md",

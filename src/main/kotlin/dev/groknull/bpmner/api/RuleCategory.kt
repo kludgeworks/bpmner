@@ -5,13 +5,11 @@
 
 package dev.groknull.bpmner.api
 
-import com.fasterxml.jackson.annotation.JsonValue
-
 /**
  * Rule category names and short codes used when deriving stable rule ids.
  */
 enum class RuleCategory(
-    @get:JsonValue val displayName: String,
+    val displayName: String,
     val shortCode: String,
 ) {
     Activity("Activity", "act"),

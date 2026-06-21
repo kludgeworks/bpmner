@@ -6,14 +6,14 @@
 package dev.groknull.bpmner.api
 
 /**
- * Annotation-free sealed BPMN domain hierarchy. Every concrete BPMN data class in
- * `core/BpmnDomain.kt` implements one of these interfaces. Rule engines (compiled and
- * Pkl-authored) consume the api types so they never depend on Jackson, Jakarta Validation,
- * or any framework-side detail of the core types.
+ * Annotation-free BPMN language + SPI. Every concrete BPMN data class in `domain/BpmnDomain.kt`
+ * implements one of these interfaces. Rule engines (compiled and Pkl-authored) consume the api
+ * types so they never depend on Jackson, Jakarta Validation, or any framework-side detail of the
+ * domain types.
  *
  * The hierarchy is sealed all the way down, which gives api-side `when` blocks compile-time
- * exhaustiveness: every new BPMN subtype must be added to both api and core in a single
- * change. The cost is that api+core must stay in one Kotlin compilation module — if api/
+ * exhaustiveness: every new BPMN subtype must be added to both api and domain in a single
+ * change. The cost is that api+domain must stay in one Kotlin compilation module — if api/
  * is ever split out as a standalone JAR, the seal must be lifted first.
  */
 interface BpmnDefinition {
@@ -69,13 +69,13 @@ interface BpmnDefinition {
 }
 
 /**
- * A BPMN node. Implementations live in `core/BpmnDomain.kt`; each carries the Jackson
+ * A BPMN node. Implementations live in `domain/BpmnDomain.kt`; each carries the Jackson
  * polymorphism annotations and Jakarta Validation constraints required for LLM JSON
  * round-tripping.
  *
- * [withName] is the api-side replacement for the prior `core.BpmnNode.withName` extension
- * function. Sealed interfaces have no synthetic `copy`, so each concrete data class
- * overrides this method, returning a clone of its own subtype with [name] replaced.
+ * [withName] provides a copy-with-replacement for the node name. Sealed interfaces have no
+ * synthetic `copy`, so each concrete data class overrides this method, returning a clone
+ * of its own subtype with [name] replaced.
  */
 interface BpmnNode {
     val id: String
@@ -112,7 +112,7 @@ sealed interface BpmnTask : BpmnNode {
 
 /**
  * Multi-instance loop characteristics attached to a [BpmnTask]. Annotation-free api view;
- * the concrete data class (with Jackson / Jakarta annotations) lives in `core/BpmnDomain.kt`
+ * the concrete data class (with Jackson / Jakarta annotations) lives in `domain/BpmnDomain.kt`
  * and renders to `<bpmn:multiInstanceLoopCharacteristics>` on the task element.
  */
 interface MultiInstanceLoopCharacteristics {
@@ -124,8 +124,8 @@ interface MultiInstanceLoopCharacteristics {
 
 /**
  * Standard-loop characteristics attached to a [BpmnTask]. Annotation-free api view; the concrete
- * data class lives in `core/BpmnDomain.kt` and renders to `<bpmn:standardLoopCharacteristics>` on
- * the task element.
+ * data class lives in `domain/BpmnDomain.kt` and renders to `<bpmn:standardLoopCharacteristics>`
+ * on the task element.
  */
 interface StandardLoopCharacteristics {
     val testBefore: Boolean
@@ -142,8 +142,8 @@ sealed interface BpmnEvent : BpmnNode {
 }
 
 // Leaf interfaces are intentionally non-sealed: Kotlin requires direct subtypes of a sealed
-// interface to live in the same package, so sealing the leaves would block the core data
-// classes (in `dev.groknull.bpmner.core`) from implementing them. Exhaustive `when` over
+// interface to live in the same package, so sealing the leaves would block the domain data
+// classes (in `dev.groknull.bpmner.domain`) from implementing them. Exhaustive `when` over
 // `BpmnNode` still works because the sealed parents (`BpmnNode`, `BpmnEvent`, `BpmnTask`,
 // `BpmnGateway`) constrain their direct subtypes — all 14 leaves are declared here.
 
@@ -364,7 +364,7 @@ interface BpmnEscalationRef {
 
 /**
  * Event-definition hierarchy carried by `BpmnEvent` subtypes. The top is intentionally
- * non-sealed so concrete `core` data classes (in a different package) can implement it
+ * non-sealed so concrete `domain` data classes (in a different package) can implement it
  * directly; the 7 leaf interfaces below are also non-sealed for the same reason. The
  * package-locality rule that applies to `sealed` interfaces in Kotlin would otherwise
  * block the cross-package implementation.
@@ -407,11 +407,11 @@ interface BpmnUnrecognizedEventDefinition : BpmnEventDefinition {
 
 /**
  * The discriminator string for [this] node, matching the `@JsonSubTypes` names on the
- * concrete `core` data classes. Kept as a property extension to preserve the existing
+ * concrete `domain` data classes. Kept as a property extension to preserve the existing
  * `node.typeName` call-site syntax across the codebase.
  *
  * NOTE: the string literals here must stay in sync with the `name` values in the
- * `@JsonSubTypes` annotation on `core.BpmnNode`. The exhaustive `when` catches missing
+ * `@JsonSubTypes` annotation on `domain.BpmnNode`. The exhaustive `when` catches missing
  * arms when a new subtype is added but cannot catch a typo or divergence; if a subtype is
  * renamed, update both lists together.
  */

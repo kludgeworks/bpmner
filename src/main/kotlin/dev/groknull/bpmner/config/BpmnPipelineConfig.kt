@@ -9,10 +9,12 @@ import dev.groknull.bpmner.config.BpmnAlignmentConfig
 import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.config.BpmnContractConfig
 import dev.groknull.bpmner.config.BpmnReadinessConfig
+import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 
 @Configuration
+@EnableConfigurationProperties(BpmnConfig::class)
 class BpmnPipelineConfig {
     @Bean
     fun bpmnReadinessConfig(bpmnConfig: BpmnConfig): BpmnReadinessConfig = bpmnConfig.readiness

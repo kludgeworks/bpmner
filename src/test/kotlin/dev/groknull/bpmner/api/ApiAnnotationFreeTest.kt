@@ -5,8 +5,6 @@
 
 package dev.groknull.bpmner.api
 
-import com.tngtech.archunit.base.DescribedPredicate
-import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.core.importer.ImportOption
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
@@ -14,14 +12,17 @@ import org.junit.jupiter.api.Test
 
 /**
  * Guards the `api` shared-kernel module: its **contract types** must never depend on Jackson,
- * Jakarta Validation, Spring, or Embabel. Annotated implementations stay in `core/`; `api/` is
- * the neutral contract layer everyone — including future Tier-3 plugin authors — can depend on
- * without pulling in the framework world.
+ * Jakarta Validation, Spring, or Embabel. Annotated implementations stay in slice-local packages;
+ * `api/` is the neutral contract layer everyone — including future Tier-3 plugin authors — can
+ * depend on without pulling in the framework world.
  *
  * Excluded: module-marker objects (suffix `Module`, e.g. `ApiModule`). They carry the
  * `@org.springframework.modulith.ApplicationModule` annotation for Spring Modulith's module-
  * boundary gate (#215), which is build-tooling metadata — not a runtime dependency that any
  * api consumer would observe. The exclusion is by simple-name suffix.
+ *
+ * `RuleCategory` carries no `@JsonValue` annotation (ADR-22 Decision 3); the entire `api`
+ * package is genuinely Jackson-free with no exception.
  */
 class ApiAnnotationFreeTest {
     private val classes =
@@ -36,7 +37,6 @@ class ApiAnnotationFreeTest {
             .resideInAPackage("..bpmner.api..")
             .and()
             .haveSimpleNameNotEndingWith("Module")
-            .and(notRuleCategory())
             .should()
             .dependOnClassesThat()
             .resideInAnyPackage("com.fasterxml.jackson..")
@@ -80,13 +80,5 @@ class ApiAnnotationFreeTest {
             .dependOnClassesThat()
             .resideInAnyPackage("com.embabel..")
             .check(classes)
-    }
-
-    private companion object {
-        fun notRuleCategory(): DescribedPredicate<JavaClass> {
-            return object : DescribedPredicate<JavaClass>("is not RuleCategory") {
-                override fun test(input: JavaClass): Boolean = input.simpleName != "RuleCategory"
-            }
-        }
     }
 }

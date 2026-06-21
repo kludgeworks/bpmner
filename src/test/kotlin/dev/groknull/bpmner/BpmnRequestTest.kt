@@ -5,8 +5,9 @@
 
 package dev.groknull.bpmner
 
+import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.domain.BpmnRequest
-import dev.groknull.bpmner.generation.asPromptContributor
+import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.generation.generationPrompt
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.MissingProcessArea
@@ -36,7 +37,7 @@ class BpmnRequestTest {
                 clarificationHistory = clarifications,
             )
 
-        val contribution = request.asPromptContributor().contribution()
+        val contribution = PromptContributor.fixed(request.styleGuideContribution()).contribution()
 
         assertFalse(contribution.contains("q-trigger"), "contribution should not mention question id")
         assertFalse(contribution.contains("What starts the process?"), "contribution should not include question text")
@@ -52,7 +53,10 @@ class BpmnRequestTest {
         // annotations (NODE_ID_DESCRIPTION), BpmnDefinitionValidator, and generate_bpmn.jinja, so
         // they must not appear in the system-message contribution.
         assertTrue(
-            BpmnRequest(processDescription = "Ship the order").asPromptContributor().contribution().isEmpty(),
+            PromptContributor
+                .fixed(BpmnRequest(processDescription = "Ship the order").styleGuideContribution())
+                .contribution()
+                .isEmpty(),
             "contribution should be empty when no style guide is supplied",
         )
 
@@ -60,7 +64,7 @@ class BpmnRequestTest {
             BpmnRequest(
                 processDescription = "Ship the order",
                 styleGuide = "Use sentence case for task names.",
-            ).asPromptContributor().contribution()
+            ).let { PromptContributor.fixed(it.styleGuideContribution()).contribution() }
 
         assertTrue(withGuide.contains("Use sentence case for task names."), "style guide should be carried")
         assertFalse(

@@ -10,9 +10,10 @@ import com.embabel.agent.api.annotation.Action
 import com.embabel.agent.api.annotation.Agent
 import com.embabel.agent.api.annotation.Export
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.config.BpmnRequestPromptContributor
 import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
@@ -23,7 +24,6 @@ import org.springframework.context.ApplicationEventPublisher
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
     private val config: BpmnConfig,
-    private val requestPromptContributor: BpmnRequestPromptContributor,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val postChecker = BpmnReadinessPostChecker(config.readiness)
@@ -44,7 +44,7 @@ internal class BpmnReadinessAgent(
     ): ProcessInputAssessment {
         val promptRunner = config.readinessAssessor
             .promptRunner(context)
-            .withPromptContributor(requestPromptContributor.contributionFor(request.styleGuide))
+            .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
         val modelAssessment = promptRunner
             .creating(ProcessInputAssessment::class.java)
             .fromTemplate("bpmner/assess_readiness", templateModel(request))

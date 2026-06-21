@@ -52,6 +52,16 @@ class BpmnerModuleBoundariesTest {
         rule.check(classes)
     }
 
+    /**
+     * Kernel-minimality ratchet: the `domain` module may only contain the types listed in
+     * [DOMAIN_ALLOWLIST]. This is the enforcement gate for the **placement-rule table**
+     * (ARCHITECTURE ADR-20 §6), which decides where each type lives based on what language
+     * it speaks (graph, request, render DTO) and which slices own it. Top-level Kotlin
+     * file facades (`*Kt` suffix) are exempt — they compile from top-level functions and
+     * are not authored types. If this gate fires, the type belongs in a slice, not the
+     * kernel; adding it to the allowlist without an architectural justification is a
+     * placement bug. (ADR-20 §6; ADR-22 gate 9; ARCHITECTURE §1.9)
+     */
     @Test
     fun `domain contains only the approved kernel types`() {
         val rule =

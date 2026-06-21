@@ -6,10 +6,10 @@
 package dev.groknull.bpmner.api
 
 /**
- * Annotation-free contract for a BPMN generation request. The concrete `core.BpmnRequest`
- * data class implements this interface and also carries the Embabel `PromptContributor`
- * implementation that produces the system prompt — `api/` deliberately knows nothing
- * about Embabel.
+ * Annotation-free contract for a BPMN generation request. The concrete `domain.BpmnRequest`
+ * data class implements this interface. Prompt-contribution behaviour lives in the `domain`
+ * kernel as a pure `String` extension (`styleGuideContribution()`); slices wrap it locally
+ * with `PromptContributor.fixed(...)` — `api/` knows nothing about Embabel (ADR-21 Track A).
  */
 interface BpmnRequest {
     val processDescription: String

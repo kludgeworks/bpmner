@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.prompt
 
+import com.embabel.common.ai.prompt.PromptContributor
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.alignment.AlignmentFindings
@@ -20,8 +21,8 @@ import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.domain.BpmnRequest
+import dev.groknull.bpmner.domain.styleGuideContribution
 import dev.groknull.bpmner.generation.FlatBpmnDefinition
-import dev.groknull.bpmner.generation.asPromptContributor
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -142,7 +143,9 @@ internal object PromptFixtures {
     // (BpmnGeneratorAgent.kt:82 is a bare `promptRunner(context)`), so its site carries no
     // request contribution. Personas (also contributors) are stable config and intentionally
     // excluded — this probe tracks the drift-prone surface: template + request contribution + schema.
-    private val requestContribution: () -> String = { canonicalRequest.asPromptContributor().contribution() }
+    private val requestContribution: () -> String = {
+        PromptContributor.fixed(canonicalRequest.styleGuideContribution()).contribution()
+    }
 
     // Use the contract module's published test fixture class to avoid reaching into
     // contract.internal.adapter.inbound (S5 — ARCHITECTURE §5 S5, §1.5).

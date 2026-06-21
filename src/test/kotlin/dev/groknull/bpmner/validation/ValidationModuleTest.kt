@@ -15,13 +15,14 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `validation` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the `validation` module depends on `rules`, which requires
- * the full `BeanRuleRegistry` Spring wiring and its `*RuleConfig` `@Configuration` beans. These
- * are transitive dependencies of `rules` (e.g. the `BpmnNlpConfig` and category rule configs).
- * ALL_DEPENDENCIES ensures the full transitive Spring context is available so every `rules` bean
- * can be wired into `validation`'s context. (S5 — ARCHITECTURE §5 S5, G8)
+ * BootstrapMode.DIRECT_DEPENDENCIES (ADR-22 gate 4‴): `BpmnConfig` is now registered inside
+ * the `config` module via `@EnableConfigurationProperties(BpmnConfig::class)` on
+ * `BpmnPipelineConfig` (ADR-22 Decision 1), so it materialises whenever `config` is in the
+ * bootstrap set. `ConventionsLoader.bpmnerLintConfig` is guarded with `@ConditionalOnMissingBean`
+ * so no stub is required. No platform agent is bootstrapped here. API keys are stubbed so no
+ * live LLM call is made at startup. (S7 — ADR-22 Decisions 1; ARCHITECTURE §5 S7, G8)
  */
-@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
+@ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",

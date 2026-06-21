@@ -11,6 +11,8 @@ import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.spi.validation.GoapPathToCompletionValidator
 import com.example.embabel.fixtures.CyclicallyInvalidAgent
 import com.example.embabel.fixtures.TriviallyValidAgent
+import dev.groknull.bpmner.orchestration.internal.adapter.inbound.AgentDeploymentValidationException
+import dev.groknull.bpmner.orchestration.internal.adapter.inbound.AgentDeploymentValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

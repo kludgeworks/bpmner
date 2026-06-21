@@ -14,11 +14,9 @@ import org.junit.jupiter.api.io.TempDir
 import java.nio.file.Path
 
 internal class ConventionsLoaderTest {
-    private val loader = ConventionsLoader()
-
     @Test
     fun `default modulepath bpmner pkl loads convention defaults`() {
-        val config = loader.bpmnerLintConfig(BpmnConfig())
+        val config = ConventionsLoader(BpmnConfig()).bpmnerLintConfig()
 
         assertThat(config.discouragedLeadingVerbs).containsExactly("handle", "manage", "process", "perform", "do")
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
@@ -42,7 +40,9 @@ internal class ConventionsLoaderTest {
             """.trimIndent(),
         )
 
-        val config = loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())))
+        val config = ConventionsLoader(
+            BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())),
+        ).bpmnerLintConfig()
 
         assertThat(config.discouragedLeadingVerbs).containsExactly("coordinate")
         assertThat(config.elementTypeWords).containsExactly("step")
@@ -54,7 +54,7 @@ internal class ConventionsLoaderTest {
     @Test
     fun `invalid config uri fails startup loudly`() {
         val error = assertThrows(IllegalStateException::class.java) {
-            loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = "not a uri")))
+            ConventionsLoader(BpmnConfig(rules = BpmnRulesConfig(configUri = "not a uri"))).bpmnerLintConfig()
         }
 
         assertThat(error.message).contains("Invalid BPMN lint config URI")
@@ -64,7 +64,9 @@ internal class ConventionsLoaderTest {
     @Test
     fun `configured override must be file uri`() {
         val error = assertThrows(IllegalStateException::class.java) {
-            loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = "modulepath:/linter/pkl/bpmner.pkl")))
+            ConventionsLoader(
+                BpmnConfig(rules = BpmnRulesConfig(configUri = "modulepath:/linter/pkl/bpmner.pkl")),
+            ).bpmnerLintConfig()
         }
 
         assertThat(error.message).contains("must be a file: URI")
@@ -86,7 +88,9 @@ internal class ConventionsLoaderTest {
         )
 
         val error = assertThrows(IllegalStateException::class.java) {
-            loader.bpmnerLintConfig(BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())))
+            ConventionsLoader(
+                BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())),
+            ).bpmnerLintConfig()
         }
 
         assertThat(error.message).contains("Failed to evaluate BPMN lint config")
