@@ -9,9 +9,9 @@ import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
+import dev.groknull.bpmner.alignment.BpmnAlignmentThresholdsConfig
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
-import dev.groknull.bpmner.config.BpmnAlignmentConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 
@@ -25,7 +25,7 @@ class BpmnAlignmentPostCheckerTest {
 
     @Test
     fun `empty issues yields ALIGNED verdict`() {
-        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentConfig())
+        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentThresholdsConfig())
         val findings = AlignmentFindings(issues = emptyList(), rationale = "All good.")
 
         val report = postChecker.apply(findings, summary)
@@ -38,7 +38,7 @@ class BpmnAlignmentPostCheckerTest {
 
     @Test
     fun `single UNSUPPORTED issue with blockOnUnsupportedElements yields FAILED`() {
-        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentConfig(blockOnUnsupportedElements = true))
+        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentThresholdsConfig(blockOnUnsupportedElements = true))
         val findings =
             AlignmentFindings(
                 issues = listOf(AlignmentIssue("Task_Invented", AlignmentClassification.UNSUPPORTED)),
@@ -50,7 +50,7 @@ class BpmnAlignmentPostCheckerTest {
 
     @Test
     fun `single MISSING issue with blockOnMissingContractItems yields FAILED`() {
-        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentConfig(blockOnMissingContractItems = true))
+        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentThresholdsConfig(blockOnMissingContractItems = true))
         val findings =
             AlignmentFindings(
                 issues = listOf(AlignmentIssue("activity-validate", AlignmentClassification.MISSING)),
@@ -62,7 +62,7 @@ class BpmnAlignmentPostCheckerTest {
 
     @Test
     fun `assumptions over threshold yield FAILED`() {
-        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentConfig(maxAssumptions = 1))
+        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentThresholdsConfig(maxAssumptions = 1))
         val findings =
             AlignmentFindings(
                 issues =
@@ -80,7 +80,7 @@ class BpmnAlignmentPostCheckerTest {
     fun `non-blocking issues yield PARTIALLY_ALIGNED`() {
         val postChecker =
             BpmnAlignmentPostChecker(
-                BpmnAlignmentConfig(
+                BpmnAlignmentThresholdsConfig(
                     blockOnUnsupportedElements = false,
                     blockOnMissingContractItems = false,
                     maxAssumptions = 10,
@@ -100,7 +100,7 @@ class BpmnAlignmentPostCheckerTest {
 
     @Test
     fun `summary is always replaced with framework-computed value`() {
-        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentConfig())
+        val postChecker = BpmnAlignmentPostChecker(BpmnAlignmentThresholdsConfig())
         val findings = AlignmentFindings(issues = emptyList(), rationale = "ok")
 
         val report = postChecker.apply(findings, summary)

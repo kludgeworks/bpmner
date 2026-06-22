@@ -11,7 +11,7 @@ import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessBudgetConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class AgentPlatformBpmnReadinessInvoker(
     private val agentPlatform: AgentPlatform,
-    private val config: BpmnConfig,
+    private val config: BpmnReadinessBudgetConfig,
     private val listeners: List<AgenticEventListener>,
 ) : BpmnReadinessInvoker {
     /**
@@ -37,7 +37,7 @@ internal class AgentPlatformBpmnReadinessInvoker(
         val process = agentPlatform.createAgentProcessFrom(
             agent,
             ProcessOptions(
-                budget = Budget(actions = config.budget.readiness),
+                budget = Budget(actions = config.readiness),
                 ephemeral = true,
                 listeners = listeners,
             ),

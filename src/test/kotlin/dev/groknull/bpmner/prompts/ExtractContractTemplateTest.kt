@@ -11,7 +11,7 @@ import com.embabel.common.ai.converters.FilteringJacksonOutputConverter
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.EvidenceSourceType
@@ -30,7 +30,7 @@ import kotlin.test.assertTrue
  */
 class ExtractContractTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val config = BpmnConfig().contract
+    private val config = BpmnContractThresholdsConfig()
 
     @Test
     fun `template includes structured output and no-invention instructions`() {

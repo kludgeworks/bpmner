@@ -7,7 +7,8 @@ package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -23,7 +24,7 @@ class BpmnReadinessAgentTest {
         val context = FakeOperationContext()
         context.expectResponse(assessment(ReadinessVerdict.READY, 92))
         val eventPublisher = mock(ApplicationEventPublisher::class.java)
-        val agent = BpmnReadinessAgent(BpmnConfig(), eventPublisher)
+        val agent = BpmnReadinessAgent(BpmnReadinessConfig(), BpmnReadinessThresholdsConfig(), eventPublisher)
 
         val result =
             agent.assessReadiness(

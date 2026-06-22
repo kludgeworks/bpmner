@@ -9,7 +9,8 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.contract.BpmnContractConfig
+import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -25,7 +26,8 @@ import org.springframework.stereotype.Component
 @PrimaryAdapter
 @Component
 internal class LlmProcessContractExtractor(
-    private val config: BpmnConfig,
+    private val config: BpmnContractConfig,
+    private val thresholds: BpmnContractThresholdsConfig,
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
 ) : ProcessContractExtractor {
@@ -78,7 +80,7 @@ internal class LlmProcessContractExtractor(
         request: BpmnRequest,
         assessment: ProcessInputAssessment,
     ): Map<String, Any> = mapOf(
-        "maxAssumptions" to config.contract.maxAssumptions,
+        "maxAssumptions" to thresholds.maxAssumptions,
         "rationale" to assessment.rationale,
         "missingAreas" to assessment.missingAreas.map { it.name },
         "evidence" to assessment.evidence.map {

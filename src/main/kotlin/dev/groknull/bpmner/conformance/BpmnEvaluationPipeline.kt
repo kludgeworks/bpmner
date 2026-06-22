@@ -8,7 +8,6 @@ package dev.groknull.bpmner.conformance
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import dev.groknull.bpmner.config.BpmnConfig
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
@@ -17,7 +16,7 @@ import kotlin.math.min
 @Service
 @Component
 internal class BpmnEvaluationPipeline(
-    private val config: BpmnConfig,
+    private val config: BpmnLoggingConfig,
     private val bpmnLintingPort: BpmnLintingPort,
     private val bpmnXsdValidationPort: BpmnXsdValidationPort,
     private val bpmnDefinitionValidator: BpmnDefinitionValidator,
@@ -166,13 +165,13 @@ internal class BpmnEvaluationPipeline(
         definition: BpmnDefinition,
         rendered: RenderedBpmn?,
     ) {
-        if (!config.logging.dumpArtifacts) return
+        if (!config.dumpArtifacts) return
         logger.debug(
             "Artifact dump [definition]: {}",
-            fingerprints.serializeDefinition(definition).truncate(config.logging.artifactPreviewLength),
+            fingerprints.serializeDefinition(definition).truncate(config.artifactPreviewLength),
         )
         rendered?.let {
-            logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.logging.artifactPreviewLength))
+            logger.debug("Artifact dump [renderedXml]: {}", it.xml.truncate(config.artifactPreviewLength))
         }
     }
 

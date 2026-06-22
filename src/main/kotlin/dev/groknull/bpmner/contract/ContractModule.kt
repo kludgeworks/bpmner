@@ -11,5 +11,5 @@ import org.springframework.modulith.ApplicationModule
  * Contract module — process contract derivation, owns the contract-prompt scaffolding
  * for downstream LLM contract elicitation.
  */
-@ApplicationModule(allowedDependencies = ["bpmn", "config", "readiness"])
+@ApplicationModule(allowedDependencies = ["bpmn", "readiness"])
 internal object ContractModule

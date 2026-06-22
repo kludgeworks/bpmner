@@ -7,7 +7,7 @@ package dev.groknull.bpmner.prompts
 
 import com.embabel.common.textio.template.JinjavaTemplateRenderer
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import kotlin.test.Test
 import kotlin.test.assertTrue
@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
  */
 class AssessReadinessTemplateTest {
     private val renderer = JinjavaTemplateRenderer()
-    private val config = BpmnConfig().readiness
+    private val config = BpmnReadinessThresholdsConfig()
 
     @Test
     fun `template includes structured output and do-not-invent constraints`() {

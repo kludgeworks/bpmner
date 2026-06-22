@@ -19,8 +19,8 @@ import dev.groknull.bpmner.authoring.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.repair.BpmnRepairConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -29,7 +29,7 @@ internal class BpmnLlmRepairApplier(
     private val promptFactory: BpmnRepairPromptPort,
     private val patchApplier: BpmnPatchApplicationPort,
     private val advancer: BpmnRepairAdvancer,
-    private val config: BpmnConfig,
+    private val config: BpmnRepairConfig,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnLlmRepairApplier::class.java)
 

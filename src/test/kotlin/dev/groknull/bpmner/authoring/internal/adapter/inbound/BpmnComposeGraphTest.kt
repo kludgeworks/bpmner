@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
+import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.DefaultFlowAssigner
 import dev.groknull.bpmner.authoring.FlatBpmnDefinition
@@ -15,7 +16,7 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -31,10 +32,11 @@ import org.springframework.context.ApplicationEventPublisher
  * cover every node, edge and the process with the single phase owner, and nothing else.
  */
 class BpmnComposeGraphTest {
-    // composeGraph touches only `config` (to gate the debug artifact dump — RETURNS_DEEP_STUBS yields
-    // dumpArtifacts=false) and `logger`; the remaining collaborators are unused, so plain mocks suffice.
+    // composeGraph touches only `logging` (to gate the debug artifact dump — dumpArtifacts=false by default)
+    // and `logger`; the remaining collaborators are unused, so plain mocks suffice.
     private val generator = LlmBpmnProcessGenerator(
-        config = Mockito.mock(BpmnConfig::class.java, Mockito.RETURNS_DEEP_STUBS),
+        config = BpmnAuthoringConfig(),
+        logging = BpmnLoggingConfig(),
         metricsCalculator = Mockito.mock(BpmnGeneratorMetrics::class.java),
         fidelityChecker = Mockito.mock(BpmnContractFidelityChecker::class.java),
         defaultFlowAssigner = Mockito.mock(DefaultFlowAssigner::class.java),

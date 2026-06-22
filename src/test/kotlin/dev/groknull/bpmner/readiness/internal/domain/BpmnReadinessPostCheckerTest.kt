@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.readiness.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnReadinessConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.EvidenceSourceType
@@ -60,7 +60,7 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `custom thresholds cap deterministic failures below ready threshold`() {
         val result =
-            BpmnReadinessPostChecker(BpmnReadinessConfig(readyThreshold = 50)).apply(
+            BpmnReadinessPostChecker(BpmnReadinessThresholdsConfig(readyThreshold = 50)).apply(
                 BpmnRequest("Review the request"),
                 assessment(ReadinessVerdict.READY, 90),
             )
@@ -134,7 +134,7 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `fewer than minimum activities lowers readiness`() {
         val result =
-            BpmnReadinessPostChecker(BpmnReadinessConfig(minimumActivityCount = 3)).apply(
+            BpmnReadinessPostChecker(BpmnReadinessThresholdsConfig(minimumActivityCount = 3)).apply(
                 BpmnRequest("When an application arrives, review it, then the application is completed."),
                 assessment(ReadinessVerdict.READY, 85),
             )
@@ -206,7 +206,7 @@ class BpmnReadinessPostCheckerTest {
     @Test
     fun `clarification questions are capped and tied to missing dimensions`() {
         val result =
-            BpmnReadinessPostChecker(BpmnReadinessConfig(maxClarificationQuestions = 2)).apply(
+            BpmnReadinessPostChecker(BpmnReadinessThresholdsConfig(maxClarificationQuestions = 2)).apply(
                 BpmnRequest("Review the request"),
                 assessment(
                     verdict = ReadinessVerdict.NEEDS_CLARIFICATION,

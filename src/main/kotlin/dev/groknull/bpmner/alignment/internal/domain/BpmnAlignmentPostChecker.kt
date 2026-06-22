@@ -9,14 +9,14 @@ import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
+import dev.groknull.bpmner.alignment.BpmnAlignmentThresholdsConfig
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
-import dev.groknull.bpmner.config.BpmnAlignmentConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnAlignmentPostChecker(
-    private val config: BpmnAlignmentConfig,
+    private val config: BpmnAlignmentThresholdsConfig,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnAlignmentPostChecker::class.java)
 

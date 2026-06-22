@@ -19,13 +19,14 @@ import org.springframework.test.context.TestPropertySource
  * Validates that the `alignment` module context bootstraps and exposes its root-package ports.
  *
  * BootstrapMode.DIRECT_DEPENDENCIES (ADR-22 gate 4‴): Two ADR-22 decisions make this possible.
- * Decision 1 — `BpmnConfig` is registered inside `config` via `@EnableConfigurationProperties`
- * on `BpmnPipelineConfig`; it materialises whenever `config` is in the bootstrap set.
+ * Decision 1 — `BpmnAlignmentConfig` and `BpmnAlignmentThresholdsConfig` are now registered via
+ * `@ConfigurationPropertiesScan` in the app root (S4: `config` module dissolved); they materialise
+ * whenever `alignment` is in the bootstrap set.
  * Decision 2 — `alignment` grants `readiness`, which bootstraps `AgentPlatformBpmnReadinessInvoker`
  * (a ctor-injected `AgentPlatform`); `@EnableAgents` supplies the real platform bean (wiring,
  * not a stub). The `BpmnRequestPromptContributor` seam is absent (ADR-21 Track A deleted it).
  * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-22 Decisions 1+2; ARCHITECTURE §5 S7, G8)
+ * (S7 — ADR-22 Decisions 1+2; ARCHITECTURE §5 S7, G8; S4 — config dissolution)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @Import(AlignmentModuleTest.AlignmentTestConfig::class)

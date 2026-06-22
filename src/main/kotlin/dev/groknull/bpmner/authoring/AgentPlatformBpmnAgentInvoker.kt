@@ -10,8 +10,8 @@ import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.authoring.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Component
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
-    private val config: BpmnConfig,
+    private val config: BpmnAuthoringBudgetConfig,
     // Spring auto-collects every AgenticEventListener bean into this list. Empty if no
     // listener is registered — the framework treats an empty list as "no observers."
     private val listeners: List<AgenticEventListener>,
@@ -94,7 +94,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
     // is short-lived and never queried for status — Phase 5 (#220) made this explicit.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
-        budget = Budget(actions = config.budget.generation),
+        budget = Budget(actions = config.generation),
         ephemeral = true,
         listeners = listeners,
     )
@@ -102,7 +102,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     // Async web generation: returns the process id immediately; callers poll for status, so the
     // process must be persisted — `ephemeral = false`.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
-        budget = Budget(actions = config.budget.generation),
+        budget = Budget(actions = config.generation),
         ephemeral = false,
         listeners = listeners,
     )

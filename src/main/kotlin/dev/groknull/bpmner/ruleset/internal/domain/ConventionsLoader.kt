@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain
 
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.ruleset.BpmnRulesUriConfig
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin
@@ -21,19 +21,19 @@ import java.net.URI
 /**
  * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
  *
- * Constructor-injects [BpmnConfig] to create a `USES_COMPONENT` edge recognised by Spring
- * Modulith, which adds `dev.groknull.bpmner.config` to the `rules` module's
- * `DIRECT_DEPENDENCIES` bootstrap scan. `@EnableConfigurationProperties(BpmnConfig::class)`
- * on `BpmnPipelineConfig` supplies the bean. (ADR-23 Decision 1.1)
+ * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
+ * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
+ * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
+ * (ADR-23 Decision 1.1, updated for S4 dissolution of `config` module)
  */
 @Configuration
-internal class ConventionsLoader(private val config: BpmnConfig) {
+internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
 
     @Bean
     @ConditionalOnMissingBean
     fun bpmnerLintConfig(): BpmnerLintConfig {
-        val uri = config.rules.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
+        val uri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
             ?: URI.create(DEFAULT_CONFIG_URI)
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
