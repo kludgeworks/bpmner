@@ -15,13 +15,16 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the required beans are **two module hops** away from `repair`
- * (`repair` → `generation` → `contract.ProcessContractMarkdownRenderer`). Spring Modulith
- * `DIRECT_DEPENDENCIES` only resolves one level deep, so the transitive `contract` beans cannot
- * materialise under isolation. Flipping to `DIRECT_DEPENDENCIES` is a **§10 follow-on** after
- * the `llm`/`config` dependency-depth reshape shortens the chain — it is not a Modulith upgrade
- * (barred by N4). (ADR-23 Decision 1.2)
+ * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator): `repair` is a genuine
+ * deep integrator across `authoring`, `conformance`, `contract`, `readiness`, and `ruleset`.
+ * Its transitive dependency set includes two root-package `internal` types
+ * `authoring.DefaultFlowAssigner` and `authoring.BpmnContractFidelityChecker` that cross
+ * module boundaries without `*.internal.*` packaging (ADR-451-8). Mocking that transitive
+ * set requires stubs of types whose encapsulation boundary is not yet enforced, making this
+ * a genuine Tier-3 deep-integrator test rather than a Tier-2 isolation gate.
  * API keys are stubbed so no live LLM call is made at startup.
+ * (S7 — ADR-451-9; ARCHITECTURE §5 S7)
+ * TODO(#451-9): re-evaluate flip to DIRECT_DEPENDENCIES once ADR-451-8 encapsulation re-seam lands
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

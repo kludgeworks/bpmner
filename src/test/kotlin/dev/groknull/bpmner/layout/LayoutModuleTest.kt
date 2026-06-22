@@ -5,25 +5,31 @@
 
 package dev.groknull.bpmner.layout
 
+import dev.groknull.bpmner.ruleset.RuleEngine
+import dev.groknull.bpmner.ruleset.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: `BpmnConfig` is **two module hops** away from `layout`
- * (`layout` → `validation` → `config`). Spring Modulith `DIRECT_DEPENDENCIES` only resolves
- * one level deep, so the `config` package is not reachable and `BpmnConfig` cannot materialise
- * under isolation. Flipping to `DIRECT_DEPENDENCIES` is a **§10 follow-on** after the
- * `llm`/`config` dependency-depth reshape shortens the chain — it is not a Modulith upgrade
- * (barred by N4). (ADR-23 Decision 1.2)
+ * BootstrapMode.DIRECT_DEPENDENCIES (ADR-451-9 Tier 2): `layout` grants only `bpmn` and
+ * `conformance`; `BpmnLayoutService` has no cross-module Spring-bean dependencies of its own.
+ * The `conformance` adapters constructor-inject two `ruleset` `@PrimaryPort` interfaces
+ * (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
+ * `conformance`'s dependency, not `layout`'s. Since `layout` never references either port
+ * directly (zero `import dev.groknull.bpmner.ruleset` under `layout/`), both are mocked here
+ * as Tier-2 transitive non-collaborators (ADR-451-9 lines 955–964, 968–971).
+ * No `@EnableAgents` is needed: no bean in {layout, bpmn, conformance} injects `AgentPlatform`.
  * API keys are stubbed so no live LLM call is made at startup.
+ * (S7 — ADR-451-9; ARCHITECTURE §5 S7)
  */
-@ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
+@ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
     properties = [
         "embabel.agent.platform.models.anthropic.api-key=test-key",
@@ -34,6 +40,14 @@ import org.springframework.test.context.TestPropertySource
     ],
 )
 class LayoutModuleTest {
+    @MockitoBean
+    @Suppress("UnusedPrivateProperty") // Tier-2 mock for conformance adapters; not directly accessed
+    private lateinit var ruleEngine: RuleEngine
+
+    @MockitoBean
+    @Suppress("UnusedPrivateProperty") // Tier-2 mock for conformance adapters; not directly accessed
+    private lateinit var ruleRegistry: RuleRegistry
+
     @Autowired
     private lateinit var bpmnLayoutPort: BpmnLayoutPort
 
