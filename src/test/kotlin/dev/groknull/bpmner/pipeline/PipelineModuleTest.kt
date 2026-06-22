@@ -22,7 +22,7 @@ import org.springframework.test.context.TestPropertySource
  * ALL_DEPENDENCIES ensures every transitive bean is wired so `BpmnGenerationAgent`'s `@Action`
  * and GOAP wiring resolve at startup. DIRECT_DEPENDENCIES would not suffice because the
  * orchestrator's actions require beans from the full transitive closure (e.g. `BpmnRepairer`,
- * `BpmnLayoutPort`, `BpmnAligner`). `AgentDeploymentValidator` is now in
+ * `BpmnLayoutPort`, `BpmnAligner`). `AgentDeploymentValidator` lives in
  * `pipeline.internal.adapter.inbound` (ADR-22 Track A) and resolves without a stub.
  * API keys are stubbed so no live LLM call is made at startup.
  * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8; §1.8 pipeline)
