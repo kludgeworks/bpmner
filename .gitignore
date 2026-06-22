@@ -1,5 +1,6 @@
-HELP.md
-target/
+# Serena MCP server local metadata
+.serena/*
+!.serena/project.yml
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

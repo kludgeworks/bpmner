@@ -1,0 +1,15 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+project_name: "bpmner"
+
+languages:
+  - kotlin
+
+ls_specific_settings:
+  kotlin:
+    jvm_options: '-Xmx4G -XX:+UseG1GC'
+
+# whether the project is in read-only mode
+# If set to true, all editing tools will be disabled and attempts to use them will result in an error
+read_only: false
