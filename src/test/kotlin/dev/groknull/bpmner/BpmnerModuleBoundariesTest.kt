@@ -275,7 +275,7 @@ class BpmnerModuleBoundariesTest {
                 "conformance",
                 "contract",
                 "layout",
-                "orchestration",
+                "pipeline",
                 "readiness",
                 "repair",
                 "ruleset",

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.orchestration
+package dev.groknull.bpmner.pipeline
 
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Test
@@ -14,18 +14,18 @@ import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
 import org.springframework.test.context.TestPropertySource
 
 /**
- * Validates that the `orchestration` module context bootstraps and wires the GOAP agent.
+ * Validates that the `pipeline` module context bootstraps and wires the GOAP agent.
  *
- * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `orchestration`
+ * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `pipeline`
  * is the full-pipeline coordinator (ARCHITECTURE §1.8). It depends on alignment, contract,
  * generation, layout, readiness, repair, and validation — the complete GOAP action graph.
  * ALL_DEPENDENCIES ensures every transitive bean is wired so `BpmnGenerationAgent`'s `@Action`
  * and GOAP wiring resolve at startup. DIRECT_DEPENDENCIES would not suffice because the
  * orchestrator's actions require beans from the full transitive closure (e.g. `BpmnRepairer`,
- * `BpmnLayoutPort`, `BpmnAligner`). `AgentDeploymentValidator` is now in
- * `orchestration.internal.adapter.inbound` (ADR-22 Track A) and resolves without a stub.
+ * `BpmnLayoutPort`, `BpmnAligner`). `AgentDeploymentValidator` lives in
+ * `pipeline.internal.adapter.inbound` (ADR-22 Track A) and resolves without a stub.
  * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8; §1.8 orchestration)
+ * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8; §1.8 pipeline)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
@@ -37,15 +37,15 @@ import org.springframework.test.context.TestPropertySource
         "embabel.agent.platform.models.deepseek.api-key=test-key",
     ],
 )
-class OrchestrationModuleTest {
+class PipelineModuleTest {
     @Autowired
     private lateinit var applicationContext: ApplicationContext
 
     @Test
-    fun `orchestration module bootstraps and wires the GOAP agent`() {
+    fun `pipeline module bootstraps and wires the GOAP agent`() {
         assertNotNull(
             applicationContext,
-            "ApplicationContext should be available — orchestration module with BpmnGenerationAgent started",
+            "ApplicationContext should be available — pipeline module with BpmnGenerationAgent started",
         )
     }
 }

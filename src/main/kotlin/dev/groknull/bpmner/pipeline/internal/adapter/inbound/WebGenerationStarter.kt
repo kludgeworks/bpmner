@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.web
+package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -11,7 +11,7 @@ import dev.groknull.bpmner.bpmn.GenerationMode
 import org.springframework.stereotype.Service
 
 @Service
-class WebGenerationStarter(
+internal class WebGenerationStarter(
     private val agentInvoker: BpmnAgentInvoker,
 ) {
     /**
