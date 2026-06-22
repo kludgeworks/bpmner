@@ -18,7 +18,8 @@ import org.springframework.test.context.TestPropertySource
  *
  * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `telemetry`
  * is a purely-outbound event-listener module that consumes the full pipeline event graph
- * (`BpmnAlignmentCheckedEvent`, `BpmnReadinessAssessedEvent`, `BpmnRepairCompletedEvent`, etc.).
+ * (`BpmnGeneratedEvent`, `BpmnAlignmentCheckedEvent`, `BpmnReadinessAssessedEvent`,
+ * `BpmnValidationFailedEvent`, `BpmnValidationPassedEvent`, etc.).
  * ALL_DEPENDENCIES ensures every event-type class in the transitive closure is wired so the
  * listeners can reference them at startup. DIRECT_DEPENDENCIES would not cover the full event
  * graph. The module exposes no root-package ports; context startup is the meaningful assertion.
