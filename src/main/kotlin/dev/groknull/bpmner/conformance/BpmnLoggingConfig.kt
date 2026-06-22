@@ -21,6 +21,11 @@ import org.springframework.validation.annotation.Validated
  * conformance→telemetry grant — a cycle, since `telemetry` already grants `conformance`.
  * `authoring` consumes this config via its existing `conformance` grant, making `conformance`
  * the only cycle-free home under the current module graph.
+ *
+ * TODO(#451 ADR-451-7): logging-config home remains in `conformance`; telemetry does not consume it.
+ * Live consumers are `conformance` (BpmnEvaluationPipeline) and `authoring` (LlmBpmnProcessGenerator);
+ * a telemetry-owned home is not cycle-free under the current graph. Re-evaluate if a
+ * per-consumer split is desired (raise as explicit placement decision per ADR-451-7).
  */
 @Validated
 @ConfigurationProperties("bpmner.logging")
