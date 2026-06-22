@@ -23,5 +23,5 @@ import org.springframework.modulith.ApplicationModule
  * follow-up phase. GraalJS now only lives inside `dev.groknull.bpmner.layout` (the BPMN
  * auto-layout JS bundle).
  */
-@ApplicationModule(allowedDependencies = ["bpmn", "config", "ruleset"])
+@ApplicationModule(allowedDependencies = ["bpmn", "ruleset"])
 internal object ConformanceModule

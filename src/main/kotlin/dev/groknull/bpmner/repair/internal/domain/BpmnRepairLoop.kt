@@ -10,10 +10,10 @@ import com.embabel.agent.api.common.workflow.loop.RepeatUntilAcceptableBuilder
 import com.embabel.agent.api.common.workflow.loop.TextFeedback
 import com.embabel.agent.core.ReplanRequestedException
 import dev.groknull.bpmner.bpmn.RepairKind
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
+import dev.groknull.bpmner.repair.BpmnRepairBudgetConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -30,7 +30,7 @@ import org.springframework.stereotype.Component
 internal class BpmnRepairLoop(
     private val localFixApplier: BpmnLocalFixApplier,
     private val llmRepairApplier: BpmnLlmRepairApplier,
-    private val config: BpmnConfig,
+    private val config: BpmnRepairBudgetConfig,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRepairLoop::class.java)
 
@@ -47,7 +47,7 @@ internal class BpmnRepairLoop(
             return seed
         }
 
-        val maxIterations = config.budget.maxRepairIterations
+        val maxIterations = config.maxRepairIterations
         logger.debug(
             "Repair loop: starting with {} blocking diagnostic(s), max {} iteration(s)",
             seed.evaluation.blockingDiagnostics.size,

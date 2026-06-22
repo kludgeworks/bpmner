@@ -10,14 +10,14 @@ import com.embabel.agent.domain.io.UserInput
 import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestDrafter
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.stereotype.Component
 
 @PrimaryAdapter
 @Component
 internal class LlmBpmnRequestDrafter(
-    private val config: BpmnConfig,
+    private val config: BpmnReadinessConfig,
 ) : BpmnRequestDrafter {
 
     override fun draftRequest(

@@ -13,6 +13,7 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
+import dev.groknull.bpmner.alignment.BpmnAlignmentConfig
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
@@ -20,7 +21,6 @@ import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -33,7 +33,7 @@ import org.springframework.stereotype.Component
 @PrimaryAdapter
 @Component
 internal class LlmBpmnAligner(
-    private val config: BpmnConfig,
+    private val config: BpmnAlignmentConfig,
     private val summarizer: BpmnSummarizer,
     private val postChecker: BpmnAlignmentPostChecker,
     private val contractRenderer: ProcessContractMarkdownRenderer,

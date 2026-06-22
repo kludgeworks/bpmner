@@ -13,8 +13,9 @@ import com.embabel.agent.api.common.OperationContext
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
+import dev.groknull.bpmner.readiness.BpmnReadinessConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
 import org.jmolecules.architecture.hexagonal.Application
@@ -23,10 +24,11 @@ import org.springframework.context.ApplicationEventPublisher
 @Application
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
-    private val config: BpmnConfig,
+    private val config: BpmnReadinessConfig,
+    private val thresholds: BpmnReadinessThresholdsConfig,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    private val postChecker = BpmnReadinessPostChecker(config.readiness)
+    private val postChecker = BpmnReadinessPostChecker(thresholds)
 
     @AchievesGoal(
         description = "Assess raw BPMN generation input for process readiness",
@@ -54,8 +56,8 @@ internal class BpmnReadinessAgent(
     }
 
     private fun templateModel(request: BpmnRequest): Map<String, Any> = mapOf(
-        "readyThreshold" to config.readiness.readyThreshold,
-        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
+        "readyThreshold" to thresholds.readyThreshold,
+        "maxClarificationQuestions" to thresholds.maxClarificationQuestions,
         "processDescription" to request.processDescription,
         "clarificationHistory" to request.clarificationHistory.map {
             mapOf(

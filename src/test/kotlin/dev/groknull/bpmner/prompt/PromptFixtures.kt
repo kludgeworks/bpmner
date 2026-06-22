@@ -15,7 +15,7 @@ import dev.groknull.bpmner.alignment.BpmnSummaryFlow
 import dev.groknull.bpmner.authoring.FlatBpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.config.BpmnConfig
+import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
@@ -23,6 +23,7 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.EvidenceSourceType
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
@@ -38,7 +39,8 @@ import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
 internal object PromptFixtures {
     private val renderer = JinjavaTemplateRenderer()
     private val objectMapper = jacksonObjectMapper()
-    private val config = BpmnConfig()
+    private val contractThresholds = BpmnContractThresholdsConfig()
+    private val readinessThresholds = BpmnReadinessThresholdsConfig()
     private val markdownRenderer = ProcessContractMarkdownRenderer()
 
     val canonicalRequest =
@@ -180,7 +182,7 @@ internal object PromptFixtures {
     ): PromptSite<T> = PromptSite(template, outputType, renderer, objectMapper, model, contribution)
 
     private fun contractExtractionModel(): Map<String, Any> = mapOf(
-        "maxAssumptions" to config.contract.maxAssumptions,
+        "maxAssumptions" to contractThresholds.maxAssumptions,
         "rationale" to canonicalAssessment.rationale,
         "missingAreas" to canonicalAssessment.missingAreas.map { it.name },
         "evidence" to canonicalAssessment.evidence.map { mapOf("id" to it.id, "text" to it.text) },
@@ -219,8 +221,8 @@ internal object PromptFixtures {
     )
 
     private fun readinessModel(): Map<String, Any> = mapOf(
-        "readyThreshold" to config.readiness.readyThreshold,
-        "maxClarificationQuestions" to config.readiness.maxClarificationQuestions,
+        "readyThreshold" to readinessThresholds.readyThreshold,
+        "maxClarificationQuestions" to readinessThresholds.maxClarificationQuestions,
         "processDescription" to canonicalRequest.processDescription,
         "clarificationHistory" to canonicalRequest.clarificationHistory.map {
             mapOf("questionId" to it.questionId, "questionText" to it.questionText, "answerText" to it.answerText)

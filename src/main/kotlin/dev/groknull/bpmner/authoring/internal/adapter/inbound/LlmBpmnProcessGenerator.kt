@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
@@ -19,9 +20,9 @@ import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import dev.groknull.bpmner.config.BpmnConfig
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
@@ -36,7 +37,8 @@ import org.springframework.stereotype.Component
 @PrimaryAdapter
 @Component
 internal class LlmBpmnProcessGenerator(
-    private val config: BpmnConfig,
+    private val config: BpmnAuthoringConfig,
+    private val logging: BpmnLoggingConfig,
     private val metricsCalculator: BpmnGeneratorMetrics,
     private val fidelityChecker: BpmnContractFidelityChecker,
     private val defaultFlowAssigner: DefaultFlowAssigner,
@@ -210,8 +212,8 @@ internal class LlmBpmnProcessGenerator(
         label: String,
         artifact: Any,
     ) {
-        if (!config.logging.dumpArtifacts) return
-        val payload = artifact.toString().take(config.logging.artifactPreviewLength)
+        if (!logging.dumpArtifacts) return
+        val payload = artifact.toString().take(logging.artifactPreviewLength)
         logger.debug("Artifact dump [{}]: {}", label, payload)
     }
 

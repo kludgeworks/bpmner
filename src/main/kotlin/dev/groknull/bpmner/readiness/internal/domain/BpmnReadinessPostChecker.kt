@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.readiness.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import dev.groknull.bpmner.config.BpmnReadinessConfig
+import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
@@ -15,7 +15,7 @@ import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 
 internal class BpmnReadinessPostChecker(
-    private val config: BpmnReadinessConfig = BpmnReadinessConfig(),
+    private val config: BpmnReadinessThresholdsConfig = BpmnReadinessThresholdsConfig(),
 ) {
     private val clarificationCeiling: Int
         get() = config.readyThreshold - 1

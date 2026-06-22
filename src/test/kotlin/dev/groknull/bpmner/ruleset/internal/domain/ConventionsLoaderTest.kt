@@ -5,8 +5,7 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain
 
-import dev.groknull.bpmner.config.BpmnConfig
-import dev.groknull.bpmner.config.BpmnRulesConfig
+import dev.groknull.bpmner.ruleset.BpmnRulesUriConfig
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
@@ -16,7 +15,7 @@ import java.nio.file.Path
 internal class ConventionsLoaderTest {
     @Test
     fun `default modulepath bpmner pkl loads convention defaults`() {
-        val config = ConventionsLoader(BpmnConfig()).bpmnerLintConfig()
+        val config = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
 
         assertThat(config.discouragedLeadingVerbs).containsExactly("handle", "manage", "process", "perform", "do")
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
@@ -41,7 +40,7 @@ internal class ConventionsLoaderTest {
         )
 
         val config = ConventionsLoader(
-            BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())),
+            BpmnRulesUriConfig(configUri = pklFile.toUri().toString()),
         ).bpmnerLintConfig()
 
         assertThat(config.discouragedLeadingVerbs).containsExactly("coordinate")
@@ -54,7 +53,7 @@ internal class ConventionsLoaderTest {
     @Test
     fun `invalid config uri fails startup loudly`() {
         val error = assertThrows(IllegalStateException::class.java) {
-            ConventionsLoader(BpmnConfig(rules = BpmnRulesConfig(configUri = "not a uri"))).bpmnerLintConfig()
+            ConventionsLoader(BpmnRulesUriConfig(configUri = "not a uri")).bpmnerLintConfig()
         }
 
         assertThat(error.message).contains("Invalid BPMN lint config URI")
@@ -65,7 +64,7 @@ internal class ConventionsLoaderTest {
     fun `configured override must be file uri`() {
         val error = assertThrows(IllegalStateException::class.java) {
             ConventionsLoader(
-                BpmnConfig(rules = BpmnRulesConfig(configUri = "modulepath:/linter/pkl/bpmner.pkl")),
+                BpmnRulesUriConfig(configUri = "modulepath:/linter/pkl/bpmner.pkl"),
             ).bpmnerLintConfig()
         }
 
@@ -89,7 +88,7 @@ internal class ConventionsLoaderTest {
 
         val error = assertThrows(IllegalStateException::class.java) {
             ConventionsLoader(
-                BpmnConfig(rules = BpmnRulesConfig(configUri = pklFile.toUri().toString())),
+                BpmnRulesUriConfig(configUri = pklFile.toUri().toString()),
             ).bpmnerLintConfig()
         }
 
