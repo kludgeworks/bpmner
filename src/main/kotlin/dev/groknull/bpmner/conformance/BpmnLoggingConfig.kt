@@ -17,11 +17,10 @@ import org.springframework.validation.annotation.Validated
  * [BpmnEvaluationPipeline] is its primary consumer; the authoring module imports it via
  * its existing `conformance` grant.
  *
- * Note: the architecture targets `telemetry` as the eventual owner of logging config.
- * Placing it here is the mechanical S4 path that avoids an unsanctioned new grant
- * (conformance→telemetry would be a new edge since telemetry already grants conformance).
- * S4's `verify()` constraint prevents the reverse cycle. The architect may choose to
- * revisit this placement in a later stage.
+ * This config belongs here because moving it to `telemetry` would require a new
+ * conformance→telemetry grant — a cycle, since `telemetry` already grants `conformance`.
+ * `authoring` consumes this config via its existing `conformance` grant, making `conformance`
+ * the only cycle-free home under the current module graph.
  */
 @Validated
 @ConfigurationProperties("bpmner.logging")

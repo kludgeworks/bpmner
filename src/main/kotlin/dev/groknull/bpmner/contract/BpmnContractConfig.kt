@@ -9,6 +9,7 @@ import com.embabel.agent.api.common.Actor
 import com.embabel.agent.config.models.anthropic.withAnthropicCaching
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.LlmOptions
+import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
 
@@ -56,5 +57,6 @@ data class BpmnContractConfig(
 @Validated
 @ConfigurationProperties("bpmner.contract")
 data class BpmnContractThresholdsConfig(
+    @field:Min(0)
     val maxAssumptions: Int = 10,
 )
