@@ -22,9 +22,9 @@ import org.springframework.validation.annotation.Validated
  * `authoring` consumes this config via its existing `conformance` grant, making `conformance`
  * the only cycle-free home under the current module graph.
  *
- * TODO(#451 ADR-451-7): logging-config home re-confirmed in conformance post event-purity (S6).
+ * TODO(#451 ADR-451-7): logging-config home remains in `conformance`; telemetry does not consume it.
  * Live consumers are `conformance` (BpmnEvaluationPipeline) and `authoring` (LlmBpmnProcessGenerator);
- * telemetry event-purity (S6) did not unlock a telemetry-owned home. Re-evaluate if a
+ * a telemetry-owned home is not cycle-free under the current graph. Re-evaluate if a
  * per-consumer split is desired (raise as explicit placement decision per ADR-451-7).
  */
 @Validated
