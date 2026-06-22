@@ -15,13 +15,16 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES: the required beans are **two module hops** away from `repair`
- * (`repair` → `generation` → `contract.ProcessContractMarkdownRenderer`). Spring Modulith
- * `DIRECT_DEPENDENCIES` only resolves one level deep, so the transitive `contract` beans cannot
- * materialise under isolation. Flipping to `DIRECT_DEPENDENCIES` is a **§10 follow-on** after
- * the `llm`/`config` dependency-depth reshape shortens the chain — it is not a Modulith upgrade
- * (barred by N4). (ADR-23 Decision 1.2)
+ * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator): `repair` is a genuine
+ * deep integrator across `authoring`, `conformance`, `contract`, `readiness`, and `ruleset`.
+ * Its transitive dependency set includes the two root-package `internal` types
+ * `authoring.DefaultFlowAssigner` and `authoring.BpmnContractFidelityChecker` that S9
+ * (ADR-451-8) will relocate to `*.internal.*` and re-seam. Flipping `repair` to
+ * `DIRECT_DEPENDENCIES` before that encapsulation re-seam lands would require mocking types
+ * that S9 is about to move — pure churn. The flip is deferred to S9 (§4 table line 369;
+ * §4.1 S9 "Done when" lines 615–618; ADR-451-9 lines 972–979).
  * API keys are stubbed so no live LLM call is made at startup.
+ * (S7 — ADR-451-9; ARCHITECTURE §5 S7; flip deferred to S9)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
