@@ -6,7 +6,7 @@
 package dev.groknull.bpmner
 
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
-import dev.groknull.bpmner.orchestration.internal.adapter.inbound.AgentDeploymentValidator
+import dev.groknull.bpmner.pipeline.internal.adapter.inbound.AgentDeploymentValidator
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test

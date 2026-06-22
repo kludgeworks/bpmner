@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.orchestration.internal.adapter.inbound
+package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.core.Agent
 import com.embabel.agent.core.AgentPlatform

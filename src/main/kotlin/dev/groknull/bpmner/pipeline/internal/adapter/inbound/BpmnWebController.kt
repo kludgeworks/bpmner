@@ -3,11 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.web
+package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
+import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.annotation.Profile
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.PostMapping
@@ -33,10 +34,11 @@ data class WebGenerationResponse(
     val sseUrl: String,
 )
 
+@PrimaryAdapter
 @RestController
 @RequestMapping("/api/bpmn")
 @Profile("web")
-class BpmnWebController(
+internal class BpmnWebController(
     private val generationStarter: WebGenerationStarter,
 ) {
     @PostMapping("/generations")

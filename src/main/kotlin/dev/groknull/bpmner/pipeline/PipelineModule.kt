@@ -3,11 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.orchestration
+package dev.groknull.bpmner.pipeline
 
 import org.springframework.modulith.ApplicationModule
 
 @ApplicationModule(
     allowedDependencies = ["alignment", "authoring", "bpmn", "conformance", "contract", "layout", "readiness", "repair"],
 )
-object OrchestrationModule
+object PipelineModule
