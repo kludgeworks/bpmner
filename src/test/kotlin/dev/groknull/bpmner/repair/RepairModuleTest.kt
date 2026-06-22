@@ -17,14 +17,14 @@ import org.springframework.test.context.TestPropertySource
  *
  * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator): `repair` is a genuine
  * deep integrator across `authoring`, `conformance`, `contract`, `readiness`, and `ruleset`.
- * Its transitive dependency set includes the two root-package `internal` types
- * `authoring.DefaultFlowAssigner` and `authoring.BpmnContractFidelityChecker` that S9
- * (ADR-451-8) will relocate to `*.internal.*` and re-seam. Flipping `repair` to
- * `DIRECT_DEPENDENCIES` before that encapsulation re-seam lands would require mocking types
- * that S9 is about to move — pure churn. The flip is deferred to S9 (§4 table line 369;
- * §4.1 S9 "Done when" lines 615–618; ADR-451-9 lines 972–979).
+ * Its transitive dependency set includes two root-package `internal` types
+ * `authoring.DefaultFlowAssigner` and `authoring.BpmnContractFidelityChecker` that cross
+ * module boundaries without `*.internal.*` packaging (ADR-451-8). Mocking that transitive
+ * set requires stubs of types whose encapsulation boundary is not yet enforced, making this
+ * a genuine Tier-3 deep-integrator test rather than a Tier-2 isolation gate.
  * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-451-9; ARCHITECTURE §5 S7; flip deferred to S9)
+ * (S7 — ADR-451-9; ARCHITECTURE §5 S7)
+ * TODO(#451-9): re-evaluate flip to DIRECT_DEPENDENCIES once ADR-451-8 encapsulation re-seam lands
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
