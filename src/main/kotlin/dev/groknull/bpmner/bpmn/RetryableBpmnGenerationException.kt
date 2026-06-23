@@ -8,12 +8,12 @@ package dev.groknull.bpmner.bpmn
 import com.embabel.agent.core.Retryable
 
 /**
- * Exception thrown when LLM-generated BPMN output fails validation during rendering or topology
- * checks. Implementing [Retryable] ensures the Embabel retry policy classifies this as retryable
- * so the planner re-prompts with the violation as feedback.
+ * Marks an LLM-output BPMN failure as retryable so the Embabel planner re-prompts with the
+ * violation as feedback. The repair loop is the second safety net per ARCHITECTURE §1.
  *
- * This exception replaces `error(...)` hard aborts on LLM-output-triggered failures, enabling the
- * outline-retry path and repair loop to recover instead of aborting the entire pipeline.
+ * Implementing [Retryable] ensures the Embabel retry policy classifies this exception as
+ * retryable on the cause chain, allowing the outline-retry path to recover from LLM-output
+ * validation failures during rendering and topology checks (ADR-001, ADR-003).
  *
  * @see com.embabel.agent.core.Retryable
  */
