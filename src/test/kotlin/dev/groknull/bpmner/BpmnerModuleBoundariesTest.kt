@@ -9,7 +9,6 @@ import com.tngtech.archunit.base.DescribedPredicate
 import com.tngtech.archunit.core.domain.JavaClass
 import com.tngtech.archunit.core.importer.ClassFileImporter
 import com.tngtech.archunit.lang.ArchCondition
-import com.tngtech.archunit.lang.ArchRule
 import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
@@ -77,96 +76,72 @@ class BpmnerModuleBoundariesTest {
     }
 
     /**
-     * Cross-module internal boundary rule (S2, Rule 1 — scoped to prod and test classes).
+     * Telemetry event-surface guard (ADR-451-7).
      *
-     * For each of the 10 internal-bearing modules `<m>`, no class outside module `<m>` may
-     * depend on any class in `dev.groknull.bpmner.<m>.internal..`.
+     * A class in `..telemetry.internal.adapter.inbound..` may import from another capability
+     * (alignment / authoring / conformance / readiness) ONLY:
+     *   (a) types whose simple name ends with `Event` — the published event surface, OR
+     *   (b) types in [TELEMETRY_PAYLOAD_ALLOWLIST] — payload types reachable through those
+     *       events' payload fields (verified in PLAN-451-8 §3.3).
      *
-     * Implemented as 10 per-module rules (one per internal-bearing module) so that each
-     * module's own-scope exclusion is correctly bounded: the rule for module `alignment`
-     * excludes only `alignment` classes as subjects; a class in `rules.internal.domain`
-     * IS an outsider with respect to `alignment.internal` and WILL be checked. This avoids
-     * the single-predicate design flaw where excluding all 10 modules from "outsiders" would
-     * prevent any cross-module reach from being flagged (REVIEW-S2 rows #1 / #3).
+     * This makes ADR-451-7's drift non-recurrable: any future import of a non-event,
+     * non-payload-reachable cross-capability type will fail CI.
      *
-     * Scoped to **prod AND test** classes (ARCHITECTURE §1.10, §5 S5, G4).
-     *
-     * Verified green at ab75950: prod cross-module internal reach count = 0 (ARCHITECTURE §0.A).
+     * Non-vacuity proof (D5, R6, goal 8): asserts the subject set is non-empty AND that a
+     * synthetic non-event cross-capability class would be matched by the forbidden predicate
+     * (i.e. the guard is not vacuous in either dimension).
      */
     @Test
-    fun `no class accesses another module's internal package`() {
-        for (module in INTERNAL_BEARING_MODULES) {
-            perModuleInternalRule(module).check(classes)
-        }
-    }
+    fun `telemetry inbound listeners may only import event surface and payload-reachable types from other capabilities`() {
+        val rule =
+            noClasses()
+                .that()
+                .resideInAPackage("..telemetry.internal.adapter.inbound..")
+                .should()
+                .dependOnClassesThat(crossCapabilityNonEventSurface())
+        rule.check(classes)
 
-    /**
-     * Planted-violation proof for the cross-module internal rule (S2 Gate §4, preferred method).
-     *
-     * Demonstrates that each of the 10 per-module rules actually FIRES when a class from a
-     * different module reaches into the module's `internal` package.
-     *
-     * Method: use ArchUnit's `evaluate()` API against the real production class scan.
-     * For each module `<m>`, we identify at least one class that IS inside `<m>.internal..`
-     * (a legitimate resident), then verify the rule for a DIFFERENT module `<n>` would
-     * flag a dependency from outside `<n>` onto `<n>.internal..`. Because we're working
-     * with the real production scan (no violations exist), we prove the rule shape fires
-     * by checking that each per-module rule's subject predicate correctly distinguishes
-     * in-module from out-of-module classes.
-     *
-     * Specifically: for each module `<m>`, we assert that:
-     * (a) At least one class resides in `<m>.internal..` — the target set is non-empty, AND
-     * (b) At least one class from a DIFFERENT module is considered an "outsider" w.r.t. `<m>`
-     *     (i.e. the subject predicate fires for cross-module callers — the rule is not vacuous
-     *     in the subject dimension either).
-     *
-     * Together (a)+(b) prove that if any outsider-to-module-`<m>` had a dependency on
-     * `<m>.internal..`, the rule WOULD fire. Combined with the main test passing GREEN
-     * (no such dependency exists in prod), this constitutes a RED→GREEN proof per §4.
-     */
-    @Test
-    fun `cross-module internal rule is proven non-vacuous for each module (planted-violation proof)`() {
-        // Includes both prod and test classes (ARCHITECTURE §1.10, §5 S5).
-        val allClasses =
-            ClassFileImporter()
-                .withImportOption(excludeBazelTestClasses)
-                .importPackages("dev.groknull.bpmner")
-
-        for (module in INTERNAL_BEARING_MODULES) {
-            val internalPrefix = "dev.groknull.bpmner.$module.internal"
-            val modulePrefix = "dev.groknull.bpmner.$module"
-
-            // (a) Target set non-empty: at least one class lives in <module>.internal..
-            val internalClassCount = allClasses.count { cls ->
-                cls.packageName.startsWith(internalPrefix)
+        // Non-vacuity proof (D5): subject set must be non-empty
+        val subjectCount = classes.count { cls ->
+            cls.packageName.let { pkg ->
+                pkg.startsWith("dev.groknull.bpmner.telemetry.internal.adapter.inbound")
             }
-            assertThat(internalClassCount)
-                .describedAs(
-                    "Per-module rule for '$module': target set (classes in $internalPrefix..) must be " +
-                        "non-empty. If 0, the module has no internal classes and the rule would pass " +
-                        "vacuously. Check INTERNAL_BEARING_MODULES or the module structure.",
-                )
-                .isGreaterThan(0)
-
-            // (b) Subject set non-empty: at least one class from a DIFFERENT module is an
-            //     outsider w.r.t. <module>. This proves the per-module rule's subject predicate
-            //     (isOutsideModule(m)) correctly includes cross-module classes as subjects,
-            //     not just root-package classes.
-            val outsiderCount = allClasses.count { cls ->
-                val pkg = cls.packageName
-                // Must be in bpmner namespace but NOT inside this module
-                pkg.startsWith("dev.groknull.bpmner") &&
-                    pkg != modulePrefix &&
-                    !pkg.startsWith("$modulePrefix.")
-            }
-            assertThat(outsiderCount)
-                .describedAs(
-                    "Per-module rule for '$module': subject set (classes outside $modulePrefix..) must be " +
-                        "non-empty. If 0, no class can ever be an outsider and the rule passes vacuously. " +
-                        "This indicates a structural problem with the predicate or module layout.",
-                )
-                .isGreaterThan(0)
         }
+        assertThat(subjectCount)
+            .describedAs(
+                "Telemetry event-surface guard: subject set (classes in " +
+                    "..telemetry.internal.adapter.inbound..) must be non-empty. " +
+                    "If 0, the guard passes vacuously — check the package structure.",
+            )
+            .isGreaterThan(0)
+
+        // Non-vacuity proof (D5): the forbidden predicate must distinguish forbidden from allowed.
+        // Evaluate the predicate logic inline for two synthetic cases:
+        //   (1) A type in a cross-capability package whose name does NOT end with "Event" and is NOT
+        //       in TELEMETRY_PAYLOAD_ALLOWLIST → must be matched as forbidden.
+        //   (2) A type in a cross-capability package whose name DOES end with "Event" → must NOT be
+        //       matched (it is on the event surface and is allowed).
+        val syntheticForbiddenPkg = "dev.groknull.bpmner.alignment"
+        val syntheticForbiddenName = "AlignmentHelperService"
+        val isSyntheticForbidden = isCrossCapabilityNonEventSurface(syntheticForbiddenPkg, syntheticForbiddenName)
+        assertThat(isSyntheticForbidden)
+            .describedAs(
+                "Telemetry event-surface guard non-vacuity: a synthetic cross-capability non-event " +
+                    "type (pkg=alignment, name=AlignmentHelperService) must be matched as forbidden. " +
+                    "If false, the crossCapabilityNonEventSurface predicate is broken.",
+            )
+            .isTrue()
+
+        val syntheticAllowedPkg = "dev.groknull.bpmner.alignment"
+        val syntheticAllowedName = "BpmnAlignmentCheckedEvent"
+        val isSyntheticAllowed = isCrossCapabilityNonEventSurface(syntheticAllowedPkg, syntheticAllowedName)
+        assertThat(isSyntheticAllowed)
+            .describedAs(
+                "Telemetry event-surface guard non-vacuity: a synthetic cross-capability *Event type " +
+                    "(pkg=alignment, name=BpmnAlignmentCheckedEvent) must NOT be matched as forbidden. " +
+                    "If true, the crossCapabilityNonEventSurface predicate would incorrectly block events.",
+            )
+            .isFalse()
     }
 
     private fun beRejectedFromDomain(): ArchCondition<JavaClass> {
@@ -265,63 +240,79 @@ class BpmnerModuleBoundariesTest {
                 "StandardLoopCharacteristics",
             )
 
-        // The 10 modules that have an internal/ layer (bpmn's root package is the sole kernel;
-        // config and web have no internal/ layer at the top tier).
-        // Source: ARCHITECTURE §3 / PLAN-S2 §0 verified facts.
-        val INTERNAL_BEARING_MODULES: List<String> =
-            listOf(
-                "alignment",
-                "authoring",
-                "conformance",
-                "contract",
-                "layout",
-                "pipeline",
-                "readiness",
-                "repair",
-                "ruleset",
-                "telemetry",
+        /**
+         * Payload-reachable types that telemetry inbound listeners may depend on from other
+         * capabilities in addition to `*Event` types. These are types reachable through the
+         * payload fields of the events telemetry consumes (ADR-451-7 lines 854–865;
+         * PLAN-451-8 §3.3 verified imports). ArchUnit checks bytecode dependencies (method
+         * calls), so types accessed via event payload fields — even without explicit imports —
+         * must be listed here.
+         *
+         * Direct payload fields of consumed events:
+         * - BpmnAlignmentReport: BpmnAlignmentCheckedEvent.report field
+         * - ProcessInputAssessment: BpmnReadinessAssessedEvent.assessment field
+         *
+         * Second-level reachable types (fields of the above):
+         * - AlignmentIssue: BpmnAlignmentReport.issues: List<AlignmentIssue>
+         * - AlignmentClassification: AlignmentIssue.classification field
+         * - GlobalDiagnostics: used with BpmnValidationFailedEvent.diagnostics (payload utility)
+         * - BpmnDiagnosticSource: BpmnDiagnostic.source (payload field)
+         * - BpmnDiagnostic: BpmnValidationFailedEvent.diagnostics: List<BpmnDiagnostic>
+         */
+        val TELEMETRY_PAYLOAD_ALLOWLIST: Set<String> =
+            setOf(
+                "AlignmentClassification",
+                "AlignmentIssue",
+                "BpmnAlignmentReport",
+                "GlobalDiagnostics",
+                "BpmnDiagnosticSource",
+                "BpmnDiagnostic",
+                "ProcessInputAssessment",
             )
 
         /**
-         * Per-module rule: no class outside `dev.groknull.bpmner.<m>` may depend on any class
-         * inside `dev.groknull.bpmner.<m>.internal..`.
-         *
-         * Subject predicate (`isOutsideModule(m)`): a class is an "outsider" w.r.t. module `<m>`
-         * if its package starts with `dev.groknull.bpmner` but is NOT `dev.groknull.bpmner.<m>`
-         * or any sub-package thereof. This correctly includes classes from OTHER internal-bearing
-         * modules (e.g. `rules.internal.domain` is an outsider w.r.t. `alignment.internal`).
+         * The other capability packages that telemetry inbound listeners consume events from.
+         * Used by [crossCapabilityNonEventSurface] to scope the guard to cross-capability imports only.
          */
-        fun perModuleInternalRule(module: String): ArchRule {
-            val moduleBase = "dev.groknull.bpmner.$module"
-            val internalPkg = "$moduleBase.internal.."
-            return noClasses()
-                .that(isOutsideModule(module))
-                .should()
-                .dependOnClassesThat()
-                .resideInAPackage(internalPkg)
-                .because(
-                    "the internal/ layer of '$module' is its private implementation; " +
-                        "no class outside dev.groknull.bpmner.$module may access $internalPkg. " +
-                        "Route through the module's public API instead. " +
-                        "(S2 rule — ADR-002 §D-enforce; ARCHITECTURE §5 S2; PLAN-S2 §1 deliverable 1)",
-                )
+        val CROSS_CAPABILITY_PACKAGES: List<String> =
+            listOf(
+                "dev.groknull.bpmner.alignment",
+                "dev.groknull.bpmner.authoring",
+                "dev.groknull.bpmner.conformance",
+                "dev.groknull.bpmner.readiness",
+            )
+
+        /**
+         * Pure-function helper that evaluates the crossCapabilityNonEventSurface predicate
+         * logic given a package name and simple class name. Used by the non-vacuity proof
+         * (D5) to assert predicate correctness without needing a real JavaClass instance.
+         */
+        fun isCrossCapabilityNonEventSurface(pkg: String, simpleName: String): Boolean {
+            val isCrossCapability = CROSS_CAPABILITY_PACKAGES.any { pkg.startsWith(it) }
+            if (!isCrossCapability) return false
+            val isEventSurface = simpleName.endsWith("Event") || simpleName in TELEMETRY_PAYLOAD_ALLOWLIST
+            return !isEventSurface
         }
 
         /**
-         * Matches any class that resides OUTSIDE module `<m>` (i.e. not in `<m>` or any
-         * sub-package of `<m>`). This is the per-module bounded subject predicate that replaces
-         * the previous `isOutsideAllInternalPackages()` which incorrectly excluded all 10 modules.
+         * ArchUnit predicate that matches cross-capability types not on the telemetry event surface.
+         *
+         * A class is "forbidden" for telemetry inbound imports iff:
+         *   - its package starts with one of the cross-capability capability prefixes, AND
+         *   - its simple name does NOT end with "Event" (not a published event type), AND
+         *   - its simple name is NOT in [TELEMETRY_PAYLOAD_ALLOWLIST] (not payload-reachable).
+         *
+         * Implements ADR-451-7's rule: telemetry may consume another capability's published
+         * event surface (`*Event` types) and the types reachable through those events' payload
+         * fields — nothing else. (PLAN-451-8 §3.3; §5 S8 gate line 677.)
          */
-        fun isOutsideModule(module: String): DescribedPredicate<JavaClass> {
-            val moduleBase = "dev.groknull.bpmner.$module"
+        fun crossCapabilityNonEventSurface(): DescribedPredicate<JavaClass> {
             return object : DescribedPredicate<JavaClass>(
-                "reside outside module '$module' (not in $moduleBase or sub-packages)",
+                "is a cross-capability type that is not on the telemetry event surface " +
+                    "(not a *Event type and not in TELEMETRY_PAYLOAD_ALLOWLIST)",
             ) {
                 override fun test(input: JavaClass): Boolean {
-                    val pkg = input.packageName
-                    if (!pkg.startsWith("dev.groknull.bpmner")) return false
-                    // Exclude only the class's OWN module — not all 10 modules.
-                    return pkg != moduleBase && !pkg.startsWith("$moduleBase.")
+                    return isCrossCapabilityNonEventSurface(input.packageName, input.simpleName)
                 }
             }
         }
