@@ -288,7 +288,7 @@ class BpmnerModuleBoundariesTest {
          * (D5) to assert predicate correctness without needing a real JavaClass instance.
          */
         fun isCrossCapabilityNonEventSurface(pkg: String, simpleName: String): Boolean {
-            val isCrossCapability = CROSS_CAPABILITY_PACKAGES.any { pkg.startsWith(it) }
+            val isCrossCapability = CROSS_CAPABILITY_PACKAGES.any { pkg == it || pkg.startsWith("$it.") }
             if (!isCrossCapability) return false
             val isEventSurface = simpleName.endsWith("Event") || simpleName in TELEMETRY_PAYLOAD_ALLOWLIST
             return !isEventSurface
