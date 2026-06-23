@@ -20,6 +20,7 @@ import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
@@ -127,7 +128,7 @@ internal class LlmBpmnProcessGenerator(
                 fidelityReport.issues
                     .filter { it.severity == BpmnFidelitySeverity.ERROR }
                     .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
-            error(
+            throw RetryableBpmnGenerationException(
                 "Generated BPMN does not faithfully encode the source contract topology " +
                     "(${fidelityReport.issues.size} fidelity issue(s)):${System.lineSeparator()}$violations",
             )

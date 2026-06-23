@@ -34,6 +34,7 @@ import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 
 /*
@@ -135,7 +136,8 @@ private fun FlatBpmnNode.toTaskNode(): BpmnNode {
             standardLoop = sl,
             parentRef = parentRef,
         )
-        else -> error("toTaskNode called with non-task kind $type")
+        else ->
+            throw RetryableBpmnGenerationException("toTaskNode called with non-task kind $type")
     }
 }
 
@@ -157,7 +159,8 @@ private fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
     FlatBpmnNodeKind.INCLUSIVE_GATEWAY -> BpmnInclusiveGateway(id = id, name = name, parentRef = parentRef)
     FlatBpmnNodeKind.PARALLEL_GATEWAY -> BpmnParallelGateway(id = id, name = name, parentRef = parentRef)
     FlatBpmnNodeKind.EVENT_BASED_GATEWAY -> BpmnEventBasedGateway(id = id, name = name, parentRef = parentRef)
-    else -> error("toGatewayNode called with non-gateway kind $type")
+    else ->
+        throw RetryableBpmnGenerationException("toGatewayNode called with non-gateway kind $type")
 }
 
 private fun FlatBpmnNode.toSubProcessNode(): BpmnNode = BpmnSubProcess(
@@ -201,7 +204,8 @@ private fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
         parentRef = parentRef,
     )
-    else -> error("toEventPositionNode called with non-event-position kind $type")
+    else ->
+        throw RetryableBpmnGenerationException("toEventPositionNode called with non-event-position kind $type")
 }
 
 public fun FlatBpmnEventDefinition.toSealed(): BpmnEventDefinition = when (type) {
