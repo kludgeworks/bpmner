@@ -40,8 +40,8 @@ data class BpmnRequestDraft(
 @org.springframework.stereotype.Component
 internal class BpmnRequestResolver(
     private val inputPathResolver: InputPathResolver,
-) {
-    fun resolveShellRequest(draft: BpmnRequestDraft): BpmnRequest {
+) : BpmnRequestResolutionPort {
+    override fun resolveShellRequest(draft: BpmnRequestDraft): BpmnRequest {
         val description = resolveProcessDescription(draft)
         val outputFile = inputPathResolver.resolveOutputPath(draft.outputFile ?: DEFAULT_SHELL_OUTPUT).toString()
         val styleGuide = resolveStyleGuide(draft)

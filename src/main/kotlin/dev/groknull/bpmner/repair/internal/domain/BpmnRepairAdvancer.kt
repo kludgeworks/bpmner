@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
+import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnRenderer
-import dev.groknull.bpmner.authoring.DefaultFlowAssigner
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
@@ -26,7 +26,7 @@ import org.springframework.stereotype.Component
 
 @Component
 internal class BpmnRepairAdvancer(
-    private val defaultFlowAssigner: DefaultFlowAssigner,
+    private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractAwareValidator: BpmnContractAwareValidator,
     private val attemptRecordFactory: BpmnAttemptRecordFactory,
     private val promptFactory: BpmnRepairPromptPort,

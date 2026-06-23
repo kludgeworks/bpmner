@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.authoring
+package dev.groknull.bpmner.authoring.internal.domain
 
+import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.contract.DefaultBranch
@@ -32,12 +33,15 @@ import org.springframework.stereotype.Component
  * Matching strategy: a default branch with `nextRef = X` matches the edge with `targetRef = X`.
  * When `nextRef` is null, the match is ambiguous — the assigner logs a WARN and leaves the
  * definition unchanged, letting the validator catch genuine wiring failures.
+ *
+ * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
+ * (ADR-451-8 disposition a). Cross-module callers inject [BpmnDefaultFlowPort] instead.
  */
 @Component
-internal class DefaultFlowAssigner {
+internal class DefaultFlowAssigner : BpmnDefaultFlowPort {
     private val logger = LoggerFactory.getLogger(DefaultFlowAssigner::class.java)
 
-    fun assign(
+    override fun assign(
         contract: ProcessContract,
         definition: BpmnDefinition,
     ): BpmnDefinition {

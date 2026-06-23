@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.repair.internal.domain
 
-import dev.groknull.bpmner.authoring.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
@@ -41,7 +41,7 @@ import org.springframework.stereotype.Component
 @Component
 internal class BpmnContractAwareValidator(
     private val pipeline: BpmnValidator,
-    private val fidelityChecker: BpmnContractFidelityChecker,
+    private val fidelityChecker: BpmnContractFidelityPort,
 ) {
     @Suppress("LongParameterList")
     fun evaluate(

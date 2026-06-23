@@ -11,7 +11,7 @@ import dev.groknull.bpmner.contract.ProcessContract
 import org.springframework.stereotype.Component
 
 @Component
-internal class ProcessContractMarkdownRenderer {
+class ProcessContractMarkdownRenderer {
     fun render(contract: ProcessContract): String = buildString {
         appendLine("# ${contract.processName}")
         appendLine("Trigger: ${contract.trigger}")

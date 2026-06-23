@@ -144,6 +144,27 @@ class BpmnerModuleBoundariesTest {
             .isFalse()
     }
 
+    /**
+     * S9 boundary-guard audit note (ADR-451-8 §4.4 best-effort, lines 921–923):
+     *
+     * The four root-package `internal` leaks (L1–L4) identified by ADR-451-8 are structurally
+     * fixed by S9: L2 (`BpmnContractFidelityChecker`) and L3 (`DefaultFlowAssigner`) are
+     * relocated to `authoring.internal.domain` and exposed only via `BpmnContractFidelityPort`
+     * and `BpmnDefaultFlowPort` — Modulith's `verify()` (mechanism 1) now enforces the
+     * `*.internal.*` package path and will reject any future cross-module direct reach.
+     * L1 (`ProcessContractMarkdownRenderer`) and L4 (`BpmnRequestResolver`) are converted to
+     * disposition (b): L1 drops `internal` (deliberate public API of `contract`); L4 is exposed
+     * via `BpmnRequestResolutionPort` (implementation remains `internal` due to injecting
+     * `authoring.internal.adapter.inbound.InputPathResolver`).
+     *
+     * A programmatic ArchUnit guard for "Kotlin `internal` modifier on a root-package type
+     * imported cross-module" is not feasible from bytecode: the Kotlin compiler compiles
+     * `internal` to package-private JVM visibility with name mangling, not to a flag ArchUnit
+     * can query on `JavaClass`. Relying on `verify()` (which enforces the `*.internal.*` package
+     * path) plus the per-PR audit documented in PLAN-451-9 §5 is the correct ongoing posture.
+     * The structural re-seam (mechanism 1) is more robust than a lint heuristic (mechanism 2).
+     */
+
     private fun beRejectedFromDomain(): ArchCondition<JavaClass> {
         return object : ArchCondition<JavaClass>("be one of the approved bpmn kernel classes") {
             override fun check(

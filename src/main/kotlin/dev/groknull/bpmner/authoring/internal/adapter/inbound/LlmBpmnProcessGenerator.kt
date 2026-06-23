@@ -8,10 +8,10 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
-import dev.groknull.bpmner.authoring.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
+import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
-import dev.groknull.bpmner.authoring.DefaultFlowAssigner
 import dev.groknull.bpmner.authoring.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.ProcessOutline
 import dev.groknull.bpmner.authoring.ValidatedOutline
@@ -40,8 +40,8 @@ internal class LlmBpmnProcessGenerator(
     private val config: BpmnAuthoringConfig,
     private val logging: BpmnLoggingConfig,
     private val metricsCalculator: BpmnGeneratorMetrics,
-    private val fidelityChecker: BpmnContractFidelityChecker,
-    private val defaultFlowAssigner: DefaultFlowAssigner,
+    private val fidelityChecker: BpmnContractFidelityPort,
+    private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractRenderer: ProcessContractMarkdownRenderer,
     private val graphRenderer: BpmnGraphRenderer,
     private val eventPublisher: ApplicationEventPublisher,

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.authoring
 
+import dev.groknull.bpmner.authoring.internal.domain.DefaultFlowAssigner
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
