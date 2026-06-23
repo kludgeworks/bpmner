@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.authoring
 
 import dev.groknull.bpmner.authoring.internal.adapter.inbound.InputPathResolver
+import dev.groknull.bpmner.authoring.internal.domain.BpmnRequestResolver
 import dev.groknull.bpmner.bpmn.GenerationMode
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertThrows
