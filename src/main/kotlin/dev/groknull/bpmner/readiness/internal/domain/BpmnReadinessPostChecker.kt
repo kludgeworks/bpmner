@@ -282,6 +282,15 @@ internal class BpmnReadinessPostChecker(
                 "transform",
                 "transmit",
                 "verify",
+                // General / physical
+                "make",
+                "take",
+                "put",
+                "place",
+                "serve",
+                "move",
+                "check",
+                "get",
             ).map { Regex("\\b${it}\\w*\\b") }
 
         // Start triggers are phrased in either voice/tense ("an order is submitted" vs "an employee
@@ -319,6 +328,11 @@ internal class BpmnReadinessPostChecker(
                 "done",
                 "terminates",
                 "terminated",
+                "end",
+                "finish",
+                "finished",
+                "stops",
+                "stopped",
             ).map { Regex("\\b$it\\b") }
 
         val SEQUENCE_MARKERS =

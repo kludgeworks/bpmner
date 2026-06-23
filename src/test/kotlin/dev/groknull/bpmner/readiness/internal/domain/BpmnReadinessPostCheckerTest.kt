@@ -294,6 +294,48 @@ class BpmnReadinessPostCheckerTest {
         assertEquals("src-7", result.evidence.single().id)
     }
 
+    @Test
+    fun `make toast domestic scenario with make/take/put/serve verbs resolves READY`() {
+        // Part C test: everyday verbs ("make", "take", "put", "serve") should satisfy PROCESS_VERBS.
+        val result =
+            checker.apply(
+                BpmnRequest("Make toast. Take bread, put it in toaster, press down. When popped, serve."),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+
+        assertEquals(ReadinessVerdict.READY, result.verdict)
+        assertEquals(90, result.overallScore)
+        assertTrue(result.missingAreas.isEmpty(), "expected no missing areas, got ${result.missingAreas}")
+    }
+
+    @Test
+    fun `end/finish/finished/stops/stopped end-state markers resolve READY`() {
+        // Part C regression: new end-state markers should be recognized.
+        val endScenario =
+            checker.apply(
+                BpmnRequest("When an order is submitted, the clerk processes it, then finishes it, the order is done."),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+        assertEquals(ReadinessVerdict.READY, endScenario.verdict)
+        assertTrue(MissingProcessArea.END_STATE !in endScenario.missingAreas)
+
+        val finishedScenario =
+            checker.apply(
+                BpmnRequest("When an order is submitted, the clerk reviews it, then approves it, the order is finished."),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+        assertEquals(ReadinessVerdict.READY, finishedScenario.verdict)
+        assertTrue(MissingProcessArea.END_STATE !in finishedScenario.missingAreas)
+
+        val stoppedScenario =
+            checker.apply(
+                BpmnRequest("When the process starts, it runs, then stops at the checkpoint and finally ends."),
+                assessment(ReadinessVerdict.READY, 90),
+            )
+        assertEquals(ReadinessVerdict.READY, stoppedScenario.verdict)
+        assertTrue(MissingProcessArea.END_STATE !in stoppedScenario.missingAreas)
+    }
+
     private fun assertDimensionLowered(
         assessment: ProcessInputAssessment,
         dimension: ReadinessDimension,
