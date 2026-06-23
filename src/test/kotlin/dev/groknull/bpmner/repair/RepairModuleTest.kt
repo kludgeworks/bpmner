@@ -15,16 +15,19 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator): `repair` is a genuine
- * deep integrator across `authoring`, `conformance`, `contract`, `readiness`, and `ruleset`.
- * Its transitive dependency set includes two root-package `internal` types
- * `authoring.DefaultFlowAssigner` and `authoring.BpmnContractFidelityChecker` that cross
- * module boundaries without `*.internal.*` packaging (ADR-451-8). Mocking that transitive
- * set requires stubs of types whose encapsulation boundary is not yet enforced, making this
- * a genuine Tier-3 deep-integrator test rather than a Tier-2 isolation gate.
- * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-451-9; ARCHITECTURE §5 S7)
- * TODO(#451-9): re-evaluate flip to DIRECT_DEPENDENCIES once ADR-451-8 encapsulation re-seam lands
+ * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator, settled post-S9):
+ * `repair` is a genuine deep integrator across `authoring`, `conformance`, `contract`,
+ * `readiness`, and `ruleset`. The S9 re-seam (ADR-451-8 disposition a) has resolved the
+ * root-package `internal` leak: `BpmnContractFidelityChecker` and `DefaultFlowAssigner` are
+ * now in `authoring.internal.domain` behind their respective ports (`BpmnContractFidelityPort`,
+ * `BpmnDefaultFlowPort`). However, a DIRECT_DEPENDENCIES flip is still not achievable:
+ * the `authoring` module itself requires the `alignment` module to fully wire its beans
+ * (e.g. `LlmBpmnProcessGenerator` depends on `BpmnLoggingConfig` from `conformance`, and
+ * `BpmnGenerationAgent` wires `BpmnAligner` from `alignment`). Since `alignment` is not in
+ * `repair`'s `allowedDependencies`, a DIRECT_DEPENDENCIES bootstrap of `repair` cannot
+ * fully wire `authoring`'s beans — making ALL_DEPENDENCIES the correct tier for a true
+ * wiring-complete integration gate. API keys are stubbed so no live LLM call is made.
+ * (S9 — ADR-451-9 Tier-3 settled rationale; ADR-451-8 re-seam complete)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

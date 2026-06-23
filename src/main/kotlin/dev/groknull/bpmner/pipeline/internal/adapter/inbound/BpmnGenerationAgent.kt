@@ -22,7 +22,7 @@ import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestDrafter
-import dev.groknull.bpmner.authoring.BpmnRequestResolver
+import dev.groknull.bpmner.authoring.BpmnRequestResolutionPort
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -48,7 +48,7 @@ import java.io.File
 @Agent(description = "Single idiomatic agent for happy-path BPMN generation")
 internal class BpmnGenerationAgent(
     private val requestDrafter: BpmnRequestDrafter,
-    private val requestResolver: BpmnRequestResolver,
+    private val requestResolver: BpmnRequestResolutionPort,
     private val readinessInvoker: BpmnReadinessInvoker,
     private val contractExtractor: ProcessContractExtractor,
     private val processGenerator: BpmnProcessGenerator,

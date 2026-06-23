@@ -3,8 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.authoring
+package dev.groknull.bpmner.authoring.internal.domain
 
+import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
+import dev.groknull.bpmner.authoring.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.BpmnFidelityReport
+import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
@@ -75,13 +80,16 @@ import org.springframework.stereotype.Component
  *    *semantically transparent* nodes (see [isSemanticallyTransparent]). The transparent-node
  *    walk accepts the legitimate generator pattern where flows pass through unnamed converging
  *    joins; missing-edge bugs are still caught.
+ *
+ * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
+ * (ADR-451-8 disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
  */
 @Component
 @Suppress("TooManyFunctions") // per-contract-element private helpers (Activity / EndState / Decision)
-internal class BpmnContractFidelityChecker {
+internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
-    fun check(
+    override fun check(
         contract: ProcessContract,
         definition: BpmnDefinition,
     ): BpmnFidelityReport {
