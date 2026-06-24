@@ -102,6 +102,57 @@ class BpmnPreviewWriterTest {
         assertThat(previewHtml).doesNotContain("console.log('</SCRIPT>')")
     }
 
+    @Test
+    fun `escapes json special characters in bpmn xml`(@TempDir tempDir: Path) {
+        // Covers backslash, double-quote, tab, newline, carriage-return, backspace,
+        // form-feed, and a raw control character in the XML payload.
+        val specialCharsXml =
+            "<?xml version=\"1.0\"?>" +
+                "<definitions id=\"D\">" +
+                "<process id=\"P\" name=\"a\\b&quot;\t\n\r\u0008\u000C\u0001z\" />" +
+                "</definitions>"
+        val writer = ClasspathBpmnPreviewWriter { path ->
+            when (path) {
+                "preview/preview-template.html" -> TEST_TEMPLATE
+                "preview/preview-bundle.js" -> ""
+                else -> error("unexpected resource: $path")
+            }
+        }
+        val bpmnPath = tempDir.resolve("special-chars.bpmn")
+        Files.writeString(bpmnPath, specialCharsXml, StandardCharsets.UTF_8)
+
+        val previewHtml = Files.readString(writer.writePreview(bpmnPath))
+
+        // Backslash must be doubled
+        assertThat(previewHtml).contains("\\\\")
+        // Double-quote must be escaped as \"
+        assertThat(previewHtml).contains("\\\"")
+        // Tab, newline, carriage return
+        assertThat(previewHtml).contains("\\t")
+        assertThat(previewHtml).contains("\\n")
+        assertThat(previewHtml).contains("\\r")
+        // Backspace and form-feed
+        assertThat(previewHtml).contains("\\b")
+        assertThat(previewHtml).contains("\\f")
+        // Raw control character 0x01 → \u0001
+        assertThat(previewHtml).contains("\\u0001")
+        // Plain ASCII letter 'z' must pass through unescaped (not become \u0000-something)
+        assertThat(previewHtml).contains("z")
+    }
+
+    @Test
+    fun `missing classpath resource raises clear error`(@TempDir tempDir: Path) {
+        val writer = ClasspathBpmnPreviewWriter { path ->
+            throw IllegalStateException("Missing packaged BPMN preview resource: $path")
+        }
+        val bpmnPath = tempDir.resolve("any.bpmn")
+        Files.writeString(bpmnPath, MINIMAL_BPMN, StandardCharsets.UTF_8)
+
+        assertThatThrownBy { writer.writePreview(bpmnPath) }
+            .isInstanceOf(IllegalStateException::class.java)
+            .hasMessageContaining("Missing packaged BPMN preview resource")
+    }
+
     private companion object {
         val TEST_TEMPLATE: String = """
             <script type="application/json" id="bpmn-preview-xml">

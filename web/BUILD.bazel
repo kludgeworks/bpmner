@@ -4,6 +4,7 @@
 load("@aspect_rules_esbuild//esbuild:defs.bzl", "esbuild")
 load("@bazel_sonarqube//:defs.bzl", "sonarqube")
 load("@npm//:defs.bzl", "npm_link_all_packages")
+load("//tools/js:test.bzl", "bpmner_node_test")
 load("//tools/js:ts.bzl", "bpmner_ts_configs", "bpmner_ts_project")
 
 package(default_visibility = [
@@ -34,6 +35,8 @@ npm_link_all_packages(name = "node_modules")
 
 WEB_SRCS = glob(["src/**/*.ts"])
 
+WEB_TEST_SRCS = glob(["test/**/*.ts"])
+
 WEB_STATIC_ASSETS = glob(["src/static/**/*"])
 
 WEB_TS_DEPS = [
@@ -45,10 +48,17 @@ bpmner_ts_configs()
 
 bpmner_ts_project(
     name = "ts",
-    srcs = WEB_SRCS,
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
     out_dir = "tsc",
     resolve_json_module = True,
     tsconfig = ":tsconfig_bazel",
+    deps = WEB_TS_DEPS,
+)
+
+bpmner_node_test(
+    name = "preview_helpers_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/preview-helpers.test.ts",
     deps = WEB_TS_DEPS,
 )
 

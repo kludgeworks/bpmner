@@ -4,6 +4,7 @@
  */
 
 import BpmnViewer from "bpmn-js"
+import { formatError, parsePreviewXml } from "./preview-helpers"
 
 type BpmnCanvas = {
 	zoom: (mode: "fit-viewport") => void
@@ -22,15 +23,14 @@ function requiredElement<T extends HTMLElement>(id: string): T {
 }
 
 function previewXml(): string {
-	return JSON.parse(
-		requiredElement<HTMLScriptElement>("bpmn-preview-xml").textContent ?? '""',
+	return parsePreviewXml(
+		requiredElement<HTMLScriptElement>("bpmn-preview-xml").textContent,
 	)
 }
 
 function showError(error: unknown): void {
 	const errorElement = requiredElement<HTMLElement>("preview-error")
-	errorElement.textContent =
-		error instanceof Error ? error.message : String(error)
+	errorElement.textContent = formatError(error)
 	errorElement.style.display = "block"
 }
 
