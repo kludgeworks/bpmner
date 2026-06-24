@@ -7,27 +7,23 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
+import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
-import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentInvoker
-import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
-import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
-import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
-import dev.groknull.bpmner.authoring.internal.domain.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
@@ -129,38 +125,17 @@ internal class LlmBpmnProcessGenerator(
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
 
-        val fidelityDiagnostics = fidelityChecker.check(validatedContract.contract, outline.definition)
-        if (fidelityDiagnostics.any { it.severity == BpmnDiagnosticSeverity.ERROR }) {
+        val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
+        if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
             val violations =
-                fidelityDiagnostics
-                    .filter { it.severity == BpmnDiagnosticSeverity.ERROR }
-                    .joinToString(separator = System.lineSeparator()) { "- ${it.message}" }
+                fidelityReport.issues
+                    .filter { it.severity == BpmnFidelitySeverity.ERROR }
+                    .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
             throw RetryableBpmnGenerationException(
                 "Generated BPMN does not faithfully encode the source contract topology " +
-                    "(${fidelityDiagnostics.size} fidelity issue(s)):${System.lineSeparator()}$violations",
+                    "(${fidelityReport.issues.size} fidelity issue(s)):${System.lineSeparator()}$violations",
             )
         }
-
-        val fidelityIssues = fidelityDiagnostics.map { diagnostic ->
-            val codeStr = diagnostic.message.substringBefore("]").removePrefix("[")
-            val code = try {
-                BpmnFidelityCode.valueOf(codeStr)
-            } catch (_: IllegalArgumentException) {
-                BpmnFidelityCode.DECISION_GATEWAY_MISSING
-            }
-            val msg = diagnostic.message.substringAfter("] ")
-            BpmnFidelityIssue(
-                code = code,
-                severity = if (diagnostic.severity == BpmnDiagnosticSeverity.ERROR) {
-                    BpmnFidelitySeverity.ERROR
-                } else {
-                    BpmnFidelitySeverity.WARNING
-                },
-                message = msg,
-                bpmnElementId = diagnostic.elementId,
-            )
-        }
-        val fidelityReport = BpmnFidelityReport(issues = fidelityIssues)
 
         return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
     }

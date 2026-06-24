@@ -109,7 +109,7 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         }
     }
 
-    fun checkDetailed(
+    override fun checkDetailed(
         contract: ProcessContract,
         definition: BpmnDefinition,
     ): BpmnFidelityReport {

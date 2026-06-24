@@ -7,23 +7,23 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.Retryable
 import com.embabel.agent.test.unit.FakeOperationContext
+import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
+import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
-import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentInvoker
-import dev.groknull.bpmner.authoring.internal.domain.BpmnRenderer
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
-import dev.groknull.bpmner.conformance.BpmnDiagnostic
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
-import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractIssueSeverity
@@ -143,24 +143,24 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         val stubbedDefinition = flatLlmResponse.toSealed()
         `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
 
-        val errorDiagnostics = listOf(
-            BpmnDiagnostic(
-                source = BpmnDiagnosticSource.GRAPH,
-                message = "[ACTIVITY_TASK_KIND_MISMATCH] Activity 'act1' is a ServiceTask but contract requires UserTask",
-                severity = BpmnDiagnosticSeverity.ERROR,
-                repairScope = BpmnRepairScope.FULL_PROCESS,
-                elementId = "act1",
-            ),
-            BpmnDiagnostic(
-                source = BpmnDiagnosticSource.GRAPH,
-                message = "[DECISION_GATEWAY_MISSING] Decision 'dec1' has no corresponding gateway in the BPMN",
-                severity = BpmnDiagnosticSeverity.ERROR,
-                repairScope = BpmnRepairScope.FULL_PROCESS,
-                elementId = "dec1",
+        val errorReport = BpmnFidelityReport(
+            issues = listOf(
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = "Activity 'act1' is a ServiceTask but contract requires UserTask",
+                    bpmnElementId = "act1",
+                ),
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = "Decision 'dec1' has no corresponding gateway in the BPMN",
+                    bpmnElementId = "dec1",
+                ),
             ),
         )
-        `when`(mockFidelityChecker.check(anyKt(), anyKt()))
-            .thenReturn(errorDiagnostics)
+        `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt()))
+            .thenReturn(errorReport)
 
         val ex = assertFailsWith<RetryableBpmnGenerationException> {
             generator.createOutline(ready, validatedContract, context)

@@ -5,8 +5,13 @@
 
 package dev.groknull.bpmner.authoring
 
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.contract.ProcessContract
 import org.jmolecules.architecture.hexagonal.PrimaryPort
 
@@ -24,10 +29,41 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * Modulith's mechanism-1 enforcement fires on any future direct cross-module reach.
  */
 @PrimaryPort
-fun interface BpmnContractFidelityPort {
+interface BpmnContractFidelityPort {
     /**
      * Check that [definition] faithfully encodes the topology declared by [contract].
      * Returns a list of [BpmnDiagnostic] representing any topology discrepancies.
      */
     fun check(contract: ProcessContract, definition: BpmnDefinition): List<BpmnDiagnostic>
+
+    /**
+     * Check that [definition] faithfully encodes the topology declared by [contract],
+     * returning a structured [BpmnFidelityReport] so callers never need to re-parse
+     * diagnostic message strings to recover fidelity codes.
+     *
+     * The primary implementation overrides this directly to avoid any string round-trip.
+     * The default implementation reconstructs the report from [check] by parsing the
+     * `[CODE] message` format produced by the primary implementation — this provides
+     * correct behaviour for test doubles that only implement [check].
+     */
+    fun checkDetailed(contract: ProcessContract, definition: BpmnDefinition): BpmnFidelityReport {
+        val diagnostics = check(contract, definition)
+        val issues = diagnostics.map { diagnostic ->
+            val codeStr = diagnostic.message.substringBefore("]").removePrefix("[")
+            val code = runCatching { BpmnFidelityCode.valueOf(codeStr) }
+                .getOrDefault(BpmnFidelityCode.DECISION_GATEWAY_MISSING)
+            val msg = diagnostic.message.substringAfter("] ")
+            BpmnFidelityIssue(
+                code = code,
+                severity = if (diagnostic.severity == BpmnDiagnosticSeverity.ERROR) {
+                    BpmnFidelitySeverity.ERROR
+                } else {
+                    BpmnFidelitySeverity.WARNING
+                },
+                message = msg,
+                bpmnElementId = diagnostic.elementId,
+            )
+        }
+        return BpmnFidelityReport(issues = issues)
+    }
 }

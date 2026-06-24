@@ -3,16 +3,13 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("unused")
+
 package dev.groknull.bpmner.authoring.internal.domain
 
-import dev.groknull.bpmner.bpmn.BpmnDefinition
-import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
-import dev.groknull.bpmner.bpmn.RenderedBpmn
-import org.jmolecules.architecture.hexagonal.SecondaryPort
-
-@SecondaryPort
-interface BpmnRenderer {
-    fun render(definition: BpmnDefinition): RenderedBpmn
-
-    fun render(graph: LaidOutProcessGraph): RenderedBpmn
-}
+/**
+ * Relocated to the public authoring package as a `@SecondaryPort`.
+ * This alias is retained so references within `internal.domain` continue to resolve
+ * without churn. All new code must import from [dev.groknull.bpmner.authoring.BpmnRenderer].
+ */
+internal typealias BpmnRenderer = dev.groknull.bpmner.authoring.BpmnRenderer

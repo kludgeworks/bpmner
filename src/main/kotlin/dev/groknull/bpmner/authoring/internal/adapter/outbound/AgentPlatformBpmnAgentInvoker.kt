@@ -10,9 +10,9 @@ import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
-import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentInvoker
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
@@ -42,14 +42,13 @@ internal class AgentPlatformBpmnAgentInvoker(
                 assessment,
             )
         process.run()
-        // The helper `fromProcessStatus()` returns the goal output on COMPLETED and throws
-        // the framework's typed status exceptions (`ProcessExecutionStuckException` when the
-        // planner has no applicable action, `ProcessExecutionTerminatedException` on budget
-        // exhaustion). This replaces any usage of `process.resultOfType()` which would crash
-        // silently on non-COMPLETED states.
+        // `fromProcessStatus()` returns the goal output on COMPLETED and throws the framework's
+        // typed status exceptions (`ProcessExecutionStuckException` when the planner has no
+        // applicable action, `ProcessExecutionTerminatedException` on budget exhaustion).
+        // Using `process.resultOfType()` would crash silently on non-COMPLETED states.
         //
-        // This does not use `AgentPlatformTypedOps.transform()` because that path uses
-        // the older `process.resultOfType()` and would lose the typed exception surface above.
+        // `AgentPlatformTypedOps.transform()` is not used here because that path uses
+        // `process.resultOfType()` and loses the typed exception surface above.
         val execution = AgentProcessExecution.fromProcessStatus(request, process)
         return BpmnResult::class.java.cast(execution.output)
     }

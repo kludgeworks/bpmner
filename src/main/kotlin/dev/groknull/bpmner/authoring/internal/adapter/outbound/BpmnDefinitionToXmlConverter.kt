@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.BpmnModelFactory
-import dev.groknull.bpmner.authoring.internal.domain.BpmnRenderer
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
