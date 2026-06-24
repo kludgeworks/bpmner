@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
@@ -92,7 +93,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
     -> toPayloadActivity()
 }
 
-private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
+internal fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
     FlatActivityKind.BUSINESS_RULE -> ContractActivity.BusinessRule(
         id = id,
         name = name,
@@ -129,7 +130,8 @@ private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (k
         modifiers = toModifiers(),
     )
 
-    else -> error("toPayloadActivity called with non-payload kind: $kind")
+    else ->
+        throw RetryableBpmnGenerationException("toPayloadActivity called with non-payload kind: $kind")
 }
 
 public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {

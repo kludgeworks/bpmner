@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.authoring
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
@@ -30,7 +31,7 @@ internal class BpmnDefinitionDomPostProcessor(
     }
 
     private fun Document.processElement(): Element = bpmnElements("process").firstOrNull()
-        ?: error("Unable to locate process in generated BPMN XML")
+        ?: throw RetryableBpmnGenerationException("Unable to locate process in generated BPMN XML")
 
     private fun Element.declareBpmnerNamespace() {
         setAttributeNS(

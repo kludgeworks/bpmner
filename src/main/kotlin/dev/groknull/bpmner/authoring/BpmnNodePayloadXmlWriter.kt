@@ -21,6 +21,7 @@ import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -102,7 +103,9 @@ internal class BpmnNodePayloadXmlWriter(
     ) {
         dataAssociations.forEach { da ->
             val element = allTaskElementsById[da.sourceRef]
-                ?: error("Data association '${da.id}' sourceRef '${da.sourceRef}' has no rendered task element")
+                ?: throw RetryableBpmnGenerationException(
+                    "Data association '${da.id}' sourceRef '${da.sourceRef}' has no rendered task element",
+                )
             element.appendDataAssociation(document, da)
         }
     }
@@ -116,13 +119,17 @@ internal class BpmnNodePayloadXmlWriter(
         tasks.forEach { task ->
             task.multiInstance?.let { mi ->
                 val element = allTaskElementsById[task.id]
-                    ?: error("Task '${task.id}' has a multi-instance marker but no task element was rendered for it")
+                    ?: throw RetryableBpmnGenerationException(
+                        "Task '${task.id}' has a multi-instance marker but no task element was rendered for it",
+                    )
                 element.appendMultiInstance(document, mi)
                 bpmnerNamespaceUsed = true
             }
             task.standardLoop?.let { loop ->
                 val element = allTaskElementsById[task.id]
-                    ?: error("Task '${task.id}' has a standard-loop marker but no task element was rendered for it")
+                    ?: throw RetryableBpmnGenerationException(
+                        "Task '${task.id}' has a standard-loop marker but no task element was rendered for it",
+                    )
                 element.appendStandardLoop(document, loop)
             }
         }
@@ -152,11 +159,14 @@ internal class BpmnNodePayloadXmlWriter(
     ).elementsById(this)
 
     private fun Map<String, Element>.taskElement(id: String): Element {
-        return this[id] ?: error("Task element with id='$id' not found in rendered XML")
+        return this[id] ?: throw RetryableBpmnGenerationException("Task element with id='$id' not found in rendered XML")
     }
 
     private fun Map<String, Element>.eventElement(id: String): Element {
-        return this[id] ?: error("Unable to locate BPMN event element id=\"$id\" in generated BPMN XML")
+        return this[id]
+            ?: throw RetryableBpmnGenerationException(
+                "Unable to locate BPMN event element id=\"$id\" in generated BPMN XML",
+            )
     }
 }
 
@@ -170,7 +180,7 @@ private fun BpmnNode.payloadEventDefinition(): BpmnEventDefinition = when (this)
 private fun BpmnNode.payloadMessageRef(): String = when (this) {
     is BpmnSendTask -> messageRef
     is BpmnReceiveTask -> messageRef
-    else -> error("messageRef requested for non-message task '$id'")
+    else -> throw RetryableBpmnGenerationException("messageRef requested for non-message task '$id'")
 }
 
 private fun Element.appendMultiInstance(

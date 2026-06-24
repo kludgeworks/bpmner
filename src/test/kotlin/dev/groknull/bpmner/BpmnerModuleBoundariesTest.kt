@@ -252,6 +252,7 @@ class BpmnerModuleBoundariesTest {
                 "RepairKind",
                 "RepairMetadata",
                 "RepairSafety",
+                "RetryableBpmnGenerationException",
                 "RuleCategory",
                 "RuleDiagnostic",
                 "RuleEvaluation",
