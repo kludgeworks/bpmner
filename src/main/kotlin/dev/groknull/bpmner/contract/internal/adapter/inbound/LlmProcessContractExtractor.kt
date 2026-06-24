@@ -8,6 +8,7 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.contract.BpmnContractConfig
 import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
@@ -61,7 +62,14 @@ internal class LlmProcessContractExtractor(
                 ContractExtractionExamples.eventSubProcessExample,
             )
             .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
-        val contract = flat.toSealed()
+        val contract = try {
+            flat.toSealed()
+        } catch (e: IllegalArgumentException) {
+            throw RetryableBpmnGenerationException(
+                "LLM generated a structurally incomplete ProcessContract: ${e.message}",
+                e,
+            )
+        }
 
         logger.info("Contract extracted:\n{}", markdownRenderer.render(contract))
         val report = validator.validate(contract)
