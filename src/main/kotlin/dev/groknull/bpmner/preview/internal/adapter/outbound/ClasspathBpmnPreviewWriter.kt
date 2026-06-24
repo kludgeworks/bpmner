@@ -31,7 +31,7 @@ internal open class ClasspathBpmnPreviewWriter : BpmnPreviewWriter {
         return previewPath
     }
 
-    fun previewPathFor(bpmnPath: Path): Path {
+    private fun previewPathFor(bpmnPath: Path): Path {
         val fileName = "${bpmnPath.nameWithoutExtension}.preview.html"
         return bpmnPath.resolveSibling(fileName)
     }
