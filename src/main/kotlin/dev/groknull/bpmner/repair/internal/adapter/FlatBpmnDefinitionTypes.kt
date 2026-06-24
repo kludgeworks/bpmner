@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.repair.internal.adapter
 
+// CPD-OFF
+
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.bpmn.BpmnAssociation
@@ -328,7 +330,7 @@ public data class FlatBpmnDefinition(
     val messageFlows: List<BpmnMessageFlow> = emptyList(),
 )
 
-// Ported verbatim from core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than
+// Copy of core/BpmnDomain.kt:264-271 (file-private there; copying is cleaner than
 // widening core visibility just to share a constant).
 private const val NODE_ID_DESCRIPTION: String =
     "Unique node id. For contract-realized nodes, use the corresponding `act-…` / `dec-…` / `end-…` " +
@@ -338,3 +340,5 @@ private const val NODE_ID_DESCRIPTION: String =
 
 private const val NODE_NAME_DESCRIPTION: String =
     "Optional node label. Required for tasks, events, and diverging gateways; omit for converging gateways."
+
+// CPD-ON

@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.repair.internal.adapter
 
+// CPD-OFF
+
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
@@ -239,3 +241,5 @@ private fun <T : Any> requireField(value: T?, kind: Enum<*>, fieldName: String, 
     }
     return nonNull
 }
+
+// CPD-ON

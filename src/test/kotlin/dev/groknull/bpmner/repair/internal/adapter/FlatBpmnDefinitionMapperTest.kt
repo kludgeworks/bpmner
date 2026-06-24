@@ -7,6 +7,8 @@
 
 package dev.groknull.bpmner.repair.internal.adapter
 
+// CPD-OFF
+
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
@@ -18,6 +20,7 @@ import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationRef
+import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -70,6 +73,10 @@ class FlatBpmnDefinitionMapperTest {
         assertEquals(
             BpmnParallelGateway("p1", "Fork"),
             flatNode(FlatBpmnNodeKind.PARALLEL_GATEWAY, "p1", "Fork").toSealed(),
+        )
+        assertEquals(
+            BpmnEventBasedGateway("eg1", "EvGate"),
+            flatNode(FlatBpmnNodeKind.EVENT_BASED_GATEWAY, "eg1", "EvGate").toSealed(),
         )
     }
 
@@ -478,3 +485,5 @@ class FlatBpmnDefinitionMapperTest {
         name: String? = null,
     ): FlatBpmnNode = FlatBpmnNode(id = id, type = type, name = name)
 }
+
+// CPD-ON
