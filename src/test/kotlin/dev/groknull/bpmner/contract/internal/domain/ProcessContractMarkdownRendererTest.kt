@@ -42,8 +42,8 @@ class ProcessContractMarkdownRendererTest {
             - actor-warehouse: Warehouse (fulfilment)
 
             ## Activities
-            - a-pack: Pack order (actor: actor-warehouse)
-            - a-ship: Ship order (actor: actor-warehouse)
+            - a-pack: Pack order (actor: actor-warehouse) [SERVICE]
+            - a-ship: Ship order (actor: actor-warehouse) [SERVICE]
 
             ## Decisions
             - d-stock: Is the item in stock?
@@ -57,7 +57,7 @@ class ProcessContractMarkdownRendererTest {
             - throw-invoice: Notify invoice ready [MESSAGE messageName="invoice ready"]
 
             ## End states
-            - end-shipped: Order shipped
+            - end-shipped: Order shipped [NORMAL]
 
             ## Assumptions
             - assume-payment: Payment is authorised upstream (sources: ev1)
@@ -208,6 +208,37 @@ class ProcessContractMarkdownRendererTest {
             markdown.contains("- throw-esc: Escalate overdue approval [ESCALATION escalationCode=\"APPROVAL_OVERDUE\"]"),
         )
         assertTrue(!renderer.render(contract.copy(intermediateThrows = emptyList())).contains("## Intermediate throws"))
+    }
+
+    @Test
+    fun `renders SERVICE and NORMAL markers for default kind discriminators`() {
+        val sources = listOf("ev1")
+        val contract =
+            ProcessContract(
+                id = "contract-regression",
+                processName = "Toast workflow",
+                summary = "Regression: default kinds must be explicit in the prompt.",
+                trigger = "User is hungry",
+                activities =
+                listOf(
+                    ContractActivity(id = "act-toast", name = "Toast bread", sourceIds = sources),
+                ),
+                endStates =
+                listOf(
+                    ContractEndState(id = "end-served", name = "Toast served", sourceIds = sources),
+                ),
+            )
+
+        val markdown = renderer.render(contract)
+
+        assertTrue(
+            markdown.contains("[SERVICE]"),
+            "Service activity must render the [SERVICE] marker to avoid ACTIVITY_TASK_KIND_MISMATCH; got:\n$markdown",
+        )
+        assertTrue(
+            markdown.contains("[NORMAL]"),
+            "Normal end state must render the [NORMAL] marker for lossless prompt projection; got:\n$markdown",
+        )
     }
 
     @Suppress("LongMethod")

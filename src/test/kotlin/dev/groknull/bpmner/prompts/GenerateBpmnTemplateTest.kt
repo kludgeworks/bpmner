@@ -127,6 +127,23 @@ class GenerateBpmnTemplateTest {
     }
 
     @Test
+    fun `contractMarkdown contains SERVICE and NORMAL markers for default kind discriminators`() {
+        val prompt = render(
+            request = BpmnRequest(processDescription = "Handle a claim."),
+            contract = claimContract(),
+        )
+
+        assertTrue(
+            prompt.contains("[SERVICE]"),
+            "Service activity must appear as [SERVICE] in contractMarkdown to prevent ACTIVITY_TASK_KIND_MISMATCH; got:\n$prompt",
+        )
+        assertTrue(
+            prompt.contains("[NORMAL]"),
+            "Normal end state must appear as [NORMAL] in contractMarkdown for lossless prompt projection; got:\n$prompt",
+        )
+    }
+
+    @Test
     fun `template teaches event-subprocess topology and renders the trigger and members`() {
         val prompt = render(
             request = BpmnRequest(processDescription = "Review a request; escalate if overdue."),
