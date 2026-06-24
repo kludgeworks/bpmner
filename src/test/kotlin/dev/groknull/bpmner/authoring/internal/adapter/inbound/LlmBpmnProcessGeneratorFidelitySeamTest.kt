@@ -54,9 +54,9 @@ import kotlin.test.assertIs
  * converted to [RetryableBpmnGenerationException] with the violation count and per-issue
  * `- [code] message` body preserved in the exception message (ADR-004: message IS the feedback).
  *
- * [LlmBpmnProcessGeneratorTest] stays @Disabled (migrating to orchestrator). This test covers the
- * seam via [FakeOperationContext] + a mocked [BpmnContractFidelityChecker] so the LLM path is
- * bypassed entirely, as permitted by PLAN §1.3 / §5 R6.
+ * [LlmBpmnProcessGeneratorTest] remains @Disabled; this test covers the seam via
+ * [FakeOperationContext] + a mocked [BpmnContractFidelityChecker] so the LLM path is bypassed
+ * entirely, as permitted by PLAN §1.3 / §5 R6.
  */
 /**
  * Kotlin-safe wrapper for Mockito.any() that avoids NPE on non-null Kotlin parameters.

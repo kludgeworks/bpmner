@@ -475,7 +475,7 @@ class FlatBpmnDefinitionMapperTest {
     }
 
     // --- Convert-site tests (sites 1-3): defensive else branches in dispatch helpers ---
-    // These branches guard against future enum additions that are not yet dispatched.
+    // These branches handle unrecognised node kinds produced by LLM output.
 
     // Site 1: toTaskNode called with non-task kind
     @Test

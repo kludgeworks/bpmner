@@ -595,8 +595,8 @@ class FlatContractMapperTest {
     )
 
     // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.
-    // The else branch is defensive — guards against future FlatActivityKind additions that are not
-    // yet dispatched to toPayloadActivity.
+    // The else branch is defensive — it handles LLM-emitted activity kinds that are not
+    // payload kinds dispatched by toPayloadActivity.
     @Test
     fun `toPayloadActivity with non-payload kind throws RetryableBpmnGenerationException`() {
         // FlatActivityKind.SERVICE is a non-payload kind; toPayloadActivity's else branch fires.
