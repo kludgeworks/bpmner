@@ -136,10 +136,12 @@ private fun branchSuffix(branch: ContractBranch): String = when (branch) {
 
 private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()
 
-// Activity-kind suffix for the markdown line. Service is the default kind so we omit
-// its label to keep the rendering quiet; Send / Receive / BusinessRule carry their
-// payload reference to keep the rendered contract self-contained for the BPMN-generation
-// LLM (otherwise it would have to walk back to the source prose for the messageName).
+// Activity-kind suffix for the markdown line. Service carries an explicit [SERVICE] marker
+// because the markdown doubles as a generation-critical LLM prompt input — omitting it
+// caused the generation LLM to default un-marked activities to USER_TASK; Send / Receive /
+// BusinessRule additionally carry their payload reference to keep the rendered contract
+// self-contained for the BPMN-generation LLM (otherwise it would have to walk back to the
+// source prose for the messageName).
 // Data reads/writes referencing the contract's artifacts, so the BPMN-generation LLM can wire a
 // READ/WRITE data association from the activity to each data object/store.
 private fun dataSuffix(activity: ContractActivity): String {
@@ -149,7 +151,7 @@ private fun dataSuffix(activity: ContractActivity): String {
 }
 
 private fun activitySuffix(activity: ContractActivity): String = when (activity) {
-    is ContractActivity.Service -> ""
+    is ContractActivity.Service -> " [SERVICE]"
     is ContractActivity.User -> " [USER]"
     is ContractActivity.Script -> " [SCRIPT]"
     is ContractActivity.BusinessRule -> " [BUSINESS_RULE decisionName=\"${activity.decisionName}\"]"
@@ -161,12 +163,13 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
     is ContractActivity.CallActivity -> " [CALL_ACTIVITY calledElement=\"${activity.calledElement}\"]"
 }
 
-// End-state-kind suffix for the markdown line. Normal is the default and gets no
-// label; the four typed kinds carry their payload identifier (errorCode / messageName
-// / signalName / escalationCode) so the BPMN-generation LLM sees the catalogue keys
-// directly without re-walking the source prose.
+// End-state-kind suffix for the markdown line. Normal carries an explicit [NORMAL] marker
+// because the markdown doubles as a generation-critical LLM prompt input — omitting it
+// caused generation ambiguity; the four typed kinds additionally carry their payload
+// identifier (errorCode / messageName / signalName / escalationCode) so the
+// BPMN-generation LLM sees the catalogue keys directly without re-walking the source prose.
 private fun endStateSuffix(endState: ContractEndState): String = when (endState) {
-    is ContractEndState.Normal -> ""
+    is ContractEndState.Normal -> " [NORMAL]"
     is ContractEndState.Terminate -> " [TERMINATE]"
     is ContractEndState.Error -> " [ERROR errorCode=\"${endState.errorCode}\"]"
     is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"

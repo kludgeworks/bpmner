@@ -111,6 +111,20 @@ class CheckAlignmentTemplateTest {
         assertTrue(prompt.contains("Make toast for breakfast."))
     }
 
+    @Test
+    fun `contractMarkdown contains SERVICE and NORMAL markers for default kind discriminators`() {
+        val prompt = render(sampleSummary())
+
+        assertTrue(
+            prompt.contains("[SERVICE]"),
+            "Service activity must appear as [SERVICE] in contractMarkdown; got:\n$prompt",
+        )
+        assertTrue(
+            prompt.contains("[NORMAL]"),
+            "Normal end state must appear as [NORMAL] in contractMarkdown; got:\n$prompt",
+        )
+    }
+
     private fun sampleSummary() = BpmnDefinitionSummary(
         processId = "Process_1",
         processName = "Make Toast",
