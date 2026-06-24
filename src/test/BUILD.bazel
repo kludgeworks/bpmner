@@ -161,7 +161,7 @@ _DATA = {
 ) for src, name in [
     (
         s,
-        s.split("/")[-1].replace(".kt", ""),
+        "RepairFlatBpmnDefinitionMapperTest" if s.endswith("repair/internal/adapter/FlatBpmnDefinitionMapperTest.kt") else s.split("/")[-1].replace(".kt", ""),
     )
     for s in glob(
         ["kotlin/**/*Test.kt"],
