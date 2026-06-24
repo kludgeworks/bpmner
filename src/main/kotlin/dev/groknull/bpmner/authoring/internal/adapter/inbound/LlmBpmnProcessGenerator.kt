@@ -7,16 +7,17 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
+import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.ProcessOutline
 import dev.groknull.bpmner.authoring.ValidatedOutline
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
-import dev.groknull.bpmner.authoring.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn

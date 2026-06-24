@@ -7,6 +7,7 @@ package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
+import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn

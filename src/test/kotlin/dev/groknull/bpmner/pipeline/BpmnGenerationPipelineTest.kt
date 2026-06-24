@@ -15,7 +15,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.prompt.PromptFixtures
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker

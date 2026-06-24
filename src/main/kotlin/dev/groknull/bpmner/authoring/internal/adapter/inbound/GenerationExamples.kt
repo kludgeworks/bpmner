@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.FlatBpmnEventDefinition
-import dev.groknull.bpmner.authoring.FlatBpmnEventDefinitionKind
-import dev.groknull.bpmner.authoring.FlatBpmnNode
-import dev.groknull.bpmner.authoring.FlatBpmnNodeKind
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnEventDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnEventDefinitionKind
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.bpmn.BpmnDataAssociation
 import dev.groknull.bpmner.bpmn.BpmnDataObject
 import dev.groknull.bpmner.bpmn.BpmnDataStore

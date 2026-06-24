@@ -7,18 +7,19 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.Retryable
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnFidelityCode
 import dev.groknull.bpmner.authoring.BpmnFidelityIssue
 import dev.groknull.bpmner.authoring.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.FlatBpmnNode
-import dev.groknull.bpmner.authoring.FlatBpmnNodeKind
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
-import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException

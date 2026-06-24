@@ -12,11 +12,11 @@ import dev.groknull.bpmner.alignment.AlignmentIssue
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.authoring.AgentPlatformBpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.FlatBpmnNode
-import dev.groknull.bpmner.authoring.FlatBpmnNodeKind
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.AgentPlatformBpmnAgentInvoker
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
