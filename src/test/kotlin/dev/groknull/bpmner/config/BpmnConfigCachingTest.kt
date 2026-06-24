@@ -8,7 +8,7 @@ package dev.groknull.bpmner.config
 import com.embabel.agent.config.models.anthropic.getAnthropicCaching
 import com.embabel.common.ai.model.LlmOptions
 import dev.groknull.bpmner.alignment.BpmnAlignmentConfig
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig

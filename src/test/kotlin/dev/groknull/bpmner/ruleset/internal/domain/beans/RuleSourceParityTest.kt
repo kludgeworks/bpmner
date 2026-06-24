@@ -7,7 +7,7 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
-import dev.groknull.bpmner.authoring.BpmnXmlToDefinitionConverter
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.BpmnXmlToDefinitionConverter
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RuleDiagnostic
 import dev.groknull.bpmner.ruleset.RuleProfile

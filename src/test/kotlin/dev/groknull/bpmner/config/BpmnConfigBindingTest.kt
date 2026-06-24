@@ -9,7 +9,7 @@ import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
 import dev.groknull.bpmner.alignment.BpmnAlignmentConfig
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig
@@ -59,7 +59,7 @@ class BpmnConfigBindingTest {
     lateinit var rulesUriConfig: BpmnRulesUriConfig
 
     @Autowired
-    lateinit var authoringConfig: BpmnAuthoringConfig
+    internal lateinit var authoringConfig: BpmnAuthoringConfig
 
     @Autowired
     lateinit var repairConfig: BpmnRepairConfig

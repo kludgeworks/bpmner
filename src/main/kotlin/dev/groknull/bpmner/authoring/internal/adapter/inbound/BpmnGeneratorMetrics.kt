@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
-import dev.groknull.bpmner.authoring.OutlineMetrics
+import dev.groknull.bpmner.authoring.internal.domain.OutlineMetrics
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
