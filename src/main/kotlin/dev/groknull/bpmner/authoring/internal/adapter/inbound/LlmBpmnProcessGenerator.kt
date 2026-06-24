@@ -7,15 +7,15 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
-import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -42,7 +42,7 @@ internal class LlmBpmnProcessGenerator(
     private val config: BpmnAuthoringConfig,
     private val logging: BpmnLoggingConfig,
     private val metricsCalculator: BpmnGeneratorMetrics,
-    private val fidelityChecker: BpmnContractFidelityPort,
+    private val fidelityChecker: BpmnContractFidelityChecker,
     private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractRenderer: ProcessContractMarkdownRenderer,
     private val graphRenderer: BpmnGraphRenderer,
@@ -123,7 +123,7 @@ internal class LlmBpmnProcessGenerator(
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
 
-        val fidelityReport = fidelityChecker.check(validatedContract.contract, outline.definition)
+        val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
         if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
             val violations =
                 fidelityReport.issues
@@ -185,6 +185,10 @@ internal class LlmBpmnProcessGenerator(
         val rendered = graphRenderer.render(graph)
         eventPublisher.publishEvent(dev.groknull.bpmner.authoring.BpmnGeneratedEvent(ready.request, rendered))
         return rendered
+    }
+
+    override fun render(graph: LaidOutProcessGraph): RenderedBpmn {
+        return graphRenderer.render(graph)
     }
 
     private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {

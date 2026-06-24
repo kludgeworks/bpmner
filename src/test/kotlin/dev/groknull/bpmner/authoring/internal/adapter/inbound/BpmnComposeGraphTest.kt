@@ -7,12 +7,12 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
-import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -38,7 +38,7 @@ class BpmnComposeGraphTest {
         config = BpmnAuthoringConfig(),
         logging = BpmnLoggingConfig(),
         metricsCalculator = Mockito.mock(BpmnGeneratorMetrics::class.java),
-        fidelityChecker = Mockito.mock(BpmnContractFidelityPort::class.java),
+        fidelityChecker = Mockito.mock(BpmnContractFidelityChecker::class.java),
         defaultFlowAssigner = Mockito.mock(BpmnDefaultFlowPort::class.java),
         contractRenderer = Mockito.mock(ProcessContractMarkdownRenderer::class.java),
         graphRenderer = Mockito.mock(BpmnGraphRenderer::class.java),

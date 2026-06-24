@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
-import dev.groknull.bpmner.authoring.BpmnRenderer
+import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
@@ -31,7 +31,7 @@ internal class BpmnRepairAdvancer(
     private val attemptRecordFactory: BpmnAttemptRecordFactory,
     private val promptFactory: BpmnRepairPromptPort,
     private val fingerprints: BpmnFingerprintService,
-    private val bpmnRenderer: BpmnRenderer,
+    private val processGenerator: BpmnProcessGenerator,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnRepairAdvancer::class.java)
 
@@ -105,7 +105,7 @@ internal class BpmnRepairAdvancer(
         val nextGraph = prior.graph.withUpdatedDefinition(stamped)
         var renderFailureMessage: String? = null
         val nextRendered = try {
-            bpmnRenderer.render(nextGraph)
+            processGenerator.render(nextGraph)
         } catch (e: IllegalStateException) {
             renderFailureMessage = e.message ?: e.javaClass.simpleName
             null

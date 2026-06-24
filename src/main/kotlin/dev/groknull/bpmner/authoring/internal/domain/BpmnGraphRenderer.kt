@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.authoring.internal.domain
 
-import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import org.springframework.stereotype.Component

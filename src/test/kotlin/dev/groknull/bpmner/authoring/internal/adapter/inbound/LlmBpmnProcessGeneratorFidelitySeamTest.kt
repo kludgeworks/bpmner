@@ -7,18 +7,17 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.Retryable
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
-import dev.groknull.bpmner.authoring.BpmnFidelityCode
-import dev.groknull.bpmner.authoring.BpmnFidelityIssue
-import dev.groknull.bpmner.authoring.BpmnFidelityReport
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
 import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
@@ -71,7 +70,7 @@ private fun <T> anyKt(): T {
 
 @Suppress("TooManyFunctions")
 class LlmBpmnProcessGeneratorFidelitySeamTest {
-    private val mockFidelityChecker = mock(BpmnContractFidelityPort::class.java)
+    private val mockFidelityChecker = mock(BpmnContractFidelityChecker::class.java)
     private val mockDefaultFlowAssigner = mock(BpmnDefaultFlowPort::class.java)
 
     private val generator = LlmBpmnProcessGenerator(
@@ -156,7 +155,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
                 contractElementId = "dec1",
             ),
         )
-        `when`(mockFidelityChecker.check(anyKt(), anyKt()))
+        `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt()))
             .thenReturn(BpmnFidelityReport(issues = errorIssues))
 
         val ex = assertFailsWith<RetryableBpmnGenerationException> {

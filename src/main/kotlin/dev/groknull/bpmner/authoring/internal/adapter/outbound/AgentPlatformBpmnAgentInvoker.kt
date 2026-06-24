@@ -10,9 +10,9 @@ import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
-import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
+import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentInvoker
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter

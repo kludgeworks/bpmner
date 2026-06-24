@@ -7,7 +7,6 @@
 
 package dev.groknull.bpmner.authoring.internal.domain
 
-import dev.groknull.bpmner.authoring.BpmnFidelityCode
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
@@ -60,7 +59,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `valid loop with back-edge passes`() {
-        val report = checker.check(repairLoopContract(), repairLoopDefinitionWithBackEdge())
+        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionWithBackEdge())
 
         assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
     }
@@ -68,7 +67,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `matching multi-instance activity passes`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 miContract(MultiInstanceMode.PARALLEL),
                 miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each reviewer")),
             )
@@ -78,7 +77,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `multi-instance contract realised without the marker flagged`() {
-        val report = checker.check(miContract(MultiInstanceMode.PARALLEL), miDefinition(multiInstance = null))
+        val report = checker.checkDetailed(miContract(MultiInstanceMode.PARALLEL), miDefinition(multiInstance = null))
 
         assertFalse(report.isValid)
         assertTrue(
@@ -90,7 +89,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `multi-instance mode disagreement flagged`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 miContract(MultiInstanceMode.PARALLEL),
                 miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.SEQUENTIAL, "each reviewer")),
             )
@@ -114,7 +113,7 @@ class BpmnContractFidelityCheckerTest {
         )
 
         val report =
-            checker.check(
+            checker.checkDetailed(
                 contract,
                 miDefinition(MultiInstanceLoopCharacteristics(MultiInstanceMode.PARALLEL, "each reviewer")),
             )
@@ -162,7 +161,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `embedded subprocess realised correctly passes`() {
-        val report = checker.check(subProcessContract(), subProcessDefinition())
+        val report = checker.checkDetailed(subProcessContract(), subProcessDefinition())
 
         assertTrue(report.isValid, "expected valid; got ${report.issues}")
     }
@@ -170,7 +169,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `subprocess member left on the outer flow flags SUBPROCESS_MEMBER_NOT_NESTED`() {
         // act-validate is realised with no parentRef — left on the enclosing flow, not nested.
-        val report = checker.check(subProcessContract(), subProcessDefinition(validateParent = null))
+        val report = checker.checkDetailed(subProcessContract(), subProcessDefinition(validateParent = null))
 
         val codes = report.issues.map { it.code }
         assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED), "got $codes")
@@ -180,7 +179,7 @@ class BpmnContractFidelityCheckerTest {
     fun `sequence flow crossing the subprocess boundary flags SUBPROCESS_BOUNDARY_CROSSED`() {
         // An edge from the outer act-pay directly to the inner act-validate crosses the boundary.
         val crossing = BpmnEdge("Fx", "act-pay", "act-validate")
-        val report = checker.check(subProcessContract(), subProcessDefinition(extra = listOf(crossing)))
+        val report = checker.checkDetailed(subProcessContract(), subProcessDefinition(extra = listOf(crossing)))
 
         val codes = report.issues.map { it.code }
         assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_BOUNDARY_CROSSED), "got $codes")
@@ -197,7 +196,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
         }
-        val report = checker.check(subProcessContract(), definition)
+        val report = checker.checkDetailed(subProcessContract(), definition)
 
         val codes = report.issues.map { it.code }
         assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_MEMBER_NOT_NESTED), "got $codes")
@@ -212,7 +211,7 @@ class BpmnContractFidelityCheckerTest {
         val definition = subProcessDefinition().let { def ->
             def.copy(nodes = def.nodes.filterNot { it.id == "sub-assess" })
         }
-        val report = checker.check(subProcessContract(), definition)
+        val report = checker.checkDetailed(subProcessContract(), definition)
 
         val codes = report.issues.map { it.code }
         assertTrue(codes.contains(BpmnFidelityCode.SUBPROCESS_NODE_MISSING), "got $codes")
@@ -228,7 +227,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
         }
-        val report = checker.check(subProcessContract(), definition)
+        val report = checker.checkDetailed(subProcessContract(), definition)
 
         val codes = report.issues.map { it.code }
         assertTrue(codes.contains(BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH), "got $codes")
@@ -283,7 +282,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `event subprocess realised correctly passes`() {
-        val report = checker.check(eventSubProcessContract(), eventSubProcessDefinition())
+        val report = checker.checkDetailed(eventSubProcessContract(), eventSubProcessDefinition())
 
         assertTrue(report.isValid, "expected valid; got ${report.issues}")
     }
@@ -293,7 +292,7 @@ class BpmnContractFidelityCheckerTest {
         val definition = eventSubProcessDefinition().let { def ->
             def.copy(nodes = def.nodes.filterNot { it.id == "esp-overdue" })
         }
-        val report = checker.check(eventSubProcessContract(), definition)
+        val report = checker.checkDetailed(eventSubProcessContract(), definition)
 
         assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_NODE_MISSING))
     }
@@ -307,7 +306,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
         }
-        val report = checker.check(eventSubProcessContract(), definition)
+        val report = checker.checkDetailed(eventSubProcessContract(), definition)
 
         assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED))
     }
@@ -326,7 +325,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
         }
-        val report = checker.check(eventSubProcessContract(), definition)
+        val report = checker.checkDetailed(eventSubProcessContract(), definition)
 
         assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_START_MISMATCH))
     }
@@ -350,7 +349,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
         }
-        val report = checker.check(eventSubProcessContract(), definition)
+        val report = checker.checkDetailed(eventSubProcessContract(), definition)
 
         assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_INTERRUPTING_MISMATCH))
     }
@@ -407,14 +406,14 @@ class BpmnContractFidelityCheckerTest {
     fun `matching standard loop activity passes`() {
         val loop = ContractLoop(testBefore = false, loopCondition = "payment failed", loopMaximum = 3)
         val marker = StandardLoopCharacteristics(testBefore = false, loopCondition = "payment failed", loopMaximum = 3)
-        val report = checker.check(loopContract(loop), loopDefinition(marker))
+        val report = checker.checkDetailed(loopContract(loop), loopDefinition(marker))
 
         assertTrue(report.isValid, "expected valid; got ${report.issues}")
     }
 
     @Test
     fun `standard loop contract realised without the marker flagged`() {
-        val report = checker.check(loopContract(ContractLoop(testBefore = false)), loopDefinition(standardLoop = null))
+        val report = checker.checkDetailed(loopContract(ContractLoop(testBefore = false)), loopDefinition(standardLoop = null))
 
         assertTrue(
             report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
@@ -433,7 +432,7 @@ class BpmnContractFidelityCheckerTest {
             endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Charged")),
         )
 
-        val report = checker.check(contract, loopDefinition(StandardLoopCharacteristics(testBefore = false)))
+        val report = checker.checkDetailed(contract, loopDefinition(StandardLoopCharacteristics(testBefore = false)))
 
         assertTrue(
             report.issues.any { it.code == BpmnFidelityCode.ACTIVITY_STANDARD_LOOP_MISMATCH },
@@ -444,7 +443,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `standard loop testBefore disagreement flagged`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 loopContract(ContractLoop(testBefore = false, loopCondition = "payment not yet successful")),
                 loopDefinition(StandardLoopCharacteristics(testBefore = true, loopCondition = "payment not yet successful")),
             )
@@ -458,7 +457,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `standard loop condition disagreement flagged`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 loopContract(ContractLoop(testBefore = false, loopCondition = "payment not yet successful")),
                 loopDefinition(StandardLoopCharacteristics(testBefore = false, loopCondition = "shipment not yet confirmed")),
             )
@@ -472,7 +471,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `standard loop maximum disagreement flagged`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 loopContract(ContractLoop(testBefore = false, loopMaximum = 3)),
                 loopDefinition(StandardLoopCharacteristics(testBefore = false, loopMaximum = 5)),
             )
@@ -513,7 +512,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `missing branch flow flagged as BRANCH_FLOW_MISSING`() {
         // Definition lacks the back-edge from dec-validate to act-strategy-1
-        val report = checker.check(repairLoopContract(), repairLoopDefinitionFlattened())
+        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionFlattened())
 
         assertFalse(report.isValid)
         assertTrue(
@@ -525,7 +524,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `branch flow through unnamed converging exclusive join passes`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 skipForwardContract(),
                 skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_join", name = null)),
             )
@@ -538,7 +537,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `branch flow through unnamed converging parallel join passes`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 skipForwardContract(),
                 skipForwardViaJoinDefinition(join = BpmnParallelGateway("Gateway_join", name = null)),
             )
@@ -552,7 +551,7 @@ class BpmnContractFidelityCheckerTest {
     fun `branch flow through named gateway still flagged as BRANCH_FLOW_MISSING`() {
         // A named gateway carries semantic content — it's not transparent. The walk must stop there.
         val report =
-            checker.check(
+            checker.checkDetailed(
                 skipForwardContract(),
                 skipForwardViaJoinDefinition(join = BpmnExclusiveGateway("Gateway_named", name = "Re-check?")),
             )
@@ -566,7 +565,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `branch flow through gateway with multiple outbounds still flagged as BRANCH_FLOW_MISSING`() {
         // A converging gateway that fans out again is a fork, not a transparent merge.
-        val report = checker.check(skipForwardContract(), skipForwardViaMultiOutboundJoinDefinition())
+        val report = checker.checkDetailed(skipForwardContract(), skipForwardViaMultiOutboundJoinDefinition())
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
     }
@@ -574,7 +573,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `branch flow through user task still flagged as BRANCH_FLOW_MISSING`() {
         // Only gateways qualify as transparent today; tasks must never be skipped over.
-        val report = checker.check(skipForwardContract(), skipForwardViaTaskDefinition())
+        val report = checker.checkDetailed(skipForwardContract(), skipForwardViaTaskDefinition())
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_FLOW_MISSING })
     }
@@ -582,7 +581,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `gateway with too few outbound flows flagged as GATEWAY_BRANCH_COUNT_INSUFFICIENT`() {
         // Definition has the gateway but only one outbound (collapsed branches)
-        val report = checker.check(repairLoopContract(), repairLoopDefinitionWithCollapsedBranches())
+        val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionWithCollapsedBranches())
 
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.GATEWAY_BRANCH_COUNT_INSUFFICIENT })
@@ -593,7 +592,7 @@ class BpmnContractFidelityCheckerTest {
         val contract = unresolvedRefContract()
         val definition = unresolvedRefDefinition()
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertFalse(report.isValid)
         assertTrue(report.issues.any { it.code == BpmnFidelityCode.BRANCH_NEXT_REF_UNRESOLVED })
@@ -605,7 +604,7 @@ class BpmnContractFidelityCheckerTest {
         val contract = unresolvedRefContract()
         val definitionWithoutDecisionNode = unresolvedRefDefinition()
 
-        val report = checker.check(contract, definitionWithoutDecisionNode)
+        val report = checker.checkDetailed(contract, definitionWithoutDecisionNode)
 
         assertTrue(
             report.issues.any { it.code == BpmnFidelityCode.DECISION_GATEWAY_MISSING },
@@ -653,7 +652,7 @@ class BpmnContractFidelityCheckerTest {
                 ),
             )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertFalse(report.isValid)
         assertTrue(
@@ -671,7 +670,7 @@ class BpmnContractFidelityCheckerTest {
         // Happy path: contract declares Terminate end; BPMN end event carries
         // BpmnTerminateEventDefinition. No fidelity issue should fire.
         val report =
-            checker.check(
+            checker.checkDetailed(
                 typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
                 typedEndStateDefinition("end-cancelled", BpmnTerminateEventDefinition),
             )
@@ -683,7 +682,7 @@ class BpmnContractFidelityCheckerTest {
         // Contract declares Terminate, BPMN realises it with NoneEventDefinition — the
         // terminate-scope semantic is lost. END_EVENT_KIND_MISMATCH should fire.
         val report =
-            checker.check(
+            checker.checkDetailed(
                 typedEndStateContract(ContractEndState.Terminate("end-cancelled", "Cancelled")),
                 typedEndStateDefinition("end-cancelled", BpmnNoneEventDefinition),
             )
@@ -741,7 +740,7 @@ class BpmnContractFidelityCheckerTest {
                 ),
             )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertFalse(report.isValid)
         assertTrue(
@@ -758,7 +757,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `intermediate throw with matching event definition passes fidelity`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 typedIntermediateThrowContract(
                     ContractIntermediateThrow.Signal("throw-stock", "Broadcast stock change", "stock changed"),
                 ),
@@ -771,7 +770,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `missing intermediate throw node flagged as INTERMEDIATE_THROW_KIND_MISMATCH`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 typedIntermediateThrowContract(
                     ContractIntermediateThrow.Message("throw-invoice", "Send invoice notice", "invoice ready"),
                 ),
@@ -800,7 +799,7 @@ class BpmnContractFidelityCheckerTest {
                     ),
                 )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertFalse(report.isValid)
         assertTrue(
@@ -816,7 +815,7 @@ class BpmnContractFidelityCheckerTest {
     @Test
     fun `intermediate throw with wrong event definition flagged as INTERMEDIATE_THROW_KIND_MISMATCH`() {
         val report =
-            checker.check(
+            checker.checkDetailed(
                 typedIntermediateThrowContract(
                     ContractIntermediateThrow.Escalation("throw-overdue", "Escalate overdue", "APPROVAL_OVERDUE"),
                 ),
@@ -937,7 +936,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
 
-        val report = checker.check(contract, withDecisionAsTask)
+        val report = checker.checkDetailed(contract, withDecisionAsTask)
 
         assertTrue(
             report.issues.any {
@@ -1015,7 +1014,7 @@ class BpmnContractFidelityCheckerTest {
                 ),
             )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertTrue(report.isValid, "forward-skip must not flag any fidelity issue; got: ${report.issues}")
     }
@@ -1093,7 +1092,7 @@ class BpmnContractFidelityCheckerTest {
                 ),
             )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertFalse(report.isValid)
         val countIssues =
@@ -1110,7 +1109,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `PARALLEL decision realized as BpmnParallelGateway passes`() {
-        val report = checker.check(parallelForkContract(), parallelForkDefinition(useParallelFork = true))
+        val report = checker.checkDetailed(parallelForkContract(), parallelForkDefinition(useParallelFork = true))
 
         assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
     }
@@ -1119,7 +1118,7 @@ class BpmnContractFidelityCheckerTest {
     fun `PARALLEL decision realized as BpmnExclusiveGateway flagged as DECISION_GATEWAY_KIND_MISMATCH`() {
         // Generator emitted EXCLUSIVE for the fork — the bug employee-onboarding hit. The
         // alignment LLM caught it semantically; the fidelity checker must catch it structurally.
-        val report = checker.check(parallelForkContract(), parallelForkDefinition(useParallelFork = false))
+        val report = checker.checkDetailed(parallelForkContract(), parallelForkDefinition(useParallelFork = false))
 
         assertFalse(report.isValid)
         val mismatches = report.issues.filter { it.code == BpmnFidelityCode.DECISION_GATEWAY_KIND_MISMATCH }
@@ -1150,7 +1149,7 @@ class BpmnContractFidelityCheckerTest {
                 },
             )
 
-        val report = checker.check(contract, withParallelGateway)
+        val report = checker.checkDetailed(contract, withParallelGateway)
 
         assertFalse(report.isValid)
         assertTrue(
@@ -1191,7 +1190,7 @@ class BpmnContractFidelityCheckerTest {
                 sequences = listOf(BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "end-done")),
             )
 
-        val report = checker.check(contract, definition)
+        val report = checker.checkDetailed(contract, definition)
 
         assertEquals(0, report.issues.size)
         assertTrue(report.isValid)
@@ -1199,7 +1198,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `DefaultBranch without isDefault edge flagged as DEFAULT_FLOW_MISSING`() {
-        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoIsDefault())
+        val report = checker.checkDetailed(defaultBranchContract(), defaultBranchDefinitionNoIsDefault())
 
         assertFalse(report.isValid)
         val dfm = report.issues.filter { it.code == BpmnFidelityCode.DEFAULT_FLOW_MISSING }
@@ -1210,7 +1209,7 @@ class BpmnContractFidelityCheckerTest {
 
     @Test
     fun `DefaultBranch with isDefault edge passes`() {
-        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionWithIsDefault())
+        val report = checker.checkDetailed(defaultBranchContract(), defaultBranchDefinitionWithIsDefault())
 
         assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
     }
@@ -1219,7 +1218,7 @@ class BpmnContractFidelityCheckerTest {
     fun `DefaultBranch with gateway missing entirely does NOT fire DEFAULT_FLOW_MISSING`() {
         // The gateway is absent → DECISION_GATEWAY_MISSING catches this first.
         // DEFAULT_FLOW_MISSING must not fire because `gatewayIsValid` is false.
-        val report = checker.check(defaultBranchContract(), defaultBranchDefinitionNoGateway())
+        val report = checker.checkDetailed(defaultBranchContract(), defaultBranchDefinitionNoGateway())
 
         assertFalse(report.isValid)
         assertTrue(

@@ -6,10 +6,6 @@
 package dev.groknull.bpmner.authoring.internal.domain
 
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
-import dev.groknull.bpmner.authoring.BpmnFidelityCode
-import dev.groknull.bpmner.authoring.BpmnFidelityIssue
-import dev.groknull.bpmner.authoring.BpmnFidelityReport
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
@@ -41,6 +37,10 @@ import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.isSemanticallyTransparent
 import dev.groknull.bpmner.bpmn.typeName
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -90,6 +90,26 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
     override fun check(
+        contract: ProcessContract,
+        definition: BpmnDefinition,
+    ): List<BpmnDiagnostic> {
+        val report = checkDetailed(contract, definition)
+        return report.issues.map { issue ->
+            BpmnDiagnostic(
+                source = BpmnDiagnosticSource.GRAPH,
+                message = "[${issue.code}] ${issue.message}",
+                elementId = issue.bpmnElementId,
+                repairScope = BpmnRepairScope.FULL_PROCESS,
+                severity = if (issue.severity == BpmnFidelitySeverity.ERROR) {
+                    BpmnDiagnosticSeverity.ERROR
+                } else {
+                    BpmnDiagnosticSeverity.WARNING
+                },
+            )
+        }
+    }
+
+    fun checkDetailed(
         contract: ProcessContract,
         definition: BpmnDefinition,
     ): BpmnFidelityReport {
