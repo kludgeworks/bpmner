@@ -14,6 +14,7 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentLauncher
 import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
@@ -46,6 +47,7 @@ internal class LlmBpmnProcessGenerator(
     private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractRenderer: ProcessContractMarkdownRenderer,
     private val graphRenderer: BpmnGraphRenderer,
+    private val agentLauncher: BpmnAgentLauncher,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnProcessGenerator {
     private val logger = LoggerFactory.getLogger(LlmBpmnProcessGenerator::class.java)
@@ -189,6 +191,10 @@ internal class LlmBpmnProcessGenerator(
 
     override fun render(graph: LaidOutProcessGraph): RenderedBpmn {
         return graphRenderer.render(graph)
+    }
+
+    override fun startAsync(request: BpmnRequest): String {
+        return agentLauncher.startAsync(request)
     }
 
     private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {

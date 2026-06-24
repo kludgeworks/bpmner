@@ -13,6 +13,7 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinitio
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentLauncher
 import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
@@ -81,6 +82,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         defaultFlowAssigner = mockDefaultFlowAssigner,
         contractRenderer = ProcessContractMarkdownRenderer(),
         graphRenderer = mock(BpmnGraphRenderer::class.java),
+        agentLauncher = mock(BpmnAgentLauncher::class.java),
         eventPublisher = mock(ApplicationEventPublisher::class.java),
     )
 

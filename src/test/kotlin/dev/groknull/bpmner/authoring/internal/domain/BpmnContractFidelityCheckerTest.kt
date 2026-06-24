@@ -27,6 +27,9 @@ import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
@@ -62,6 +65,22 @@ class BpmnContractFidelityCheckerTest {
         val report = checker.checkDetailed(repairLoopContract(), repairLoopDefinitionWithBackEdge())
 
         assertTrue(report.isValid, "expected valid report, got: ${report.issues}")
+    }
+
+    @Test
+    fun `public check maps issues to diagnostics`() {
+        val diagnostics = checker.check(miContract(MultiInstanceMode.PARALLEL), miDefinition(multiInstance = null))
+
+        assertEquals(1, diagnostics.size)
+        val diag = diagnostics.first()
+        assertEquals(BpmnDiagnosticSource.GRAPH, diag.source)
+        assertEquals(BpmnDiagnosticSeverity.ERROR, diag.severity)
+        assertEquals("act-review", diag.elementId)
+        assertEquals(BpmnRepairScope.FULL_PROCESS, diag.repairScope)
+        assertTrue(
+            diag.message.contains("ACTIVITY_ITERATION_MODE_MISMATCH"),
+            "Expected message to contain issue code, got: ${diag.message}",
+        )
     }
 
     @Test

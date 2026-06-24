@@ -12,6 +12,7 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentLauncher
 import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
 import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
@@ -42,6 +43,7 @@ class BpmnComposeGraphTest {
         defaultFlowAssigner = Mockito.mock(BpmnDefaultFlowPort::class.java),
         contractRenderer = Mockito.mock(ProcessContractMarkdownRenderer::class.java),
         graphRenderer = Mockito.mock(BpmnGraphRenderer::class.java),
+        agentLauncher = Mockito.mock(BpmnAgentLauncher::class.java),
         eventPublisher = Mockito.mock(ApplicationEventPublisher::class.java),
     )
 
