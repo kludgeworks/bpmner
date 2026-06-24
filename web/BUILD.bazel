@@ -73,7 +73,7 @@ esbuild(
         "sourcemap": False,
     },
     entry_point = "src/preview.ts",
-    format = "iife",
+    format = "esm",
     output = "dist/preview/preview-bundle.js",
     platform = "browser",
     target = "es2022",

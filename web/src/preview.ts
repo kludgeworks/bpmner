@@ -34,13 +34,9 @@ function showError(error: unknown): void {
 	errorElement.style.display = "block"
 }
 
-async function renderPreview(): Promise<void> {
-	try {
-		await viewer.importXML(previewXml())
-		;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
-	} catch (error) {
-		showError(error)
-	}
+try {
+	await viewer.importXML(previewXml())
+	;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
+} catch (error) {
+	showError(error)
 }
-
-void renderPreview()
