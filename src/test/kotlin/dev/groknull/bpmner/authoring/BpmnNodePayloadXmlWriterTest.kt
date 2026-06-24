@@ -30,6 +30,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 
 class BpmnNodePayloadXmlWriterTest {
     private val writer = BpmnNodePayloadXmlWriter()
@@ -154,7 +155,7 @@ class BpmnNodePayloadXmlWriterTest {
         assertContains(ex.message!!, "Task 'task1' has a standard-loop marker but no task element was rendered for it")
     }
 
-    // Site 7: task element id not found in XML
+    // Site 7: data association with task element id not found in XML
     @Test
     fun `data association with undefined task element throws RetryableBpmnGenerationException`() {
         val definition = BpmnDefinition(
@@ -184,7 +185,8 @@ class BpmnNodePayloadXmlWriterTest {
         val ex = assertFailsWith<RetryableBpmnGenerationException> {
             writer.write(parseXml(xml), definition)
         }
-        assertContains(ex.message!!, "Task element with id='task1' not found in rendered XML")
+        // Site 4: data association sourceRef not found in rendered task elements
+        assertContains(ex.message!!, "sourceRef 'task1' has no rendered task element")
     }
 
     // Site 8: event element not located in XML
@@ -256,9 +258,11 @@ class BpmnNodePayloadXmlWriterTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        val result = writer.write(parseXml(xml), definition)
+        val doc = parseXml(xml)
+        val result = writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
 
-        assertXml(xml).nodesByXPath("//bpmn:sendTask[@messageRef='Message_Some']").exist()
+        assertXml(serialized).nodesByXPath("//bpmn:sendTask[@messageRef='Message_Some']").exist()
         assertFalse(result, "bpmner namespace should not be used for messageRef")
     }
 
@@ -294,9 +298,11 @@ class BpmnNodePayloadXmlWriterTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        writer.write(parseXml(xml), definition)
+        val doc = parseXml(xml)
+        writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
 
-        assertXml(xml).nodesByXPath("//bpmn:receiveTask[@messageRef='Message_Ack']").exist()
+        assertXml(serialized).nodesByXPath("//bpmn:receiveTask[@messageRef='Message_Ack']").exist()
     }
 
     // Helper for task element access
@@ -330,9 +336,11 @@ class BpmnNodePayloadXmlWriterTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        writer.write(parseXml(xml), definition)
+        val doc = parseXml(xml)
+        writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
 
-        assertXml(xml).nodesByXPath("//bpmn:startEvent[@id='start']/bpmn:messageEventDefinition").exist()
+        assertXml(serialized).nodesByXPath("//bpmn:startEvent[@id='start']/bpmn:messageEventDefinition").exist()
     }
 
     @Test
@@ -363,44 +371,10 @@ class BpmnNodePayloadXmlWriterTest {
             </bpmn:definitions>
         """.trimIndent()
 
-        writer.write(parseXml(xml), definition)
+        val doc = parseXml(xml)
+        writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
 
-        assertXml(xml).nodesByXPath("//bpmn:endEvent[@id='end']/bpmn:messageEventDefinition").exist()
-    }
-
-    @Test
-    fun `receive task with messageRef renders correctly`() {
-        val definition = BpmnDefinition(
-            processId = "Process_1",
-            processName = "Test",
-            nodes = listOf(
-                BpmnStartEvent("start", "Start"),
-                BpmnReceiveTask(
-                    "recv1",
-                    "Receive message",
-                    messageRef = "Message_Ack",
-                ),
-                BpmnEndEvent("end", "End"),
-            ),
-            sequences = listOf(
-                dev.groknull.bpmner.bpmn.BpmnEdge("f1", "start", "recv1"),
-                dev.groknull.bpmner.bpmn.BpmnEdge("f2", "recv1", "end"),
-            ),
-            messages = listOf(BpmnMessageRef("Message_Ack", "Ack message")),
-        )
-
-        val xml = """
-            <bpmn:definitions xmlns:bpmn="$BPMN_NS">
-                <bpmn:process id="Process_1" name="Test">
-                    <bpmn:startEvent id="start"/>
-                    <bpmn:receiveTask id="recv1"/>
-                    <bpmn:endEvent id="end"/>
-                </bpmn:process>
-            </bpmn:definitions>
-        """.trimIndent()
-
-        writer.write(parseXml(xml), definition)
-
-        assertXml(xml).nodesByXPath("//bpmn:receiveTask[@messageRef='Message_Ack']").exist()
+        assertXml(serialized).nodesByXPath("//bpmn:endEvent[@id='end']/bpmn:messageEventDefinition").exist()
     }
 }

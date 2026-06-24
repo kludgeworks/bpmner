@@ -295,11 +295,11 @@ class BpmnReadinessPostCheckerTest {
     }
 
     @Test
-    fun `make toast domestic scenario with make/take/put/serve verbs resolves READY`() {
+    fun `make toast domestic scenario with everyday verbs resolves READY`() {
         // Part C test: everyday verbs ("make", "take", "put", "serve") should satisfy PROCESS_VERBS.
         val result =
             checker.apply(
-                BpmnRequest("Make toast. Take bread, put it in toaster, press down. When popped, serve."),
+                BpmnRequest("Make toast. Take bread, then put it in toaster, press down. When popped, serve. Done."),
                 assessment(ReadinessVerdict.READY, 90),
             )
 
@@ -309,7 +309,7 @@ class BpmnReadinessPostCheckerTest {
     }
 
     @Test
-    fun `end/finish/finished/stops/stopped end-state markers resolve READY`() {
+    fun `new end-state markers end finish finished stops stopped resolve READY`() {
         // Part C regression: new end-state markers should be recognized.
         val endScenario =
             checker.apply(

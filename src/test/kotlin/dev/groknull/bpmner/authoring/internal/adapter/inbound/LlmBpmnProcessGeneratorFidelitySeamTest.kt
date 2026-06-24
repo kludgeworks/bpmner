@@ -8,12 +8,12 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 import com.embabel.agent.core.Retryable
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
-import dev.groknull.bpmner.authoring.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
+import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnFidelityCode
 import dev.groknull.bpmner.authoring.BpmnFidelityIssue
 import dev.groknull.bpmner.authoring.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
-import dev.groknull.bpmner.authoring.DefaultFlowAssigner
 import dev.groknull.bpmner.authoring.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.FlatBpmnNode
 import dev.groknull.bpmner.authoring.FlatBpmnNodeKind
@@ -37,6 +37,7 @@ import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
+import org.mockito.Mockito
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.`when`
 import org.springframework.context.ApplicationEventPublisher
@@ -57,11 +58,20 @@ import kotlin.test.assertIs
  * seam via [FakeOperationContext] + a mocked [BpmnContractFidelityChecker] so the LLM path is
  * bypassed entirely, as permitted by PLAN §1.3 / §5 R6.
  */
+/**
+ * Kotlin-safe wrapper for Mockito.any() that avoids NPE on non-null Kotlin parameters.
+ * Mockito.any() returns null in Java, which violates Kotlin's non-null contract.
+ */
+private fun <T> anyKt(): T {
+    Mockito.any<T>()
+    @Suppress("UNCHECKED_CAST")
+    return null as T
+}
+
 @Suppress("TooManyFunctions")
 class LlmBpmnProcessGeneratorFidelitySeamTest {
-    private val mockFidelityChecker = mock(BpmnContractFidelityChecker::class.java)
-    private val mockDefaultFlowAssigner = mock(DefaultFlowAssigner::class.java)
-    private val mockContractRenderer = mock(ProcessContractMarkdownRenderer::class.java)
+    private val mockFidelityChecker = mock(BpmnContractFidelityPort::class.java)
+    private val mockDefaultFlowAssigner = mock(BpmnDefaultFlowPort::class.java)
 
     private val generator = LlmBpmnProcessGenerator(
         config = BpmnAuthoringConfig(),
@@ -69,7 +79,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         metricsCalculator = BpmnGeneratorMetrics(),
         fidelityChecker = mockFidelityChecker,
         defaultFlowAssigner = mockDefaultFlowAssigner,
-        contractRenderer = mockContractRenderer,
+        contractRenderer = ProcessContractMarkdownRenderer(),
         graphRenderer = mock(BpmnGraphRenderer::class.java),
         eventPublisher = mock(ApplicationEventPublisher::class.java),
     )
@@ -126,8 +136,10 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         val context = FakeOperationContext()
         context.expectResponse(flatLlmResponse)
 
-        val definition = flatLlmResponse.toSealed()
-        `when`(mockDefaultFlowAssigner.assign(contract, definition)).thenReturn(definition)
+        // Use any() matcher since the BpmnDefinition instance created inside createOutline is
+        // a different object from flatLlmResponse.toSealed() (even if structurally equal).
+        val stubbedDefinition = flatLlmResponse.toSealed()
+        `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
 
         val errorIssues = listOf(
             BpmnFidelityIssue(
@@ -143,7 +155,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
                 contractElementId = "dec1",
             ),
         )
-        `when`(mockFidelityChecker.check(contract, definition))
+        `when`(mockFidelityChecker.check(anyKt(), anyKt()))
             .thenReturn(BpmnFidelityReport(issues = errorIssues))
 
         val ex = assertFailsWith<RetryableBpmnGenerationException> {
