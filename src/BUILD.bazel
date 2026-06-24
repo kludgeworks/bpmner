@@ -43,6 +43,12 @@ java_library(
     resources = ["//web:static_assets"],
 )
 
+java_library(
+    name = "preview_bundle_resources",
+    resource_strip_prefix = "web/dist",
+    resources = ["//web:preview_bundle"],
+)
+
 filegroup(
     name = "bazelrun_samples",
     srcs = [
@@ -62,6 +68,7 @@ kt_jvm_library(
     resources = glob(["main/resources/**"]),
     deps = [
         ":layout_bundle_resources",
+        ":preview_bundle_resources",
         ":web_bundle_resources",
         ":web_static_resources",
         "//linter/pkl:pkl_runtime_resources",

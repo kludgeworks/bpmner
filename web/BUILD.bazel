@@ -66,6 +66,20 @@ esbuild(
     deps = WEB_TS_DEPS,
 )
 
+esbuild(
+    name = "preview_bundle",
+    srcs = WEB_SRCS,
+    config = {
+        "sourcemap": False,
+    },
+    entry_point = "src/preview.ts",
+    format = "iife",
+    output = "dist/preview/preview-bundle.js",
+    platform = "browser",
+    target = "es2022",
+    deps = WEB_TS_DEPS,
+)
+
 filegroup(
     name = "static_assets",
     srcs = WEB_STATIC_ASSETS,

@@ -1,0 +1,43 @@
+<!doctype html>
+<!--
+  Copyright 2026 The Project Contributors
+  SPDX-License-Identifier: MIT
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BPMN Preview</title>
+  <style>
+    html,
+    body,
+    #canvas {
+      height: 100%;
+      margin: 0;
+      width: 100%;
+    }
+
+    #preview-error {
+      background: #fff1f2;
+      border: 1px solid #fda4af;
+      color: #9f1239;
+      display: none;
+      font-family: system-ui, sans-serif;
+      left: 1rem;
+      padding: 0.75rem 1rem;
+      position: fixed;
+      right: 1rem;
+      top: 1rem;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body>
+  <div id="preview-error" role="alert"></div>
+  <div id="canvas" aria-label="BPMN preview canvas"></div>
+  <script type="application/json" id="bpmn-preview-xml">"__BPMN_XML_JSON__"</script>
+  <script>
+__PREVIEW_BUNDLE_JS__
+  </script>
+</body>
+</html>
