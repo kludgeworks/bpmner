@@ -137,11 +137,11 @@ private fun branchSuffix(branch: ContractBranch): String = when (branch) {
 private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.let { " → $it" }.orEmpty()
 
 // Activity-kind suffix for the markdown line. Service carries an explicit [SERVICE] marker
-// because the markdown doubles as a generation-critical LLM prompt input — omitting it
-// caused the generation LLM to default un-marked activities to USER_TASK; Send / Receive /
-// BusinessRule additionally carry their payload reference to keep the rendered contract
-// self-contained for the BPMN-generation LLM (otherwise it would have to walk back to the
-// source prose for the messageName).
+// because the markdown doubles as a generation-critical LLM prompt input; without it the
+// generation LLM has no discriminator and defaults un-marked activities to USER_TASK. Send /
+// Receive / BusinessRule additionally carry their payload reference to keep the rendered
+// contract self-contained for the BPMN-generation LLM (otherwise it would have to walk back
+// to the source prose for the messageName).
 // Data reads/writes referencing the contract's artifacts, so the BPMN-generation LLM can wire a
 // READ/WRITE data association from the activity to each data object/store.
 private fun dataSuffix(activity: ContractActivity): String {
@@ -164,10 +164,11 @@ private fun activitySuffix(activity: ContractActivity): String = when (activity)
 }
 
 // End-state-kind suffix for the markdown line. Normal carries an explicit [NORMAL] marker
-// because the markdown doubles as a generation-critical LLM prompt input — omitting it
-// caused generation ambiguity; the four typed kinds additionally carry their payload
-// identifier (errorCode / messageName / signalName / escalationCode) so the
-// BPMN-generation LLM sees the catalogue keys directly without re-walking the source prose.
+// because the markdown doubles as a generation-critical LLM prompt input; without it the
+// generation LLM has no discriminator for the default end-state kind. The four typed kinds
+// additionally carry their payload identifier (errorCode / messageName / signalName /
+// escalationCode) so the BPMN-generation LLM sees the catalogue keys directly without
+// re-walking the source prose.
 private fun endStateSuffix(endState: ContractEndState): String = when (endState) {
     is ContractEndState.Normal -> " [NORMAL]"
     is ContractEndState.Terminate -> " [TERMINATE]"
