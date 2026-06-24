@@ -83,7 +83,33 @@ class BpmnPreviewWriterTest {
         assertThat(previewHtml).doesNotContain("__BPMN_XML_JSON__")
     }
 
+    @Test
+    fun `escapes inline preview bundle script close tags`(@TempDir tempDir: Path) {
+        val writer = ClasspathBpmnPreviewWriter { path ->
+            when (path) {
+                "preview/preview-template.html" -> TEST_TEMPLATE
+                "preview/preview-bundle.js" -> "console.log('</script>'); console.log('</SCRIPT>')"
+                else -> error("unexpected resource: $path")
+            }
+        }
+        val bpmnPath = tempDir.resolve("script-safe.bpmn")
+        Files.writeString(bpmnPath, MINIMAL_BPMN, StandardCharsets.UTF_8)
+
+        val previewHtml = Files.readString(writer.writePreview(bpmnPath))
+
+        assertThat(previewHtml).contains("console.log('<\\/script>'); console.log('<\\/script>')")
+        assertThat(previewHtml).doesNotContain("console.log('</script>')")
+        assertThat(previewHtml).doesNotContain("console.log('</SCRIPT>')")
+    }
+
     private companion object {
+        val TEST_TEMPLATE: String = """
+            <script type="application/json" id="bpmn-preview-xml">
+              "__BPMN_XML_JSON__"
+            </script>
+            <script>__PREVIEW_BUNDLE_JS__</script>
+        """.trimIndent()
+
         val MINIMAL_BPMN: String = """
             <?xml version="1.0" encoding="UTF-8"?>
             <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1">
