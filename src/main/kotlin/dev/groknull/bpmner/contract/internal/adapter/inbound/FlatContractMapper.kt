@@ -93,7 +93,7 @@ public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
     -> toPayloadActivity()
 }
 
-private fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
+internal fun FlatContractActivity.toPayloadActivity(): ContractActivity = when (kind) {
     FlatActivityKind.BUSINESS_RULE -> ContractActivity.BusinessRule(
         id = id,
         name = name,

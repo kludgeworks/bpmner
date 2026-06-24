@@ -10,6 +10,7 @@ package dev.groknull.bpmner.contract.internal.adapter.inbound
 import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
@@ -30,6 +31,7 @@ import dev.groknull.bpmner.contract.boundaryEvents
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.loop
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertTrue
@@ -591,4 +593,21 @@ class FlatContractMapperTest {
         signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
         escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
     )
+
+    // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.
+    // The else branch is defensive — guards against future FlatActivityKind additions that are not
+    // yet dispatched to toPayloadActivity.
+    @Test
+    fun `toPayloadActivity with non-payload kind throws RetryableBpmnGenerationException`() {
+        // FlatActivityKind.SERVICE is a non-payload kind; toPayloadActivity's else branch fires.
+        val activity = FlatContractActivity(
+            id = "a1",
+            name = "Do work",
+            kind = FlatActivityKind.SERVICE,
+            sourceIds = listOf("ev1"),
+        )
+        val ex = assertFailsWith<RetryableBpmnGenerationException> { activity.toPayloadActivity() }
+        assertContains(ex.message!!, "toPayloadActivity called with non-payload kind")
+        assertContains(ex.message!!, "SERVICE")
+    }
 }

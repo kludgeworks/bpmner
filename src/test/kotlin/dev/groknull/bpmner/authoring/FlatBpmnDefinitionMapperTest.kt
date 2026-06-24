@@ -46,7 +46,9 @@ import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
@@ -470,6 +472,36 @@ class FlatBpmnDefinitionMapperTest {
             sealed.nodes.associate { it.id to it.parentRef },
         )
         assertEquals("sp", sealed.sequences.single().parentRef)
+    }
+
+    // --- Convert-site tests (sites 1-3): defensive else branches in dispatch helpers ---
+    // These branches guard against future enum additions that are not yet dispatched.
+
+    // Site 1: toTaskNode called with non-task kind
+    @Test
+    fun `toTaskNode with non-task kind throws RetryableBpmnGenerationException`() {
+        val node = FlatBpmnNode(id = "ev1", type = FlatBpmnNodeKind.START_EVENT, name = "Start")
+        val ex = assertFailsWith<RetryableBpmnGenerationException> { node.toTaskNode() }
+        assertContains(ex.message!!, "toTaskNode called with non-task kind")
+        assertContains(ex.message!!, "START_EVENT")
+    }
+
+    // Site 2: toGatewayNode called with non-gateway kind
+    @Test
+    fun `toGatewayNode with non-gateway kind throws RetryableBpmnGenerationException`() {
+        val node = FlatBpmnNode(id = "t1", type = FlatBpmnNodeKind.USER_TASK, name = "Task")
+        val ex = assertFailsWith<RetryableBpmnGenerationException> { node.toGatewayNode() }
+        assertContains(ex.message!!, "toGatewayNode called with non-gateway kind")
+        assertContains(ex.message!!, "USER_TASK")
+    }
+
+    // Site 3: toEventPositionNode called with non-event-position kind
+    @Test
+    fun `toEventPositionNode with non-event-position kind throws RetryableBpmnGenerationException`() {
+        val node = FlatBpmnNode(id = "u1", type = FlatBpmnNodeKind.USER_TASK, name = "Task")
+        val ex = assertFailsWith<RetryableBpmnGenerationException> { node.toEventPositionNode() }
+        assertContains(ex.message!!, "toEventPositionNode called with non-event-position kind")
+        assertContains(ex.message!!, "USER_TASK")
     }
 
     private fun flatNode(
