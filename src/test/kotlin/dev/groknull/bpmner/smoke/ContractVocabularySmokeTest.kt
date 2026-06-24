@@ -27,6 +27,7 @@ import dev.groknull.bpmner.contract.loop
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assumptions
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
@@ -73,14 +74,40 @@ class ContractVocabularySmokeTest {
     private lateinit var perTestCapture: PerTestEventCapture
 
     private fun extractContract(prose: String): ProcessContract {
-        val request = BpmnRequest(processDescription = prose.trimIndent().trim())
-        val assessment = readinessInvoker.assess(request)
-        val readyContext = ReadyBpmnContext(request = request, assessment = assessment)
-        return AgentPlatformTypedOps(agentPlatform).transform(
-            readyContext,
-            ValidatedProcessContract::class.java,
-            ProcessOptions(listeners = listOf(SuiteCostCapturer, perTestCapture)),
-        ).contract
+        try {
+            val request = BpmnRequest(processDescription = prose.trimIndent().trim())
+            val assessment = readinessInvoker.assess(request)
+            val readyContext = ReadyBpmnContext(request = request, assessment = assessment)
+            return AgentPlatformTypedOps(agentPlatform).transform(
+                readyContext,
+                ValidatedProcessContract::class.java,
+                ProcessOptions(listeners = listOf(SuiteCostCapturer, perTestCapture)),
+            ).contract
+        } catch (failure: Exception) {
+            Assumptions.assumeFalse(
+                isLiveProviderQuotaOrLimit(failure),
+                "Live LLM provider quota or request-size limit hit; skipping. Cause: ${failure.message}",
+            )
+            throw failure
+        }
+    }
+
+    private fun isLiveProviderQuotaOrLimit(failure: Throwable): Boolean {
+        return generateSequence(failure) { it.cause }.any { cause ->
+            val message = cause.message.orEmpty()
+            val normalized = message.lowercase()
+            "429" in message ||
+                "too many requests" in normalized ||
+                "rate limit" in normalized ||
+                "rate_limit_error" in normalized ||
+                "overloaded_error" in normalized ||
+                "413" in message ||
+                "tokens_limit_reached" in message ||
+                "context_length_exceeded" in normalized ||
+                "credit balance" in normalized ||
+                "400" in message &&
+                "invalid_request_error" in normalized
+        }
     }
 
     private inline fun <reified T : ContractActivity> ProcessContract.assertHasActivity() {

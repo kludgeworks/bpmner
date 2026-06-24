@@ -99,13 +99,16 @@ class LiveLlmFullPipelineSmokeTest {
             val message = cause.message.orEmpty()
             val normalized = message.lowercase()
             "429" in message ||
-                "Too Many Requests" in message ||
+                "too many requests" in normalized ||
                 "rate limit" in normalized ||
                 "rate_limit_error" in normalized ||
                 "overloaded_error" in normalized ||
                 "413" in message ||
                 "tokens_limit_reached" in message ||
-                "context_length_exceeded" in normalized
+                "context_length_exceeded" in normalized ||
+                "credit balance" in normalized ||
+                "400" in message &&
+                "invalid_request_error" in normalized
         }
     }
 }

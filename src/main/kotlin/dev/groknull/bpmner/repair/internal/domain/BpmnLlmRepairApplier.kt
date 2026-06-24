@@ -15,12 +15,12 @@ import com.embabel.agent.prompt.persona.Persona
 import com.embabel.chat.AssistantMessage
 import com.embabel.chat.UserMessage
 import com.embabel.common.ai.prompt.PromptContributor
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.toSealed
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.repair.BpmnRepairConfig
+import dev.groknull.bpmner.repair.internal.adapter.FlatBpmnDefinition
+import dev.groknull.bpmner.repair.internal.adapter.toSealed
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
