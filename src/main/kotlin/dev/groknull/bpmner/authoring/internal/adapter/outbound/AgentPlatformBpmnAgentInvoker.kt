@@ -42,16 +42,14 @@ internal class AgentPlatformBpmnAgentInvoker(
                 assessment,
             )
         process.run()
-        // Phase 4 (#219): `fromProcessStatus()` returns the goal output on COMPLETED and throws
+        // The helper `fromProcessStatus()` returns the goal output on COMPLETED and throws
         // the framework's typed status exceptions (`ProcessExecutionStuckException` when the
         // planner has no applicable action, `ProcessExecutionTerminatedException` on budget
-        // exhaustion). Replaces the prior `process.resultOfType()` which crashed silently on
-        // non-COMPLETED states and the bespoke `BpmnRefinementFailureException`.
+        // exhaustion). This replaces any usage of `process.resultOfType()` which would crash
+        // silently on non-COMPLETED states.
         //
-        // Phase 5 (#220) deliberately did NOT migrate to `AgentPlatformTypedOps.transform()`
-        // because that path uses the older `process.resultOfType()` and would lose the typed
-        // exception surface above. The TypedOps consolidation can revisit when/if Embabel
-        // changes TypedOps to use `fromProcessStatus()` internally.
+        // This does not use `AgentPlatformTypedOps.transform()` because that path uses
+        // the older `process.resultOfType()` and would lose the typed exception surface above.
         val execution = AgentProcessExecution.fromProcessStatus(request, process)
         return BpmnResult::class.java.cast(execution.output)
     }
@@ -94,7 +92,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     }
 
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
-    // is short-lived and never queried for status — Phase 5 (#220) made this explicit.
+    // is short-lived and never queried for status.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         ephemeral = true,

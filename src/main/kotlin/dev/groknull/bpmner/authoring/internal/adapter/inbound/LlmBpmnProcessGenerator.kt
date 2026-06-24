@@ -7,6 +7,7 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
@@ -14,16 +15,19 @@ import dev.groknull.bpmner.authoring.ValidatedOutline
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
-import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentLauncher
-import dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker
+import dev.groknull.bpmner.authoring.internal.domain.BpmnAgentInvoker
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
 import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
-import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
+import dev.groknull.bpmner.authoring.internal.domain.BpmnRenderer
 import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.conformance.BpmnRepairScope
@@ -43,11 +47,11 @@ internal class LlmBpmnProcessGenerator(
     private val config: BpmnAuthoringConfig,
     private val logging: BpmnLoggingConfig,
     private val metricsCalculator: BpmnGeneratorMetrics,
-    private val fidelityChecker: BpmnContractFidelityChecker,
+    private val fidelityChecker: BpmnContractFidelityPort,
     private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractRenderer: ProcessContractMarkdownRenderer,
-    private val graphRenderer: BpmnGraphRenderer,
-    private val agentLauncher: BpmnAgentLauncher,
+    private val renderer: BpmnRenderer,
+    private val agentInvoker: BpmnAgentInvoker,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnProcessGenerator {
     private val logger = LoggerFactory.getLogger(LlmBpmnProcessGenerator::class.java)
@@ -59,12 +63,12 @@ internal class LlmBpmnProcessGenerator(
     /**
      * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
      *
-     * Phase 5 (#220) collapsed the previous two-action shape (`createProcessOutline` + `validateOutline`)
-     * because the LLM call and its deterministic post-validation are one logical step. The
-     * `?: error("Outline generator failed…")` defense that lived on the prior `createObject` call is
-     * gone with the inline — `createObject` returns non-null by Embabel's contract and throws
-     * `InvalidLlmReturnFormatException` on failure (see [Embabel `LlmOperations.createObject`]).
+     * The LLM call and its deterministic post-validation are one logical step — no intermediate
+     * `createObject` null-guard is needed because `createObject` returns non-null by Embabel's
+     * contract and throws `InvalidLlmReturnFormatException` on failure
+     * (see [Embabel `LlmOperations.createObject`]).
      */
+    @Suppress("LongMethod")
     override fun createOutline(
         ready: ReadyBpmnContext,
         validatedContract: ValidatedProcessContract,
@@ -125,17 +129,38 @@ internal class LlmBpmnProcessGenerator(
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
 
-        val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
-        if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
+        val fidelityDiagnostics = fidelityChecker.check(validatedContract.contract, outline.definition)
+        if (fidelityDiagnostics.any { it.severity == BpmnDiagnosticSeverity.ERROR }) {
             val violations =
-                fidelityReport.issues
-                    .filter { it.severity == BpmnFidelitySeverity.ERROR }
-                    .joinToString(separator = System.lineSeparator()) { "- [${it.code}] ${it.message}" }
+                fidelityDiagnostics
+                    .filter { it.severity == BpmnDiagnosticSeverity.ERROR }
+                    .joinToString(separator = System.lineSeparator()) { "- ${it.message}" }
             throw RetryableBpmnGenerationException(
                 "Generated BPMN does not faithfully encode the source contract topology " +
-                    "(${fidelityReport.issues.size} fidelity issue(s)):${System.lineSeparator()}$violations",
+                    "(${fidelityDiagnostics.size} fidelity issue(s)):${System.lineSeparator()}$violations",
             )
         }
+
+        val fidelityIssues = fidelityDiagnostics.map { diagnostic ->
+            val codeStr = diagnostic.message.substringBefore("]").removePrefix("[")
+            val code = try {
+                BpmnFidelityCode.valueOf(codeStr)
+            } catch (_: IllegalArgumentException) {
+                BpmnFidelityCode.DECISION_GATEWAY_MISSING
+            }
+            val msg = diagnostic.message.substringAfter("] ")
+            BpmnFidelityIssue(
+                code = code,
+                severity = if (diagnostic.severity == BpmnDiagnosticSeverity.ERROR) {
+                    BpmnFidelitySeverity.ERROR
+                } else {
+                    BpmnFidelitySeverity.WARNING
+                },
+                message = msg,
+                bpmnElementId = diagnostic.elementId,
+            )
+        }
+        val fidelityReport = BpmnFidelityReport(issues = fidelityIssues)
 
         return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
     }
@@ -184,17 +209,17 @@ internal class LlmBpmnProcessGenerator(
     }
 
     override fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
-        val rendered = graphRenderer.render(graph)
+        val rendered = renderer.render(graph)
         eventPublisher.publishEvent(dev.groknull.bpmner.authoring.BpmnGeneratedEvent(ready.request, rendered))
         return rendered
     }
 
     override fun render(graph: LaidOutProcessGraph): RenderedBpmn {
-        return graphRenderer.render(graph)
+        return renderer.render(graph)
     }
 
     override fun startAsync(request: BpmnRequest): String {
-        return agentLauncher.startAsync(request)
+        return agentInvoker.startAsync(request)
     }
 
     private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {

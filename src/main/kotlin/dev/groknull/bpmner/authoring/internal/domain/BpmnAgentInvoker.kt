@@ -34,12 +34,3 @@ interface BpmnAgentInvoker {
         request: BpmnRequest,
     ): String
 }
-
-@org.springframework.stereotype.Component
-internal class BpmnAgentLauncher(
-    private val agentInvoker: BpmnAgentInvoker,
-) {
-    fun startAsync(request: BpmnRequest): String {
-        return agentInvoker.startAsync(request)
-    }
-}
