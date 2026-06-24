@@ -10,6 +10,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.ConditionExpression
@@ -134,6 +135,7 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
             )
     }
 
+    @Suppress("ThrowsCount") // 3 throws is the minimum needed for this function
     private fun buildSequenceFlows(
         modelInstance: BpmnModelInstance,
         definition: BpmnDefinition,
@@ -168,10 +170,11 @@ internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
 
                     is InclusiveGateway -> source.default = sequenceFlow
 
-                    else -> error(
-                        "edge ${edge.id}: isDefault is only supported on exclusive- or inclusive-gateway " +
-                            "sources, got ${source::class.simpleName}",
-                    )
+                    else ->
+                        throw RetryableBpmnGenerationException(
+                            "edge ${edge.id}: isDefault is only supported on exclusive- or inclusive-gateway " +
+                                "sources, got ${source::class.simpleName}",
+                        )
                 }
             }
         }

@@ -26,6 +26,7 @@ import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
@@ -99,12 +100,13 @@ internal object BpmnModelFactory {
                 // Unrecognized nodes carry no Camunda model class. Callers are expected to
                 // filter them out before reaching the generator; reaching here is a contract
                 // violation.
-                is BpmnUnrecognizedNode -> error(
-                    "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) " +
-                        "cannot be converted to a Camunda FlowNode. " +
-                        "The generator pipeline must filter unrecognized nodes " +
-                        "before reaching BpmnModelFactory.",
-                )
+                is BpmnUnrecognizedNode ->
+                    throw RetryableBpmnGenerationException(
+                        "BpmnUnrecognizedNode '${node.id}' (${node.bpmnType}) " +
+                            "cannot be converted to a Camunda FlowNode. " +
+                            "The generator pipeline must filter unrecognized nodes " +
+                            "before reaching BpmnModelFactory.",
+                    )
             }
         flowNode.id = node.id
         BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }

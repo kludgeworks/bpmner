@@ -15,6 +15,7 @@ import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.w3c.dom.Document
 import org.w3c.dom.Element
 
@@ -44,10 +45,11 @@ internal class BpmnEventDefinitionXmlWriter {
         )
         is BpmnTerminateEventDefinition -> document.bpmnElement("terminateEventDefinition")
         is BpmnNoneEventDefinition -> error("none event definition must not render XML")
-        is BpmnUnrecognizedEventDefinition -> error(
-            "BpmnUnrecognizedEventDefinition (${definition.typeName}) cannot be rendered to XML. " +
-                "The generator must filter unrecognized event definitions before reaching this point.",
-        )
+        is BpmnUnrecognizedEventDefinition ->
+            throw RetryableBpmnGenerationException(
+                "BpmnUnrecognizedEventDefinition (${definition.typeName}) cannot be rendered to XML. " +
+                    "The generator must filter unrecognized event definitions before reaching this point.",
+            )
     }
 
     private fun timerElement(

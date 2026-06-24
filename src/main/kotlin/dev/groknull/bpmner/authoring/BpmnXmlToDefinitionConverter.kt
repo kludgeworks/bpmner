@@ -35,6 +35,7 @@ import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
@@ -111,7 +112,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
         val process =
             model.getModelElementsByType(Process::class.java).firstOrNull()
-                ?: error("BPMN XML contains no <process> element")
+                ?: throw RetryableBpmnGenerationException("BPMN XML contains no <process> element")
 
         val eventMetadata = eventMetadataFrom(document)
         val taskMetadata = taskMetadataFrom(document)

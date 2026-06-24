@@ -37,6 +37,7 @@ import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
+import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.StandardLoopCharacteristics
 import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
@@ -684,7 +685,7 @@ class BpmnDefinitionToXmlConverterTest {
             sequences = listOf(BpmnEdge("f", "s", "e")),
         )
 
-        assertFailsWith<IllegalStateException> { converter.toXml(definition) }
+        assertFailsWith<RetryableBpmnGenerationException> { converter.toXml(definition) }
     }
 
     private fun minimalDefinition(
