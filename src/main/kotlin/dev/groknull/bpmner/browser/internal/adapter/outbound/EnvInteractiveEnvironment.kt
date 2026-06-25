@@ -14,7 +14,7 @@ import java.awt.GraphicsEnvironment
 @Service
 internal open class EnvInteractiveEnvironment(
     private val envGet: (String) -> String? = { System.getenv(it) },
-    private val console: ConsoleAccessor = SystemConsoleAccessor,
+    private val console: () -> Boolean = { System.console() != null },
     private val isHeadless: () -> Boolean = { GraphicsEnvironment.isHeadless() },
 ) : InteractiveEnvironment {
 
@@ -24,25 +24,16 @@ internal open class EnvInteractiveEnvironment(
             return false
         }
 
-        // CI environment check - CI=true means non-interactive
-        val ciValue = envGet("CI")
-        if (ciValue != null && ciValue.equals("true", ignoreCase = true)) {
+        // CI environment check - presence of CI env var (not value) means non-interactive
+        if (envGet("CI") != null) {
             return false
         }
 
         // Console must be present
-        if (console.getConsole() == null) {
+        if (!console()) {
             return false
         }
 
         return true
-    }
-
-    interface ConsoleAccessor {
-        fun getConsole(): java.io.Console?
-    }
-
-    object SystemConsoleAccessor : ConsoleAccessor {
-        override fun getConsole(): java.io.Console? = System.console()
     }
 }

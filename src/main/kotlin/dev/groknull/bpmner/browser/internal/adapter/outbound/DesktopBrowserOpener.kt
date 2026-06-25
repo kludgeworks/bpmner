@@ -9,41 +9,74 @@ import dev.groknull.bpmner.browser.BrowserOpenOutcome
 import dev.groknull.bpmner.browser.BrowserOpenPort
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.springframework.stereotype.Service
+import java.awt.Desktop
+import java.awt.GraphicsEnvironment
 import java.io.IOException
-import java.lang.reflect.Method
+import java.net.URI
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
+
+private const val BROWSE_TIMEOUT_SECONDS = 30L
 
 @SecondaryAdapter
 @Service
 internal open class DesktopBrowserOpener(
-    private val desktopSupplier: () -> Any? = { DesktopBrowserOpener.getDefaultDesktop() },
+    /**
+     * Returns true when a Desktop BROWSE action is available in this environment.
+     * Production default: guarded check per ARCHITECTURE.md §85–93.
+     */
+    private val isBrowseAvailable: () -> Boolean = {
+        !GraphicsEnvironment.isHeadless() &&
+            Desktop.isDesktopSupported() &&
+            Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)
+    },
+    /**
+     * Performs the actual browse call. May throw IOException or
+     * UnsupportedOperationException; all other throwables are wrapped in IOException.
+     */
+    private val desktopBrowse: (URI) -> Unit = { uri ->
+        Desktop.getDesktop().browse(uri)
+    },
     private val osNameSupplier: () -> String = { System.getProperty("os.name").lowercase() },
     private val launchWithProcessBuilder: (Array<out String>) -> Int = { cmd ->
-        ProcessBuilder(*cmd).redirectErrorStream(true).start().waitFor()
+        val process = ProcessBuilder(*cmd).start()
+        // Drain stdout to prevent OS pipe-buffer deadlock.
+        val drain = Thread {
+            try {
+                process.inputStream.bufferedReader().use { it.readText() }
+            } catch (_: Exception) { /* discard */ }
+        }
+        drain.isDaemon = true
+        drain.start()
+        val finished = try {
+            process.waitFor(BROWSE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        } catch (_: InterruptedException) {
+            process.destroyForcibly()
+            Thread.currentThread().interrupt()
+            false
+        }
+        if (finished) {
+            process.exitValue()
+        } else {
+            process.destroyForcibly()
+            -1
+        }
     },
 ) : BrowserOpenPort {
 
-    override fun open(target: Path): BrowserOpenOutcome {
-        val osName = osNameSupplier()
-        val desktop = desktopSupplier()
-
-        return if (desktop != null && isDesktopSupported(desktop)) {
-            browseWithDesktop(desktop, target)
-        } else {
-            launchWithProcessBuilderFallback(osName, target)
-        }
+    override fun open(target: Path): BrowserOpenOutcome = if (isBrowseAvailable()) {
+        browseWithDesktop(target)
+    } else {
+        launchWithProcessBuilderFallback(osNameSupplier(), target)
     }
 
-    @Suppress("SwallowedException")
-    private fun browseWithDesktop(desktop: Any, target: Path): BrowserOpenOutcome {
-        return try {
-            browse(desktop, target)
-            BrowserOpenOutcome.Opened
-        } catch (e: IOException) {
-            BrowserOpenOutcome.Failed("IOException while browsing: ${e.message}")
-        } catch (e: UnsupportedOperationException) {
-            BrowserOpenOutcome.Unsupported("Desktop browse action not supported")
-        }
+    private fun browseWithDesktop(target: Path): BrowserOpenOutcome = try {
+        desktopBrowse(target.toUri())
+        BrowserOpenOutcome.Opened
+    } catch (e: IOException) {
+        BrowserOpenOutcome.Failed("IOException while browsing: ${e.message}")
+    } catch (e: UnsupportedOperationException) {
+        BrowserOpenOutcome.Unsupported(e.message ?: "Desktop browse action not supported")
     }
 
     private fun launchWithProcessBuilderFallback(osName: String, target: Path): BrowserOpenOutcome {
@@ -51,117 +84,31 @@ internal open class DesktopBrowserOpener(
         val osNameLower = osName.lowercase()
         return when {
             osNameLower.contains("mac") || osNameLower.contains("darwin") -> {
-                val result = launchWithProcessBuilder(arrayOf("open", target.toString()))
-                if (result == 0) {
+                val code = launchWithProcessBuilder(arrayOf("open", target.toString()))
+                if (code == 0) {
                     BrowserOpenOutcome.Opened
                 } else {
-                    BrowserOpenOutcome.Failed("open command exited with code $result")
+                    BrowserOpenOutcome.Failed("open command exited with code $code")
                 }
             }
             osNameLower.contains("win") -> {
-                val result = launchWithProcessBuilder(arrayOf("cmd", "/c", "start", "\"\"", uri))
-                if (result == 0) {
+                // Use rundll32 to avoid cmd.exe shell parsing / metacharacter injection.
+                val code = launchWithProcessBuilder(arrayOf("rundll32", "url.dll,FileProtocolHandler", uri))
+                if (code == 0) {
                     BrowserOpenOutcome.Opened
                 } else {
-                    BrowserOpenOutcome.Failed("cmd start exited with code $result")
+                    BrowserOpenOutcome.Failed("rundll32 exited with code $code")
                 }
             }
             osNameLower.contains("nix") || osNameLower.contains("nux") || osNameLower.contains("linux") -> {
-                val result = launchWithProcessBuilder(arrayOf("xdg-open", target.toString()))
-                if (result == 0) {
+                val code = launchWithProcessBuilder(arrayOf("xdg-open", target.toString()))
+                if (code == 0) {
                     BrowserOpenOutcome.Opened
                 } else {
-                    BrowserOpenOutcome.Failed("xdg-open exited with code $result")
+                    BrowserOpenOutcome.Failed("xdg-open exited with code $code")
                 }
             }
             else -> BrowserOpenOutcome.Unsupported("Unknown operating system: $osName")
-        }
-    }
-
-    companion object {
-        @Suppress("SwallowedException")
-        fun getDefaultDesktop(): Any? {
-            return try {
-                val desktopClass = Class.forName("java.awt.Desktop")
-                val isDesktopSupported: Method = desktopClass.getMethod("isDesktopSupported")
-                val getDesktop: Method = desktopClass.getMethod("getDesktop")
-
-                if (isDesktopSupported.invoke(null) as Boolean) {
-                    getDesktop.invoke(null)
-                } else {
-                    null
-                }
-            } catch (e: ClassNotFoundException) {
-                null
-            } catch (e: NoSuchMethodException) {
-                null
-            } catch (e: IllegalAccessException) {
-                null
-            }
-        }
-    }
-
-    @Suppress("SwallowedException")
-    private fun isDesktopSupported(desktop: Any?): Boolean {
-        return try {
-            val desktopClass = desktop?.javaClass ?: return false
-            val method: Method = desktopClass.getMethod("isDesktopSupported")
-            // Try instance method first, then static (for real Desktop class)
-            try {
-                method.invoke(desktop) as Boolean
-            } catch (iae: IllegalArgumentException) {
-                // Instance method failed, try static (Desktop.isDesktopSupported())
-                method.invoke(null) as Boolean
-            }
-        } catch (e: NoSuchMethodException) {
-            false
-        } catch (e: IllegalAccessException) {
-            false
-        }
-    }
-
-    @Suppress("SwallowedException", "UnusedPrivateMember")
-    private fun isBrowseSupported(desktop: Any?): Boolean {
-        return try {
-            val desktopClass = desktop?.javaClass ?: return false
-            val browseActionClass = Class.forName("java.awt.Desktop\$Action")
-            val browseAction = browseActionClass.enumConstants?.firstOrNull { it.toString() == "BROWSE" }
-                ?: return false
-            // Try to find isSupported with the enum type first, then with Object (for mocks)
-            val method: Method = try {
-                desktopClass.getMethod("isSupported", browseActionClass)
-            } catch (e: NoSuchMethodException) {
-                desktopClass.getMethod("isSupported", Any::class.java)
-            }
-            // Try instance method first, then static
-            try {
-                method.invoke(desktop, browseAction) as Boolean
-            } catch (iae: IllegalArgumentException) {
-                method.invoke(null, browseAction) as Boolean
-            }
-        } catch (e: NoSuchMethodException) {
-            false
-        } catch (e: IllegalAccessException) {
-            false
-        }
-    }
-
-    @Suppress("SwallowedException", "ThrowsCount")
-    private fun browse(desktop: Any, target: Path) {
-        val desktopClass = desktop.javaClass
-        val uriClass = Class.forName("java.net.URI")
-        val browse = try {
-            desktopClass.getMethod("browse", uriClass)
-        } catch (e: NoSuchMethodException) {
-            desktopClass.methods.firstOrNull { it.name == "browse" && it.parameterCount == 1 }
-                ?: throw IOException("Failed to browse: no browse method found")
-        }
-        try {
-            browse.invoke(desktop, target.toUri())
-        } catch (e: java.lang.reflect.InvocationTargetException) {
-            throw e.targetException
-        } catch (e: IllegalAccessException) {
-            throw IOException("Failed to browse: inaccessible method", e)
         }
     }
 }
