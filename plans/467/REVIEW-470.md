@@ -7,6 +7,7 @@
 **Worktree:** `workspace/467-470`
 **Reviewer:** claude-sonnet-4-6
 **Date:** 2026-06-25
+**Resolved:** 2026-06-25 (CI green; no ACCEPT rows — zero code changes required)
 
 ## Summary
 
@@ -17,6 +18,11 @@ Stage 3 of epic #467: evict `BpmnAlignmentConfig`/`BpmnAlignmentThresholdsConfig
 
 13 files changed (40 additions / 40 deletions): 3 renamed config files, 2
 in-module importer fixups, 8 test import/visibility fixups.
+
+**Resolution outcome:** All 24 rows resolved. Zero ACCEPT rows existed — no code
+changes were required. CI checks that were pending at initial review time have
+completed green. PR is MERGEABLE (branch behind main by 2 review commits; routine
+base-update before merge).
 
 ## Findings
 
@@ -41,28 +47,28 @@ in-module importer fixups, 8 test import/visibility fixups.
 | 17 | Semantic | `ProcessContractMarkdownRenderer.kt` NOT moved — stays in `contract` root per ADR 467-3 §2 | REJECT | ARCHITECTURE.md line 99; PLAN-470.md non-goals — file absent from diff, confirmed present in contract root at HEAD | yes |
 | 18 | Semantic | No files outside `alignment`/`contract`/`llm` modules in the diff — non-goal respected | REJECT | PLAN-470.md non-goals — all 13 diff entries are inside the three modules (test config files live in `config`/`prompt`/`prompts` test packages, which are compilation-module peers, not separate production modules) | yes |
 | 19 | Semantic | `@Autowired` test fields for non-internal types also marked `internal` in `BpmnConfigBindingTest.kt` and `BpmnConfigThresholdBindingTest.kt` (e.g. `readinessConfig`, `loggingConfig`, `conformanceConfig`) | REJECT | Types are public on HEAD; making the test field `internal` is harmless and defensive for future stages. Test code only; no production impact. The plan's non-goal covers "visibility of any **type**" (§ non-goals last bullet) — these are field access modifiers in test classes, not type declarations. Kotlin accepts this; detekt passes per PR description. | yes |
-| 20 | CI | `test-unit` CI check pending at review time (run ID 28194885813) | UNKNOWN | Required check not yet complete — cannot pass until green | no |
-| 21 | CI | `Greptile Review` CI check pending at review time (check run 83519284201) | UNKNOWN | Greptile review still `REVIEWING_FILES`; cannot pass until complete | no |
+| 20 | CI | `test-unit` CI check — **now PASS** (run ID 28194885813, completed in 4m14s) | REJECT | CI green — `test-unit` passed, including `BpmnerModulithTest` and `BpmnerArchitectureTest` | yes |
+| 21 | CI | `Greptile Review` CI check — **now PASS** (completed in 6m41s, zero comments posted) | REJECT | Greptile passed with no inline review comments; zero defects flagged | yes |
 | 22 | SonarQube | SonarQube PR #481: 0 open issues on `kludgeworks_bpmner` | REJECT | No new OPEN issues of any severity; quality gate status returned 404 (PR not yet scanned — not a gate failure, no scan result exists) | yes |
-| 23 | Greptile | No Greptile inline comments on PR #481 (first run SKIPPED; second run in progress at closeout time) | REJECT | Zero Greptile comments to triage; nothing to fold into table | yes |
-| 24 | Merge | PR `mergeable: true`, `mergeable_state: behind` — merges cleanly with `main`, but branch is behind `main` by 1 commit (the REVIEW skeleton push) | UNKNOWN | `behind` is not a conflict: the branch needs a base update before merging but is otherwise clean. Base update is a merge operation for the human. | no |
+| 23 | Greptile | No Greptile inline comments on PR #481 | REJECT | Zero Greptile comments; nothing to fold into table | yes |
+| 24 | Merge | PR `mergeable: MERGEABLE`, `mergeStateStatus: BEHIND` — merges cleanly; branch is behind `main` by 2 review commits (REVIEW-470.md skeleton + update pushes) | REJECT | `BEHIND` is not a conflict. Routine base-update (`gh pr update-branch`) required before merge. No code change needed. | yes |
 
 ## Gate Results
 
 | Gate | Status | Evidence |
 |------|--------|----------|
-| Alignment root retains exactly 5 files | PASS | GitHub API on HEAD lists exactly: AlignmentClassification.kt, BpmnAligner.kt, BpmnAlignmentCheckedEvent.kt, BpmnAlignmentTypes.kt, AlignmentModule.kt |
-| Contract root retains exactly 5 files | PASS | GitHub API on HEAD lists exactly: ContractModule.kt, BpmnContractTypes.kt, ProcessContractExtractor.kt, BpmnContractDiagnostics.kt, ProcessContractMarkdownRenderer.kt |
-| LLM root retains exactly LlmModule.kt | PASS | GitHub API on HEAD confirms single file |
+| Alignment root retains exactly 5 files | PASS | GitHub API on HEAD — verified |
+| Contract root retains exactly 5 files | PASS | GitHub API on HEAD — verified |
+| LLM root retains exactly LlmModule.kt | PASS | GitHub API on HEAD — verified |
 | All 6 config/properties classes declared `internal` | PASS | All 6 declarations confirmed in diff |
-| No production-module cross-boundary import of moved types | UNKNOWN | Requires CI (BpmnerModulithTest); PR reports `bazel test //:detekt_check` ✅ but CI test-unit pending |
-| `hk check` passes | PASS | PR body reports `hk check` ✅; `lint` CI check PASS |
+| No production-module cross-boundary import of moved types | PASS | `test-unit` CI green (includes BpmnerModulithTest + BpmnerArchitectureTest) |
+| `hk check` passes | PASS | PR body reports `hk check` ✅; `lint` CI PASS |
 | All in-module importer fixups applied | PASS | 5 import lines updated across 3 production files — verified in diff |
 | All test import/visibility fixups applied | PASS | 8 test files updated — verified in diff |
 
 ## Plan To Diff Coverage
 
-All 14 plan requirements covered. See rows 1–19 above for per-requirement evidence.
+All 14 plan requirements covered.
 
 | Plan Requirement | Coverage |
 |---|---|
@@ -83,7 +89,7 @@ All 14 plan requirements covered. See rows 1–19 above for per-requirement evid
 
 ## Diff To Plan Coverage
 
-All 13 diff files are IN_PLAN. No unexpected files.
+All 13 diff files IN_PLAN. No unexpected files.
 
 | File | Status |
 |---|---|
@@ -104,5 +110,4 @@ All 13 diff files are IN_PLAN. No unexpected files.
 ## Out Of Scope Files
 
 None. All files are within alignment/contract/llm modules (main sources) or their
-corresponding test compilation units (shared compilation module). No files from
-authoring/bpmn/conformance/readiness/ruleset/repair production sources were modified.
+corresponding test compilation units (shared compilation module).
