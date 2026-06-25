@@ -41,4 +41,14 @@ class SmokeResultRecorderTest {
         assertEquals("deterministic", smokeCategoryFor(IllegalStateException("bean missing")))
         assertEquals("infra", smokeCategoryFor(SocketTimeoutException("timed out")))
     }
+
+    @Test
+    fun `quota and billing matcher requires stable provider signatures`() {
+        val bpmnAssertion = AssertionError("Expected billing task and quota review lane")
+
+        assertEquals("classification", smokeCategoryFor(bpmnAssertion))
+        assertNull(smokeFailureSignalFor("fail", bpmnAssertion, llmCallCount = 0))
+        assertEquals("deterministic", smokeCategoryFor(RuntimeException("completed in 429ms with id 14295")))
+        assertNull(smokeFailureSignalFor("fail", RuntimeException("completed in 429ms"), llmCallCount = 0))
+    }
 }

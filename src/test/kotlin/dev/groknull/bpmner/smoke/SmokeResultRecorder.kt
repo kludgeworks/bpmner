@@ -238,8 +238,8 @@ internal const val SMOKE_FAILURE_SIGNAL_NO_SIGNAL = "no_signal"
 // Zero-call quota/account-balance failures are also kept out of `deterministic` for legacy consumers;
 // [smokeFailureSignalFor] provides the new explicit machine-readable no-signal marker.
 internal fun smokeCategoryFor(cause: Throwable): String = when {
-    isSmokeQuotaOrBillingFailure(cause) || isSmokeInfraFailure(cause) -> "infra"
     cause is AssertionError -> "classification"
+    isSmokeQuotaOrBillingFailure(cause) || isSmokeInfraFailure(cause) -> "infra"
     else -> "deterministic"
 }
 
@@ -257,13 +257,16 @@ private fun isZeroCallQuotaFailure(
     outcome: String,
     cause: Throwable?,
     llmCallCount: Int,
-): Boolean = outcome == "fail" && llmCallCount == 0 && cause?.let(::isSmokeQuotaOrBillingFailure) == true
+): Boolean = outcome == "fail" &&
+    llmCallCount == 0 &&
+    cause !is AssertionError &&
+    cause?.let(::isSmokeQuotaOrBillingFailure) == true
 
 internal fun isSmokeQuotaOrBillingFailure(cause: Throwable): Boolean = generateSequence(cause) { it.cause }.any { throwable ->
     val message = throwable.message.orEmpty()
     val normalized = message.lowercase()
     QUOTA_OR_BILLING_SIGNATURES.any { it in normalized } ||
-        HTTP_QUOTA_CODES.any { it in message } ||
+        HTTP_QUOTA_CODE_PATTERN.containsMatchIn(message) ||
         isLowCreditInvalidRequest(message, normalized)
 }
 
@@ -280,18 +283,23 @@ private fun isSmokeInfraTypeName(name: String): Boolean = name.startsWith("java.
     name.startsWith("java.util.concurrent.") ||
     "TimeoutException" in name
 
-private val HTTP_QUOTA_CODES = listOf("429")
+private val HTTP_QUOTA_CODE_PATTERN = Regex(
+    pattern = """(?i)\b(?:http|status|code|error(?:\s+code)?)\D{0,24}429\b|\b429\s+(?:too many requests|rate limit)""",
+)
 
 private val QUOTA_OR_BILLING_SIGNATURES = listOf(
     "too many requests",
     "rate limit",
     "rate_limit_error",
-    "quota",
+    "quota exceeded",
+    "exceeded quota",
+    "insufficient quota",
     "overloaded_error",
     "credit balance",
     "credits depleted",
     "insufficient credit",
     "insufficient funds",
-    "billing",
+    "billing hard limit",
+    "billing limit",
     "account balance",
 )
