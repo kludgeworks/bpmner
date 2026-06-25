@@ -49,8 +49,9 @@ class SmokeResultRecorder :
     ) = record(
         context,
         outcome = "fail",
-        category = categoryFor(cause),
+        category = smokeCategoryFor(cause),
         message = cause.message,
+        cause = cause,
     )
 
     override fun testAborted(
@@ -82,8 +83,10 @@ class SmokeResultRecorder :
         outcome: String,
         category: String?,
         message: String?,
+        cause: Throwable? = null,
     ) {
         val snap = capture(context)?.snapshot()
+        val llmCallCount = snap?.llmCallCount ?: 0
         val diagnostics = enrichDiagnosticModels(SmokeDiagnosticCapture.snapshot(), snap)
         val testMethod = context.displayName
         val signature = failureSignature(outcome, testMethod, message)
@@ -98,6 +101,7 @@ class SmokeResultRecorder :
                 testMethod = testMethod,
                 outcome = outcome,
                 failureCategory = category,
+                failureSignal = smokeFailureSignalFor(outcome, cause, llmCallCount),
                 message = message?.take(MAX_MESSAGE),
                 failureSignature = signature,
                 failureHash = signature?.let { sha256(it.toByteArray(Charsets.UTF_8)) },
@@ -106,10 +110,11 @@ class SmokeResultRecorder :
                 costKnown = snap?.costKnown ?: "unknown",
                 promptTokens = snap?.promptTokens ?: 0,
                 completionTokens = snap?.completionTokens ?: 0,
-                llmCallCount = snap?.llmCallCount ?: 0,
+                llmCallCount = llmCallCount,
                 llmTimeMs = snap?.llmTimeMs ?: 0,
                 toolCallCount = snap?.toolCallCount ?: 0,
                 stageBreakdown = snap?.stageBreakdown ?: emptyMap(),
+                roleBreakdown = snap?.roleBreakdown ?: emptyMap(),
                 diagnostics = diagnostics,
                 diagnosticSummary = diagnostics.groupingBy { it.kind }.fold(0) { total, diagnostic -> total + diagnostic.count },
                 testFingerprint = testClassFingerprint(context),
@@ -161,23 +166,6 @@ class SmokeResultRecorder :
     } else {
         "$method::${message?.lineSequence()?.firstOrNull()?.trim()?.take(MAX_SIGNATURE).orEmpty()}"
     }
-
-    // A failed extraction assertion is a `classification` miss; a timeout / transport error is `infra`
-    // (latency or quota, not an LLM-quality regression); anything else (DI / parse / compile) is
-    // `deterministic`. Keeping infra out of `deterministic` matters: the gate hard-fails on deterministic.
-    private fun categoryFor(cause: Throwable): String = when {
-        isInfra(cause) -> "infra"
-        cause is AssertionError -> "classification"
-        else -> "deterministic"
-    }
-
-    private fun isInfra(cause: Throwable): Boolean = generateSequence(cause) { it.cause }.any {
-        isInfraTypeName(it::class.java.name) || "timed out" in (it.message ?: "").lowercase()
-    }
-
-    private fun isInfraTypeName(name: String): Boolean = name.startsWith("java.net.") ||
-        name.startsWith("java.util.concurrent.") ||
-        "TimeoutException" in name
 
     // Cached — the test class is the same for every method in a suite. The test SOURCE is not in the
     // Bazel sandbox, so hash the compiled class bytecode as a proxy (stable within a build, changes
@@ -243,3 +231,67 @@ class SmokeResultRecorder :
             )
     }
 }
+
+internal const val SMOKE_FAILURE_SIGNAL_NO_SIGNAL = "no_signal"
+
+// A failed extraction assertion is a `classification` miss; a timeout / transport error is `infra`.
+// Zero-call quota/account-balance failures are also kept out of `deterministic` for legacy consumers;
+// [smokeFailureSignalFor] provides the new explicit machine-readable no-signal marker.
+internal fun smokeCategoryFor(cause: Throwable): String = when {
+    isSmokeQuotaOrBillingFailure(cause) || isSmokeInfraFailure(cause) -> "infra"
+    cause is AssertionError -> "classification"
+    else -> "deterministic"
+}
+
+internal fun smokeFailureSignalFor(
+    outcome: String,
+    cause: Throwable?,
+    llmCallCount: Int,
+): String? = if (isZeroCallQuotaFailure(outcome, cause, llmCallCount)) {
+    SMOKE_FAILURE_SIGNAL_NO_SIGNAL
+} else {
+    null
+}
+
+private fun isZeroCallQuotaFailure(
+    outcome: String,
+    cause: Throwable?,
+    llmCallCount: Int,
+): Boolean = outcome == "fail" && llmCallCount == 0 && cause?.let(::isSmokeQuotaOrBillingFailure) == true
+
+internal fun isSmokeQuotaOrBillingFailure(cause: Throwable): Boolean = generateSequence(cause) { it.cause }.any { throwable ->
+    val message = throwable.message.orEmpty()
+    val normalized = message.lowercase()
+    QUOTA_OR_BILLING_SIGNATURES.any { it in normalized } ||
+        HTTP_QUOTA_CODES.any { it in message } ||
+        isLowCreditInvalidRequest(message, normalized)
+}
+
+private fun isLowCreditInvalidRequest(
+    message: String,
+    normalized: String,
+): Boolean = "400" in message && "invalid_request_error" in normalized && "credit" in normalized
+
+private fun isSmokeInfraFailure(cause: Throwable): Boolean = generateSequence(cause) { it.cause }.any {
+    isSmokeInfraTypeName(it::class.java.name) || "timed out" in (it.message ?: "").lowercase()
+}
+
+private fun isSmokeInfraTypeName(name: String): Boolean = name.startsWith("java.net.") ||
+    name.startsWith("java.util.concurrent.") ||
+    "TimeoutException" in name
+
+private val HTTP_QUOTA_CODES = listOf("429")
+
+private val QUOTA_OR_BILLING_SIGNATURES = listOf(
+    "too many requests",
+    "rate limit",
+    "rate_limit_error",
+    "quota",
+    "overloaded_error",
+    "credit balance",
+    "credits depleted",
+    "insufficient credit",
+    "insufficient funds",
+    "billing",
+    "account balance",
+)
