@@ -8,9 +8,9 @@ package dev.groknull.bpmner.config
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
-import dev.groknull.bpmner.alignment.BpmnAlignmentConfig
+import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
 import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
-import dev.groknull.bpmner.contract.BpmnContractConfig
+import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig
 import dev.groknull.bpmner.ruleset.BpmnRulesConfig
@@ -44,25 +44,25 @@ class BpmnConfigBindingTest {
     class Config
 
     @Autowired
-    lateinit var readinessConfig: BpmnReadinessConfig
+    internal lateinit var readinessConfig: BpmnReadinessConfig
 
     @Autowired
-    lateinit var contractConfig: BpmnContractConfig
+    internal lateinit var contractConfig: BpmnContractConfig
 
     @Autowired
-    lateinit var alignmentConfig: BpmnAlignmentConfig
+    internal lateinit var alignmentConfig: BpmnAlignmentConfig
 
     @Autowired
-    lateinit var rulesConfig: BpmnRulesConfig
+    internal lateinit var rulesConfig: BpmnRulesConfig
 
     @Autowired
-    lateinit var rulesUriConfig: BpmnRulesUriConfig
+    internal lateinit var rulesUriConfig: BpmnRulesUriConfig
 
     @Autowired
-    lateinit var authoringConfig: BpmnAuthoringConfig
+    internal lateinit var authoringConfig: BpmnAuthoringConfig
 
     @Autowired
-    lateinit var repairConfig: BpmnRepairConfig
+    internal lateinit var repairConfig: BpmnRepairConfig
 
     @Test
     fun `generator actor binds to BPMN Designer persona with generator role`() {

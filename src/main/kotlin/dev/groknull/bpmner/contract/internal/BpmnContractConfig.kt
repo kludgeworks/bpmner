@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.contract
+package dev.groknull.bpmner.contract.internal
 
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.config.models.anthropic.withAnthropicCaching
@@ -21,7 +21,7 @@ import org.springframework.validation.annotation.Validated
  */
 @Validated
 @ConfigurationProperties("bpmner")
-data class BpmnContractConfig(
+internal data class BpmnContractConfig(
     val contractExtractor: Actor<Persona> = DEFAULT_CONTRACT_EXTRACTOR,
 ) {
     companion object {
@@ -56,7 +56,7 @@ data class BpmnContractConfig(
  */
 @Validated
 @ConfigurationProperties("bpmner.contract")
-data class BpmnContractThresholdsConfig(
+internal data class BpmnContractThresholdsConfig(
     @field:Min(0)
     val maxAssumptions: Int = 10,
 )
