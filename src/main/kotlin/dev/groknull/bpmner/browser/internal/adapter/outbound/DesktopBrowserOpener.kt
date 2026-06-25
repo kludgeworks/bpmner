@@ -38,8 +38,14 @@ internal open class DesktopBrowserOpener(
         Desktop.getDesktop().browse(uri)
     },
     private val osNameSupplier: () -> String = { System.getProperty("os.name").lowercase() },
-    private val launchWithProcessBuilder: (Array<out String>) -> Int = { cmd ->
-        val process = ProcessBuilder(*cmd).start()
+    private val launchWithProcessBuilder: (Array<out String>) -> Int = launch@{ cmd ->
+        // Catch IOException from start() when the executable is not found (e.g. xdg-open absent on
+        // minimal Linux). Map to -1 so the caller maps it to Failed without throwing.
+        val process = try {
+            ProcessBuilder(*cmd).start()
+        } catch (_: IOException) {
+            return@launch -1
+        }
         // Drain stdout to prevent OS pipe-buffer deadlock.
         val drain = Thread {
             try {

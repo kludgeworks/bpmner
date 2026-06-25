@@ -10,7 +10,7 @@ import org.jmolecules.architecture.hexagonal.SecondaryPort
 /**
  * Secondary port for detecting whether the current environment is interactive
  * and capable of browser operation. Returns true only when all conditions hold:
- * - Not running in a CI environment (CI env var not set or not "true")
+ * - Not running in a CI environment (CI env var not set; any non-null value is treated as CI)
  * - Console is present (System.console() != null)
  * - GraphicsEnvironment is not headless (!isHeadless())
  *

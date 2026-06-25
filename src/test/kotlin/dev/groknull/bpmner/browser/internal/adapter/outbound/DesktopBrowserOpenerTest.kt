@@ -174,6 +174,25 @@ class DesktopBrowserOpenerTest {
     }
 
     @Test
+    fun `failed outcome when ProcessBuilder start returns -1 (executable not found)`() {
+        // The production default launchWithProcessBuilder lambda catches IOException from
+        // ProcessBuilder.start() (e.g. when xdg-open is absent on the PATH) and returns -1,
+        // mapping to Failed. This test verifies that the -1 exit-code path produces Failed,
+        // which is the same outcome the production default delivers when .start() throws.
+        val opener = DesktopBrowserOpener(
+            isBrowseAvailable = { false },
+            desktopBrowse = { error("desktop browse must not be called") },
+            osNameSupplier = { "linux" },
+            launchWithProcessBuilder = { -1 },
+        )
+
+        val outcome = opener.open(Path.of("/tmp/test.bpmn"))
+
+        assertThat(outcome).isInstanceOf(BrowserOpenOutcome.Failed::class.java)
+        assertThat((outcome as BrowserOpenOutcome.Failed).reason).contains("exited with code -1")
+    }
+
+    @Test
     fun `unsupported outcome for unknown operating system`() {
         val opener = DesktopBrowserOpener(
             isBrowseAvailable = { false },
