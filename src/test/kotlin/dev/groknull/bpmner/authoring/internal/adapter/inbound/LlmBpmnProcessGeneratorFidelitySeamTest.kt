@@ -7,18 +7,19 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.core.Retryable
 import com.embabel.agent.test.unit.FakeOperationContext
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
-import dev.groknull.bpmner.authoring.BpmnFidelityCode
-import dev.groknull.bpmner.authoring.BpmnFidelityIssue
-import dev.groknull.bpmner.authoring.BpmnFidelityReport
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.FlatBpmnNode
-import dev.groknull.bpmner.authoring.FlatBpmnNodeKind
-import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
-import dev.groknull.bpmner.authoring.toSealed
+import dev.groknull.bpmner.authoring.BpmnRenderer
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityCode
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityIssue
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelityReport
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -55,7 +56,7 @@ import kotlin.test.assertIs
  * `- [code] message` body preserved in the exception message (ADR-004: message IS the feedback).
  *
  * [LlmBpmnProcessGeneratorTest] remains @Disabled; this test covers the seam via
- * [FakeOperationContext] + a mocked [BpmnContractFidelityChecker] so the LLM path is bypassed
+ * [FakeOperationContext] + a mocked [BpmnContractFidelityPort] so the LLM path is bypassed
  * entirely, as permitted by PLAN §1.3 / §5 R6.
  */
 /**
@@ -80,7 +81,8 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         fidelityChecker = mockFidelityChecker,
         defaultFlowAssigner = mockDefaultFlowAssigner,
         contractRenderer = ProcessContractMarkdownRenderer(),
-        graphRenderer = mock(BpmnGraphRenderer::class.java),
+        renderer = mock(BpmnRenderer::class.java),
+        agentInvoker = mock(BpmnAgentInvoker::class.java),
         eventPublisher = mock(ApplicationEventPublisher::class.java),
     )
 
@@ -141,22 +143,24 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         val stubbedDefinition = flatLlmResponse.toSealed()
         `when`(mockDefaultFlowAssigner.assign(anyKt(), anyKt())).thenReturn(stubbedDefinition)
 
-        val errorIssues = listOf(
-            BpmnFidelityIssue(
-                code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
-                severity = BpmnFidelitySeverity.ERROR,
-                message = "Activity 'act1' is a ServiceTask but contract requires UserTask",
-                contractElementId = "act1",
-            ),
-            BpmnFidelityIssue(
-                code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
-                severity = BpmnFidelitySeverity.ERROR,
-                message = "Decision 'dec1' has no corresponding gateway in the BPMN",
-                contractElementId = "dec1",
+        val errorReport = BpmnFidelityReport(
+            issues = listOf(
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.ACTIVITY_TASK_KIND_MISMATCH,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = "Activity 'act1' is a ServiceTask but contract requires UserTask",
+                    bpmnElementId = "act1",
+                ),
+                BpmnFidelityIssue(
+                    code = BpmnFidelityCode.DECISION_GATEWAY_MISSING,
+                    severity = BpmnFidelitySeverity.ERROR,
+                    message = "Decision 'dec1' has no corresponding gateway in the BPMN",
+                    bpmnElementId = "dec1",
+                ),
             ),
         )
-        `when`(mockFidelityChecker.check(anyKt(), anyKt()))
-            .thenReturn(BpmnFidelityReport(issues = errorIssues))
+        `when`(mockFidelityChecker.checkDetailed(anyKt(), anyKt()))
+            .thenReturn(errorReport)
 
         val ex = assertFailsWith<RetryableBpmnGenerationException> {
             generator.createOutline(ready, validatedContract, context)

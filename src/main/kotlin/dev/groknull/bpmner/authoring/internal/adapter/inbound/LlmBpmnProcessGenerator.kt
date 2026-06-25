@@ -7,16 +7,18 @@ package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
+import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.ProcessOutline
+import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.ValidatedOutline
-import dev.groknull.bpmner.authoring.internal.domain.BpmnGraphRenderer
-import dev.groknull.bpmner.authoring.toSealed
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.toSealed
+import dev.groknull.bpmner.authoring.internal.domain.BpmnFidelitySeverity
+import dev.groknull.bpmner.authoring.internal.domain.ProcessOutline
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
@@ -44,7 +46,8 @@ internal class LlmBpmnProcessGenerator(
     private val fidelityChecker: BpmnContractFidelityPort,
     private val defaultFlowAssigner: BpmnDefaultFlowPort,
     private val contractRenderer: ProcessContractMarkdownRenderer,
-    private val graphRenderer: BpmnGraphRenderer,
+    private val renderer: BpmnRenderer,
+    private val agentInvoker: BpmnAgentInvoker,
     private val eventPublisher: ApplicationEventPublisher,
 ) : BpmnProcessGenerator {
     private val logger = LoggerFactory.getLogger(LlmBpmnProcessGenerator::class.java)
@@ -56,12 +59,12 @@ internal class LlmBpmnProcessGenerator(
     /**
      * Single LLM-driven action: contract → outline → fidelity-checked [ValidatedOutline].
      *
-     * Phase 5 (#220) collapsed the previous two-action shape (`createProcessOutline` + `validateOutline`)
-     * because the LLM call and its deterministic post-validation are one logical step. The
-     * `?: error("Outline generator failed…")` defense that lived on the prior `createObject` call is
-     * gone with the inline — `createObject` returns non-null by Embabel's contract and throws
-     * `InvalidLlmReturnFormatException` on failure (see [Embabel `LlmOperations.createObject`]).
+     * The LLM call and its deterministic post-validation are one logical step — no intermediate
+     * `createObject` null-guard is needed because `createObject` returns non-null by Embabel's
+     * contract and throws `InvalidLlmReturnFormatException` on failure
+     * (see [Embabel `LlmOperations.createObject`]).
      */
+    @Suppress("LongMethod")
     override fun createOutline(
         ready: ReadyBpmnContext,
         validatedContract: ValidatedProcessContract,
@@ -122,7 +125,7 @@ internal class LlmBpmnProcessGenerator(
             logger.warn("Outline validation summary: {} issue(s)", diagnostics.size)
         }
 
-        val fidelityReport = fidelityChecker.check(validatedContract.contract, outline.definition)
+        val fidelityReport = fidelityChecker.checkDetailed(validatedContract.contract, outline.definition)
         if (fidelityReport.issues.any { it.severity == BpmnFidelitySeverity.ERROR }) {
             val violations =
                 fidelityReport.issues
@@ -181,9 +184,17 @@ internal class LlmBpmnProcessGenerator(
     }
 
     override fun render(ready: ReadyBpmnContext, graph: LaidOutProcessGraph): RenderedBpmn {
-        val rendered = graphRenderer.render(graph)
+        val rendered = renderer.render(graph)
         eventPublisher.publishEvent(dev.groknull.bpmner.authoring.BpmnGeneratedEvent(ready.request, rendered))
         return rendered
+    }
+
+    override fun render(graph: LaidOutProcessGraph): RenderedBpmn {
+        return renderer.render(graph)
+    }
+
+    override fun startAsync(request: BpmnRequest): String {
+        return agentInvoker.startAsync(request)
     }
 
     private fun outlineDiagnostics(outline: ProcessOutline): List<BpmnDiagnostic> = buildList {

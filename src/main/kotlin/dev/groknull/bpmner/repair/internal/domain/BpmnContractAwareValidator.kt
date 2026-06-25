@@ -6,15 +6,11 @@
 package dev.groknull.bpmner.repair.internal.domain
 
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
-import dev.groknull.bpmner.authoring.BpmnFidelitySeverity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
-import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnEvaluation
-import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.conformance.BpmnValidator
 import dev.groknull.bpmner.conformance.GlobalDiagnostics
 import dev.groknull.bpmner.contract.ProcessContract
@@ -23,7 +19,7 @@ import org.springframework.stereotype.Component
 
 /**
  * Contract-aware validator wrapper that composes the structural [BpmnValidator] (XSD, lint,
- * graph) with the [BpmnContractFidelityChecker] (contract→BPMN topology correspondence).
+ * graph) with the [BpmnContractFidelityPort] (contract→BPMN topology correspondence).
  *
  * Exists in the repair domain layer so that the `validation` module remains contract-agnostic.
  * The [BpmnValidator] interface and [dev.groknull.bpmner.conformance.BpmnEvaluationPipeline]
@@ -55,26 +51,7 @@ internal class BpmnContractAwareValidator(
         val base = pipeline.evaluate(graph, definition, rendered, renderFailureMessage, repairAttempts)
         // If structural validation already failed, fidelity is not meaningful yet.
         if (base.blockingDiagnostics.isNotEmpty()) return base
-        val fidelity = fidelityChecker.check(contract, definition)
-        // Surface BOTH severities. ERROR fidelity issues drive the repair LLM to fix them;
-        // WARNING fidelity issues become advisory feedback the LLM sees but doesn't have to
-        // act on (matching the existing lint-warning convention in BpmnRepairPromptFactory's
-        // appendDiagnosticBlock). Discarding WARNINGs would lose useful signal.
-        val fidelityDiagnostics =
-            fidelity.issues.map { issue ->
-                BpmnDiagnostic(
-                    source = BpmnDiagnosticSource.GRAPH,
-                    message = "[${issue.code}] ${issue.message}",
-                    elementId = issue.bpmnElementId,
-                    repairScope = BpmnRepairScope.FULL_PROCESS,
-                    severity =
-                    if (issue.severity == BpmnFidelitySeverity.ERROR) {
-                        BpmnDiagnosticSeverity.ERROR
-                    } else {
-                        BpmnDiagnosticSeverity.WARNING
-                    },
-                )
-            }
+        val fidelityDiagnostics = fidelityChecker.check(contract, definition)
         if (fidelityDiagnostics.isEmpty()) return base
         val allDiagnostics = base.diagnostics + fidelityDiagnostics
         return base.copy(

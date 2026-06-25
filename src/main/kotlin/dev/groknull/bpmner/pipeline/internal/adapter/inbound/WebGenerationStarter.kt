@@ -5,14 +5,14 @@
 
 package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
-import dev.groknull.bpmner.authoring.BpmnAgentInvoker
+import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
 import org.springframework.stereotype.Service
 
 @Service
 internal class WebGenerationStarter(
-    private val agentInvoker: BpmnAgentInvoker,
+    private val processGenerator: BpmnProcessGenerator,
 ) {
     /**
      * Starts an async BPMN generation process and returns its process ID.
@@ -30,6 +30,6 @@ internal class WebGenerationStarter(
                 outputFile = null,
                 mode = GenerationMode.INTERACTIVE,
             )
-        return agentInvoker.startAsync(bpmnRequest)
+        return processGenerator.startAsync(bpmnRequest)
     }
 }

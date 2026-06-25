@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.config
 
 import dev.groknull.bpmner.alignment.internal.BpmnAlignmentThresholdsConfig
-import dev.groknull.bpmner.authoring.BpmnAuthoringBudgetConfig
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.conformance.BpmnConformanceConfig
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig

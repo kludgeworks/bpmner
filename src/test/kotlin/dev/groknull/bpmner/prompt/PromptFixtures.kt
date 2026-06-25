@@ -12,7 +12,7 @@ import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
 import dev.groknull.bpmner.alignment.BpmnSummaryElement
 import dev.groknull.bpmner.alignment.BpmnSummaryFlow
-import dev.groknull.bpmner.authoring.FlatBpmnDefinition
+import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.contract.ConditionalBranch

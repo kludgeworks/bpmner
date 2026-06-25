@@ -9,7 +9,7 @@ import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
 import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
-import dev.groknull.bpmner.authoring.BpmnAuthoringConfig
+import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig
