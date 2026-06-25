@@ -10,13 +10,13 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.styleGuideContribution
-import dev.groknull.bpmner.contract.BpmnContractConfig
-import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
+import dev.groknull.bpmner.contract.internal.BpmnContractConfig
+import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext

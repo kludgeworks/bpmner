@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.alignment
+package dev.groknull.bpmner.alignment.internal
 
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.config.models.anthropic.withAnthropicCaching
@@ -21,7 +21,7 @@ import org.springframework.validation.annotation.Validated
  */
 @Validated
 @ConfigurationProperties("bpmner")
-data class BpmnAlignmentConfig(
+internal data class BpmnAlignmentConfig(
     val alignmentValidator: Actor<Persona> = DEFAULT_ALIGNMENT_VALIDATOR,
 ) {
     companion object {
@@ -52,7 +52,7 @@ data class BpmnAlignmentConfig(
  */
 @Validated
 @ConfigurationProperties("bpmner.alignment")
-data class BpmnAlignmentThresholdsConfig(
+internal data class BpmnAlignmentThresholdsConfig(
     @field:Min(0)
     val maxAssumptions: Int = 3,
     val blockOnUnsupportedElements: Boolean = true,

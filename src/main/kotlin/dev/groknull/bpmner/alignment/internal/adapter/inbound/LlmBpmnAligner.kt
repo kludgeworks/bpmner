@@ -13,10 +13,10 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.BpmnAligner
 import dev.groknull.bpmner.alignment.BpmnAlignmentCheckedEvent
-import dev.groknull.bpmner.alignment.BpmnAlignmentConfig
 import dev.groknull.bpmner.alignment.BpmnAlignmentException
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
 import dev.groknull.bpmner.alignment.internal.domain.BpmnAlignmentPostChecker
 import dev.groknull.bpmner.alignment.internal.domain.BpmnSummarizer
 import dev.groknull.bpmner.bpmn.BpmnRequest

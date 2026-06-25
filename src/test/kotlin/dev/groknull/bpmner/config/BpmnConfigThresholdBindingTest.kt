@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.config
 
-import dev.groknull.bpmner.alignment.BpmnAlignmentThresholdsConfig
+import dev.groknull.bpmner.alignment.internal.BpmnAlignmentThresholdsConfig
 import dev.groknull.bpmner.authoring.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.conformance.BpmnConformanceConfig
 import dev.groknull.bpmner.conformance.BpmnLoggingConfig
-import dev.groknull.bpmner.contract.BpmnContractThresholdsConfig
+import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessBudgetConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.repair.BpmnRepairBudgetConfig
@@ -61,28 +61,28 @@ class BpmnConfigThresholdBindingTest {
     class Config
 
     @Autowired
-    lateinit var readinessThresholds: BpmnReadinessThresholdsConfig
+    internal lateinit var readinessThresholds: BpmnReadinessThresholdsConfig
 
     @Autowired
-    lateinit var readinessBudget: BpmnReadinessBudgetConfig
+    internal lateinit var readinessBudget: BpmnReadinessBudgetConfig
 
     @Autowired
-    lateinit var contractThresholds: BpmnContractThresholdsConfig
+    internal lateinit var contractThresholds: BpmnContractThresholdsConfig
 
     @Autowired
-    lateinit var alignmentThresholds: BpmnAlignmentThresholdsConfig
+    internal lateinit var alignmentThresholds: BpmnAlignmentThresholdsConfig
 
     @Autowired
-    lateinit var authoringBudget: BpmnAuthoringBudgetConfig
+    internal lateinit var authoringBudget: BpmnAuthoringBudgetConfig
 
     @Autowired
-    lateinit var repairBudget: BpmnRepairBudgetConfig
+    internal lateinit var repairBudget: BpmnRepairBudgetConfig
 
     @Autowired
-    lateinit var loggingConfig: BpmnLoggingConfig
+    internal lateinit var loggingConfig: BpmnLoggingConfig
 
     @Autowired
-    lateinit var conformanceConfig: BpmnConformanceConfig
+    internal lateinit var conformanceConfig: BpmnConformanceConfig
 
     // bpmner.readiness.*
     @Test

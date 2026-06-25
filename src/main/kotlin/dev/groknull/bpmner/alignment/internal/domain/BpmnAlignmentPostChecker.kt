@@ -9,8 +9,8 @@ import dev.groknull.bpmner.alignment.AlignmentClassification
 import dev.groknull.bpmner.alignment.AlignmentFindings
 import dev.groknull.bpmner.alignment.AlignmentVerdict
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
-import dev.groknull.bpmner.alignment.BpmnAlignmentThresholdsConfig
 import dev.groknull.bpmner.alignment.BpmnDefinitionSummary
+import dev.groknull.bpmner.alignment.internal.BpmnAlignmentThresholdsConfig
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 

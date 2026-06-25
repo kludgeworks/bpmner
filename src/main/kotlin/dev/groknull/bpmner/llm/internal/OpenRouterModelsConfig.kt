@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.llm
+package dev.groknull.bpmner.llm.internal
 
 import com.embabel.agent.openai.OpenAiCompatibleModelFactory
 import com.embabel.agent.openai.StandardOpenAiOptionsConverter
@@ -24,77 +24,88 @@ import org.springframework.context.annotation.Profile
 import org.springframework.web.client.RestClient
 import org.springframework.web.reactive.function.client.WebClient
 
-private const val PROVIDER = "DeepSeek"
+private const val PROVIDER = "OpenRouter"
 private const val DEFAULT_MAX_ATTEMPTS = 10
 private const val DEFAULT_BACKOFF_MILLIS = 5000L
 private const val DEFAULT_BACKOFF_MULTIPLIER = 5.0
 private const val DEFAULT_BACKOFF_MAX_INTERVAL = 180000L
-private const val BASE_URL = "https://api.deepseek.com/v1"
+private const val BASE_URL = "https://openrouter.ai/api/v1"
 private const val COMPLETIONS_PATH = "/chat/completions"
 
-private const val DEEPSEEK_CHAT_INPUT_PRICE = 0.14
-private const val DEEPSEEK_CHAT_OUTPUT_PRICE = 0.28
-private const val DEEPSEEK_REASONER_INPUT_PRICE = 0.55
-private const val DEEPSEEK_REASONER_OUTPUT_PRICE = 2.19
+// OpenRouter is OpenAI-compatible but ships no Embabel pricing bundle, so register pricing explicitly
+// so the smoke-history dashboard reports real cost (`cost_known=priced`). These are the Cerebras rates
+// for the Llama model — Cerebras is pinned at the OpenRouter account level ("Provider preferences →
+// only Cerebras"), because OpenRouter's per-request `provider` routing is a request-body field that
+// Spring AI's OpenAiChatOptions cannot set. Verify the exact rate on the OpenRouter model page
+// (https://openrouter.ai/meta-llama/llama-3.3-70b-instruct, Cerebras provider). USD per 1M tokens.
+private const val LLAMA_70B_USD_PER_1M_IN = 0.85
+private const val LLAMA_70B_USD_PER_1M_OUT = 1.2
 
-// DeepSeek pricing (as of June 2026, cache-miss rates)
-// V3 (deepseek-chat): $0.14 / 1M input tokens, $0.28 / 1M output tokens
-// R1 (deepseek-reasoner): $0.55 / 1M input tokens, $2.19 / 1M output tokens
-private val DEEPSEEK_PRICING: Map<String, PricingModel> =
+private val OPENROUTER_PRICING: Map<String, PricingModel> =
     mapOf(
-        "deepseek-chat" to PricingModel.usdPer1MTokens(DEEPSEEK_CHAT_INPUT_PRICE, DEEPSEEK_CHAT_OUTPUT_PRICE),
-        "deepseek-reasoner" to PricingModel.usdPer1MTokens(DEEPSEEK_REASONER_INPUT_PRICE, DEEPSEEK_REASONER_OUTPUT_PRICE),
+        "meta-llama/llama-3.3-70b-instruct" to
+            PricingModel.usdPer1MTokens(LLAMA_70B_USD_PER_1M_IN, LLAMA_70B_USD_PER_1M_OUT),
     )
 
-@ConfigurationProperties(prefix = "embabel.agent.platform.models.deepseek")
-class DeepSeekProperties : RetryProperties {
+// OpenRouter uses these for rate-limit tier and usage attribution; optional, harmless if absent.
+private val OPENROUTER_HEADERS =
+    mapOf(
+        "HTTP-Referer" to "https://github.com/kludgeworks/bpmner",
+        "X-Title" to "bpmner-smoke",
+    )
+
+@ConfigurationProperties(prefix = "embabel.agent.platform.models.openrouter")
+internal class OpenRouterProperties : RetryProperties {
     var apiKey: String? = null
-    var models: List<String> = listOf("deepseek-chat", "deepseek-reasoner")
+    var models: List<String> = listOf("meta-llama/llama-3.3-70b-instruct")
     override var maxAttempts: Int = DEFAULT_MAX_ATTEMPTS
     override var backoffMillis: Long = DEFAULT_BACKOFF_MILLIS
     override var backoffMultiplier: Double = DEFAULT_BACKOFF_MULTIPLIER
     override var backoffMaxInterval: Long = DEFAULT_BACKOFF_MAX_INTERVAL
 }
 
-@Profile("deepseek")
+// Activated by the `llama` profile: OpenRouter is just the proxy; the Llama model (on Cerebras,
+// pinned account-level) is the family under test, so the profile/CI row is named for the model.
+@Profile("llama")
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(DeepSeekProperties::class)
-class DeepSeekModelsConfig(
+@EnableConfigurationProperties(OpenRouterProperties::class)
+internal class OpenRouterModelsConfig(
     observationRegistry: ObjectProvider<ObservationRegistry>,
     @Qualifier("aiModelRestClientBuilder")
     restClientBuilder: ObjectProvider<RestClient.Builder>,
     @Qualifier("aiModelWebClientBuilder")
     webClientBuilder: ObjectProvider<WebClient.Builder>,
-    private val properties: DeepSeekProperties,
+    private val properties: OpenRouterProperties,
     private val configurableBeanFactory: ConfigurableBeanFactory,
 ) : OpenAiCompatibleModelFactory(
     baseUrl = BASE_URL,
-    apiKey = properties.apiKey?.takeIf { it.isNotBlank() } ?: "UNCONFIGURED", // loads context without a key; fails at call time
+    apiKey =
+    properties.apiKey?.takeIf { it.isNotBlank() }
+        ?: error(
+            "OpenRouter API key required: set OPENROUTER_API_KEY env var or" +
+                " embabel.agent.platform.models.openrouter.api-key",
+        ),
     completionsPath = COMPLETIONS_PATH,
     embeddingsPath = null,
-    httpHeaders = emptyMap(),
+    httpHeaders = OPENROUTER_HEADERS,
     observationRegistry = observationRegistry.getIfUnique { ObservationRegistry.NOOP },
     restClientBuilder = restClientBuilder,
     webClientBuilder = webClientBuilder,
 ) {
     @Bean
-    fun deepSeekModelsInitializer(): ProviderInitialization {
+    fun openRouterModelsInitializer(): ProviderInitialization {
         val registeredLlms =
-            properties.models.distinct().map { modelId ->
-                val pricingModel = DEEPSEEK_PRICING[modelId]
-                if (pricingModel == null) {
-                    logger.warn("No pricing model found for DeepSeek model: {}. Cost tracking will be disabled.", modelId)
-                }
+            properties.models.map { modelId ->
                 val llm =
                     SpringAiLlmService(
                         name = modelId,
                         provider = PROVIDER,
                         chatModel = chatModelOf(modelId, properties.retryTemplate(modelId)),
                         optionsConverter = StandardOpenAiOptionsConverter,
-                        pricingModel = pricingModel,
+                        pricingModel = OPENROUTER_PRICING[modelId],
                     )
                 configurableBeanFactory.registerSingleton(modelId, llm)
-                logger.info("Registered DeepSeek model: {}", modelId)
+                logger.info("Registered OpenRouter model: {}", modelId)
                 RegisteredModel(beanName = modelId, modelId = modelId)
             }
 
