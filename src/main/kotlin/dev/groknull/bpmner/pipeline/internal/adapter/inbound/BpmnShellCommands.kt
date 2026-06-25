@@ -7,6 +7,8 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.shell.ShellCommands
 import dev.groknull.bpmner.authoring.GENERATED_CONTENT_PREFIX
+import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
+import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.shell.standard.ShellComponent
@@ -22,6 +24,11 @@ import org.springframework.shell.standard.ShellOption
  * in closed mode, reusing its goal composition, interactive clarification (HITL) loop,
  * and result formatting — so `generate "<description>"` just works.
  *
+ * After a successful generate that produced a BPMN output path, the command delegates
+ * to [BpmnPreviewOrchestrator] which prompts an interactive human (default **Yes**) and
+ * on opt-in writes a sibling HTML preview and asks the OS to open it.
+ * Non-interactive/CI/failed/no-marker runs return exactly the same output as before.
+ *
  * [ShellCommands] is resolved through an [ObjectProvider] so this bean instantiates even in contexts
  * where the embabel shell is not active (e.g. non-shell `@SpringBootTest` contexts); the provider is
  * only dereferenced when the command actually runs, which only happens inside a live shell.
@@ -30,6 +37,7 @@ import org.springframework.shell.standard.ShellOption
 @ShellComponent
 internal class BpmnShellCommands(
     private val shellCommands: ObjectProvider<ShellCommands>,
+    private val previewOrchestrator: BpmnPreviewOrchestrator,
 ) {
     @ShellMethod(
         key = ["generate", "gen", "g"],
@@ -55,7 +63,13 @@ internal class BpmnShellCommands(
             showPlanning = true,
             context = null,
         )
-        return withTrailingOutputLocation(rendered)
+        val base = withTrailingOutputLocation(rendered)
+        val bpmnName = extractOutputName(rendered)
+        val previewSuffix = bpmnName
+            ?.let { previewOrchestrator.runPreviewFlow(it) }
+            ?.let { previewResultMessage(it) }
+            ?: ""
+        return if (previewSuffix.isBlank()) base else "$base\n$previewSuffix"
     }
 
     // The open-mode pipeline only takes the prose (it seeds UserInput); the output file is set by the
@@ -75,8 +89,20 @@ internal class BpmnShellCommands(
     // directly; if absent (clarification/error), the result is returned unchanged.
     private fun withTrailingOutputLocation(rendered: String?): String {
         if (rendered == null) return ""
-        val outputPath = OUTPUT_LOCATION.find(rendered)?.groupValues?.get(1)?.trim()
+        val outputPath = extractOutputName(rendered)
         return if (outputPath.isNullOrBlank()) rendered else "$rendered\n\nWrote BPMN to: $outputPath"
+    }
+
+    /** Extracts the bare file name from the OUTPUT_LOCATION marker, or null if absent. */
+    private fun extractOutputName(rendered: String?): String? {
+        return rendered?.let { OUTPUT_LOCATION.find(it)?.groupValues?.get(1)?.trim() }
+    }
+
+    /** Maps a [PreviewResult] to the text appended after the existing output, or blank for Skipped. */
+    private fun previewResultMessage(result: PreviewResult): String = when (result) {
+        is PreviewResult.Skipped -> ""
+        is PreviewResult.Opened -> "Preview opened in browser: ${result.previewPath}"
+        is PreviewResult.Fallback -> "Preview written to: ${result.previewPath}\n${result.reason}"
     }
 
     private companion object {

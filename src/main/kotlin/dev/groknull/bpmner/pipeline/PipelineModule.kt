@@ -8,6 +8,10 @@ package dev.groknull.bpmner.pipeline
 import org.springframework.modulith.ApplicationModule
 
 @ApplicationModule(
-    allowedDependencies = ["alignment", "authoring", "bpmn", "conformance", "contract", "layout", "readiness", "repair"],
+    allowedDependencies = [
+        "alignment", "authoring", "bpmn", "browser",
+        "conformance", "contract", "layout", "preview",
+        "readiness", "repair",
+    ],
 )
 object PipelineModule

@@ -1,0 +1,129 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.pipeline.internal.domain
+
+import dev.groknull.bpmner.browser.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertInstanceOf
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.io.TempDir
+import java.nio.file.Path
+
+class BpmnPreviewOrchestratorTest {
+
+    private fun orchestrator(
+        previewReturns: Path? = null,
+        browserOutcome: BrowserOpenOutcome = BrowserOpenOutcome.Opened,
+        interactive: Boolean = true,
+        promptAnswer: Boolean = true,
+    ) = BpmnPreviewOrchestrator(
+        previewWriter = { bpmnPath ->
+            previewReturns ?: error("writePreview called unexpectedly for $bpmnPath")
+        },
+        browserOpenPort = { _ -> browserOutcome },
+        interactiveEnvironment = { interactive },
+        previewPrompt = { promptAnswer },
+    )
+
+    @Test
+    fun `non-interactive - returns Skipped without prompting`() {
+        val orc = BpmnPreviewOrchestrator(
+            previewWriter = { _ -> error("must not write preview when non-interactive") },
+            browserOpenPort = { _ -> error("must not open browser when non-interactive") },
+            interactiveEnvironment = { false },
+            previewPrompt = { error("must not prompt when non-interactive") },
+        )
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("output.bpmn"))
+    }
+
+    @Test
+    fun `user declines - returns Skipped without writing preview`() {
+        val orc = BpmnPreviewOrchestrator(
+            previewWriter = { _ -> error("must not write preview when user declines") },
+            browserOpenPort = { _ -> error("must not open browser when user declines") },
+            interactiveEnvironment = { true },
+            previewPrompt = { false },
+        )
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("output.bpmn"))
+    }
+
+    @Test
+    fun `blank file name - returns Skipped`() {
+        val orc = orchestrator()
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow(""))
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("   "))
+    }
+
+    @Test
+    fun `resolved path does not exist - returns Skipped`() {
+        val orc = orchestrator()
+        // /nonexistent/path.bpmn won't exist on disk
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("/nonexistent/missing.bpmn"))
+    }
+
+    @Test
+    fun `preview writer throws - returns Skipped gracefully`(@TempDir tempDir: Path) {
+        val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
+        val orc = BpmnPreviewOrchestrator(
+            previewWriter = { _ -> throw IllegalArgumentException("write failed") },
+            browserOpenPort = { _ -> error("must not open browser when writer fails") },
+            interactiveEnvironment = { true },
+            previewPrompt = { true },
+        )
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow(bpmnFile.toString()))
+    }
+
+    @Test
+    fun `browser Opened - returns Opened with preview path`(@TempDir tempDir: Path) {
+        val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
+        val previewFile = tempDir.resolve("output.preview.html")
+        val orc = orchestrator(previewReturns = previewFile, browserOutcome = BrowserOpenOutcome.Opened)
+
+        val result = orc.runPreviewFlow(bpmnFile.toString())
+
+        assertInstanceOf(PreviewResult.Opened::class.java, result)
+        assertEquals(previewFile, (result as PreviewResult.Opened).previewPath)
+    }
+
+    @Test
+    fun `browser Unsupported - returns Fallback with preview path and reason`(@TempDir tempDir: Path) {
+        val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
+        val previewFile = tempDir.resolve("output.preview.html")
+        val orc = orchestrator(previewReturns = previewFile, browserOutcome = BrowserOpenOutcome.Unsupported("headless"))
+
+        val result = orc.runPreviewFlow(bpmnFile.toString())
+
+        assertInstanceOf(PreviewResult.Fallback::class.java, result)
+        val fallback = result as PreviewResult.Fallback
+        assertEquals(previewFile, fallback.previewPath)
+        assertTrue(fallback.reason.contains("headless"), "reason was: ${fallback.reason}")
+        assertTrue(fallback.reason.contains("browser not supported"), "reason was: ${fallback.reason}")
+    }
+
+    @Test
+    fun `browser Failed - returns Fallback with preview path and reason`(@TempDir tempDir: Path) {
+        val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
+        val previewFile = tempDir.resolve("output.preview.html")
+        val orc = orchestrator(previewReturns = previewFile, browserOutcome = BrowserOpenOutcome.Failed("exit 1"))
+
+        val result = orc.runPreviewFlow(bpmnFile.toString())
+
+        assertInstanceOf(PreviewResult.Fallback::class.java, result)
+        val fallback = result as PreviewResult.Fallback
+        assertEquals(previewFile, fallback.previewPath)
+        assertTrue(fallback.reason.contains("exit 1"), "reason was: ${fallback.reason}")
+        assertTrue(fallback.reason.contains("Browser launch failed"), "reason was: ${fallback.reason}")
+    }
+
+    @Test
+    fun `relative file name resolves to cwd-relative path`() {
+        // A relative path that doesn't exist → Skipped (not a crash)
+        val orc = orchestrator()
+        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("relative-output.bpmn"))
+    }
+}
