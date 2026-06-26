@@ -267,7 +267,7 @@ class ConformanceModuleTest {
     fun `BpmnEvaluationPipeline throws infrastructure exception`() {
         val ctx = createPipelineAndContext()
         val infraDiagnostic = BpmnDiagnostic(
-            source = BpmnDiagnosticSource.LINT,
+            source = BpmnDiagnosticSource.GRAPH,
             rule = "parse-error",
             message = "bpmnlint-bundle load failed",
         )
