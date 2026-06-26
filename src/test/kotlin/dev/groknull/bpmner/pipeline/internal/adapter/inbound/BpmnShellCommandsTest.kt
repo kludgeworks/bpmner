@@ -96,6 +96,44 @@ class BpmnShellCommandsTest {
     }
 
     @Test
+    fun `the output marker is recovered even when embabel colourises it with ANSI escapes`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        // Embabel's FormatProcessOutput wraps HasContent.content in ANSI SGR colour escapes; the
+        // outer-wrap escape surrounds the entire line so stripping it recovers the plain prefix.
+        val esc = "\u001B"
+        val rendered =
+            "You asked: Make toast\n" +
+                "$esc[38;2;190;183;128mGenerated BPMN \u2192 toast.bpmn (842 chars).$esc[0m\n\n" +
+                "LLMs used: [gpt-4.1] across 4 calls"
+        `when`(
+            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+        ).thenReturn(rendered)
+
+        val result = commandDelegatingTo(shellCommands).generate("Make toast")
+
+        assertTrue(result.endsWith("Wrote BPMN to: toast.bpmn"), "result was:\n$result")
+    }
+
+    @Test
+    fun `the output marker is recovered when an ANSI escape is injected mid-prefix`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        // Root-cause path: the colour escape splits the prefix string between "Generated " and
+        // "BPMN →", so a naive string match on "Generated BPMN →" fails to find the marker.
+        val esc = "\u001B"
+        val rendered =
+            "You asked: Make toast\n" +
+                "Generated $esc[38;2;190;183;128mBPMN \u2192 toast.bpmn (842 chars).$esc[0m\n\n" +
+                "LLMs used: [gpt-4.1] across 4 calls"
+        `when`(
+            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+        ).thenReturn(rendered)
+
+        val result = commandDelegatingTo(shellCommands).generate("Make toast")
+
+        assertTrue(result.endsWith("Wrote BPMN to: toast.bpmn"), "result was:\n$result")
+    }
+
+    @Test
     fun `no trailing line is added when nothing was generated`() {
         val shellCommands = mock(ShellCommands::class.java)
         `when`(

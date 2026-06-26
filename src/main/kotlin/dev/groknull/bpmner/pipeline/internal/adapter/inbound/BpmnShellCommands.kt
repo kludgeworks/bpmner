@@ -85,17 +85,26 @@ internal class BpmnShellCommands(
 
     // Embabel renders the result (incl. the output file) above its cost/tool-usage summary, so the
     // filename is easy to miss. Recover it from BpmnResult.content's marker and echo it as the very
-    // last line. The marker is contiguous within embabel's (block-coloured) output, so it matches
-    // directly; if absent (clarification/error), the result is returned unchanged.
+    // last line. Embabel wraps the rendered content in ANSI colour escapes (FormatProcessOutput
+    // colours HasContent.content), so the colour codes must be stripped before the marker is matched;
+    // if the marker is absent (clarification/error), the result is returned unchanged.
     private fun withTrailingOutputLocation(rendered: String?): String {
         if (rendered == null) return ""
         val outputPath = extractOutputName(rendered)
         return if (outputPath.isNullOrBlank()) rendered else "$rendered\n\nWrote BPMN to: $outputPath"
     }
 
-    /** Extracts the bare file name from the OUTPUT_LOCATION marker, or null if absent. */
+    /**
+     * Extracts the bare file name from the OUTPUT_LOCATION marker, or null if absent.
+     *
+     * Embabel colourises the rendered result with ANSI SGR escapes, which split the literal marker
+     * prefix ([GENERATED_CONTENT_PREFIX]) and break a naive match. Strip the escapes first so the
+     * marker is matched against the plain text the producer emitted.
+     */
     private fun extractOutputName(rendered: String?): String? {
-        return rendered?.let { OUTPUT_LOCATION.find(it)?.groupValues?.get(1)?.trim() }
+        return rendered
+            ?.replace(ANSI_ESCAPE, "")
+            ?.let { OUTPUT_LOCATION.find(it)?.groupValues?.get(1)?.trim() }
     }
 
     /** Maps a [PreviewResult] to the text appended after the existing output, or blank for Skipped. */
@@ -108,5 +117,9 @@ internal class BpmnShellCommands(
 
     private companion object {
         val OUTPUT_LOCATION = Regex(Regex.escape(GENERATED_CONTENT_PREFIX) + """(.+?) \(\d+ chars\)""")
+
+        // ANSI SGR (Select Graphic Rendition) escape sequences embabel uses to colour shell output,
+        // e.g. "\u001B[38;2;190;183;128m" … "\u001B[0m". Stripped before marker matching.
+        val ANSI_ESCAPE = Regex("\u001B\\[[0-9;]*m")
     }
 }
