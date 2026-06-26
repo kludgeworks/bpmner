@@ -107,7 +107,7 @@ class BpmnShellCommandsTest {
         assertEquals("I'm sorry. I don't know how to proceed.", result)
     }
 
-    // ── 476-3: Preview flow tests (all via mocked orchestrator, no real stdin/browser/LLM) ──────
+    // ── Preview flow tests (all via mocked orchestrator, no real stdin/browser/LLM) ─────────────
 
     private fun renderedWithMarker(fileName: String): String {
         return "You asked: Make toast\nGenerated BPMN → $fileName (842 chars).\n\nLLMs used: x"
@@ -190,6 +190,25 @@ class BpmnShellCommandsTest {
         assertTrue(result.contains(previewPath.toString()), "should contain preview path: $result")
         assertTrue(result.contains("headless environment"), "should contain outcome reason: $result")
         assertTrue(result.contains("browser not supported"), "should contain fallback label: $result")
+    }
+
+    @Test
+    fun `orchestrator WriteFailed - write error text includes bpmn path and reason`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val bpmnPath = Paths.get("toast.bpmn")
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn"))
+            .thenReturn(PreviewResult.WriteFailed(bpmnPath, "Preview write failed: disk full"))
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.contains("Wrote BPMN to:"), "should contain Wrote BPMN to: $result")
+        assertTrue(result.contains("Preview write failed"), "should contain write-failed label: $result")
+        assertTrue(result.contains("disk full"), "should contain failure reason: $result")
+        assertTrue(result.contains(bpmnPath.toString()), "should contain bpmn path: $result")
     }
 
     @Test

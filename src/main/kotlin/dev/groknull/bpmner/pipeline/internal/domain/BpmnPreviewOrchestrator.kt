@@ -11,6 +11,7 @@ import dev.groknull.bpmner.browser.InteractiveEnvironment
 import dev.groknull.bpmner.pipeline.internal.adapter.inbound.PreviewPrompt
 import dev.groknull.bpmner.preview.BpmnPreviewWriter
 import org.springframework.stereotype.Component
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -43,14 +44,15 @@ internal class BpmnPreviewOrchestrator(
             return PreviewResult.Skipped
         }
         val bpmnPath = resolveBpmnPath(bpmnFileName)
-        val previewPath = bpmnPath
-            ?.takeIf { it.toFile().exists() }
-            ?.let { runCatching { previewWriter.writePreview(it) }.getOrNull() }
-        return if (previewPath == null) {
-            PreviewResult.Skipped
-        } else {
-            outcomeToResult(previewPath, browserOpenPort.open(previewPath))
-        }
+            ?.takeIf { Files.exists(it) }
+            ?: return PreviewResult.Skipped
+        val writeResult = runCatching { previewWriter.writePreview(bpmnPath) }
+        val previewPath = writeResult.getOrNull()
+            ?: return PreviewResult.WriteFailed(
+                bpmnPath,
+                "Preview write failed: ${writeResult.exceptionOrNull()?.message ?: "unknown error"}",
+            )
+        return outcomeToResult(previewPath, browserOpenPort.open(previewPath))
     }
 
     private fun resolveBpmnPath(name: String): Path? {
@@ -79,5 +81,11 @@ internal class BpmnPreviewOrchestrator(
 
         /** Preview written but browser launch was unsupported or failed; show the path manually. */
         data class Fallback(val previewPath: Path, val reason: String) : PreviewResult
+
+        /**
+         * Preview write failed after the user opted in; [bpmnPath] is the source BPMN file,
+         * [reason] describes the failure so the user can act on it.
+         */
+        data class WriteFailed(val bpmnPath: Path, val reason: String) : PreviewResult
     }
 }

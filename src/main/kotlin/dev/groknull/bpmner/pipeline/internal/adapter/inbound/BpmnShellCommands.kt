@@ -27,7 +27,7 @@ import org.springframework.shell.standard.ShellOption
  * After a successful generate that produced a BPMN output path, the command delegates
  * to [BpmnPreviewOrchestrator] which prompts an interactive human (default **Yes**) and
  * on opt-in writes a sibling HTML preview and asks the OS to open it.
- * Non-interactive/CI/failed/no-marker runs return exactly the same output as before.
+ * Non-interactive, CI, failed, and no-marker runs produce output that is unaffected by the preview flow.
  *
  * [ShellCommands] is resolved through an [ObjectProvider] so this bean instantiates even in contexts
  * where the embabel shell is not active (e.g. non-shell `@SpringBootTest` contexts); the provider is
@@ -103,6 +103,7 @@ internal class BpmnShellCommands(
         is PreviewResult.Skipped -> ""
         is PreviewResult.Opened -> "Preview opened in browser: ${result.previewPath}"
         is PreviewResult.Fallback -> "Preview written to: ${result.previewPath}\n${result.reason}"
+        is PreviewResult.WriteFailed -> "${result.reason}\nSource BPMN: ${result.bpmnPath}"
     }
 
     private companion object {

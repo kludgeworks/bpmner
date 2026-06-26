@@ -67,15 +67,20 @@ class BpmnPreviewOrchestratorTest {
     }
 
     @Test
-    fun `preview writer throws - returns Skipped gracefully`(@TempDir tempDir: Path) {
+    fun `preview writer throws - returns WriteFailed with bpmn path and reason`(@TempDir tempDir: Path) {
         val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
         val orc = BpmnPreviewOrchestrator(
-            previewWriter = { _ -> throw IllegalArgumentException("write failed") },
+            previewWriter = { _ -> throw IllegalArgumentException("disk full") },
             browserOpenPort = { _ -> error("must not open browser when writer fails") },
             interactiveEnvironment = { true },
             previewPrompt = { true },
         )
-        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow(bpmnFile.toString()))
+        val result = orc.runPreviewFlow(bpmnFile.toString())
+        assertInstanceOf(PreviewResult.WriteFailed::class.java, result)
+        val writeFailed = result as PreviewResult.WriteFailed
+        assertEquals(bpmnFile, writeFailed.bpmnPath)
+        assertTrue(writeFailed.reason.contains("disk full"), "reason was: ${writeFailed.reason}")
+        assertTrue(writeFailed.reason.contains("Preview write failed"), "reason was: ${writeFailed.reason}")
     }
 
     @Test
