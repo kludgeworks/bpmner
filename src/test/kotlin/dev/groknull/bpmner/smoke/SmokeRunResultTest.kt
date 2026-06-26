@@ -35,7 +35,7 @@ class SmokeRunResultTest {
         testMethod = "parallel multi-instance activity",
         outcome = "fail",
         failureCategory = "classification",
-        failureSignal = "no_signal",
+        failureSignal = null,
         message = "Expected activity of type Service",
         failureSignature = "parallel multi-instance activity::Expected activity of type Service",
         failureHash = "deadbeef",

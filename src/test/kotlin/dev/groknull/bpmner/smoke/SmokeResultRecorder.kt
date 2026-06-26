@@ -236,7 +236,7 @@ internal const val SMOKE_FAILURE_SIGNAL_NO_SIGNAL = "no_signal"
 
 // A failed extraction assertion is a `classification` miss; a timeout / transport error is `infra`.
 // Zero-call quota/account-balance failures are also kept out of `deterministic` for legacy consumers;
-// [smokeFailureSignalFor] provides the new explicit machine-readable no-signal marker.
+// [smokeFailureSignalFor] provides the explicit machine-readable no-signal marker.
 internal fun smokeCategoryFor(cause: Throwable): String = when {
     cause is AssertionError -> "classification"
     isSmokeQuotaOrBillingFailure(cause) || isSmokeInfraFailure(cause) -> "infra"
