@@ -224,9 +224,11 @@ Alternatively, run `generate` locally, then use `scp` or port-forwarding to retr
 
 #### Minimal Linux without xdg-open
 
-On container images or stripped server installs `xdg-open` may not be present. The `DesktopBrowserOpener`
-falls back to `xdg-open` on Linux after trying `Desktop.Action.BROWSE`; if neither succeeds the result
-is `Fallback` and the preview path is printed. Install `xdg-utils` (`apt install xdg-utils`) and set
+On container images or stripped server installs `xdg-open` may not be present. `DesktopBrowserOpener`
+checks upfront whether `Desktop.Action.BROWSE` is available in the current JVM environment; when it is
+not (no desktop or BROWSE action unsupported), it invokes `xdg-open` directly via `ProcessBuilder`.
+If `xdg-open` is absent the process exits non-zero and the result is `Fallback` — the preview path is
+always printed so you can open it manually. Install `xdg-utils` (`apt install xdg-utils`) and set
 `DISPLAY` or `WAYLAND_DISPLAY` if you want automatic browser opening on a Linux desktop.
 
 #### Headless servers (no display)
