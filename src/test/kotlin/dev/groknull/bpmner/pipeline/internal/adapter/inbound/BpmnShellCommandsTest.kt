@@ -6,21 +6,43 @@
 package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.shell.ShellCommands
+import dev.groknull.bpmner.browser.BrowserOpenOutcome
+import dev.groknull.bpmner.browser.BrowserOpenPort
+import dev.groknull.bpmner.browser.InteractiveEnvironment
+import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
+import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
+import dev.groknull.bpmner.preview.BpmnPreviewWriter
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when`
 import org.springframework.beans.factory.ObjectProvider
+import java.nio.file.Paths
 
 class BpmnShellCommandsTest {
-    private fun commandDelegatingTo(shellCommands: ShellCommands): BpmnShellCommands {
+
+    /** Non-interactive orchestrator (returns Skipped): existing tests never trigger prompts. */
+    private val nonInteractiveOrchestrator = BpmnPreviewOrchestrator(
+        previewWriter = BpmnPreviewWriter { _ -> Paths.get("preview.html") },
+        browserOpenPort = BrowserOpenPort { _ -> BrowserOpenOutcome.Unsupported("test") },
+        interactiveEnvironment = InteractiveEnvironment { false },
+        previewPrompt = PreviewPrompt { false },
+    )
+
+    private fun commandDelegatingTo(
+        shellCommands: ShellCommands,
+        orchestrator: BpmnPreviewOrchestrator = nonInteractiveOrchestrator,
+    ): BpmnShellCommands {
         @Suppress("UNCHECKED_CAST")
         val provider = mock(ObjectProvider::class.java) as ObjectProvider<ShellCommands>
         `when`(provider.getObject()).thenReturn(shellCommands)
-        return BpmnShellCommands(provider)
+        return BpmnShellCommands(provider, orchestrator)
     }
+
+    // ── Existing generation tests (must stay byte-for-byte unchanged in expectations) ───────────
 
     @Test
     fun `generate delegates to embabel execute in closed mode`() {
@@ -83,5 +105,128 @@ class BpmnShellCommandsTest {
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
 
         assertEquals("I'm sorry. I don't know how to proceed.", result)
+    }
+
+    // ── Preview flow tests (all via mocked orchestrator, no real stdin/browser/LLM) ─────────────
+
+    private fun renderedWithMarker(fileName: String): String {
+        return "You asked: Make toast\nGenerated BPMN → $fileName (842 chars).\n\nLLMs used: x"
+    }
+
+    @Test
+    fun `orchestrator Skipped - output unchanged, no preview suffix`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn")).thenReturn(PreviewResult.Skipped)
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.endsWith("Wrote BPMN to: toast.bpmn"), "result was:\n$result")
+        assertFalse(result.contains("Preview"), "should not contain preview text: $result")
+    }
+
+    @Test
+    fun `null render - passthrough as empty string, orchestrator not invoked`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(null)
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertEquals("", result)
+        // Verify runPreviewFlow was never called (no marker in null render)
+        org.mockito.Mockito.verifyNoInteractions(orchestrator)
+    }
+
+    @Test
+    fun `no marker - passthrough, orchestrator not invoked`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn("I'm sorry. I don't know how to proceed.")
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertEquals("I'm sorry. I don't know how to proceed.", result)
+        org.mockito.Mockito.verifyNoInteractions(orchestrator)
+    }
+
+    @Test
+    fun `orchestrator Opened - success text appended after Wrote BPMN`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val previewPath = Paths.get("toast.preview.html")
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn"))
+            .thenReturn(PreviewResult.Opened(previewPath))
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.contains("Wrote BPMN to:"), "should contain Wrote BPMN to: $result")
+        assertTrue(result.contains("Preview opened in browser:"), "should contain success text: $result")
+        assertTrue(result.contains(previewPath.toString()), "should contain preview path: $result")
+    }
+
+    @Test
+    fun `orchestrator Fallback unsupported - fallback text includes preview path and reason`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val previewPath = Paths.get("toast.preview.html")
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn"))
+            .thenReturn(PreviewResult.Fallback(previewPath, "browser not supported: headless environment"))
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.contains("Wrote BPMN to:"), "should contain Wrote BPMN to: $result")
+        assertTrue(result.contains(previewPath.toString()), "should contain preview path: $result")
+        assertTrue(result.contains("headless environment"), "should contain outcome reason: $result")
+        assertTrue(result.contains("browser not supported"), "should contain fallback label: $result")
+    }
+
+    @Test
+    fun `orchestrator WriteFailed - write error text includes bpmn path and reason`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val bpmnPath = Paths.get("toast.bpmn")
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn"))
+            .thenReturn(PreviewResult.WriteFailed(bpmnPath, "Preview write failed: disk full"))
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.contains("Wrote BPMN to:"), "should contain Wrote BPMN to: $result")
+        assertTrue(result.contains("Preview write failed"), "should contain write-failed label: $result")
+        assertTrue(result.contains("disk full"), "should contain failure reason: $result")
+        assertTrue(result.contains(bpmnPath.toString()), "should contain bpmn path: $result")
+    }
+
+    @Test
+    fun `orchestrator Fallback failed - fallback text includes preview path and reason`() {
+        val shellCommands = mock(ShellCommands::class.java)
+        val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
+        val previewPath = Paths.get("toast.preview.html")
+        val rendered = renderedWithMarker("toast.bpmn")
+        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+            .thenReturn(rendered)
+        `when`(orchestrator.runPreviewFlow("toast.bpmn"))
+            .thenReturn(PreviewResult.Fallback(previewPath, "Browser launch failed: process exit 1"))
+
+        val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
+
+        assertTrue(result.contains("Wrote BPMN to:"), "should contain Wrote BPMN to: $result")
+        assertTrue(result.contains(previewPath.toString()), "should contain preview path: $result")
+        assertTrue(result.contains("process exit 1"), "should contain outcome reason: $result")
+        assertTrue(result.contains("Browser launch failed"), "should contain fallback label: $result")
     }
 }
