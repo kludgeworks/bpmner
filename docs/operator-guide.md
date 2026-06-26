@@ -216,8 +216,11 @@ so you can open it manually.
 
 `System.console()` returns null for most non-login SSH sessions and multiplexer panes because stdin
 is not a real TTY. The interactivity gate sees "no console" and returns `Skipped` — no prompt is
-shown. To open the preview, copy the printed `.preview.html` path to your local machine and open it
-in a browser, or use port-forwarding/scp to retrieve the file.
+shown and **no preview file is written**. There is no path to copy because the `Skipped` outcome
+emits zero output. To get a preview, run `generate` from a local developer workstation (where a
+console and display are available); the preview file will be written there and opened automatically.
+Alternatively, run `generate` locally, then use `scp` or port-forwarding to retrieve the
+`<stem>.preview.html` file produced during that local run.
 
 #### Minimal Linux without xdg-open
 
