@@ -189,8 +189,9 @@ always in the same directory as the BPMN output.
 
 <!-- markdownlint-enable MD013 -->
 
-On `Fallback` and `WriteFailed` the preview path (or BPMN path) is always printed so the operator
-can open the file manually.
+On `Fallback` the preview path is always printed so the operator can open the preview file manually.
+On `WriteFailed` the preview file was not written (the write itself failed); only the source BPMN
+path is printed (`Source BPMN: <path>`) so the operator knows which source file triggered the error.
 
 ### Non-interactive and CI environments
 
@@ -209,8 +210,9 @@ Actions, Jenkins, etc.), piped shell commands, and server JVMs.
 ### Browser preview not opening
 
 The preview prompt and browser launch can fail silently or produce a `Fallback` output line in
-several common environments. The preview file path is always printed on `Fallback` or `WriteFailed`
-so you can open it manually.
+several common environments. On `Fallback` the preview file is written and its path is printed so
+you can open it manually. On `WriteFailed` the preview write itself failed — only the source BPMN
+path is printed; there is no preview file to open.
 
 #### Remote shells (SSH, tmux, screen)
 
