@@ -13,9 +13,11 @@ import dev.groknull.bpmner.bpmn.OwnedElementGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.conformance.internal.domain.BpmnDiagnosticNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 class BpmnDiagnosticNormalizerTest {
     private val localXmlCapability =
@@ -150,6 +152,114 @@ class BpmnDiagnosticNormalizerTest {
         val diagnostics = normalizer.normalizeLintDiagnostics(issues, emptyIndex, emptyGraph)
 
         assertEquals(RepairKind.LOCAL_XML_FIX, diagnostics[0].kind)
+    }
+
+    @Test
+    fun `inferRepairScope for RENDER source returns FULL_PROCESS`() {
+        val diag = BpmnDiagnostic(source = BpmnDiagnosticSource.RENDER, message = "render err")
+        val normalized = normalizer.scopedDiagnostic(emptyGraph, diag)
+        assertEquals(BpmnRepairScope.FULL_PROCESS, normalized.repairScope)
+    }
+
+    @Test
+    fun `inferRepairScope for GRAPH source with ownerRef returns PHASE`() {
+        val diag = BpmnDiagnostic(source = BpmnDiagnosticSource.GRAPH, message = "graph err", ownerRef = "owner1")
+        val normalized = normalizer.scopedDiagnostic(emptyGraph, diag)
+        assertEquals(BpmnRepairScope.PHASE, normalized.repairScope)
+    }
+
+    @Test
+    fun `inferRepairScope for GRAPH source with objectRef returns PHASE`() {
+        val diag = BpmnDiagnostic(source = BpmnDiagnosticSource.GRAPH, message = "graph err", objectRef = "someRef")
+        val normalized = normalizer.scopedDiagnostic(emptyGraph, diag)
+        assertEquals(BpmnRepairScope.PHASE, normalized.repairScope)
+    }
+
+    @Test
+    fun `inferRepairScope for GRAPH source with no owner or objectRef returns COMPOSITION`() {
+        val diag = BpmnDiagnostic(source = BpmnDiagnosticSource.GRAPH, message = "graph err")
+        val normalized = normalizer.scopedDiagnostic(emptyGraph, diag)
+        assertEquals(BpmnRepairScope.COMPOSITION, normalized.repairScope)
+    }
+
+    @Test
+    fun `inferRepairScope for XSD and LINT sources`() {
+        // XSD/LINT with ownerRef -> PHASE
+        val diag1 = BpmnDiagnostic(source = BpmnDiagnosticSource.XSD, message = "xsd err", ownerRef = "owner1")
+        assertEquals(BpmnRepairScope.PHASE, normalizer.scopedDiagnostic(emptyGraph, diag1).repairScope)
+
+        // XSD/LINT with objectRef == "process" -> COMPOSITION
+        val diag2 = BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, message = "lint err", objectRef = "process")
+        assertEquals(BpmnRepairScope.COMPOSITION, normalizer.scopedDiagnostic(emptyGraph, diag2).repairScope)
+
+        // XSD/LINT with elementId != null -> COMPOSITION
+        val diag3 = BpmnDiagnostic(source = BpmnDiagnosticSource.XSD, message = "xsd err", elementId = "someId")
+        assertEquals(BpmnRepairScope.COMPOSITION, normalizer.scopedDiagnostic(emptyGraph, diag3).repairScope)
+
+        // XSD/LINT with other values -> FULL_PROCESS
+        val diag4 = BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, message = "lint err")
+        assertEquals(BpmnRepairScope.FULL_PROCESS, normalizer.scopedDiagnostic(emptyGraph, diag4).repairScope)
+    }
+
+    @Test
+    fun `infrastructureDiagnostics filters correctly`() {
+        val infraDiag = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            rule = "parse-error",
+            message = "unknown rule foo",
+        )
+        val nonInfraDiag = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            rule = "some-other-rule",
+            message = "some error",
+        )
+        val list = normalizer.infrastructureDiagnostics(listOf(infraDiag, nonInfraDiag))
+        assertEquals(1, list.size)
+        assertEquals("unknown rule foo", list[0].message)
+    }
+
+    @Test
+    fun `validatorInfrastructureMessage formats message properly`() {
+        val infraDiag = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.LINT,
+            rule = "parse-error",
+            message = "unknown rule foo",
+        )
+        val msg = normalizer.validatorInfrastructureMessage(listOf(infraDiag))
+        assertTrue(msg.contains("BPMN validator infrastructure failure"))
+        assertTrue(msg.contains("unknown rule foo"))
+        assertTrue(msg.contains("Non-repairable bpmn-lint diagnostic(s):"))
+
+        val emptyMsg = normalizer.validatorInfrastructureMessage(emptyList())
+        assertEquals("BPMN validator infrastructure failure\nNon-repairable bpmn-lint diagnostic(s):", emptyMsg)
+    }
+
+    @Test
+    fun `isValidatorInfrastructureFailure matches hints`() {
+        val base = BpmnDiagnostic(source = BpmnDiagnosticSource.LINT, rule = "parse-error", message = "")
+
+        fun check(msg: String, expected: Boolean) {
+            val list = normalizer.infrastructureDiagnostics(listOf(base.copy(message = msg)))
+            assertEquals(expected, list.isNotEmpty())
+        }
+
+        check("An unknown rule appeared", true)
+        check("Config resolution not supported here", true)
+        check("Failed to resolveRule", true)
+        check("The resolver failed", true)
+        check("Cannot load bpmnlint-bundle", true)
+        check("BPMN-LINT execution error occurred", true)
+
+        // Non-matching message
+        check("Just a syntax error", false)
+
+        // Non-matching source
+        val xsdDiag = base.copy(source = BpmnDiagnosticSource.XSD, message = "unknown rule")
+        assertTrue(normalizer.infrastructureDiagnostics(listOf(xsdDiag)).isEmpty())
+
+        // Non-matching rule
+        val ruleDiag = base.copy(rule = "other", message = "unknown rule")
+        assertTrue(normalizer.infrastructureDiagnostics(listOf(ruleDiag)).isEmpty())
     }
 
     private fun mockRendered(): RenderedBpmn = RenderedBpmn(

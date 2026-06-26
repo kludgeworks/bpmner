@@ -27,8 +27,8 @@ import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.GenerationMode
 import dev.groknull.bpmner.conformance.BpmnLintingPort
-import dev.groknull.bpmner.conformance.BpmnXsdValidator
 import dev.groknull.bpmner.conformance.LintIssue
+import dev.groknull.bpmner.conformance.internal.adapter.outbound.BpmnXsdValidator
 import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.ClarificationQuestion

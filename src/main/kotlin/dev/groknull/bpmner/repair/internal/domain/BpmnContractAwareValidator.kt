@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component
  * graph) with the [BpmnContractFidelityPort] (contract→BPMN topology correspondence).
  *
  * Exists in the repair domain layer so that the `validation` module remains contract-agnostic.
- * The [BpmnValidator] interface and [dev.groknull.bpmner.conformance.BpmnEvaluationPipeline]
+ * The [BpmnValidator] interface and [dev.groknull.bpmner.conformance.internal.domain.BpmnEvaluationPipeline]
  * are not modified.
  *
  * Fidelity issues are projected as [BpmnDiagnostic] entries with `source = GRAPH`,

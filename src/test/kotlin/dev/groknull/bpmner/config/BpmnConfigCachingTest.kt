@@ -12,7 +12,7 @@ import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig
-import dev.groknull.bpmner.ruleset.BpmnRulesConfig
+import dev.groknull.bpmner.ruleset.internal.BpmnRulesConfig
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue

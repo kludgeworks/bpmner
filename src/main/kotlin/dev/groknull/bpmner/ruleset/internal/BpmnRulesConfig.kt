@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.ruleset
+package dev.groknull.bpmner.ruleset.internal
 
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.config.models.anthropic.withAnthropicCaching
@@ -20,7 +20,7 @@ import org.springframework.validation.annotation.Validated
  */
 @Validated
 @ConfigurationProperties("bpmner")
-data class BpmnRulesConfig(
+internal data class BpmnRulesConfig(
     val linter: Actor<Persona> = DEFAULT_LINTER,
 ) {
     companion object {
@@ -54,7 +54,7 @@ data class BpmnRulesConfig(
  */
 @Validated
 @ConfigurationProperties("bpmner.rules")
-data class BpmnRulesUriConfig(
+internal data class BpmnRulesUriConfig(
     // Modeller-owned lint convention source. Defaults to the packaged
     // `modulepath:/linter/pkl/bpmner.pkl`; set `bpmner.rules.config-uri` to a `file:` URI to load
     // team-specific word lists. Rule profile and per-rule severity overrides are read from
