@@ -25,6 +25,7 @@ import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator
 import dev.groknull.bpmner.ruleset.RuleEngine
 import dev.groknull.bpmner.ruleset.RulesTestFixtures
 import org.junit.jupiter.api.Assertions.assertEquals

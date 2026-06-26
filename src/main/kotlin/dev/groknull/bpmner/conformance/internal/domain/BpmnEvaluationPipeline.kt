@@ -3,11 +3,23 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.conformance
+package dev.groknull.bpmner.conformance.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
+import dev.groknull.bpmner.conformance.BpmnEvaluation
+import dev.groknull.bpmner.conformance.BpmnFingerprintService
+import dev.groknull.bpmner.conformance.BpmnLintingPort
+import dev.groknull.bpmner.conformance.BpmnLoggingConfig
+import dev.groknull.bpmner.conformance.BpmnRepairScope
+import dev.groknull.bpmner.conformance.BpmnValidator
+import dev.groknull.bpmner.conformance.BpmnValidatorInfrastructureException
+import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
+import dev.groknull.bpmner.conformance.GlobalDiagnostics
+import dev.groknull.bpmner.conformance.LintIssue
 import org.jmolecules.ddd.annotation.Service
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

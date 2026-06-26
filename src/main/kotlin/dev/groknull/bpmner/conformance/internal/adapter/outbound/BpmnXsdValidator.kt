@@ -3,9 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.conformance
+package dev.groknull.bpmner.conformance.internal.adapter.outbound
 
-import dev.groknull.bpmner.conformance.internal.adapter.outbound.ClasspathResourceResolver
+import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
+import dev.groknull.bpmner.conformance.XsdValidationIssue
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component

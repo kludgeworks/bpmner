@@ -297,7 +297,7 @@ class BpmnXmlToDefinitionConverterTest {
         assertEquals(BpmnMessageEventDefinition(""), startEvent.eventDefinition)
 
         val errors =
-            dev.groknull.bpmner.conformance
+            dev.groknull.bpmner.conformance.internal.domain
                 .BpmnDefinitionValidator()
                 .validate(parsed)
         assertContains(

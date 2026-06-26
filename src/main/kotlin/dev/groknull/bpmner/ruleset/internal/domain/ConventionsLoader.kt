@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain
 
-import dev.groknull.bpmner.ruleset.BpmnRulesUriConfig
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig
 import org.pkl.config.java.ConfigEvaluator
 import org.pkl.config.kotlin.forKotlin
 import org.pkl.config.kotlin.to

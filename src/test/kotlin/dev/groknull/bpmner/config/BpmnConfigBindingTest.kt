@@ -13,8 +13,8 @@ import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.repair.BpmnRepairConfig
-import dev.groknull.bpmner.ruleset.BpmnRulesConfig
-import dev.groknull.bpmner.ruleset.BpmnRulesUriConfig
+import dev.groknull.bpmner.ruleset.internal.BpmnRulesConfig
+import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired

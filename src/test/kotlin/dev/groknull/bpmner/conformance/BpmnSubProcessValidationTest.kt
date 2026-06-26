@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUserTask
+import dev.groknull.bpmner.conformance.internal.domain.BpmnDefinitionValidator
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertTrue

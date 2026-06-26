@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.OwnedElementGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.bpmn.RepairKind
 import dev.groknull.bpmner.bpmn.RepairSafety
+import dev.groknull.bpmner.conformance.internal.domain.BpmnDiagnosticNormalizer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
