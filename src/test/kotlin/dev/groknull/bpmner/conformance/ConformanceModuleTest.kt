@@ -56,7 +56,7 @@ class ConformanceModuleTest {
 
     private fun <T> anyNonNull(): T {
         org.mockito.ArgumentMatchers.any<T>()
-        @Suppress("UNCHECKED_CAST")
+        @Suppress("UNCHECKED_CAST") // mockito any() matchers return null but we cast to non-null T
         return null as T
     }
 
