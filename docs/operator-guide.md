@@ -190,8 +190,9 @@ always in the same directory as the BPMN output.
 <!-- markdownlint-enable MD013 -->
 
 On `Fallback` the preview path is always printed so the operator can open the preview file manually.
-On `WriteFailed` the preview file was not written (the write itself failed); only the source BPMN
-path is printed (`Source BPMN: <path>`) so the operator knows which source file triggered the error.
+On `WriteFailed` the preview file was not written (the write itself failed); the error reason and
+the source BPMN path (`Source BPMN: <path>`) are both printed so the operator knows what went wrong
+and which source file triggered the error.
 
 ### Non-interactive and CI environments
 
