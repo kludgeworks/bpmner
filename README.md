@@ -41,7 +41,7 @@ Each LLM call routes through a named **role** (e.g. `repair-label`) rather than 
 
 Roles are also defined for `readiness-assessor` (balanced), `contract-extractor` (high precision), and `alignment-validator` (critical); see `src/main/resources/application*.yaml` for the full list.
 
-**Where to change it.** Persona definitions and role names live in [`BpmnConfig.kt`](src/main/kotlin/dev/groknull/bpmner/config/BpmnConfig.kt). Concrete model assignments live in `src/main/resources/application*.yaml`. Adding a provider is a YAML-only change; adding a new role requires a `BpmnConfig` entry and an entry in every active profile.
+**Where to change it.** Persona definitions and role names live in the capability-owned config files under `src/main/kotlin/`. Concrete model assignments live in `src/main/resources/application*.yaml`. Adding a provider is a YAML-only change; adding a new role requires updating the relevant config bean and an entry in every active profile.
 
 **When to promote a task to a larger model.** If a small-tier role starts producing bad fixes — for example `repair-label` mangling capitalization — bump that role to the next tier in the relevant `application-*.yaml`. No code change is needed; the routing key is the role name.
 
@@ -82,14 +82,58 @@ Open `http://localhost:8080` once the server is up.
 
 #### Interactive Shell
 
-Start the shell and use Embabel's built-in `x` / `execute` command. The shell owns prompting,
-blackboard inspection, cost output, and tool statistics.
+Start the shell and use the dedicated `generate` command (also aliased as `gen` or `g`) to create a
+BPMN diagram from a plain-language description. The shell owns prompting, blackboard inspection, cost
+output, and tool statistics.
 
 ```bash
 mise run bpmner-cli --provider anthropic
 ```
 
-Then run, for example: `x "Generate BPMN for the toast process in toast-process.txt and write it to toast.bpmn"`.
+Then run, for example:
+
+```text
+generate "Order fulfilment workflow with payment authorisation and shipping notification"
+generate --output order-fulfilment.bpmn "Order fulfilment workflow"
+```
+
+Omitting `--output` lets the LLM generate a descriptive kebab-case name from the process description
+(e.g. `purchase-order-approval.bpmn`). Embabel's built-in `x` / `execute` command also works, but
+`generate` adds the dedicated post-generation preview prompt described below.
+
+##### Post-generation browser preview
+
+After each successful `generate` run the shell asks whether to open the diagram in a browser:
+
+```text
+Open preview in browser? [Y/n]:
+```
+
+Press **Enter** (or type `y`/`yes`) to accept — the default is **Yes**. The command writes a
+`<stem>.preview.html` file beside the `.bpmn` output (e.g. `output.preview.html` next to
+`output.bpmn`) and asks the OS to open it.
+
+<!-- markdownlint-disable MD013 -->
+
+**Output lines you will see:**
+
+| Outcome | Line(s) appended |
+| --- | --- |
+| Browser opened successfully | `Preview opened in browser: <path>` |
+| Browser unsupported / launch failed | `Preview written to: <path>` followed by the reason |
+| Preview file could not be written | `<reason>` followed by `Source BPMN: <path>` |
+| Non-interactive / CI / headless / user declined / path not found | *(no line — output is unchanged)* |
+
+<!-- markdownlint-enable MD013 -->
+
+**Non-interactive and CI runs skip the prompt entirely** — a run is considered non-interactive when
+any of the following hold: the `CI` environment variable is set, no system console is attached
+(`System.console()` returns null), or the JVM is in headless mode (`GraphicsEnvironment.isHeadless()`
+returns true). In those cases the prompt is never shown and the output is byte-for-byte identical to a
+run without the preview feature. Automation never hangs.
+
+See the [Operator Guide](docs/operator-guide.md#bpmn-preview) for headless/CI configuration and
+browser-open troubleshooting.
 
 ## Observability & Tracing
 

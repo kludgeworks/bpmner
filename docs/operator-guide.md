@@ -13,7 +13,7 @@ Every `bpmner.*` YAML key, default, range, when to tune.
 | `bpmner.budget.generation` | `100` | ≥ 1 | Bump if the generation+repair loop terminates with `ProcessExecutionTerminatedException` on inputs you believe are tractable. Lower at your peril — the budget covers generation AND the entire repair loop in one process. |
 | `bpmner.budget.readiness` | `20` | ≥ 1 | Rarely tuned. Readiness has no repair loop; 20 is generous. |
 
-Both fields live under a single `BpmnBudgetConfig` block in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/config/BpmnConfig.kt).
+Both fields are bound at `bpmner.budget` via `@ConfigurationProperties` in the authoring and readiness capability config files.
 
 ### Rule profile + severity overrides
 
@@ -78,7 +78,7 @@ bpmner doesn't pick a model directly; it picks a *role*, and Embabel's role-mapp
 
 Override per-role under `embabel.models.llms.<role>`. Provider profiles are configured in `application-anthropic.yaml`, `application-openai.yaml`, `application-gemini.yaml`, `application-mistral.yaml`, `application-deepseek.yaml`, and `application-llama.yaml`. The simplest way to run is `mise run bpmner-cli --provider <provider>` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama` (Llama on Cerebras via the OpenRouter proxy); the task reads that provider's API key from 1Password (`op://bpmner/<provider>/api-key`) and sets `SPRING_PROFILES_ACTIVE` for you (add `--web` or `--verbose` to layer on those profiles). To run `bazel` directly instead, pass `--spring.profiles.active=<provider>` (or set `SPRING_PROFILES_ACTIVE`) and ensure the corresponding API key environment variable is set (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GEMINI_API_KEY`, `MISTRAL_API_KEY`, `DEEPSEEK_API_KEY`, or `OPENROUTER_API_KEY`).
 
-The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults in [`BpmnConfig.kt`](../src/main/kotlin/dev/groknull/bpmner/config/BpmnConfig.kt) are tuned for the BPMN domain; override via YAML only if you're substantially changing the application's tone.
+The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmner.alignment-validator`, …) controls the system prompt voice. Defaults are tuned for the BPMN domain in the capability-owned config beans; override via YAML only if you're substantially changing the application's tone.
 
 ### Logging + diagnostics
 
@@ -143,13 +143,110 @@ class MyProgressListener {
 }
 ```
 
-The mapping table lives in [`BpmnProgressProjectionObserver.kt`](../src/main/kotlin/dev/groknull/bpmner/observability/internal/adapter/inbound/BpmnProgressProjectionObserver.kt). Add a new entry whenever you add an `@Action` somewhere.
+The mapping table lives in [`BpmnProgressProjectionObserver.kt`](../src/main/kotlin/dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver.kt). Add a new entry whenever you add an `@Action` somewhere.
 
 ### Custom Embabel listeners
 
 `ProcessOptions.listeners` is populated from Spring-collected `List<AgenticEventListener>`. Drop a `@Component` `AgenticEventListener` into the application context and it auto-wires into both `AgentPlatformBpmnAgentInvoker` (generation) and `AgentPlatformBpmnReadinessInvoker` (readiness). Useful for cost tracking, per-action timing, prompt logging.
 
+## BPMN preview
+
+After each successful interactive `generate` run the shell prompts the user to open the generated
+diagram in a browser. This section describes the gate, artifact naming, output lines, and how the
+feature behaves in non-interactive and headless environments.
+
+### Gate order
+
+The orchestrator (`BpmnPreviewOrchestrator`) evaluates three conditions in order before opening a
+browser:
+
+1. **`canOpenBrowser()` is true** — the interactivity gate (`InteractiveEnvironment`) checks (a)
+   `GraphicsEnvironment.isHeadless()` is false, (b) the `CI` environment variable is absent
+   (`System.getenv("CI") == null`), and (c) `System.console() != null`. All three must hold.
+2. **`confirmOpenPreview()` is true** — the shell prompts `Open preview in browser? [Y/n]:`.
+   Blank or empty input defaults to **Yes**; `y`/`yes` (case-insensitive) is Yes; any other input
+   is No.
+3. **The BPMN file exists on disk** — the resolved output path must be present.
+
+If any condition fails the result is `Skipped` and the output is byte-for-byte unchanged.
+
+### Artifact naming
+
+The HTML preview is written beside the `.bpmn` file using the sibling naming convention
+`<stem>.preview.html`. For example, `output.bpmn` → `output.preview.html`. The preview file is
+always in the same directory as the BPMN output.
+
+### Output lines
+
+<!-- markdownlint-disable MD013 -->
+
+| `PreviewResult` | Line(s) appended after `Wrote BPMN to: <path>` |
+| --- | --- |
+| `Skipped` | *(none — output is unchanged)* |
+| `Opened` | `Preview opened in browser: <path>` |
+| `Fallback` (unsupported or failed browser) | `Preview written to: <path>` followed by the reason on the next line |
+| `WriteFailed` (preview file write error) | The error reason followed by `Source BPMN: <path>` |
+
+<!-- markdownlint-enable MD013 -->
+
+On `Fallback` the preview path is always printed so the operator can open the preview file manually.
+On `WriteFailed` the preview file was not written (the write itself failed); the error reason and
+the source BPMN path (`Source BPMN: <path>`) are both printed so the operator knows what went wrong
+and which source file triggered the error.
+
+### Non-interactive and CI environments
+
+The interactivity gate short-circuits to `Skipped` — no prompt is shown and no browser is opened —
+whenever **any** of the following is true:
+
+- `CI` environment variable is set (presence check, any value).
+- `System.console()` returns null (piped stdin/stdout, non-TTY, most application servers).
+- `GraphicsEnvironment.isHeadless()` returns true (headless JVM, X11-less Linux servers).
+
+This means automation never hangs waiting for input. The combined gate covers CI systems (GitHub
+Actions, Jenkins, etc.), piped shell commands, and server JVMs.
+
 ## Troubleshooting
+
+### Browser preview not opening
+
+The preview prompt and browser launch can fail silently or produce a `Fallback` output line in
+several common environments. On `Fallback` the preview file is written and its path is printed so
+you can open it manually. On `WriteFailed` the preview write itself failed — only the source BPMN
+path is printed; there is no preview file to open.
+
+#### Remote shells (SSH, tmux, screen)
+
+`System.console()` returns null for most non-login SSH sessions and multiplexer panes because stdin
+is not a real TTY. The interactivity gate sees "no console" and returns `Skipped` — no prompt is
+shown and **no preview file is written**. There is no path to copy because the `Skipped` outcome
+emits zero output. To get a preview, run `generate` from a local developer workstation (where a
+console and display are available); the preview file will be written there and opened automatically.
+Alternatively, run `generate` locally, then use `scp` or port-forwarding to retrieve the
+`<stem>.preview.html` file produced during that local run.
+
+#### Minimal Linux without xdg-open
+
+On container images or stripped server installs `xdg-open` may not be present. `DesktopBrowserOpener`
+checks upfront whether `Desktop.Action.BROWSE` is available in the current JVM environment; when it is
+not (no desktop or BROWSE action unsupported), it invokes `xdg-open` directly via `ProcessBuilder`.
+If `xdg-open` is absent the process exits non-zero and the result is `Fallback` — the preview path is
+always printed so you can open it manually. Install `xdg-utils` (`apt install xdg-utils`) and set
+`DISPLAY` or `WAYLAND_DISPLAY` if you want automatic browser opening on a Linux desktop.
+
+#### Headless servers (no display)
+
+`GraphicsEnvironment.isHeadless()` returns true when no graphics environment is available (no `DISPLAY`
+variable, no AWT peer). The interactivity gate returns `Skipped` immediately so AWT is never
+initialised and no exception is thrown. The `.preview.html` file is only written on explicit opt-in
+(user answers Yes in a non-headless shell), so on headless servers the preview file will not be present.
+Run `generate` from a local developer workstation to produce and open the preview.
+
+#### Desktop.Action.BROWSE unsupported
+
+Some Linux desktop environments do not expose `Desktop.Action.BROWSE` via the JVM's `java.awt.Desktop`
+API. In this case the opener falls back to `xdg-open <path>`. If that also fails, the result is
+`Fallback` and the preview path is printed for manual opening.
 
 ### `ProcessExecutionStuckException`
 
