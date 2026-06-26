@@ -99,7 +99,7 @@ class BpmnShellCommandsTest {
     fun `the output marker is recovered even when embabel colourises it with ANSI escapes`() {
         val shellCommands = mock(ShellCommands::class.java)
         // Embabel's FormatProcessOutput wraps HasContent.content in ANSI SGR colour escapes; the
-        // colour codes split the literal "Generated BPMN \u2192 " prefix and break a naive match.
+        // outer-wrap escape surrounds the entire line so stripping it recovers the plain prefix.
         val esc = "\u001B"
         val rendered =
             "You asked: Make toast\n" +
