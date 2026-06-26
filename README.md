@@ -122,7 +122,7 @@ Press **Enter** (or type `y`/`yes`) to accept — the default is **Yes**. The co
 | Browser opened successfully | `Preview opened in browser: <path>` |
 | Browser unsupported / launch failed | `Preview written to: <path>` followed by the reason |
 | Preview file could not be written | `<reason>` followed by `Source BPMN: <path>` |
-| Non-interactive / CI / headless | *(no line — output is unchanged)* |
+| Non-interactive / CI / headless / user declined / path not found | *(no line — output is unchanged)* |
 
 <!-- markdownlint-enable MD013 -->
 
