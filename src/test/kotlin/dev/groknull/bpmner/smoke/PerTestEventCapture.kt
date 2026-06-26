@@ -9,9 +9,12 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.LlmInvocationEvent
+import com.embabel.agent.api.event.LlmRequestEvent
 import com.embabel.agent.api.event.LlmResponseEvent
 import com.embabel.agent.api.event.ToolCallResponseEvent
 import com.embabel.agent.core.LlmInvocation
+import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
+import com.embabel.common.ai.model.LlmOptions
 import com.embabel.common.ai.model.PricingModel
 
 /**
@@ -30,6 +33,7 @@ class PerTestEventCapture : AgenticEventListener {
     private val lock = Any()
     private val invocations = mutableListOf<TimedInvocation>()
     private val llmResponseTimeMsByInteraction = mutableMapOf<String, MutableList<Long>>()
+    private val roleByInteraction = mutableMapOf<String, String>()
     private var finishedProcessToolCalls = 0
     private var toolResponseCalls = 0
 
@@ -38,6 +42,10 @@ class PerTestEventCapture : AgenticEventListener {
             is LlmInvocationEvent ->
                 synchronized(lock) {
                     invocations.add(TimedInvocation(event.invocation, event.interactionId))
+                }
+            is LlmRequestEvent<*> ->
+                synchronized(lock) {
+                    roleByInteraction[event.interaction.id.value] = roleFor(event.interaction.llm)
                 }
             is LlmResponseEvent<*> ->
                 synchronized(lock) {
@@ -58,6 +66,7 @@ class PerTestEventCapture : AgenticEventListener {
         synchronized(lock) {
             invocations.clear()
             llmResponseTimeMsByInteraction.clear()
+            roleByInteraction.clear()
             finishedProcessToolCalls = 0
             toolResponseCalls = 0
         }
@@ -75,18 +84,25 @@ class PerTestEventCapture : AgenticEventListener {
             llmTimeMs = llmTimeMsOf(timedInvs),
             toolCallCount = if (finishedProcessToolCalls > 0) finishedProcessToolCalls else toolResponseCalls,
             servedModel = invs.map { it.llmMetadata.name }.distinct().joinToString(",").ifEmpty { null },
-            stageBreakdown =
-            invs.groupBy { it.agentName ?: UNKNOWN }
-                .mapValues { (_, group) ->
-                    StageStats(
-                        model = group.map { it.llmMetadata.name }.distinct().joinToString(","),
-                        promptTokens = group.sumOf { it.usage.promptTokens ?: 0 },
-                        completionTokens = group.sumOf { it.usage.completionTokens ?: 0 },
-                        llmCalls = group.size,
-                    )
-                },
+            stageBreakdown = timedInvs.statsBy { it.invocation.agentName ?: UNKNOWN },
+            roleBreakdown = timedInvs.statsBy { roleByInteraction[it.interactionId] ?: UNKNOWN },
         )
     }
+
+    private fun List<TimedInvocation>.statsBy(key: (TimedInvocation) -> String): Map<String, StageStats> = groupBy(key)
+        .mapValues { (_, group) ->
+            val invs = group.map { it.invocation }
+            StageStats(
+                model = invs.map { it.llmMetadata.name }.distinct().joinToString(","),
+                promptTokens = invs.sumOf { it.usage.promptTokens ?: 0 },
+                completionTokens = invs.sumOf { it.usage.completionTokens ?: 0 },
+                llmCalls = invs.size,
+            )
+        }
+
+    private fun roleFor(options: LlmOptions): String = options.role
+        ?: (options.criteria as? ByRoleModelSelectionCriteria)?.role
+        ?: UNKNOWN
 
     /**
      * Embabel 0.4.0 can emit zero-valued [LlmInvocation.runningTime] for provider-backed calls while
@@ -129,6 +145,7 @@ class PerTestEventCapture : AgenticEventListener {
         val toolCallCount: Int,
         val servedModel: String?,
         val stageBreakdown: Map<String, StageStats>,
+        val roleBreakdown: Map<String, StageStats>,
     )
 
     private data class TimedInvocation(

@@ -100,6 +100,32 @@ class PerTestEventCaptureTest {
     }
 
     @Test
+    fun `keeps stage breakdown agent-keyed and adds role-keyed breakdown`() {
+        val capture = PerTestEventCapture()
+        val request = llmRequestEvent(LlmOptions.withLlmForRole("contract-extractor"))
+
+        capture.onProcessEvent(request)
+        capture.onProcessEvent(
+            invocationEvent(
+                runningTime = Duration.ofMillis(500),
+                interactionId = request.interaction.id.value,
+                agentName = "goal-ValidatedProcessContract",
+            ),
+        )
+
+        val snap = capture.snapshot()
+
+        assertEquals(
+            StageStats(model = "test-provider", promptTokens = 100, completionTokens = 25, llmCalls = 1),
+            snap.stageBreakdown["goal-ValidatedProcessContract"],
+        )
+        assertEquals(
+            StageStats(model = "test-provider", promptTokens = 100, completionTokens = 25, llmCalls = 1),
+            snap.roleBreakdown["contract-extractor"],
+        )
+    }
+
+    @Test
     fun `falls back to tool response events when finished process stats are empty`() {
         val capture = PerTestEventCapture()
 
@@ -113,26 +139,30 @@ class PerTestEventCaptureTest {
     private fun invocationEvent(
         runningTime: Duration,
         interactionId: String = "interaction-1",
+        agentName: String = "test-agent",
     ): LlmInvocationEvent = LlmInvocationEvent(
         mock(AgentProcess::class.java),
         LlmInvocation(
             LlmMetadata.create("test-provider", "test-model", null, PricingModel.ALL_YOU_CAN_EAT),
             Usage(promptTokens = 100, completionTokens = 25, nativeUsage = null),
-            "test-agent",
+            agentName,
             Instant.parse("2026-06-07T00:00:00Z"),
             runningTime,
         ),
         interactionId,
     )
 
-    private fun llmResponseEvent(runningTime: Duration) = LlmRequestEvent(
+    private fun llmResponseEvent(runningTime: Duration) = llmRequestEvent(LlmOptions.withModel("test-model"))
+        .responseEvent("ok", runningTime)
+
+    private fun llmRequestEvent(llmOptions: LlmOptions) = LlmRequestEvent(
         mock(AgentProcess::class.java),
         mock(Action::class.java),
         String::class.java,
-        LlmInteraction.using(LlmOptions.withModel("test-model")),
+        LlmInteraction.using(llmOptions),
         LlmMetadata.create("test-provider", "test-model", null, PricingModel.ALL_YOU_CAN_EAT),
         emptyList(),
-    ).responseEvent("ok", runningTime)
+    )
 
     private fun toolCallResponseEvent() = ToolCallRequestEvent(
         mock(AgentProcess::class.java),
