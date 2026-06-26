@@ -7,6 +7,7 @@ package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.ComposedProcessGraph
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.OwnedElementGraph
@@ -127,6 +128,7 @@ class ConformanceModuleTest {
         )
 
         `when`(fingerprints.serializeDefinition(anyNonNull())).thenReturn("serialized-definition-longer-string")
+        `when`(normalizer.infrastructureDiagnostics(anyNonNull())).thenReturn(emptyList())
 
         return PipelineTestContext(
             pipeline = pipeline,
@@ -281,5 +283,54 @@ class ConformanceModuleTest {
         assertThrows(BpmnValidatorInfrastructureException::class.java) {
             ctx.pipeline.evaluate(ctx.graph, ctx.definition, null, null, 0)
         }
+    }
+
+    @Test
+    fun `BpmnEvaluationPipeline handles graph ownership validation error`() {
+        val ctx = createPipelineAndContext()
+        val definitionWithNode = ctx.definition.copy(
+            nodes = listOf(BpmnStartEvent("StartEvent_1", "Start")),
+        )
+        val badGraph = LaidOutProcessGraph(
+            ownedGraph = OwnedElementGraph(
+                composedGraph = ComposedProcessGraph(
+                    definition = definitionWithNode,
+                    objectOwnersByObjectRef = mapOf("process" to "owner1"),
+                ),
+                elementOwnersByElementId = emptyMap(),
+                objectOwnersByObjectRef = mapOf("process" to "owner1"),
+            ),
+            definition = definitionWithNode,
+        )
+
+        `when`(ctx.definitionValidator.validate(definitionWithNode)).thenReturn(emptyList())
+        `when`(ctx.fingerprints.serializeDefinition(definitionWithNode)).thenReturn("short")
+
+        val result = ctx.pipeline.evaluate(badGraph, definitionWithNode, null, null, 0)
+        assertEquals(1, result.diagnostics.size)
+        assertEquals(BpmnDiagnosticSource.GRAPH, result.diagnostics[0].source)
+        assertTrue(result.diagnostics[0].message.contains("has no owner assignment"))
+    }
+
+    @Test
+    fun `BpmnEvaluationPipeline does not truncate short artifacts`() {
+        val ctx = createPipelineAndContext()
+        val index = BpmnElementIndex(
+            processId = "Process_1",
+            nodeObjectRefs = emptyMap(),
+            edgeObjectRefs = emptyMap(),
+        )
+        val rendered = RenderedBpmn(ctx.definition, "<xml/>", index)
+
+        `when`(ctx.definitionValidator.validate(ctx.definition)).thenReturn(emptyList())
+        `when`(ctx.fingerprints.serializeDefinition(ctx.definition)).thenReturn("short")
+        `when`(ctx.xsdValidationPortMock.validateDetailed(rendered.xml)).thenReturn(emptyList())
+        `when`(
+            ctx.normalizer.normalizeXsdDiagnostics(emptyList(), rendered, ctx.graph),
+        ).thenReturn(emptyList())
+        `when`(ctx.lintingPortMock.lint(ctx.definition)).thenReturn(null)
+
+        val result = ctx.pipeline.evaluate(ctx.graph, ctx.definition, rendered, null, 0)
+        assertTrue(result.diagnostics.isEmpty())
     }
 }

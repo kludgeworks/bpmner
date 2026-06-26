@@ -16,6 +16,7 @@ import dev.groknull.bpmner.repair.BpmnRepairConfig
 import dev.groknull.bpmner.ruleset.internal.BpmnRulesConfig
 import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -126,5 +127,33 @@ class BpmnConfigBindingTest {
                 "expected ByRoleModelSelectionCriteria for role '$role'",
             )
         assertEquals(role, criteria.role, "unexpected role for persona '$persona'")
+    }
+
+    @Test
+    fun `BpmnRulesConfig data class methods run successfully`() {
+        val config1 = BpmnRulesConfig()
+        val config2 = BpmnRulesConfig()
+
+        assertEquals(config1, config2)
+        assertEquals(config1.hashCode(), config2.hashCode())
+        assertEquals(config1.toString(), config2.toString())
+
+        val config3 = config1.copy(linter = BpmnRulesConfig.DEFAULT_LINTER)
+        assertEquals(config1, config3)
+    }
+
+    @Test
+    fun `BpmnRulesUriConfig data class methods run successfully`() {
+        val config1 = BpmnRulesUriConfig(configUri = "file:/tmp/foo.pkl")
+        val config2 = BpmnRulesUriConfig(configUri = "file:/tmp/foo.pkl")
+        val config3 = BpmnRulesUriConfig(configUri = "file:/tmp/bar.pkl")
+
+        assertEquals(config1, config2)
+        assertEquals(config1.hashCode(), config2.hashCode())
+        assertEquals(config1.toString(), config2.toString())
+        assertNotEquals(config1, config3)
+
+        val config4 = config1.copy(configUri = "file:/tmp/bar.pkl")
+        assertEquals(config3, config4)
     }
 }
