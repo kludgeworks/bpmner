@@ -6,17 +6,14 @@
 package dev.groknull.bpmner.browser
 
 /**
- * Outcome of attempting to open a file/URI in the default browser.
- * Distinguishes between opened, unsupported, and failed-with-reason outcomes.
+ * Outcome of attempting to open a file/URI in the default browser:
+ * either opened, or failed-with-reason (covering both unsupported platforms and launch errors).
  */
 sealed interface BrowserOpenOutcome {
 
     /** The browser successfully opened the target. */
     data object Opened : BrowserOpenOutcome
 
-    /** Browser open is not supported on this platform or environment. */
-    data class Unsupported(val reason: String) : BrowserOpenOutcome
-
-    /** Browser open was attempted but failed. */
+    /** Browser open was not attempted or did not succeed; [reason] explains why. */
     data class Failed(val reason: String) : BrowserOpenOutcome
 }

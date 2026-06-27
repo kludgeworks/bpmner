@@ -8,7 +8,6 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 import com.embabel.agent.shell.ShellCommands
 import dev.groknull.bpmner.browser.BrowserOpenOutcome
 import dev.groknull.bpmner.browser.BrowserOpenPort
-import dev.groknull.bpmner.browser.InteractiveEnvironment
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import dev.groknull.bpmner.preview.BpmnPreviewWriter
@@ -24,11 +23,10 @@ import java.nio.file.Paths
 
 class BpmnShellCommandsTest {
 
-    /** Non-interactive orchestrator (returns Skipped): existing tests never trigger prompts. */
+    /** Declining orchestrator (returns Skipped): existing generation tests never trigger a preview. */
     private val nonInteractiveOrchestrator = BpmnPreviewOrchestrator(
         previewWriter = BpmnPreviewWriter { _ -> Paths.get("preview.html") },
-        browserOpenPort = BrowserOpenPort { _ -> BrowserOpenOutcome.Unsupported("test") },
-        interactiveEnvironment = InteractiveEnvironment { false },
+        browserOpenPort = BrowserOpenPort { _ -> BrowserOpenOutcome.Failed("test") },
         previewPrompt = PreviewPrompt { false },
     )
 

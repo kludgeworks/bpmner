@@ -36,6 +36,8 @@ build/
 node_modules/
 dist/
 logs/
+# Spring Shell command-history file written at the repo root on shell exit
+/bpmner.log
 linter/src/generated/static-rules.ts
 linter/docs/rules/*.md
 

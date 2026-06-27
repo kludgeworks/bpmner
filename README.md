@@ -55,7 +55,7 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ### Build
 
 ```bash
-bazel build //src:bpmner_app
+bazelisk build //src:bpmner_app
 ```
 
 ### Run
@@ -63,7 +63,7 @@ bazel build //src:bpmner_app
 `bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell. Both launch
 through the `bpmner-cli` mise task, which loads the chosen provider's API key from 1Password
 (`op://bpmner/<provider>/api-key`), sets the matching Spring profile via `SPRING_PROFILES_ACTIVE`, and
-runs `bazel run //src:bpmner_app`. Sign in to 1Password first (`op signin`, or set
+runs `bazelisk run //src:bpmner_app`. Sign in to 1Password first (`op signin`, or set
 `OP_SERVICE_ACCOUNT_TOKEN`).
 
 Select a provider with `--provider` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`,
@@ -145,7 +145,7 @@ browser-open troubleshooting.
 ## Static Analysis
 
 Kotlin code is checked by three complementary tools:
-- **detekt** and **ktlint** run on every PR via `bazel test //...` — fast, style/complexity-focused, configured in `detekt.yml` and `.editorconfig`.
+- **detekt** and **ktlint** run on every PR via `bazelisk test //...` — fast, style/complexity-focused, configured in `detekt.yml` and `.editorconfig`.
 - **SonarCloud** runs on every PR as a required check. It performs deep code analysis for the backend, linter, and web sub-projects, and pushes results into the [SonarCloud dashboard](https://sonarcloud.io/).
 
 ## Testing
@@ -155,7 +155,7 @@ Kotlin code is checked by three complementary tools:
 Run all unit and integration tests (excluding live LLM tests):
 
 ```bash
-bazel test //...
+bazelisk test //...
 ```
 
 ### Live LLM Smoke Tests
@@ -164,7 +164,7 @@ To manually verify that the LLM correctly extracts process contract vocabulary i
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
-  bazel test --test_tag_filters=manual,live-llm \
+  bazelisk test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
@@ -175,7 +175,7 @@ To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
-  bazel test --test_tag_filters=manual,live-llm \
+  bazelisk test --test_tag_filters=manual,live-llm \
   --test_env=ANTHROPIC_API_KEY --test_env=SPRING_PROFILES_ACTIVE \
   //src/test:LiveLlmFullPipelineSmokeTest --test_output=streamed
 ```

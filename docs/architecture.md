@@ -23,7 +23,7 @@ infrastructure. Decided in [adr-002-module-architecture.md §D-map](./adr-002-mo
 | **Intake / Readiness** | Supporting domain | Request readiness + clarification subdomain | `readiness` |
 | **Generation Orchestration** | Application layer — not a domain context | Single `BpmnGenerationAgent`, GOAP wiring, `@Action` shims | `orchestration` |
 | **Delivery adapters** | Inbound/primary adapters — not contexts | HTTP, shell entrypoint | `web`, shell entrypoint |
-| **Preview** | Output artifact generator — not a domain context | BPMN → sibling HTML preview artifact; bundled local viewer assets | `preview` |
+| **Preview** | Output artifact generator — not a domain context | BPMN → transient temp-dir HTML preview artifact; bundled local viewer assets | `preview` |
 | **Cross-cutting** | Infrastructure / sink — not contexts | Config, observability | `config`, `observability` |
 
 <!-- markdownlint-enable MD013 -->
@@ -283,7 +283,7 @@ an analogous startup check on deployed agents.
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
 | `rules/` | Pkl rule catalog + rule engine. | `RuleEngine` (port), `BpmnerLintConfig`. |
 | `observability/` | Process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
-| `preview/` | Standalone preview artifact generator: BPMN → sibling `.preview.html` with bundled local viewer. No shell wiring until 476-3. `allowedDependencies = []`. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
+| `preview/` | Standalone preview artifact generator: BPMN → transient temp-dir `.preview.html` (deleted on JVM exit) with bundled local viewer. Wired into `generate` via `BpmnPreviewOrchestrator`. `allowedDependencies = []`. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
 
 <!-- markdownlint-enable MD013 -->
 

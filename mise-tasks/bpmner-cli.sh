@@ -3,7 +3,7 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
-#MISE description="Run the bpmner app via bazel with a provider profile; API key sourced from 1Password"
+#MISE description="Run the bpmner app via bazelisk with a provider profile; API key sourced from 1Password"
 #MISE dir="{{config_root}}"
 #MISE tools={gum="latest"}
 #MISE raw=true
@@ -65,4 +65,8 @@ profiles="${provider}"
 [[ ${usage_verbose:-false} == "true" ]] && profiles="${profiles},verbose"
 export SPRING_PROFILES_ACTIVE="${profiles}"
 
-exec bazel run //src:bpmner_app
+bazelisk build //src:bpmner_app
+bazel_bin="$(bazelisk info bazel-bin)"
+exec java \
+  -Dspring.profiles.active="${SPRING_PROFILES_ACTIVE}" \
+  -jar "${bazel_bin}/src/bpmner_app.jar"

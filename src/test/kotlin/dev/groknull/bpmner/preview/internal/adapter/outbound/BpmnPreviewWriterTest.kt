@@ -17,28 +17,33 @@ class BpmnPreviewWriterTest {
     private val writer = ClasspathBpmnPreviewWriter()
 
     @Test
-    fun `writes sibling preview with deterministic name`(@TempDir tempDir: Path) {
+    fun `writes preview into the system temp dir, not beside the bpmn`(@TempDir tempDir: Path) {
         val bpmnPath = tempDir.resolve("order-process.bpmn")
         Files.writeString(bpmnPath, MINIMAL_BPMN, StandardCharsets.UTF_8)
 
         val previewPath = writer.writePreview(bpmnPath)
 
-        assertThat(previewPath).isEqualTo(tempDir.resolve("order-process.preview.html"))
+        val systemTemp = Path.of(System.getProperty("java.io.tmpdir")).toRealPath()
+        assertThat(previewPath.parent.toRealPath()).isEqualTo(systemTemp)
+        assertThat(previewPath.parent).isNotEqualTo(bpmnPath.parent)
+        assertThat(previewPath.fileName.toString())
+            .startsWith("bpmn-order-process-")
+            .endsWith(".preview.html")
         assertThat(previewPath).exists()
         assertThat(Files.readString(previewPath)).contains("BPMN Preview")
     }
 
     @Test
-    fun `overwrites existing preview without changing bpmn`(@TempDir tempDir: Path) {
+    fun `each call writes a distinct temp file and never mutates the bpmn`(@TempDir tempDir: Path) {
         val bpmnPath = tempDir.resolve("diagram.bpmn")
         Files.writeString(bpmnPath, MINIMAL_BPMN, StandardCharsets.UTF_8)
-        val previewPath = tempDir.resolve("diagram.preview.html")
-        Files.writeString(previewPath, "stale preview", StandardCharsets.UTF_8)
 
-        val actualPath = writer.writePreview(bpmnPath)
+        val first = writer.writePreview(bpmnPath)
+        val second = writer.writePreview(bpmnPath)
 
-        assertThat(actualPath).isEqualTo(previewPath)
-        assertThat(Files.readString(previewPath)).doesNotContain("stale preview")
+        assertThat(first).isNotEqualTo(second)
+        assertThat(first).exists()
+        assertThat(second).exists()
         assertThat(Files.readString(bpmnPath)).isEqualTo(MINIMAL_BPMN)
     }
 

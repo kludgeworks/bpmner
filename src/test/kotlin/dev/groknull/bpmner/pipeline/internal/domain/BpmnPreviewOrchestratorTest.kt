@@ -19,34 +19,20 @@ class BpmnPreviewOrchestratorTest {
     private fun orchestrator(
         previewReturns: Path? = null,
         browserOutcome: BrowserOpenOutcome = BrowserOpenOutcome.Opened,
-        interactive: Boolean = true,
         promptAnswer: Boolean = true,
     ) = BpmnPreviewOrchestrator(
         previewWriter = { bpmnPath ->
             previewReturns ?: error("writePreview called unexpectedly for $bpmnPath")
         },
         browserOpenPort = { _ -> browserOutcome },
-        interactiveEnvironment = { interactive },
         previewPrompt = { promptAnswer },
     )
 
     @Test
-    fun `non-interactive - returns Skipped without prompting`() {
+    fun `user declines or non-interactive - returns Skipped without writing preview`() {
         val orc = BpmnPreviewOrchestrator(
-            previewWriter = { _ -> error("must not write preview when non-interactive") },
-            browserOpenPort = { _ -> error("must not open browser when non-interactive") },
-            interactiveEnvironment = { false },
-            previewPrompt = { error("must not prompt when non-interactive") },
-        )
-        assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("output.bpmn"))
-    }
-
-    @Test
-    fun `user declines - returns Skipped without writing preview`() {
-        val orc = BpmnPreviewOrchestrator(
-            previewWriter = { _ -> error("must not write preview when user declines") },
-            browserOpenPort = { _ -> error("must not open browser when user declines") },
-            interactiveEnvironment = { true },
+            previewWriter = { _ -> error("must not write preview when prompt declines") },
+            browserOpenPort = { _ -> error("must not open browser when prompt declines") },
             previewPrompt = { false },
         )
         assertEquals(PreviewResult.Skipped, orc.runPreviewFlow("output.bpmn"))
@@ -72,7 +58,6 @@ class BpmnPreviewOrchestratorTest {
         val orc = BpmnPreviewOrchestrator(
             previewWriter = { _ -> throw IllegalArgumentException("disk full") },
             browserOpenPort = { _ -> error("must not open browser when writer fails") },
-            interactiveEnvironment = { true },
             previewPrompt = { true },
         )
         val result = orc.runPreviewFlow(bpmnFile.toString())
@@ -93,21 +78,6 @@ class BpmnPreviewOrchestratorTest {
 
         assertInstanceOf(PreviewResult.Opened::class.java, result)
         assertEquals(previewFile, (result as PreviewResult.Opened).previewPath)
-    }
-
-    @Test
-    fun `browser Unsupported - returns Fallback with preview path and reason`(@TempDir tempDir: Path) {
-        val bpmnFile = tempDir.resolve("output.bpmn").also { it.toFile().writeText("<definitions/>") }
-        val previewFile = tempDir.resolve("output.preview.html")
-        val orc = orchestrator(previewReturns = previewFile, browserOutcome = BrowserOpenOutcome.Unsupported("headless"))
-
-        val result = orc.runPreviewFlow(bpmnFile.toString())
-
-        assertInstanceOf(PreviewResult.Fallback::class.java, result)
-        val fallback = result as PreviewResult.Fallback
-        assertEquals(previewFile, fallback.previewPath)
-        assertTrue(fallback.reason.contains("headless"), "reason was: ${fallback.reason}")
-        assertTrue(fallback.reason.contains("browser not supported"), "reason was: ${fallback.reason}")
     }
 
     @Test

@@ -36,7 +36,12 @@ function showError(error: unknown): void {
 
 try {
 	await viewer.importXML(previewXml())
-	;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
+	const canvas = viewer.get("canvas") as BpmnCanvas
+	const fitViewport = (): void => canvas.zoom("fit-viewport")
+	// Fit once layout has settled (the container may still be sizing on first paint),
+	// and re-fit whenever the window is resized so the whole diagram stays visible.
+	requestAnimationFrame(fitViewport)
+	window.addEventListener("resize", fitViewport)
 } catch (error) {
 	showError(error)
 }
