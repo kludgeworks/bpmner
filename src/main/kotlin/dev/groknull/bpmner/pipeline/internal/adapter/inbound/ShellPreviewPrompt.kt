@@ -38,12 +38,12 @@ internal open class ShellPreviewPrompt(
     override fun confirmOpenPreview(): Boolean {
         val lr = lineReaderProvider.ifAvailable
         if (lr == null) {
-            logger.info("[preview] confirmOpenPreview = false — no LineReader available (non-interactive context)")
+            logger.debug("[preview] confirmOpenPreview = false — no LineReader available (non-interactive context)")
             return false
         }
         val answer = lineRead(lr) ?: ""
         val confirmed = answer.isBlank() || answer.trim().lowercase().let { it == "y" || it == "yes" }
-        logger.info("[preview] confirmOpenPreview — answer='{}' -> {}", answer, confirmed)
+        logger.debug("[preview] confirmOpenPreview — answer='{}' -> {}", answer, confirmed)
         return confirmed
     }
 }

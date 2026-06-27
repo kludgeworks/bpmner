@@ -28,7 +28,7 @@ private const val LAUNCH_TIMEOUT_SECONDS = 30L
 @SecondaryAdapter
 @Service
 internal open class OsCommandBrowserOpener(
-    private val osNameSupplier: () -> String = { System.getProperty("os.name") },
+    private val osNameSupplier: () -> String = { System.getProperty("os.name") ?: "unknown" },
     private val launch: (Array<String>) -> Int = ::runLauncher,
 ) : BrowserOpenPort {
 
@@ -64,7 +64,9 @@ internal open class OsCommandBrowserOpener(
 
     private companion object {
         // Start the launcher and wait briefly for it to hand off to the browser. Output is
-        // discarded (no pipe-buffer deadlock). IOException (command absent on PATH) maps to -1.
+        // discarded (no pipe-buffer deadlock). Anything that goes wrong maps to -1 so the
+        // best-effort preview never throws: IOException (command absent on PATH) and
+        // SecurityException (process creation denied) both surface as a failed launch.
         fun runLauncher(command: Array<String>): Int = try {
             val process = ProcessBuilder(*command)
                 .redirectOutput(ProcessBuilder.Redirect.DISCARD)
@@ -77,6 +79,8 @@ internal open class OsCommandBrowserOpener(
                 -1
             }
         } catch (_: IOException) {
+            -1
+        } catch (_: SecurityException) {
             -1
         } catch (_: InterruptedException) {
             Thread.currentThread().interrupt()
