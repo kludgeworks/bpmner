@@ -10,6 +10,7 @@ import dev.groknull.bpmner.authoring.GENERATED_CONTENT_PREFIX
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.shell.standard.ShellComponent
 import org.springframework.shell.standard.ShellMethod
@@ -39,6 +40,8 @@ internal class BpmnShellCommands(
     private val shellCommands: ObjectProvider<ShellCommands>,
     private val previewOrchestrator: BpmnPreviewOrchestrator,
 ) {
+    private val logger = LoggerFactory.getLogger(BpmnShellCommands::class.java)
+
     @ShellMethod(
         key = ["generate", "gen", "g"],
         value = "Generate a BPMN diagram from a natural-language description (interactive).",
@@ -65,9 +68,16 @@ internal class BpmnShellCommands(
         )
         val base = withTrailingOutputLocation(rendered)
         val bpmnName = extractOutputName(rendered)
+        logger.debug("[preview] generate finished; extracted BPMN output name from marker = {}", bpmnName)
         val previewSuffix = bpmnName
-            ?.let { previewOrchestrator.runPreviewFlow(it) }
-            ?.let { previewResultMessage(it) }
+            ?.let {
+                logger.debug("[preview] invoking runPreviewFlow for '{}'", it)
+                previewOrchestrator.runPreviewFlow(it)
+            }
+            ?.let {
+                logger.debug("[preview] runPreviewFlow returned {}", it)
+                previewResultMessage(it)
+            }
             ?: ""
         return if (previewSuffix.isBlank()) base else "$base\n$previewSuffix"
     }

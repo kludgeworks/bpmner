@@ -7,6 +7,7 @@ package dev.groknull.bpmner.preview.internal.adapter.outbound
 
 import dev.groknull.bpmner.preview.BpmnPreviewWriter
 import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
@@ -19,10 +20,13 @@ import kotlin.io.path.nameWithoutExtension
 internal open class ClasspathBpmnPreviewWriter(
     private val resourceLoader: (String) -> String = ::loadClasspathResource,
 ) : BpmnPreviewWriter {
+    private val logger = LoggerFactory.getLogger(ClasspathBpmnPreviewWriter::class.java)
+
     override fun writePreview(bpmnPath: Path): Path {
         require(bpmnPath.exists()) { "BPMN input does not exist: $bpmnPath" }
 
         val bpmnXml = Files.readString(bpmnPath, StandardCharsets.UTF_8)
+        logger.debug("[preview] read {} chars of BPMN XML from {}", bpmnXml.length, bpmnPath)
         val previewHtml =
             loadResource(PREVIEW_TEMPLATE_RESOURCE)
                 .replace("\"$BPMN_XML_PLACEHOLDER\"", jsonStringLiteral(bpmnXml))
@@ -30,12 +34,17 @@ internal open class ClasspathBpmnPreviewWriter(
 
         val previewPath = previewPathFor(bpmnPath)
         Files.writeString(previewPath, previewHtml, StandardCharsets.UTF_8)
+        logger.debug("[preview] wrote {} chars of preview HTML to {}", previewHtml.length, previewPath)
         return previewPath
     }
 
+    // The preview is a throwaway view, not a saved artifact: write it into the system temp dir
+    // (createTempFile uses java.io.tmpdir) and delete on JVM exit so it never pollutes the user's
+    // working directory next to the .bpmn. The base name keeps it recognisable in the browser tab.
     private fun previewPathFor(bpmnPath: Path): Path {
-        val fileName = "${bpmnPath.nameWithoutExtension}.preview.html"
-        return bpmnPath.resolveSibling(fileName)
+        val previewPath = Files.createTempFile("bpmn-${bpmnPath.nameWithoutExtension}-", ".preview.html")
+        previewPath.toFile().deleteOnExit()
+        return previewPath
     }
 
     private fun loadResource(path: String): String = resourceLoader(path)

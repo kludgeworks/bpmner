@@ -3,7 +3,7 @@
 
 load("@rules_java//java:defs.bzl", "java_library")
 load("@rules_kotlin//kotlin:core.bzl", "kt_compiler_plugin", "kt_plugin_cfg")
-load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
+load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_binary", "kt_jvm_library")
 load("@rules_kotlin//kotlin:lint.bzl", "ktlint_test")
 load("@rules_spring//springboot:springboot.bzl", "springboot")
 load("//tools/kotlin:spring.bzl", "SPRING_OPEN_ANNOTATIONS", "spring_allopen_plugins")
@@ -107,6 +107,16 @@ springboot(
     boot_app_class = "dev.groknull.bpmner.BpmnerApplicationKt",
     boot_launcher_class = "org.springframework.boot.loader.launch.JarLauncher",
     java_library = ":bpmner_core",
+)
+
+# Dev-only plain JVM binary so IntelliJ's Bazel plugin renders a run/debug gutter
+# action on `fun main`. Reuses the :bpmner_core library; it does NOT replicate the
+# Spring Boot launcher/profile wiring of :bpmner_app — use :bpmner_app for the
+# packaged artifact, this purely for fast in-IDE run/debug.
+kt_jvm_binary(
+    name = "bpmner_dev",
+    main_class = "dev.groknull.bpmner.BpmnerApplicationKt",
+    runtime_deps = [":bpmner_core"],
 )
 
 ktlint_test(

@@ -8,7 +8,7 @@ package dev.groknull.bpmner.preview
 import org.jmolecules.architecture.hexagonal.SecondaryPort
 import java.nio.file.Path
 
-/** Writes a durable HTML preview artifact beside a generated BPMN file. */
+/** Writes a transient HTML preview for a generated BPMN file into a temp dir and returns its path. */
 @SecondaryPort
 fun interface BpmnPreviewWriter {
     fun writePreview(bpmnPath: Path): Path
