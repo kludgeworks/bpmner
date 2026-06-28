@@ -10,6 +10,7 @@ import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import com.embabel.agent.core.Verbosity
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
@@ -94,6 +95,7 @@ internal class AgentPlatformBpmnAgentInvoker(
     // is short-lived and never queried for status.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
+        verbosity = TRACE_VERBOSITY,
         ephemeral = true,
         listeners = listeners,
     )
@@ -102,11 +104,18 @@ internal class AgentPlatformBpmnAgentInvoker(
     // process must be persisted — `ephemeral = false`.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
+        verbosity = TRACE_VERBOSITY,
         ephemeral = false,
         listeners = listeners,
     )
 
     companion object {
         private const val GENERATION_AGENT_NAME = "BpmnGenerationAgent"
+        private val TRACE_VERBOSITY = Verbosity(
+            showPrompts = true,
+            showLlmResponses = true,
+            debug = false,
+            showPlanning = true,
+        )
     }
 }

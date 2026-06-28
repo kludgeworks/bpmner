@@ -10,6 +10,7 @@ import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
+import com.embabel.agent.core.Verbosity
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.BpmnReadinessBudgetConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
@@ -38,6 +39,7 @@ internal class AgentPlatformBpmnReadinessInvoker(
             agent,
             ProcessOptions(
                 budget = Budget(actions = config.readiness),
+                verbosity = TRACE_VERBOSITY,
                 ephemeral = true,
                 listeners = listeners,
             ),
@@ -51,5 +53,11 @@ internal class AgentPlatformBpmnReadinessInvoker(
 
     private companion object {
         const val READINESS_AGENT_NAME = "BpmnReadinessAgent"
+        val TRACE_VERBOSITY = Verbosity(
+            showPrompts = true,
+            showLlmResponses = true,
+            debug = false,
+            showPlanning = true,
+        )
     }
 }

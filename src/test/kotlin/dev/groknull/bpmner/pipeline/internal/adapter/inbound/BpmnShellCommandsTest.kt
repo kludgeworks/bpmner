@@ -47,13 +47,13 @@ class BpmnShellCommandsTest {
         val shellCommands = mock(ShellCommands::class.java)
         // Closed mode (2nd arg = false); every other flag off except the default showPlanning.
         `when`(
-            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
         ).thenReturn("Generated BPMN")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
 
         assertEquals("Generated BPMN", result)
-        verify(shellCommands).execute("Make toast", false, false, false, false, false, false, false, true, null)
+        verify(shellCommands).execute("Make toast", false, true, true, false, false, false, false, true, null)
     }
 
     @Test
@@ -61,13 +61,13 @@ class BpmnShellCommandsTest {
         val shellCommands = mock(ShellCommands::class.java)
         val expectedIntent = "Make toast\n\nWrite the generated BPMN to the file: toast.bpmn"
         `when`(
-            shellCommands.execute(expectedIntent, false, false, false, false, false, false, false, true, null),
+            shellCommands.execute(expectedIntent, false, true, true, false, false, false, false, true, null),
         ).thenReturn("ok")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast", "toast.bpmn")
 
         assertEquals("ok", result)
-        verify(shellCommands).execute(expectedIntent, false, false, false, false, false, false, false, true, null)
+        verify(shellCommands).execute(expectedIntent, false, true, true, false, false, false, false, true, null)
     }
 
     @Test
@@ -85,7 +85,7 @@ class BpmnShellCommandsTest {
             Tool usage:
             """.trimIndent()
         `when`(
-            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
         ).thenReturn(rendered)
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
@@ -104,7 +104,7 @@ class BpmnShellCommandsTest {
                 "$esc[38;2;190;183;128mGenerated BPMN \u2192 toast.bpmn (842 chars).$esc[0m\n\n" +
                 "LLMs used: [gpt-4.1] across 4 calls"
         `when`(
-            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
         ).thenReturn(rendered)
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
@@ -123,7 +123,7 @@ class BpmnShellCommandsTest {
                 "Generated $esc[38;2;190;183;128mBPMN \u2192 toast.bpmn (842 chars).$esc[0m\n\n" +
                 "LLMs used: [gpt-4.1] across 4 calls"
         `when`(
-            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
         ).thenReturn(rendered)
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
@@ -135,7 +135,7 @@ class BpmnShellCommandsTest {
     fun `no trailing line is added when nothing was generated`() {
         val shellCommands = mock(ShellCommands::class.java)
         `when`(
-            shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null),
+            shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null),
         ).thenReturn("I'm sorry. I don't know how to proceed.")
 
         val result = commandDelegatingTo(shellCommands).generate("Make toast")
@@ -154,7 +154,7 @@ class BpmnShellCommandsTest {
         val shellCommands = mock(ShellCommands::class.java)
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
         val rendered = renderedWithMarker("toast.bpmn")
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(rendered)
         `when`(orchestrator.runPreviewFlow("toast.bpmn")).thenReturn(PreviewResult.Skipped)
 
@@ -168,7 +168,7 @@ class BpmnShellCommandsTest {
     fun `null render - passthrough as empty string, orchestrator not invoked`() {
         val shellCommands = mock(ShellCommands::class.java)
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(null)
 
         val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
@@ -182,7 +182,7 @@ class BpmnShellCommandsTest {
     fun `no marker - passthrough, orchestrator not invoked`() {
         val shellCommands = mock(ShellCommands::class.java)
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn("I'm sorry. I don't know how to proceed.")
 
         val result = commandDelegatingTo(shellCommands, orchestrator).generate("Make toast")
@@ -197,7 +197,7 @@ class BpmnShellCommandsTest {
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
         val previewPath = Paths.get("toast.preview.html")
         val rendered = renderedWithMarker("toast.bpmn")
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(rendered)
         `when`(orchestrator.runPreviewFlow("toast.bpmn"))
             .thenReturn(PreviewResult.Opened(previewPath))
@@ -215,7 +215,7 @@ class BpmnShellCommandsTest {
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
         val previewPath = Paths.get("toast.preview.html")
         val rendered = renderedWithMarker("toast.bpmn")
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(rendered)
         `when`(orchestrator.runPreviewFlow("toast.bpmn"))
             .thenReturn(PreviewResult.Fallback(previewPath, "browser not supported: headless environment"))
@@ -234,7 +234,7 @@ class BpmnShellCommandsTest {
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
         val bpmnPath = Paths.get("toast.bpmn")
         val rendered = renderedWithMarker("toast.bpmn")
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(rendered)
         `when`(orchestrator.runPreviewFlow("toast.bpmn"))
             .thenReturn(PreviewResult.WriteFailed(bpmnPath, "Preview write failed: disk full"))
@@ -253,7 +253,7 @@ class BpmnShellCommandsTest {
         val orchestrator = mock(BpmnPreviewOrchestrator::class.java)
         val previewPath = Paths.get("toast.preview.html")
         val rendered = renderedWithMarker("toast.bpmn")
-        `when`(shellCommands.execute("Make toast", false, false, false, false, false, false, false, true, null))
+        `when`(shellCommands.execute("Make toast", false, true, true, false, false, false, false, true, null))
             .thenReturn(rendered)
         `when`(orchestrator.runPreviewFlow("toast.bpmn"))
             .thenReturn(PreviewResult.Fallback(previewPath, "Browser launch failed: process exit 1"))

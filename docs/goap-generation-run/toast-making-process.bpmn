@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" exporter="bpmner" exporterVersion="0.0.1" id="definitions_cddf3312-e108-4979-88b2-016a27e89725" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:message xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Message_no_bread_notification" name="no bread notification"/><process camunda:historyTimeToLive="P180D" id="Process_make_toast" isExecutable="true" name="Make Toast Process">
+    <startEvent id="StartEvent_1" name="Decision to make toast">
+      <outgoing>Flow_1</outgoing>
+    </startEvent>
+    <serviceTask id="act-check-bread" name="Check whether bread is available">
+      <incoming>Flow_1</incoming>
+      <outgoing>Flow_2</outgoing>
+    </serviceTask>
+    <exclusiveGateway id="dec-has-bread" name="Is bread available?">
+      <incoming>Flow_2</incoming>
+      <outgoing>Flow_3</outgoing>
+      <outgoing>Flow_5</outgoing>
+    </exclusiveGateway>
+    <sendTask id="act-notify-no-bread" messageRef="Message_no_bread_notification" name="Notify user that toast cannot be made">
+      <incoming>Flow_3</incoming>
+      <outgoing>Flow_4</outgoing>
+    </sendTask>
+    <endEvent id="end-cannot-make" name="Cannot make toast - notified user">
+      <incoming>Flow_4</incoming>
+    </endEvent>
+    <manualTask id="act-take-bread" name="Take two slices of bread">
+      <incoming>Flow_det_1</incoming>
+      <outgoing>Flow_6</outgoing>
+    </manualTask>
+    <manualTask id="act-set-toaster" name="Set toaster to medium browning and place bread in toaster">
+      <incoming>Flow_6</incoming>
+      <outgoing>Flow_7</outgoing>
+    </manualTask>
+    <manualTask id="act-start-toaster" name="Start the toaster">
+      <incoming>Flow_7</incoming>
+      <outgoing>Flow_8</outgoing>
+    </manualTask>
+    <serviceTask id="act-wait-finish" name="Wait until the toaster finishes">
+      <incoming>Flow_8</incoming>
+      <outgoing>Flow_9</outgoing>
+    </serviceTask>
+    <manualTask id="act-remove-toast" name="Remove the toast from the toaster">
+      <incoming>Flow_9</incoming>
+      <outgoing>Flow_10</outgoing>
+    </manualTask>
+    <serviceTask id="act-check-burned" name="Check whether the toast is burned">
+      <incoming>Flow_10</incoming>
+      <outgoing>Flow_11</outgoing>
+    </serviceTask>
+    <exclusiveGateway id="dec-burned" name="Is the toast burned?">
+      <incoming>Flow_11</incoming>
+      <outgoing>Flow_12</outgoing>
+      <outgoing>Flow_16</outgoing>
+    </exclusiveGateway>
+    <manualTask id="act-discard-burned" name="Discard burned toast">
+      <incoming>Flow_12</incoming>
+      <outgoing>Flow_13</outgoing>
+    </manualTask>
+    <exclusiveGateway id="dec-more-bread" name="Is more bread available after discarding burned toast?">
+      <incoming>Flow_13</incoming>
+      <outgoing>Flow_14</outgoing>
+      <outgoing>Flow_15</outgoing>
+    </exclusiveGateway>
+    <endEvent id="end-burned-no-bread" name="No bread after burned toast">
+      <incoming>Flow_15</incoming>
+    </endEvent>
+    <manualTask id="act-place-plate" name="Place toast on a plate">
+      <incoming>Flow_16</incoming>
+      <outgoing>Flow_17</outgoing>
+    </manualTask>
+    <userTask id="act-ask-butter" name="Ask user whether butter is desired">
+      <incoming>Flow_17</incoming>
+      <outgoing>Flow_18</outgoing>
+    </userTask>
+    <exclusiveGateway id="dec-butter" name="Does the user desire butter?">
+      <incoming>Flow_18</incoming>
+      <outgoing>Flow_19</outgoing>
+      <outgoing>Flow_21</outgoing>
+    </exclusiveGateway>
+    <manualTask id="act-spread-butter" name="Spread butter on the toast">
+      <incoming>Flow_19</incoming>
+      <outgoing>Flow_20</outgoing>
+    </manualTask>
+    <manualTask id="act-serve-toast" name="Serve toast to user">
+      <incoming>Flow_det_2</incoming>
+      <outgoing>Flow_22</outgoing>
+    </manualTask>
+    <endEvent id="end-toast-served" name="Toast served successfully">
+      <incoming>Flow_22</incoming>
+    </endEvent>
+    <exclusiveGateway id="Gateway_join_1">
+      <incoming>Flow_5</incoming>
+      <incoming>Flow_14</incoming>
+      <outgoing>Flow_det_1</outgoing>
+    </exclusiveGateway>
+    <exclusiveGateway id="Gateway_join_2">
+      <incoming>Flow_20</incoming>
+      <incoming>Flow_21</incoming>
+      <outgoing>Flow_det_2</outgoing>
+    </exclusiveGateway>
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="act-check-bread"/>
+    <sequenceFlow id="Flow_2" sourceRef="act-check-bread" targetRef="dec-has-bread"/>
+    <sequenceFlow id="Flow_3" name="No" sourceRef="dec-has-bread" targetRef="act-notify-no-bread">
+      <conditionExpression id="conditionExpression_c5d76ced-3af4-4b21-95e3-740136727281">No bread is available</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_4" sourceRef="act-notify-no-bread" targetRef="end-cannot-make"/>
+    <sequenceFlow id="Flow_5" name="Yes" sourceRef="dec-has-bread" targetRef="Gateway_join_1">
+      <conditionExpression id="conditionExpression_a27d9d0f-764d-4b8b-933f-5fc76d6e83c7">Bread is available</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_6" sourceRef="act-take-bread" targetRef="act-set-toaster"/>
+    <sequenceFlow id="Flow_7" sourceRef="act-set-toaster" targetRef="act-start-toaster"/>
+    <sequenceFlow id="Flow_8" sourceRef="act-start-toaster" targetRef="act-wait-finish"/>
+    <sequenceFlow id="Flow_9" sourceRef="act-wait-finish" targetRef="act-remove-toast"/>
+    <sequenceFlow id="Flow_10" sourceRef="act-remove-toast" targetRef="act-check-burned"/>
+    <sequenceFlow id="Flow_11" sourceRef="act-check-burned" targetRef="dec-burned"/>
+    <sequenceFlow id="Flow_12" name="Yes" sourceRef="dec-burned" targetRef="act-discard-burned">
+      <conditionExpression id="conditionExpression_d74afd68-f260-4be9-94dd-786ab1b00ce4">Toast is burned</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_13" sourceRef="act-discard-burned" targetRef="dec-more-bread"/>
+    <sequenceFlow id="Flow_14" name="Yes" sourceRef="dec-more-bread" targetRef="Gateway_join_1">
+      <conditionExpression id="conditionExpression_797e50a4-c0c0-4602-bed0-00a9ea91f430">More bread is available</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_15" name="No" sourceRef="dec-more-bread" targetRef="end-burned-no-bread">
+      <conditionExpression id="conditionExpression_65fc7034-40d9-45d5-b832-e0474a688db7">No more bread is available</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_16" name="No" sourceRef="dec-burned" targetRef="act-place-plate">
+      <conditionExpression id="conditionExpression_27238e0d-8c3c-41a9-912c-af1724bd9473">Toast is not burned</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_17" sourceRef="act-place-plate" targetRef="act-ask-butter"/>
+    <sequenceFlow id="Flow_18" sourceRef="act-ask-butter" targetRef="dec-butter"/>
+    <sequenceFlow id="Flow_19" name="Yes" sourceRef="dec-butter" targetRef="act-spread-butter">
+      <conditionExpression id="conditionExpression_d0d011a9-748b-45d7-ae1d-f6dc68eb4900">Butter is desired</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_20" sourceRef="act-spread-butter" targetRef="Gateway_join_2"/>
+    <sequenceFlow id="Flow_21" name="No" sourceRef="dec-butter" targetRef="Gateway_join_2">
+      <conditionExpression id="conditionExpression_266866b7-b3e7-4f00-9ead-6c3f348bef13">Butter is not desired</conditionExpression>
+    </sequenceFlow>
+    <sequenceFlow id="Flow_22" sourceRef="act-serve-toast" targetRef="end-toast-served"/>
+    <sequenceFlow id="Flow_det_1" sourceRef="Gateway_join_1" targetRef="act-take-bread"/>
+    <sequenceFlow id="Flow_det_2" sourceRef="Gateway_join_2" targetRef="act-serve-toast"/>
+  </process>
+<bpmndi:BPMNDiagram id="BPMNDiagram_Process_make_toast"><bpmndi:BPMNPlane bpmnElement="Process_make_toast" id="BPMNPlane_Process_make_toast"><bpmndi:BPMNShape bpmnElement="StartEvent_1" id="StartEvent_1_di"><dc:Bounds height="36" width="36" x="57" y="52"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-check-bread" id="act-check-bread_di"><dc:Bounds height="80" width="100" x="175" y="30"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="dec-has-bread" id="dec-has-bread_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="350" y="45"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-notify-no-bread" id="act-notify-no-bread_di"><dc:Bounds height="80" width="100" x="475" y="30"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="end-cannot-make" id="end-cannot-make_di"><dc:Bounds height="36" width="36" x="657" y="52"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-take-bread" id="act-take-bread_di"><dc:Bounds height="80" width="100" x="625" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-set-toaster" id="act-set-toaster_di"><dc:Bounds height="80" width="100" x="775" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-start-toaster" id="act-start-toaster_di"><dc:Bounds height="80" width="100" x="925" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-wait-finish" id="act-wait-finish_di"><dc:Bounds height="80" width="100" x="1075" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-remove-toast" id="act-remove-toast_di"><dc:Bounds height="80" width="100" x="1225" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-check-burned" id="act-check-burned_di"><dc:Bounds height="80" width="100" x="1375" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="dec-burned" id="dec-burned_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="1550" y="325"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-discard-burned" id="act-discard-burned_di"><dc:Bounds height="80" width="100" x="1675" y="310"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="dec-more-bread" id="dec-more-bread_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="1850" y="185"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="end-burned-no-bread" id="end-burned-no-bread_di"><dc:Bounds height="36" width="36" x="2007" y="192"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-place-plate" id="act-place-plate_di"><dc:Bounds height="80" width="100" x="1675" y="450"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-ask-butter" id="act-ask-butter_di"><dc:Bounds height="80" width="100" x="1825" y="450"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="dec-butter" id="dec-butter_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="2000" y="465"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-spread-butter" id="act-spread-butter_di"><dc:Bounds height="80" width="100" x="2125" y="590"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="act-serve-toast" id="act-serve-toast_di"><dc:Bounds height="80" width="100" x="2425" y="450"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="end-toast-served" id="end-toast-served_di"><dc:Bounds height="36" width="36" x="2607" y="472"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="Gateway_join_1" id="Gateway_join_1_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="500" y="185"/></bpmndi:BPMNShape><bpmndi:BPMNShape bpmnElement="Gateway_join_2" id="Gateway_join_2_di" isMarkerVisible="true"><dc:Bounds height="50" width="50" x="2300" y="465"/></bpmndi:BPMNShape><bpmndi:BPMNEdge bpmnElement="Flow_1" id="Flow_1_di"><di:waypoint x="93" y="70"/><di:waypoint x="175" y="70"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_2" id="Flow_2_di"><di:waypoint x="275" y="70"/><di:waypoint x="350" y="70"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_3" id="Flow_3_di"><di:waypoint x="400" y="70"/><di:waypoint x="475" y="70"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_4" id="Flow_4_di"><di:waypoint x="575" y="70"/><di:waypoint x="657" y="70"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_5" id="Flow_5_di"><di:waypoint x="375" y="95"/><di:waypoint x="375" y="210"/><di:waypoint x="500" y="210"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_6" id="Flow_6_di"><di:waypoint x="725" y="350"/><di:waypoint x="775" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_7" id="Flow_7_di"><di:waypoint x="875" y="350"/><di:waypoint x="925" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_8" id="Flow_8_di"><di:waypoint x="1025" y="350"/><di:waypoint x="1075" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_9" id="Flow_9_di"><di:waypoint x="1175" y="350"/><di:waypoint x="1225" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_10" id="Flow_10_di"><di:waypoint x="1325" y="350"/><di:waypoint x="1375" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_11" id="Flow_11_di"><di:waypoint x="1475" y="350"/><di:waypoint x="1550" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_12" id="Flow_12_di"><di:waypoint x="1600" y="350"/><di:waypoint x="1675" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_13" id="Flow_13_di"><di:waypoint x="1775" y="350"/><di:waypoint x="1875" y="350"/><di:waypoint x="1875" y="235"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_14" id="Flow_14_di"><di:waypoint x="1850" y="210"/><di:waypoint x="550" y="210"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_15" id="Flow_15_di"><di:waypoint x="1900" y="210"/><di:waypoint x="2007" y="210"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_16" id="Flow_16_di"><di:waypoint x="1575" y="375"/><di:waypoint x="1575" y="490"/><di:waypoint x="1675" y="490"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_17" id="Flow_17_di"><di:waypoint x="1775" y="490"/><di:waypoint x="1825" y="490"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_18" id="Flow_18_di"><di:waypoint x="1925" y="490"/><di:waypoint x="2000" y="490"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_19" id="Flow_19_di"><di:waypoint x="2025" y="515"/><di:waypoint x="2025" y="630"/><di:waypoint x="2125" y="630"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_20" id="Flow_20_di"><di:waypoint x="2225" y="630"/><di:waypoint x="2325" y="630"/><di:waypoint x="2325" y="515"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_21" id="Flow_21_di"><di:waypoint x="2050" y="490"/><di:waypoint x="2300" y="490"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_22" id="Flow_22_di"><di:waypoint x="2525" y="490"/><di:waypoint x="2607" y="490"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_det_1" id="Flow_det_1_di"><di:waypoint x="525" y="235"/><di:waypoint x="525" y="350"/><di:waypoint x="625" y="350"/></bpmndi:BPMNEdge><bpmndi:BPMNEdge bpmnElement="Flow_det_2" id="Flow_det_2_di"><di:waypoint x="2350" y="490"/><di:waypoint x="2425" y="490"/></bpmndi:BPMNEdge></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></definitions>

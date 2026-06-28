@@ -57,8 +57,8 @@ internal class BpmnShellCommands(
         val rendered = shellCommands.getObject().execute(
             intent = intentFor(description, outputFile),
             open = false,
-            showPrompts = false,
-            showLlmResponses = false,
+            showPrompts = true,
+            showLlmResponses = true,
             debug = false,
             state = false,
             toolDelay = false,
