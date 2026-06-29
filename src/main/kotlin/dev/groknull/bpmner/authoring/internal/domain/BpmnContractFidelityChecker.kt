@@ -85,7 +85,7 @@ import org.springframework.stereotype.Component
  * (ADR-451-8 disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
  */
 @Component
-@Suppress("TooManyFunctions") // per-contract-element private helpers (Activity / EndState / Decision)
+@Suppress("TooManyFunctions", "LargeClass") // per-contract-element private helpers (Activity / EndState / Decision / Lane)
 internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     private val logger = LoggerFactory.getLogger(BpmnContractFidelityChecker::class.java)
 
@@ -141,6 +141,8 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         contract.eventSubProcesses.forEach { eventSubProcess ->
             checkEventSubProcess(eventSubProcess, nodeById, definition, issues)
         }
+
+        checkLanesPresentForRoles(contract, definition, issues)
 
         val report = BpmnFidelityReport(issues = issues.toList())
         if (!report.isValid) {
@@ -807,6 +809,31 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractIntermediateThrow.Message -> BpmnMessageEventDefinition::class.simpleName!!
         is ContractIntermediateThrow.Signal -> BpmnSignalEventDefinition::class.simpleName!!
         is ContractIntermediateThrow.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
+    }
+
+    /**
+     * Fires when the contract declares at least one actor (role structure is present) but the
+     * generated BPMN has no lanes. Responsibility partitioning was declared in the source and
+     * must be reflected in the BPMN; lane absence under role-present conditions is a topology
+     * fidelity failure, not a lint advisory.
+     */
+    private fun checkLanesPresentForRoles(
+        contract: ProcessContract,
+        definition: BpmnDefinition,
+        issues: MutableList<BpmnFidelityIssue>,
+    ) {
+        if (contract.actors.isEmpty()) return
+        if (definition.lanes.isNotEmpty()) return
+        issues +=
+            BpmnFidelityIssue(
+                code = BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES,
+                severity = BpmnFidelitySeverity.ERROR,
+                message =
+                "Contract declares ${contract.actors.size} actor role(s) " +
+                    "(${contract.actors.joinToString { it.name }}) but the generated BPMN has no lanes. " +
+                    "Responsibility partitioning was declared in the source and must be encoded as " +
+                    "swimlanes — add a lane for each actor role.",
+            )
     }
 }
 

@@ -152,6 +152,21 @@ enum class BpmnFidelityCode {
      * with the contract `interrupting` flag (interrupting vs non-interrupting handler).
      */
     EVENT_SUBPROCESS_INTERRUPTING_MISMATCH,
+
+    /**
+     * The source contract declares one or more [dev.groknull.bpmner.contract.ContractActor]s
+     * (explicit role structure), but the generated [dev.groknull.bpmner.bpmn.BpmnDefinition]
+     * has no lanes. When actors are present the process has defined responsibility partitioning,
+     * so the BPMN must carry lanes to encode it.
+     *
+     * This is a deterministic, process-level check (no per-element id required). It fires in
+     * the fidelity checker at generation-time (via [dev.groknull.bpmner.authoring.internal.adapter.inbound.LlmBpmnProcessGenerator]
+     * `validateOutline`) and at repair-time (via
+     * [dev.groknull.bpmner.repair.internal.domain.BpmnContractAwareValidator]), making
+     * lane-absence an ERROR — blocking both the generation and repair paths — whenever
+     * actor roles are declared in the contract.
+     */
+    ROLES_DECLARED_BUT_NO_LANES,
 }
 
 /**
