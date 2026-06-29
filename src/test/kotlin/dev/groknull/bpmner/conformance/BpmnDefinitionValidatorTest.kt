@@ -414,6 +414,36 @@ class BpmnDefinitionValidatorTest {
         )
     }
 
+    @Test
+    fun `validator accepts boundary event without sequence flow participation`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnBoundaryEvent(
+                        id = "Boundary_1",
+                        name = "Timeout",
+                        attachedToRef = "Task_1",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
+                    ),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                ),
+            )
+
+        val errors = validator.validate(definition)
+
+        assertTrue(errors.isEmpty(), "Expected boundary event without sequence flows to pass, got: $errors")
+    }
+
     // Blank-ref pre-checks: when a `<bpmn:messageEventDefinition/>` (etc.) has no `messageRef`
     // attribute, the parser produces `BpmnMessageEventDefinition("")` so the malformed XML is
     // captured faithfully. The validator must then surface the *missing attribute* — not a

@@ -22,7 +22,8 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
-- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions, connectivity, and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; GraalJS is used only for the diagram auto-layout pass.
+- Kotlin graph-integrity checks that reject malformed topology such as dangling flows or orphaned non-terminal nodes before output is accepted.
+- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; GraalJS is used only for the diagram auto-layout pass.
 
 ### 3. Deterministic Repair
 

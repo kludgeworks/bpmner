@@ -82,6 +82,8 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
+        if (!definition.hasRequiredTopLevelEvents()) return
+
         val incomingCounts = definition.sequences.groupingBy { it.targetRef }.eachCount()
         val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
 
@@ -95,6 +97,11 @@ internal class BpmnDefinitionValidator {
         }
     }
 
+    private fun BpmnDefinition.hasRequiredTopLevelEvents(): Boolean {
+        return nodes.any { it is BpmnStartEvent && it.parentRef == null } &&
+            nodes.any { it is BpmnEndEvent && it.parentRef == null }
+    }
+
     private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
         is BpmnStartEvent, is BpmnBoundaryEvent -> false
 
@@ -103,7 +110,7 @@ internal class BpmnDefinitionValidator {
     }
 
     private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
-        is BpmnEndEvent -> false
+        is BpmnEndEvent, is BpmnBoundaryEvent -> false
         is BpmnSubProcess -> !triggeredByEvent
         else -> true
     }
