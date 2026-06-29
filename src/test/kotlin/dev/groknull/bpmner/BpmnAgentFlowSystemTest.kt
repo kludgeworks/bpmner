@@ -79,6 +79,60 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
 
     @Test
+    fun `interactive clarification loop asks only the first question and maps answer correctly`() {
+        val request =
+            BpmnRequest(
+                processDescription = "When an order is submitted, the clerk reviews it.",
+                mode = GenerationMode.INTERACTIVE,
+            )
+
+        val multipleQuestions = ProcessInputAssessment(
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+            overallScore = 40,
+            dimensions = emptyList(),
+            evidence = emptyList(),
+            clarificationQuestions = listOf(
+                ClarificationQuestion(id = "q1", questionText = "What is the first question?"),
+                ClarificationQuestion(id = "q2", questionText = "What is the second question?"),
+            ),
+            rationale = "Needs clarification",
+        )
+
+        val readyAssessment = ProcessInputAssessment(
+            verdict = ReadinessVerdict.READY,
+            overallScore = 85,
+            dimensions = emptyList(),
+            evidence = emptyList(),
+            rationale = "Ready",
+        )
+
+        whenCreateObject(
+            { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(readyAssessment)
+
+        val process = runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, multipleQuestions)
+        assertEquals(AgentProcessStatusCode.WAITING, process.status)
+
+        @Suppress("UNCHECKED_CAST")
+        val form = process.last(FormBindingRequest::class.java)
+            as FormBindingRequest<BpmnClarificationAnswers>
+
+        form.bind(BpmnClarificationAnswers("Finally the order is completed."), process)
+        process.run()
+
+        assertEquals(AgentProcessStatusCode.COMPLETED, process.status)
+
+        // Verify the clarification history only mapped the first question
+        val finalContext = process.last(ReadyBpmnContext::class.java)!!
+        val history = finalContext.request.clarificationHistory
+        assertEquals(1, history.size, "Only one question should be added to history")
+        assertEquals("q1", history[0].questionId)
+        assertEquals("What is the first question?", history[0].questionText)
+        assertEquals("Finally the order is completed.", history[0].answerText)
+    }
+
+    @Test
     @Suppress("LongMethod")
     fun `planner resolves request through definition render validation and write`(
         @TempDir tempDir: Path,

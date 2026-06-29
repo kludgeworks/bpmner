@@ -239,7 +239,7 @@ data class Blocked(
     )
 }
 
-private const val MAX_ROUNDS = 10 // max clarification rounds before Blocked
+private const val MAX_ROUNDS = 3 // max clarification rounds before Blocked
 
 private fun promptFrom(assessment: ProcessInputAssessment): String {
     val questions = assessment.clarificationQuestions
