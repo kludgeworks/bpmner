@@ -84,6 +84,32 @@ class BpmnDefinitionValidatorTest {
     }
 
     @Test
+    fun `validator rejects orphan non-terminal node`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnExclusiveGateway("Gateway_orphan", "Floating decision"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                ),
+            )
+
+        val errors = validator.validate(definition).joinToString("\n")
+
+        assertContains(errors, "node Gateway_orphan missing incoming sequence flow")
+        assertContains(errors, "node Gateway_orphan missing outgoing sequence flow")
+    }
+
+    @Test
     fun `validator rejects blank task name`() {
         val definition =
             minimalDefinition(

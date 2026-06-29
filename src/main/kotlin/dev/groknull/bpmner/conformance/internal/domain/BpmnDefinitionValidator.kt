@@ -51,6 +51,7 @@ internal class BpmnDefinitionValidator {
 
         validateNames(definition, errors)
         validateSubProcesses(definition, errors)
+        validateFlowNodeConnectivity(definition, errors)
         validateEventDefinitions(definition, errors)
         validateTaskPayloads(definition, errors)
         validateDefaultFlows(definition, errors)
@@ -76,6 +77,38 @@ internal class BpmnDefinitionValidator {
             }
         }
     }
+
+    private fun validateFlowNodeConnectivity(
+        definition: BpmnDefinition,
+        errors: MutableList<String>,
+    ) {
+        val incomingCounts = definition.sequences.groupingBy { it.targetRef }.eachCount()
+        val outgoingCounts = definition.sequences.groupingBy { it.sourceRef }.eachCount()
+
+        definition.nodes.forEach { node ->
+            if (node.requiresIncomingSequenceFlow() && incomingCounts[node.id].orZero() == 0) {
+                errors.add("node ${node.id} missing incoming sequence flow")
+            }
+            if (node.requiresOutgoingSequenceFlow() && outgoingCounts[node.id].orZero() == 0) {
+                errors.add("node ${node.id} missing outgoing sequence flow")
+            }
+        }
+    }
+
+    private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
+        is BpmnStartEvent, is BpmnBoundaryEvent -> false
+
+        is BpmnSubProcess -> !triggeredByEvent
+        else -> true
+    }
+
+    private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
+        is BpmnEndEvent -> false
+        is BpmnSubProcess -> !triggeredByEvent
+        else -> true
+    }
+
+    private fun Int?.orZero(): Int = this ?: 0
 
     // Subprocess containment integrity. Each guard turns a malformed parentRef into a clean error
     // rather than an unhandled IllegalArgumentException from the renderer's container resolution.
