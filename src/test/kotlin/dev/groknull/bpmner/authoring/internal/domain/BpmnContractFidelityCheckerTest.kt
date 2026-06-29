@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
+import dev.groknull.bpmner.bpmn.BpmnLane
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
@@ -33,6 +34,7 @@ import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
+import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractEventSubProcess
@@ -1249,6 +1251,56 @@ class BpmnContractFidelityCheckerTest {
             "DEFAULT_FLOW_MISSING must not fire when gateway is missing; got: ${report.issues.map { it.code }}",
         )
     }
+
+    // ----- ROLES_DECLARED_BUT_NO_LANES tests -----
+
+    @Test
+    fun `roles present lanes absent is flagged as error`() {
+        val report = checker.checkDetailed(rolesContract(), lanelessDefinition())
+
+        assertFalse(report.isValid)
+        assertTrue(
+            report.issues.any { it.code == BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES },
+            "expected ROLES_DECLARED_BUT_NO_LANES; got: ${report.issues.map { it.code }}",
+        )
+        assertEquals(
+            BpmnFidelitySeverity.ERROR,
+            report.issues.first { it.code == BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES }.severity,
+        )
+    }
+
+    @Test
+    fun `roles present lanes present passes`() {
+        val report = checker.checkDetailed(rolesContract(), lanedDefinition())
+
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES },
+            "ROLES_DECLARED_BUT_NO_LANES must not fire when lanes are present; got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `regression guard - no roles passes with no lanes and no new error`() {
+        // Role-free prose must still produce a valid report — no new lane-related error.
+        val report = checker.checkDetailed(rolesContract().copy(actors = emptyList()), lanelessDefinition())
+
+        assertTrue(
+            report.issues.none { it.code == BpmnFidelityCode.ROLES_DECLARED_BUT_NO_LANES },
+            "ROLES_DECLARED_BUT_NO_LANES must not fire when no actors are declared; " +
+                "got: ${report.issues.map { it.code }}",
+        )
+    }
+
+    @Test
+    fun `determinism - repeated invocation produces identical issue codes`() {
+        val contract = rolesContract()
+        val definition = lanelessDefinition()
+
+        val first = checker.checkDetailed(contract, definition).issues.map { it.code }
+        val second = checker.checkDetailed(contract, definition).issues.map { it.code }
+
+        assertEquals(first, second, "Issue codes must be identical across repeated invocations")
+    }
 }
 
 // ----- Fixtures -----
@@ -1643,4 +1695,41 @@ private fun defaultBranchDefinitionNoGateway(): BpmnDefinition = BpmnDefinition(
         BpmnEdge(id = "F2", sourceRef = "act-review", targetRef = "act-manual"),
         BpmnEdge(id = "F3", sourceRef = "act-manual", targetRef = "end-done"),
     ),
+)
+
+// ----- ROLES_DECLARED_BUT_NO_LANES fixtures -----
+
+/** Contract with one actor declared — triggers the lane-presence expectation. */
+private fun rolesContract(): ProcessContract {
+    val sources = listOf("ev1")
+    return ProcessContract(
+        id = "c-roles",
+        processName = "Role-bearing process",
+        summary = "Process with an explicit actor role",
+        trigger = "request received",
+        triggerSourceIds = sources,
+        actors = listOf(ContractActor(id = "actor-sales", name = "Sales")),
+        activities = listOf(ContractActivity.User(id = "act-process", name = "Process request", sourceIds = sources)),
+        endStates = listOf(ContractEndState.Normal(id = "end-done", name = "Done", sourceIds = sources)),
+    )
+}
+
+/** Minimal valid definition with no lanes — used to assert that lane absence is caught. */
+private fun lanelessDefinition(): BpmnDefinition = BpmnDefinition(
+    processId = "P",
+    processName = "Role-bearing process",
+    nodes = listOf(
+        BpmnStartEvent(id = "StartEvent_1", name = "Start"),
+        BpmnUserTask(id = "act-process", name = "Process request"),
+        BpmnEndEvent(id = "end-done", name = "Done"),
+    ),
+    sequences = listOf(
+        BpmnEdge(id = "F1", sourceRef = "StartEvent_1", targetRef = "act-process"),
+        BpmnEdge(id = "F2", sourceRef = "act-process", targetRef = "end-done"),
+    ),
+)
+
+/** Same definition with a lane present — used to assert lane-presence check is satisfied. */
+private fun lanedDefinition(): BpmnDefinition = lanelessDefinition().copy(
+    lanes = listOf(BpmnLane(id = "Lane_Sales", name = "Sales", flowNodeRefs = listOf("act-process"))),
 )
