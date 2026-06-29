@@ -93,6 +93,9 @@ class BpmnProgressProjectionObserver(
             "checkAlignment" to "Verifying semantic alignment",
             // Rule evaluation (LlmRuleAgent — called from inside the repair loop)
             "evaluateLlmRules" to "Evaluating LLM rules",
+            // State-machine flow transitions
+            "proceed" to "Proceeding with generation",
+            "terminate" to "Terminating process",
         )
     }
 }

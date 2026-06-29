@@ -12,6 +12,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.alignment.BpmnAlignmentReport
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import jakarta.validation.Valid
 import java.nio.file.Path
@@ -54,6 +55,9 @@ data class BpmnResult(
     val alignmentReport: BpmnAlignmentReport? = null,
     @get:JsonPropertyDescription("Optional report output file path for guardrail diagnostics")
     val reportFile: String? = null,
+    @field:Valid
+    @get:JsonPropertyDescription("Validation diagnostics when validation has failed")
+    val validationDiagnostics: List<BpmnDiagnostic>? = null,
 ) : HasInfoString,
     HasContent {
     override fun infoString(
@@ -84,6 +88,17 @@ data class BpmnResult(
             BpmnGenerationStatus.NEEDS_CLARIFICATION ->
                 "Not ready to generate: the input needs clarification." +
                     (reportFile?.let { " Readiness report: ${outputFileName(it)}" } ?: "")
+
+            BpmnGenerationStatus.VALIDATION_FAILED -> {
+                val errors = validationDiagnostics?.filter { it.isBlocking } ?: emptyList()
+                val details = if (errors.isNotEmpty()) {
+                    " Remaining blocking diagnostics: " + errors.joinToString("; ") { it.message }
+                } else {
+                    ""
+                }
+                "BPMN generation did not complete (status=$status).$details" +
+                    (reportFile?.let { " Report: ${outputFileName(it)}" } ?: "")
+            }
 
             else ->
                 "BPMN generation did not complete (status=$status)." +

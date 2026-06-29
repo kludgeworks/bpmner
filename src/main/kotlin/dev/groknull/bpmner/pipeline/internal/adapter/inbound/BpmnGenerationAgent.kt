@@ -108,8 +108,13 @@ internal class BpmnGenerationAgent(
         r: RenderedBpmn,
         c: ValidatedProcessContract,
         ctx: ActionContext,
-    ): ValidatedBpmnXml {
-        return repairer.validateInitial(ready, g, r, c, ctx)
+    ): ValidationStage {
+        val validated = repairer.validateInitial(ready, g, r, c, ctx)
+        return if (validated.diagnostics.any { it.isBlocking }) {
+            ValidationFailed(ready, validated)
+        } else {
+            ValidationPassed(validated)
+        }
     }
 
     @Action(actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE)
@@ -236,6 +241,35 @@ data class Blocked(
         outputFile = request.outputFile,
         status = BpmnGenerationStatus.NEEDS_CLARIFICATION,
         readinessReport = assessment,
+    )
+}
+
+// Sealed supertype for polymorphic validation returns
+sealed interface ValidationStage
+
+@State
+data class ValidationPassed(val validated: ValidatedBpmnXml) : ValidationStage {
+    @Action fun proceed(): ValidatedBpmnXml = validated
+}
+
+@State
+data class ValidationFailed(
+    val ready: ReadyBpmnContext,
+    val validated: ValidatedBpmnXml,
+) : ValidationStage {
+    @AchievesGoal(
+        description = "Terminate with validation failure",
+        export = Export(
+            name = "generateBpmn",
+            startingInputTypes = [UserInput::class, BpmnRequest::class, ProcessInputAssessment::class],
+        ),
+    )
+    @Action
+    fun terminate(): BpmnResult = BpmnResult(
+        outputFile = ready.request.outputFile,
+        status = BpmnGenerationStatus.VALIDATION_FAILED,
+        xml = validated.xml,
+        validationDiagnostics = validated.diagnostics.filter { it.isBlocking },
     )
 }
 
