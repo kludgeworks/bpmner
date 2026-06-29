@@ -134,7 +134,7 @@ those ports in plain Spring components.
 
 | Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
-| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 13 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess` | `generateBpmn` (on `finish`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
+| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-21 Track A). |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
@@ -154,7 +154,7 @@ those ports in plain Spring components.
 | `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract, OperationContext) → ValidatedOutline` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` (`generation/`) |
 | `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` — deterministic |
 | `render` | `(ReadyBpmnContext, LaidOutProcessGraph) → RenderedBpmn` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` via `BpmnGraphRenderer` |
-| `validate` | `(ReadyBpmnContext, LaidOutProcessGraph, RenderedBpmn, ValidatedProcessContract) → ValidatedBpmnXml` | `BpmnRepairer` | `DefaultBpmnRepairer` (`repair/`) — validate-only initial pass + repair loop |
+| `validate` | `(ReadyBpmnContext, LaidOutProcessGraph, RenderedBpmn, ValidatedProcessContract) → ValidationStage` | `BpmnRepairer` | `DefaultBpmnRepairer` (`repair/`) — validate-only initial pass + repair loop, returns `ValidationStage` branch |
 | `layout` | `ValidatedBpmnXml → FinalValidatedBpmnXml` | (inline) | `BpmnLayoutPort` + `BpmnXsdValidationPort` directly; errors on XSD-invalid output |
 | `align` | `(ReadyBpmnContext, ValidatedProcessContract, FinalValidatedBpmnXml, OperationContext) → BpmnAlignmentReport` | `BpmnAligner` | `LlmBpmnAligner` (`alignment/`). `FIRE_ONCE`. |
 | `finish` | `(ReadyBpmnContext, FinalValidatedBpmnXml, BpmnAlignmentReport) → BpmnResult` | (inline) | Critique gate: `ALIGNMENT_FAILED` if `verdict == FAILED`; writes file otherwise. `@AchievesGoal`. `FIRE_ONCE`. |
@@ -171,6 +171,13 @@ those ports in plain Spring components.
 | `Ready` | `proceed` | `Ready → ReadyBpmnContext` | Feeds existing downstream chain. |
 | `Blocked` | `terminate` | `Blocked → BpmnResult` | Terminates with `NEEDS_CLARIFICATION` status. |
 | (outer class) | `reassess` | `(AwaitingClarification, BpmnClarificationAnswers) → Assessing` | Updates request with answers, reassesses. `clearBlackboard = true`. |
+
+### `@State` machine (validation / short-circuit loop)
+
+| State | Action | Input → Output | What happens |
+| --- | --- | --- | --- |
+| `ValidationPassed` | `proceed` | `ValidationPassed → ValidatedBpmnXml` | Unpacks validation results and proceeds to layout. |
+| `ValidationFailed` | `terminate` | `ValidationFailed → BpmnResult` | Short-circuits process and terminates with `VALIDATION_FAILED` status. |
 
 ### Prompt-contribution seam (ADR-21 Track A)
 
@@ -316,9 +323,10 @@ an analogous startup check on deployed agents.
    │     ▼                                                                 │
    │  render              → RenderedBpmn  (BpmnGraphRenderer→BpmnRenderer)  │
    │     ▼                  emits BpmnGeneratedEvent                       │
-   │  validate            repair loop → ValidatedBpmnXml   (BpmnRepairer)   │
-   │     ▼                                                                 │
-   │  layout              inline BpmnLayoutPort + XSD → FinalValidatedBpmnXml│
+    │  validate            repair loop → ValidationStage   (BpmnRepairer)   │
+    │     ▼  (state machine: ValidationPassed → proceed → ValidatedBpmnXml; │
+    │         ValidationFailed → terminate → BpmnResult)                    │
+    │  layout              inline BpmnLayoutPort + XSD → FinalValidatedBpmnXml│
    │     ▼                  throws on XSD-invalid output                   │
    │  align               LLM → BpmnAlignmentReport       (BpmnAligner)    │
    │     ▼                  critique gate: no throw on verdict              │

@@ -30,7 +30,7 @@ This created two structural problems:
 Consolidate the generation pipeline into **one `@Agent`** with **one
 `@AchievesGoal`**:
 
-- `BpmnGenerationAgent` owns the `generateBpmn` goal (achieved on `finish`).
+- `BpmnGenerationAgent` owns the `generateBpmn` goal (achieved on `finish`, or on validation/readiness failure via `ValidationFailed.terminate`/`Blocked.terminate`).
 - All pipeline stages are thin `@Action` methods that delegate to per-module
   **ports**. Modules are capability libraries, not agents.
 - Inline prompts and few-shot examples live in module-owned `PromptContributor`
@@ -66,8 +66,10 @@ resolved by name (`READINESS_AGENT_NAME`) and is **not** exposed remotely.
 The orchestrator's `validate` action delegates to the `BpmnRepairer` port
 (`DefaultBpmnRepairer`), which drives an iterative `RepeatUntilAcceptable` loop
 (`BpmnRepairLoop`) over cost-tiered repair appliers. The loop exits when all
-blocking diagnostics are resolved or the iteration budget is exhausted. This keeps
-repair logic in `repair/`, not scattered across the orchestrator.
+blocking diagnostics are resolved or the iteration budget is exhausted. If unresolved
+blocking diagnostics remain after repair-loop exhaustion, the orchestrator immediately
+fails the pipeline via `ValidationFailed.terminate`, short-circuiting layout and alignment.
+This keeps repair logic in `repair/`, not scattered across the orchestrator.
 
 ### G5 — Alignment is a critique gate
 
