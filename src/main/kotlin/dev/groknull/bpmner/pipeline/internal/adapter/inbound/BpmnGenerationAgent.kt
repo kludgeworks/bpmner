@@ -239,14 +239,14 @@ data class Blocked(
     )
 }
 
-private const val MAX_ROUNDS = 3 // max clarification rounds before Blocked
+private const val MAX_ROUNDS = 10 // max clarification rounds before Blocked
 
 private fun promptFrom(assessment: ProcessInputAssessment): String {
     val questions = assessment.clarificationQuestions
     return if (questions.isEmpty()) {
         assessment.rationale.ifBlank { "Please provide clarification." }
     } else {
-        questions.joinToString("\n") { it.questionText }
+        questions.first().questionText
     }
 }
 
@@ -254,25 +254,25 @@ private fun BpmnRequest.withClarification(
     answers: BpmnClarificationAnswers,
     assessment: ProcessInputAssessment,
 ): BpmnRequest {
-    val genericExchange =
-        ClarificationExchange(
-            questionId = "generic",
-            questionText = assessment.rationale.ifBlank { "Please provide clarification." },
-            answerText = answers.answers,
+    val questions = assessment.clarificationQuestions
+    val exchangesToAdd = if (questions.isEmpty()) {
+        listOf(
+            ClarificationExchange(
+                questionId = "generic",
+                questionText = assessment.rationale.ifBlank { "Please provide clarification." },
+                answerText = answers.answers,
+            ),
         )
-    val newExchanges =
-        assessment.clarificationQuestions.map { question ->
+    } else {
+        val question = questions.first()
+        listOf(
             ClarificationExchange(
                 questionId = question.id,
                 questionText = question.questionText,
                 answerText = answers.answers,
-            )
-        }
-    val exchangesToAdd =
-        when {
-            newExchanges.isEmpty() -> listOf(genericExchange)
-            else -> newExchanges
-        }
+            ),
+        )
+    }
     return this.copy(
         clarificationHistory = this.clarificationHistory + exchangesToAdd,
     )
