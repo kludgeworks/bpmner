@@ -39,6 +39,7 @@ import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import dev.groknull.bpmner.readiness.BpmnReadinessInvoker
 import dev.groknull.bpmner.readiness.ClarificationExchange
+import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
@@ -246,7 +247,7 @@ private fun promptFrom(assessment: ProcessInputAssessment): String {
     return if (questions.isEmpty()) {
         assessment.rationale.ifBlank { "Please provide clarification." }
     } else {
-        questions.joinToString("\n") { it.questionText }
+        questions.first().questionText
     }
 }
 
@@ -254,26 +255,30 @@ private fun BpmnRequest.withClarification(
     answers: BpmnClarificationAnswers,
     assessment: ProcessInputAssessment,
 ): BpmnRequest {
-    val genericExchange =
+    val questions = assessment.clarificationQuestions
+    // Build set of questionIds already answered to skip duplicates on re-assessment
+    val answeredIds = clarificationHistory.map { it.questionId }.toSet()
+    val exchange = if (questions.isEmpty()) {
         ClarificationExchange(
             questionId = "generic",
             questionText = assessment.rationale.ifBlank { "Please provide clarification." },
             answerText = answers.answers,
         )
-    val newExchanges =
-        assessment.clarificationQuestions.map { question ->
-            ClarificationExchange(
-                questionId = question.id,
-                questionText = question.questionText,
-                answerText = answers.answers,
+    } else {
+        // Find first question whose id isn't already answered
+        val question = questions.firstOrNull { it.id !in answeredIds }
+            // Fall back to generic if all questions already answered
+            ?: ClarificationQuestion(
+                id = "generic",
+                questionText = assessment.rationale.ifBlank { "Please provide clarification." },
             )
-        }
-    val exchangesToAdd =
-        when {
-            newExchanges.isEmpty() -> listOf(genericExchange)
-            else -> newExchanges
-        }
+        ClarificationExchange(
+            questionId = question.id,
+            questionText = question.questionText,
+            answerText = answers.answers,
+        )
+    }
     return this.copy(
-        clarificationHistory = this.clarificationHistory + exchangesToAdd,
+        clarificationHistory = this.clarificationHistory + exchange,
     )
 }

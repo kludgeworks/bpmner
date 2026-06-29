@@ -78,6 +78,9 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
     @Autowired
     private lateinit var bpmnAgentInvoker: AgentPlatformBpmnAgentInvoker
 
+    // Class-level counter for mock calls - each test should reset this
+    private var assessmentCallCount = 0
+
     @Test
     fun `interactive clarification loop asks only the first question and maps answer correctly`() {
         val request =
@@ -130,6 +133,95 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals("q1", history[0].questionId)
         assertEquals("What is the first question?", history[0].questionText)
         assertEquals("Finally the order is completed.", history[0].answerText)
+    }
+
+    @Test
+    @Suppress("LongMethod")
+    fun `interactive clarification loop skips duplicate questions on re-assessment`() {
+        val request =
+            BpmnRequest(
+                processDescription = "When an order is submitted, the clerk reviews it.",
+                mode = GenerationMode.INTERACTIVE,
+            )
+        val firstQ = listOf(
+            ClarificationQuestion(id = "q1", questionText = "What is the first question?"),
+            ClarificationQuestion(id = "q2", questionText = "What is the second question?"),
+        )
+        val firstAssessment = ProcessInputAssessment(
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+            overallScore = 40,
+            dimensions = emptyList(),
+            evidence = emptyList(),
+            clarificationQuestions = firstQ,
+            rationale = "Needs clarification",
+        )
+        // After first answer, the LLM still returns q1 and q2 (same question list - the loop guard should skip q1)
+        val readyAssessment = ProcessInputAssessment(
+            verdict = ReadinessVerdict.READY,
+            overallScore = 85,
+            dimensions = emptyList(),
+            evidence = emptyList(),
+            rationale = "Ready",
+        )
+
+        // Reset the assessment call count for this test
+        assessmentCallCount = 0
+        whenCreateObject(
+            { prompt: String ->
+                val matches =
+                    prompt.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling")
+                if (matches) {
+                    println("DEBUG: Mock matcher triggered for assessment call")
+                }
+                matches
+            },
+            ProcessInputAssessment::class.java,
+        ).thenAnswer {
+            assessmentCallCount++
+            val result = when (assessmentCallCount) {
+                1 -> firstAssessment
+                else -> readyAssessment
+            }
+            println("DEBUG: Mock call #$assessmentCallCount returning score=${result.overallScore}")
+            result
+        }
+
+        val process = runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, firstAssessment)
+        assertEquals(AgentProcessStatusCode.WAITING, process.status)
+
+        @Suppress("UNCHECKED_CAST")
+        val form = process.last(FormBindingRequest::class.java)
+            as FormBindingRequest<BpmnClarificationAnswers>
+        // First answer includes markers for deterministic checks to pass
+        form.bind(
+            BpmnClarificationAnswers(
+                "Answer to first question. The order is submitted and the process is complete.",
+            ),
+            process,
+        )
+        process.run()
+        assertEquals(AgentProcessStatusCode.WAITING, process.status)
+
+        @Suppress("UNCHECKED_CAST")
+        val form2 = process.last(FormBindingRequest::class.java)
+            as FormBindingRequest<BpmnClarificationAnswers>
+        // Second answer includes markers for deterministic checks to pass
+        form2.bind(
+            BpmnClarificationAnswers(
+                "Answer to second question. Finally the order is completed and the process ends.",
+            ),
+            process,
+        )
+        process.run()
+        assertEquals(AgentProcessStatusCode.COMPLETED, process.status)
+
+        val finalContext = process.last(ReadyBpmnContext::class.java)!!
+        val history = finalContext.request.clarificationHistory
+        assertEquals(2, history.size)
+        assertEquals("q1", history[0].questionId)
+        assertEquals("Answer to first question. The order is submitted and the process is complete.", history[0].answerText)
+        assertEquals("q2", history[1].questionId)
+        assertEquals("Answer to second question. Finally the order is completed and the process ends.", history[1].answerText)
     }
 
     @Test
