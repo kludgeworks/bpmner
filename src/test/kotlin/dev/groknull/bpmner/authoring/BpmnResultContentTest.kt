@@ -6,6 +6,9 @@
 package dev.groknull.bpmner.authoring
 
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
+import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -65,5 +68,22 @@ class BpmnResultContentTest {
 
         assertFalse(json.contains("\"content\""), "the computed content getter must not serialise: $json")
         assertTrue(json.contains("\"outputFile\""))
+    }
+
+    @Test
+    fun `content summarises a validation-failed result with blocking diagnostics`() {
+        val diagnostic = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.GRAPH,
+            message = "Missing start event",
+            severity = BpmnDiagnosticSeverity.ERROR,
+        )
+        val result = BpmnResult(
+            outputFile = null,
+            status = BpmnGenerationStatus.VALIDATION_FAILED,
+            validationDiagnostics = listOf(diagnostic),
+        )
+
+        assertTrue(result.content.contains("VALIDATION_FAILED"), "content: ${result.content}")
+        assertTrue(result.content.contains("Missing start event"), "content: ${result.content}")
     }
 }

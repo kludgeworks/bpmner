@@ -306,7 +306,7 @@ class BpmnRepairLoopIntegrationTest : EmbabelMockitoIntegrationTest() {
         // Config maxRepairIterations is 5.
         // It runs 5 iterations of the loop plus a final output-binding invocation (6 times total),
         // then exits the loop returning the initial dirty evaluation.
-        assertEquals(BpmnGenerationStatus.GENERATED, result.status)
+        assertEquals(BpmnGenerationStatus.VALIDATION_FAILED, result.status)
         verify(localFixApplier, times(6)).applyLocalModelFix(anyNonNull())
         assertTrue(result.xml != null)
     }
