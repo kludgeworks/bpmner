@@ -18,6 +18,7 @@ import dev.groknull.bpmner.conformance.internal.domain.BpmnDiagnosticNormalizer
 import dev.groknull.bpmner.conformance.internal.domain.BpmnEvaluationPipeline
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -169,6 +170,34 @@ class ConformanceModuleTest {
         val result = ctx.pipeline.evaluate(ctx.graph, ctx.definition, null, null, 0)
         assertEquals(1, result.diagnostics.size)
         assertEquals(BpmnDiagnosticSource.GRAPH, result.diagnostics[0].source)
+    }
+
+    @Test
+    fun `BpmnEvaluationPipeline rejects orphan graph diagnostics without validated XML`() {
+        val ctx = createPipelineAndContext()
+        val index = BpmnElementIndex(
+            processId = "Process_1",
+            nodeObjectRefs = emptyMap(),
+            edgeObjectRefs = emptyMap(),
+        )
+        val rendered = RenderedBpmn(ctx.definition, "<xml/>", index)
+        val orphanMessage = "node Gateway_orphan missing incoming sequence flow"
+        val mockDiagnostic = BpmnDiagnostic(
+            source = BpmnDiagnosticSource.GRAPH,
+            message = orphanMessage,
+            repairScope = BpmnRepairScope.COMPOSITION,
+        )
+
+        `when`(ctx.definitionValidator.validate(ctx.definition)).thenReturn(listOf(orphanMessage))
+        `when`(ctx.fingerprints.serializeDefinition(ctx.definition)).thenReturn("def-long-serialized")
+        `when`(ctx.normalizer.graphDiagnostic(ctx.graph, orphanMessage)).thenReturn(mockDiagnostic)
+        `when`(ctx.normalizer.infrastructureDiagnostics(listOf(mockDiagnostic))).thenReturn(emptyList())
+
+        val result = ctx.pipeline.evaluate(ctx.graph, ctx.definition, rendered, null, 0)
+
+        assertEquals(1, result.diagnostics.size)
+        assertEquals(BpmnDiagnosticSource.GRAPH, result.diagnostics[0].source)
+        assertNull(result.validatedXml)
     }
 
     @Test
