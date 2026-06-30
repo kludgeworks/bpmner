@@ -280,7 +280,7 @@ private fun promptFrom(assessment: ProcessInputAssessment): String {
     return if (questions.isEmpty()) {
         assessment.rationale.ifBlank { "Please provide clarification." }
     } else {
-        questions.joinToString("\n") { it.questionText }
+        questions.first().questionText
     }
 }
 
@@ -288,26 +288,19 @@ private fun BpmnRequest.withClarification(
     answers: BpmnClarificationAnswers,
     assessment: ProcessInputAssessment,
 ): BpmnRequest {
-    val genericExchange =
-        ClarificationExchange(
-            questionId = "generic",
-            questionText = assessment.rationale.ifBlank { "Please provide clarification." },
-            answerText = answers.answers,
-        )
-    val newExchanges =
-        assessment.clarificationQuestions.map { question ->
+    val exchange =
+        assessment.clarificationQuestions.firstOrNull()?.let { question ->
             ClarificationExchange(
                 questionId = question.id,
                 questionText = question.questionText,
                 answerText = answers.answers,
             )
-        }
-    val exchangesToAdd =
-        when {
-            newExchanges.isEmpty() -> listOf(genericExchange)
-            else -> newExchanges
-        }
+        } ?: ClarificationExchange(
+            questionId = "generic",
+            questionText = assessment.rationale.ifBlank { "Please provide clarification." },
+            answerText = answers.answers,
+        )
     return this.copy(
-        clarificationHistory = this.clarificationHistory + exchangesToAdd,
+        clarificationHistory = this.clarificationHistory + exchange,
     )
 }
