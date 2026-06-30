@@ -273,6 +273,61 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
         assertEquals(ReadinessVerdict.READY, process.last(ReadyBpmnContext::class.java)!!.assessment.verdict)
     }
 
+    @Test
+    fun `clarification answer is recorded only against the first question not all questions`() {
+        // Regression guard for #497: when the assessment returns [q1, q2], only q1 is shown
+        // and the answer is recorded as exactly one ClarificationExchange against q1.
+        val q1 = ClarificationQuestion(id = "q1", questionText = "What starts the process?")
+        val q2 = ClarificationQuestion(id = "q2", questionText = "What is the end state?")
+        val request =
+            BpmnRequest(
+                processDescription = "When an order is submitted, the clerk reviews it, then approves it.",
+                mode = GenerationMode.INTERACTIVE,
+            )
+
+        whenCreateObject(
+            { it.contains("Assess whether the source text describes a workflow that is ready for BPMN modelling") },
+            ProcessInputAssessment::class.java,
+        ).thenReturn(
+            ProcessInputAssessment(
+                verdict = ReadinessVerdict.READY,
+                overallScore = 85,
+                dimensions = emptyList(),
+                evidence = emptyList(),
+                rationale = "Ready",
+            ),
+        )
+
+        val twoQuestionAssessment =
+            ProcessInputAssessment(
+                verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+                overallScore = 40,
+                dimensions = emptyList(),
+                evidence = emptyList(),
+                clarificationQuestions = listOf(q1, q2),
+                rationale = "Needs clarification",
+            )
+
+        val process =
+            runGateProcess(ReadyBpmnContext::class.java, ephemeral = false, request, twoQuestionAssessment)
+        assertEquals(AgentProcessStatusCode.WAITING, process.status)
+
+        @Suppress("UNCHECKED_CAST")
+        val form =
+            process.last(FormBindingRequest::class.java)
+                as FormBindingRequest<BpmnClarificationAnswers>
+        form.bind(BpmnClarificationAnswers("The order is completed."), process)
+        process.run()
+
+        assertEquals(AgentProcessStatusCode.COMPLETED, process.status)
+
+        val history = process.last(ReadyBpmnContext::class.java)!!.request.clarificationHistory
+        assertEquals(1, history.size, "Only the first question should be recorded, not all questions")
+        assertEquals("q1", history[0].questionId)
+        assertEquals(q1.questionText, history[0].questionText)
+        assertEquals("The order is completed.", history[0].answerText)
+    }
+
     private fun runGateProcess(
         resultClass: Class<*>,
         ephemeral: Boolean,
