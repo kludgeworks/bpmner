@@ -275,7 +275,7 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
     @Test
     fun `clarification answer is recorded only against the first question not all questions`() {
-        // Regression guard for #497: when the assessment returns [q1, q2], only q1 is shown
+        // Regression guard: when the assessment returns [q1, q2], only q1 is shown
         // and the answer is recorded as exactly one ClarificationExchange against q1.
         val q1 = ClarificationQuestion(id = "q1", questionText = "What starts the process?")
         val q2 = ClarificationQuestion(id = "q2", questionText = "What is the end state?")
