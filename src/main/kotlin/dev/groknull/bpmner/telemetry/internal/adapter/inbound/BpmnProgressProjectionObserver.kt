@@ -24,6 +24,9 @@ class BpmnProgressProjectionObserver(
             // 0 out of 0 means indeterminate progress, which is typically good for status text updates.
             eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, friendlyLabel, 0, 0))
         }
+        val stageMapping = ACTION_STAGES[actionName] ?: return
+        val label = friendlyLabel ?: actionName
+        eventPublisher.publishEvent(BpmnStageEvent(event.agentProcess, stageMapping.stage, stageMapping.stageStatus, label))
     }
 
     @EventListener
@@ -61,41 +64,63 @@ class BpmnProgressProjectionObserver(
         if (label != null) {
             eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, label, 0, 0))
         }
+
+        // Emit a typed warn stage event for repair attempts so the rail highlights the validate chip.
+        if (event.stage == "VALIDATION_FAILED") {
+            val warnLabel = label ?: "Validating and repairing (Attempt ${event.attemptNumber ?: 1})"
+            eventPublisher.publishEvent(
+                BpmnStageEvent(event.agentProcess, stage = "validate", stageStatus = "warn", label = warnLabel),
+            )
+        }
     }
 
     private fun mapActionToLabel(actionName: String): String? = ACTION_LABELS[actionName]
 
     companion object {
-        // Maps every `@Action` method name in the codebase to a user-facing progress string. Keep
+        // Maps every @Action method name in the codebase to a user-facing progress string. Keep
         // this exhaustive — silent gaps (a missing entry) mean the UI stalls on "unknown step"
-        // for the duration of an action's execution. If you add a new `@Action`, add it here.
-        private val ACTION_LABELS: Map<String, String> = mapOf(
-            // Input side (BpmnReadinessAgent + BpmnContractAgent)
+        // for the duration of an action's execution. If you add a new @Action, add it here.
+        //
+        // Keys are the RUNTIME action names (= bare Kotlin method names; no @Action(name=…)
+        // overrides exist in this codebase). BpmnProgressProjectionObserverTest enforces this
+        // via reflection so stale keys fail the build.
+        @JvmField
+        internal val ACTION_LABELS: Map<String, String> = mapOf(
+            // BpmnReadinessAgent
             "assessReadiness" to "Assessing input readiness",
-            "extractProcessContract" to "Extracting process contract",
-            // Generator (BpmnGeneratorAgent, Phase 5, 4 actions)
+            // BpmnGenerationAgent — contract, generation, validate, layout, align, finish
+            "extractContract" to "Extracting process contract",
             "createOutline" to "Generating BPMN structure",
             "composeGraph" to "Composing process graph",
-            "renderBpmnXml" to "Rendering BPMN XML",
-            "finalizeBpmn" to "Finalizing BPMN output",
-            // Repair (BpmnRepairAgent, Phase 4 GOAP, 5 actions + finalize)
+            "render" to "Rendering BPMN XML",
             "validate" to "Validating BPMN",
-            "applyDeterministicFixes" to "Applying deterministic fixes",
-            "applyLlmLabelPatch" to "Repairing labels",
-            "applyLlmStructuralPatch" to "Repairing structure",
-            "applyFullLlmRewrite" to "Rewriting BPMN",
-            "finalize" to "Finalizing repair",
-            // Layout (BpmnLayoutAgent)
+            "layout" to "Laying out diagram",
+            "align" to "Verifying semantic alignment",
+            "finish" to "Finalizing BPMN output",
+            // BpmnLayoutAgent (standalone layout path)
             "layoutBpmnXml" to "Laying out diagram",
-            "autoFixBpmnXml" to "Auto-fixing diagram XML",
             "validateFinalBpmnXml" to "Validating final BPMN",
-            // Alignment (BpmnAlignmentAgent)
-            "checkAlignment" to "Verifying semantic alignment",
-            // Rule evaluation (LlmRuleAgent — called from inside the repair loop)
-            "evaluateLlmRules" to "Evaluating LLM rules",
-            // State-machine flow transitions
-            "proceed" to "Proceeding with generation",
-            "terminate" to "Terminating process",
+        )
+
+        // Maps runtime action names to (stage, status) for the six-chip pipeline rail.
+        // Stage keys: readiness | contract | generate | validate | layout | align
+        // Status: active | done | warn  (warn is set from VALIDATION_FAILED snapshot, not here)
+        @JvmField
+        internal val ACTION_STAGES: Map<String, StageMapping> = mapOf(
+            "assessReadiness" to StageMapping(stage = "readiness", stageStatus = "active"),
+            "reassess" to StageMapping(stage = "readiness", stageStatus = "active"),
+            "extractContract" to StageMapping(stage = "contract", stageStatus = "active"),
+            "createOutline" to StageMapping(stage = "generate", stageStatus = "active"),
+            "composeGraph" to StageMapping(stage = "generate", stageStatus = "active"),
+            "render" to StageMapping(stage = "generate", stageStatus = "active"),
+            "validate" to StageMapping(stage = "validate", stageStatus = "active"),
+            "layout" to StageMapping(stage = "layout", stageStatus = "active"),
+            "layoutBpmnXml" to StageMapping(stage = "layout", stageStatus = "active"),
+            "align" to StageMapping(stage = "align", stageStatus = "active"),
+            "finish" to StageMapping(stage = "align", stageStatus = "done"),
         )
     }
 }
+
+/** Lightweight value type for the action→stage mapping table. */
+internal data class StageMapping(val stage: String, val stageStatus: String)

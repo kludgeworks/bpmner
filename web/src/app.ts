@@ -4,6 +4,8 @@
  */
 
 import BpmnViewer from "bpmn-js"
+import type { ChipState, StageKey } from "./stage-rail"
+import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
 
 type ProgressUpdateEvent = {
 	type: "ProgressUpdateEvent"
@@ -25,11 +27,19 @@ type BpmnRunCostEvent = {
 	costSummary: string
 }
 
+type BpmnStageEvent = {
+	type: "BpmnStageEvent"
+	stage: string
+	stageStatus: string
+	label: string
+}
+
 type ServerEvent =
 	| ProgressUpdateEvent
 	| BpmnSnapshotEvent
 	| AgentProcessEvent
 	| BpmnRunCostEvent
+	| BpmnStageEvent
 	| { type?: string }
 
 type Diagnostic = {
@@ -79,6 +89,7 @@ const diagnosticsContainer = getRequiredElement<HTMLElement>(
 const diagnosticsList = getRequiredElement<HTMLElement>("diagnostics-list")
 const downloadContainer = getRequiredElement<HTMLElement>("download-container")
 const downloadXml = getRequiredElement<HTMLAnchorElement>("download-xml")
+const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
 
 let eventSource: EventSource | null = null
 let currentXml = ""
@@ -87,6 +98,7 @@ let snapshotCount = 0
 let sawFinish = false
 let sawCost = false
 let closeTimer: number | null = null
+let stages: Record<StageKey, ChipState> = initialStages()
 
 // The run-cost event arrives just after the terminal finished event, so keep the stream open
 // briefly past completion to receive it; close anyway after this grace period if it never comes.
@@ -108,6 +120,8 @@ generateBtn.addEventListener("click", async () => {
 	snapshotCount = 0
 	sawFinish = false
 	sawCost = false
+	stages = initialStages()
+	renderStageRail(stageRailEl, stages)
 	if (closeTimer !== null) {
 		clearTimeout(closeTimer)
 		closeTimer = null
@@ -152,6 +166,13 @@ function connectSse(url: string) {
 
 		if (event.type === "ProgressUpdateEvent" && "name" in event) {
 			addProgress(event.name as string)
+		} else if (event.type === "BpmnStageEvent" && "stageStatus" in event) {
+			const stageEvent = event as BpmnStageEvent
+			stages = reduceStages(stages, {
+				stage: stageEvent.stage,
+				status: stageEvent.stageStatus,
+			})
+			renderStageRail(stageRailEl, stages)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
 			await handleSnapshot(event as BpmnSnapshotEvent)
 		} else if (event.type === "AgentProcessFinishedEvent") {
