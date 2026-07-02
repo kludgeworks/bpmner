@@ -51,16 +51,14 @@ class BpmnProgressProjectionObserverTest {
                 BpmnLayoutAgent::class.java,
             )
 
-        // Collect @Action method names from top-level AND nested/inner classes
-        // (state-machine actions like Ready.proceed() live on nested classes).
+        // Collect @Action method names from each agent class. State-machine action
+        // methods (proceed, assess, ask, terminate) live on top-level @State classes
+        // in the same file, not on inner/nested classes of the agent — and none of
+        // those names appear in ACTION_LABELS or ACTION_STAGES, so we do not need to
+        // scan for them here.
         val liveActionNames: Set<String> =
             agentClasses.flatMap { clazz ->
-                val ownNames = clazz.declaredMethods.filter { it.isAnnotationPresent(Action::class.java) }.map { it.name }
-                val nestedNames =
-                    clazz.declaredClasses.flatMap { nested ->
-                        nested.declaredMethods.filter { it.isAnnotationPresent(Action::class.java) }.map { it.name }
-                    }
-                ownNames + nestedNames
+                clazz.declaredMethods.filter { it.isAnnotationPresent(Action::class.java) }.map { it.name }
             }.toSet()
 
         val deadLabels = BpmnProgressProjectionObserver.ACTION_LABELS.keys - liveActionNames
