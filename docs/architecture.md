@@ -355,6 +355,31 @@ Decision 1, it is registered **module-locally** in `config/BpmnPipelineConfig` v
 
 For the full configuration reference see [`operator-guide.md`](./operator-guide.md).
 
+### SSE wire contract {#wire-contract}
+
+The web client receives typed SSE events over the Embabel platform channel
+(`/api/bpmn/generations/events/process/{id}`). The following rules are **binding** for
+all new event types — do not rename a class or property without updating the TypeScript
+client in the same PR.
+
+- **Type discriminator:** the `type` field in the SSE JSON payload is the **Kotlin simple
+  class name** of the event. New event types must be concrete `class` (not `data class`)
+  declarations in `telemetry/internal/adapter/inbound/` extending
+  `AbstractAgentProcessEvent`.
+- **Class and property names are the API.** Renaming a Kotlin class or property changes
+  the JSON field name and silently breaks the client.
+- **Note on inherited properties:** `AbstractAgentProcessEvent` exposes a `status` getter
+  returning `AgentProcessStatusReport`. New event types that carry a string status should
+  name the property `stageStatus` (or another non-conflicting name) to avoid hiding the
+  inherited getter with an incompatible type.
+- **Stage keys** (for `BpmnStageEvent`): `readiness | contract | generate | validate |
+  layout | align`.
+- **Status values** (for `BpmnStageEvent.stageStatus`): `active | done | warn`.
+
+The drift guard in `BpmnProgressProjectionObserverTest` enforces at build time that every
+key in `ACTION_LABELS` and `ACTION_STAGES` is a live `@Action` method name — stale keys
+fail the build.
+
 ---
 
 ## 6. Enforcement

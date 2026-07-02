@@ -166,13 +166,8 @@ function connectSse(url: string) {
 
 		if (event.type === "ProgressUpdateEvent" && "name" in event) {
 			addProgress(event.name as string)
-		} else if (event.type === "BpmnStageEvent" && "stageStatus" in event) {
-			const stageEvent = event as BpmnStageEvent
-			stages = reduceStages(stages, {
-				stage: stageEvent.stage,
-				status: stageEvent.stageStatus,
-			})
-			renderStageRail(stageRailEl, stages)
+		} else if (event.type === "BpmnStageEvent") {
+			applyStageEvent(event as BpmnStageEvent)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
 			await handleSnapshot(event as BpmnSnapshotEvent)
 		} else if (event.type === "AgentProcessFinishedEvent") {
@@ -205,6 +200,14 @@ function connectSse(url: string) {
 		generateBtn.disabled = false
 		addProgress("Connection lost.")
 	}
+}
+
+function applyStageEvent(event: BpmnStageEvent): void {
+	stages = reduceStages(stages, {
+		stage: event.stage,
+		status: event.stageStatus,
+	})
+	renderStageRail(stageRailEl, stages)
 }
 
 function closeStream() {

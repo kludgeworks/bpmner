@@ -12,8 +12,9 @@ import com.embabel.agent.core.AgentProcess
  * Published alongside [com.embabel.agent.api.event.ProgressUpdateEvent] when an @Action starts,
  * carrying a stable machine-readable stage identifier and status for the six-chip pipeline rail.
  *
- * Wire contract (ARCHITECTURE.md §wire-contract): the Kotlin simple class name is the SSE `type`
- * discriminator; class name and property names are API — do not rename without a client update.
+ * Wire contract (docs/architecture.md §wire-contract): the Kotlin simple class name is the SSE
+ * `type` discriminator; class name and property names are API — do not rename without a client
+ * update.
  *
  * Stage keys: `readiness | contract | generate | validate | layout | align`
  * Status values in `stageStatus`: `active | done | warn`

@@ -26,7 +26,11 @@ def bpmner_node_test(
     bundle_name = name + "_bundle"
     bundle_output = "dist/test/%s.js" % name
 
-    config = {"sourcemap": False}
+    # Use inline source maps so that Node.js's --experimental-test-coverage can
+    # map V8 coverage ranges back to original TypeScript source file paths.
+    # Without source maps the LCOV paths point to the bundled JS file only and
+    # SonarCloud sees 0% coverage on the TypeScript sources.
+    config = {"sourcemap": "inline"}
     if loaders:
         config["loader"] = loaders
 
