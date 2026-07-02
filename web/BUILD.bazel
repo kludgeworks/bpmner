@@ -62,6 +62,13 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "stage_rail_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/stage-rail.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
 esbuild(
     name = "bundle",
     srcs = WEB_SRCS,

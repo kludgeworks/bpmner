@@ -37,6 +37,9 @@ const args = ['--test'];
 // If Bazel is requesting coverage collection
 const coverageOutputFile = env.COVERAGE_OUTPUT_FILE;
 if (coverageOutputFile) {
+    // Enable source map support so coverage data is remapped from the esbuild
+    // bundle back to the original TypeScript source file paths in the LCOV output.
+    args.unshift('--enable-source-maps');
     args.push('--experimental-test-coverage');
 
     // Node.js pairs reporters and destinations positionally:
