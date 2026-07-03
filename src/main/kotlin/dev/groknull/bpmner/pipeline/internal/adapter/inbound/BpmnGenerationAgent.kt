@@ -34,6 +34,7 @@ import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
@@ -43,6 +44,7 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnRepairer
+import org.springframework.context.ApplicationEventPublisher
 import java.io.File
 
 @Agent(description = "Single idiomatic agent for happy-path BPMN generation")
@@ -56,6 +58,7 @@ internal class BpmnGenerationAgent(
     private val layoutPort: BpmnLayoutPort,
     private val xsdValidationPort: BpmnXsdValidationPort,
     private val aligner: BpmnAligner,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     @Action
     fun draft(userInput: UserInput, ctx: OperationContext): BpmnRequestDraft {
@@ -126,6 +129,10 @@ internal class BpmnGenerationAgent(
             val details = xsdIssues.mapNotNull { it.message }.joinToString("; ").ifBlank { "Unknown XSD validation error" }
             error("Auto-layout produced structurally invalid BPMN: $details")
         }
+        // Publish the laid-out (DI-bearing) XML so telemetry can forward a LAYOUT_COMPLETE
+        // snapshot over the SSE channel, enabling the web client to switch from its client-side
+        // preview layout to the canonical server geometry (ARCH ADR-ss-007).
+        eventPublisher.publishEvent(BpmnLayoutCompletedEvent(layouted.xml))
         return FinalValidatedBpmnXml(definition = layouted.definition, xml = layouted.xml)
     }
 
