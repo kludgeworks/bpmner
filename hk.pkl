@@ -4,6 +4,10 @@ import "package://github.com/jdx/hk/releases/download/v1.45.0/hk@1.45.0#/Builtin
 local linters = new Mapping<String, Step> {
   ["biome"] = (Builtins.biome) {
     batch = true
+    // Extend the default (js/ts/json) glob to our CSS + HTML so hk lints them
+    // through Biome's HTML/CSS support (ADR-ss-006). Vendored/templated files
+    // are excluded in biome.jsonc.
+    glob = List("**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx", "**/*.json", "**/*.css", "**/*.html")
   }
   ["ktlint"] = (Builtins.ktlint) {
     batch = true

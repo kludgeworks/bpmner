@@ -3,113 +3,524 @@
  * SPDX-License-Identifier: MIT
  */
 
-body, html {
-  margin: 0;
-  padding: 0;
-  height: 100%;
-  font-family: sans-serif;
+/* --------------------------------------------------------------------------
+ * Design tokens (Kludgeworks). Ink / paper / oxide plus derived neutrals,
+ * severity hues, the three brand type stacks, small radii and spacing.
+ * ------------------------------------------------------------------------ */
+:root {
+	--ink: #16181d;
+	--paper: #ffffff;
+	--oxide: #cf3a22;
+
+	--ink-70: rgba(22, 24, 29, 0.7);
+	--ink-45: rgba(22, 24, 29, 0.45);
+	--ink-12: rgba(22, 24, 29, 0.12);
+	--ink-06: rgba(22, 24, 29, 0.06);
+	--oxide-12: rgba(207, 58, 34, 0.12);
+
+	--sev-error: var(--oxide);
+	--sev-warning: #c77d12;
+	--sev-info: #2b6cb0;
+	--sev-success: #2f7a43;
+	--sev-unknown: var(--ink-45);
+
+	--font-sans: "Geist", system-ui, -apple-system, sans-serif;
+	--font-mono: "Geist Mono", ui-monospace, "SF Mono", monospace;
+	--font-display: "Chakra Petch", var(--font-sans);
+
+	--radius: 4px;
+	--radius-sm: 3px;
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 24px;
+
+	--entrance-duration: 220ms;
 }
 
-.layout {
-  display: flex;
-  height: 100vh;
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
 }
 
-.sidebar {
-  width: 300px;
-  padding: 20px;
-  background: #f4f4f4;
-  border-right: 1px solid #ccc;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
+html,
+body {
+	margin: 0;
+	padding: 0;
+	height: 100%;
 }
 
-textarea {
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 10px;
-  font-family: monospace;
-}
-
-button {
-  padding: 10px;
-  background: #007bff;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-button:hover {
-  background: #0056b3;
+body {
+	font-family: var(--font-sans);
+	font-size: 14px;
+	line-height: 1.5;
+	color: var(--ink);
+	background: var(--paper);
 }
 
 .hidden {
-  display: none;
+	display: none;
 }
 
-.main-content {
-  flex-grow: 1;
-  display: flex;
+.visually-hidden {
+	position: absolute;
+	width: 1px;
+	height: 1px;
+	margin: -1px;
+	padding: 0;
+	overflow: hidden;
+	clip: rect(0, 0, 0, 0);
+	white-space: nowrap;
+	border: 0;
+}
+
+/* --------------------------------------------------------------------------
+ * Studio shell: brand bar across the top, sidebar + dominant canvas below.
+ * ------------------------------------------------------------------------ */
+.studio {
+	display: grid;
+	grid-template-columns: 320px 1fr;
+	grid-template-rows: auto 1fr;
+	grid-template-areas:
+		"bar bar"
+		"sidebar canvas";
+	height: 100vh;
+}
+
+.studio-bar {
+	grid-area: bar;
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-3);
+	padding: var(--space-3) var(--space-5);
+	border-bottom: 1px solid var(--ink-12);
+	background: var(--paper);
+}
+
+.studio-brand {
+	margin: 0;
+	font-family: var(--font-display);
+	font-weight: 600;
+	font-size: 20px;
+	letter-spacing: 0.02em;
+	color: var(--ink);
+}
+
+.studio-tagline {
+	margin: 0;
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 12px;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--oxide);
+}
+
+.studio-sidebar {
+	grid-area: sidebar;
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-4);
+	padding: var(--space-4);
+	overflow-y: auto;
+	background: var(--ink-06);
+	border-right: 1px solid var(--ink-12);
+}
+
+.studio-canvas {
+	grid-area: canvas;
+	position: relative;
+	overflow: hidden;
+	background: var(--paper);
 }
 
 #canvas {
-  width: 100%;
-  height: 100%;
+	width: 100%;
+	height: 100%;
 }
 
-ul {
-  padding-left: 20px;
+/* --------------------------------------------------------------------------
+ * Panels
+ * ------------------------------------------------------------------------ */
+.panel {
+	padding: var(--space-3);
+	background: var(--paper);
+	border: 1px solid var(--ink-12);
+	border-radius: var(--radius);
+}
+
+.panel-title {
+	margin: 0 0 var(--space-2) 0;
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	color: var(--ink-70);
+}
+
+.panel-note {
+	margin-left: var(--space-2);
+	font-family: var(--font-mono);
+	font-weight: 400;
+	font-size: 10px;
+	letter-spacing: 0;
+	text-transform: none;
+	color: var(--ink-45);
+}
+
+/* --------------------------------------------------------------------------
+ * Inputs & buttons
+ * ------------------------------------------------------------------------ */
+textarea {
+	width: 100%;
+	box-sizing: border-box;
+	padding: var(--space-2);
+	font-family: var(--font-mono);
+	font-size: 13px;
+	color: var(--ink);
+	background: var(--paper);
+	border: 1px solid var(--ink-12);
+	border-radius: var(--radius-sm);
+	resize: vertical;
+}
+
+textarea:focus-visible,
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible {
+	outline: 2px solid var(--oxide);
+	outline-offset: 1px;
+}
+
+button {
+	width: 100%;
+	margin-top: var(--space-2);
+	padding: var(--space-2) var(--space-3);
+	font-family: var(--font-sans);
+	font-weight: 500;
+	font-size: 13px;
+	color: var(--paper);
+	background: var(--ink);
+	border: none;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+button:hover {
+	background: var(--oxide);
+}
+
+button:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+button:disabled:hover {
+	background: var(--ink);
+}
+
+/* --------------------------------------------------------------------------
+ * Stage rail
+ * ------------------------------------------------------------------------ */
+#stage-rail {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-1);
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#stage-rail li {
+	display: flex;
+	align-items: center;
+	gap: var(--space-2);
+	padding: var(--space-1) 0;
+	font-size: 12px;
+	color: var(--ink-45);
+}
+
+#stage-rail li::before {
+	content: "";
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--ink-12);
+}
+
+#stage-rail li[data-state="active"] {
+	font-weight: 500;
+	color: var(--ink);
+}
+
+#stage-rail li[data-state="active"]::before {
+	background: var(--oxide);
+	box-shadow: 0 0 0 3px var(--oxide-12);
+}
+
+#stage-rail li[data-state="done"] {
+	color: var(--ink-70);
+}
+
+#stage-rail li[data-state="done"]::before {
+	background: var(--ink);
+}
+
+#stage-rail li[data-state="warn"] {
+	color: var(--ink);
+}
+
+#stage-rail li[data-state="warn"]::before {
+	background: var(--sev-warning);
+}
+
+/* --------------------------------------------------------------------------
+ * Progress ticker
+ * ------------------------------------------------------------------------ */
+#progress-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+#progress-list li {
+	padding: 2px 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	color: var(--ink-70);
+	border-bottom: 1px solid var(--ink-06);
+}
+
+.run-cost {
+	margin: var(--space-2) 0 0 0;
+	font-family: var(--font-mono);
+	font-size: 11px;
+	white-space: pre-wrap;
+	color: var(--ink-70);
+}
+
+/* --------------------------------------------------------------------------
+ * Diagnostics — severity dots + strike-in-place for fixed rows (ADR-ss-002)
+ * ------------------------------------------------------------------------ */
+#diagnostics-list {
+	margin: 0;
+	padding: 0;
+	list-style: none;
 }
 
 .diagnostic-item {
-  margin-bottom: 8px;
-  font-size: 0.9em;
+	display: flex;
+	align-items: baseline;
+	gap: var(--space-2);
+	padding: var(--space-1) 0;
+	font-size: 12px;
+	color: var(--ink);
 }
 
+.severity-dot {
+	flex: none;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	transform: translateY(1px);
+	background: var(--sev-unknown);
+}
+
+.severity-dot--error {
+	background: var(--sev-error);
+}
+
+.severity-dot--warning {
+	background: var(--sev-warning);
+}
+
+.severity-dot--info {
+	background: var(--sev-info);
+}
+
+.diagnostic-text {
+	word-break: break-word;
+}
+
+.diagnostic-item--fixed .diagnostic-text {
+	color: var(--ink-45);
+	text-decoration: line-through;
+}
+
+.diagnostic-item--fixed .severity-dot {
+	background: var(--ink-12);
+}
+
+/* Canvas overlays — a severity-coloured dot pinned to the flagged element. */
 .diagnostic-overlay {
-  width: 10px;
-  height: 10px;
-  background: red;
-  border-radius: 50%;
-  cursor: help;
-  pointer-events: auto;
+	width: 12px;
+	height: 12px;
+	border-radius: 50%;
+	border: 2px solid var(--paper);
+	cursor: help;
+	pointer-events: auto;
+	background: var(--sev-unknown);
 }
 
-/* Clarification region — shown when the agent is awaiting a user answer. */
+.diagnostic-overlay--error {
+	background: var(--sev-error);
+}
+
+.diagnostic-overlay--warning {
+	background: var(--sev-warning);
+}
+
+.diagnostic-overlay--info {
+	background: var(--sev-info);
+}
+
+/* --------------------------------------------------------------------------
+ * Result bar
+ * ------------------------------------------------------------------------ */
+#result-bar:not(.hidden) {
+	display: flex;
+	flex-direction: column;
+	gap: var(--space-2);
+}
+
+.result-badge {
+	align-self: flex-start;
+	padding: var(--space-1) var(--space-2);
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 11px;
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+	color: var(--paper);
+	background: var(--ink);
+	border-radius: var(--radius-sm);
+}
+
+.result-badge[data-result-status="GENERATED"] {
+	background: var(--sev-success);
+}
+
+.result-badge[data-result-status="NEEDS_CLARIFICATION"] {
+	background: var(--sev-warning);
+}
+
+.result-badge[data-result-status="ALIGNMENT_FAILED"],
+.result-badge[data-result-status="VALIDATION_FAILED"] {
+	background: var(--oxide);
+}
+
+.alignment-report summary {
+	cursor: pointer;
+	font-size: 12px;
+	color: var(--ink-70);
+}
+
+.alignment-report p {
+	margin: var(--space-2) 0 0 0;
+	font-size: 12px;
+	white-space: pre-wrap;
+	color: var(--ink);
+}
+
+.download-bpmn {
+	align-self: flex-start;
+	padding: var(--space-1) var(--space-2);
+	font-size: 12px;
+	font-weight: 500;
+	color: var(--oxide);
+	text-decoration: none;
+	border: 1px solid var(--oxide);
+	border-radius: var(--radius-sm);
+}
+
+.download-bpmn:hover {
+	color: var(--paper);
+	background: var(--oxide);
+}
+
+/* --------------------------------------------------------------------------
+ * Clarify region — a prominent oxide-tinted card (a required user action)
+ * ------------------------------------------------------------------------ */
 #clarify-region {
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  padding: 12px;
-  margin-bottom: 12px;
-  background: #fffbe6;
+	padding: var(--space-3);
+	background: var(--oxide-12);
+	border: 1px solid var(--oxide);
+	border-left: 3px solid var(--oxide);
+	border-radius: var(--radius);
 }
 
 .clarify-indicator {
-  font-size: 0.8em;
-  color: #666;
-  margin: 0 0 4px 0;
+	margin: 0 0 var(--space-1) 0;
+	font-family: var(--font-display);
+	font-weight: 500;
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.1em;
+	color: var(--oxide);
 }
 
 .clarify-prompt {
-  font-weight: bold;
-  margin: 0 0 8px 0;
+	margin: 0 0 var(--space-2) 0;
+	font-weight: 500;
+	color: var(--ink);
 }
 
 .clarify-answer {
-  width: 100%;
-  box-sizing: border-box;
-  margin-bottom: 8px;
-  font-family: sans-serif;
-  resize: vertical;
-}
-
-.clarify-submit {
-  width: 100%;
+	width: 100%;
+	box-sizing: border-box;
+	margin-bottom: var(--space-2);
 }
 
 .clarify-error {
-  color: #c0392b;
-  font-size: 0.9em;
-  margin: 6px 0 0 0;
+	margin: var(--space-2) 0 0 0;
+	font-size: 12px;
+	color: var(--oxide);
+}
+
+/* --------------------------------------------------------------------------
+ * Canvas status pill ("Diagram pending (attempt N)")
+ * ------------------------------------------------------------------------ */
+.canvas-status {
+	position: absolute;
+	bottom: var(--space-4);
+	left: var(--space-4);
+	padding: var(--space-1) var(--space-2);
+	font-family: var(--font-mono);
+	font-size: 12px;
+	color: var(--ink-70);
+	background: var(--paper);
+	border: 1px solid var(--ink-12);
+	border-radius: var(--radius-sm);
+}
+
+/* --------------------------------------------------------------------------
+ * Progressive diagram entrance — CSS-only, disabled under reduced-motion.
+ * app.ts toggles `.canvas--entrance` on #canvas after each successful draw.
+ * ------------------------------------------------------------------------ */
+@keyframes djs-entrance {
+	from {
+		opacity: 0;
+		transform: scale(0.985);
+	}
+
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+.canvas--entrance .djs-element {
+	transform-box: fill-box;
+	transform-origin: center;
+	animation: djs-entrance var(--entrance-duration) ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.canvas--entrance .djs-element {
+		animation: none;
+	}
 }

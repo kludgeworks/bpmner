@@ -43,8 +43,11 @@ WEB_TEST_SRCS = glob(["test/**/*.ts"])
 WEB_STATIC_ASSETS = glob(["src/static/**/*"])
 
 WEB_TS_DEPS = [
+    "//:node_modules/@types/jsdom",
     "//:node_modules/@types/node",
+    "//:node_modules/axe-core",
     "//:node_modules/bpmn-js",
+    "//:node_modules/jsdom",
     "//:node_modules/yet-another-bpmn-auto-layout",
 ]
 
@@ -98,6 +101,24 @@ bpmner_node_test(
     name = "clarify_form_test",
     srcs = WEB_SRCS + WEB_TEST_SRCS,
     entry_point = "test/clarify-form.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
+bpmner_node_test(
+    name = "diagnostic_diff_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/diagnostic-diff.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
+# jsdom is a large CJS package with runtime resource loading that does not
+# survive esbuild bundling, so it is marked external here and resolved from
+# node_modules at runtime (ADR-ss-006 / PLAN ss-5 risk R-jsdom-bundle).
+bpmner_node_test(
+    name = "studio_a11y_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/studio-a11y.test.ts",
+    external = ["jsdom"],
     deps = WEB_TS_DEPS,
 )
 

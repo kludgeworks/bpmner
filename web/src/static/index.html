@@ -22,49 +22,75 @@
 -->
 
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>bpmner - Generative BPMN</title>
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="bpmn-js.css">
-  <link rel="stylesheet" href="diagram-js.css">
-  <link rel="stylesheet" href="bpmn-font/css/bpmn.css">
-</head>
-<body>
-  <div class="layout">
-    <div class="sidebar">
-      <h2>Generate BPMN</h2>
-      <textarea id="process-description" rows="10" placeholder="Enter process description..."></textarea>
-      <button id="generate-btn" type="button">Generate</button>
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<title>bpmner — Generation Studio</title>
+		<link rel="stylesheet" href="fonts.css">
+		<link rel="stylesheet" href="style.css">
+		<link rel="stylesheet" href="bpmn-js.css">
+		<link rel="stylesheet" href="diagram-js.css">
+		<link rel="stylesheet" href="bpmn-font/css/bpmn.css">
+	</head>
 
-      <div id="clarify-region" class="hidden"></div>
+	<body>
+		<div class="studio">
+			<header class="studio-bar">
+				<h1 class="studio-brand">bpmner</h1>
+				<p class="studio-tagline">Generation Studio</p>
+			</header>
 
-      <ol id="stage-rail" aria-label="Pipeline stages">
-        <li data-stage="readiness" data-state="pending">Readiness</li>
-        <li data-stage="contract" data-state="pending">Contract</li>
-        <li data-stage="generate" data-state="pending">Generate</li>
-        <li data-stage="validate" data-state="pending">Validate</li>
-        <li data-stage="layout" data-state="pending">Layout</li>
-        <li data-stage="align" data-state="pending">Align</li>
-      </ol>
+			<aside class="studio-sidebar" aria-label="Controls and status">
+				<section class="panel">
+					<h2 class="panel-title">Describe</h2>
+					<label class="visually-hidden" for="process-description"
+						>Process description</label
+					>
+					<textarea
+						id="process-description"
+						rows="8"
+						placeholder="Enter process description…"
+					></textarea>
+					<button id="generate-btn" type="button" class="btn-primary">
+						Generate
+					</button>
+				</section>
 
-      <div id="progress-container" class="hidden">
-        <h3>Progress</h3>
-        <ul id="progress-list"></ul>
-      </div>
+				<div id="clarify-region" class="hidden"></div>
 
-      <div id="diagnostics-container" class="hidden">
-        <h3>Diagnostics</h3>
-        <ul id="diagnostics-list"></ul>
-      </div>
+				<section class="panel">
+					<h2 class="panel-title">Pipeline</h2>
+					<ol id="stage-rail" aria-label="Pipeline stages">
+						<li data-stage="readiness" data-state="pending">Readiness</li>
+						<li data-stage="contract" data-state="pending">Contract</li>
+						<li data-stage="generate" data-state="pending">Generate</li>
+						<li data-stage="validate" data-state="pending">Validate</li>
+						<li data-stage="layout" data-state="pending">Layout</li>
+						<li data-stage="align" data-state="pending">Align</li>
+					</ol>
+				</section>
 
-      <div id="result-bar" class="hidden"></div>
-    </div>
-    <div class="main-content">
-      <div id="canvas"></div>
-      <div id="canvas-status" class="canvas-status hidden"></div>
-    </div>
-  </div>
-  <script src="js/app-bundle.js"></script>
-</body>
+				<div id="progress-container" class="panel hidden">
+					<h2 class="panel-title">Progress</h2>
+					<ul id="progress-list"></ul>
+				</div>
+
+				<div id="diagnostics-container" class="panel hidden">
+					<h2 class="panel-title">
+						Diagnostics
+						<span id="diagnostics-attempt" class="panel-note"></span>
+					</h2>
+					<ul id="diagnostics-list"></ul>
+				</div>
+
+				<div id="result-bar" class="hidden"></div>
+			</aside>
+
+			<main class="studio-canvas" aria-label="Diagram canvas">
+				<div id="canvas"></div>
+				<div id="canvas-status" class="canvas-status hidden"></div>
+			</main>
+		</div>
+		<script src="js/app-bundle.js"></script>
+	</body>
 </html>

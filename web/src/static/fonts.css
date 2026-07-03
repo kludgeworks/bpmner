@@ -1,0 +1,58 @@
+/**
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+/*
+ * Self-hosted Kludgeworks brand fonts, vendored as woff2 under ./fonts/
+ * (SIL Open Font License 1.1). Geist + Geist Mono © Vercel; Chakra Petch
+ * © Cadson Demak. Only the weights the studio uses are shipped.
+ */
+
+@font-face {
+	font-family: "Geist";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("fonts/geist-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Geist";
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("fonts/geist-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Geist";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("fonts/geist-latin-600-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Geist Mono";
+	font-style: normal;
+	font-weight: 400;
+	font-display: swap;
+	src: url("fonts/geist-mono-latin-400-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Chakra Petch";
+	font-style: normal;
+	font-weight: 500;
+	font-display: swap;
+	src: url("fonts/chakra-petch-latin-500-normal.woff2") format("woff2");
+}
+
+@font-face {
+	font-family: "Chakra Petch";
+	font-style: normal;
+	font-weight: 600;
+	font-display: swap;
+	src: url("fonts/chakra-petch-latin-600-normal.woff2") format("woff2");
+}

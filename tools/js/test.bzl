@@ -12,6 +12,7 @@ def bpmner_node_test(
         srcs,
         deps,
         loaders = {},
+        external = [],
         **kwargs):
     """Bundle a TS test file with esbuild and run it with node:test.
 
@@ -21,6 +22,9 @@ def bpmner_node_test(
         srcs: The source files for the test.
         deps: The dependencies for the test.
         loaders: Optional loaders for esbuild.
+        external: Extra module names to leave unbundled (resolved from
+            node_modules at runtime). When non-empty, `deps` are added to the
+            test's runfiles so the externalised packages resolve at run time.
         **kwargs: Additional arguments for js_test.
     """
     bundle_name = name + "_bundle"
@@ -39,7 +43,7 @@ def bpmner_node_test(
         srcs = srcs,
         config = config,
         entry_point = entry_point,
-        external = ["node:test", "node:assert"],
+        external = ["node:test", "node:assert"] + external,
         format = "cjs",
         output = bundle_output,
         platform = "node",
@@ -47,13 +51,20 @@ def bpmner_node_test(
         deps = deps,
     )
 
+    data = [
+        ":" + bundle_name,
+        "//tools/js:test_wrapper",
+    ]
+
+    # Externalised packages are not in the bundle, so they must be present in
+    # the runfiles for Node to resolve them from node_modules at runtime.
+    if external:
+        data = data + deps
+
     js_test(
         name = name,
         args = ["$(rootpaths :%s)" % bundle_name],
-        data = [
-            ":" + bundle_name,
-            "//tools/js:test_wrapper",
-        ],
+        data = data,
         entry_point = "//tools/js:test_wrapper",
         **kwargs
     )
