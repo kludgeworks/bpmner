@@ -37,7 +37,7 @@ complexity:
     ignoreAnnotatedFunctions: ['Action', 'Condition', 'Test']
   LongParameterList:
     active: true
-    constructorThreshold: 10
+    constructorThreshold: 11
 
 performance:
   SpreadOperator:

@@ -13,6 +13,7 @@ import dev.groknull.bpmner.conformance.BpmnDiagnosticSource
 import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
 import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
 import dev.groknull.bpmner.conformance.GlobalDiagnostics
+import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.slf4j.LoggerFactory
@@ -35,6 +36,18 @@ class BpmnPipelineObserver(
                 process = process,
                 stage = "INITIAL_RENDER",
                 xml = event.rendered.xml,
+            ),
+        )
+    }
+
+    @EventListener
+    fun onLayoutCompleted(event: BpmnLayoutCompletedEvent) {
+        val process = currentProcessOrWarn("BpmnLayoutCompletedEvent") ?: return
+        eventPublisher.publishEvent(
+            BpmnSnapshotEvent(
+                process = process,
+                stage = "LAYOUT_COMPLETE",
+                xml = event.xml,
             ),
         )
     }

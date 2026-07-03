@@ -4,6 +4,8 @@
  */
 
 import BpmnViewer from "bpmn-js"
+import { layoutProcess } from "yet-another-bpmn-auto-layout"
+import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
 import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
 
@@ -16,6 +18,7 @@ type BpmnSnapshotEvent = {
 	type: "BpmnSnapshotEvent"
 	xml?: string
 	diagnostics?: Diagnostic[]
+	attemptNumber?: number
 }
 
 type AgentProcessEvent = {
@@ -90,6 +93,7 @@ const diagnosticsList = getRequiredElement<HTMLElement>("diagnostics-list")
 const downloadContainer = getRequiredElement<HTMLElement>("download-container")
 const downloadXml = getRequiredElement<HTMLAnchorElement>("download-xml")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
+const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 
 let eventSource: EventSource | null = null
 let currentXml = ""
@@ -122,6 +126,8 @@ generateBtn.addEventListener("click", async () => {
 	sawCost = false
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
+	canvasStatus.textContent = ""
+	canvasStatus.classList.add("hidden")
 	if (closeTimer !== null) {
 		clearTimeout(closeTimer)
 		closeTimer = null
@@ -241,21 +247,34 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 	currentXml = event.xml || ""
 	if (!currentXml) return
 
-	try {
-		const { warnings } = await viewer.importXML(currentXml)
-		if (warnings.length) {
-			console.warn("Warnings importing XML", warnings)
-		}
+	const outcome = await importSnapshot(
+		{
+			layout: layoutProcess,
+			importXML: (xml) => viewer.importXML(xml),
+		},
+		currentXml,
+		event.attemptNumber,
+	)
 
+	if (outcome.status === "drawn") {
 		snapshotCount += 1
 		if (snapshotCount === 1) {
 			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
 		}
-
-		renderDiagnostics(event.diagnostics || [])
-	} catch (err) {
-		console.error("Error rendering XML", err)
+		canvasStatus.textContent = ""
+		canvasStatus.classList.add("hidden")
+	} else {
+		const msg =
+			outcome.attemptNumber !== undefined
+				? `Diagram pending (attempt ${outcome.attemptNumber})`
+				: "Diagram pending"
+		canvasStatus.textContent = msg
+		canvasStatus.classList.remove("hidden")
 	}
+
+	// Always update diagnostics list — it is canvas-independent.
+	// overlays.add already silently catches missing elements.
+	renderDiagnostics(event.diagnostics || [])
 }
 
 function renderDiagnostics(diagnostics: Diagnostic[]) {
