@@ -125,7 +125,8 @@ let currentProcessId: string | null = null
 // All three terminal signals (BpmnResultEvent, BpmnRunCostEvent, AgentProcessFinishedEvent)
 // fan out from the same server-side AgentProcessFinishedEvent, so their SSE order is
 // non-deterministic. The grace timer is a safety net for runs that never emit BpmnResultEvent
-// (budget-exhausted / stuck) — it fires closeStream() directly after this interval.
+// (budget-exhausted / stuck) — it forces sawResult and calls closeWhenSettled() so the
+// stream always closes even when no result event arrives (REVIEW-ss-3 F4).
 const COST_EVENT_GRACE_MS = 4000
 
 generateBtn.addEventListener("click", async () => {
@@ -205,7 +206,12 @@ function connectSse(url: string) {
 			generateBtn.disabled = false
 			settle = { ...settle, sawFinish: true }
 			if (closeTimer === null) {
-				closeTimer = window.setTimeout(closeStream, COST_EVENT_GRACE_MS)
+				closeTimer = window.setTimeout(() => {
+					// Safety net for runs that never emit BpmnResultEvent (budget-exhausted / stuck).
+					// Force sawResult so closeWhenSettled() can proceed; avoids bypassing shouldClose().
+					settle = { ...settle, sawResult: true }
+					closeWhenSettled()
+				}, COST_EVENT_GRACE_MS)
 			}
 			closeWhenSettled()
 		} else if (event.type === "BpmnRunCostEvent" && "costSummary" in event) {

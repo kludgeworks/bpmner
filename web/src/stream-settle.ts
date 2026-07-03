@@ -14,7 +14,8 @@
  *
  * Runs that never produce a `BpmnResult` (budget-exhausted / stuck) never emit
  * `BpmnResultEvent`, so `sawResult` stays false; the caller must arm a fallback timer
- * (`COST_EVENT_GRACE_MS`) that calls `closeStream()` directly as a safety net.
+ * (`COST_EVENT_GRACE_MS`) that forces `sawResult` and calls `closeWhenSettled()` as a
+ * safety net, ensuring the stream closes even when no result event arrives (REVIEW-ss-3 F4).
  */
 export type SettleState = {
 	sawFinish: boolean
