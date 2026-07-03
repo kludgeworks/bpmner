@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.telemetry.internal.adapter.inbound
 
+import com.embabel.agent.api.event.AgentProcessEvent
+import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.ActionExecutionStartEvent
 import com.embabel.agent.api.event.ProgressUpdateEvent
 import org.springframework.context.ApplicationEventPublisher
@@ -14,8 +16,15 @@ import org.springframework.stereotype.Component
 @Component
 class BpmnProgressProjectionObserver(
     private val eventPublisher: ApplicationEventPublisher,
-) {
-    @EventListener
+) : AgenticEventListener {
+    
+    override fun onProcessEvent(event: AgentProcessEvent) {
+        println("BpmnProgressProjectionObserver.onProcessEvent: ${event.javaClass.simpleName}")
+        if (event is ActionExecutionStartEvent) {
+            onActionStart(event)
+        }
+    }
+
     fun onActionStart(event: ActionExecutionStartEvent) {
         val actionName = event.action.name
         val friendlyLabel = mapActionToLabel(actionName)
