@@ -158,6 +158,7 @@ generateBtn.addEventListener("click", async () => {
 	if (!desc) return
 
 	generateBtn.disabled = true
+	descriptionEl.disabled = true
 	progressContainer.classList.remove("hidden")
 	progressList.innerHTML = ""
 	progressContainer.querySelectorAll("pre.run-cost").forEach((el) => {
@@ -208,13 +209,14 @@ generateBtn.addEventListener("click", async () => {
 		const message = e instanceof Error ? e.message : String(e)
 		addProgress(`Error: ${message}`)
 		generateBtn.disabled = false
+		descriptionEl.disabled = false
 	}
 })
 
 function connectSse(url: string) {
 	eventSource = new EventSource(url)
 
-	eventSource.onmessage = async (e) => {
+	const messageHandler = async (e: MessageEvent) => {
 		let event: ServerEvent
 		try {
 			event = JSON.parse(e.data) as ServerEvent
@@ -236,6 +238,7 @@ function connectSse(url: string) {
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
 			generateBtn.disabled = false
+			descriptionEl.disabled = false
 			clarifyRegionEl.classList.add("hidden")
 			clarifyRegionEl.innerHTML = ""
 			settle = { ...settle, sawFinish: true }
@@ -261,14 +264,19 @@ function connectSse(url: string) {
 		} else if (event.type === "AgentProcessFailedEvent") {
 			addProgress("Process failed.")
 			generateBtn.disabled = false
+			descriptionEl.disabled = false
 			closeStream()
 		}
 	}
+
+	eventSource.onmessage = messageHandler
+	eventSource.addEventListener("agent-process-event", messageHandler as EventListener)
 
 	eventSource.onerror = (e) => {
 		console.error("SSE Error", e)
 		closeStream()
 		generateBtn.disabled = false
+		descriptionEl.disabled = false
 		addProgress("Connection lost.")
 	}
 }
