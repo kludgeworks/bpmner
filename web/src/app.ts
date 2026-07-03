@@ -5,6 +5,11 @@
 
 import BpmnViewer from "bpmn-js"
 import { layoutProcess } from "yet-another-bpmn-auto-layout"
+import {
+	type ResultBarState,
+	type ResultStatus,
+	renderResultBar,
+} from "./result-bar"
 import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
 import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
@@ -37,12 +42,24 @@ type BpmnStageEvent = {
 	label: string
 }
 
+/**
+ * Terminal result event — wire contract: class simple name is the type discriminator.
+ * `resultStatus` not `status` (ADR-ss-008: AbstractAgentProcessEvent already exposes `status`).
+ */
+type BpmnResultEvent = {
+	type: "BpmnResultEvent"
+	resultStatus: string
+	alignmentVerdict?: string
+	alignmentReport?: string
+}
+
 type ServerEvent =
 	| ProgressUpdateEvent
 	| BpmnSnapshotEvent
 	| AgentProcessEvent
 	| BpmnRunCostEvent
 	| BpmnStageEvent
+	| BpmnResultEvent
 	| { type?: string }
 
 type Diagnostic = {
@@ -90,19 +107,20 @@ const diagnosticsContainer = getRequiredElement<HTMLElement>(
 	"diagnostics-container",
 )
 const diagnosticsList = getRequiredElement<HTMLElement>("diagnostics-list")
-const downloadContainer = getRequiredElement<HTMLElement>("download-container")
-const downloadXml = getRequiredElement<HTMLAnchorElement>("download-xml")
+const resultBarEl = getRequiredElement<HTMLElement>("result-bar")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
 const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 
 let eventSource: EventSource | null = null
 let currentXml = ""
-let currentDownloadUrl: string | null = null
 let snapshotCount = 0
 let sawFinish = false
 let sawCost = false
 let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
+let resultBarState: ResultBarState = {}
+/** processId captured from POST response; used to build the BPMN download URL. */
+let currentProcessId: string | null = null
 
 // The run-cost event arrives just after the terminal finished event, so keep the stream open
 // briefly past completion to receive it; close anyway after this grace period if it never comes.
@@ -119,8 +137,10 @@ generateBtn.addEventListener("click", async () => {
 		el.remove()
 	})
 	diagnosticsContainer.classList.add("hidden")
-	downloadContainer.classList.add("hidden")
+	resultBarState = {}
+	renderResultBar(resultBarEl, resultBarState)
 	currentXml = ""
+	currentProcessId = null
 	snapshotCount = 0
 	sawFinish = false
 	sawCost = false
@@ -150,6 +170,7 @@ generateBtn.addEventListener("click", async () => {
 		}
 
 		const data = await res.json()
+		currentProcessId = data.processId as string | null
 		connectSse(data.sseUrl)
 	} catch (e: unknown) {
 		const message = e instanceof Error ? e.message : String(e)
@@ -176,13 +197,10 @@ function connectSse(url: string) {
 			applyStageEvent(event as BpmnStageEvent)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
 			await handleSnapshot(event as BpmnSnapshotEvent)
+		} else if (event.type === "BpmnResultEvent") {
+			applyResultEvent(event as BpmnResultEvent)
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
-			if (currentXml) {
-				setupDownload(currentXml)
-			} else {
-				addProgress("No BPMN XML was generated.")
-			}
 			generateBtn.disabled = false
 			sawFinish = true
 			if (closeTimer === null) {
@@ -190,7 +208,11 @@ function connectSse(url: string) {
 			}
 			closeWhenSettled()
 		} else if (event.type === "BpmnRunCostEvent" && "costSummary" in event) {
-			renderCostSummary((event as BpmnRunCostEvent).costSummary)
+			const costEvent = event as BpmnRunCostEvent
+			// Render cost in the progress ticker (existing behaviour) and in the result bar.
+			renderCostSummary(costEvent.costSummary)
+			resultBarState = { ...resultBarState, costSummary: costEvent.costSummary }
+			renderResultBar(resultBarEl, resultBarState)
 			sawCost = true
 			closeWhenSettled()
 		} else if (event.type === "AgentProcessFailedEvent") {
@@ -214,6 +236,21 @@ function applyStageEvent(event: BpmnStageEvent): void {
 		status: event.stageStatus,
 	})
 	renderStageRail(stageRailEl, stages)
+}
+
+function applyResultEvent(event: BpmnResultEvent): void {
+	const status = event.resultStatus as ResultStatus
+	const downloadUrl = currentProcessId
+		? `api/bpmn/generations/${currentProcessId}/bpmn`
+		: undefined
+	resultBarState = {
+		...resultBarState,
+		status,
+		alignmentVerdict: event.alignmentVerdict,
+		alignmentReport: event.alignmentReport,
+		downloadUrl,
+	}
+	renderResultBar(resultBarEl, resultBarState)
 }
 
 function closeStream() {
@@ -317,14 +354,4 @@ function renderDiagnostics(diagnostics: Diagnostic[]) {
 			}
 		}
 	})
-}
-
-function setupDownload(xml: string) {
-	downloadContainer.classList.remove("hidden")
-	if (currentDownloadUrl) {
-		URL.revokeObjectURL(currentDownloadUrl)
-	}
-	const blob = new Blob([xml], { type: "application/bpmn20-xml" })
-	currentDownloadUrl = URL.createObjectURL(blob)
-	downloadXml.href = currentDownloadUrl
 }
