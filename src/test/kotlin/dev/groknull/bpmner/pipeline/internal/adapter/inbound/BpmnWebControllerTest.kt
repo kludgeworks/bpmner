@@ -12,6 +12,7 @@ import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
+import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -188,6 +189,18 @@ class BpmnWebControllerTest {
         val response = controller.submitAnswers("no-form", BpmnClarificationAnswers("answer"))
 
         assertEquals(HttpStatus.CONFLICT, response.statusCode)
+    }
+
+    @Test
+    fun `400 — blank answers violates NotBlank — Spring @Valid rejects before controller runs`() {
+        // Validate directly with Jakarta Bean Validation (the same mechanism Spring @Valid delegates to).
+        // A blank answers string must produce exactly one constraint violation on the `answers` field,
+        // which Spring MVC translates to a 400 Bad Request (PLAN-ss-4 §Tests, controller KDoc).
+        val violations =
+            Validation.buildDefaultValidatorFactory().validator
+                .validate(BpmnClarificationAnswers(""))
+        assertEquals(1, violations.size, "expected one NotBlank violation for blank answers; got: $violations")
+        assertEquals("answers", violations.first().propertyPath.toString())
     }
 
     // -------------------------------------------------------------------------
