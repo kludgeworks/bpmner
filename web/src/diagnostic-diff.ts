@@ -31,7 +31,12 @@ export type DiagnosticKey = string
  * `source | rule | elementId | message`, undefined fields → empty segment).
  */
 export function keyOf(d: Diagnostic): DiagnosticKey {
-	return [d.source ?? "", d.rule ?? "", d.elementId ?? "", d.message].join("|")
+	return [
+		d.source ?? "",
+		d.rule ?? "",
+		d.elementId ?? d.objectRef ?? "",
+		d.message,
+	].join("|")
 }
 
 export type DiffRow = {

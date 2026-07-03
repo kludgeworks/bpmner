@@ -40,6 +40,20 @@ describe("keyOf", () => {
 	it("distinguishes diagnostics differing only by rule", () => {
 		assert.notEqual(keyOf(err({ rule: "R1" })), keyOf(err({ rule: "R2" })))
 	})
+
+	it("uses objectRef when elementId is absent", () => {
+		assert.equal(
+			keyOf({ source: "S", rule: "R", objectRef: "ObjA", message: "m" }),
+			"S|R|ObjA|m",
+		)
+	})
+
+	it("distinguishes diagnostics differing only by objectRef", () => {
+		assert.notEqual(
+			keyOf({ objectRef: "A", message: "m" }),
+			keyOf({ objectRef: "B", message: "m" }),
+		)
+	})
 })
 
 // ---------------------------------------------------------------------------
