@@ -5,6 +5,7 @@
 
 import BpmnViewer from "bpmn-js"
 import { layoutProcess } from "yet-another-bpmn-auto-layout"
+import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
 	type ResultBarState,
 	type ResultStatus,
@@ -54,6 +55,18 @@ type BpmnResultEvent = {
 	alignmentReport?: string
 }
 
+/**
+ * Clarification request event — published when the agent parks in AwaitingClarification.
+ * Wire contract (ARCHITECTURE.md §ss-4, ADR-ss-008): uses `round`/`maxRounds`/`prompt`,
+ * not `status`.
+ */
+type BpmnClarificationRequestEvent = {
+	type: "BpmnClarificationRequestEvent"
+	round: number
+	maxRounds: number
+	prompt: string
+}
+
 type ServerEvent =
 	| ProgressUpdateEvent
 	| BpmnSnapshotEvent
@@ -61,6 +74,7 @@ type ServerEvent =
 	| BpmnRunCostEvent
 	| BpmnStageEvent
 	| BpmnResultEvent
+	| BpmnClarificationRequestEvent
 	| { type?: string }
 
 type Diagnostic = {
@@ -109,6 +123,7 @@ const diagnosticsContainer = getRequiredElement<HTMLElement>(
 )
 const diagnosticsList = getRequiredElement<HTMLElement>("diagnostics-list")
 const resultBarEl = getRequiredElement<HTMLElement>("result-bar")
+const clarifyRegionEl = getRequiredElement<HTMLElement>("clarify-region")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
 const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 
@@ -140,6 +155,8 @@ generateBtn.addEventListener("click", async () => {
 		el.remove()
 	})
 	diagnosticsContainer.classList.add("hidden")
+	clarifyRegionEl.classList.add("hidden")
+	clarifyRegionEl.innerHTML = ""
 	resultBarState = {}
 	renderResultBar(resultBarEl, resultBarState)
 	currentXml = ""
@@ -199,11 +216,15 @@ function connectSse(url: string) {
 			applyStageEvent(event as BpmnStageEvent)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
 			await handleSnapshot(event as BpmnSnapshotEvent)
+		} else if (event.type === "BpmnClarificationRequestEvent") {
+			applyClarificationEvent(event as BpmnClarificationRequestEvent)
 		} else if (event.type === "BpmnResultEvent") {
 			applyResultEvent(event as BpmnResultEvent)
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
 			generateBtn.disabled = false
+			clarifyRegionEl.classList.add("hidden")
+			clarifyRegionEl.innerHTML = ""
 			settle = { ...settle, sawFinish: true }
 			if (closeTimer === null) {
 				closeTimer = window.setTimeout(() => {
@@ -247,11 +268,73 @@ function applyStageEvent(event: BpmnStageEvent): void {
 	renderStageRail(stageRailEl, stages)
 }
 
+function applyClarificationEvent(event: BpmnClarificationRequestEvent): void {
+	const baseState: ClarifyState = {
+		prompt: event.prompt,
+		round: event.round,
+		maxRounds: event.maxRounds,
+		submitting: false,
+	}
+
+	async function submitAnswers(answer: string): Promise<void> {
+		// Optimistically disable the form while submitting.
+		renderClarifyForm(
+			clarifyRegionEl,
+			{ ...baseState, submitting: true },
+			submitAnswers,
+		)
+
+		try {
+			const res = await fetch(
+				`api/bpmn/generations/${currentProcessId}/answers`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({ answers: answer }),
+				},
+			)
+
+			if (res.status === 202) {
+				// Resume accepted — hide the form; progress resumes over SSE.
+				// A round-2 BpmnClarificationRequestEvent will re-show it if needed.
+				clarifyRegionEl.classList.add("hidden")
+				clarifyRegionEl.innerHTML = ""
+			} else {
+				// Non-202: show inline error and re-enable.
+				renderClarifyForm(
+					clarifyRegionEl,
+					{
+						...baseState,
+						submitting: false,
+						error: "Couldn't submit — try again",
+					},
+					submitAnswers,
+				)
+			}
+		} catch {
+			renderClarifyForm(
+				clarifyRegionEl,
+				{
+					...baseState,
+					submitting: false,
+					error: "Couldn't submit — try again",
+				},
+				submitAnswers,
+			)
+		}
+	}
+
+	renderClarifyForm(clarifyRegionEl, baseState, submitAnswers)
+}
+
 function applyResultEvent(event: BpmnResultEvent): void {
 	const status = event.resultStatus as ResultStatus
 	const downloadUrl = currentProcessId
 		? `api/bpmn/generations/${currentProcessId}/bpmn`
 		: undefined
+	// Hide the clarify region on terminal result (covers NEEDS_CLARIFICATION after round 3).
+	clarifyRegionEl.classList.add("hidden")
+	clarifyRegionEl.innerHTML = ""
 	resultBarState = {
 		...resultBarState,
 		status,

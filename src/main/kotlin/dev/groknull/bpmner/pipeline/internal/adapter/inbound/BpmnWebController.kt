@@ -6,7 +6,10 @@
 package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentPlatform
+import com.embabel.agent.core.AgentProcessStatusCode
+import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
@@ -91,5 +94,43 @@ internal class BpmnWebController(
                 ContentDisposition.attachment().filename("$id.bpmn").build().toString(),
             )
             .body(xml)
+    }
+
+    /**
+     * Accepts a free-text clarification answer, binds it to the parked process, and resumes it
+     * asynchronously (ARCHITECTURE.md §ss-4, ADR-ss-003).
+     *
+     * - `202`: answer accepted; the run resumes over the existing SSE stream.
+     * - `404`: unknown process id (or process evicted from the in-memory store).
+     * - `409`: process is not in the `WAITING` state, or no `FormBindingRequest` is on the blackboard.
+     * - `400`: `answers` field is blank (`@NotBlank` on [BpmnClarificationAnswers]).
+     *
+     * Uses `agentPlatform.start(process)` (async, returns `CompletableFuture`) rather than
+     * `process.run()` (sync) so the POST returns 202 immediately while progress streams over SSE.
+     */
+    @PostMapping("/generations/{id}/answers")
+    fun submitAnswers(
+        @PathVariable id: String,
+        @Valid @RequestBody answers: BpmnClarificationAnswers,
+    ): ResponseEntity<Void> {
+        val process =
+            try {
+                agentPlatform.getAgentProcess(id)
+            } catch (_: Exception) {
+                null
+            } ?: return ResponseEntity.notFound().build()
+
+        if (process.status != AgentProcessStatusCode.WAITING) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build()
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val form =
+            process.last(FormBindingRequest::class.java) as? FormBindingRequest<BpmnClarificationAnswers>
+                ?: return ResponseEntity.status(HttpStatus.CONFLICT).build()
+
+        form.bind(answers, process)
+        agentPlatform.start(process)
+        return ResponseEntity.accepted().build()
     }
 }
