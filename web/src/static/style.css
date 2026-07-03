@@ -75,3 +75,41 @@ ul {
   cursor: help;
   pointer-events: auto;
 }
+
+/* Clarification region — shown when the agent is awaiting a user answer. */
+#clarify-region {
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 12px;
+  margin-bottom: 12px;
+  background: #fffbe6;
+}
+
+.clarify-indicator {
+  font-size: 0.8em;
+  color: #666;
+  margin: 0 0 4px 0;
+}
+
+.clarify-prompt {
+  font-weight: bold;
+  margin: 0 0 8px 0;
+}
+
+.clarify-answer {
+  width: 100%;
+  box-sizing: border-box;
+  margin-bottom: 8px;
+  font-family: sans-serif;
+  resize: vertical;
+}
+
+.clarify-submit {
+  width: 100%;
+}
+
+.clarify-error {
+  color: #c0392b;
+  font-size: 0.9em;
+  margin: 6px 0 0 0;
+}

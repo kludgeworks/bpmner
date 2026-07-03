@@ -266,6 +266,12 @@ class BpmnAgentFlowSystemTest : EmbabelMockitoIntegrationTest() {
 
         @Suppress("UNCHECKED_CAST")
         val form = process.last(FormBindingRequest::class.java) as FormBindingRequest<BpmnClarificationAnswers>
+        // G1: the FormBindingRequest carries the current-round prompt (PLAN-ss-4 §verification).
+        // promptFrom(needsClarification()) = needsClarification().clarificationQuestions.first().questionText
+        assertEquals(
+            "What final state should the process reach?",
+            (process.last(FormBindingRequest::class.java) as FormBindingRequest<*>).payload.title,
+        )
         form.bind(BpmnClarificationAnswers("Finally the order is completed."), process)
         process.run()
 

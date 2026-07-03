@@ -7,8 +7,12 @@ package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.AgentProcess
+import com.embabel.agent.core.AgentProcessStatusCode
+import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.authoring.BpmnGenerationStatus
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
+import jakarta.validation.Validation
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
@@ -126,12 +130,95 @@ class BpmnWebControllerTest {
     }
 
     // -------------------------------------------------------------------------
+    // POST /generations/{id}/answers
+    // -------------------------------------------------------------------------
+
+    @Test
+    fun `202 when process is WAITING and form is present — bind and start are called`() {
+        val answers = BpmnClarificationAnswers("The order is completed.")
+        val process = waitingProcessWithForm()
+        `when`(agentPlatform.getAgentProcess("waiting-proc")).thenReturn(process)
+
+        val response = controller.submitAnswers("waiting-proc", answers)
+
+        assertEquals(HttpStatus.ACCEPTED, response.statusCode)
+        // Verify bind was called with the submitted answers
+        val form =
+            @Suppress("UNCHECKED_CAST")
+            process.last(FormBindingRequest::class.java) as FormBindingRequest<BpmnClarificationAnswers>
+        verify(form).bind(answers, process)
+        verify(agentPlatform).start(process)
+    }
+
+    @Test
+    fun `404 when answers submitted for unknown process id`() {
+        `when`(agentPlatform.getAgentProcess("unknown")).thenReturn(null)
+
+        val response = controller.submitAnswers("unknown", BpmnClarificationAnswers("answer"))
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+    }
+
+    @Test
+    fun `404 when getAgentProcess throws for answers`() {
+        `when`(agentPlatform.getAgentProcess("bad-id")).thenThrow(RuntimeException("not found"))
+
+        val response = controller.submitAnswers("bad-id", BpmnClarificationAnswers("answer"))
+
+        assertEquals(HttpStatus.NOT_FOUND, response.statusCode)
+    }
+
+    @Test
+    fun `409 when process is not in WAITING state`() {
+        val process = mock(AgentProcess::class.java)
+        `when`(process.status).thenReturn(AgentProcessStatusCode.RUNNING)
+        `when`(agentPlatform.getAgentProcess("running")).thenReturn(process)
+
+        val response = controller.submitAnswers("running", BpmnClarificationAnswers("answer"))
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+    }
+
+    @Test
+    fun `409 when no FormBindingRequest on blackboard despite WAITING status`() {
+        val process = mock(AgentProcess::class.java)
+        `when`(process.status).thenReturn(AgentProcessStatusCode.WAITING)
+        `when`(process.last(FormBindingRequest::class.java)).thenReturn(null)
+        `when`(agentPlatform.getAgentProcess("no-form")).thenReturn(process)
+
+        val response = controller.submitAnswers("no-form", BpmnClarificationAnswers("answer"))
+
+        assertEquals(HttpStatus.CONFLICT, response.statusCode)
+    }
+
+    @Test
+    fun `400 — blank answers violates NotBlank — Spring @Valid rejects before controller runs`() {
+        // Validate directly with Jakarta Bean Validation (the same mechanism Spring @Valid delegates to).
+        // A blank answers string must produce exactly one constraint violation on the `answers` field,
+        // which Spring MVC translates to a 400 Bad Request (PLAN-ss-4 §Tests, controller KDoc).
+        val violations =
+            Validation.buildDefaultValidatorFactory().validator
+                .validate(BpmnClarificationAnswers(""))
+        assertEquals(1, violations.size, "expected one NotBlank violation for blank answers; got: $violations")
+        assertEquals("answers", violations.first().propertyPath.toString())
+    }
+
+    // -------------------------------------------------------------------------
     // Helpers
     // -------------------------------------------------------------------------
 
     private fun processWithResult(result: BpmnResult?): AgentProcess {
         val process = mock(AgentProcess::class.java)
         `when`(process.last(BpmnResult::class.java)).thenReturn(result)
+        return process
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun waitingProcessWithForm(): AgentProcess {
+        val process = mock(AgentProcess::class.java)
+        `when`(process.status).thenReturn(AgentProcessStatusCode.WAITING)
+        val form = mock(FormBindingRequest::class.java) as FormBindingRequest<BpmnClarificationAnswers>
+        `when`(process.last(FormBindingRequest::class.java)).thenReturn(form)
         return process
     }
 }
