@@ -39,7 +39,7 @@ java_library(
 
 java_library(
     name = "web_static_resources",
-    resource_strip_prefix = "web/src/static",
+    resource_strip_prefix = "web/src",
     resources = ["//web:static_assets"],
 )
 
