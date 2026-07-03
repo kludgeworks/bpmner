@@ -7,6 +7,15 @@ import BpmnViewer from "bpmn-js"
 import { layoutProcess } from "yet-another-bpmn-auto-layout"
 import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
+	type Diagnostic,
+	type DiagnosticKey,
+	type DiffRow,
+	type DiffState,
+	initialDiff,
+	keyOf,
+	reduceDiagnostics,
+} from "./diagnostic-diff"
+import {
 	type ResultBarState,
 	type ResultStatus,
 	renderResultBar,
@@ -77,19 +86,12 @@ type ServerEvent =
 	| BpmnClarificationRequestEvent
 	| { type?: string }
 
-type Diagnostic = {
-	source?: string
-	message: string
-	elementId?: string
-	objectRef?: string
-}
-
 type BpmnCanvas = {
 	zoom: (mode: "fit-viewport") => void
 }
 
 type BpmnOverlays = {
-	remove: (filter: { type: string }) => void
+	remove: (filter: string | { type?: string }) => void
 	add: (
 		elementId: string,
 		type: string,
@@ -97,7 +99,7 @@ type BpmnOverlays = {
 			position: { bottom: number; right: number }
 			html: HTMLElement
 		},
-	) => void
+	) => string
 }
 
 const viewer = new BpmnViewer({
@@ -126,6 +128,9 @@ const resultBarEl = getRequiredElement<HTMLElement>("result-bar")
 const clarifyRegionEl = getRequiredElement<HTMLElement>("clarify-region")
 const stageRailEl = getRequiredElement<HTMLElement>("stage-rail")
 const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
+const canvasEl = getRequiredElement<HTMLElement>("canvas")
+// Optional attempt counter in the diagnostics panel header (absent → no-op).
+const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 
 let eventSource: EventSource | null = null
 let currentXml = ""
@@ -134,6 +139,10 @@ let settle: SettleState = initialSettle()
 let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
 let resultBarState: ResultBarState = {}
+/** Running fixed-diagnostic diff across snapshots (ADR-ss-002). */
+let diffState: DiffState = initialDiff()
+/** Live overlay ids keyed by diagnostic key, so fixed ones can be cleared surgically. */
+const overlayIds = new Map<DiagnosticKey, string>()
 /** processId captured from POST response; used to build the BPMN download URL. */
 let currentProcessId: string | null = null
 
@@ -155,6 +164,10 @@ generateBtn.addEventListener("click", async () => {
 		el.remove()
 	})
 	diagnosticsContainer.classList.add("hidden")
+	diagnosticsList.innerHTML = ""
+	diffState = initialDiff()
+	overlayIds.clear()
+	updateDiagnosticsHeader()
 	clarifyRegionEl.classList.add("hidden")
 	clarifyRegionEl.innerHTML = ""
 	resultBarState = {}
@@ -389,13 +402,17 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 		event.attemptNumber,
 	)
 
-	if (outcome.status === "drawn") {
+	const redrawn = outcome.status === "drawn"
+
+	if (redrawn) {
 		snapshotCount += 1
 		if (snapshotCount === 1) {
 			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
 		}
 		canvasStatus.textContent = ""
 		canvasStatus.classList.add("hidden")
+		// Progressive entrance — CSS-only, honours prefers-reduced-motion.
+		triggerCanvasEntrance()
 	} else {
 		const msg =
 			outcome.attemptNumber !== undefined
@@ -405,49 +422,131 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 		canvasStatus.classList.remove("hidden")
 	}
 
-	// Always update diagnostics list — it is canvas-independent.
-	// overlays.add already silently catches missing elements.
-	renderDiagnostics(event.diagnostics || [])
+	// Diagnostics are canvas-independent; the diff decides what is fixed/live.
+	renderDiagnostics(event.diagnostics || [], event.attemptNumber, redrawn)
 }
 
-function renderDiagnostics(diagnostics: Diagnostic[]) {
-	diagnosticsList.innerHTML = ""
-	const overlays = viewer.get("overlays") as BpmnOverlays
+/**
+ * Re-trigger the CSS entrance animation on the freshly-imported diagram.
+ * Toggling the class with a forced reflow replays the keyframes each redraw;
+ * `@media (prefers-reduced-motion: reduce)` in style.css disables it entirely.
+ */
+function triggerCanvasEntrance() {
+	canvasEl.classList.remove("canvas--entrance")
+	// Force reflow so the re-added class restarts the animation.
+	void canvasEl.offsetWidth
+	canvasEl.classList.add("canvas--entrance")
+}
 
-	// Clear previous overlays
-	overlays.remove({ type: "diagnostic" })
+/** ERROR|WARNING|INFO → a css modifier suffix; anything else → "unknown". */
+function severityModifier(severity: string | undefined): string {
+	switch ((severity ?? "").toUpperCase()) {
+		case "ERROR":
+			return "error"
+		case "WARNING":
+			return "warning"
+		case "INFO":
+			return "info"
+		default:
+			return "unknown"
+	}
+}
 
-	if (diagnostics.length === 0) {
+function renderDiagnostics(
+	diagnostics: Diagnostic[],
+	attemptNumber: number | undefined,
+	redrawn: boolean,
+) {
+	const result = reduceDiagnostics(diffState, { diagnostics, attemptNumber })
+	diffState = result.state
+
+	renderDiagnosticList()
+	updateDiagnosticsHeader()
+
+	if (diffState.rows.length === 0) {
 		diagnosticsContainer.classList.add("hidden")
-		return
+	} else {
+		diagnosticsContainer.classList.remove("hidden")
 	}
 
-	diagnosticsContainer.classList.remove("hidden")
+	const overlays = viewer.get("overlays") as BpmnOverlays
 
-	diagnostics.forEach((diag) => {
+	if (redrawn) {
+		// importXML wiped every overlay; the id map is stale. Rebuild for live rows.
+		overlayIds.clear()
+		for (const row of diffState.rows) {
+			if (!row.fixed) addDiagnosticOverlay(overlays, row)
+		}
+	} else {
+		// Diagram was kept (import failed): surgically clear only the newly-fixed
+		// overlays, then add overlays for any new live rows still missing one.
+		for (const key of result.newlyFixed) {
+			removeDiagnosticOverlay(overlays, key)
+		}
+		for (const row of diffState.rows) {
+			if (!row.fixed) addDiagnosticOverlay(overlays, row)
+		}
+	}
+}
+
+function renderDiagnosticList() {
+	diagnosticsList.innerHTML = ""
+	for (const row of diffState.rows) {
 		const li = document.createElement("li")
 		li.className = "diagnostic-item"
-		li.textContent = `[${diag.source}] ${diag.message}`
+		if (row.fixed) li.classList.add("diagnostic-item--fixed")
+
+		const dot = document.createElement("span")
+		dot.className = `severity-dot severity-dot--${severityModifier(
+			row.diagnostic.severity,
+		)}`
+		dot.setAttribute("aria-hidden", "true")
+		li.appendChild(dot)
+
+		const text = document.createElement("span")
+		text.className = "diagnostic-text"
+		const src = row.diagnostic.source ? `[${row.diagnostic.source}] ` : ""
+		text.textContent = `${src}${row.diagnostic.message}`
+		li.appendChild(text)
+
 		diagnosticsList.appendChild(li)
+	}
+}
 
-		// If we have an element ID, we can overlay it
-		const elementId = diag.elementId || diag.objectRef
-		if (elementId) {
-			try {
-				const overlayHtml = document.createElement("div")
-				overlayHtml.className = "diagnostic-overlay"
-				overlayHtml.title = diag.message
+function updateDiagnosticsHeader() {
+	if (!diagnosticsAttemptEl) return
+	diagnosticsAttemptEl.textContent =
+		diffState.attemptNumber > 0 ? `attempt ${diffState.attemptNumber}` : ""
+}
 
-				overlays.add(elementId, "diagnostic", {
-					position: {
-						bottom: 0,
-						right: 0,
-					},
-					html: overlayHtml,
-				})
-			} catch {
-				// Element might not exist in the diagram yet
-			}
-		}
-	})
+function addDiagnosticOverlay(overlays: BpmnOverlays, row: DiffRow) {
+	const elementId = row.diagnostic.elementId || row.diagnostic.objectRef
+	if (!elementId) return
+	const key = keyOf(row.diagnostic)
+	if (overlayIds.has(key)) return
+	try {
+		const el = document.createElement("div")
+		el.className = `diagnostic-overlay diagnostic-overlay--${severityModifier(
+			row.diagnostic.severity,
+		)}`
+		el.title = row.diagnostic.message
+		const id = overlays.add(elementId, "diagnostic", {
+			position: { bottom: 0, right: 0 },
+			html: el,
+		})
+		if (typeof id === "string") overlayIds.set(key, id)
+	} catch {
+		// Element might not exist in the diagram yet.
+	}
+}
+
+function removeDiagnosticOverlay(overlays: BpmnOverlays, key: DiagnosticKey) {
+	const id = overlayIds.get(key)
+	if (!id) return
+	try {
+		overlays.remove(id)
+	} catch {
+		// Overlay already gone (e.g. diagram was re-imported).
+	}
+	overlayIds.delete(key)
 }
