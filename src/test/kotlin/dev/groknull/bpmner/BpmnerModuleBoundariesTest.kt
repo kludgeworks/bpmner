@@ -284,7 +284,10 @@ class BpmnerModuleBoundariesTest {
             setOf(
                 "AlignmentClassification",
                 "AlignmentIssue",
+                "AlignmentVerdict", // BpmnAlignmentReport.verdict — accessed by BpmnResultEventPublisher (ss-3)
                 "BpmnAlignmentReport",
+                "BpmnGenerationStatus", // BpmnResult.status — accessed by BpmnResultEventPublisher (ss-3)
+                "BpmnResult", // terminal generation output projected into BpmnResultEvent (ss-3)
                 "GlobalDiagnostics",
                 "BpmnDiagnosticSource",
                 "BpmnDiagnostic",

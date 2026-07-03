@@ -80,6 +80,20 @@ bpmner_node_test(
     deps = WEB_TS_DEPS,
 )
 
+bpmner_node_test(
+    name = "result_bar_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/result-bar.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
+bpmner_node_test(
+    name = "stream_settle_test",
+    srcs = WEB_SRCS + WEB_TEST_SRCS,
+    entry_point = "test/stream-settle.test.ts",
+    deps = WEB_TS_DEPS,
+)
+
 esbuild(
     name = "bundle",
     srcs = WEB_SRCS,
