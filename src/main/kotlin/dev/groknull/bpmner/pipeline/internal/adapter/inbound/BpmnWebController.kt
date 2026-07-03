@@ -12,6 +12,7 @@ import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.annotation.Profile
+import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
@@ -85,7 +86,10 @@ internal class BpmnWebController(
                 ?: return ResponseEntity.status(HttpStatus.CONFLICT).build()
 
         return ResponseEntity.ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"$id.bpmn\"")
+            .header(
+                HttpHeaders.CONTENT_DISPOSITION,
+                ContentDisposition.attachment().filename("$id.bpmn").build().toString(),
+            )
             .body(xml)
     }
 }

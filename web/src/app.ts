@@ -13,6 +13,7 @@ import {
 import { importSnapshot } from "./snapshot-import"
 import type { ChipState, StageKey } from "./stage-rail"
 import { initialStages, reduceStages, renderStageRail } from "./stage-rail"
+import { initialSettle, type SettleState, shouldClose } from "./stream-settle"
 
 type ProgressUpdateEvent = {
 	type: "ProgressUpdateEvent"
@@ -114,16 +115,17 @@ const canvasStatus = getRequiredElement<HTMLElement>("canvas-status")
 let eventSource: EventSource | null = null
 let currentXml = ""
 let snapshotCount = 0
-let sawFinish = false
-let sawCost = false
+let settle: SettleState = initialSettle()
 let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
 let resultBarState: ResultBarState = {}
 /** processId captured from POST response; used to build the BPMN download URL. */
 let currentProcessId: string | null = null
 
-// The run-cost event arrives just after the terminal finished event, so keep the stream open
-// briefly past completion to receive it; close anyway after this grace period if it never comes.
+// All three terminal signals (BpmnResultEvent, BpmnRunCostEvent, AgentProcessFinishedEvent)
+// fan out from the same server-side AgentProcessFinishedEvent, so their SSE order is
+// non-deterministic. The grace timer is a safety net for runs that never emit BpmnResultEvent
+// (budget-exhausted / stuck) — it fires closeStream() directly after this interval.
 const COST_EVENT_GRACE_MS = 4000
 
 generateBtn.addEventListener("click", async () => {
@@ -142,8 +144,7 @@ generateBtn.addEventListener("click", async () => {
 	currentXml = ""
 	currentProcessId = null
 	snapshotCount = 0
-	sawFinish = false
-	sawCost = false
+	settle = initialSettle()
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
 	canvasStatus.textContent = ""
@@ -202,7 +203,7 @@ function connectSse(url: string) {
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
 			generateBtn.disabled = false
-			sawFinish = true
+			settle = { ...settle, sawFinish: true }
 			if (closeTimer === null) {
 				closeTimer = window.setTimeout(closeStream, COST_EVENT_GRACE_MS)
 			}
@@ -213,7 +214,7 @@ function connectSse(url: string) {
 			renderCostSummary(costEvent.costSummary)
 			resultBarState = { ...resultBarState, costSummary: costEvent.costSummary }
 			renderResultBar(resultBarEl, resultBarState)
-			sawCost = true
+			settle = { ...settle, sawCost: true }
 			closeWhenSettled()
 		} else if (event.type === "AgentProcessFailedEvent") {
 			addProgress("Process failed.")
@@ -251,6 +252,10 @@ function applyResultEvent(event: BpmnResultEvent): void {
 		downloadUrl,
 	}
 	renderResultBar(resultBarEl, resultBarState)
+	// Mark result seen and attempt settlement — fixes the F1 race where the stream
+	// could close on sawFinish+sawCost before BpmnResultEvent arrived (REVIEW-ss-3).
+	settle = { ...settle, sawResult: true }
+	closeWhenSettled()
 }
 
 function closeStream() {
@@ -262,7 +267,7 @@ function closeStream() {
 }
 
 function closeWhenSettled() {
-	if (sawFinish && sawCost) {
+	if (shouldClose(settle)) {
 		closeStream()
 	}
 }
