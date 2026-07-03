@@ -32,10 +32,10 @@ const STATUS_LABELS: Record<ResultStatus, string> = {
 
 /**
  * Returns true if the status represents a successful generation with downloadable XML.
- * Only GENERATED produces a final BPMN artifact.
+ * GENERATED, ALIGNMENT_FAILED, and VALIDATION_FAILED all produce a final BPMN artifact.
  */
 function hasDownload(status: ResultStatus): boolean {
-	return status === "GENERATED"
+	return status === "GENERATED" || status === "ALIGNMENT_FAILED" || status === "VALIDATION_FAILED"
 }
 
 /**

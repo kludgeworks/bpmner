@@ -270,7 +270,10 @@ function connectSse(url: string) {
 	}
 
 	eventSource.onmessage = messageHandler
-	eventSource.addEventListener("agent-process-event", messageHandler as EventListener)
+	eventSource.addEventListener(
+		"agent-process-event",
+		messageHandler as EventListener,
+	)
 
 	eventSource.onerror = (e) => {
 		console.error("SSE Error", e)
@@ -414,13 +417,17 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 
 	if (redrawn) {
 		snapshotCount += 1
-		if (snapshotCount === 1) {
-			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
-		}
 		canvasStatus.textContent = ""
 		canvasStatus.classList.add("hidden")
 		// Progressive entrance — CSS-only, honours prefers-reduced-motion.
 		triggerCanvasEntrance()
+
+		// Zoom to fit the new diagram geometry. We defer this slightly so the browser
+		// has time to apply the entrance class and lay out the container, ensuring
+		// the bounding box calculations are accurate (fixes the off-screen leftmost element).
+		requestAnimationFrame(() => {
+			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
+		})
 	} else {
 		const msg =
 			outcome.attemptNumber !== undefined
