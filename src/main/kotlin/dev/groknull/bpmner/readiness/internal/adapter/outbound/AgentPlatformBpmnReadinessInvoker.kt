@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
-import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
@@ -22,7 +21,6 @@ import org.springframework.stereotype.Component
 internal class AgentPlatformBpmnReadinessInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnReadinessBudgetConfig,
-    private val listeners: List<AgenticEventListener>,
 ) : BpmnReadinessInvoker {
     /**
      * Runs the readiness assessment as a sub-process scoped to **only** [BpmnReadinessAgent].
@@ -36,10 +34,11 @@ internal class AgentPlatformBpmnReadinessInvoker(
             ?: error("Agent platform has no agent named '$READINESS_AGENT_NAME'")
         val process = agentPlatform.createAgentProcessFrom(
             agent,
+            // No listeners here: AgenticEventListener @Components are already auto-registered
+            // globally on the platform; passing them again would double every event delivery.
             ProcessOptions(
                 budget = Budget(actions = config.readiness),
                 ephemeral = true,
-                listeners = listeners,
             ),
             request,
         )

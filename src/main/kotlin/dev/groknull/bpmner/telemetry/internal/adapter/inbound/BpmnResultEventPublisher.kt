@@ -18,8 +18,9 @@ import org.springframework.stereotype.Component
  * alignment verdict, and alignment rationale so the web client can display a typed result bar
  * (ARCHITECTURE.md §ss-3, ADR-ss-004).
  *
- * As an [AgenticEventListener] `@Component` it is auto-collected into every run's
- * `ProcessOptions.listeners` — no explicit wiring needed (same pattern as [BpmnRunCostEventPublisher]).
+ * As an [AgenticEventListener] `@Component` it is auto-registered globally on the platform — no
+ * explicit wiring needed, and it must NOT also be added to `ProcessOptions.listeners` (same pattern
+ * as [BpmnRunCostEventPublisher]), or it would fire twice per run.
  *
  * Guard: if no [BpmnResult] is present on the blackboard (budget-exhausted / stuck runs), no event
  * is published; the client falls back to the existing `AgentProcessFailedEvent`. Uses

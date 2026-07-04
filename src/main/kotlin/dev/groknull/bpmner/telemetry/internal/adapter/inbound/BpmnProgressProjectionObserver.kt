@@ -18,15 +18,21 @@ class BpmnProgressProjectionObserver(
     private val eventPublisher: ApplicationEventPublisher,
 ) : AgenticEventListener {
 
+    // ActionExecutionStartEvent is emitted on Embabel's agentic event bus, not Spring's
+    // ApplicationEventPublisher — so this observer must be an AgenticEventListener (auto-registered
+    // globally on the platform) to see it. A plain @EventListener would never fire for engine
+    // events. Snapshot handling below stays on @EventListener because BpmnSnapshotEvent is
+    // published via ApplicationEventPublisher.
     override fun onProcessEvent(event: AgentProcessEvent) {
-        println("BpmnProgressProjectionObserver.onProcessEvent: ${event.javaClass.simpleName}")
         if (event is ActionExecutionStartEvent) {
             onActionStart(event)
         }
     }
 
     fun onActionStart(event: ActionExecutionStartEvent) {
-        val actionName = event.action.name
+        // Embabel's core engine uses fully qualified action names (e.g., "dev.groknull...BpmnGenerationAgent.assessReadiness"),
+        // but our mapping tables use the bare method name.
+        val actionName = event.action.name.substringAfterLast(".")
         val friendlyLabel = mapActionToLabel(actionName)
         if (friendlyLabel != null) {
             // We publish a ProgressUpdateEvent using the label, which Embabel uses for SSE updates.
