@@ -92,6 +92,63 @@ class BpmnSummarizerTest {
     }
 
     @Test
+    fun `splices synthetic join gateways out of elements and flows but keeps forking decisions`() {
+        // A forking exclusive gateway (a named decision) merges back through an unnamed join
+        // gateway. bpmnlint's `label-required` (and our BpmnNodeNamingPolicy) treat the join as
+        // structural scaffolding needing no name, so the alignment summary must omit it entirely —
+        // both from the element list AND the flows (rewired A->B) — otherwise the LLM aligner flags
+        // the unnamed join as UNSUPPORTED (as an "unlisted joining gateway") and fails the run.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Join Process",
+                nodes =
+                listOf(
+                    BpmnStartEvent("Start_1", "Start"),
+                    BpmnExclusiveGateway("dec-1", "Is valid?"),
+                    BpmnUserTask("Task_A", "A"),
+                    BpmnUserTask("Task_B", "B"),
+                    BpmnExclusiveGateway("Gateway_join_1", null),
+                    BpmnEndEvent("End_1", "End"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_Start", "Start_1", "dec-1"),
+                    BpmnEdge("Flow_A", "dec-1", "Task_A", "Yes", "valid == true"),
+                    BpmnEdge("Flow_B", "dec-1", "Task_B", "No", "valid == false"),
+                    BpmnEdge("Flow_JA", "Task_A", "Gateway_join_1"),
+                    BpmnEdge("Flow_JB", "Task_B", "Gateway_join_1"),
+                    BpmnEdge("Flow_End", "Gateway_join_1", "End_1"),
+                ),
+            )
+
+        val summary = summarizer.summarize(definition)
+
+        // The forking decision stays; the unnamed 2-in/1-out join is dropped from the element list.
+        assertTrue(summary.elements.any { it.id == "dec-1" }, "forking decision gateway must be kept")
+        assertEquals(
+            listOf("Start_1", "dec-1", "Task_A", "Task_B", "End_1"),
+            summary.elements.map { it.id },
+        )
+        // The join id must not appear anywhere in the flows — neither as source nor target.
+        val flowEndpoints = summary.flows.map { "${it.sourceRef}->${it.targetRef}" }
+        assertTrue(
+            summary.flows.none { it.sourceRef == "Gateway_join_1" || it.targetRef == "Gateway_join_1" },
+            "join gateway must be spliced out of the flow topology, got: $flowEndpoints",
+        )
+        // The two branch flows are rewired straight to the join's downstream target (End_1),
+        // preserving connectivity so the aligner still sees both branches reach the end.
+        assertTrue(
+            summary.flows.any { it.sourceRef == "Task_A" && it.targetRef == "End_1" },
+            "Task_A should be rewired directly to End_1",
+        )
+        assertTrue(
+            summary.flows.any { it.sourceRef == "Task_B" && it.targetRef == "End_1" },
+            "Task_B should be rewired directly to End_1",
+        )
+    }
+
+    @Test
     fun `detects unreachable elements`() {
         val definition =
             BpmnDefinition(
