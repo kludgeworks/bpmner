@@ -135,6 +135,16 @@ const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 let eventSource: EventSource | null = null
 let currentXml = ""
 let snapshotCount = 0
+/**
+ * Serializes snapshot application. Each SSE message triggers an independent async handler, and
+ * DI-less intermediate snapshots run a slow client-side auto-layout (`layoutProcess`) while the
+ * final DI-bearing `LAYOUT_COMPLETE` snapshot imports as-is and fast. Without serialization a
+ * slow earlier `importXML` can resolve AFTER the fast final one and clobber the authoritative
+ * server geometry — leaving edges drawn but nodes stacked at the origin (worst on cyclic graphs
+ * the auto-layouter mishandles). Chaining guarantees snapshots are applied in SSE arrival order,
+ * so the last (server-laid-out) snapshot always wins.
+ */
+let snapshotQueue: Promise<void> = Promise.resolve()
 let settle: SettleState = initialSettle()
 let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
@@ -176,6 +186,7 @@ generateBtn.addEventListener("click", async () => {
 	currentXml = ""
 	currentProcessId = null
 	snapshotCount = 0
+	snapshotQueue = Promise.resolve()
 	settle = initialSettle()
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
@@ -230,7 +241,14 @@ function connectSse(url: string) {
 		} else if (event.type === "BpmnStageEvent") {
 			applyStageEvent(event as BpmnStageEvent)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
-			await handleSnapshot(event as BpmnSnapshotEvent)
+			// Apply snapshots strictly in arrival order so a slow earlier auto-layout can't
+			// resolve after — and overwrite — the final server-laid-out diagram.
+			const snapshot = event as BpmnSnapshotEvent
+			snapshotQueue = snapshotQueue
+				.then(() => handleSnapshot(snapshot))
+				.catch((err) => {
+					console.error("Snapshot handling failed", err)
+				})
 		} else if (event.type === "BpmnClarificationRequestEvent") {
 			applyClarificationEvent(event as BpmnClarificationRequestEvent)
 		} else if (event.type === "BpmnResultEvent") {
@@ -272,7 +290,7 @@ function connectSse(url: string) {
 	eventSource.onmessage = messageHandler
 	eventSource.addEventListener(
 		"agent-process-event",
-		messageHandler as EventListener,
+		messageHandler as unknown as EventListener,
 	)
 
 	eventSource.onerror = (e) => {

@@ -501,21 +501,25 @@ button:disabled:hover {
  * Progressive diagram entrance — CSS-only, disabled under reduced-motion.
  * app.ts toggles `.canvas--entrance` on #canvas after each successful draw.
  * ------------------------------------------------------------------------ */
+/*
+ * Opacity-only fade. Do NOT animate `transform` here: bpmn-js positions every `.djs-element`
+ * shape group via its SVG `transform="matrix(1 0 0 1 x y)"` attribute, which is merely the
+ * low-priority presentation form of the CSS `transform` property. A CSS `transform` (e.g. an
+ * animated `scale()`) overrides that matrix, dropping the translation and collapsing every shape
+ * onto the origin (edges survive because their geometry lives in absolute path waypoints). Fade
+ * only, so element positions are never touched.
+ */
 @keyframes djs-entrance {
 	from {
 		opacity: 0;
-		transform: scale(0.985);
 	}
 
 	to {
 		opacity: 1;
-		transform: scale(1);
 	}
 }
 
 .canvas--entrance .djs-element {
-	transform-box: fill-box;
-	transform-origin: center;
 	animation: djs-entrance var(--entrance-duration) ease-out both;
 }
 

@@ -73,14 +73,14 @@ describe("buildResultBarHtml — download anchor", () => {
 		assert.ok(html.includes(" download"), "should have download attribute")
 	})
 
-	it("omits download anchor for ALIGNMENT_FAILED (no XML artifact)", () => {
+	it("includes download anchor for ALIGNMENT_FAILED (artifact still inspectable)", () => {
 		const html = buildResultBarHtml({
 			status: "ALIGNMENT_FAILED",
 			downloadUrl: "api/bpmn/generations/proc-1/bpmn",
 		})
 		assert.ok(
-			!html.includes("download-bpmn"),
-			"ALIGNMENT_FAILED should not render download",
+			html.includes("download-bpmn"),
+			"ALIGNMENT_FAILED still yields an inspectable BPMN artifact, so the download is offered",
 		)
 	})
 
