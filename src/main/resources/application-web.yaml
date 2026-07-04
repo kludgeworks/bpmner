@@ -8,5 +8,6 @@ spring:
 embabel:
   agent:
     shell:
+      web-application-type: servlet
       interactive:
         enabled: false

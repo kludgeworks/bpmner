@@ -15,8 +15,9 @@ import org.springframework.stereotype.Component
 /**
  * On run completion, publishes a [BpmnRunCostEvent] carrying the framework's
  * [com.embabel.agent.core.LlmInvocationHistory.costInfoString] summary so the web client can display
- * the run cost. As an [AgenticEventListener] `@Component` it is auto-collected into the agent
- * invoker's `ProcessOptions.listeners` (like `BpmnerRunSummaryListener`), so it fires for every run.
+ * the run cost. As an [AgenticEventListener] `@Component` it is auto-registered globally on the
+ * platform (like `BpmnerRunSummaryListener`), so it fires once for every run. It must NOT also be
+ * passed via `ProcessOptions.listeners`, or it would fire twice and duplicate the SSE cost line.
  */
 @PrimaryAdapter
 @Component

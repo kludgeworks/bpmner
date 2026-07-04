@@ -10,7 +10,10 @@
 #USAGE flag "-p --provider <provider>" help="LLM provider profile (prompts via gum if omitted)" {
 #USAGE   choices "anthropic" "openai" "gemini" "mistral" "deepseek" "llama"
 #USAGE }
-#USAGE flag "-w --web" help="Also activate the web UI profile (browser UI on :8080)"
+#USAGE flag "-m --mode <mode>" help="Launch mode (cli or web, prompts via gum if omitted)" {
+#USAGE   choices "cli" "web"
+#USAGE }
+#USAGE flag "-w --web" help="Also activate the web UI profile (browser UI on :8080) [deprecated: use --mode web]"
 #USAGE flag "--verbose" help="Also activate the verbose (DEBUG logging) profile"
 
 set -euo pipefail
@@ -60,8 +63,21 @@ if ! key="$(op read "op://bpmner/${op_item}/api-key")"; then
 fi
 export "${key_var}=${key}"
 
+mode="${usage_mode:-}"
+if [[ -z ${mode} ]]; then
+  if [[ ${usage_web:-false} == "true" ]]; then
+    mode="web"
+  else
+    mode="$(gum choose --header "Select a launch mode" --label-delimiter=":" "CLI (Terminal):cli" "Web App (Browser):web")"
+  fi
+fi
+if [[ -z ${mode} ]]; then
+  echo "No mode selected." >&2
+  exit 1
+fi
+
 profiles="${provider}"
-[[ ${usage_web:-false} == "true" ]] && profiles="${profiles},web"
+[[ ${mode} == "web" ]] && profiles="${profiles},web"
 [[ ${usage_verbose:-false} == "true" ]] && profiles="${profiles},verbose"
 export SPRING_PROFILES_ACTIVE="${profiles}"
 

@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import com.embabel.agent.api.common.autonomy.AgentProcessExecution
-import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.AgentPlatform
 import com.embabel.agent.core.Budget
 import com.embabel.agent.core.ProcessOptions
@@ -23,9 +22,6 @@ import org.springframework.stereotype.Component
 internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,
     private val config: BpmnAuthoringBudgetConfig,
-    // Spring auto-collects every AgenticEventListener bean into this list. Empty if no
-    // listener is registered — the framework treats an empty list as "no observers."
-    private val listeners: List<AgenticEventListener>,
 ) : BpmnAgentInvoker {
     override fun generate(
         request: BpmnRequest,
@@ -92,18 +88,22 @@ internal class AgentPlatformBpmnAgentInvoker(
 
     // Sync CLI generation: blocks for a typed BpmnResult. `ephemeral = true` because the process
     // is short-lived and never queried for status.
+    //
+    // Listeners are NOT set here: every AgenticEventListener @Component (SSEController, the
+    // telemetry publishers, the progress observer) is already auto-registered globally on the
+    // platform and receives events for every process. Also passing them via ProcessOptions.listeners
+    // registers them a second time, so each fires twice — which surfaced as duplicated SSE
+    // progress/cost lines in the web UI.
     private fun syncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         ephemeral = true,
-        listeners = listeners,
     )
 
     // Async web generation: returns the process id immediately; callers poll for status, so the
-    // process must be persisted — `ephemeral = false`.
+    // process must be persisted — `ephemeral = false`. See the note above on listeners.
     private fun asyncGenerationProcessOptions(): ProcessOptions = ProcessOptions(
         budget = Budget(actions = config.generation),
         ephemeral = false,
-        listeners = listeners,
     )
 
     companion object {

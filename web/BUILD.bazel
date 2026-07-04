@@ -130,7 +130,7 @@ esbuild(
     },
     entry_point = "src/app.ts",
     format = "iife",
-    output = "dist/js/app-bundle.js",
+    output = "dist/static/js/app-bundle.js",
     platform = "browser",
     target = "es2022",
     deps = WEB_TS_DEPS,

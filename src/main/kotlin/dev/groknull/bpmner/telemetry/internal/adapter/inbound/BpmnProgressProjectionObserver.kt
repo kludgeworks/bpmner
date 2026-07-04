@@ -6,6 +6,8 @@
 package dev.groknull.bpmner.telemetry.internal.adapter.inbound
 
 import com.embabel.agent.api.event.ActionExecutionStartEvent
+import com.embabel.agent.api.event.AgentProcessEvent
+import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.ProgressUpdateEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
@@ -14,15 +16,28 @@ import org.springframework.stereotype.Component
 @Component
 class BpmnProgressProjectionObserver(
     private val eventPublisher: ApplicationEventPublisher,
-) {
-    @EventListener
+) : AgenticEventListener {
+
+    // ActionExecutionStartEvent is emitted on Embabel's agentic event bus, not Spring's
+    // ApplicationEventPublisher — so this observer must be an AgenticEventListener (auto-registered
+    // globally on the platform) to see it. A plain @EventListener would never fire for engine
+    // events. Snapshot handling below stays on @EventListener because BpmnSnapshotEvent is
+    // published via ApplicationEventPublisher.
+    override fun onProcessEvent(event: AgentProcessEvent) {
+        if (event is ActionExecutionStartEvent) {
+            onActionStart(event)
+        }
+    }
+
     fun onActionStart(event: ActionExecutionStartEvent) {
-        val actionName = event.action.name
+        // Embabel's core engine uses fully qualified action names (e.g., "dev.groknull...BpmnGenerationAgent.assessReadiness"),
+        // but our mapping tables use the bare method name.
+        val actionName = event.action.name.substringAfterLast(".")
         val friendlyLabel = mapActionToLabel(actionName)
         if (friendlyLabel != null) {
             // We publish a ProgressUpdateEvent using the label, which Embabel uses for SSE updates.
-            // 0 out of 0 means indeterminate progress, which is typically good for status text updates.
-            eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, friendlyLabel, 0, 0))
+            // Using 0 out of 1 to avoid / by zero in Embabel's logging listener.
+            eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, friendlyLabel, 0, 1))
         }
         val stageMapping = ACTION_STAGES[actionName] ?: return
         val label = friendlyLabel ?: actionName
@@ -62,7 +77,7 @@ class BpmnProgressProjectionObserver(
             }
 
         if (label != null) {
-            eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, label, 0, 0))
+            eventPublisher.publishEvent(ProgressUpdateEvent(event.agentProcess, label, 0, 1))
         }
 
         // Emit a typed warn stage event for repair attempts so the rail highlights the validate chip.

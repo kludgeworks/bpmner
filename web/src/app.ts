@@ -135,6 +135,16 @@ const diagnosticsAttemptEl = document.getElementById("diagnostics-attempt")
 let eventSource: EventSource | null = null
 let currentXml = ""
 let snapshotCount = 0
+/**
+ * Serializes snapshot application. Each SSE message triggers an independent async handler, and
+ * DI-less intermediate snapshots run a slow client-side auto-layout (`layoutProcess`) while the
+ * final DI-bearing `LAYOUT_COMPLETE` snapshot imports as-is and fast. Without serialization a
+ * slow earlier `importXML` can resolve AFTER the fast final one and clobber the authoritative
+ * server geometry — leaving edges drawn but nodes stacked at the origin (worst on cyclic graphs
+ * the auto-layouter mishandles). Chaining guarantees snapshots are applied in SSE arrival order,
+ * so the last (server-laid-out) snapshot always wins.
+ */
+let snapshotQueue: Promise<void> = Promise.resolve()
 let settle: SettleState = initialSettle()
 let closeTimer: number | null = null
 let stages: Record<StageKey, ChipState> = initialStages()
@@ -158,6 +168,7 @@ generateBtn.addEventListener("click", async () => {
 	if (!desc) return
 
 	generateBtn.disabled = true
+	descriptionEl.disabled = true
 	progressContainer.classList.remove("hidden")
 	progressList.innerHTML = ""
 	progressContainer.querySelectorAll("pre.run-cost").forEach((el) => {
@@ -175,6 +186,7 @@ generateBtn.addEventListener("click", async () => {
 	currentXml = ""
 	currentProcessId = null
 	snapshotCount = 0
+	snapshotQueue = Promise.resolve()
 	settle = initialSettle()
 	stages = initialStages()
 	renderStageRail(stageRailEl, stages)
@@ -208,13 +220,14 @@ generateBtn.addEventListener("click", async () => {
 		const message = e instanceof Error ? e.message : String(e)
 		addProgress(`Error: ${message}`)
 		generateBtn.disabled = false
+		descriptionEl.disabled = false
 	}
 })
 
 function connectSse(url: string) {
 	eventSource = new EventSource(url)
 
-	eventSource.onmessage = async (e) => {
+	const messageHandler = async (e: MessageEvent) => {
 		let event: ServerEvent
 		try {
 			event = JSON.parse(e.data) as ServerEvent
@@ -228,7 +241,14 @@ function connectSse(url: string) {
 		} else if (event.type === "BpmnStageEvent") {
 			applyStageEvent(event as BpmnStageEvent)
 		} else if (event.type === "BpmnSnapshotEvent" && "xml" in event) {
-			await handleSnapshot(event as BpmnSnapshotEvent)
+			// Apply snapshots strictly in arrival order so a slow earlier auto-layout can't
+			// resolve after — and overwrite — the final server-laid-out diagram.
+			const snapshot = event as BpmnSnapshotEvent
+			snapshotQueue = snapshotQueue
+				.then(() => handleSnapshot(snapshot))
+				.catch((err) => {
+					console.error("Snapshot handling failed", err)
+				})
 		} else if (event.type === "BpmnClarificationRequestEvent") {
 			applyClarificationEvent(event as BpmnClarificationRequestEvent)
 		} else if (event.type === "BpmnResultEvent") {
@@ -236,6 +256,7 @@ function connectSse(url: string) {
 		} else if (event.type === "AgentProcessFinishedEvent") {
 			addProgress("Process complete.")
 			generateBtn.disabled = false
+			descriptionEl.disabled = false
 			clarifyRegionEl.classList.add("hidden")
 			clarifyRegionEl.innerHTML = ""
 			settle = { ...settle, sawFinish: true }
@@ -261,14 +282,22 @@ function connectSse(url: string) {
 		} else if (event.type === "AgentProcessFailedEvent") {
 			addProgress("Process failed.")
 			generateBtn.disabled = false
+			descriptionEl.disabled = false
 			closeStream()
 		}
 	}
+
+	eventSource.onmessage = messageHandler
+	eventSource.addEventListener(
+		"agent-process-event",
+		messageHandler as unknown as EventListener,
+	)
 
 	eventSource.onerror = (e) => {
 		console.error("SSE Error", e)
 		closeStream()
 		generateBtn.disabled = false
+		descriptionEl.disabled = false
 		addProgress("Connection lost.")
 	}
 }
@@ -406,13 +435,17 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 
 	if (redrawn) {
 		snapshotCount += 1
-		if (snapshotCount === 1) {
-			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
-		}
 		canvasStatus.textContent = ""
 		canvasStatus.classList.add("hidden")
 		// Progressive entrance — CSS-only, honours prefers-reduced-motion.
 		triggerCanvasEntrance()
+
+		// Zoom to fit the new diagram geometry. We defer this slightly so the browser
+		// has time to apply the entrance class and lay out the container, ensuring
+		// the bounding box calculations are accurate (fixes the off-screen leftmost element).
+		requestAnimationFrame(() => {
+			;(viewer.get("canvas") as BpmnCanvas).zoom("fit-viewport")
+		})
 	} else {
 		const msg =
 			outcome.attemptNumber !== undefined
