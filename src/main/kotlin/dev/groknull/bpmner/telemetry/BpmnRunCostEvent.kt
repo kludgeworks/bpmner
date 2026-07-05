@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.telemetry.internal.adapter.inbound
+package dev.groknull.bpmner.telemetry
 
 import com.embabel.agent.api.event.AbstractAgentProcessEvent
 import com.embabel.agent.core.AgentProcess

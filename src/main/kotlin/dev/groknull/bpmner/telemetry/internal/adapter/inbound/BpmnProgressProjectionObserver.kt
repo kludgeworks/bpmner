@@ -9,6 +9,8 @@ import com.embabel.agent.api.event.ActionExecutionStartEvent
 import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.api.event.ProgressUpdateEvent
+import dev.groknull.bpmner.telemetry.BpmnSnapshotEvent
+import dev.groknull.bpmner.telemetry.BpmnStageEvent
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component

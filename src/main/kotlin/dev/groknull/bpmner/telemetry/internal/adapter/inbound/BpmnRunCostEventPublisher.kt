@@ -8,6 +8,7 @@ package dev.groknull.bpmner.telemetry.internal.adapter.inbound
 import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
+import dev.groknull.bpmner.telemetry.BpmnRunCostEvent
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component

@@ -12,6 +12,8 @@ import com.embabel.agent.core.AgentProcess
 import com.embabel.agent.core.hitl.FormBindingRequest
 import com.embabel.ux.form.Form
 import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
+import dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent
+import dev.groknull.bpmner.telemetry.BpmnStageEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.Mockito.mock

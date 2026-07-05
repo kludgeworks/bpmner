@@ -11,6 +11,7 @@ import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.hitl.FormBindingRequest
+import dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
