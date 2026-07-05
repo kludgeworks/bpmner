@@ -8,5 +8,5 @@ package dev.groknull.bpmner.browser
 import org.springframework.modulith.ApplicationModule
 
 /** Browser open and interactivity detection module. */
-@ApplicationModule(allowedDependencies = [])
+@ApplicationModule
 internal object BrowserModule

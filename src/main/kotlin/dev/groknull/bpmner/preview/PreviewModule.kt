@@ -8,5 +8,5 @@ package dev.groknull.bpmner.preview
 import org.springframework.modulith.ApplicationModule
 
 /** Preview artifact generation module. */
-@ApplicationModule(allowedDependencies = [])
+@ApplicationModule
 internal object PreviewModule
