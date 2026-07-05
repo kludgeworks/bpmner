@@ -132,7 +132,7 @@ epic's final PR (boot validator roster, test, exception, observer labels, docs).
 Its `remote` export was removed in #409. Deletion is tracked as a future
 non-epic cleanup.
 
-`remote = true` was removed from both sub-agent exports in #409 (ADR-2). No agent
+`remote = true` was removed from both sub-agent exports in #409. No agent
 in the deployed roster publishes a remote/MCP tool surface (N2).
 
 ## Consequences
