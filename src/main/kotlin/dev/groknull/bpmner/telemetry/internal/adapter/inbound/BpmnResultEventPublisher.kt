@@ -9,6 +9,7 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import dev.groknull.bpmner.authoring.BpmnResult
+import dev.groknull.bpmner.telemetry.BpmnResultEvent
 import org.jmolecules.architecture.hexagonal.PrimaryAdapter
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component

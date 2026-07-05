@@ -7,6 +7,7 @@ package dev.groknull.bpmner.telemetry.internal.adapter.inbound
 
 import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
+import dev.groknull.bpmner.telemetry.BpmnSnapshotEvent
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue

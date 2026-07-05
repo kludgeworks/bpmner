@@ -14,8 +14,10 @@ import org.springframework.stereotype.Component
 /**
  * Bridges bpmner's custom SSE events onto Embabel's [SSEController].
  *
- * The telemetry publishers emit custom [AgentProcessEvent]s (BpmnStageEvent, BpmnSnapshotEvent,
- * ProgressUpdateEvent, BpmnResultEvent, BpmnRunCostEvent, BpmnClarificationRequestEvent) on Spring's
+ * The telemetry publishers emit custom [AgentProcessEvent]s ([dev.groknull.bpmner.telemetry.BpmnStageEvent],
+ * [dev.groknull.bpmner.telemetry.BpmnSnapshotEvent], [com.embabel.agent.api.event.ProgressUpdateEvent],
+ * [dev.groknull.bpmner.telemetry.BpmnResultEvent], [dev.groknull.bpmner.telemetry.BpmnRunCostEvent],
+ * [dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent]) on Spring's
  * `ApplicationEventPublisher`. Embabel's [SSEController] only receives events on its
  * `AgenticEventListener` bus and never sees raw Spring events, so without this bridge the browser
  * gets nothing.

@@ -364,7 +364,7 @@ client in the same PR.
 
 - **Type discriminator:** the `type` field in the SSE JSON payload is the **Kotlin simple
   class name** of the event. New event types must be concrete `class` (not `data class`)
-  declarations in `telemetry/internal/adapter/inbound/` extending
+  declarations in the telemetry module root (`dev.groknull.bpmner.telemetry`) extending
   `AbstractAgentProcessEvent`.
 - **Class and property names are the API.** Renaming a Kotlin class or property changes
   the JSON field name and silently breaks the client.

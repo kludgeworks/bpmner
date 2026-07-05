@@ -11,6 +11,8 @@ import com.embabel.agent.core.AgentProcess
 import dev.groknull.bpmner.layout.internal.adapter.inbound.BpmnLayoutAgent
 import dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnGenerationAgent
 import dev.groknull.bpmner.readiness.internal.adapter.inbound.BpmnReadinessAgent
+import dev.groknull.bpmner.telemetry.BpmnSnapshotEvent
+import dev.groknull.bpmner.telemetry.BpmnStageEvent
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
