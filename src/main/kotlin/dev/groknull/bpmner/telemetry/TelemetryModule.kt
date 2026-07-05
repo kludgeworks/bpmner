@@ -17,7 +17,5 @@ import org.springframework.modulith.ApplicationModule
 // import; verify() confirms this grant is load-bearing (removal fails ApplicationModules.verify()).
 // layout is listed because BpmnPipelineObserver observes BpmnLayoutCompletedEvent (ss-2) to
 // emit the LAYOUT_COMPLETE snapshot; BpmnLayoutCompletedEvent is the layout module's published API.
-@ApplicationModule(
-    allowedDependencies = ["alignment", "authoring", "bpmn", "conformance", "layout", "readiness"],
-)
+@ApplicationModule
 internal object TelemetryModule

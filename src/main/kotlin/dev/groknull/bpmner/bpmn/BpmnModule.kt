@@ -12,5 +12,5 @@ import org.springframework.modulith.ApplicationModule
  * types, and value types that every other module depends on. Leaf node of the application's
  * module graph: this module imports zero other bpmner modules.
  */
-@ApplicationModule(allowedDependencies = [])
+@ApplicationModule
 internal object BpmnModule
