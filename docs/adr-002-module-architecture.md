@@ -13,8 +13,8 @@ verified at the commit basis used throughout this epic:
 
 - **`core/` is a god-module**: `BpmnDomain.kt` (~843 lines of anemic `data class`es),
   `Bpmn{Graph,Pipeline,Guardrail}Types.kt`, `BpmnConfig.kt` (~271 lines) — the entire
-  domain model. 13 of 14 modules list `core` in `allowedDependencies` (`api` is the sole
-  exception). This is the "all dependants, whole model" shape the DDD consensus recognises
+  domain model. In the archived strict-mode snapshot, 13 of 14 modules list `core` in
+  `allowedDependencies` (`api` is the sole exception). This is the "all dependants, whole model" shape the DDD consensus recognises
   as the God-Module anti-pattern, not a legitimate Shared Kernel (a shared kernel is a
   *small, stable* subset — a `Money` value type, a `Result` type). See challenge E1 in
   `plans/424/BLOCKER-S1.md` (upheld in the architecture refresh, see [ARCHITECTURE.md §0.B]).
@@ -43,7 +43,7 @@ verified at the commit basis used throughout this epic:
   (`@RestController`), `WebGenerationStarter` (`@Service`), `WebModule`. It is a delivery
   adapter, not a bounded context. Challenge E2 upheld.
 
-- **`allowedDependencies`**: `api[]`, `core[api]`, `config[core]`, `readiness[core]`,
+- **Archived strict-mode `allowedDependencies` snapshot**: `api[]`, `core[api]`, `config[core]`, `readiness[core]`,
   `rules[api,core,pkl]`, `contract[api,core,readiness]`, `validation[api,core,rules]`,
   `generation[alignment,api,contract,core,readiness,validation]`,
   `repair[api,contract,core,generation,readiness,rules,validation]`,

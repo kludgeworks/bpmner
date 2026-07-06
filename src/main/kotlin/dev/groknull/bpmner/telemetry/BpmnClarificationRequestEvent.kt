@@ -24,8 +24,7 @@ import com.embabel.agent.core.AgentProcess
  * not a stale re-assessment. See PLAN-ss-4.md §Design decisions for why `FormBindingRequest.payload`
  * is preferred over `process.last(ProcessInputAssessment)`.
  *
- * No bpmner payload types are referenced; fields are primitives and framework types only, so no
- * `TELEMETRY_PAYLOAD_ALLOWLIST` change is needed (contrast with `BpmnResultEvent`).
+ * No bpmner payload types are referenced; fields are primitives and framework types only.
  */
 class BpmnClarificationRequestEvent(
     process: AgentProcess,

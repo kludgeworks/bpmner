@@ -23,8 +23,8 @@ import org.springframework.test.context.TestPropertySource
  * `BpmnDefaultFlowPort`). However, a DIRECT_DEPENDENCIES flip is still not achievable:
  * the `authoring` module itself requires the `alignment` module to fully wire its beans
  * (e.g. `LlmBpmnProcessGenerator` depends on `BpmnLoggingConfig` from `conformance`, and
- * `BpmnGenerationAgent` wires `BpmnAligner` from `alignment`). Since `alignment` is not in
- * `repair`'s `allowedDependencies`, a DIRECT_DEPENDENCIES bootstrap of `repair` cannot
+ * `BpmnGenerationAgent` wires `BpmnAligner` from `alignment`). Since `alignment` is not a
+ * direct dependency of `repair`, a DIRECT_DEPENDENCIES bootstrap of `repair` cannot
  * fully wire `authoring`'s beans — making ALL_DEPENDENCIES the correct tier for a true
  * wiring-complete integration gate. API keys are stubbed so no live LLM call is made.
  * (S9 — ADR-451-9 Tier-3 settled rationale; ADR-451-8 re-seam complete)
