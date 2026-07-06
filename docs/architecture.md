@@ -9,7 +9,7 @@
 ## 1. Context map
 
 Three bounded contexts, one application layer, delivery adapters, and cross-cutting
-infrastructure. See §2 for the authoritative module map and [ADR-020](./adr-020-module-placement-and-boundaries.md) for the placement rule.
+infrastructure. See §2 for the authoritative module map and [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) for the placement rule.
 
 <!-- markdownlint-disable MD013 -->
 
@@ -128,7 +128,7 @@ those ports in plain Spring components.
 | Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
 | `BpmnGenerationAgent` | `pipeline/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
-| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-21 Track A). |
+| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Track A). |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
 <!-- markdownlint-enable MD013 -->
@@ -172,12 +172,12 @@ those ports in plain Spring components.
 | `ValidationPassed` | `proceed` | `ValidationPassed → ValidatedBpmnXml` | Unpacks validation results and proceeds to layout. |
 | `ValidationFailed` | `terminate` | `ValidationFailed → BpmnResult` | Short-circuits process and terminates with `VALIDATION_FAILED` status. |
 
-### Prompt-contribution seam (ADR-21 Track A)
+### Prompt-contribution seam (ADR-005 Track A)
 
 `BpmnRequest.styleGuideContribution(): String` lives as a top-level extension in the `bpmn`
 kernel (`bpmn/BpmnRequestContribution.kt`). Each call site wraps it locally with
 `PromptContributor.fixed(request.styleGuideContribution())` — no cross-tier interface,
-no stub required in module tests. See [ADR-021](./adr-021-prompt-contribution-seam.md).
+no stub required in module tests. See [ADR-005](./adr/adr-005-prompt-contribution-seam.md).
 
 ---
 
@@ -257,7 +257,7 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 
 | Module | Owns | Key public types |
 | --- | --- | --- |
-| `bpmn/` | BPMN language kernel. Root: annotation-free graph interfaces + rule SPI. `bpmn/internal/model/`: Jackson-bound concrete implementations. No Spring or Embabel imports in root. | `BpmnDefinition`, `BpmnNode`, `BpmnRequest`, `BpmnRule`, `RuleMetadata`, `RuleCategory`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`. Also: `styleGuideContribution()` (ADR-21 Decision 1). |
+| `bpmn/` | BPMN language kernel. Root: annotation-free graph interfaces + rule SPI. `bpmn/internal/model/`: Jackson-bound concrete implementations. No Spring or Embabel imports in root. | `BpmnDefinition`, `BpmnNode`, `BpmnRequest`, `BpmnRule`, `RuleMetadata`, `RuleCategory`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`. Also: `styleGuideContribution()` (ADR-005 Decision 1). |
 | `authoring/` | Request drafting, typed LLM generation, composition, XML rendering, agent invocation. | `BpmnRequestDrafter` (port), `BpmnProcessGenerator` (port), `BpmnAgentInvoker`, `AgentPlatformBpmnAgentInvoker`, `BpmnResult`. |
 | `conformance/` | Diagnostic discovery: structural checks, XSD, in-process rule evaluation. | `BpmnLintingPort`, `BpmnXsdValidationPort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`. |
 | `ruleset/` | Modelling-rule catalogue + rule engine. | `RuleEngine` (port), `RuleRegistry` (port), `BpmnerLintConfig`. |
@@ -329,7 +329,7 @@ Both entrypoints reach `generateBpmn` by resolving the orchestrator by name on `
 ### Configuration
 
 Each capability module owns its `@ConfigurationProperties` binding
-(config module dissolved in epic #451 S4; per ADR-020, config types belong at the capability root package). For the full configuration reference see
+(config module dissolved in epic #451 S4; per ADR-004, config types belong at the capability root package). For the full configuration reference see
 [`operator-guide.md`](./operator-guide.md).
 
 ### SSE wire contract {#wire-contract}
@@ -361,25 +361,25 @@ fail the build.
 
 ## 6. Enforcement
 
-The boundary enforcement stack (see [ADR-020](./adr-020-module-placement-and-boundaries.md) §6):
+The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) §6):
 
 - **`BpmnerModulithTest`** — `ApplicationModules.of(…, excludeBazelTestClasses).verify()`
   checks acyclicity and declared boundaries. Module tests target `DIRECT_DEPENDENCIES` for **6
   of 10** modules (`conformance`, `readiness`, `contract`, `alignment`, `ruleset`, `layout`;
-  ADR-23 Decision 1 + epic #451 S7); `authoring`, `pipeline`, `repair`, `telemetry` keep
+  ADR-007 Decision 1 + epic #451 S7); `authoring`, `pipeline`, `repair`, `telemetry` keep
   `ALL_DEPENDENCIES` with documented rationale (deep transitive agent/event graph).
 - **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 5 bespoke
   pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `conformance` class
-  permitted to depend on `ruleset` `@PrimaryPort`s — ADR-23 Decision 2),
+  permitted to depend on `ruleset` `@PrimaryPort`s — ADR-007 Decision 2),
   `excludeBazelTestClasses`.
 - **`BpmnerArchitectureTest` (kernel gate)** — `bpmn kernel is free of framework, IO, and
   cross-module dependencies`: the `bpmn/` kernel module may not import other `bpmner` modules
   or framework/prompt-construction glue (ported from deleted `BpmnerModuleBoundariesTest` in
-  epic #539; enforces the **placement-rule table** from ADR-20 §6).
+  epic #539; enforces the **placement-rule table** from ADR-004 §6).
 - **`src/test/resources/archunit_ignore_patterns.txt`** — Kotlin-synthetic regex suppressions
   only (`$\d+`, `$Companion`, etc.); masks no product-code dependency.
 
-### Placement-rule table (ADR-20 §6)
+### Placement-rule table (ADR-004 §6)
 
 A type's home is decided by what language it speaks and which slice owns its lifecycle:
 
@@ -397,14 +397,18 @@ A type's home is decided by what language it speaks and which slice owns its lif
 
 ## 7. ADR log
 
+<!-- markdownlint-disable MD013 -->
+
 | ADR | Title | Status |
 | --- | --- | --- |
-| [ADR-001](./adr-001-single-agent-design.md) | Single-Agent Design for BPMN Generation | Accepted (epic #399, #409, 2026-06-15) |
-| [ADR-020](./adr-020-module-placement-and-boundaries.md) | Module placement rule & boundaries | Accepted — current on `main` |
-| [ADR-021](./adr-021-prompt-contribution-seam.md) | Prompt contribution lives in the `bpmn` kernel | Accepted — current on `main` |
-| [ADR-023](./adr-023-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |
-| [ADR-003 / ADR-004](./adr-003-retryable-generation-exception.md) | Retryable generation exception: kernel placement & feedback contract | Accepted — current on `main` |
-| [ADR-8 (ADR-008)](./adr-008-interactive-web-generation.md) | Interactive web generation (no synchronous 422) | Accepted — current on `main` |
-| [ADR-22 (ADR-022)](./adr-022-agent-platform-and-module-bootstrap.md) | Agent platform wiring & module-test bootstrap | Accepted — current on `main` |
-| [ADR-451 / ADR-451-7 / ADR-451-8 / ADR-451-9](./adr-451-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
-| [ADR-376-003](./adr-376-003-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
+| [ADR-001](./adr/adr-001-single-agent-design.md) | Single-Agent Design for BPMN Generation | Accepted (epic #399, #409, 2026-06-15) |
+| [ADR-002](./adr/adr-002-retryable-generation-exception.md) | Retryable generation exception: kernel placement & feedback contract | Accepted — current on `main` |
+| [ADR-003](./adr/adr-003-interactive-web-generation.md) | Interactive web generation (no synchronous 422) | Accepted — current on `main` |
+| [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) | Module placement rule & boundaries | Accepted — current on `main` |
+| [ADR-005](./adr/adr-005-prompt-contribution-seam.md) | Prompt contribution lives in the `bpmn` kernel | Accepted — current on `main` |
+| [ADR-006](./adr/adr-006-agent-platform-and-module-bootstrap.md) | Agent platform wiring & module-test bootstrap | Accepted — current on `main` |
+| [ADR-007](./adr/adr-007-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |
+| [ADR-008](./adr/adr-008-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
+| [ADR-009](./adr/adr-009-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
+
+<!-- markdownlint-enable MD013 -->

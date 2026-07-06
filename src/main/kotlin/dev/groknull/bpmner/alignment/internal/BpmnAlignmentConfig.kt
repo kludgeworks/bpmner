@@ -17,7 +17,7 @@ import org.springframework.validation.annotation.Validated
  * Alignment-module actor configuration — the default alignment-validator persona.
  *
  * Bound at `bpmner` to preserve the existing `bpmner.alignmentValidator` property key while
- * placing config ownership in the alignment module (ADR-451 S4).
+ * placing config ownership in the alignment module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -48,7 +48,7 @@ internal data class BpmnAlignmentConfig(
  * Alignment-module threshold configuration — alignment strictness settings.
  *
  * Bound at `bpmner.alignment` to preserve existing operator-facing property keys while
- * placing config ownership in the alignment module (ADR-451 S4).
+ * placing config ownership in the alignment module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner.alignment")

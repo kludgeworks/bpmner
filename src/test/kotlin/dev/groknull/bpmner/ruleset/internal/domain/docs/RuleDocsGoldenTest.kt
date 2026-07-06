@@ -26,7 +26,7 @@ import java.nio.file.Paths
  * `src/test/resources/rule-docs/<id>.md` and `src/test/resources/rule-docs/README.md`.
  *
  * The golden source is the **bean metadata** (from `RuleMetadata`), NOT a byte-for-byte
- * copy of the old Pkl output. This discharges ADR-376-003's declaration that the bean
+ * copy of the old Pkl output. This discharges ADR-008's declaration that the bean
  * catalog is authoritative and the sole source of truth.
  *
  * On mismatch, the test failure message instructs developers to run the regenerate

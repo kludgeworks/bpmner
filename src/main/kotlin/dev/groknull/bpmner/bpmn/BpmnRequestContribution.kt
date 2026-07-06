@@ -11,6 +11,6 @@ package dev.groknull.bpmner.bpmn
  * Returns the style-guide header string for inclusion in a prompt contribution,
  * or an empty string when no style guide is present. This is a pure `String` function;
  * it carries no `com.embabel.*` import. Slices that drive LLM prompts wrap it locally
- * with `PromptContributor.fixed(request.styleGuideContribution())` (ADR-21 Decision 1).
+ * with `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Decision 1).
  */
 fun BpmnRequest.styleGuideContribution(): String = styleGuide?.let { "## Style guide\n\n$it" } ?: ""

@@ -13,7 +13,7 @@ import com.embabel.agent.core.Retryable
  *
  * Implementing [Retryable] ensures the Embabel retry policy classifies this exception as
  * retryable on the cause chain, allowing the outline-retry path to recover from LLM-output
- * validation failures during rendering and topology checks (ADR-001, ADR-003).
+ * validation failures during rendering and topology checks (ADR-001, ADR-002).
  *
  * @see com.embabel.agent.core.Retryable
  */

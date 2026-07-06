@@ -16,13 +16,13 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `authoring` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-22 gate 4‴ rationale): `authoring`
+ * BootstrapMode.ALL_DEPENDENCIES (intentional; see ADR-006 gate 4‴ rationale): `authoring`
  * depends on `alignment`, `contract`, `readiness`, `ruleset`, and `conformance`, producing a deep
  * transitive graph. The full pipeline must be wired together so the `BpmnGenerationAgent`'s
  * `@Action` handoff, contract extraction, and alignment checks can resolve at startup.
  * DIRECT_DEPENDENCIES would not suffice here — the transitive closure is load-bearing.
  * LLM API keys are stubbed via `@TestPropertySource` so no live LLM call is made at startup.
- * (S7 — ADR-22 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8)
+ * (S7 — ADR-006 gate 4‴ ALL_DEPENDENCIES rationale; ARCHITECTURE §5 S7, G8)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

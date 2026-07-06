@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component
  * definition unchanged, letting the validator catch genuine wiring failures.
  *
  * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
- * (ADR-451-8 disposition a). Cross-module callers inject [BpmnDefaultFlowPort] instead.
+ * (ADR-009 (port-fronting) disposition a). Cross-module callers inject [BpmnDefaultFlowPort] instead.
  */
 @Component
 internal class DefaultFlowAssigner : BpmnDefaultFlowPort {

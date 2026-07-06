@@ -1,4 +1,4 @@
-# ADR-021: Prompt contribution lives in the `bpmn` kernel
+# ADR-005: Prompt contribution lives in the `bpmn` kernel
 
 **Decision 1:** `BpmnRequest.styleGuideContribution(): String` lives as a top-level extension
 in the `bpmn` kernel (`bpmn/BpmnRequestContribution.kt`). It depends only on a `bpmn` type
@@ -9,4 +9,4 @@ site wraps it locally with `PromptContributor.fixed(request.styleGuideContributi
 the dissolved `config/` module and was implemented in `generation/`) is deleted. Module tests
 for `readiness`, `contract`, and `alignment` require no stub for it.
 
-Origin: epic #424 S7, Decision 1 current on `main`. See `architecture.md` §3.
+Origin: epic #424 S7, Decision 1 current on `main`. See `../architecture.md` §3.

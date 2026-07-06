@@ -17,7 +17,7 @@ import org.springframework.validation.annotation.Validated
  * Contract-module actor configuration — the default contract-extractor persona.
  *
  * Bound at `bpmner` to preserve the existing `bpmner.contractExtractor` property key while
- * placing config ownership in the contract module (ADR-451 S4).
+ * placing config ownership in the contract module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -52,7 +52,7 @@ internal data class BpmnContractConfig(
  * Contract-module threshold configuration — extraction limits.
  *
  * Bound at `bpmner.contract` to preserve the existing `bpmner.contract.maxAssumptions`
- * property key while placing config ownership in the contract module (ADR-451 S4).
+ * property key while placing config ownership in the contract module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner.contract")

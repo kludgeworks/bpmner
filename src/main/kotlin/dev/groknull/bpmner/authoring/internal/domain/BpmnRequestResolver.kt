@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component
  * [BpmnRequest] suitable for the generation pipeline.
  *
  * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
- * (ADR-451-8 disposition a). Cross-module callers inject [BpmnRequestResolutionPort] instead.
+ * (ADR-009 (port-fronting) disposition a). Cross-module callers inject [BpmnRequestResolutionPort] instead.
  * The relocation lets Modulith's `verify()` (mechanism 1) enforce the `*.internal.*` package
  * path and reject any future cross-module direct reach.
  *

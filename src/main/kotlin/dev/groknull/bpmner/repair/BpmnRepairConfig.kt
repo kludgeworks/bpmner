@@ -17,7 +17,7 @@ import org.springframework.validation.annotation.Validated
  * Repair-module configuration — repairer personas.
  *
  * Bound at `bpmner` to preserve existing operator-facing property keys while placing
- * config ownership in the repair module (ADR-451 S4).
+ * config ownership in the repair module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -93,7 +93,7 @@ data class BpmnRepairConfig(
  * Repair-module budget configuration.
  *
  * Bound at `bpmner.budget` to preserve the existing `bpmner.budget.maxRepairIterations`
- * property key while placing config ownership in the repair module (ADR-451 S4).
+ * property key while placing config ownership in the repair module (ADR-009 S4).
  *
  * [maxRepairIterations] bounds the [BpmnRepairLoop]: the loop exits as soon as there are no
  * blocking diagnostics or the iteration count reaches this ceiling, whichever comes first.

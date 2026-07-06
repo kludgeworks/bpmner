@@ -17,7 +17,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * that Modulith's `verify()` (mechanism 1) enforces the `*.internal.*` package path and
  * rejects any future cross-module direct reach. The port is the cross-module seam.
  *
- * Rationale (ADR-451-8 disposition a; S9): `BpmnRequestResolver` was a root-package
+ * Rationale (ADR-009 (port-fronting) disposition a; S9): `BpmnRequestResolver` was a root-package
  * `internal class` imported cross-module by `pipeline`. S9 relocates the implementation to
  * `authoring.internal.domain` (completing disposition-a) and exposes this port as the
  * published cross-module seam, closing the mechanism-1 gap identified in REVIEW-451-9 #5.

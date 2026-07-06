@@ -53,7 +53,7 @@ import kotlin.test.assertIs
  *
  * Architecture §5 "fidelity-seam test" (R6): proves that ERROR-severity fidelity results are
  * converted to [RetryableBpmnGenerationException] with the violation count and per-issue
- * `- [code] message` body preserved in the exception message (ADR-004: message IS the feedback).
+ * `- [code] message` body preserved in the exception message (ADR-002 (message-is-feedback): message IS the feedback).
  *
  * [LlmBpmnProcessGeneratorTest] remains @Disabled; this test covers the seam via
  * [FakeOperationContext] + a mocked [BpmnContractFidelityPort] so the LLM path is bypassed
@@ -134,7 +134,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
     fun `createOutline converts ERROR fidelity result to RetryableBpmnGenerationException`() {
         // #458 fidelity seam (R6): ERROR-severity fidelity result → RetryableBpmnGenerationException.
         // The exception message must preserve the violation count and per-issue [code] message body
-        // so the repair loop has the feedback it needs (ADR-004).
+        // so the repair loop has the feedback it needs (ADR-002 (message-is-feedback)).
         val context = FakeOperationContext()
         context.expectResponse(flatLlmResponse)
 
@@ -172,7 +172,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
         // Message must carry the total issue count (R6 — count preserved).
         assertContains(ex.message!!, "2 fidelity issue(s)")
 
-        // Message must carry each violation's code and body (R6 / ADR-004 — feedback body preserved).
+        // Message must carry each violation's code and body (R6 / ADR-002 (message-is-feedback) — feedback body preserved).
         assertContains(ex.message!!, "- [ACTIVITY_TASK_KIND_MISMATCH] Activity 'act1' is a ServiceTask")
         assertContains(ex.message!!, "- [DECISION_GATEWAY_MISSING] Decision 'dec1' has no corresponding")
     }

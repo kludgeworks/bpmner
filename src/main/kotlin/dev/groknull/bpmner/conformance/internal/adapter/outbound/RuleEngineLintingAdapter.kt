@@ -35,7 +35,7 @@ import org.springframework.stereotype.Component
  * repairs flow through Kotlin handlers under `DeterministicTopologyRepairStrategy` instead
  * (`LOCAL_MODEL_FIX` kind).
  */
-// NOTE: @SecondaryAdapter is deliberately absent (ADR-23 Decision 2). This adapter calls
+// NOTE: @SecondaryAdapter is deliberately absent (ADR-007 Decision 2). This adapter calls
 // RuleEngine and RuleRegistry, both @PrimaryPort interfaces in rules/, which violates the
 // jMolecules ensureHexagonal(LENIENT) rule for the @SecondaryAdapter layer. This adapter is
 // an Anti-Corruption Layer (ACL) over rules' driving surface, not a pure secondary adapter.

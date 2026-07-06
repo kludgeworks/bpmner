@@ -18,16 +18,16 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 /**
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.DIRECT_DEPENDENCIES (ADR-451-9 Tier 2): `layout` grants only `bpmn` and
+ * BootstrapMode.DIRECT_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 2): `layout` grants only `bpmn` and
  * `conformance`; `BpmnLayoutService` has no cross-module Spring-bean dependencies of its own.
  * The `conformance` adapters constructor-inject two `ruleset` `@PrimaryPort` interfaces
  * (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
  * `conformance`'s dependency, not `layout`'s. Since `layout` never references either port
  * directly (zero `import dev.groknull.bpmner.ruleset` under `layout/`), both are mocked here
- * as Tier-2 transitive non-collaborators (ADR-451-9 lines 955–964, 968–971).
+ * as Tier-2 transitive non-collaborators (ADR-009 (bootstrap tiers) lines 955–964, 968–971).
  * No `@EnableAgents` is needed: no bean in {layout, bpmn, conformance} injects `AgentPlatform`.
  * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-451-9; ARCHITECTURE §5 S7)
+ * (S7 — ADR-009 (bootstrap tiers); ARCHITECTURE §5 S7)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(
