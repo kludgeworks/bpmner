@@ -329,8 +329,8 @@ Both entrypoints reach `generateBpmn` by resolving the orchestrator by name on `
 
 ### Configuration
 
-Each capability module owns its `@ConfigurationProperties` class at its root package
-(config module dissolved in epic #451 S4). For the full configuration reference see
+Each capability module owns its `@ConfigurationProperties` binding
+(config module dissolved in epic #451 S4; per ADR-020, config types belong at the capability root package). For the full configuration reference see
 [`operator-guide.md`](./operator-guide.md).
 
 ### SSE wire contract {#wire-contract}
