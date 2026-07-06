@@ -34,8 +34,6 @@ Key decisions:
   No aggregate/repository/persistence machinery.
 - "Authoring / Conformance / Intake" are **subdomain labels** (grouping lenses),
   not separate directory structures.
-- HTTP and shell entrypoints are inbound adapters inside `pipeline` (dissolved from `web`
-  in epic #451 S5).
 
 ### Module boundaries
 
@@ -195,7 +193,7 @@ uses cost-based A\* over the action graph.
 - **`ProcessExecutionStuckException`** — no applicable action exists for the goal.
 - **`ProcessExecutionTerminatedException`** — `Budget(actions = N)` exhausted before goal reached.
 
-Both of the latter are surfaced by `AgentProcessExecution.fromProcessStatus()`.
+Both of the latter are surfaced by `AgentProcessExecution.fromProcessStatus()`. For how to diagnose each signal at runtime, see the [Troubleshooting section](./operator-guide.md#processexecutionstuckexception) of the operator guide.
 
 ### Scoped readiness sub-process
 
@@ -286,29 +284,29 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
    ┌───────────────────────────────────────────────────────────────────────┐
    │                  BpmnGenerationAgent  (pipeline/)                    │
    │                                                                       │
-   │  draft               LLM → BpmnRequestDraft       (BpmnRequestDrafter)│
+   │  draft               LLM → BpmnRequestDraft                          │
    │     ▼                                                                 │
-   │  resolve             → BpmnRequest                (BpmnRequestResolver)│
+   │  resolve             → BpmnRequest                                   │
    │     ▼                                                                 │
    │  assessReadiness     scoped sub-process → ProcessInputAssessment      │
-   │     ▼                                          (BpmnReadinessInvoker)  │
+   │     ▼                                                                 │
    │  startAssessing      → Assessing  (@State machine entry)              │
    │     ▼  (state machine: Ready → ReadyBpmnContext; AwaitingClarification│
    │         → WaitFor.formSubmission over SSE; Blocked → NEEDS_CLARIF.)  │
    │  extractContract     LLM → ValidatedProcessContract                   │
-   │     ▼                                          (ProcessContractExtractor)│
-   │  createOutline       LLM → ValidatedOutline      (BpmnProcessGenerator)│
+   │     ▼                                                                 │
+   │  createOutline       LLM → ValidatedOutline                           │
    │     ▼                                                                 │
    │  composeGraph        deterministic → LaidOutProcessGraph              │
    │     ▼                                                                 │
-   │  render              → RenderedBpmn  (BpmnGraphRenderer→BpmnRenderer)  │
+   │  render              → RenderedBpmn                                   │
    │     ▼                  emits BpmnGeneratedEvent                       │
-    │  validate            repair loop → ValidationStage   (BpmnRepairer)   │
+    │  validate            repair loop → ValidationStage                   │
     │     ▼  (state machine: ValidationPassed → proceed → ValidatedBpmnXml; │
     │         ValidationFailed → terminate → BpmnResult)                    │
     │  layout              inline BpmnLayoutPort + XSD → FinalValidatedBpmnXml│
    │     ▼                  throws on XSD-invalid output                   │
-   │  align               LLM → BpmnAlignmentReport       (BpmnAligner)    │
+   │  align               LLM → BpmnAlignmentReport                       │
    │     ▼                  critique gate: no throw on verdict              │
    │  finish  @AchievesGoal(generateBpmn)  writes file → BpmnResult        │
    │            verdict==FAILED → ALIGNMENT_FAILED (no file write)         │

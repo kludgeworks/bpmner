@@ -264,7 +264,7 @@ Diagnose:
 
 Surface: same as above.
 
-Meaning: `Budget(actions = N)` exhausted before reaching the goal. **Important**: `ReplanRequestedException` does **not** count against this budget — only successful action completions do. So a TERMINATED process has spent N actions actually doing work.
+Meaning: `Budget(actions = N)` exhausted before the goal was reached (see [architecture §4](./architecture.md#4-goap-lifecycle-and-repair-architecture) for the budget and replanning semantics).
 
 Common cause: an LLM action keeps returning *almost-correct* outputs, none of which fully resolve `diagnosticsResolved`. Each attempt is one budget action.
 
