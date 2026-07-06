@@ -80,7 +80,7 @@ class BpmnShellCommandsTest {
             You asked: Make toast
             Generated BPMN → toast.bpmn (842 chars).
 
-            LLMs used: [mistral-large-2411] across 4 calls
+            LLMs used: [mistral-medium-3-5] across 4 calls
             Cost: ${'$'}0.04
             Tool usage:
             """.trimIndent()
