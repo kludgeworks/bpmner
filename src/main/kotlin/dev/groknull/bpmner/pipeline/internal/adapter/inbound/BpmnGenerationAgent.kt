@@ -146,13 +146,9 @@ internal class BpmnGenerationAgent(
         return aligner.align(ready, c, x, ctx)
     }
 
-    // Critique gate (doc §3.2, §1 G5, §9): alignment is not a throwing step.
-    // PASSED verdict (ALIGNED / PARTIALLY_ALIGNED) → write file, return GENERATED.
-    // FAILED verdict → return typed ALIGNMENT_FAILED carrying the report, no file write.
-    // A single action with verdict check inside satisfies the GOAP runtime planner:
-    // @Condition + pre= on two separate goal actions causes both conditions to evaluate FALSE
-    // when BpmnAlignmentReport is not yet on the blackboard, making the planner stuck.
-    // (doc §8 risk #1 mitigation: typed inputs alone gate the action; verdict branch is internal.)
+    // Critique gate (ADR-001): alignment is not a throwing step.
+    // PASSED verdict -> write file; FAILED verdict -> return ALIGNMENT_FAILED.
+    // Typed inputs alone gate the action; the verdict branch is internal to avoid GOAP planning lock.
     @AchievesGoal(
         description = "Generate a complete BPMN definition from user input",
         export = Export(
@@ -190,7 +186,7 @@ internal class BpmnGenerationAgent(
     }
 }
 
-// Sealed supertype for polymorphic state returns (lore: "parent interface").
+// Sealed supertype for polymorphic state returns.
 sealed interface ReadinessStage
 
 // State that wraps ReadyBpmnContext for the state machine
@@ -206,9 +202,8 @@ data class Assessing(
     val round: Int, // clarification rounds completed so far
 ) : ReadinessStage {
 
-    // Branch: READY → Ready; not-ready + INTERACTIVE + rounds left → ask;
-    // SINGLE_SHOT or rounds exhausted → Blocked. clearBlackboard=true so the
-    // loop can re-enter Assessing after an answer (lore §4.19.4).
+    // Branch: READY -> Ready; not-ready + INTERACTIVE + rounds left -> ask;
+    // SINGLE_SHOT or rounds exhausted -> Blocked.
     @Action(clearBlackboard = true)
     fun assess(): ReadinessStage = when {
         assessment.verdict == ReadinessVerdict.READY ->
@@ -226,7 +221,7 @@ data class AwaitingClarification(
     val round: Int,
 ) : ReadinessStage {
 
-    // Pauses the process into WAITING and asks for typed answers (lore §4.19.9).
+    // Pauses the process into WAITING and asks for typed answers.
     @Action
     fun ask(): BpmnClarificationAnswers = WaitFor.formSubmission(promptFrom(assessment), BpmnClarificationAnswers::class.java)
 }

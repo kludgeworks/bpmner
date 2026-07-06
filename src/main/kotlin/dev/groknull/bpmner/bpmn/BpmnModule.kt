@@ -14,3 +14,11 @@ import org.springframework.modulith.ApplicationModule
  */
 @ApplicationModule
 internal object BpmnModule
+
+/**
+ * Opt-in marker annotation for classes that are sanctioned exceptions to architecture rules.
+ * Handled by [dev.groknull.bpmner.BpmnerArchitectureTest] to generalize name-based rule pins.
+ */
+@Target(AnnotationTarget.CLASS)
+@Retention(AnnotationRetention.RUNTIME)
+annotation class SanctionedArchitectureException(val reason: String)
