@@ -1,54 +1,47 @@
 # bpmner — Architecture
 
-> **Status:** Consolidated in epic #424 S7 (ADR-22). This is the single authoritative
-> architecture document. The four legacy docs (`agents.md`, `goap-lifecycle.md`,
-> `pipeline-architecture.md`, `hexagonal-architecture.md`) have been folded into this
-> file and deleted. Do not edit the frozen ADRs
-> ([adr-001-single-agent-design.md](./adr-001-single-agent-design.md),
-> [adr-002-module-architecture.md](./adr-002-module-architecture.md)).
+> **Status:** Authoritative architecture document. Legacy docs (`agents.md`,
+> `goap-lifecycle.md`, `pipeline-architecture.md`, `hexagonal-architecture.md`) folded in
+> and deleted. Module vocabulary reflects post-#451 renames. ADR index in §7.
 
 ---
 
 ## 1. Context map
 
 Three bounded contexts, one application layer, delivery adapters, and cross-cutting
-infrastructure. Decided in [adr-002-module-architecture.md §D-map](./adr-002-module-architecture.md).
+infrastructure. See §2 for the authoritative module map and [ADR-020](./adr-020-module-placement-and-boundaries.md) for the placement rule.
 
 <!-- markdownlint-disable MD013 -->
 
 | Context / Layer | Role | Owns | Current modules (as-built) |
 | --- | --- | --- | --- |
-| **Authoring** | Core domain | The BPMN process graph as a behaviour-bearing domain object; its structural invariants; generation / contract drafting | `domain`, `generation`, `contract`, `layout` |
-| **Conformance** | Supporting domain | Rule catalogue + evaluation + repair; own ubiquitous language (rule id / severity / capability, Pkl-fed) | `rules`, `validation`, `repair`, `alignment` |
+| **Authoring** | Core domain | The BPMN process graph as a behaviour-bearing domain object; its structural invariants; generation / contract drafting | `bpmn`, `authoring`, `contract`, `layout` |
+| **Conformance** | Supporting domain | Rule catalogue + evaluation + repair; own ubiquitous language (rule id / severity / capability, Pkl-fed) | `ruleset`, `conformance`, `repair`, `alignment` |
 | **Intake / Readiness** | Supporting domain | Request readiness + clarification subdomain | `readiness` |
-| **Generation Orchestration** | Application layer — not a domain context | Single `BpmnGenerationAgent`, GOAP wiring, `@Action` shims | `orchestration` |
-| **Delivery adapters** | Inbound/primary adapters — not contexts | HTTP, shell entrypoint | `web`, shell entrypoint |
+| **Generation Orchestration** | Application layer — not a domain context | Single `BpmnGenerationAgent`, GOAP wiring, `@Action` shims; HTTP + shell inbound adapters | `pipeline` |
+| **Delivery adapters** | Inbound/primary adapters — not contexts | HTTP + shell dissolved into `pipeline` in epic #451 S5 | *(see `pipeline` above)* |
 | **Preview** | Output artifact generator — not a domain context | BPMN → transient temp-dir HTML preview artifact; bundled local viewer assets | `preview` |
-| **Cross-cutting** | Infrastructure / sink — not contexts | Config, observability | `config`, `observability` |
+| **Cross-cutting** | Infrastructure / sink — not contexts | LLM provider registration; event sink; preview | `llm`, `telemetry`, `browser`, `preview` |
 
 <!-- markdownlint-enable MD013 -->
 
 Key decisions:
 
-- `web` (3 files, ~104 lines of HTTP↔port glue) is a **driving/primary adapter** of
-  Generation Orchestration, not a bounded context.
+- `bpmn` is the **BPMN language kernel** — annotation-free types and rule SPI at the root;
+  Jackson-bound implementations in `bpmn/internal/model/`. No framework annotations in the root.
 - The BPMN process graph is a **behaviour-bearing domain object** — model-intrinsic
-  invariants (`validateStructure()`, `validateOwnership()`) live on graph types in `domain`.
+  invariants (`validateStructure()`, `validateOwnership()`) live on graph types in `bpmn`.
   No aggregate/repository/persistence machinery.
-- `api` is the **published external contract** (annotation-free).
-  All annotation-free BPMN language types live here; implementations live in `domain`.
-- "Authoring / Conformance / Intake / Render" are **subdomain labels** (grouping lenses),
+- "Authoring / Conformance / Intake" are **subdomain labels** (grouping lenses),
   not separate directory structures.
+- HTTP and shell entrypoints are inbound adapters inside `pipeline` (dissolved from `web`
+  in epic #451 S5).
 
-### Module dependency overview (post-S6 grants)
+### Module boundaries
 
-The grant graph is the S6-audited set plus the `preview` module added in epic #476-1:
-`layout=["domain","validation"]`, `web=["api","domain","generation"]`,
-`readiness=["api","config","domain"]`,
-`contract=["api","config","domain","readiness"]`,
-`alignment=["api","config","contract","domain","readiness","validation"]`,
-`repair=["api","config","contract","domain","generation","readiness","rules","validation"]`,
-`preview=[]`.
+Explicit `allowedDependencies` declarations were removed from all capability modules in
+epic #536. Boundaries are enforced by `BpmnerArchitectureTest` and `BpmnerModulithTest`;
+the `bpmn` kernel retains `allowedDependencies = []`.
 
 ---
 
@@ -94,9 +87,9 @@ All four come from `org.jmolecules.architecture.hexagonal`. The DDD building blo
 | Inbound Adapter | `<module>/internal/adapter/inbound/` | `@PrimaryAdapter` | `@Component` (or `@ShellComponent`, `@Agent`, etc.) |
 | Outbound Adapter | `<module>/internal/adapter/outbound/` | `@SecondaryAdapter` | `@Component` or `@Service` |
 
-`domain/` and `config/` use no hexagonal annotations — `domain/` holds pure BPMN graph
-kernel and cross-tier DTOs; `config/` holds Spring `@ConfigurationProperties` and platform
-config. Neither owns a use-case.
+The `bpmn/` kernel uses no hexagonal annotations — the root holds the annotation-free BPMN
+language layer + rule SPI; `bpmn/internal/model/` holds the Jackson-bound implementations.
+Per-capability `@ConfigurationProperties` classes live in each capability's public package.
 
 ### Where the pattern bends
 
@@ -104,14 +97,14 @@ config. Neither owns a use-case.
   holds `@SecondaryPort internal interface BpmnRepairPromptPort` and `BpmnPatchApplicationPort`.
   These are private to the module; placing them at root would advertise a contract nothing
   outside the module is allowed to fulfil.
-- **`observability/` has no `@SecondaryPort`** — it is a one-way sink: event listeners only,
+- **`telemetry/` has no `@SecondaryPort`** — it is a one-way sink: event listeners only,
   no SPI.
 
 ### When to use which annotation
 
 - **Adding a new way to trigger generation** — add a primary adapter for the new transport,
   start an Embabel process through `BpmnAgentInvoker` or seed the same blackboard types.
-- **Adding a new validator** — `@Service` in `validation/internal/domain/`.
+- **Adding a new validator** — `@Service` in `conformance/internal/domain/`.
 - **Swapping the rule engine** — write a new `@SecondaryAdapter` implementing `BpmnLintingPort`.
 - **Adding a brand-new module** — create `<module>/` with its `@PrimaryPort`, `@SecondaryPort`,
   `internal/domain/`, and `internal/adapter/{inbound,outbound}/` skeleton; the architecture
@@ -134,7 +127,7 @@ those ports in plain Spring components.
 
 | Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
-| `BpmnGenerationAgent` | `orchestration/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
+| `BpmnGenerationAgent` | `pipeline/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-21 Track A). |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
@@ -146,12 +139,12 @@ those ports in plain Spring components.
 
 | Action | Input → Output | Port | Implementation |
 | --- | --- | --- | --- |
-| `draft` | `(UserInput, OperationContext) → BpmnRequestDraft` | `BpmnRequestDrafter` | `LlmBpmnRequestDrafter` (`generation/`) |
-| `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`generation/`) |
+| `draft` | `(UserInput, OperationContext) → BpmnRequestDraft` | `BpmnRequestDrafter` | `LlmBpmnRequestDrafter` (`authoring/`) |
+| `resolve` | `BpmnRequestDraft → BpmnRequest` | `BpmnRequestResolver` | `BpmnRequestResolver` (`authoring/`) |
 | `assessReadiness` | `BpmnRequest → ProcessInputAssessment` | `BpmnReadinessInvoker` | `AgentPlatformBpmnReadinessInvoker` (`readiness/`) |
 | `startAssessing` | `(BpmnRequest, ProcessInputAssessment) → Assessing` | (inline) | `@State` machine entry |
 | `extractContract` | `(ReadyBpmnContext, OperationContext) → ValidatedProcessContract` | `ProcessContractExtractor` | `LlmProcessContractExtractor` (`contract/`) |
-| `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract, OperationContext) → ValidatedOutline` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` (`generation/`) |
+| `createOutline` | `(ReadyBpmnContext, ValidatedProcessContract, OperationContext) → ValidatedOutline` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` (`authoring/`) |
 | `composeGraph` | `ValidatedOutline → LaidOutProcessGraph` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` — deterministic |
 | `render` | `(ReadyBpmnContext, LaidOutProcessGraph) → RenderedBpmn` | `BpmnProcessGenerator` | `LlmBpmnProcessGenerator` via `BpmnGraphRenderer` |
 | `validate` | `(ReadyBpmnContext, LaidOutProcessGraph, RenderedBpmn, ValidatedProcessContract) → ValidationStage` | `BpmnRepairer` | `DefaultBpmnRepairer` (`repair/`) — validate-only initial pass + repair loop, returns `ValidationStage` branch |
@@ -181,22 +174,10 @@ those ports in plain Spring components.
 
 ### Prompt-contribution seam (ADR-21 Track A)
 
-Prior to S7, a `BpmnRequestPromptContributor` port in `config/` was implemented in
-`generation/` and injected into `readiness`, `contract`, and `alignment` agents. This was
-speculative generality: one implementation, duplicated body, injected cross-tier only to avoid
-a direct call. **ADR-21 deletes it.**
-
-The replacement is a pure `String` extension in the `domain` kernel:
-
-```kotlin
-// domain/BpmnRequestContribution.kt
-fun BpmnRequest.styleGuideContribution(): String =
-    styleGuide?.let { "## Style guide\n\n$it" } ?: ""
-```
-
-Each agent that wraps a style-guide prompt calls it locally:
-`PromptContributor.fixed(request.styleGuideContribution())`. No cross-tier interface, no
-`generation` import in `readiness`/`contract`/`alignment`, grants byte-unchanged.
+`BpmnRequest.styleGuideContribution(): String` lives as a top-level extension in the `bpmn`
+kernel (`bpmn/BpmnRequestContribution.kt`). Each call site wraps it locally with
+`PromptContributor.fixed(request.styleGuideContribution())` — no cross-tier interface,
+no stub required in module tests. See [ADR-021](./adr-021-prompt-contribution-seam.md).
 
 ---
 
@@ -264,8 +245,7 @@ Every rule declares `RepairMetadata` in its Kotlin bean config:
 
 `BpmnLocalRepairCapabilityValidator` (`repair/internal/domain/`) fails context refresh if
 any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValidator`
-(`orchestration/internal/adapter/inbound/`, moved from `config/` in ADR-22 Track A) performs
-an analogous startup check on deployed agents.
+(`pipeline/internal/adapter/inbound/`) performs an analogous startup check on deployed agents.
 
 ---
 
@@ -277,20 +257,21 @@ an analogous startup check on deployed agents.
 
 | Module | Owns | Key public types |
 | --- | --- | --- |
-| `api/` | Stable, annotation-free contract types (Jackson-free as of ADR-22 Decision 3). | `BpmnDefinition`, `BpmnNode`, `RuleMetadata`, `RuleCategory`, `RepairKind`. |
-| `domain/` | Pure BPMN graph kernel + cross-tier DTOs. No `com.embabel.*` import. | `BpmnRequest`, `BpmnDefinition` (impl), `LaidOutProcessGraph`, `RenderedBpmn`, `BpmnElementIndex`. Also: `styleGuideContribution()` (pure `String` extension, ADR-21). |
-| `config/` | Spring `@ConfigurationProperties` + pipeline configuration. `BpmnConfig` registered module-locally via `@EnableConfigurationProperties(BpmnConfig::class)` on `BpmnPipelineConfig` (ADR-22 Decision 1). | `BpmnConfig`, `BpmnPipelineConfig`, `OpenRouterModelsConfig`. |
-| `orchestration/` | Single `generateBpmn` orchestrator: thin `@Action` shims + `AgentDeploymentValidator` (moved from `config/` in ADR-22). | `BpmnGenerationAgent`, `AgentDeploymentValidator`. |
-| `readiness/` | Guardrail 1: LLM input assessment, ready-state handoff, scoped sub-process. | `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadyBpmnContext`. |
+| `bpmn/` | BPMN language kernel. Root: annotation-free graph interfaces + rule SPI. `bpmn/internal/model/`: Jackson-bound concrete implementations. No Spring or Embabel imports in root. | `BpmnDefinition`, `BpmnNode`, `BpmnRequest`, `BpmnRule`, `RuleMetadata`, `RuleCategory`, `RepairKind`, `LaidOutProcessGraph`, `RenderedBpmn`. Also: `styleGuideContribution()` (ADR-21 Decision 1). |
+| `authoring/` | Request drafting, typed LLM generation, composition, XML rendering, agent invocation. | `BpmnRequestDrafter` (port), `BpmnProcessGenerator` (port), `BpmnAgentInvoker`, `AgentPlatformBpmnAgentInvoker`, `BpmnResult`. |
+| `conformance/` | Diagnostic discovery: structural checks, XSD, in-process rule evaluation. | `BpmnLintingPort`, `BpmnXsdValidationPort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`. |
+| `ruleset/` | Modelling-rule catalogue + rule engine. | `RuleEngine` (port), `RuleRegistry` (port), `BpmnerLintConfig`. |
 | `contract/` | Guardrail 2: source-grounded process contracts. | `ProcessContractExtractor` (port), `LlmProcessContractExtractor`, `ProcessContract`, `ValidatedProcessContract`. |
-| `generation/` | Request drafting, typed LLM generation, composition, XML rendering, agent invocation. | `BpmnRequestDrafter` (port), `BpmnProcessGenerator` (port), `BpmnAgentInvoker`, `AgentPlatformBpmnAgentInvoker`, `BpmnResult`. |
-| `repair/` | Validation + iterative repair loop. Contract-aware validation wrapper. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`. |
-| `validation/` | Diagnostic discovery: structural checks, XSD, in-process rule evaluation. | `BpmnValidator` (port), `BpmnLintingPort`, `BpmnXsdValidationPort`, `ValidatedBpmnXml`, `FinalValidatedBpmnXml`. |
-| `layout/` | Deterministic auto-layout + final XSD validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
+| `readiness/` | Guardrail 1: LLM input assessment, ready-state handoff, scoped sub-process. | `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadyBpmnContext`. |
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
-| `rules/` | Pkl rule catalog + rule engine. | `RuleEngine` (port), `BpmnerLintConfig`. |
-| `observability/` | Process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
-| `preview/` | Standalone preview artifact generator: BPMN → transient temp-dir `.preview.html` (deleted on JVM exit) with bundled local viewer. Wired into `generate` via `BpmnPreviewOrchestrator`. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
+| `repair/` | Validation + iterative repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`. |
+| `layout/` | Deterministic auto-layout + final XSD validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
+| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`. |
+| `telemetry/` | Event sink: process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
+| `llm/` | LLM provider registration (DeepSeek, OpenRouter). Platform-level; `allowedDependencies = []`. | Provider `@Configuration` classes. |
+| `browser/` | OS-level browser launch for post-generation preview. | `BrowserOpenPort` (port). |
+| `preview/` | BPMN → transient temp-dir `.preview.html` artifact. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
+
 
 <!-- markdownlint-enable MD013 -->
 
@@ -304,7 +285,7 @@ an analogous startup check on deployed agents.
    └────────────┬─────────────┘            └───────────────┬────────────────┘
                 ▼                                          ▼
    ┌───────────────────────────────────────────────────────────────────────┐
-   │                  BpmnGenerationAgent  (orchestration/)               │
+   │                  BpmnGenerationAgent  (pipeline/)                    │
    │                                                                       │
    │  draft               LLM → BpmnRequestDraft       (BpmnRequestDrafter)│
    │     ▼                                                                 │
@@ -339,7 +320,7 @@ an analogous startup check on deployed agents.
 
 Both entrypoints reach `generateBpmn` by resolving the orchestrator by name on `AgentPlatform`:
 
-- **Shell** — `BpmnShellCommands` (`generation/internal/adapter/inbound/`) exposes `generate`
+- **Shell** — `BpmnShellCommands` (`pipeline/internal/adapter/inbound/`) exposes `generate`
   / `gen` / `g`, seeding `UserInput` in **closed mode**.
 - **Web (Tripper `JourneyController`)** — `BpmnWebController` → `WebGenerationStarter` calls
   `BpmnAgentInvoker.startAsync(request)` in `INTERACTIVE` mode; returns `202 {processId,
@@ -348,12 +329,9 @@ Both entrypoints reach `generateBpmn` by resolving the orchestrator by name on `
 
 ### Configuration
 
-`BpmnConfig` (`@ConfigurationProperties("bpmner")`) controls the pipeline. As of ADR-22
-Decision 1, it is registered **module-locally** in `config/BpmnPipelineConfig` via
-`@EnableConfigurationProperties(BpmnConfig::class)` — it no longer depends on the app-root
-`BpmnerApplication` scan, which enables `DIRECT_DEPENDENCIES` module tests (ADR-22 §5 S7).
-
-For the full configuration reference see [`operator-guide.md`](./operator-guide.md).
+Each capability module owns its `@ConfigurationProperties` binding
+(config module dissolved in epic #451 S4; per ADR-020, config types belong at the capability root package). For the full configuration reference see
+[`operator-guide.md`](./operator-guide.md).
 
 ### SSE wire contract {#wire-contract}
 
@@ -384,22 +362,22 @@ fail the build.
 
 ## 6. Enforcement
 
-The boundary enforcement stack (see [adr-002-module-architecture.md](./adr-002-module-architecture.md)):
+The boundary enforcement stack (see [ADR-020](./adr-020-module-placement-and-boundaries.md) §6):
 
 - **`BpmnerModulithTest`** — `ApplicationModules.of(…, excludeBazelTestClasses).verify()`
-  checks acyclicity and declared boundaries. Module tests target `DIRECT_DEPENDENCIES` for **5
-  of 10** modules (`validation`, `readiness`, `contract`, `alignment`, `rules`; ADR-23 Decision
-  1); `layout` and `repair` keep `ALL_DEPENDENCIES` because their required beans are two module
-  hops away (§10 follow-on); `generation`, `observability`, `orchestration` keep
-  `ALL_DEPENDENCIES` with documented rationale (deep transitive agent graph).
+  checks acyclicity and declared boundaries. Module tests target `DIRECT_DEPENDENCIES` for **6
+  of 10** modules (`conformance`, `readiness`, `contract`, `alignment`, `ruleset`, `layout`;
+  ADR-23 Decision 1 + epic #451 S7); `authoring`, `pipeline`, `repair`, `telemetry` keep
+  `ALL_DEPENDENCIES` with documented rationale (deep transitive agent/event graph).
 - **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 5 bespoke
-  pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `validation` class
-  permitted to depend on `rules` `@PrimaryPort`s — ADR-23 Decision 2),
-  `excludeBazelTestClasses`, and a domain purity rule banning `java.io`, `org.springframework`,
-  and cross-module dependencies from the `bpmn` kernel.
-- **`ApiAnnotationFreeTest`** — enforces that `api` types carry no Jackson, Jakarta, Spring,
-  or Embabel annotations. As of ADR-22 Decision 3 the `RuleCategory` carve-out is removed:
-  `api` is genuinely Jackson-free with no exception.
+  pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `conformance` class
+  permitted to depend on `ruleset` `@PrimaryPort`s — ADR-23 Decision 2),
+  `excludeBazelTestClasses`.
+- **`BpmnerArchitectureTest` (kernel gate)** — `bpmn kernel is free of framework, IO, and
+  cross-module dependencies`: the `bpmn/` kernel module may not import other `bpmner` modules
+  or framework/prompt-construction glue (ported from deleted `BpmnerModuleBoundariesTest` in
+  epic #539; enforces the **placement-rule table** from ADR-20 §6).
+
 - **`src/test/resources/archunit_ignore_patterns.txt`** — Kotlin-synthetic regex suppressions
   only (`$\d+`, `$Companion`, etc.); masks no product-code dependency.
 
@@ -409,9 +387,9 @@ A type's home is decided by what language it speaks and which slice owns its lif
 
 | What it is | Home |
 | --- | --- |
-| BPMN graph types + cross-tier DTOs | `domain/` |
-| Annotation-free API contracts | `api/` |
-| Spring config / properties | `config/` |
+| Annotation-free BPMN language types + rule SPI | `bpmn/` root |
+| Jackson-bound BPMN model implementations | `bpmn/internal/model/` |
+| Capability `@ConfigurationProperties` | capability root package |
 | Slice-local vocabulary (rule id, repair kind, readiness enum) | owning slice's root package |
 | LLM-backed adapter (port impl) | `<module>/internal/adapter/inbound/` |
 | Deterministic outbound adapter | `<module>/internal/adapter/outbound/` |
@@ -424,4 +402,6 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | ADR | Title | Status |
 | --- | --- | --- |
 | [ADR-001](./adr-001-single-agent-design.md) | Single-Agent Design for BPMN Generation | Accepted (epic #399, #409, 2026-06-15) |
-| [ADR-002](./adr-002-module-architecture.md) | Subdomain Context Map and Rich-Graph Domain Model | Accepted (epic #424, S1, 2026-06-17) |
+| [ADR-020](./adr-020-module-placement-and-boundaries.md) | Module placement rule & boundaries | Accepted — current on `main` |
+| [ADR-021](./adr-021-prompt-contribution-seam.md) | Prompt contribution lives in the `bpmn` kernel | Accepted — current on `main` |
+| [ADR-023](./adr-023-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |

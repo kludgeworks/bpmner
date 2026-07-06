@@ -181,7 +181,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
 
     @Test
     fun `RuleCategory unknown name throws non-retryable IllegalStateException`() {
-        // ADR-002 keep-list: RuleCategory.kt:34 — internal enum-resolution precondition must NOT
+        // RuleCategory.kt:34 — internal enum-resolution precondition must NOT
         // be RetryableBpmnGenerationException; it is not an LLM-output failure, so retrying is useless.
         val ex = assertFailsWith<IllegalStateException> {
             dev.groknull.bpmner.bpmn.RuleCategory.fromDisplayName("no_such_category")
@@ -195,7 +195,7 @@ class LlmBpmnProcessGeneratorFidelitySeamTest {
 
     @Test
     fun `invalid process contract throws non-retryable error (LlmBpmnProcessGenerator line 75)`() {
-        // ARCHITECTURE §4 "Do NOT convert" / ADR-002 keep-list:
+        // ARCHITECTURE §4 "Do NOT convert"
         // LlmBpmnProcessGenerator.createOutline line 75 — invalid-contract precondition must NOT
         // be retryable. Retrying an invalid contract burns attempts without benefit (R2).
         val context = FakeOperationContext()
