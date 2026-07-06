@@ -32,7 +32,6 @@ import org.springframework.boot.test.context.SpringBootTest
     classes = [BpmnConfigThresholdBindingTest.Config::class],
     properties = [
         "bpmner.readiness.ready-threshold=80",
-        "bpmner.readiness.minimum-activity-count=3",
         "bpmner.readiness.max-clarification-questions=4",
         "bpmner.contract.max-assumptions=8",
         "bpmner.alignment.max-assumptions=2",
@@ -88,11 +87,6 @@ class BpmnConfigThresholdBindingTest {
     @Test
     fun `bpmner-readiness-ready-threshold binds`() {
         assertEquals(80, readinessThresholds.readyThreshold)
-    }
-
-    @Test
-    fun `bpmner-readiness-minimum-activity-count binds`() {
-        assertEquals(3, readinessThresholds.minimumActivityCount)
     }
 
     @Test

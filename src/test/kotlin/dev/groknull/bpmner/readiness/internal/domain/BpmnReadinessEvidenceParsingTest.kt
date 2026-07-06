@@ -8,6 +8,7 @@ package dev.groknull.bpmner.readiness.internal.domain
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.internal.adapter.inbound.normalize
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -17,7 +18,7 @@ import kotlin.test.assertTrue
  * `text` + `sourceType` (no `id`). When `SourceEvidence.id` was a non-null `@NotBlank` field, Jackson
  * threw `KotlinInvalidNullException`, Embabel retried 10×, and the whole process failed despite a
  * perfect READY verdict. `id` is now optional (defaulted), so the model output deserialises cleanly;
- * stable ids are assigned later by [BpmnReadinessPostChecker].
+ * stable ids are assigned later by [normalize].
  */
 class BpmnReadinessEvidenceParsingTest {
     private val mapper = jacksonObjectMapper()
@@ -51,16 +52,10 @@ class BpmnReadinessEvidenceParsingTest {
     }
 
     @Test
-    fun `post-checker backfills the deserialised blank ids`() {
+    fun `normalize backfills the deserialised blank ids`() {
         val assessment = mapper.readValue<ProcessInputAssessment>(modelJson)
 
-        val checked =
-            BpmnReadinessPostChecker().apply(
-                dev.groknull.bpmner.bpmn.BpmnRequest(
-                    "An employee submits a purchase request, then it is reviewed, and finally it is completed.",
-                ),
-                assessment,
-            )
+        val checked = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 5)
 
         assertTrue(checked.evidence.all { it.id.isNotBlank() })
         assertEquals(listOf("ev-1", "ev-2"), checked.evidence.map { it.id })

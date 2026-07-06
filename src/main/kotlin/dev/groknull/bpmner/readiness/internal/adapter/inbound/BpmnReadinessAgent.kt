@@ -17,7 +17,9 @@ import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker
+import dev.groknull.bpmner.readiness.ReadinessDimension
+import dev.groknull.bpmner.readiness.ReadinessDimensionScore
+import dev.groknull.bpmner.readiness.ReadinessVerdict
 import org.jmolecules.architecture.hexagonal.Application
 import org.springframework.context.ApplicationEventPublisher
 
@@ -28,7 +30,6 @@ internal class BpmnReadinessAgent(
     private val thresholds: BpmnReadinessThresholdsConfig,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
-    private val postChecker = BpmnReadinessPostChecker(thresholds)
 
     @AchievesGoal(
         description = "Assess raw BPMN generation input for process readiness",
@@ -50,7 +51,7 @@ internal class BpmnReadinessAgent(
         val modelAssessment = promptRunner
             .creating(ProcessInputAssessment::class.java)
             .fromTemplate("bpmner/assess_readiness", templateModel(request))
-        val assessment = postChecker.apply(request, modelAssessment)
+        val assessment = modelAssessment.normalize(thresholds.readyThreshold, thresholds.maxClarificationQuestions)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment
     }
@@ -66,5 +67,50 @@ internal class BpmnReadinessAgent(
                 "answerText" to it.answerText,
             )
         },
+    )
+}
+
+private const val MIN_SCORE = 0
+private const val MAX_SCORE = 100
+private const val DEFAULT_DIMENSION_SCORE = 50
+
+internal fun ProcessInputAssessment.normalize(readyThreshold: Int, maxClarificationQuestions: Int): ProcessInputAssessment {
+    val overallScoreNormalized = overallScore.coerceIn(MIN_SCORE, MAX_SCORE)
+    val verdictNormalized = if (overallScoreNormalized >= readyThreshold) {
+        ReadinessVerdict.READY
+    } else {
+        ReadinessVerdict.NEEDS_CLARIFICATION
+    }
+
+    val dimensionsMap = dimensions.associateBy { it.dimension }.toMutableMap()
+    ReadinessDimension.entries.forEach { dimension ->
+        dimensionsMap.putIfAbsent(
+            dimension,
+            ReadinessDimensionScore(
+                dimension = dimension,
+                score = DEFAULT_DIMENSION_SCORE,
+                rationale = "No model score was provided for ${dimension.name}.",
+            ),
+        )
+    }
+    dimensionsMap.replaceAll { _, score ->
+        score.copy(score = score.score.coerceIn(MIN_SCORE, MAX_SCORE))
+    }
+    val normalizedDimensions = ReadinessDimension.entries.map { dimensionsMap.getValue(it) }
+
+    val normalizedEvidence = evidence.mapIndexed { index, item ->
+        if (item.id.isBlank()) item.copy(id = "ev-${index + 1}") else item
+    }
+
+    val normalizedQuestions = clarificationQuestions.mapIndexed { index, item ->
+        if (item.id.isBlank()) item.copy(id = "q${index + 1}") else item
+    }.take(maxClarificationQuestions)
+
+    return this.copy(
+        verdict = verdictNormalized,
+        overallScore = overallScoreNormalized,
+        dimensions = normalizedDimensions,
+        evidence = normalizedEvidence,
+        clarificationQuestions = normalizedQuestions,
     )
 }
