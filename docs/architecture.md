@@ -35,7 +35,7 @@ Key decisions:
 - The BPMN process graph is a **behaviour-bearing domain object** — model-intrinsic
   invariants (`validateStructure()`, `validateOwnership()`) live on graph types in `domain`.
   No aggregate/repository/persistence machinery.
-- `api` is the **published external contract** (annotation-free, `allowedDependencies = []`).
+- `api` is the **published external contract** (annotation-free).
   All annotation-free BPMN language types live here; implementations live in `domain`.
 - "Authoring / Conformance / Intake / Render" are **subdomain labels** (grouping lenses),
   not separate directory structures.
@@ -290,7 +290,7 @@ an analogous startup check on deployed agents.
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
 | `rules/` | Pkl rule catalog + rule engine. | `RuleEngine` (port), `BpmnerLintConfig`. |
 | `observability/` | Process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
-| `preview/` | Standalone preview artifact generator: BPMN → transient temp-dir `.preview.html` (deleted on JVM exit) with bundled local viewer. Wired into `generate` via `BpmnPreviewOrchestrator`. `allowedDependencies = []`. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
+| `preview/` | Standalone preview artifact generator: BPMN → transient temp-dir `.preview.html` (deleted on JVM exit) with bundled local viewer. Wired into `generate` via `BpmnPreviewOrchestrator`. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -395,12 +395,8 @@ The boundary enforcement stack (see [adr-002-module-architecture.md](./adr-002-m
 - **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 5 bespoke
   pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `validation` class
   permitted to depend on `rules` `@PrimaryPort`s — ADR-23 Decision 2),
-  `excludeBazelTestClasses`.
-- **`BpmnerModuleBoundariesTest`** — per-module cross-`internal` rules + three `domain`
-  guards: `domain does not depend on other modules except api`, `domain does not depend on
-  forbidden framework prompt or io types` (`forbiddenPromptGlue` bans `com.embabel.common.ai.prompt`
-  in `domain`), `domain contains only the approved kernel types` (closed `DOMAIN_ALLOWLIST`,
-  enforcing the **placement-rule table** from ADR-20 §6).
+  `excludeBazelTestClasses`, and a domain purity rule banning `java.io`, `org.springframework`,
+  and cross-module dependencies from the `bpmn` kernel.
 - **`ApiAnnotationFreeTest`** — enforces that `api` types carry no Jackson, Jakarta, Spring,
   or Embabel annotations. As of ADR-22 Decision 3 the `RuleCategory` carve-out is removed:
   `api` is genuinely Jackson-free with no exception.
