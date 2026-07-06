@@ -5,4 +5,4 @@ over SSE. There is no synchronous `422 Blocked` branch — the web path calls `s
 without a prior assessment handshake, and any need for clarification is resolved interactively
 over the event stream.
 
-Origin: epic #424 (option b decision). See `architecture.md` §3.
+Origin: epic #424 (option b decision). See `architecture.md` §5.

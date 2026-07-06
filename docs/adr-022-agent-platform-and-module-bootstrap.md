@@ -6,7 +6,7 @@
 **gate 4‴:** Module `@ApplicationModule` tests select their `BootstrapMode` per the ADR-451-9
 tier rule — `DIRECT_DEPENDENCIES` where all collaborators are direct (e.g. `conformance`,
 `alignment`, `readiness`, `contract`); `ALL_DEPENDENCIES` for deep integrators whose transitive
-beans must be live (e.g. `pipeline`, `telemetry`, `authoring`).
+beans must be live (e.g. `pipeline`, `telemetry`, `authoring`, `repair`).
 
 **Track A:** `AgentDeploymentValidator` lives in `pipeline/internal/adapter/inbound/` and
 resolves within `ALL_DEPENDENCIES` bootstrap without a stub.
