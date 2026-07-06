@@ -1,4 +1,4 @@
-# ADR-020: Module placement rule & boundaries
+# ADR-004: Module placement rule & boundaries
 
 A type's home is decided by what language it speaks and which slice owns it (**§6** placement
 rule, enforced by `BpmnerArchitectureTest`):
@@ -18,4 +18,4 @@ rule, enforced by `BpmnerArchitectureTest`):
   named in the BPMN ubiquitous language or as an explicit adapter/agent, it finds its capability
   owner — never a new layer bucket.
 
-Origin: epic #424 S7, reshaped by epics #451 and #539. See `architecture.md` §6.
+Origin: epic #424 S7, reshaped by epics #451 and #539. See `../architecture.md` §6.

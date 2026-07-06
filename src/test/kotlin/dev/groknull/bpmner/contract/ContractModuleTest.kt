@@ -18,15 +18,15 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `contract` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.DIRECT_DEPENDENCIES (ADR-22 gate 4‴): Two ADR-22 decisions make this possible.
+ * BootstrapMode.DIRECT_DEPENDENCIES (ADR-006 gate 4‴): Two ADR-006 decisions make this possible.
  * Decision 1 — `BpmnContractConfig` and `BpmnContractThresholdsConfig` are now registered via
  * `@ConfigurationPropertiesScan` in the app root (S4: `config` module dissolved); they materialise
  * whenever `contract` is in the bootstrap set.
  * Decision 2 — `contract` grants `readiness`, which bootstraps `AgentPlatformBpmnReadinessInvoker`
  * (a ctor-injected `AgentPlatform`); `@EnableAgents` supplies the real platform bean (wiring,
- * not a stub). The `BpmnRequestPromptContributor` seam is absent (ADR-21 Track A deleted it).
+ * not a stub). The `BpmnRequestPromptContributor` seam is absent (ADR-005 Track A deleted it).
  * API keys are stubbed so no live LLM call is made at startup.
- * (S7 — ADR-22 Decisions 1+2; ARCHITECTURE §5 S7, G8; S4 — config dissolution)
+ * (S7 — ADR-006 Decisions 1+2; ARCHITECTURE §5 S7, G8; S4 — config dissolution)
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @Import(ContractModuleTest.ContractTestConfig::class)
@@ -41,7 +41,7 @@ import org.springframework.test.context.TestPropertySource
 )
 class ContractModuleTest {
     /**
-     * Supplies the real embabel `AgentPlatform` via `@EnableAgents` (ADR-22 Decision 2).
+     * Supplies the real embabel `AgentPlatform` via `@EnableAgents` (ADR-006 Decision 2).
      * This is framework wiring, not a stub: it provides the actual `AgentPlatform` bean
      * scoped to the agents present in the bootstrapped modules.
      */

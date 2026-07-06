@@ -19,7 +19,7 @@ import org.springframework.test.context.TestPropertySource
  * (S4: `BpmnConfig` dissolved, config now lives in the `ruleset` module itself), creating a
  * `USES_COMPONENT` edge that adds `dev.groknull.bpmner.ruleset` to the module's own bootstrap scan.
  * `@ConfigurationPropertiesScan` in the app root supplies the bean. `@ConditionalOnMissingBean`
- * on `bpmnerLintConfig` prevents double registration. No stub required. (ADR-23 Decision 1.1, S4)
+ * on `bpmnerLintConfig` prevents double registration. No stub required. (ADR-007 Decision 1.1, S4)
  * API keys are stubbed so no live LLM call is made at startup.
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)

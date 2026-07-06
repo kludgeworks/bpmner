@@ -16,7 +16,7 @@ import org.springframework.validation.annotation.Validated
  * Ruleset-module actor configuration — the default linter persona.
  *
  * Bound at `bpmner` to preserve the existing `bpmner.linter` property key while placing
- * config ownership in the ruleset module (ADR-451 S4).
+ * config ownership in the ruleset module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -50,7 +50,7 @@ internal data class BpmnRulesConfig(
  * Ruleset-module lint convention URI configuration.
  *
  * Bound at `bpmner.rules` to preserve the existing `bpmner.rules.config-uri` property key
- * while placing config ownership in the ruleset module (ADR-451 S4).
+ * while placing config ownership in the ruleset module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner.rules")

@@ -23,7 +23,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * ([dev.groknull.bpmner.authoring.internal.domain.BpmnContractFidelityChecker]) lives in
  * `authoring.internal.domain` and is enforced there by Spring Modulith's `verify()`.
  *
- * Rationale (ADR-451-8 disposition a; S9): `BpmnContractFidelityChecker` was a root-package
+ * Rationale (ADR-009 (port-fronting) disposition a; S9): `BpmnContractFidelityChecker` was a root-package
  * `internal class` that leaked across the `authoring → repair` boundary. Relocating the
  * implementation behind this port walls the concrete class inside `*.internal.*` so
  * Modulith's mechanism-1 enforcement fires on any future direct cross-module reach.

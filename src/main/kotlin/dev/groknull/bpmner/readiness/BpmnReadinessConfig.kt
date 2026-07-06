@@ -18,7 +18,7 @@ import org.springframework.validation.annotation.Validated
  * Readiness-module actor configuration — the default readiness-assessor persona.
  *
  * Bound at `bpmner` to preserve the existing `bpmner.readinessAssessor` property key while
- * placing config ownership in the readiness module (ADR-451 S4).
+ * placing config ownership in the readiness module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -52,7 +52,7 @@ data class BpmnReadinessConfig(
  * Readiness-module budget configuration.
  *
  * Bound at `bpmner.budget` to preserve the existing `bpmner.budget.readiness` property key
- * while placing config ownership in the readiness module (ADR-451 S4).
+ * while placing config ownership in the readiness module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner.budget")
@@ -65,7 +65,7 @@ data class BpmnReadinessBudgetConfig(
  * Readiness-module threshold configuration — scoring thresholds and clarification limits.
  *
  * Bound at `bpmner.readiness` to preserve existing operator-facing property keys while
- * placing config ownership in the readiness module (ADR-451 S4).
+ * placing config ownership in the readiness module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner.readiness")

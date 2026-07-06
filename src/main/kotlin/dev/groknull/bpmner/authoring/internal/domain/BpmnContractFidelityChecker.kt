@@ -82,7 +82,7 @@ import org.springframework.stereotype.Component
  *    joins; missing-edge bugs are still caught.
  *
  * Relocated from `authoring` root package to `authoring.internal.domain` as part of S9
- * (ADR-451-8 disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
+ * (ADR-009 (port-fronting) disposition a). Cross-module callers inject [BpmnContractFidelityPort] instead.
  */
 @Component
 @Suppress("TooManyFunctions", "LargeClass") // per-contract-element private helpers (Activity / EndState / Decision / Lane)

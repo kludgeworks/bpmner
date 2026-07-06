@@ -20,7 +20,7 @@ internal class WebGenerationStarter(
      * The process runs in [GenerationMode.INTERACTIVE] so the agent's `assessReadiness`
      * `@State` machine can pause into a `WaitFor.formSubmission` when clarification is needed
      * and surface it over SSE — there is no synchronous 422 `Blocked` branch (architecture G6,
-     * ADR-8 option b).
+     * ADR-003 option b).
      */
     fun start(request: WebGenerationRequest): String {
         val bpmnRequest =

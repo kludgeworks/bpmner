@@ -15,9 +15,9 @@ import org.springframework.test.context.TestPropertySource
 /**
  * Validates that the `repair` module context bootstraps and exposes its root-package ports.
  *
- * BootstrapMode.ALL_DEPENDENCIES (ADR-451-9 Tier 3 — deep integrator, settled post-S9):
+ * BootstrapMode.ALL_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 3 — deep integrator, settled post-S9):
  * `repair` is a genuine deep integrator across `authoring`, `conformance`, `contract`,
- * `readiness`, and `ruleset`. The S9 re-seam (ADR-451-8 disposition a) has resolved the
+ * `readiness`, and `ruleset`. The S9 re-seam (ADR-009 (port-fronting) disposition a) has resolved the
  * root-package `internal` leak: `BpmnContractFidelityChecker` and `DefaultFlowAssigner` are
  * now in `authoring.internal.domain` behind their respective ports (`BpmnContractFidelityPort`,
  * `BpmnDefaultFlowPort`). However, a DIRECT_DEPENDENCIES flip is still not achievable:
@@ -27,7 +27,7 @@ import org.springframework.test.context.TestPropertySource
  * direct dependency of `repair`, a DIRECT_DEPENDENCIES bootstrap of `repair` cannot
  * fully wire `authoring`'s beans — making ALL_DEPENDENCIES the correct tier for a true
  * wiring-complete integration gate. API keys are stubbed so no live LLM call is made.
- * (S9 — ADR-451-9 Tier-3 settled rationale; ADR-451-8 re-seam complete)
+ * (S9 — ADR-009 (bootstrap tiers) Tier-3 settled rationale; ADR-009 (port-fronting) re-seam complete)
  */
 @ApplicationModuleTest(mode = BootstrapMode.ALL_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

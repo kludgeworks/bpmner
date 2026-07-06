@@ -13,7 +13,7 @@ import org.springframework.validation.annotation.Validated
  * Artifact-logging configuration for the evaluation and authoring pipelines.
  *
  * Bound at `bpmner.logging` to preserve existing operator-facing property keys while placing
- * config ownership here (ADR-451 S4). The conformance module owns this config because
+ * config ownership here (ADR-009 S4). The conformance module owns this config because
  * [BpmnEvaluationPipeline] is its primary consumer; the authoring module imports it via
  * its existing `conformance` grant.
  *
@@ -22,10 +22,10 @@ import org.springframework.validation.annotation.Validated
  * `authoring` consumes this config via its existing `conformance` grant, making `conformance`
  * the only cycle-free home under the current module graph.
  *
- * TODO(#451 ADR-451-7): logging-config home remains in `conformance`; telemetry does not consume it.
+ * TODO(#451 ADR-009 (logging-config home)): logging-config home remains in `conformance`; telemetry does not consume it.
  * Live consumers are `conformance` (BpmnEvaluationPipeline) and `authoring` (LlmBpmnProcessGenerator);
  * a telemetry-owned home is not cycle-free under the current graph. Re-evaluate if a
- * per-consumer split is desired (raise as explicit placement decision per ADR-451-7).
+ * per-consumer split is desired (raise as explicit placement decision per ADR-009 (logging-config home)).
  */
 @Validated
 @ConfigurationProperties("bpmner.logging")
@@ -44,7 +44,7 @@ data class BpmnLoggingConfig(
  * Conformance-module linting configuration.
  *
  * Bound at `bpmner` to preserve the existing `bpmner.lintBatchSize` property key
- * while placing config ownership in the conformance module (ADR-451 S4).
+ * while placing config ownership in the conformance module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")

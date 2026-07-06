@@ -24,7 +24,7 @@ import java.net.URI
  * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
  * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
  * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
- * (ADR-23 Decision 1.1, updated for S4 dissolution of `config` module)
+ * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
  */
 @Configuration
 internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {

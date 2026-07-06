@@ -17,7 +17,7 @@ import org.springframework.validation.annotation.Validated
  * Authoring-module configuration — the default generator persona.
  *
  * Bound at `bpmner` to preserve existing operator-facing property keys while placing
- * config ownership in the authoring module (ADR-451 S4).
+ * config ownership in the authoring module (ADR-009 S4).
  */
 @Validated
 @ConfigurationProperties("bpmner")
@@ -47,7 +47,7 @@ internal data class BpmnAuthoringConfig(
  * Authoring-module budget configuration.
  *
  * Bound at `bpmner.budget` to preserve the existing `bpmner.budget.generation` property key
- * while placing config ownership in the authoring module (ADR-451 S4).
+ * while placing config ownership in the authoring module (ADR-009 S4).
  *
  * Generation and repair share a single budget because the repair loop chains into the
  * generation goal in one GOAP plan; lowering [generation] below today's ceiling risks budget
