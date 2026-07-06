@@ -55,7 +55,7 @@ class BpmnReadinessEvidenceParsingTest {
     fun `normalize backfills the deserialised blank ids`() {
         val assessment = mapper.readValue<ProcessInputAssessment>(modelJson)
 
-        val checked = assessment.normalize(75)
+        val checked = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 5)
 
         assertTrue(checked.evidence.all { it.id.isNotBlank() })
         assertEquals(listOf("ev-1", "ev-2"), checked.evidence.map { it.id })

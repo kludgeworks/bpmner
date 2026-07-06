@@ -51,7 +51,7 @@ internal class BpmnReadinessAgent(
         val modelAssessment = promptRunner
             .creating(ProcessInputAssessment::class.java)
             .fromTemplate("bpmner/assess_readiness", templateModel(request))
-        val assessment = modelAssessment.normalize(thresholds.readyThreshold)
+        val assessment = modelAssessment.normalize(thresholds.readyThreshold, thresholds.maxClarificationQuestions)
         eventPublisher.publishEvent(BpmnReadinessAssessedEvent(request, assessment))
         return assessment
     }
@@ -74,7 +74,7 @@ private const val MIN_SCORE = 0
 private const val MAX_SCORE = 100
 private const val DEFAULT_DIMENSION_SCORE = 50
 
-internal fun ProcessInputAssessment.normalize(readyThreshold: Int): ProcessInputAssessment {
+internal fun ProcessInputAssessment.normalize(readyThreshold: Int, maxClarificationQuestions: Int): ProcessInputAssessment {
     val overallScoreNormalized = overallScore.coerceIn(MIN_SCORE, MAX_SCORE)
     val verdictNormalized = if (overallScoreNormalized >= readyThreshold) {
         ReadinessVerdict.READY
@@ -104,7 +104,7 @@ internal fun ProcessInputAssessment.normalize(readyThreshold: Int): ProcessInput
 
     val normalizedQuestions = clarificationQuestions.mapIndexed { index, item ->
         if (item.id.isBlank()) item.copy(id = "q${index + 1}") else item
-    }
+    }.take(maxClarificationQuestions)
 
     return this.copy(
         verdict = verdictNormalized,

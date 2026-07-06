@@ -14,7 +14,7 @@ Generates valid, semantically-grounded BPMN 2.0 XML from plain-language workflow
 ### 1. Semantic Integrity (The Guardrail Pipeline)
 
 Traditional LLM generation often suffers from "hallucinations" or missing requirements. `bpmner` mitigates this with a unique three-stage guardrail system:
-- **Readiness Assessment:** Analyzes the input for modeling suitability. If the description is too vague (missing triggers, end states, or activities), the system blocks generation and initiates an **Interactive Clarification Flow** to gather missing facts.
+- **Readiness Assessment:** Analyzes the input for modeling suitability. If the description is too vague, the system blocks generation and initiates an **Interactive Clarification Flow** to gather missing facts.
 - **Process Contract Extraction:** Derives a structured "contract" from the source text and clarifications. This contract serves as the source of truth, grounding every subsequent generation step in evidence.
 - **Semantic Alignment:** After generation, the system performs a terminal check comparing the BPMN elements against the Process Contract. Any invented tasks or missing branches are detected and reported, preventing ungrounded models from being delivered.
 

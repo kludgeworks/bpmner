@@ -52,7 +52,7 @@ class BpmnReadinessInvokerTest : EmbabelMockitoIntegrationTest() {
             ),
         )
 
-        // Prose carries the deterministic readiness markers the post-checker scores: a start trigger
+        // Prose carries the readiness markers: a start trigger
         // ("when"/"submitted"), several process verbs, a sequence marker ("then"), and end states.
         val prose = "When an order is submitted, it is reviewed, then approved and completed."
         val result = readinessInvoker.assess(BpmnRequest(processDescription = prose))

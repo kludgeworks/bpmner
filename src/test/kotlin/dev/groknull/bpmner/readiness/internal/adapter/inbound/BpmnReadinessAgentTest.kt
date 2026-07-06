@@ -52,7 +52,7 @@ class BpmnReadinessAgentTest {
             rationale = "Model rationale.",
         )
 
-        val normalized = assessment.normalize(75)
+        val normalized = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 5)
 
         assertEquals(100, normalized.overallScore)
         assertEquals(ReadinessVerdict.READY, normalized.verdict)
@@ -85,10 +85,32 @@ class BpmnReadinessAgentTest {
             rationale = "Model rationale.",
         )
 
-        val normalized = assessment.normalize(75)
+        val normalized = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 5)
 
         assertEquals(listOf("ev-1", "existing-ev"), normalized.evidence.map { it.id })
         assertEquals(listOf("q1", "existing-q"), normalized.clarificationQuestions.map { it.id })
+    }
+
+    @Test
+    fun `normalize limits clarification questions count`() {
+        val assessment = ProcessInputAssessment(
+            verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
+            overallScore = 60,
+            dimensions = ReadinessDimension.entries.map {
+                ReadinessDimensionScore(it, 60, "Rationale")
+            },
+            clarificationQuestions = listOf(
+                ClarificationQuestion("", "What starts it?"),
+                ClarificationQuestion("", "Who is responsible?"),
+                ClarificationQuestion("", "What ends it?"),
+            ),
+            rationale = "Model rationale.",
+        )
+
+        val normalized = assessment.normalize(readyThreshold = 75, maxClarificationQuestions = 2)
+
+        assertEquals(2, normalized.clarificationQuestions.size)
+        assertEquals(listOf("q1", "q2"), normalized.clarificationQuestions.map { it.id })
     }
 
     private fun assessment(
