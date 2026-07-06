@@ -57,6 +57,10 @@
 		{
 			"path": "docs/adr/adr-009-module-config-and-isolation.md",
 			"description": "ADR-009: Decoupled per-capability configuration and isolation"
+		},
+		{
+			"path": "docs/adr/adr-010-sanctioned-architecture-exceptions.md",
+			"description": "ADR-010: Sanctioned architecture-test exceptions via opt-in marker annotation"
 		}
 	]
 }
