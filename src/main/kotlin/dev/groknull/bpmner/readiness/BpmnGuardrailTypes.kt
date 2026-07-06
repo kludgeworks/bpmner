@@ -23,7 +23,7 @@ import dev.groknull.bpmner.bpmn.ClarificationExchange as ApiClarificationExchang
  * response with `InvalidFormatException`, the LLM call retries, and a more conservative
  * verdict often comes back — silently downgrading READY responses. The canonical
  * cross-mapping is documented in
- * `dev.groknull.bpmner.readiness.internal.domain.BpmnReadinessPostChecker.dimensionFor`.
+ * `dev.groknull.bpmner.readiness.internal.adapter.inbound.normalize`.
  *
  * Aliases are read-only — canonical names still serialise out.
  */
@@ -73,8 +73,8 @@ enum class MissingProcessArea {
     @JsonAlias("END_STATES")
     END_STATE,
 
-    // ACTIVITIES (a ReadinessDimension) maps onto ACTIVITY_SEQUENCE per the post-checker
-    // (BpmnReadinessPostChecker.dimensionFor returns ACTIVITIES for ACTIVITY_SEQUENCE).
+    // ACTIVITIES (a ReadinessDimension) maps onto ACTIVITY_SEQUENCE
+    // (activities map to sequence order dimension).
     // SEQUENCE_ORDER is the dimension that pairs with this area, so it's the natural alias.
     @JsonAlias("SEQUENCE_ORDER", "ACTIVITIES")
     ACTIVITY_SEQUENCE,
@@ -114,7 +114,7 @@ enum class EvidenceSourceType {
 data class SourceEvidence(
     // Optional from the model's perspective: ids are a code/traceability concern, not something the
     // LLM should invent (Mistral omits them; a missing id deserialises as the empty string rather
-    // than null). Blank ids are backfilled deterministically by BpmnReadinessPostChecker before the
+    // than null). Blank ids are backfilled deterministically by BpmnReadinessAgent.normalize before the
     // assessment flows downstream. Not @NotBlank: the empty default must survive bean validation
     // rather than re-triggering the LLM retry loop.
     @get:JsonPropertyDescription("Stable evidence id (assigned by the system if omitted)")

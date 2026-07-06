@@ -30,7 +30,7 @@ class BpmnGuardrailTypesJacksonTest {
     @Test
     fun `ReadinessDimension accepts MissingProcessArea names via JsonAlias`() {
         // Each pair: (alias the LLM might emit, the canonical ReadinessDimension it resolves to).
-        // Derived from BpmnReadinessPostChecker.dimensionFor(). PROCESS_BOUNDARY / START_TRIGGER
+        // Derived from BpmnReadinessAgent's mapping logic. PROCESS_BOUNDARY / START_TRIGGER
         // share the same name across both enums, so no alias is needed for them.
         val cases =
             listOf(
