@@ -272,7 +272,6 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 | `browser/` | OS-level browser launch for post-generation preview. | `BrowserOpenPort` (port). |
 | `preview/` | BPMN → transient temp-dir `.preview.html` artifact. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
 
-
 <!-- markdownlint-enable MD013 -->
 
 ### Pipeline diagram
@@ -377,7 +376,6 @@ The boundary enforcement stack (see [ADR-020](./adr-020-module-placement-and-bou
   cross-module dependencies`: the `bpmn/` kernel module may not import other `bpmner` modules
   or framework/prompt-construction glue (ported from deleted `BpmnerModuleBoundariesTest` in
   epic #539; enforces the **placement-rule table** from ADR-20 §6).
-
 - **`src/test/resources/archunit_ignore_patterns.txt`** — Kotlin-synthetic regex suppressions
   only (`$\d+`, `$Companion`, etc.); masks no product-code dependency.
 
@@ -405,3 +403,8 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | [ADR-020](./adr-020-module-placement-and-boundaries.md) | Module placement rule & boundaries | Accepted — current on `main` |
 | [ADR-021](./adr-021-prompt-contribution-seam.md) | Prompt contribution lives in the `bpmn` kernel | Accepted — current on `main` |
 | [ADR-023](./adr-023-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |
+| [ADR-003 / ADR-004](./adr-003-retryable-generation-exception.md) | Retryable generation exception: kernel placement & feedback contract | Accepted — current on `main` |
+| [ADR-8 (ADR-008)](./adr-008-interactive-web-generation.md) | Interactive web generation (no synchronous 422) | Accepted — current on `main` |
+| [ADR-22 (ADR-022)](./adr-022-agent-platform-and-module-bootstrap.md) | Agent platform wiring & module-test bootstrap | Accepted — current on `main` |
+| [ADR-451 / ADR-451-7 / ADR-451-8 / ADR-451-9](./adr-451-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
+| [ADR-376-003](./adr-376-003-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |

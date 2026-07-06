@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component
  * returns the best evaluation reached so far.
  *
  * This is **wiring only** — the repair handlers, advancer, appliers, and validator are all
- * reused unchanged (doc ADR-6 / N1).
+ * reused unchanged.
  */
 @Component
 internal class BpmnRepairLoop(
