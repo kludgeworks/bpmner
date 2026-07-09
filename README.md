@@ -62,13 +62,13 @@ bazelisk build //src:bpmner_app
 ### Run
 
 `bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell. Both launch
-through the `bpmner-cli` mise task, which loads the chosen provider's API key from 1Password
-(`op://bpmner/<provider>/api-key`), sets the matching Spring profile via `SPRING_PROFILES_ACTIVE`, and
+through the `bpmner-cli` mise task. For most providers, it loads the API key from 1Password
+(`op://bpmner/<provider>/api-key`); for `githubmodels`, it retrieves the token via `gh auth token`. The task sets the matching Spring profile via `SPRING_PROFILES_ACTIVE`, and
 runs `bazelisk run //src:bpmner_app`. Sign in to 1Password first (`op signin`, or set
-`OP_SERVICE_ACCOUNT_TOKEN`).
+`OP_SERVICE_ACCOUNT_TOKEN`) if using a 1Password-based provider.
 
 Select a provider with `--provider` — one of `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`,
-or `llama`; omit it to choose interactively (via `gum`). Add `--web` for the browser UI and `--verbose`
+`llama`, or `githubmodels`; omit it to choose interactively (via `gum`). Add `--web` for the browser UI and `--verbose`
 for DEBUG logging.
 
 #### Web Interface
@@ -170,7 +170,7 @@ ANTHROPIC_API_KEY=sk-ant-... SPRING_PROFILES_ACTIVE=anthropic \
   //src/test:ContractVocabularySmokeTest --test_output=streamed
 ```
 
-Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, or `llama`.
+Set `SPRING_PROFILES_ACTIVE` to a provider profile: `anthropic`, `openai`, `gemini`, `mistral`, `deepseek`, `llama`, or `githubmodels` (in which case ensure `GITHUB_TOKEN` is set).
 
 To manually verify the full BPMN pipeline, run the `LiveLlmFullPipelineSmokeTest` suite with one supported live provider profile:
 
