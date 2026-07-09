@@ -1,0 +1,9 @@
+{
+	"packages": {
+		".": {
+			"release-type": "simple",
+			"package-name": "bpmner",
+			"changelog-path": "CHANGELOG.md"
+		}
+	}
+}
