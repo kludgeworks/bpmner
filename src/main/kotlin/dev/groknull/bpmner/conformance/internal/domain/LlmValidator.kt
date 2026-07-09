@@ -8,6 +8,7 @@ package dev.groknull.bpmner.conformance.internal.domain
 import com.embabel.agent.api.common.PromptRunner
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
+import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnRuleGuidancePort
 import dev.groknull.bpmner.ruleset.RuleRegistry
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Component
         "Do not extend this class — the GOAP-shaped LlmRuleAgent is the replacement.",
 )
 @Component
+@SanctionedArchitectureException(reason = "Deprecated validation class needing temporary ruleset package access (ADR-010)")
 internal class LlmValidator(
     private val ruleRegistry: RuleRegistry,
 ) : BpmnRuleGuidancePort {

@@ -9,6 +9,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import dev.groknull.bpmner.conformance.BpmnAutoFixResult
 import dev.groknull.bpmner.conformance.BpmnLintRuleCapability
 import dev.groknull.bpmner.conformance.BpmnLintRuleIds
@@ -20,28 +21,14 @@ import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * Backs [BpmnLintingPort] with the Pkl rule catalog plus the [RuleEngine]. Replaces the
- * legacy GraalJS-hosted bpmn-lint bridge (`BpmnLintService` and its JS context) so the
- * `bpmnlint` TS codebase, `linter-rules.json`, `Catalog.pkl`, and `bpmner.lint.*` runtime
- * config can be retired. GraalJS now only lives inside [..layout..].
- *
- * The port surface is preserved so existing consumers — `BpmnEvaluationPipeline`,
- * `BpmnDiagnosticNormalizer`, `BpmnLocalRepairCapabilityValidator`, `BpmnRepairPromptFactory`
- * — keep working unchanged. The interface itself (and `LintIssue` / `BpmnLintRuleCapability`
- * shapes) will be renamed in a follow-up; this commit is a Branch-by-Abstraction swap of
- * the implementation only.
- *
- * [autoFix] returns `null`: the JS auto-fix path is gone. Safe-to-execute deterministic
- * repairs flow through Kotlin handlers under `DeterministicTopologyRepairStrategy` instead
- * (`LOCAL_MODEL_FIX` kind).
+ * Anti-Corruption Layer (ACL) backing [BpmnLintingPort] with the [RuleEngine].
+ * Enforced as a sanctioned exception to ensure clean boundaries (ADR-007, ADR-010).
  */
-// NOTE: @SecondaryAdapter is deliberately absent (ADR-007 Decision 2). This adapter calls
-// RuleEngine and RuleRegistry, both @PrimaryPort interfaces in rules/, which violates the
-// jMolecules ensureHexagonal(LENIENT) rule for the @SecondaryAdapter layer. This adapter is
+// NOTE: @SecondaryAdapter is deliberately absent (ADR-007 Decision 2). This adapter is
 // an Anti-Corruption Layer (ACL) over rules' driving surface, not a pure secondary adapter.
-// The ACL shape is enforced by a BpmnerArchitectureTest pin: RuleEngineLintingAdapter is the
-// sole validation class permitted to depend on rules' @PrimaryPorts.
+// The ACL exception is marked via @SanctionedArchitectureException (ADR-010).
 @Component
+@SanctionedArchitectureException(reason = "Anti-Corruption Layer over rules primary ports (ADR-010)")
 internal class RuleEngineLintingAdapter(
     private val ruleEngine: RuleEngine,
     private val ruleRegistry: RuleRegistry,

@@ -408,5 +408,6 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | [ADR-007](./adr/adr-007-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |
 | [ADR-008](./adr/adr-008-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
 | [ADR-009](./adr/adr-009-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
+| [ADR-010](./adr/adr-010-sanctioned-architecture-exceptions.md) | Sanctioned architecture-test exceptions via opt-in marker | Accepted — current on `main` |
 
 <!-- markdownlint-enable MD013 -->

@@ -33,36 +33,9 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 
 /**
- * Phase 1H (#216) parity gate.
- *
- * Asserts that the legacy [BpmnDefinitionValidator] and the new [RuleEngine] composing
- * the seven compiled rules from `rules/internal/domain/compiled/` produce the **same set of
- * triggered diagnosticCodes** for the same input. Parity is on the **set of codes**, not on
- * count and not on message text — see #216:
- *
- *  > Compare by scenario (same input → same set of triggered diagnosticCodes).
- *  > Not by exact message text — messages will differ between old String errors and new
- *  > RuleDiagnostic objects.
- *
- * `BpmnDefinitionValidator` stays alive as the parity oracle for Phase 1 (#216 explicit AC).
- * Its eventual deletion is Phase 2 work.
- *
- * The rule engine is obtained via [RulesTestFixtures.standardCompiledRuleEngine] — the
- * published `rules` root test fixture — so this test does not reach into `rules.internal.*`
- * directly (S5 — ARCHITECTURE §5 S5, §1.5).
- *
- * ### Translation contract
- *
- * Each legacy validator error string is mapped to exactly one of the 22 diagnosticCodes
- * emitted by the compiled rules via [TRANSLATION_TABLE]. The mapping is the **parity
- * contract** — it must be reviewed alongside this test before it can be trusted.
- *
- * - **Catch-all assertion:** any validator string that fails to match any pattern fails the
- *   test loudly. This prevents silent drift when a future validator string change isn't
- *   reflected in the table.
- * - **Coverage assertion:** the union of all codes triggered across every scenario must
- *   equal [EXPECTED_DIAGNOSTIC_CODES], guaranteeing each compiled rule's code is exercised
- *   at least once.
+ * Parity regression gate (see #216).
+ * Asserts that the legacy [BpmnDefinitionValidator] and the new [RuleEngine] producing
+ * the compiled rules trigger the same set of diagnostic codes for the same inputs.
  */
 @Suppress("TooManyFunctions")
 class BpmnerParityTest {

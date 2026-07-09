@@ -16,6 +16,7 @@ import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
 import com.tngtech.archunit.library.Architectures.LayeredArchitecture
+import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import org.jmolecules.archunit.JMoleculesArchitectureRules
 import org.jmolecules.archunit.JMoleculesArchitectureRules.VerificationDepth
 import org.jmolecules.archunit.JMoleculesDddRules
@@ -122,19 +123,15 @@ class BpmnerArchitectureTest {
 
     @Test
     fun `only permitted validation classes may reach rules primary ports`() {
-        // ACL pin (ADR-007 Decision 2): RuleEngineLintingAdapter is the Anti-Corruption Layer over
-        // rules' @PrimaryPort interfaces (RuleEngine, RuleRegistry). Adding @SecondaryAdapter would
-        // yield 7 ensureHexagonal(LENIENT) violations — the omission is intentional.
-        // LlmValidator (@Deprecated) is a pre-existing second reacher of RuleRegistry; it is
-        // excluded here as a named, audited exception pending its removal in a follow-on phase.
+        // ACL pin (ADR-007, ADR-010): classes annotated with @SanctionedArchitectureException
+        // are allowed to depend on rules' @PrimaryPort interfaces (RuleEngine, RuleRegistry).
+        // RuleEngineLintingAdapter is the ACL; LlmValidator is a deprecated exception.
         // No other validation class may reach rules @PrimaryPorts directly.
         noClasses()
             .that()
             .resideInAPackage("..conformance..")
             .and()
-            .doNotHaveSimpleName("RuleEngineLintingAdapter")
-            .and()
-            .doNotHaveSimpleName("LlmValidator")
+            .areNotAnnotatedWith(SanctionedArchitectureException::class.java)
             .should()
             .dependOnClassesThat()
             .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleEngine")
@@ -142,9 +139,8 @@ class BpmnerArchitectureTest {
             .dependOnClassesThat()
             .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleRegistry")
             .because(
-                "Only RuleEngineLintingAdapter (ACL, ADR-007 Decision 2) and the deprecated " +
-                    "LlmValidator (audited exception, pending removal) may reach rules' " +
-                    "@PrimaryPorts; all other validation classes must go through BpmnLintingPort",
+                "Only classes annotated with @SanctionedArchitectureException (ADR-010) " +
+                    "may reach rules' @PrimaryPorts; all other validation classes must go through BpmnLintingPort",
             )
             .check(classes)
     }

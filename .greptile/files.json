@@ -15,12 +15,52 @@
 		{
 			"path": "linter/docs/rule-authoring-guide.md",
 			"description": "Rules for adding or changing BPMN linter rules",
-			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/rules/**"]
+			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/ruleset/**"]
 		},
 		{
 			"path": "linter/docs/toolbox.md",
 			"description": "BPMN rule primitive implementations and toolbox API",
-			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/rules/**"]
+			"scope": ["linter/**", "src/main/kotlin/dev/groknull/bpmner/ruleset/**"]
+		},
+		{
+			"path": "docs/adr/adr-001-single-agent-design.md",
+			"description": "ADR-001: Single-agent orchestrator design and coordination invariants"
+		},
+		{
+			"path": "docs/adr/adr-002-retryable-generation-exception.md",
+			"description": "ADR-002: Handling retryable exceptions in BPMN generation"
+		},
+		{
+			"path": "docs/adr/adr-003-interactive-web-generation.md",
+			"description": "ADR-003: Interactive web generation and browser integration"
+		},
+		{
+			"path": "docs/adr/adr-004-module-placement-and-boundaries.md",
+			"description": "ADR-004: Core module placement rules and hexagonal boundaries"
+		},
+		{
+			"path": "docs/adr/adr-005-prompt-contribution-seam.md",
+			"description": "ADR-005: Seam for custom prompt contributions and styling"
+		},
+		{
+			"path": "docs/adr/adr-006-agent-platform-and-module-bootstrap.md",
+			"description": "ADR-006: Agent platform bootstrap and execution modes"
+		},
+		{
+			"path": "docs/adr/adr-007-conformance-ruleset-acl.md",
+			"description": "ADR-007: Conformance-to-ruleset Anti-Corruption Layer (ACL)"
+		},
+		{
+			"path": "docs/adr/adr-008-rule-docs-golden-source.md",
+			"description": "ADR-008: BPMN rule documentation single-source policy"
+		},
+		{
+			"path": "docs/adr/adr-009-module-config-and-isolation.md",
+			"description": "ADR-009: Decoupled per-capability configuration and isolation"
+		},
+		{
+			"path": "docs/adr/adr-010-sanctioned-architecture-exceptions.md",
+			"description": "ADR-010: Sanctioned architecture-test exceptions via opt-in marker annotation"
 		}
 	]
 }
