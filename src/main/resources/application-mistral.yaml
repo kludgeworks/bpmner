@@ -18,13 +18,13 @@ embabel:
         prompts:
           default-timeout: PT180S
   models:
-    default-llm: mistral-large-2411
+    default-llm: mistral-large-2512
     llms:
-      generator: mistral-large-2411
-      repairer: mistral-large-2411
+      generator: mistral-large-2512
+      repairer: mistral-large-2512
       repair-label: mistral-small-2506
       repair-patch: mistral-small-2506
-      repair-rewrite: mistral-large-2411
+      repair-rewrite: mistral-large-2512
       readiness-assessor: mistral-small-2506
-      contract-extractor: mistral-large-2411
-      alignment-validator: mistral-large-2411
+      contract-extractor: mistral-large-2512
+      alignment-validator: mistral-large-2512
