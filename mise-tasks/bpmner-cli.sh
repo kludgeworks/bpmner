@@ -8,7 +8,7 @@
 #MISE tools={gum="latest"}
 #MISE raw=true
 #USAGE flag "-p --provider <provider>" help="LLM provider profile (prompts via gum if omitted)" {
-#USAGE   choices "anthropic" "openai" "gemini" "mistral" "deepseek" "llama"
+#USAGE   choices "anthropic" "openai" "gemini" "mistral" "deepseek" "llama" "githubmodels"
 #USAGE }
 #USAGE flag "-m --mode <mode>" help="Launch mode (cli or web, prompts via gum if omitted)" {
 #USAGE   choices "cli" "web"
@@ -26,6 +26,7 @@ choices=(
   "Mistral:mistral"
   "DeepSeek:deepseek"
   "Llama via OpenRouter:llama"
+  "GitHub Models:githubmodels"
 )
 
 # No --provider given: pick one interactively with gum.
@@ -51,6 +52,7 @@ gemini) key_var=GEMINI_API_KEY op_item=gemini ;;
 mistral) key_var=MISTRAL_API_KEY op_item=mistral ;;
 deepseek) key_var=DEEPSEEK_API_KEY op_item=deepseek ;;
 llama) key_var=OPENROUTER_API_KEY op_item=openrouter ;;
+githubmodels) key_var=GITHUB_TOKEN op_item=github-models ;;
 *)
   echo "Unknown provider: '${provider}'" >&2
   exit 1
