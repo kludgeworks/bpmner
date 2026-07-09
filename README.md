@@ -190,6 +190,12 @@ These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocat
 - `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
 - `docs/`: In-depth documentation in the consolidated [Architecture doc](docs/architecture.md) (covers the pipeline, hexagonal design, GOAP lifecycle, agent overview, and module map) plus the [Operator Guide](docs/operator-guide.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
 
+## Releases
+
+Merges to `main` feed [release-please](https://github.com/googleapis/release-please) through Conventional Commits. Release Please opens or updates a release PR that prepares `CHANGELOG.md` and repository release metadata; merging that PR creates the GitHub release.
+
+Publishing packages or artifacts is intentionally not configured. The release workflow uses the repository-provided `GITHUB_TOKEN`; maintainers only need to switch to a dedicated token secret if release-please-created PRs must trigger additional workflows.
+
 ## Contributing
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
