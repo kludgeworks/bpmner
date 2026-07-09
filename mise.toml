@@ -22,6 +22,7 @@ rumdl = "latest"
 actionlint = "latest"
 "github:google/addlicense" = "latest"
 coursier = "latest"
+gh = "latest"
 
 [env]
 HK_MISE = 1
