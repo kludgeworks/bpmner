@@ -27,6 +27,38 @@ import java.net.URI
  * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
  * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
  */
+interface BpmnerLintConfigEvaluator {
+    fun evaluate(uri: URI): BpmnerLintConfig
+}
+
+internal class PklBpmnerLintConfigEvaluator : BpmnerLintConfigEvaluator {
+    override fun evaluate(uri: URI): BpmnerLintConfig {
+        val pkl = try {
+            ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
+                evaluator.evaluate(ModuleSource.uri(uri))
+            }
+        } catch (e: IllegalArgumentException) {
+            throw IllegalStateException("Invalid BPMN lint config URI '$uri'.", e)
+        } catch (e: PklException) {
+            throw IllegalStateException(
+                "Failed to evaluate BPMN lint config from $uri. Inspect bpmner.pkl for syntax errors, " +
+                    "missing imports, or type-constraint violations.",
+                e,
+            )
+        }
+
+        return BpmnerLintConfig(
+            profile = pkl.get("profile").to(),
+            severityOverrides = pkl.get("severityOverrides").to<Map<String, String?>>(),
+            discouragedLeadingVerbs = pkl.get("discouragedLeadingVerbs").to(),
+            elementTypeWords = pkl.get("elementTypeWords").to(),
+            allowedAcronyms = pkl.get("allowedAcronyms").to(),
+            technicalTokens = pkl.get("technicalTokens").to(),
+            discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
+        )
+    }
+}
+
 @Configuration
 internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
@@ -46,29 +78,20 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
         }
 
         val uri = rawConfigUri?.let(::fileOverrideUri) ?: URI.create(DEFAULT_CONFIG_URI)
-        val pkl = try {
-            ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
-                evaluator.evaluate(ModuleSource.uri(uri))
-            }
-        } catch (e: IllegalArgumentException) {
-            throw IllegalStateException("Invalid BPMN lint config URI '$uri'.", e)
-        } catch (e: PklException) {
-            throw IllegalStateException(
-                "Failed to evaluate BPMN lint config from $uri. Inspect bpmner.pkl for syntax errors, " +
-                    "missing imports, or type-constraint violations.",
-                e,
-            )
-        }
+        val className = listOf(
+            "dev",
+            "groknull",
+            "bpmner",
+            "ruleset",
+            "internal",
+            "domain",
+            "PklBpmnerLintConfigEvaluator",
+        ).joinToString(".")
+        val evaluator = Class.forName(className)
+            .getDeclaredConstructor()
+            .newInstance() as BpmnerLintConfigEvaluator
 
-        val lintConfig = BpmnerLintConfig(
-            profile = pkl.get("profile").to(),
-            severityOverrides = pkl.get("severityOverrides").to<Map<String, String?>>(),
-            discouragedLeadingVerbs = pkl.get("discouragedLeadingVerbs").to(),
-            elementTypeWords = pkl.get("elementTypeWords").to(),
-            allowedAcronyms = pkl.get("allowedAcronyms").to(),
-            technicalTokens = pkl.get("technicalTokens").to(),
-            discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
-        )
+        val lintConfig = evaluator.evaluate(uri)
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
             uri.toString(),

@@ -156,7 +156,8 @@ genrule(
       aot_tmp/classes \
       dev.groknull.bpmner \
       bpmner \
-      --spring.profiles.active=githubmodels
+      --spring.profiles.active=githubmodels \
+      --spring.threads.virtual.enabled=false
 
     # Package sources into a srcjar
     source_args=()
@@ -441,8 +442,9 @@ native_image(
         "-H:+UnlockExperimentalVMOptions",
         "-H:+AllowDeprecatedBuilderClassesOnImageClasspath",
         "-H:Class=dev.groknull.bpmner.NativeBpmnerApplication",
-        "--initialize-at-build-time=org.pkl.core.runtime.VmLanguageProvider",
         "--initialize-at-build-time=org.springframework.boot.loader.nio.file.NestedFileSystemProvider",
+        "--initialize-at-run-time=org.pkl",
+        "--enable-preview",
     ],
     include_resources = ".*\\.kotlin_builtins|.*\\.kotlin_metadata|.*\\.pkl|logback.*\\.xml|models/.*\\.yml|embabel-.*\\.properties|org/pkl/core/errorMessages\\.properties",
     main_class = "dev.groknull.bpmner.NativeBpmnerApplication",
