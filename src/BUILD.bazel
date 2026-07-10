@@ -157,15 +157,33 @@ genrule(
       --spring.profiles.active=githubmodels
 
     # Package sources into a srcjar
-    jar cf $(location aot_sources.srcjar) -C aot_tmp/sources .
+    source_args=()
+    while IFS= read -r file; do
+      rel="$${file#./}"
+      source_args+=("$${rel}=aot_tmp/sources/$${rel}")
+    done < <(cd aot_tmp/sources && find . -type f | sort)
+    $(location @bazel_tools//tools/zip:zipper) c $(location aot_sources.srcjar) "$${source_args[@]}"
 
     # Package resources into a jar
-    jar cf $(location aot_resources.jar) -C aot_tmp/resources .
+    resource_args=()
+    while IFS= read -r file; do
+      rel="$${file#./}"
+      resource_args+=("$${rel}=aot_tmp/resources/$${rel}")
+    done < <(cd aot_tmp/resources && find . -type f | sort)
+    $(location @bazel_tools//tools/zip:zipper) c $(location aot_resources.jar) "$${resource_args[@]}"
 
     # Package generated classes into a jar
-    jar cf $(location aot_classes.jar) -C aot_tmp/classes .
+    class_args=()
+    while IFS= read -r file; do
+      rel="$${file#./}"
+      class_args+=("$${rel}=aot_tmp/classes/$${rel}")
+    done < <(cd aot_tmp/classes && find . -type f | sort)
+    $(location @bazel_tools//tools/zip:zipper) c $(location aot_classes.jar) "$${class_args[@]}"
     """,
-    tools = [":aot_processor"],
+    tools = [
+        ":aot_processor",
+        "@bazel_tools//tools/zip:zipper",
+    ],
 )
 
 java_import(
@@ -235,9 +253,11 @@ genrule(
     srcs = ["@pkl_config_java_all_jar//file"],
     outs = ["pkl_config_java_all_stripped.jar"],
     cmd = """
-    mkdir -p empty
-    jar cf $@ -C empty .
+    mkdir -p empty/META-INF
+    touch empty/META-INF/MANIFEST.MF
+    $(location @bazel_tools//tools/zip:zipper) c $@ META-INF/MANIFEST.MF=empty/META-INF/MANIFEST.MF
     """,
+    tools = ["@bazel_tools//tools/zip:zipper"],
 )
 
 java_import(
@@ -251,7 +271,12 @@ genrule(
     cmd = """
     cat > $@ <<'EOF'
 #!/usr/bin/env bash
-exec /Users/timsparg/.local/share/mise/installs/java/liberica-nik-openjdk25-25.0.3+1/bin/native-image "$$@"
+export DEVELOPER_DIR="$${DEVELOPER_DIR:-/Library/Developer/CommandLineTools}"
+if [[ -z "$${JAVA_HOME:-}" ]]; then
+  echo "JAVA_HOME must point at a GraalVM native-image JDK" >&2
+  exit 1
+fi
+exec "$${JAVA_HOME}/bin/native-image" "$$@"
 EOF
     chmod +x $@
     """,
@@ -408,8 +433,10 @@ public final class NativeBpmnerApplication {
   }
 }
 EOF
-    jar cf $(location native_launcher.srcjar) -C native_launcher_src .
+    $(location @bazel_tools//tools/zip:zipper) c $(location native_launcher.srcjar) \
+      dev/groknull/bpmner/NativeBpmnerApplication.java=native_launcher_src/dev/groknull/bpmner/NativeBpmnerApplication.java
     """,
+    tools = ["@bazel_tools//tools/zip:zipper"],
 )
 
 java_library(
@@ -432,6 +459,7 @@ native_image(
     main_class = "dev.groknull.bpmner.NativeBpmnerApplication",
     native_image_tool = ":native_image_tool",
     reflection_configuration = ":native-reflect-config.json",
+    tags = ["local"],
     deps = [
         ":bpmner_aot_lib",
         ":bpmner_aot_resources",

@@ -921,7 +921,7 @@
     "@@rules_graalvm+//:extensions.bzl%graalvm": {
       "general": {
         "bzlTransitiveDigest": "h5NoLe6qf+ziboLGAdcXrD+fgwCizx5PmMd0VH19SXY=",
-        "usagesDigest": "i4Qbmvxy6EI8XV2+kEDNUlNQP7eoL/AL+Ix58L+C9hg=",
+        "usagesDigest": "wwYi7TFvPXIgv+2jdqNrQwb1uqkErKriXXGMEkqoGdU=",
         "recordedFileInputs": {},
         "recordedDirentsInputs": {},
         "envVariables": {},
