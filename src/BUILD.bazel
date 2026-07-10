@@ -142,6 +142,8 @@ genrule(
         "aot_classes.jar",
     ],
     cmd = """
+    set -euo pipefail
+
     mkdir -p aot_tmp/sources
     mkdir -p aot_tmp/resources
     mkdir -p aot_tmp/classes
@@ -424,7 +426,12 @@ public final class NativeBpmnerApplication {
       if (arg.startsWith("--") && arg.contains("=")) {
         String property = arg.substring(2);
         int separator = property.indexOf('=');
-        System.setProperty(property.substring(0, separator), property.substring(separator + 1));
+        String key = property.substring(0, separator);
+        if (key.contains(".")) {
+          System.setProperty(key, property.substring(separator + 1));
+        } else {
+          applicationArgs.add(arg);
+        }
       } else {
         applicationArgs.add(arg);
       }
