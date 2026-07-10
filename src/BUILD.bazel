@@ -268,24 +268,6 @@ java_import(
 )
 
 genrule(
-    name = "native_image_tool",
-    outs = ["native-image-tool"],
-    cmd = """
-    cat > $@ <<'EOF'
-#!/usr/bin/env bash
-export DEVELOPER_DIR="$${DEVELOPER_DIR:-/Library/Developer/CommandLineTools}"
-if [[ -z "$${JAVA_HOME:-}" ]]; then
-  echo "JAVA_HOME must point at a GraalVM native-image JDK" >&2
-  exit 1
-fi
-exec "$${JAVA_HOME}/bin/native-image" "$$@"
-EOF
-    chmod +x $@
-    """,
-    executable = True,
-)
-
-genrule(
     name = "native_reflection_config",
     outs = ["native-reflect-config.json"],
     cmd = """
@@ -464,7 +446,6 @@ native_image(
     ],
     include_resources = ".*\\.kotlin_builtins|.*\\.kotlin_metadata|.*\\.pkl|logback.*\\.xml|models/.*\\.yml|embabel-.*\\.properties|org/pkl/core/errorMessages\\.properties",
     main_class = "dev.groknull.bpmner.NativeBpmnerApplication",
-    native_image_tool = ":native_image_tool",
     reflection_configuration = ":native-reflect-config.json",
     tags = ["local"],
     deps = [
