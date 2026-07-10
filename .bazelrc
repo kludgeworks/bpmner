@@ -1,5 +1,12 @@
 common --enable_bzlmod
 
+# Temporary compatibility for rules_graalvm in Bazel 8
+build --noincompatible_disallow_ctx_resolve_tools
+
+# rules_graalvm's macOS native-image wrapper expands this variable in its
+# generated script; make it explicit under Bazel's strict action environment.
+build --action_env=DEVELOPER_DIR=/Library/Developer/CommandLineTools
+
 # Make the empty WORKSPACE explicit
 common --noenable_workspace
 

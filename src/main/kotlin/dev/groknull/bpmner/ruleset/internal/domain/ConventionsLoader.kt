@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.NativeDetector
 import java.net.URI
 
 /**
@@ -33,8 +34,18 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     @Bean
     @ConditionalOnMissingBean
     fun bpmnerLintConfig(): BpmnerLintConfig {
-        val uri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
-            ?: URI.create(DEFAULT_CONFIG_URI)
+        val rawConfigUri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }
+        if (rawConfigUri == null && NativeDetector.inNativeImage()) {
+            return packagedNativeLintConfig().also {
+                logger.info(
+                    "BPMN lint conventions loaded from native packaged defaults ({} element type word(s), {} allowed acronym(s))",
+                    it.elementTypeWords.size,
+                    it.allowedAcronyms.size,
+                )
+            }
+        }
+
+        val uri = rawConfigUri?.let(::fileOverrideUri) ?: URI.create(DEFAULT_CONFIG_URI)
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
                 evaluator.evaluate(ModuleSource.uri(uri))
@@ -69,6 +80,15 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
 
     companion object {
         const val DEFAULT_CONFIG_URI = "modulepath:/linter/pkl/bpmner.pkl"
+
+        internal fun packagedNativeLintConfig(): BpmnerLintConfig = BpmnerLintConfig(
+            severityOverrides = mapOf(
+                "act-verb-object-name" to "off",
+                "act-activity-label-capitalization" to "off",
+                "name-no-element-type-words" to "off",
+                "name-uncommon-abbreviations" to "off",
+            ),
+        )
 
         private fun fileOverrideUri(raw: String): URI {
             val uri = try {
