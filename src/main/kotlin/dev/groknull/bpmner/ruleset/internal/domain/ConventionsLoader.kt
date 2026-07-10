@@ -18,21 +18,18 @@ import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.NativeDetector
 import java.net.URI
+import java.util.function.Function
 
 /**
- * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
+ * Evaluates a Pkl config URI and returns a [BpmnerLintConfig].
  *
- * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
- * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
- * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
- * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
+ * Defined at package scope and loaded via [Class.forName] in [ConventionsLoader] so that
+ * GraalVM's static analysis cannot trace into Pkl's Truffle AST nodes, which conflict with
+ * SubstrateVM at native-image build time. No interface is introduced; the standard
+ * [java.util.function.Function] is used as the cast target (ADR-555-001).
  */
-interface BpmnerLintConfigEvaluator {
-    fun evaluate(uri: URI): BpmnerLintConfig
-}
-
-internal class PklBpmnerLintConfigEvaluator : BpmnerLintConfigEvaluator {
-    override fun evaluate(uri: URI): BpmnerLintConfig {
+internal class PklConfigEvaluator : Function<URI, BpmnerLintConfig> {
+    override fun apply(uri: URI): BpmnerLintConfig {
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
                 evaluator.evaluate(ModuleSource.uri(uri))
@@ -59,6 +56,14 @@ internal class PklBpmnerLintConfigEvaluator : BpmnerLintConfigEvaluator {
     }
 }
 
+/**
+ * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
+ *
+ * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
+ * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
+ * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
+ * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
+ */
 @Configuration
 internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
@@ -78,20 +83,15 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
         }
 
         val uri = rawConfigUri?.let(::fileOverrideUri) ?: URI.create(DEFAULT_CONFIG_URI)
-        val className = listOf(
-            "dev",
-            "groknull",
-            "bpmner",
-            "ruleset",
-            "internal",
-            "domain",
-            "PklBpmnerLintConfigEvaluator",
-        ).joinToString(".")
-        val evaluator = Class.forName(className)
-            .getDeclaredConstructor()
-            .newInstance() as BpmnerLintConfigEvaluator
 
-        val lintConfig = evaluator.evaluate(uri)
+        // Load PklConfigEvaluator via Class.forName to prevent GraalVM static analysis from
+        // tracing into Pkl/Truffle classes, which are incompatible with SubstrateVM at build time.
+        @Suppress("UNCHECKED_CAST")
+        val evaluator = Class.forName("${ConventionsLoader::class.java.packageName}.PklConfigEvaluator")
+            .getDeclaredConstructor()
+            .newInstance() as Function<URI, BpmnerLintConfig>
+
+        val lintConfig = evaluator.apply(uri)
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
             uri.toString(),
