@@ -72,6 +72,7 @@ jobs:
           export JAVA_HOME="${HOME}/.local/share/mise/installs/java/liberica-nik-openjdk25-25.0.3+1"
           bazel test \
             --config=rbe \
+            --strategy=NativeImage=local \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --test_output=errors \
             //...
@@ -239,6 +240,7 @@ jobs:
           bazel coverage //... \
             --config=ci \
             --strategy=CoverageReport=local \
+            --strategy=NativeImage=local \
             --remote_header=x-buildbuddy-api-key="${BUILDBUDDY_API_KEY}" \
             --combined_report=lcov \
             --coverage_report_generator=@bazel_sonarqube//:sonarqube_coverage_generator \
