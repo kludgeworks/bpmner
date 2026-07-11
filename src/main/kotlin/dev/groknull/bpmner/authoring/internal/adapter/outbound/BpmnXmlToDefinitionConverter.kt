@@ -177,14 +177,16 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
      * decides what's discouraged. Fallback ids are deterministic per-document so two parses
      * of the same XML produce the same `elementId`s.
      */
-    private fun extractUnrecognizedExotics(document: Document): List<BpmnUnrecognizedNode> = EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
-        document.bpmnElements(localName).mapIndexed { elemIndex, element ->
-            BpmnUnrecognizedNode(
-                id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
-                name = element.getAttribute("name").takeIf { it.isNotBlank() },
-                bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
-            )
-        }.toList()
+    private fun extractUnrecognizedExotics(document: Document): List<BpmnUnrecognizedNode> {
+        return EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
+            document.bpmnElements(localName).mapIndexed { elemIndex, element ->
+                BpmnUnrecognizedNode(
+                    id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
+                    name = element.getAttribute("name").takeIf { it.isNotBlank() },
+                    bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
+                )
+            }.toList()
+        }
     }
 
     /**
@@ -445,8 +447,10 @@ private fun String.localNameRef(): String? = trim()
     .takeIf { it.isNotBlank() }
     ?.substringAfterLast(":")
 
-// BPMN MODEL namespace, duplicated at file scope so the collaboration helpers below stay top-level
-// (off the converter class) and don't inflate its function count.
+/**
+ * BPMN MODEL namespace, duplicated at file scope so the collaboration helpers below stay top-level
+ * (off the converter class) and don't inflate its function count.
+ */
 private const val BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 
 /**
