@@ -87,25 +87,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         private const val DISALLOW_DOCTYPE_DECL = "http://apache.org/xml/features/disallow-doctype-decl"
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
-
-        /**
-         * BPMN element local names that aren't `FlowNode`s (so the Camunda model walk misses
-         * them) and that the parser doesn't translate into typed Kotlin nodes. Surfaced via
-         * DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them through
-         * `BpmnSubset`'s `targetElements`. The parser surfaces all such elements; the Pkl
-         * rule decides what's discouraged. Includes both top-level constructs (Choreography,
-         * Conversation) and their child element types (e.g. choreographyTask), all picked up
-         * by `getElementsByTagNameNS` regardless of nesting.
-         */
-        private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
-            "choreography",
-            "choreographyTask",
-            "subChoreography",
-            "callChoreography",
-            "conversation",
-            "conversationLink",
-            "conversationAssociation",
-        )
     }
 
     override fun parse(xml: String): BpmnDefinition {
@@ -161,32 +142,6 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             messageFlows = collaboration.messageFlows,
             diagramCount = diagramCount,
         )
-    }
-
-    /**
-     * Counts `<bpmndi:BPMNDiagram>` elements. The semantic model carries no DI; the count
-     * is surfaced on `BpmnDefinition` so the `NoDuplicateDiagrams` rule can enforce the
-     * policy (one diagram per document).
-     */
-    private fun countDiagrams(model: BpmnModelInstance): Int = model.getModelElementsByType(BpmnDiagram::class.java).size
-
-    /**
-     * Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
-     * typed scan. Surface them as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can
-     * flag them via `targetElements`. The parser surfaces all such elements; the rule
-     * decides what's discouraged. Fallback ids are deterministic per-document so two parses
-     * of the same XML produce the same `elementId`s.
-     */
-    private fun extractUnrecognizedExotics(document: Document): List<BpmnUnrecognizedNode> {
-        return EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
-            document.bpmnElements(localName).mapIndexed { elemIndex, element ->
-                BpmnUnrecognizedNode(
-                    id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
-                    name = element.getAttribute("name").takeIf { it.isNotBlank() },
-                    bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
-                )
-            }.toList()
-        }
     }
 
     /**
@@ -539,3 +494,48 @@ internal data class EventMetadata(
     val errors: List<BpmnErrorRef>,
     val escalations: List<BpmnEscalationRef>,
 )
+
+/**
+ * BPMN element local names that aren't `FlowNode`s (so the Camunda model walk misses
+ * them) and that the parser doesn't translate into typed Kotlin nodes. Surfaced via
+ * DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them through
+ * `BpmnSubset`'s `targetElements`. The parser surfaces all such elements; the Pkl
+ * rule decides what's discouraged. Includes both top-level constructs (Choreography,
+ * Conversation) and their child element types (e.g. choreographyTask), all picked up
+ * by `getElementsByTagNameNS` regardless of nesting.
+ */
+private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
+    "choreography",
+    "choreographyTask",
+    "subChoreography",
+    "callChoreography",
+    "conversation",
+    "conversationLink",
+    "conversationAssociation",
+)
+
+/**
+ * Counts `<bpmndi:BPMNDiagram>` elements. The semantic model carries no DI; the count
+ * is surfaced on `BpmnDefinition` so the `NoDuplicateDiagrams` rule can enforce the
+ * policy (one diagram per document).
+ */
+private fun countDiagrams(model: BpmnModelInstance): Int = model.getModelElementsByType(BpmnDiagram::class.java).size
+
+/**
+ * Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
+ * typed scan. Surface them as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can
+ * flag them via `targetElements`. The parser surfaces all such elements; the rule
+ * decides what's discouraged. Fallback ids are deterministic per-document so two parses
+ * of the same XML produce the same `elementId`s.
+ */
+private fun extractUnrecognizedExotics(document: Document): List<BpmnUnrecognizedNode> {
+    return EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
+        document.bpmnElements(localName).mapIndexed { elemIndex, element ->
+            BpmnUnrecognizedNode(
+                id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
+                name = element.getAttribute("name").takeIf { it.isNotBlank() },
+                bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
+            )
+        }.toList()
+    }
+}

@@ -95,7 +95,7 @@
 			"id": "inline-comments-to-kdoc",
 			"severity": "medium",
 			"scope": ["src/main/kotlin/**/*.kt"],
-			"rule": "Flag large block `//` comments. For comments above properties, classes, or functions, suggest converting them to KDoc (`/** ... */`). For comments inside functions, suggest extracting the commented block of code into a separate, well-named private function with a Kdoc comment. Ensure comments add value rather than just repeating what the code does."
+			"rule": "Flag consecutive multi-line `//` comment blocks. For comments above properties, classes, or functions, suggest converting them to KDoc (`/** ... */`). Inside functions, suggest extraction only for cohesive, multi-step commented blocks; do not flag concise inline rationale comments."
 		}
 	]
 }
