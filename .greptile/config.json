@@ -90,6 +90,12 @@
 				"src/main/kotlin/dev/groknull/bpmner/contract/internal/adapter/inbound/FlatContractTypes.kt"
 			],
 			"rule": "ContractVocabularySmokeTest (src/test/kotlin/dev/groknull/bpmner/smoke/ContractVocabularySmokeTest.kt) is the live-LLM guard that every contract-vocabulary construct is actually extractable from natural-language prose. If this PR adds a new vocabulary construct — a new ContractActivity / ContractEndState / ContractBranch / ContractTrigger / ContractIntermediateThrow subtype, a new FlatActivityKind / FlatEndStateKind / BoundaryEventKind / ContractArtifactKind / ContractGatewayKind enum value, or a new cross-cutting construct surfaced from prose (actor responsibility, iteration, standard loop, data artifact, pool/lane, message flow) — flag the PR unless it also adds or extends a ContractVocabularySmokeTest case that exercises that construct end-to-end, or clearly explains why a live-extraction case is not applicable."
+		},
+		{
+			"id": "inline-comments-to-kdoc",
+			"severity": "medium",
+			"scope": ["src/main/kotlin/**/*.kt"],
+			"rule": "Flag consecutive multi-line `//` comment blocks. For comments above properties, classes, or functions, suggest converting them to KDoc (`/** ... */`). Inside functions, suggest extraction only for cohesive, multi-step commented blocks; do not flag concise inline rationale comments."
 		}
 	]
 }
