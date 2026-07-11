@@ -11,10 +11,8 @@ import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActor
-import dev.groknull.bpmner.contract.ContractArtifact
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractGatewayKind
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.EventTriggerKind
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
@@ -49,14 +47,10 @@ public enum class FlatEndStateKind {
     TERMINATE,
     ERROR,
     MESSAGE,
-    SIGNAL,
-    ESCALATION,
 }
 
 public enum class FlatIntermediateThrowKind {
     MESSAGE,
-    SIGNAL,
-    ESCALATION,
 }
 
 public enum class FlatBranchKind {
@@ -70,7 +64,6 @@ public enum class FlatTriggerKind {
     NONE,
     TIMER,
     MESSAGE,
-    SIGNAL,
 }
 
 @JsonClassDescription(
@@ -142,18 +135,6 @@ public data class FlatContractActivity(
             "activity. Distinct from a per-item iteration over a collection.",
     )
     val loop: FlatContractLoop? = null,
-    @field:Size(max = 50)
-    @get:JsonPropertyDescription(
-        "Ids of artifacts (data objects/stores) this activity reads. Each id must match a top-level " +
-            "artifacts entry. Empty for activities that consume no declared data.",
-    )
-    val dataInputIds: List<String> = emptyList(),
-    @field:Size(max = 50)
-    @get:JsonPropertyDescription(
-        "Ids of artifacts (data objects/stores) this activity writes or updates. Each id must match a " +
-            "top-level artifacts entry. Empty for activities that produce no declared data.",
-    )
-    val dataOutputIds: List<String> = emptyList(),
 )
 
 @JsonClassDescription(
@@ -197,11 +178,6 @@ public data class FlatContractBoundaryEvent(
         "Id of the activity, decision, or end state the exception path routes to when this event fires.",
     )
     val nextRef: String,
-    @get:JsonPropertyDescription(
-        "Whether firing interrupts (cancels) the attached activity. Default true. ERROR boundary " +
-            "events must be interrupting; TIMER/ESCALATION may be non-interrupting.",
-    )
-    val cancelActivity: Boolean = true,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
@@ -261,16 +237,6 @@ public data class FlatContractEndState(
         "Required when kind=MESSAGE. Human-readable message name (e.g. \"shipment confirmation\").",
     )
     val messageName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Required when kind=SIGNAL. Human-readable broadcast name (e.g. \"settlement complete\").",
-    )
-    val signalName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription(
-        "Required when kind=ESCALATION. Stable business escalation code (e.g. \"APPROVAL_OVERDUE\").",
-    )
-    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -298,12 +264,6 @@ public data class FlatContractIntermediateThrow(
     @field:Size(max = 200)
     @get:JsonPropertyDescription("Required when kind=MESSAGE. Human-readable message name.")
     val messageName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Required when kind=SIGNAL. Human-readable broadcast signal name.")
-    val signalName: String? = null,
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Required when kind=ESCALATION. Stable business escalation code.")
-    val escalationCode: String? = null,
 )
 
 @JsonClassDescription(
@@ -379,10 +339,6 @@ public data class FlatContractTrigger(
         "Required when type=MESSAGE. Human-readable name of the inbound message (e.g. \"order.submitted\").",
     )
     val messageName: String? = null,
-    @get:JsonPropertyDescription(
-        "Required when type=SIGNAL. Human-readable name of the broadcast signal.",
-    )
-    val signalName: String? = null,
 )
 
 @JsonClassDescription("Source-grounded process start declaration")
@@ -424,47 +380,6 @@ public data class FlatContractSubProcess(
 )
 
 @JsonClassDescription(
-    "Event subprocess — an event-triggered handler that runs OFF the main flow when its trigger " +
-        "fires, rather than being reached by a sequence flow (cues: \"at any point during the " +
-        "process, if X happens …\", \"whenever Y occurs, …\", \"on cancellation/timeout, …\" followed " +
-        "by one or more handler steps). Distinct from an ordinary `subProcesses` entry, which is a " +
-        "composite step ON the main flow. Lists the ids of its handler activities; those activities " +
-        "stay in the top-level `activities` array.",
-)
-public data class FlatContractEventSubProcess(
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Stable event-subprocess id")
-    val id: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Human-readable event-subprocess name")
-    val name: String,
-    @field:NotEmpty
-    @field:Size(max = 100)
-    @get:JsonPropertyDescription(
-        "Ids of the handler activities contained in this event subprocess. Each must match an entry " +
-            "in the top-level `activities` array. Order follows the handler flow.",
-    )
-    val activityIds: List<String>,
-    @get:JsonPropertyDescription(
-        "The event that starts the handler: MESSAGE (a named message arrives), TIMER (a deadline / " +
-            "duration elapses), ERROR (a named business error is caught), ESCALATION (a business " +
-            "escalation is raised), SIGNAL (a broadcast is observed).",
-    )
-    val trigger: EventSubProcessTrigger,
-    @get:JsonPropertyDescription(
-        "Whether the handler interrupts the enclosing process when it fires. true (default) = " +
-            "interrupting (the main flow is cancelled); false = non-interrupting (the handler runs " +
-            "alongside the main flow). ERROR triggers are always interrupting.",
-    )
-    val interrupting: Boolean = true,
-    @field:Size(max = 10)
-    @get:JsonPropertyDescription("Source ids grounding this event subprocess in evidence.")
-    val sourceIds: List<String> = emptyList(),
-)
-
-@JsonClassDescription(
     "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
         "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +
         "kind-specific fields. The agent maps this to the internal sealed ProcessContract before " +
@@ -499,10 +414,6 @@ public data class FlatProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Actors referenced by the process contract")
     val actors: List<ContractActor> = emptyList(),
-    @field:Valid
-    @field:Size(max = 100)
-    @get:JsonPropertyDescription("Artifacts referenced by the process contract")
-    val artifacts: List<ContractArtifact> = emptyList(),
     @field:NotEmpty
     @field:Valid
     @field:Size(max = 50)
@@ -520,14 +431,6 @@ public data class FlatProcessContract(
             "composite steps.",
     )
     val subProcesses: List<FlatContractSubProcess> = emptyList(),
-    @field:Valid
-    @field:Size(max = 50)
-    @get:JsonPropertyDescription(
-        "Event subprocesses — event-triggered handlers that run off the main flow (on a message, " +
-            "timer, error, escalation, or signal) rather than being reached by a sequence flow. Each " +
-            "lists its handler activity ids. Leave empty when the process has no such handlers.",
-    )
-    val eventSubProcesses: List<FlatContractEventSubProcess> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")

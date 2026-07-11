@@ -8,8 +8,6 @@ package dev.groknull.bpmner.conformance
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUserTask
@@ -155,78 +153,4 @@ class BpmnSubProcessValidationTest {
         val errors = validator.validate(definition).joinToString("\n")
         assertContains(errors, "has a cyclic parentRef chain")
     }
-
-    @Test
-    fun `validator accepts an event subprocess with a typed inner start and no connecting flow`() {
-        val errors = validator.validate(eventSubProcessDefinition()).joinToString("\n")
-        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
-    }
-
-    @Test
-    fun `validator rejects an event subprocess with a connecting sequence flow`() {
-        val base = eventSubProcessDefinition()
-        val definition =
-            base.copy(
-                // A flow reaching the event-subprocess marker — event subprocesses are event-triggered.
-                sequences = base.sequences + BpmnEdge("Flow_into_evt", "StartEvent_1", "EventSub_1"),
-            )
-
-        val errors = validator.validate(definition).joinToString("\n")
-        assertContains(errors, "event subprocess 'EventSub_1' must not have an incoming or outgoing sequence flow")
-    }
-
-    @Test
-    fun `validator rejects an event subprocess whose inner start is untyped`() {
-        val definition =
-            BpmnDefinition(
-                processId = "Process_1",
-                processName = "Handle request",
-                nodes =
-                listOf(
-                    BpmnStartEvent("StartEvent_1", "Received"),
-                    BpmnEndEvent("EndEvent_1", "Completed"),
-                    BpmnSubProcess("EventSub_1", "Handle", triggeredByEvent = true),
-                    // Untyped (NONE) start — invalid as an event-subprocess trigger.
-                    BpmnStartEvent("Inner_start", "Begin", parentRef = "EventSub_1"),
-                    BpmnEndEvent("Inner_end", "Inner done", parentRef = "EventSub_1"),
-                ),
-                sequences =
-                listOf(
-                    BpmnEdge("Flow_main", "StartEvent_1", "EndEvent_1"),
-                    BpmnEdge("Flow_inner", "Inner_start", "Inner_end", parentRef = "EventSub_1"),
-                ),
-            )
-
-        val errors = validator.validate(definition).joinToString("\n")
-        assertContains(
-            errors,
-            "event subprocess 'EventSub_1' start event 'Inner_start' must be typed (carry a non-NONE event definition)",
-        )
-    }
-
-    private fun eventSubProcessDefinition(): BpmnDefinition = BpmnDefinition(
-        processId = "Process_1",
-        processName = "Handle request",
-        nodes =
-        listOf(
-            BpmnStartEvent("StartEvent_1", "Received"),
-            BpmnEndEvent("EndEvent_1", "Completed"),
-            BpmnSubProcess("EventSub_1", "Handle cancellation", triggeredByEvent = true),
-            BpmnStartEvent(
-                "Inner_start",
-                "Cancellation requested",
-                eventDefinition = BpmnMessageEventDefinition(messageRef = "Msg_cancel"),
-                parentRef = "EventSub_1",
-            ),
-            BpmnUserTask("Inner_task", "Refund", parentRef = "EventSub_1"),
-            BpmnEndEvent("Inner_end", "Handled", parentRef = "EventSub_1"),
-        ),
-        sequences =
-        listOf(
-            BpmnEdge("Flow_main", "StartEvent_1", "EndEvent_1"),
-            BpmnEdge("Flow_c1", "Inner_start", "Inner_task", parentRef = "EventSub_1"),
-            BpmnEdge("Flow_c2", "Inner_task", "Inner_end", parentRef = "EventSub_1"),
-        ),
-        messages = listOf(BpmnMessageRef(id = "Msg_cancel", name = "Cancellation requested")),
-    )
 }

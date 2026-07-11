@@ -44,22 +44,6 @@ internal class BpmnProcessArtifactXmlWriter {
                 },
             )
         }
-        definition.dataObjects.forEach { dataObject ->
-            process.appendChild(
-                document.bpmnElement("dataObject").also { el ->
-                    el.setAttribute("id", dataObject.id)
-                    el.setAttribute("name", dataObject.name)
-                },
-            )
-        }
-        definition.dataStores.forEach { dataStore ->
-            root.appendChild(
-                document.bpmnElement("dataStore").also { el ->
-                    el.setAttribute("id", dataStore.id)
-                    el.setAttribute("name", dataStore.name)
-                },
-            )
-        }
         writeCollaboration(document, root, process, definition)
     }
 

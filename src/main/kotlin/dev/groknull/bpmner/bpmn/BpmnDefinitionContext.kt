@@ -45,14 +45,8 @@ class BpmnDefinitionContext(
     /** Catalog ids referenced by message event definitions and send/receive tasks. */
     val messageIds: Set<String> = definition.messages.map { it.id }.toSet()
 
-    /** Catalog ids referenced by signal event definitions. */
-    val signalIds: Set<String> = definition.signals.map { it.id }.toSet()
-
     /** Catalog ids referenced by error event definitions. */
     val errorIds: Set<String> = definition.errors.map { it.id }.toSet()
-
-    /** Catalog ids referenced by escalation event definitions. */
-    val escalationIds: Set<String> = definition.escalations.map { it.id }.toSet()
 
     /** Outgoing-edge count per source node id — feeds the gateway / naming-policy rules. */
     val outgoingCounts: Map<String, Int> = definition.sequences.groupingBy { it.sourceRef }.eachCount()

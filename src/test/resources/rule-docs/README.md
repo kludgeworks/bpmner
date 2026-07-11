@@ -46,6 +46,7 @@ This folder documents each custom rule implemented by `bpmnlint-plugin-bpmner`.
 - [gtw-fake-join](gtw-fake-join.md): Fake Join
 - [gtw-gateway-no-work-label](gtw-gateway-no-work-label.md): Gateway No Work Label
 - [gtw-no-gateway-join-fork](gtw-no-gateway-join-fork.md): No Gateway Join Fork
+- [gtw-no-implicit-split](gtw-no-implicit-split.md): No Implicit Split
 - [gtw-superfluous-gateway](gtw-superfluous-gateway.md): Superfluous Gateway
 - [lane-actor-artifact-usage](lane-actor-artifact-usage.md): Actor Artifact Usage
 - [lane-lane-labels-business-roles-performers](lane-lane-labels-business-roles-performers.md): Lane Labels Business Roles Performers

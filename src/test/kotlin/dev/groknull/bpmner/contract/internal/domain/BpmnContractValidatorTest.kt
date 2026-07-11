@@ -5,15 +5,11 @@
 
 package dev.groknull.bpmner.contract.internal.domain
 
-import dev.groknull.bpmner.contract.ActivityModifiers
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractArtifact
-import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIssueSeverity
@@ -22,7 +18,6 @@ import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.ContractValidationCode
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
@@ -442,70 +437,15 @@ class BpmnContractValidatorTest {
                         messageName = " ",
                         sourceIds = sources,
                     ),
-                    ContractIntermediateThrow.Signal(
-                        id = "throw-sig",
-                        name = "Broadcast",
-                        signalName = "",
-                        sourceIds = sources,
-                    ),
-                    ContractIntermediateThrow.Escalation(
-                        id = "throw-esc",
-                        name = "Escalate",
-                        escalationCode = " ",
-                        sourceIds = sources,
-                    ),
                 ),
             )
 
         val issues = validator.validate(contract).issues
 
-        assertEquals(3, issues.count { it.code == ContractValidationCode.INVALID_CONTRACT_ITEM })
+        assertEquals(1, issues.count { it.code == ContractValidationCode.INVALID_CONTRACT_ITEM })
     }
 
     private val sources = listOf("ev-source")
-
-    @Test
-    fun `activity referencing an undeclared data id flags DATA_REF_NOT_IN_ARTIFACTS`() {
-        val contract = linearContract().copy(
-            activities = listOf(
-                ContractActivity.Service(
-                    id = "activity-receive",
-                    name = "Receive application",
-                    sourceIds = sources,
-                    modifiers = ActivityModifiers(dataInputIds = listOf("art-missing")),
-                ),
-            ),
-            artifacts = listOf(ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT)),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS))
-    }
-
-    @Test
-    fun `activity data refs that match declared artifacts pass`() {
-        val contract = linearContract().copy(
-            activities = listOf(
-                ContractActivity.Service(
-                    id = "activity-receive",
-                    name = "Receive application",
-                    sourceIds = sources,
-                    modifiers = ActivityModifiers(
-                        dataInputIds = listOf("art-order"),
-                        dataOutputIds = listOf("art-decision"),
-                    ),
-                ),
-            ),
-            artifacts = listOf(
-                ContractArtifact("art-order", "Order", ContractArtifactKind.DATA_OBJECT),
-                ContractArtifact("art-decision", "Approval decision", ContractArtifactKind.DATA_OBJECT),
-            ),
-        )
-
-        assertFalse(
-            validator.validate(contract).issues.any { it.code == ContractValidationCode.DATA_REF_NOT_IN_ARTIFACTS },
-        )
-    }
 
     @Test
     fun `valid embedded subprocess passes`() {
@@ -604,105 +544,6 @@ class BpmnContractValidatorTest {
     }
 
     @Test
-    fun `valid event subprocess passes`() {
-        val base = linearContract()
-        val contract = base.copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-cancel",
-                    name = "Handle cancellation",
-                    containedActivityIds = listOf("activity-receive"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val report = validator.validate(contract)
-        assertTrue(report.isValid, "expected valid event subprocess, got ${report.issues}")
-    }
-
-    @Test
-    fun `event subprocess with a dangling member flags EVENT_SUBPROCESS_MEMBER_NOT_FOUND`() {
-        val contract = linearContract().copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-cancel",
-                    name = "Handle cancellation",
-                    containedActivityIds = listOf("act-ghost"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_MEMBER_NOT_FOUND))
-    }
-
-    @Test
-    fun `activity claimed by two event subprocesses flags EVENT_SUBPROCESS_MEMBER_SHARED`() {
-        val contract = linearContract().copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-a",
-                    name = "A",
-                    containedActivityIds = listOf("activity-receive"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-                ContractEventSubProcess(
-                    id = "esp-b",
-                    name = "B",
-                    containedActivityIds = listOf("activity-receive"),
-                    trigger = EventSubProcessTrigger.SIGNAL,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_MEMBER_SHARED))
-    }
-
-    @Test
-    fun `empty event subprocess flags EVENT_SUBPROCESS_EMPTY`() {
-        val contract = linearContract().copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-empty",
-                    name = "Empty",
-                    containedActivityIds = emptyList(),
-                    trigger = EventSubProcessTrigger.TIMER,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_EMPTY))
-    }
-
-    @Test
-    fun `non-interrupting ERROR event subprocess flags EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING`() {
-        val contract = linearContract().copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-error",
-                    name = "Handle error",
-                    containedActivityIds = listOf("activity-receive"),
-                    trigger = EventSubProcessTrigger.ERROR,
-                    interrupting = false,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_ERROR_NOT_INTERRUPTING))
-    }
-
-    @Test
     fun `duplicate member within one embedded subprocess is not misreported as shared`() {
         val base = linearContract()
         val contract = base.copy(
@@ -716,70 +557,6 @@ class BpmnContractValidatorTest {
 
         val codes = validator.validate(contract).issues.map { it.code }
         assertFalse(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_SHARED))
-    }
-
-    @Test
-    fun `duplicate member within one event subprocess is not misreported as shared`() {
-        val contract = linearContract().copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-dup",
-                    name = "Dup",
-                    containedActivityIds = listOf("activity-receive", "activity-receive"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertFalse(codes.contains(ContractValidationCode.EVENT_SUBPROCESS_MEMBER_SHARED))
-    }
-
-    @Test
-    fun `event subprocess id colliding with an activity flags DUPLICATE_CONTRACT_ELEMENT_ID`() {
-        val base = linearContract()
-        val contract = base.copy(
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    // Collides with an existing activity id; event subprocesses are a separate
-                    // collection, so uniqueness must fold them in explicitly.
-                    id = "activity-receive",
-                    name = "Handler",
-                    containedActivityIds = listOf("activity-review"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.DUPLICATE_CONTRACT_ELEMENT_ID))
-    }
-
-    @Test
-    fun `activity claimed by both an embedded and event subprocess flags SUBPROCESS_MEMBER_CROSS_CLAIMED`() {
-        val base = linearContract()
-        val contract = base.copy(
-            activities = base.activities + ContractActivity.SubProcess(
-                id = "sub-embedded",
-                name = "Embedded",
-                containedActivityIds = listOf("activity-receive"),
-                sourceIds = sources,
-            ),
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-handler",
-                    name = "Handler",
-                    containedActivityIds = listOf("activity-receive"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = sources,
-                ),
-            ),
-        )
-
-        val codes = validator.validate(contract).issues.map { it.code }
-        assertTrue(codes.contains(ContractValidationCode.SUBPROCESS_MEMBER_CROSS_CLAIMED))
     }
 
     private fun linearContract(): ProcessContract = ProcessContract(

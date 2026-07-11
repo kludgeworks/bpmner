@@ -22,26 +22,9 @@ class ProcessContractMarkdownRenderer {
         appendActors(contract)
         appendActivities(contract)
         appendDecisions(contract)
-        appendArtifacts(contract)
         appendIntermediateThrows(contract)
-        appendEventSubProcesses(contract)
         appendEndStates(contract)
         appendAssumptions(contract)
-    }
-}
-
-private fun StringBuilder.appendEventSubProcesses(contract: ProcessContract) {
-    if (contract.eventSubProcesses.isNotEmpty()) {
-        appendLine()
-        appendLine("## Event subprocesses")
-        contract.eventSubProcesses.forEach { eventSubProcess ->
-            val interrupting = if (eventSubProcess.interrupting) "interrupting" else "non-interrupting"
-            val members = eventSubProcess.containedActivityIds.joinToString(",")
-            appendLine(
-                "- ${eventSubProcess.id}: ${eventSubProcess.name} " +
-                    "[EVENT_SUBPROCESS trigger=${eventSubProcess.trigger} $interrupting contains=\"$members\"]",
-            )
-        }
     }
 }
 
@@ -63,7 +46,7 @@ private fun StringBuilder.appendActivities(contract: ProcessContract) {
         contract.activities.forEach { activity ->
             val actor = activity.actorId?.let { " (actor: $it)" }.orEmpty()
             val kindSuffix = activitySuffix(activity)
-            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix${dataSuffix(activity)}")
+            appendLine("- ${activity.id}: ${activity.name}$actor$kindSuffix")
         }
     }
 }
@@ -80,17 +63,6 @@ private fun StringBuilder.appendDecisions(contract: ProcessContract) {
                 val next = branchNextSuffix(branch)
                 appendLine("  - ${branch.id} → \"${branch.label}\"$suffix$next")
             }
-        }
-    }
-}
-
-private fun StringBuilder.appendArtifacts(contract: ProcessContract) {
-    if (contract.artifacts.isNotEmpty()) {
-        appendLine()
-        appendLine("## Artifacts")
-        contract.artifacts.forEach { artifact ->
-            val description = artifact.description?.let { " — $it" }.orEmpty()
-            appendLine("- ${artifact.id}: ${artifact.name} [${artifact.kind}]$description")
         }
     }
 }
@@ -142,14 +114,6 @@ private fun branchNextSuffix(branch: ContractBranch): String = branch.nextRef?.l
 // Receive / BusinessRule additionally carry their payload reference to keep the rendered
 // contract self-contained for the BPMN-generation LLM (otherwise it would have to walk back
 // to the source prose for the messageName).
-// Data reads/writes referencing the contract's artifacts, so the BPMN-generation LLM can wire a
-// READ/WRITE data association from the activity to each data object/store.
-private fun dataSuffix(activity: ContractActivity): String {
-    val reads = activity.dataInputIds.takeIf { it.isNotEmpty() }?.let { " reads=${it.joinToString(",")}" }.orEmpty()
-    val writes = activity.dataOutputIds.takeIf { it.isNotEmpty() }?.let { " writes=${it.joinToString(",")}" }.orEmpty()
-    return reads + writes
-}
-
 private fun activitySuffix(activity: ContractActivity): String = when (activity) {
     is ContractActivity.Service -> " [SERVICE]"
     is ContractActivity.User -> " [USER]"
@@ -174,12 +138,8 @@ private fun endStateSuffix(endState: ContractEndState): String = when (endState)
     is ContractEndState.Terminate -> " [TERMINATE]"
     is ContractEndState.Error -> " [ERROR errorCode=\"${endState.errorCode}\"]"
     is ContractEndState.Message -> " [MESSAGE messageName=\"${endState.messageName}\"]"
-    is ContractEndState.Signal -> " [SIGNAL signalName=\"${endState.signalName}\"]"
-    is ContractEndState.Escalation -> " [ESCALATION escalationCode=\"${endState.escalationCode}\"]"
 }
 
 private fun intermediateThrowSuffix(intermediateThrow: ContractIntermediateThrow): String = when (intermediateThrow) {
     is ContractIntermediateThrow.Message -> " [MESSAGE messageName=\"${intermediateThrow.messageName}\"]"
-    is ContractIntermediateThrow.Signal -> " [SIGNAL signalName=\"${intermediateThrow.signalName}\"]"
-    is ContractIntermediateThrow.Escalation -> " [ESCALATION escalationCode=\"${intermediateThrow.escalationCode}\"]"
 }

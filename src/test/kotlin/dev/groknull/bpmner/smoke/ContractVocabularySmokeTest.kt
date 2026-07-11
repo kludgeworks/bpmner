@@ -12,7 +12,6 @@ import dev.groknull.bpmner.bpmn.BoundaryEventKind
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.contract.ContractActivity
-import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractBranch
 import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ContractGatewayKind
@@ -174,14 +173,6 @@ class ContractVocabularySmokeTest {
         }
     }
 
-    private fun ProcessContract.assertHasArtifactKind(kind: ContractArtifactKind) {
-        val hasArtifact = artifacts.any { it.kind == kind }
-        assertTrue(hasArtifact) {
-            "Expected a $kind artifact, but found: " +
-                artifacts.joinToString { "${it.id}: '${it.name}', kind=${it.kind}" }
-        }
-    }
-
     // Task Kinds
 
     @Test
@@ -310,17 +301,6 @@ class ContractVocabularySmokeTest {
         c.assertTriggerType<ContractTrigger.Message>()
     }
 
-    @Test
-    fun `signal start`() {
-        val c = extractContract(
-            """
-            The process starts when the system broadcasts a 'Global System Shutdown' signal.
-            Once started, it records the shutdown log and ends.
-            """,
-        )
-        c.assertTriggerType<ContractTrigger.Signal>()
-    }
-
     // Typed End Events
 
     @Test
@@ -355,26 +335,6 @@ class ContractVocabularySmokeTest {
     }
 
     @Test
-    fun `signal end`() {
-        val c = extractContract(
-            """
-            The process begins when started. Upon successful completion of the process, a signal is broadcast to all subsystems.
-            """,
-        )
-        c.assertHasEndState<ContractEndState.Signal>()
-    }
-
-    @Test
-    fun `escalation end`() {
-        val c = extractContract(
-            """
-            The process begins when started. If the approval is overdue, we trigger a manager escalation.
-            """,
-        )
-        c.assertHasEndState<ContractEndState.Escalation>()
-    }
-
-    @Test
     fun `intermediate message throw`() {
         val c = extractContract(
             """
@@ -384,30 +344,6 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasIntermediateThrow<ContractIntermediateThrow.Message>()
-    }
-
-    @Test
-    fun `intermediate signal throw`() {
-        val c = extractContract(
-            """
-            The process starts when requested. After updating inventory, it broadcasts
-            an inventory-updated signal to listening systems. Then the record is archived
-            and the process ends.
-            """,
-        )
-        c.assertHasIntermediateThrow<ContractIntermediateThrow.Signal>()
-    }
-
-    @Test
-    fun `intermediate escalation throw`() {
-        val c = extractContract(
-            """
-            The process starts when requested. The approver reviews the request.
-            If approval is overdue, a non-interrupting escalation is raised and
-            the process continues to archive the request before ending normally.
-            """,
-        )
-        c.assertHasIntermediateThrow<ContractIntermediateThrow.Escalation>()
     }
 
     // Gateways
@@ -471,18 +407,6 @@ class ContractVocabularySmokeTest {
         c.assertHasBoundaryEvent(BoundaryEventKind.ERROR)
     }
 
-    @Test
-    fun `escalation boundary event`() {
-        val c = extractContract(
-            """
-            The process begins when a support ticket is opened. An agent works the ticket. While the
-            agent is handling it, if the agent raises an escalation because the issue is severe, a
-            manager immediately takes over. Once the ticket is resolved, the process ends.
-            """,
-        )
-        c.assertHasBoundaryEvent(BoundaryEventKind.ESCALATION)
-    }
-
     // Inclusive gateway
 
     @Test
@@ -543,23 +467,6 @@ class ContractVocabularySmokeTest {
         c.assertHasActivity<ContractActivity.SubProcess>()
     }
 
-    // Event subprocess
-
-    @Test
-    fun `event subprocess`() {
-        val c = extractContract(
-            """
-            An order is processed and then shipped. At any point before shipping, if a cancellation
-            request arrives, the order is refunded and the customer is notified of the cancellation.
-            Otherwise the order ships and the process ends.
-            """,
-        )
-        assertTrue(c.eventSubProcesses.isNotEmpty()) {
-            "Expected an event subprocess, but found none. Activities: " +
-                c.activities.joinToString { it.name }
-        }
-    }
-
     // Call activity (inter-process invocation) — a standalone, reusable process invoked by
     // reference, defined elsewhere, rather than inlined as an embedded subprocess.
 
@@ -574,18 +481,6 @@ class ContractVocabularySmokeTest {
             """,
         )
         c.assertHasActivity<ContractActivity.CallActivity>()
-    }
-
-    @Test
-    fun `data objects and stores`() {
-        val c = extractContract(
-            """
-            When an order is received, the system reads the customer record from the customer
-            database and produces a validated order, which it then stores.
-            """,
-        )
-        c.assertHasArtifactKind(ContractArtifactKind.DATA_STORE)
-        c.assertHasArtifactKind(ContractArtifactKind.DATA_OBJECT)
     }
 
     // Pools and lanes (actor responsibilities) — lanes are generated from distinct performing actors,

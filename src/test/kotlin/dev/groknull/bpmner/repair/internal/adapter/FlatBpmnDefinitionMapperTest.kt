@@ -18,8 +18,6 @@ import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGroup
@@ -38,8 +36,6 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -247,17 +243,17 @@ class FlatBpmnDefinitionMapperTest {
         val ok = FlatBpmnNode(
             id = "ic1",
             type = FlatBpmnNodeKind.INTERMEDIATE_CATCH_EVENT,
-            name = "Wait for signal",
+            name = "Wait for message",
             eventDefinition = FlatBpmnEventDefinition(
-                type = FlatBpmnEventDefinitionKind.SIGNAL,
-                signalRef = "sig-go",
+                type = FlatBpmnEventDefinitionKind.MESSAGE,
+                messageRef = "msg-go",
             ),
         )
         assertEquals(
             BpmnIntermediateCatchEvent(
                 id = "ic1",
-                name = "Wait for signal",
-                eventDefinition = BpmnSignalEventDefinition(signalRef = "sig-go"),
+                name = "Wait for message",
+                eventDefinition = BpmnMessageEventDefinition(messageRef = "msg-go"),
             ),
             ok.toSealed(),
         )
@@ -312,7 +308,6 @@ class FlatBpmnDefinitionMapperTest {
                 id = "b1",
                 name = "Timeout",
                 attachedToRef = "task-1",
-                cancelActivity = true,
                 eventDefinition = BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = "PT5M"),
             ),
             ok.toSealed(),
@@ -355,24 +350,10 @@ class FlatBpmnDefinitionMapperTest {
             ).toSealed(),
         )
         assertEquals(
-            BpmnSignalEventDefinition(signalRef = "sig-x"),
-            FlatBpmnEventDefinition(
-                type = FlatBpmnEventDefinitionKind.SIGNAL,
-                signalRef = "sig-x",
-            ).toSealed(),
-        )
-        assertEquals(
             BpmnErrorEventDefinition(errorRef = "err-x"),
             FlatBpmnEventDefinition(
                 type = FlatBpmnEventDefinitionKind.ERROR,
                 errorRef = "err-x",
-            ).toSealed(),
-        )
-        assertEquals(
-            BpmnEscalationEventDefinition(escalationRef = "esc-x"),
-            FlatBpmnEventDefinition(
-                type = FlatBpmnEventDefinitionKind.ESCALATION,
-                escalationRef = "esc-x",
             ).toSealed(),
         )
     }
@@ -416,9 +397,7 @@ class FlatBpmnDefinitionMapperTest {
     fun `FlatBpmnDefinition toSealed composes per-element mappers and preserves siblings`() {
         val edges = listOf(BpmnEdge(id = "f1", sourceRef = "s1", targetRef = "u1"))
         val messages = listOf(BpmnMessageRef(id = "m1", name = "Confirm"))
-        val signals = listOf(BpmnSignalRef(id = "sg1", name = "Settled"))
         val errors = listOf(BpmnErrorRef(id = "e1", code = "REJECTED"))
-        val escalations = listOf(BpmnEscalationRef(id = "es1", code = "OVERDUE"))
         val groups = listOf(BpmnGroup(id = "g1", name = "Visual group"))
 
         val flat = FlatBpmnDefinition(
@@ -431,9 +410,7 @@ class FlatBpmnDefinitionMapperTest {
             ),
             sequences = edges,
             messages = messages,
-            signals = signals,
             errors = errors,
-            escalations = escalations,
             groups = groups,
         )
 
@@ -446,9 +423,7 @@ class FlatBpmnDefinitionMapperTest {
         // Non-sealed siblings reused unchanged.
         assertEquals(edges, sealed.sequences)
         assertEquals(messages, sealed.messages)
-        assertEquals(signals, sealed.signals)
         assertEquals(errors, sealed.errors)
-        assertEquals(escalations, sealed.escalations)
         assertEquals(groups, sealed.groups)
     }
 
@@ -459,7 +434,7 @@ class FlatBpmnDefinitionMapperTest {
             processName = "P",
             nodes =
             listOf(
-                FlatBpmnNode(id = "sp", type = FlatBpmnNodeKind.SUB_PROCESS, name = "Handle", triggeredByEvent = true),
+                FlatBpmnNode(id = "sp", type = FlatBpmnNodeKind.SUB_PROCESS, name = "Handle"),
                 FlatBpmnNode(id = "s", type = FlatBpmnNodeKind.START_EVENT, name = "Begin", parentRef = "sp"),
                 FlatBpmnNode(id = "u", type = FlatBpmnNodeKind.USER_TASK, name = "Work", parentRef = "sp"),
                 FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "Done", parentRef = "sp"),
@@ -471,7 +446,6 @@ class FlatBpmnDefinitionMapperTest {
 
         val sp = sealed.nodes.single { it.id == "sp" }
         assertIs<BpmnSubProcess>(sp)
-        assertTrue(sp.triggeredByEvent, "triggeredByEvent must survive the flat→sealed mapping")
         assertEquals(
             mapOf("sp" to null, "s" to "sp", "u" to "sp", "e" to "sp"),
             sealed.nodes.associate { it.id to it.parentRef },

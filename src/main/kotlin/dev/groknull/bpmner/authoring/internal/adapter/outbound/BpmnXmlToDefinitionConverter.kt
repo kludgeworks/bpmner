@@ -7,15 +7,10 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.authoring.internal.domain.BpmnXmlParser
 import dev.groknull.bpmner.bpmn.BpmnAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataObject
-import dev.groknull.bpmner.bpmn.BpmnDataStore
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnLane
@@ -25,15 +20,12 @@ import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParticipant
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
-import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -62,9 +54,6 @@ private data class ParsedArtifacts(
     val annotations: List<BpmnTextAnnotation>,
     val associations: List<BpmnAssociation>,
     val groups: List<BpmnGroup>,
-    val dataObjects: List<BpmnDataObject>,
-    val dataStores: List<BpmnDataStore>,
-    val dataAssociations: List<BpmnDataAssociation>,
 )
 
 // Collaboration artifacts: participants (pools) + message flows from <collaboration>, and lanes from
@@ -99,6 +88,12 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             "conversation",
             "conversationLink",
             "conversationAssociation",
+            "dataObject",
+            "dataObjectReference",
+            "dataStore",
+            "dataStoreReference",
+            "dataInputAssociation",
+            "dataOutputAssociation",
         )
     }
 
@@ -157,15 +152,10 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             nodes = allNodes,
             sequences = sequences,
             messages = eventMetadata.messages,
-            signals = eventMetadata.signals,
             errors = eventMetadata.errors,
-            escalations = eventMetadata.escalations,
             annotations = artifacts.annotations,
             groups = artifacts.groups,
             associations = artifacts.associations,
-            dataObjects = artifacts.dataObjects,
-            dataStores = artifacts.dataStores,
-            dataAssociations = artifacts.dataAssociations,
             participants = collaboration.participants,
             lanes = collaboration.lanes,
             messageFlows = collaboration.messageFlows,
@@ -174,11 +164,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     }
 
     // All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
-    // text annotations + their association edges (sourceRef = annotated element, targetRef =
-    // annotation), groups, data objects/stores, and the read/write data associations parsed from
-    // each activity's `<dataInputAssociation>` (data id in `<sourceRef>`) /
-    // `<dataOutputAssociation>` (data id in `<targetRef>`) children (the association's `sourceRef`
-    // is the parent activity id).
+    // Text annotations + their association edges (sourceRef = annotated element, targetRef =
+    // annotation) and groups are the supported non-flow-node artifacts.
     private fun artifactsAndDataFrom(document: Document): ParsedArtifacts {
         val categoryValuesById = document.bpmnElements("categoryValue")
             .mapNotNull { el ->
@@ -204,29 +191,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val associations = document.bpmnElements("association")
             .map { el -> BpmnAssociation(el.getAttribute("id"), el.getAttribute("sourceRef"), el.getAttribute("targetRef")) }
             .filter { it.id.isNotBlank() }.toList()
-        val dataObjects = document.bpmnElements("dataObject")
-            .map { BpmnDataObject(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-            .filter { it.id.isNotBlank() }.toList()
-        val dataStores = document.bpmnElements("dataStore")
-            .map { BpmnDataStore(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-            .filter { it.id.isNotBlank() }.toList()
-        fun Element.toAssociation(direction: DataFlowDirection, refChild: String): BpmnDataAssociation? {
-            val activityId = (parentNode as? Element)?.getAttribute("id").orEmpty()
-            val dataId = childElements().firstOrNull { it.localName == refChild }?.textContent?.trim().orEmpty()
-            // Externally-authored BPMN may omit the association id; derive a deterministic one so the
-            // link still round-trips. Skip only when the endpoints (activity / data id) are missing.
-            val id = getAttribute("id").ifBlank { "DataAssoc_${activityId}_$dataId" }
-            return if (activityId.isBlank() || dataId.isBlank()) {
-                null
-            } else {
-                BpmnDataAssociation(id = id, sourceRef = activityId, targetRef = dataId, direction = direction)
-            }
-        }
-        val inputs = document.bpmnElements("dataInputAssociation")
-            .mapNotNull { it.toAssociation(DataFlowDirection.READ, "sourceRef") }
-        val outputs = document.bpmnElements("dataOutputAssociation")
-            .mapNotNull { it.toAssociation(DataFlowDirection.WRITE, "targetRef") }
-        return ParsedArtifacts(annotations, associations, groups, dataObjects, dataStores, (inputs + outputs).toList())
+        return ParsedArtifacts(annotations, associations, groups)
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory
@@ -335,15 +300,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .bpmnElements("boundaryEvent")
                 .associate { it.getAttribute("id") to it.getAttribute("attachedToRef") }
                 .filterValues { it.isNotBlank() },
-            cancelActivity =
-            document
-                .bpmnElements("boundaryEvent")
-                .filter { it.hasAttribute("cancelActivity") }
-                .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
             messages = document.parseMessages(),
-            signals = document.parseSignals(),
             errors = document.parseErrors(),
-            escalations = document.parseEscalations(),
         )
     }
 
@@ -356,11 +314,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             "messageEventDefinition" -> BpmnMessageEventDefinition(child.getAttribute("messageRef"))
 
-            "signalEventDefinition" -> BpmnSignalEventDefinition(child.getAttribute("signalRef"))
-
             "errorEventDefinition" -> BpmnErrorEventDefinition(child.getAttribute("errorRef"))
-
-            "escalationEventDefinition" -> BpmnEscalationEventDefinition(child.getAttribute("escalationRef"))
 
             "terminateEventDefinition" -> BpmnTerminateEventDefinition
 
@@ -501,9 +455,6 @@ internal data class EventMetadata(
     val eventDefinitions: Map<String, BpmnEventDefinition>,
     val isInterrupting: Map<String, Boolean>,
     val attachedToRefs: Map<String, String>,
-    val cancelActivity: Map<String, Boolean>,
     val messages: List<BpmnMessageRef>,
-    val signals: List<BpmnSignalRef>,
     val errors: List<BpmnErrorRef>,
-    val escalations: List<BpmnEscalationRef>,
 )

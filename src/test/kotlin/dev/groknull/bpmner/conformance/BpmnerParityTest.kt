@@ -11,7 +11,6 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
@@ -20,7 +19,6 @@ import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -66,17 +64,15 @@ class BpmnerParityTest {
     }
 
     @Test
-    fun `event definitions — all 9 codes — produce same codes`() {
-        // Triggers every event-definition diagnostic code in one shot:
+    fun `event definitions produce same codes`() {
+        // Triggers every retained event-definition diagnostic code in one shot:
         //  def-missing-event-def        (intermediate catch with NoneEventDefinition)
         //  def-missing-attached-to      (boundary with blank attachedToRef)
         //  def-invalid-attached-to      (boundary attachedToRef → missing node)
         //  def-non-task-attached-to     (boundary attachedToRef → gateway)
         //  def-missing-timer-expr       (start event with blank timer expression)
         //  def-invalid-message-ref      (intermediate throw with missing-catalog messageRef)
-        //  def-invalid-signal-ref       (intermediate catch with missing-catalog signalRef)
         //  def-invalid-error-ref        (boundary with missing-catalog errorRef)
-        //  def-invalid-escalation-ref   (boundary with missing-catalog escalationRef)
         parity("event definitions", eventDefinitionsDefinition())
     }
 
@@ -132,7 +128,15 @@ class BpmnerParityTest {
         scenario: String,
         def: BpmnDefinition,
     ) {
+        // Connectivity errors from validateScopeWeakConnectivity are excluded from parity
+        // comparison: the compiled rule engine has no equivalent check, so these errors
+        // would always produce a false parity break. Disconnected-component cases are
+        // covered by dedicated BpmnDefinitionValidatorTest assertions instead.
         val rawValidatorErrors = validator.validate(def)
+            .filterNot {
+                it.startsWith("process contains disconnected flow nodes:") ||
+                    (it.startsWith("subprocess '") && it.contains("contains disconnected flow nodes:"))
+            }
         // Catch-all: every validator string must match exactly one pattern in the
         // translation table. Drift in validator output gets surfaced loudly.
         val unmatched = rawValidatorErrors.filter { msg -> TRANSLATION_TABLE.none { it.first.containsMatchIn(msg) } }
@@ -217,11 +221,6 @@ class BpmnerParityTest {
         listOf(
             BpmnStartEvent("s", "Start", BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = " ")),
             BpmnIntermediateCatchEvent("ic-none", "IC-none", BpmnNoneEventDefinition),
-            BpmnIntermediateCatchEvent(
-                "ic-signal",
-                "IC-signal",
-                BpmnSignalEventDefinition(signalRef = "missing-signal"),
-            ),
             BpmnIntermediateThrowEvent(
                 "it-msg",
                 "IT-msg",
@@ -239,7 +238,7 @@ class BpmnerParityTest {
                 id = "be-bad-attach",
                 name = "BE-bad-attach",
                 attachedToRef = "no-such-node",
-                eventDefinition = BpmnEscalationEventDefinition(escalationRef = "missing-esc"),
+                eventDefinition = BpmnErrorEventDefinition(errorRef = "missing-err"),
             ),
             BpmnBoundaryEvent(
                 id = "be-gw-attach",
@@ -252,11 +251,10 @@ class BpmnerParityTest {
         sequences =
         listOf(
             BpmnEdge("f1", "s", "ic-none"),
-            BpmnEdge("f2", "ic-none", "ic-signal"),
-            BpmnEdge("f3", "ic-signal", "it-msg"),
-            BpmnEdge("f4", "it-msg", "gw"),
-            BpmnEdge("f5", "gw", "t-attach"),
-            BpmnEdge("f6", "t-attach", "e"),
+            BpmnEdge("f2", "ic-none", "it-msg"),
+            BpmnEdge("f3", "it-msg", "gw"),
+            BpmnEdge("f4", "gw", "t-attach"),
+            BpmnEdge("f5", "t-attach", "e"),
         ),
     )
 
@@ -358,17 +356,9 @@ class BpmnerParityTest {
                     "def-non-task-attached-to",
                 Regex("^event \\S+ timer definition expression must not be blank$") to "def-missing-timer-expr",
                 Regex(
-                    "^event \\S+ (signalEventDefinition is missing the required signalRef attribute|" +
-                        "signalRef '.*' does not match any signal catalog id)$",
-                ) to "def-invalid-signal-ref",
-                Regex(
                     "^event \\S+ (errorEventDefinition is missing the required errorRef attribute|" +
                         "errorRef '.*' does not match any error catalog id)$",
                 ) to "def-invalid-error-ref",
-                Regex(
-                    "^event \\S+ (escalationEventDefinition is missing the required escalationRef attribute|" +
-                        "escalationRef '.*' does not match any escalation catalog id)$",
-                ) to "def-invalid-escalation-ref",
                 Regex(
                     "^event \\S+ (messageEventDefinition is missing the required messageRef attribute|" +
                         "messageRef '.*' does not match any message catalog id)$",
@@ -384,6 +374,13 @@ class BpmnerParityTest {
                 Regex("^edge .* isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY or INCLUSIVE_GATEWAY$")
                     to "def-default-flow-non-gateway",
                 Regex("^node \\S+ has \\d+ default flows .*at most one is allowed$") to "def-multiple-default-flows",
+                // Validator-only: no compiled rule emits a disconnected-component code, so this
+                // entry only exists to satisfy the catch-all. Scenarios that need to assert on
+                // disconnected-component errors must call validator.validate() directly (see
+                // BpmnDefinitionValidatorTest) — they must NOT be exercised via parity() because
+                // the rule engine will never emit the matching code.
+                Regex("^(subprocess '\\S+'|process) contains disconnected flow nodes: .+$")
+                    to "def-disconnected-nodes",
             )
 
         // Every diagnosticCode the compiled rules can emit. Verified by `git grep
@@ -404,9 +401,7 @@ class BpmnerParityTest {
                 "def-invalid-attached-to",
                 "def-non-task-attached-to",
                 "def-missing-timer-expr",
-                "def-invalid-signal-ref",
                 "def-invalid-error-ref",
-                "def-invalid-escalation-ref",
                 "def-invalid-message-ref",
                 "def-missing-message-ref",
                 "def-invalid-task-message-ref",

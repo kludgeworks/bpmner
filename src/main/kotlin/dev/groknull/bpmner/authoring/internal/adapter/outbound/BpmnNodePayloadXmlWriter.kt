@@ -7,7 +7,6 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
@@ -18,7 +17,6 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTask
-import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -44,7 +42,6 @@ internal class BpmnNodePayloadXmlWriter(
         }
 
         val allTaskElementsById = document.allTaskElementsById()
-        writeDataAssociations(document, allTaskElementsById, definition.dataAssociations)
         if (writeLoopCharacteristics(document, allTaskElementsById, definition.nodes.filterIsInstance<BpmnTask>())) {
             bpmnerNamespaceUsed = true
         }
@@ -75,7 +72,7 @@ internal class BpmnNodePayloadXmlWriter(
         is BpmnBoundaryEvent -> {
             val element = eventElementsById.eventElement(node.id)
             element.setAttribute("attachedToRef", node.attachedToRef)
-            element.setAttribute("cancelActivity", node.cancelActivity.toString())
+            element.setAttribute("cancelActivity", "true")
             eventDefinitionWriter.appendTo(element, document, node.eventDefinition)
             false
         }
@@ -94,20 +91,6 @@ internal class BpmnNodePayloadXmlWriter(
             true
         }
         else -> false
-    }
-
-    private fun writeDataAssociations(
-        document: Document,
-        allTaskElementsById: Map<String, Element>,
-        dataAssociations: List<BpmnDataAssociation>,
-    ) {
-        dataAssociations.forEach { da ->
-            val element = allTaskElementsById[da.sourceRef]
-                ?: throw RetryableBpmnGenerationException(
-                    "Data association '${da.id}' sourceRef '${da.sourceRef}' has no rendered task element",
-                )
-            element.appendDataAssociation(document, da)
-        }
     }
 
     private fun writeLoopCharacteristics(
@@ -222,20 +205,6 @@ private fun Element.appendStandardLoop(
                     document.bpmnElement("loopCondition").also { it.textContent = condition },
                 )
             }
-        },
-    )
-}
-
-private fun Element.appendDataAssociation(document: Document, da: BpmnDataAssociation) {
-    val (localName, sourceId, targetId) = when (da.direction) {
-        DataFlowDirection.READ -> Triple("dataInputAssociation", da.targetRef, da.sourceRef)
-        DataFlowDirection.WRITE -> Triple("dataOutputAssociation", da.sourceRef, da.targetRef)
-    }
-    appendChild(
-        document.bpmnElement(localName).also { assoc ->
-            assoc.setAttribute("id", da.id)
-            assoc.appendChild(document.bpmnElement("sourceRef").also { it.textContent = sourceId })
-            assoc.appendChild(document.bpmnElement("targetRef").also { it.textContent = targetId })
         },
     )
 }

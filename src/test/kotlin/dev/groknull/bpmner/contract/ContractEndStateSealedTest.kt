@@ -33,7 +33,7 @@ class ContractEndStateSealedTest {
 
     @Test
     fun `every subtype exposes shared interface properties`() {
-        // Exhaustive over the 6 subtypes — compiler forces a new arm here if a new subtype
+        // Exhaustive over the retained subtypes — compiler forces a new arm here if a new subtype
         // is added without updating it, the same forcing function the rest of the codebase
         // uses on sealed types.
         val subjects: List<ContractEndState> =
@@ -42,12 +42,6 @@ class ContractEndStateSealedTest {
                 ContractEndState.Terminate("end-terminate", "Booking cancelled"),
                 ContractEndState.Error("end-error", "Credit rejected", errorCode = "CREDIT_REJECTED"),
                 ContractEndState.Message("end-message", "Shipment notification sent", messageName = "shipment confirmation"),
-                ContractEndState.Signal("end-signal", "Settlement complete signal", signalName = "settlement complete"),
-                ContractEndState.Escalation(
-                    "end-escalation",
-                    "Approval overdue escalation",
-                    escalationCode = "APPROVAL_OVERDUE",
-                ),
             )
         subjects.forEach { endState ->
             assertNotNull(endState.id)
@@ -66,8 +60,6 @@ class ContractEndStateSealedTest {
                 ContractEndState.Terminate("e", "n") to "TERMINATE",
                 ContractEndState.Error("e", "n", errorCode = "X") to "ERROR",
                 ContractEndState.Message("e", "n", messageName = "msg") to "MESSAGE",
-                ContractEndState.Signal("e", "n", signalName = "sig") to "SIGNAL",
-                ContractEndState.Escalation("e", "n", escalationCode = "X") to "ESCALATION",
             )
         cases.forEach { (endState, expectedKind) ->
             assertEquals(expectedKind, endState.kindName)
@@ -92,18 +84,6 @@ class ContractEndStateSealedTest {
                     messageName = "shipment confirmation",
                     sourceIds = listOf("ev4"),
                 ),
-                ContractEndState.Signal(
-                    "end-5",
-                    "Settlement complete signal",
-                    signalName = "settlement complete",
-                    sourceIds = listOf("ev5"),
-                ),
-                ContractEndState.Escalation(
-                    "end-6",
-                    "Approval overdue escalation",
-                    escalationCode = "APPROVAL_OVERDUE",
-                    sourceIds = listOf("ev6"),
-                ),
             )
         subjects.forEach { original ->
             val json = objectMapper.writeValueAsString(original)
@@ -126,14 +106,8 @@ class ContractEndStateSealedTest {
     }
 
     @Test
-    fun `Message and Signal subtypes carry name not ref - matches ContractTrigger`() {
-        // Mirror check: ContractTrigger.Message uses messageName too — naming convention
-        // alignment matters for #194 (intermediate throw events) which will inherit the
-        // same field shape.
+    fun `Message subtype carries name not ref`() {
         val message = ContractEndState.Message("e", "n", messageName = "shipment confirmation")
         assertEquals("shipment confirmation", message.messageName)
-
-        val signal = ContractEndState.Signal("e", "n", signalName = "settlement complete")
-        assertEquals("settlement complete", signal.signalName)
     }
 }

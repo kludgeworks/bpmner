@@ -16,29 +16,9 @@ internal class BpmnCatalogXmlWriter {
         process: Element,
         definition: BpmnDefinition,
     ) {
-        writeEscalations(document, root, process, definition)
         writeErrors(document, root, process, definition)
-        writeSignals(document, root, process, definition)
         writeMessages(document, root, process, definition)
         writeGroupCategories(document, root, process, definition)
-    }
-
-    private fun writeEscalations(
-        document: Document,
-        root: Element,
-        process: Element,
-        definition: BpmnDefinition,
-    ) {
-        definition.escalations.asReversed().forEach { escalation ->
-            root.insertBefore(
-                document.bpmnElement("escalation").also {
-                    it.setAttribute("id", escalation.id)
-                    it.setAttribute("escalationCode", escalation.code)
-                    escalation.name?.takeIf { name -> name.isNotBlank() }?.let { name -> it.setAttribute("name", name) }
-                },
-                process,
-            )
-        }
     }
 
     private fun writeErrors(
@@ -53,23 +33,6 @@ internal class BpmnCatalogXmlWriter {
                     it.setAttribute("id", error.id)
                     it.setAttribute("errorCode", error.code)
                     error.name?.takeIf { name -> name.isNotBlank() }?.let { name -> it.setAttribute("name", name) }
-                },
-                process,
-            )
-        }
-    }
-
-    private fun writeSignals(
-        document: Document,
-        root: Element,
-        process: Element,
-        definition: BpmnDefinition,
-    ) {
-        definition.signals.asReversed().forEach { signal ->
-            root.insertBefore(
-                document.bpmnElement("signal").also {
-                    it.setAttribute("id", signal.id)
-                    it.setAttribute("name", signal.name)
                 },
                 process,
             )

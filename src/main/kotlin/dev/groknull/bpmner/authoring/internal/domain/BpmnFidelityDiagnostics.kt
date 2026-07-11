@@ -127,33 +127,6 @@ enum class BpmnFidelityCode {
     SUBPROCESS_BOUNDARY_CROSSED,
 
     /**
-     * A ContractEventSubProcess has no corresponding node in the generated BPMN, or the matching
-     * node is not a BpmnSubProcess. Event subprocesses are not contract activities, so the generic
-     * ACTIVITY_TASK_KIND_MISMATCH check does not cover them.
-     */
-    EVENT_SUBPROCESS_NODE_MISSING,
-
-    /**
-     * A ContractEventSubProcess is realised as a BpmnSubProcess whose `triggeredByEvent` flag is
-     * false — it would render as an ordinary embedded subprocess on the main flow, dropping the
-     * event-handler semantic.
-     */
-    EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED,
-
-    /**
-     * A ContractEventSubProcess has no inner START_EVENT (parentRef = the subprocess) whose
-     * `eventDefinition` matches the declared trigger, so the handler's triggering event was dropped
-     * or rendered with the wrong event type.
-     */
-    EVENT_SUBPROCESS_START_MISMATCH,
-
-    /**
-     * A ContractEventSubProcess's matching inner start exists but its `isInterrupting` flag disagrees
-     * with the contract `interrupting` flag (interrupting vs non-interrupting handler).
-     */
-    EVENT_SUBPROCESS_INTERRUPTING_MISMATCH,
-
-    /**
      * The source contract declares one or more [dev.groknull.bpmner.contract.ContractActor]s
      * (explicit role structure), but the generated [dev.groknull.bpmner.bpmn.BpmnDefinition]
      * has no lanes. When actors are present the process has defined responsibility partitioning,

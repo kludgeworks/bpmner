@@ -224,7 +224,6 @@ class SmokeResultRecorder :
                 "prompts/bpmner/elements/activity_kinds.jinja",
                 "prompts/bpmner/elements/actors.jinja",
                 "prompts/bpmner/elements/branch_kinds.jinja",
-                "prompts/bpmner/elements/data_artifacts.jinja",
                 "prompts/bpmner/elements/end_state_kinds.jinja",
                 "prompts/bpmner/elements/subprocesses.jinja",
                 "prompts/bpmner/elements/topology_rules.jinja",

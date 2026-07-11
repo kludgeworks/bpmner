@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import org.w3c.dom.Document
-import org.w3c.dom.Element
 import org.w3c.dom.Node
 import org.xml.sax.InputSource
 import java.io.StringReader
@@ -23,44 +22,8 @@ internal class BpmnLayoutXmlProjector {
         isNamespaceAware = true
     }
 
-    private val elementsToStrip = setOf(
-        "dataObject",
-        "dataObjectReference",
-        "dataStore",
-        "dataStoreReference",
-        "dataInputAssociation",
-        "dataOutputAssociation",
-    )
-
     fun projectForLayout(originalXml: String): String {
-        val doc = parseXml(originalXml)
-
-        val removedIds = mutableSetOf<String>()
-        val nodesToRemove = mutableListOf<Node>()
-
-        // 1. Find all elements to strip
-        val allElements = doc.getElementsByTagName("*")
-        for (i in 0 until allElements.length) {
-            val node = allElements.item(i) as? Element ?: continue
-            val isBpmnModel = node.namespaceURI == "http://www.omg.org/spec/BPMN/20100524/MODEL"
-            if (isBpmnModel && elementsToStrip.contains(node.localName)) {
-                nodesToRemove.add(node)
-                val id = node.getAttribute("id")
-                if (id.isNotEmpty()) {
-                    removedIds.add(id)
-                }
-            }
-        }
-
-        // 2. Find associations that point to stripped elements
-        nodesToRemove.addAll(findAssociationsToRemove(allElements, removedIds))
-
-        // 3. Remove them from DOM
-        nodesToRemove.forEach { node ->
-            node.parentNode?.removeChild(node)
-        }
-
-        return serializeXml(doc)
+        return serializeXml(parseXml(originalXml))
     }
 
     fun mergeLayout(originalXml: String, layoutedProjectedXml: String): String {
@@ -118,22 +81,5 @@ internal class BpmnLayoutXmlProjector {
         writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n")
         transformer.transform(DOMSource(doc), StreamResult(writer))
         return writer.toString()
-    }
-
-    private fun findAssociationsToRemove(allElements: org.w3c.dom.NodeList, removedIds: Set<String>): List<Node> {
-        val nodesToRemove = mutableListOf<Node>()
-        for (i in 0 until allElements.length) {
-            val node = allElements.item(i) as? Element ?: continue
-            val isAssoc = node.namespaceURI == "http://www.omg.org/spec/BPMN/20100524/MODEL" &&
-                node.localName == "association"
-            if (isAssoc) {
-                val sourceRef = node.getAttribute("sourceRef")
-                val targetRef = node.getAttribute("targetRef")
-                if (removedIds.contains(sourceRef) || removedIds.contains(targetRef)) {
-                    nodesToRemove.add(node)
-                }
-            }
-        }
-        return nodesToRemove
     }
 }

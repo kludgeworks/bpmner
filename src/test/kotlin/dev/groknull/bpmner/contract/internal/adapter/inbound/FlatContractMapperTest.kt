@@ -15,7 +15,6 @@ import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractBoundaryEvent
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
 import dev.groknull.bpmner.contract.ContractLoop
@@ -23,7 +22,6 @@ import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
 import dev.groknull.bpmner.contract.EventGatewayBranch
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.EventTriggerKind
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
@@ -120,65 +118,6 @@ class FlatContractMapperTest {
         val subProcess = sealed.activities.filterIsInstance<ContractActivity.SubProcess>().single()
         assertEquals("sub-assess", subProcess.id)
         assertEquals(listOf("act-validate", "act-estimate"), subProcess.containedActivityIds)
-    }
-
-    @Test
-    fun `FlatContractEventSubProcess maps to a ContractEventSubProcess preserving trigger and flag`() {
-        val flat = FlatContractEventSubProcess(
-            id = "esp-cancel",
-            name = "Handle cancellation",
-            activityIds = listOf("act-refund", "act-notify"),
-            trigger = EventSubProcessTrigger.MESSAGE,
-            interrupting = true,
-            sourceIds = listOf("ev1"),
-        )
-
-        assertEquals(
-            ContractEventSubProcess(
-                id = "esp-cancel",
-                name = "Handle cancellation",
-                containedActivityIds = listOf("act-refund", "act-notify"),
-                trigger = EventSubProcessTrigger.MESSAGE,
-                interrupting = true,
-                sourceIds = listOf("ev1"),
-            ),
-            flat.toSealed(),
-        )
-    }
-
-    @Test
-    fun `toSealed maps eventSubProcesses to a separate collection, not into activities`() {
-        val flat = FlatProcessContract(
-            id = "c-esp",
-            processName = "Order with cancellation",
-            summary = "Process an order with an event-triggered cancellation handler.",
-            start = FlatContractStart(
-                trigger = FlatContractTrigger(type = FlatTriggerKind.NONE, description = "Order placed"),
-                sourceIds = listOf("ev1"),
-            ),
-            activities = listOf(
-                flatActivity(FlatActivityKind.SERVICE, id = "act-process"),
-                flatActivity(FlatActivityKind.SERVICE, id = "act-refund"),
-            ),
-            eventSubProcesses = listOf(
-                FlatContractEventSubProcess(
-                    id = "esp-cancel",
-                    name = "Handle cancellation",
-                    activityIds = listOf("act-refund"),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    sourceIds = listOf("ev1"),
-                ),
-            ),
-            endStates = listOf(flatEnd(FlatEndStateKind.NORMAL, "e-ok")),
-        )
-
-        val sealed = flat.toSealed()
-
-        // Event subprocesses are NOT folded into activities (unlike embedded subprocesses).
-        assertEquals(2, sealed.activities.size)
-        assertTrue(sealed.activities.none { it is ContractActivity.SubProcess })
-        assertEquals("esp-cancel", sealed.eventSubProcesses.single().id)
-        assertEquals(EventSubProcessTrigger.MESSAGE, sealed.eventSubProcesses.single().trigger)
     }
 
     @Test
@@ -287,15 +226,6 @@ class FlatContractMapperTest {
                 ContractEndState.Error("e-err", "End", errorCode = "CREDIT_REJECTED", sourceIds = sourceIds),
             flatEnd(FlatEndStateKind.MESSAGE, "e-msg", payload = "shipped") to
                 ContractEndState.Message("e-msg", "End", messageName = "shipped", sourceIds = sourceIds),
-            flatEnd(FlatEndStateKind.SIGNAL, "e-sig", payload = "settled") to
-                ContractEndState.Signal("e-sig", "End", signalName = "settled", sourceIds = sourceIds),
-            flatEnd(FlatEndStateKind.ESCALATION, "e-esc", payload = "OVERDUE") to
-                ContractEndState.Escalation(
-                    "e-esc",
-                    "End",
-                    escalationCode = "OVERDUE",
-                    sourceIds = sourceIds,
-                ),
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -350,20 +280,6 @@ class FlatContractMapperTest {
                     messageName = "invoice ready",
                     sourceIds = sourceIds,
                 ),
-            flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = "stock changed") to
-                ContractIntermediateThrow.Signal(
-                    "throw-sig",
-                    "Throw",
-                    signalName = "stock changed",
-                    sourceIds = sourceIds,
-                ),
-            flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "APPROVAL_OVERDUE") to
-                ContractIntermediateThrow.Escalation(
-                    "throw-esc",
-                    "Throw",
-                    escalationCode = "APPROVAL_OVERDUE",
-                    sourceIds = sourceIds,
-                ),
         )
 
         cases.forEach { (flat, expected) -> assertEquals(expected, flat.toSealed()) }
@@ -375,16 +291,6 @@ class FlatContractMapperTest {
         val messageEx = assertFailsWith<IllegalArgumentException> { message.toSealed() }
         assertTrue("throw-msg" in messageEx.message.orEmpty())
         assertTrue("messageName" in messageEx.message.orEmpty())
-
-        val signal = flatThrow(FlatIntermediateThrowKind.SIGNAL, "throw-sig", payload = " ")
-        val signalEx = assertFailsWith<IllegalArgumentException> { signal.toSealed() }
-        assertTrue("throw-sig" in signalEx.message.orEmpty())
-        assertTrue("signalName" in signalEx.message.orEmpty())
-
-        val escalation = flatThrow(FlatIntermediateThrowKind.ESCALATION, "throw-esc", payload = "")
-        val escalationEx = assertFailsWith<IllegalArgumentException> { escalation.toSealed() }
-        assertTrue("throw-esc" in escalationEx.message.orEmpty())
-        assertTrue("escalationCode" in escalationEx.message.orEmpty())
     }
 
     @Test
@@ -469,14 +375,6 @@ class FlatContractMapperTest {
                 type = FlatTriggerKind.MESSAGE,
                 description = "order webhook",
                 messageName = "order.submitted",
-            ).toSealed(),
-        )
-        assertEquals(
-            ContractTrigger.Signal("settlement", "broadcast"),
-            FlatContractTrigger(
-                type = FlatTriggerKind.SIGNAL,
-                description = "broadcast",
-                signalName = "settlement",
             ).toSealed(),
         )
     }
@@ -576,8 +474,6 @@ class FlatContractMapperTest {
         sourceIds = listOf("ev1"),
         errorCode = payload.takeIf { kind == FlatEndStateKind.ERROR },
         messageName = payload.takeIf { kind == FlatEndStateKind.MESSAGE },
-        signalName = payload.takeIf { kind == FlatEndStateKind.SIGNAL },
-        escalationCode = payload.takeIf { kind == FlatEndStateKind.ESCALATION },
     )
 
     private fun flatThrow(
@@ -590,8 +486,6 @@ class FlatContractMapperTest {
         kind = kind,
         sourceIds = listOf("ev1"),
         messageName = payload.takeIf { kind == FlatIntermediateThrowKind.MESSAGE },
-        signalName = payload.takeIf { kind == FlatIntermediateThrowKind.SIGNAL },
-        escalationCode = payload.takeIf { kind == FlatIntermediateThrowKind.ESCALATION },
     )
 
     // Site 15: toPayloadActivity called with non-payload kind throws RetryableBpmnGenerationException.

@@ -8,14 +8,9 @@
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataObject
-import dev.groknull.bpmner.bpmn.BpmnDataStore
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -26,15 +21,12 @@ import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
-import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -142,40 +134,6 @@ class BpmnDefinitionToXmlConverterTest {
 
         assertEquals(original.annotations, parsed.annotations)
         assertEquals(original.associations, parsed.associations)
-    }
-
-    @Test
-    fun `data objects, stores, and read-write associations round-trip through render and parse`() {
-        val original = BpmnDefinition(
-            processId = "Process_data",
-            processName = "Order validation",
-            nodes = listOf(
-                BpmnStartEvent("StartEvent_1", "Order received"),
-                BpmnServiceTask("act-validate", "Validate order"),
-                BpmnEndEvent("end-done", "Order validated"),
-            ),
-            sequences = listOf(
-                BpmnEdge("F1", "StartEvent_1", "act-validate"),
-                BpmnEdge("F2", "act-validate", "end-done"),
-            ),
-            dataObjects = listOf(
-                BpmnDataObject("DataObject_order", "Order"),
-                BpmnDataObject("DataObject_validated", "Validated order"),
-            ),
-            dataStores = listOf(BpmnDataStore("DataStore_customer", "Customer database")),
-            dataAssociations = listOf(
-                BpmnDataAssociation("DA1", "act-validate", "DataObject_order", DataFlowDirection.READ),
-                BpmnDataAssociation("DA2", "act-validate", "DataStore_customer", DataFlowDirection.READ),
-                BpmnDataAssociation("DA3", "act-validate", "DataObject_validated", DataFlowDirection.WRITE),
-            ),
-        )
-
-        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
-
-        assertEquals(original.dataObjects, parsed.dataObjects)
-        assertEquals(original.dataStores, parsed.dataStores)
-        // Parse groups inputs then outputs, so compare order-independently.
-        assertEquals(original.dataAssociations.toSet(), parsed.dataAssociations.toSet())
     }
 
     @Test
@@ -424,7 +382,7 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
-    fun `converter preserves intermediate message signal and escalation throw event definitions semantically`() {
+    fun `converter preserves intermediate message throw event definitions semantically`() {
         val definition =
             BpmnDefinition(
                 processId = "Process_Throws",
@@ -437,28 +395,14 @@ class BpmnDefinitionToXmlConverterTest {
                         "Notify invoice ready",
                         BpmnMessageEventDefinition("Message_InvoiceReady"),
                     ),
-                    BpmnIntermediateThrowEvent(
-                        "Throw_signal",
-                        "Broadcast stock change",
-                        BpmnSignalEventDefinition("Signal_StockChanged"),
-                    ),
-                    BpmnIntermediateThrowEvent(
-                        "Throw_escalation",
-                        "Escalate overdue approval",
-                        BpmnEscalationEventDefinition("Escalation_ApprovalOverdue"),
-                    ),
                     BpmnEndEvent("EndEvent_1", "Done"),
                 ),
                 sequences =
                 listOf(
                     BpmnEdge("F1", "StartEvent_1", "Throw_message"),
-                    BpmnEdge("F2", "Throw_message", "Throw_signal"),
-                    BpmnEdge("F3", "Throw_signal", "Throw_escalation"),
-                    BpmnEdge("F4", "Throw_escalation", "EndEvent_1"),
+                    BpmnEdge("F2", "Throw_message", "EndEvent_1"),
                 ),
                 messages = listOf(BpmnMessageRef("Message_InvoiceReady", "invoice ready")),
-                signals = listOf(BpmnSignalRef("Signal_StockChanged", "stock changed")),
-                escalations = listOf(BpmnEscalationRef("Escalation_ApprovalOverdue", "APPROVAL_OVERDUE")),
             )
 
         val parsed = BpmnXmlToDefinitionConverter().parse(converter.toXml(definition))
@@ -466,8 +410,6 @@ class BpmnDefinitionToXmlConverterTest {
         assertEquals(definition.nodes.associateBy { it.id }, parsed.nodes.associateBy { it.id })
         assertEquals(definition.sequences.associateBy { it.id }, parsed.sequences.associateBy { it.id })
         assertEquals(definition.messages, parsed.messages)
-        assertEquals(definition.signals, parsed.signals)
-        assertEquals(definition.escalations, parsed.escalations)
     }
 
     @Test
@@ -491,7 +433,7 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
-    fun `converter renders timer message and signal start event definitions`() {
+    fun `converter renders timer and message start event definitions`() {
         val timerDefinition =
             minimalDefinition(
                 start =
@@ -511,16 +453,6 @@ class BpmnDefinitionToXmlConverterTest {
                 ),
                 messages = listOf(BpmnMessageRef("Message_OrderReceived", "Order received")),
             )
-        val signalDefinition =
-            minimalDefinition(
-                start =
-                BpmnStartEvent(
-                    "StartEvent_signal",
-                    "Incident broadcast",
-                    eventDefinition = BpmnSignalEventDefinition("Signal_Incident"),
-                ),
-                signals = listOf(BpmnSignalRef("Signal_Incident", "Incident broadcast")),
-            )
 
         val timerXml = converter.toXml(timerDefinition)
         assertXml(timerXml).nodesByXPath("//bpmn:startEvent[@id='StartEvent_timer']/bpmn:timerEventDefinition").exist()
@@ -530,12 +462,6 @@ class BpmnDefinitionToXmlConverterTest {
         assertXml(messageXml).nodesByXPath("//bpmn:message[@id='Message_OrderReceived' and @name='Order received']").exist()
         assertXml(messageXml).nodesByXPath(
             "//bpmn:startEvent[@id='StartEvent_message']/bpmn:messageEventDefinition[@messageRef='Message_OrderReceived']",
-        ).exist()
-
-        val signalXml = converter.toXml(signalDefinition)
-        assertXml(signalXml).nodesByXPath("//bpmn:signal[@id='Signal_Incident' and @name='Incident broadcast']").exist()
-        assertXml(signalXml).nodesByXPath(
-            "//bpmn:startEvent[@id='StartEvent_signal']/bpmn:signalEventDefinition[@signalRef='Signal_Incident']",
         ).exist()
     }
 
@@ -691,7 +617,6 @@ class BpmnDefinitionToXmlConverterTest {
     private fun minimalDefinition(
         start: BpmnStartEvent,
         messages: List<BpmnMessageRef> = emptyList(),
-        signals: List<BpmnSignalRef> = emptyList(),
     ) = BpmnDefinition(
         processId = "Process_events",
         processName = "Event starts",
@@ -702,6 +627,5 @@ class BpmnDefinitionToXmlConverterTest {
         ),
         sequences = listOf(BpmnEdge("Flow_1", start.id, "EndEvent_1")),
         messages = messages,
-        signals = signals,
     )
 }
