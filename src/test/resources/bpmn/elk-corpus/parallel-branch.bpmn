@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_and" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_and" name="Parallel Branch" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:parallelGateway id="Gw_fork">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_b</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_a" name="Send Confirmation">
+      <bpmn:incoming>Flow_a</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_a</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_b" name="Update Inventory">
+      <bpmn:incoming>Flow_b</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_b</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:parallelGateway id="Gw_join">
+      <bpmn:incoming>Flow_join_a</bpmn:incoming>
+      <bpmn:incoming>Flow_join_b</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Gw_fork"/>
+    <bpmn:sequenceFlow id="Flow_a" sourceRef="Gw_fork" targetRef="Task_a"/>
+    <bpmn:sequenceFlow id="Flow_b" sourceRef="Gw_fork" targetRef="Task_b"/>
+    <bpmn:sequenceFlow id="Flow_join_a" sourceRef="Task_a" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_join_b" sourceRef="Task_b" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_join" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

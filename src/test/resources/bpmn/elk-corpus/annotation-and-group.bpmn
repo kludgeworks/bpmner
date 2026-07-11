@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_anno" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_anno" name="Annotation and Group" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_1" name="Review Document">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_2" name="Archive Document">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <!-- Sequence flows must appear before artifacts (BPMN XSD ordering) -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Task_2"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="End_1"/>
+    <!-- Artifacts follow flow elements -->
+    <bpmn:textAnnotation id="Anno_1">
+      <bpmn:text>Must be completed within 2 business days</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:group id="Group_1" categoryValueRef="CategoryValue_1"/>
+    <bpmn:association id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+  </bpmn:process>
+  <bpmn:category id="Category_1">
+    <bpmn:categoryValue id="CategoryValue_1" value="Document Processing"/>
+  </bpmn:category>
+</bpmn:definitions>

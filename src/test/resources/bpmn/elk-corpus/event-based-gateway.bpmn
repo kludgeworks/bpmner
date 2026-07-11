@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_ebg" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_ebg" name="Event Based Gateway" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:eventBasedGateway id="Gw_event" name="Wait for event">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_timer</bpmn:outgoing>
+      <bpmn:outgoing>Flow_msg</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Timer_1" name="30 minutes elapsed">
+      <bpmn:incoming>Flow_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1">
+        <bpmn:timeDuration>PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Msg_1" name="Approval received">
+      <bpmn:incoming>Flow_msg</bpmn:incoming>
+      <bpmn:outgoing>Flow_approved</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_1" messageRef="Message_approval"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_timeout" name="Timed out">
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_approved" name="Approved">
+      <bpmn:incoming>Flow_approved</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Gw_event"/>
+    <bpmn:sequenceFlow id="Flow_timer" sourceRef="Gw_event" targetRef="Timer_1"/>
+    <bpmn:sequenceFlow id="Flow_msg" sourceRef="Gw_event" targetRef="Msg_1"/>
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Timer_1" targetRef="End_timeout"/>
+    <bpmn:sequenceFlow id="Flow_approved" sourceRef="Msg_1" targetRef="End_approved"/>
+  </bpmn:process>
+  <bpmn:message id="Message_approval" name="ApprovalMessage"/>
+</bpmn:definitions>

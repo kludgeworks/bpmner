@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_or" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_or" name="Inclusive Branch" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:inclusiveGateway id="Gw_or_split" name="Select channels">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_email</bpmn:outgoing>
+      <bpmn:outgoing>Flow_sms</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:serviceTask id="Task_email" name="Send Email">
+      <bpmn:incoming>Flow_email</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_email</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_sms" name="Send SMS">
+      <bpmn:incoming>Flow_sms</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_sms</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:inclusiveGateway id="Gw_or_join">
+      <bpmn:incoming>Flow_join_email</bpmn:incoming>
+      <bpmn:incoming>Flow_join_sms</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Notifications Sent">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Gw_or_split"/>
+    <bpmn:sequenceFlow id="Flow_email" name="Email channel enabled" sourceRef="Gw_or_split" targetRef="Task_email"/>
+    <bpmn:sequenceFlow id="Flow_sms" name="SMS channel enabled" sourceRef="Gw_or_split" targetRef="Task_sms"/>
+    <bpmn:sequenceFlow id="Flow_join_email" sourceRef="Task_email" targetRef="Gw_or_join"/>
+    <bpmn:sequenceFlow id="Flow_join_sms" sourceRef="Task_sms" targetRef="Gw_or_join"/>
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_or_join" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

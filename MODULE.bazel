@@ -63,6 +63,8 @@ JUNIT_JUPITER_VERSION = "5.12.2"
 
 GRAALVM_VERSION = "25.0.2"
 
+ELK_VERSION = "0.11.0"
+
 SPRING_MODULITH_VERSION = "1.4.1"
 
 JMOLECULES_VERSION = "2.0.1"
@@ -102,6 +104,9 @@ maven.install(
         "org.junit.jupiter:junit-jupiter-api:" + JUNIT_JUPITER_VERSION,
         "org.junit.jupiter:junit-jupiter-engine:" + JUNIT_JUPITER_VERSION,
         "org.camunda.bpm.model:camunda-bpmn-model:7.24.0",
+        "org.eclipse.elk:org.eclipse.elk.alg.layered:" + ELK_VERSION,
+        # Xtext runtime required by ELK's generated LayeredMetaDataProvider (Xtend-generated code)
+        "org.eclipse.xtext:org.eclipse.xtext.xbase.lib:2.36.0",
         "org.graalvm.polyglot:polyglot:" + GRAALVM_VERSION,
         "org.graalvm.polyglot:js:" + GRAALVM_VERSION,
         "org.springframework.modulith:spring-modulith-starter-core:" + SPRING_MODULITH_VERSION,

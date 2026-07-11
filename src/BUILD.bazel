@@ -80,6 +80,8 @@ kt_jvm_library(
         "@maven//:com_embabel_agent_embabel_agent_starter_webmvc",
         "@maven//:org_apache_opennlp_opennlp_tools",
         "@maven//:org_camunda_bpm_model_camunda_bpmn_model",
+        "@maven//:org_eclipse_elk_org_eclipse_elk_alg_layered",
+        "@maven//:org_eclipse_xtext_org_eclipse_xtext_xbase_lib",
         "@maven//:org_graalvm_polyglot_js",
         "@maven//:org_graalvm_polyglot_polyglot",
         "@maven//:org_jetbrains_kotlin_kotlin_reflect",

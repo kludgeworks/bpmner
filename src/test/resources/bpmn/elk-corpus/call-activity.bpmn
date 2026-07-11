@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_call" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_call" name="Call Activity" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_prepare" name="Prepare Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:callActivity id="Call_1" name="Run KYC Check" calledElement="Process_KYC">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:serviceTask id="Task_finalize" name="Record Result">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Call_1"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Call_1" targetRef="Task_finalize"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_finalize" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

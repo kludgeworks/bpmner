@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_cycle" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_cycle" name="Explicit Cycle" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_attempt" name="Attempt Payment">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_check</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_result" name="Payment succeeded?">
+      <bpmn:incoming>Flow_check</bpmn:incoming>
+      <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_retry</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Payment Complete">
+      <bpmn:incoming>Flow_ok</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_attempt"/>
+    <bpmn:sequenceFlow id="Flow_check" sourceRef="Task_attempt" targetRef="Gw_result"/>
+    <bpmn:sequenceFlow id="Flow_ok" name="Yes" sourceRef="Gw_result" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_retry" name="No, retry" sourceRef="Gw_result" targetRef="Task_attempt"/>
+  </bpmn:process>
+</bpmn:definitions>
