@@ -87,10 +87,7 @@ internal object BpmnModelFactory {
 
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
 
-                is BpmnSubProcess ->
-                    modelInstance.newInstance(SubProcess::class.java).apply {
-                        setTriggeredByEvent(node.triggeredByEvent)
-                    }
+                is BpmnSubProcess -> modelInstance.newInstance(SubProcess::class.java)
 
                 is BpmnCallActivity ->
                     modelInstance.newInstance(CallActivity::class.java).apply {

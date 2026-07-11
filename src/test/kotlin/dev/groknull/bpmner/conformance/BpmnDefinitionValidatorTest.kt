@@ -11,7 +11,6 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
@@ -20,10 +19,10 @@ import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnParticipant
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -107,6 +106,69 @@ class BpmnDefinitionValidatorTest {
 
         assertContains(errors, "node Gateway_orphan missing incoming sequence flow")
         assertContains(errors, "node Gateway_orphan missing outgoing sequence flow")
+    }
+
+    @Test
+    fun `validator rejects a disconnected closed cycle`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes = listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                    BpmnUserTask("Cycle_1", "Rework request"),
+                    BpmnUserTask("Cycle_2", "Review rework"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "EndEvent_1"),
+                    BpmnEdge("Flow_3", "Cycle_1", "Cycle_2"),
+                    BpmnEdge("Flow_4", "Cycle_2", "Cycle_1"),
+                ),
+            )
+
+        val errors = validator.validate(definition).joinToString("\n")
+
+        assertContains(errors, "process contains disconnected flow nodes: Cycle_1, Cycle_2")
+    }
+
+    @Test
+    fun `validator accepts a cycle connected to the process`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes = listOf(
+                    BpmnStartEvent("StartEvent_1", "Request received"),
+                    BpmnUserTask("Task_1", "Validate request"),
+                    BpmnUserTask("Task_2", "Rework request"),
+                    BpmnEndEvent("EndEvent_1", "Request completed"),
+                ),
+                sequences = listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "Task_1", "Task_2"),
+                    BpmnEdge("Flow_3", "Task_2", "Task_1"),
+                    BpmnEdge("Flow_4", "Task_2", "EndEvent_1"),
+                ),
+            )
+
+        val errors = validator.validate(definition)
+
+        assertTrue(errors.isEmpty(), "Expected connected cycle to pass, got: $errors")
+    }
+
+    @Test
+    fun `validator accepts black-box participants outside process connectivity`() {
+        val definition =
+            minimalDefinition().copy(
+                participants = listOf(BpmnParticipant("Participant_external", "Payment provider")),
+            )
+
+        val errors = validator.validate(definition)
+
+        assertTrue(errors.isEmpty(), "Expected black-box participant to pass, got: $errors")
     }
 
     @Test
@@ -467,23 +529,6 @@ class BpmnDefinitionValidatorTest {
     }
 
     @Test
-    fun `validator flags missing signalRef attribute on signalEventDefinition`() {
-        val definition =
-            minimalDefinition(
-                start =
-                BpmnStartEvent(
-                    "StartEvent_1",
-                    "Broadcast caught",
-                    eventDefinition = BpmnSignalEventDefinition(""),
-                ),
-            )
-        assertContains(
-            validator.validate(definition).joinToString("\n"),
-            "event StartEvent_1 signalEventDefinition is missing the required signalRef attribute",
-        )
-    }
-
-    @Test
     fun `validator flags missing errorRef attribute on errorEventDefinition`() {
         val definition =
             minimalDefinition(
@@ -497,23 +542,6 @@ class BpmnDefinitionValidatorTest {
         assertContains(
             validator.validate(definition).joinToString("\n"),
             "event EndEvent_1 errorEventDefinition is missing the required errorRef attribute",
-        )
-    }
-
-    @Test
-    fun `validator flags missing escalationRef attribute on escalationEventDefinition`() {
-        val definition =
-            minimalDefinition(
-                end =
-                BpmnEndEvent(
-                    "EndEvent_1",
-                    "Escalated",
-                    eventDefinition = BpmnEscalationEventDefinition(""),
-                ),
-            )
-        assertContains(
-            validator.validate(definition).joinToString("\n"),
-            "event EndEvent_1 escalationEventDefinition is missing the required escalationRef attribute",
         )
     }
 

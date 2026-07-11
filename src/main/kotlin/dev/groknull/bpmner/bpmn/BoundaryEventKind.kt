@@ -8,7 +8,7 @@ package dev.groknull.bpmner.bpmn
 /**
  * The kind of event that fires a boundary event attached to an activity:
  * a deadline (`TIMER`), a thrown business error (`ERROR`), or a raised escalation
- * (`ESCALATION`). Maps to the nested BPMN 2.0 event definition on
+ * (`ERROR`). Maps to the nested BPMN 2.0 event definition on
  * `<bpmn:boundaryEvent>` (`timerEventDefinition` / `errorEventDefinition` /
  * `escalationEventDefinition`).
  *
@@ -18,5 +18,4 @@ package dev.groknull.bpmner.bpmn
 enum class BoundaryEventKind {
     TIMER,
     ERROR,
-    ESCALATION,
 }

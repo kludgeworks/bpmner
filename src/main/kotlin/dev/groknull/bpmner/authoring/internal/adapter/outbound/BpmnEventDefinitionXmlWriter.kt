@@ -6,11 +6,9 @@
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -35,14 +33,7 @@ internal class BpmnEventDefinitionXmlWriter {
     ): Element = when (definition) {
         is BpmnTimerEventDefinition -> timerElement(document, definition)
         is BpmnMessageEventDefinition -> refElement(document, "messageEventDefinition", "messageRef", definition.messageRef)
-        is BpmnSignalEventDefinition -> refElement(document, "signalEventDefinition", "signalRef", definition.signalRef)
         is BpmnErrorEventDefinition -> refElement(document, "errorEventDefinition", "errorRef", definition.errorRef)
-        is BpmnEscalationEventDefinition -> refElement(
-            document,
-            "escalationEventDefinition",
-            "escalationRef",
-            definition.escalationRef,
-        )
         is BpmnTerminateEventDefinition -> document.bpmnElement("terminateEventDefinition")
         is BpmnNoneEventDefinition -> error("none event definition must not render XML")
         is BpmnUnrecognizedEventDefinition ->

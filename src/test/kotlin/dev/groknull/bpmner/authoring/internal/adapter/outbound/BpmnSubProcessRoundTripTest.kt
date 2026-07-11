@@ -18,7 +18,6 @@ import org.xmlunit.assertj.XmlAssert
 import org.xmlunit.assertj.XmlAssert.assertThat
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
@@ -55,7 +54,6 @@ class BpmnSubProcessRoundTripTest {
         // The subprocess marker survives as a typed node, not the unrecognized fallback.
         val sp = parsed.nodes.single { it.id == "SubProcess_1" }
         assertIs<BpmnSubProcess>(sp)
-        assertFalse(sp.triggeredByEvent, "an ordinary embedded subprocess is not event-triggered")
 
         // Containment is reconstructed: every node and edge recovers the exact scope it was rendered in.
         assertEquals(parentRefById(original.nodes), parentRefById(parsed.nodes))

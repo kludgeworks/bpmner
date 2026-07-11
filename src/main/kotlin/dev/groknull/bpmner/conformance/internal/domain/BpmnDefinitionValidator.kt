@@ -8,9 +8,9 @@ package dev.groknull.bpmner.conformance.internal.domain
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -22,7 +22,6 @@ import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -95,6 +94,45 @@ internal class BpmnDefinitionValidator {
                 errors.add("node ${node.id} missing outgoing sequence flow")
             }
         }
+
+        definition.nodes
+            .filterNot { it is BpmnBoundaryEvent }
+            .groupBy { it.parentRef }
+            .forEach { (parentRef, nodes) ->
+                validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, errors)
+            }
+    }
+
+    private fun validateScopeWeakConnectivity(
+        parentRef: String?,
+        nodes: List<BpmnNode>,
+        sequences: List<BpmnEdge>,
+        errors: MutableList<String>,
+    ) {
+        if (nodes.size < 2) return
+
+        val nodeIds = nodes.map { it.id }.toSet()
+        val adjacent = nodeIds.associateWith { mutableSetOf<String>() }
+        sequences
+            .filter { it.parentRef == parentRef && it.sourceRef in nodeIds && it.targetRef in nodeIds }
+            .forEach { edge ->
+                adjacent.getValue(edge.sourceRef).add(edge.targetRef)
+                adjacent.getValue(edge.targetRef).add(edge.sourceRef)
+            }
+
+        val visited = mutableSetOf(nodes.first().id)
+        val pending = ArrayDeque<String>().apply { add(nodes.first().id) }
+        while (pending.isNotEmpty()) {
+            adjacent.getValue(pending.removeFirst())
+                .filter { visited.add(it) }
+                .forEach(pending::addLast)
+        }
+
+        val disconnected = nodeIds - visited
+        if (disconnected.isNotEmpty()) {
+            val scope = parentRef?.let { "subprocess '$it'" } ?: "process"
+            errors.add("$scope contains disconnected flow nodes: ${disconnected.sorted().joinToString(", ")}")
+        }
     }
 
     private fun BpmnDefinition.hasRequiredTopLevelEvents(): Boolean {
@@ -105,13 +143,13 @@ internal class BpmnDefinitionValidator {
     private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
         is BpmnStartEvent, is BpmnBoundaryEvent -> false
 
-        is BpmnSubProcess -> !triggeredByEvent
+        is BpmnSubProcess -> true
         else -> true
     }
 
     private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
         is BpmnEndEvent, is BpmnBoundaryEvent -> false
-        is BpmnSubProcess -> !triggeredByEvent
+        is BpmnSubProcess -> true
         else -> true
     }
 
@@ -130,36 +168,6 @@ internal class BpmnDefinitionValidator {
         validateFlowsStayInScope(definition, nodesById, errors)
         validateNoSubProcessCycles(subProcessesById, errors)
         validateSubProcessRequiredEvents(definition, subProcessesById.values, errors)
-        validateEventSubProcesses(definition, subProcessesById.values.filter { it.triggeredByEvent }, errors)
-    }
-
-    // An event subprocess is triggered by its typed inner start, not by the parent flow: it must
-    // carry no connecting sequence flow, and each inner start must be typed (a non-NONE event
-    // definition is the trigger). Interrupting vs non-interrupting rides the inner start's
-    // isInterrupting flag and needs no separate check.
-    private fun validateEventSubProcesses(
-        definition: BpmnDefinition,
-        eventSubProcesses: Collection<BpmnSubProcess>,
-        errors: MutableList<String>,
-    ) {
-        if (eventSubProcesses.isEmpty()) return
-        // Index once rather than re-scanning per event subprocess.
-        val connectedNodeIds = definition.sequences.flatMap { listOf(it.sourceRef, it.targetRef) }.toSet()
-        val startEventsByParent = definition.nodes.filterIsInstance<BpmnStartEvent>().groupBy { it.parentRef }
-
-        eventSubProcesses.forEach { sp ->
-            if (sp.id in connectedNodeIds) {
-                errors.add("event subprocess '${sp.id}' must not have an incoming or outgoing sequence flow")
-            }
-            startEventsByParent[sp.id]?.forEach { start ->
-                if (start.eventDefinition is BpmnNoneEventDefinition) {
-                    errors.add(
-                        "event subprocess '${sp.id}' start event '${start.id}' must be typed " +
-                            "(carry a non-NONE event definition)",
-                    )
-                }
-            }
-        }
     }
 
     // Every non-null parentRef must resolve to an existing node, and that node must be a subprocess
@@ -241,9 +249,7 @@ internal class BpmnDefinitionValidator {
     private data class EventValidationContext(
         val nodesById: Map<String, BpmnNode>,
         val messageIds: Set<String>,
-        val signalIds: Set<String>,
         val errorIds: Set<String>,
-        val escalationIds: Set<String>,
     )
 
     private fun validateEventDefinitions(
@@ -253,9 +259,7 @@ internal class BpmnDefinitionValidator {
         val context = EventValidationContext(
             nodesById = definition.nodes.associateBy { it.id },
             messageIds = definition.messages.map { it.id }.toSet(),
-            signalIds = definition.signals.map { it.id }.toSet(),
             errorIds = definition.errors.map { it.id }.toSet(),
-            escalationIds = definition.escalations.map { it.id }.toSet(),
         )
 
         definition.nodes.forEach { node ->
@@ -358,16 +362,6 @@ internal class BpmnDefinitionValidator {
                 }
             }
 
-            is BpmnSignalEventDefinition -> {
-                if (eventDefinition.signalRef.isBlank()) {
-                    errors.add(
-                        "event $nodeId signalEventDefinition is missing the required signalRef attribute",
-                    )
-                } else if (eventDefinition.signalRef !in context.signalIds) {
-                    errors.add("event $nodeId signalRef '${eventDefinition.signalRef}' does not match any signal catalog id")
-                }
-            }
-
             is BpmnErrorEventDefinition -> {
                 if (eventDefinition.errorRef.isBlank()) {
                     errors.add(
@@ -375,18 +369,6 @@ internal class BpmnDefinitionValidator {
                     )
                 } else if (eventDefinition.errorRef !in context.errorIds) {
                     errors.add("event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id")
-                }
-            }
-
-            is BpmnEscalationEventDefinition -> {
-                if (eventDefinition.escalationRef.isBlank()) {
-                    errors.add(
-                        "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
-                    )
-                } else if (eventDefinition.escalationRef !in context.escalationIds) {
-                    errors.add(
-                        "event $nodeId escalationRef '${eventDefinition.escalationRef}' does not match any escalation catalog id",
-                    )
                 }
             }
 

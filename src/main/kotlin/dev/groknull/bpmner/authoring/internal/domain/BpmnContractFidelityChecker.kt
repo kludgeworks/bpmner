@@ -12,7 +12,6 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -28,12 +27,9 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.isSemanticallyTransparent
 import dev.groknull.bpmner.bpmn.typeName
@@ -44,11 +40,9 @@ import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.DefaultBranch
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.iteration
 import dev.groknull.bpmner.contract.kindName
@@ -136,10 +130,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
 
         contract.decisions.forEach { decision ->
             checkDecision(decision, nodeById, outgoingBySource, issues)
-        }
-
-        contract.eventSubProcesses.forEach { eventSubProcess ->
-            checkEventSubProcess(eventSubProcess, nodeById, definition, issues)
         }
 
         checkLanesPresentForRoles(contract, definition, issues)
@@ -508,100 +498,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
     }
 
     /**
-     * Verifies that an event subprocess ([ContractEventSubProcess]) is realised as an event-triggered
-     * [BpmnSubProcess] with a typed inner start matching its trigger and containing its members:
-     * 1. [BpmnFidelityCode.EVENT_SUBPROCESS_NODE_MISSING] — the id resolves to no node, or one that is
-     *    not a [BpmnSubProcess]. (Event subprocesses are not contract activities, so [checkActivityKind]
-     *    does not cover them.)
-     * 2. [BpmnFidelityCode.EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED] — the subprocess exists but its
-     *    `triggeredByEvent` flag is false, so it would render as an ordinary embedded subprocess.
-     * 3. [BpmnFidelityCode.EVENT_SUBPROCESS_START_MISMATCH] — no inner `START_EVENT` (parentRef = this
-     *    subprocess) carries an `eventDefinition` matching the contract trigger.
-     * 4. [BpmnFidelityCode.EVENT_SUBPROCESS_INTERRUPTING_MISMATCH] — the matching inner start's
-     *    `isInterrupting` disagrees with the contract `interrupting` flag.
-     * Member nesting and boundary crossing reuse [checkContainment] (SUBPROCESS_MEMBER_NOT_NESTED /
-     * SUBPROCESS_BOUNDARY_CROSSED).
-     */
-    private fun checkEventSubProcess(
-        eventSubProcess: ContractEventSubProcess,
-        nodeById: Map<String, BpmnNode>,
-        definition: BpmnDefinition,
-        issues: MutableList<BpmnFidelityIssue>,
-    ) {
-        val node = nodeById[eventSubProcess.id]
-        if (node !is BpmnSubProcess) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.EVENT_SUBPROCESS_NODE_MISSING,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Event subprocess '${eventSubProcess.id}' " +
-                        if (node == null) {
-                            "has no corresponding node in the generated BPMN. Under the unified-id " +
-                                "convention the subprocess node must share the contract id."
-                        } else {
-                            "is realised as a ${node.typeName} node — expected an event subprocess."
-                        },
-                    contractElementId = eventSubProcess.id,
-                    bpmnElementId = node?.id,
-                )
-            return
-        }
-        if (!node.triggeredByEvent) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Event subprocess '${eventSubProcess.id}' is realised as a subprocess with " +
-                        "triggeredByEvent=false — it would render as an ordinary embedded subprocess, " +
-                        "losing the event-handler semantic.",
-                    contractElementId = eventSubProcess.id,
-                    bpmnElementId = node.id,
-                )
-        }
-        checkEventSubProcessStart(eventSubProcess, nodeById, issues)
-        checkContainment(eventSubProcess.id, eventSubProcess.containedActivityIds, nodeById, definition, issues)
-    }
-
-    private fun checkEventSubProcessStart(
-        eventSubProcess: ContractEventSubProcess,
-        nodeById: Map<String, BpmnNode>,
-        issues: MutableList<BpmnFidelityIssue>,
-    ) {
-        val innerStarts = nodeById.values
-            .filterIsInstance<BpmnStartEvent>()
-            .filter { it.parentRef == eventSubProcess.id }
-        val typedMatch = innerStarts.firstOrNull { eventSubProcess.trigger.matchesStart(it.eventDefinition) }
-        if (typedMatch == null) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.EVENT_SUBPROCESS_START_MISMATCH,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Event subprocess '${eventSubProcess.id}' declares trigger=${eventSubProcess.trigger} " +
-                        "but has no inner START_EVENT (parentRef='${eventSubProcess.id}') with a matching " +
-                        "event definition — the event-handler trigger was dropped.",
-                    contractElementId = eventSubProcess.id,
-                    bpmnElementId = eventSubProcess.id,
-                )
-            return
-        }
-        if (typedMatch.isInterrupting != eventSubProcess.interrupting) {
-            issues +=
-                BpmnFidelityIssue(
-                    code = BpmnFidelityCode.EVENT_SUBPROCESS_INTERRUPTING_MISMATCH,
-                    severity = BpmnFidelitySeverity.ERROR,
-                    message =
-                    "Event subprocess '${eventSubProcess.id}' declares interrupting=${eventSubProcess.interrupting} " +
-                        "but its inner start '${typedMatch.id}' has isInterrupting=${typedMatch.isInterrupting}.",
-                    contractElementId = eventSubProcess.id,
-                    bpmnElementId = typedMatch.id,
-                )
-        }
-    }
-
-    /**
      * Shared containment check for a subprocess container (embedded or event-triggered): every declared
      * member node carries `parentRef` = [containerId], and no sequence flow crosses the boundary.
      */
@@ -738,8 +634,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> eventDefinition is BpmnTerminateEventDefinition
         is ContractEndState.Error -> eventDefinition is BpmnErrorEventDefinition
         is ContractEndState.Message -> eventDefinition is BpmnMessageEventDefinition
-        is ContractEndState.Signal -> eventDefinition is BpmnSignalEventDefinition
-        is ContractEndState.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     // Class references rather than hardcoded strings so the diagnostic message stays
@@ -750,8 +644,6 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
         is ContractEndState.Terminate -> BpmnTerminateEventDefinition::class.simpleName!!
         is ContractEndState.Error -> BpmnErrorEventDefinition::class.simpleName!!
         is ContractEndState.Message -> BpmnMessageEventDefinition::class.simpleName!!
-        is ContractEndState.Signal -> BpmnSignalEventDefinition::class.simpleName!!
-        is ContractEndState.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     private fun checkIntermediateThrowKind(
@@ -801,14 +693,10 @@ internal class BpmnContractFidelityChecker : BpmnContractFidelityPort {
 
     private fun ContractIntermediateThrow.matchesEventDefinition(eventDefinition: BpmnEventDefinition): Boolean = when (this) {
         is ContractIntermediateThrow.Message -> eventDefinition is BpmnMessageEventDefinition
-        is ContractIntermediateThrow.Signal -> eventDefinition is BpmnSignalEventDefinition
-        is ContractIntermediateThrow.Escalation -> eventDefinition is BpmnEscalationEventDefinition
     }
 
     private fun ContractIntermediateThrow.expectedEventDefinitionName(): String = when (this) {
         is ContractIntermediateThrow.Message -> BpmnMessageEventDefinition::class.simpleName!!
-        is ContractIntermediateThrow.Signal -> BpmnSignalEventDefinition::class.simpleName!!
-        is ContractIntermediateThrow.Escalation -> BpmnEscalationEventDefinition::class.simpleName!!
     }
 
     /**
@@ -851,15 +739,6 @@ private fun kindDescription(kind: ContractGatewayKind): String = when (kind) {
     ContractGatewayKind.INCLUSIVE -> "take any branch whose condition is true"
     ContractGatewayKind.PARALLEL -> "take all branches concurrently"
     ContractGatewayKind.EVENT_BASED -> "wait for the first of several events"
-}
-
-// Maps an event-subprocess trigger to the inner start event's expected event definition.
-private fun EventSubProcessTrigger.matchesStart(eventDefinition: BpmnEventDefinition): Boolean = when (this) {
-    EventSubProcessTrigger.MESSAGE -> eventDefinition is BpmnMessageEventDefinition
-    EventSubProcessTrigger.TIMER -> eventDefinition is BpmnTimerEventDefinition
-    EventSubProcessTrigger.ERROR -> eventDefinition is BpmnErrorEventDefinition
-    EventSubProcessTrigger.ESCALATION -> eventDefinition is BpmnEscalationEventDefinition
-    EventSubProcessTrigger.SIGNAL -> eventDefinition is BpmnSignalEventDefinition
 }
 
 private fun ContractActivity.matchesTaskType(node: BpmnNode): Boolean = when (this) {

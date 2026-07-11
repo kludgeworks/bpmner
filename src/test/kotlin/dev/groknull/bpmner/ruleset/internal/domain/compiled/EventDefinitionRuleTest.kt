@@ -12,15 +12,11 @@ import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -266,34 +262,6 @@ class EventDefinitionRuleTest {
     }
 
     @Test
-    fun `signal event with unresolved signalRef emits def-invalid-signal-ref`() {
-        val signalEvent = BpmnSignalEventDefinition(signalRef = "sig-missing")
-        val ctx =
-            BpmnDefinitionContext(
-                BpmnDefinition(
-                    processId = "P",
-                    processName = "P",
-                    nodes =
-                    listOf(
-                        BpmnStartEvent(id = "s", name = "Started"),
-                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = signalEvent),
-                        BpmnEndEvent(id = "e", name = "Done"),
-                    ),
-                    sequences =
-                    listOf(
-                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                    ),
-                    signals = listOf(BpmnSignalRef(id = "sig-known", name = "Known")),
-                ),
-            )
-
-        val diag = rule.evaluate(ctx).single()
-        assertEquals("def-invalid-signal-ref", diag.diagnosticCode)
-        assertEquals("event ic signalRef 'sig-missing' does not match any signal catalog id", diag.message)
-    }
-
-    @Test
     fun `error event with unresolved errorRef emits def-invalid-error-ref`() {
         val errEvent = BpmnErrorEventDefinition(errorRef = "err-missing")
         val ctx =
@@ -319,37 +287,6 @@ class EventDefinitionRuleTest {
         val diag = rule.evaluate(ctx).single()
         assertEquals("def-invalid-error-ref", diag.diagnosticCode)
         assertEquals("event ic errorRef 'err-missing' does not match any error catalog id", diag.message)
-    }
-
-    @Test
-    fun `escalation event with unresolved escalationRef emits def-invalid-escalation-ref`() {
-        val escEvent = BpmnEscalationEventDefinition(escalationRef = "esc-missing")
-        val ctx =
-            BpmnDefinitionContext(
-                BpmnDefinition(
-                    processId = "P",
-                    processName = "P",
-                    nodes =
-                    listOf(
-                        BpmnStartEvent(id = "s", name = "Started"),
-                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = escEvent),
-                        BpmnEndEvent(id = "e", name = "Done"),
-                    ),
-                    sequences =
-                    listOf(
-                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
-                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
-                    ),
-                    escalations = listOf(BpmnEscalationRef(id = "esc-known", code = "EKNOWN")),
-                ),
-            )
-
-        val diag = rule.evaluate(ctx).single()
-        assertEquals("def-invalid-escalation-ref", diag.diagnosticCode)
-        assertEquals(
-            "event ic escalationRef 'esc-missing' does not match any escalation catalog id",
-            diag.message,
-        )
     }
 
     @Test

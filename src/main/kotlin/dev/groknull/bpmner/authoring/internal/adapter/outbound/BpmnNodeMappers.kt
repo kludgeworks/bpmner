@@ -10,7 +10,6 @@ import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -25,7 +24,6 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUserTask
@@ -104,7 +102,6 @@ internal fun FlowNode.toBpmnEventOrNull(normalisedName: String?, parentRef: Stri
                 id = id,
                 name = normalisedName,
                 attachedToRef = eventMetadata.attachedToRefs[id].orEmpty(),
-                cancelActivity = eventMetadata.cancelActivity[id] ?: true,
                 eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
                 parentRef = parentRef,
             )
@@ -153,13 +150,10 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
         is SubProcess -> {
             if (this is Transaction) {
                 toUnrecognizedNode(normalisedName, parentRef)
+            } else if (triggeredByEvent()) {
+                toUnrecognizedNode(normalisedName, parentRef)
             } else {
-                BpmnSubProcess(
-                    id = id,
-                    name = normalisedName,
-                    triggeredByEvent = triggeredByEvent(),
-                    parentRef = parentRef,
-                )
+                BpmnSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             }
         }
 
@@ -193,31 +187,12 @@ internal fun Document.parseMessages(): List<BpmnMessageRef> {
         .toList()
 }
 
-internal fun Document.parseSignals(): List<BpmnSignalRef> {
-    return bpmnElements("signal")
-        .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
-        .filter { it.id.isNotBlank() && it.name.isNotBlank() }
-        .toList()
-}
-
 internal fun Document.parseErrors(): List<BpmnErrorRef> {
     return bpmnElements("error")
         .map {
             BpmnErrorRef(
                 id = it.getAttribute("id"),
                 code = it.getAttribute("errorCode"),
-                name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
-            )
-        }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
-        .toList()
-}
-
-internal fun Document.parseEscalations(): List<BpmnEscalationRef> {
-    return bpmnElements("escalation")
-        .map {
-            BpmnEscalationRef(
-                id = it.getAttribute("id"),
-                code = it.getAttribute("escalationCode"),
                 name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
             )
         }.filter { it.id.isNotBlank() && it.code.isNotBlank() }

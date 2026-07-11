@@ -35,7 +35,6 @@ internal fun FlatContractBoundaryEvent.toSealed(): ContractBoundaryEvent = Contr
     kind = kind,
     label = requireField(label, kind, "label", "boundaryEvent"),
     nextRef = requireField(nextRef, kind, "nextRef", "boundaryEvent"),
-    cancelActivity = cancelActivity,
     detail = if (kind == BoundaryEventKind.TIMER) requireField(detail, kind, "detail", "boundaryEvent") else detail,
 )
 

@@ -32,7 +32,7 @@ import java.util.stream.Stream
  *
  * Implements assertions for:
  *
- * - Active rule count (47 = 40 Kotlin beans + 7 compiled rules)
+ * - Active rule count (48 = 41 Kotlin beans + 7 compiled rules)
  * - LLM rule specs count (2 metadata-only specs: BusinessClarityOverTechnicalDetail,
  *   ExclusiveInclusiveParallelSemantics)
  * - Tier-1 metadata (category, severity, targetElements) on executable rules
@@ -72,8 +72,8 @@ internal class RuleSourceParityTest {
         val activeRules = beanRegistry.activeRules()
         val activeIds = activeRules.map { it.id }
 
-        // 40 Kotlin bean rules + 7 compiled = 47 executable rules
-        assertThat(activeRules).hasSize(47)
+        // 41 Kotlin bean rules + 7 compiled = 48 executable rules
+        assertThat(activeRules).hasSize(48)
         assertThat(activeIds).doesNotHaveDuplicates()
     }
 

@@ -7,7 +7,6 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
@@ -17,7 +16,6 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnUserTask
-import dev.groknull.bpmner.bpmn.DataFlowDirection
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -47,39 +45,6 @@ class BpmnNodePayloadXmlWriterTest {
         .parse(org.xml.sax.InputSource(StringReader(xml)))
 
     private fun assertXml(xml: String): XmlAssert = assertThat(xml).withNamespaceContext(NAMESPACES)
-
-    // Site 4: data-assoc sourceRef → no rendered task
-    @Test
-    fun `data association with missing sourceRef throws RetryableBpmnGenerationException`() {
-        val definition = BpmnDefinition(
-            processId = "Process_1",
-            processName = "Test",
-            nodes = listOf(
-                BpmnStartEvent("start", "Start"),
-                BpmnEndEvent("end", "End"),
-            ),
-            sequences = listOf(
-                dev.groknull.bpmner.bpmn.BpmnEdge("f1", "start", "end"),
-            ),
-            dataAssociations = listOf(
-                BpmnDataAssociation("da1", "missingTask", "data1", DataFlowDirection.READ),
-            ),
-        )
-
-        val xml = """
-            <bpmn:definitions xmlns:bpmn="$BPMN_NS">
-                <bpmn:process id="Process_1" name="Test">
-                    <bpmn:startEvent id="start"/>
-                    <bpmn:endEvent id="end"/>
-                </bpmn:process>
-            </bpmn:definitions>
-        """.trimIndent()
-
-        val ex = assertFailsWith<RetryableBpmnGenerationException> {
-            writer.write(parseXml(xml), definition)
-        }
-        assertContains(ex.message!!, "sourceRef 'missingTask' has no rendered task element")
-    }
 
     // Site 5: multi-instance marker, no task element
     @Test
@@ -153,40 +118,6 @@ class BpmnNodePayloadXmlWriterTest {
             writer.write(parseXml(xml), definition)
         }
         assertContains(ex.message!!, "Task 'task1' has a standard-loop marker but no task element was rendered for it")
-    }
-
-    // Site 7: data association with task element id not found in XML
-    @Test
-    fun `data association with undefined task element throws RetryableBpmnGenerationException`() {
-        val definition = BpmnDefinition(
-            processId = "Process_1",
-            processName = "Test",
-            nodes = listOf(
-                BpmnStartEvent("start", "Start"),
-                BpmnEndEvent("end", "End"),
-            ),
-            sequences = listOf(
-                dev.groknull.bpmner.bpmn.BpmnEdge("f1", "start", "end"),
-            ),
-            dataAssociations = listOf(
-                BpmnDataAssociation("da1", "task1", "data1", DataFlowDirection.READ),
-            ),
-        )
-
-        val xml = """
-            <bpmn:definitions xmlns:bpmn="$BPMN_NS">
-                <bpmn:process id="Process_1" name="Test">
-                    <bpmn:startEvent id="start"/>
-                    <bpmn:endEvent id="end"/>
-                </bpmn:process>
-            </bpmn:definitions>
-        """.trimIndent()
-
-        val ex = assertFailsWith<RetryableBpmnGenerationException> {
-            writer.write(parseXml(xml), definition)
-        }
-        // Site 4: data association sourceRef not found in rendered task elements
-        assertContains(ex.message!!, "sourceRef 'task1' has no rendered task element")
     }
 
     // Site 8: event element not located in XML

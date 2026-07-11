@@ -11,7 +11,6 @@ import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -27,7 +26,6 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -56,15 +54,10 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     nodes = nodes.map { it.toSealed() },
     sequences = sequences,
     messages = messages,
-    signals = signals,
     errors = errors,
-    escalations = escalations,
     annotations = annotations,
     groups = groups,
     associations = associations,
-    dataObjects = dataObjects,
-    dataStores = dataStores,
-    dataAssociations = dataAssociations,
     participants = participants,
     lanes = lanes,
     messageFlows = messageFlows,
@@ -166,7 +159,6 @@ internal fun FlatBpmnNode.toGatewayNode(): BpmnNode = when (type) {
 private fun FlatBpmnNode.toSubProcessNode(): BpmnNode = BpmnSubProcess(
     id = id,
     name = name,
-    triggeredByEvent = triggeredByEvent ?: false,
     parentRef = parentRef,
 )
 
@@ -188,7 +180,6 @@ internal fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         id = id,
         name = name,
         attachedToRef = requireField(attachedToRef, type, "attachedToRef", id),
-        cancelActivity = cancelActivity ?: true,
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
         parentRef = parentRef,
     )
@@ -221,16 +212,8 @@ public fun FlatBpmnEventDefinition.toSealed(): BpmnEventDefinition = when (type)
         messageRef = requireField(messageRef, type, "messageRef", EVENT_CONTEXT),
     )
 
-    FlatBpmnEventDefinitionKind.SIGNAL -> BpmnSignalEventDefinition(
-        signalRef = requireField(signalRef, type, "signalRef", EVENT_CONTEXT),
-    )
-
     FlatBpmnEventDefinitionKind.ERROR -> BpmnErrorEventDefinition(
         errorRef = requireField(errorRef, type, "errorRef", EVENT_CONTEXT),
-    )
-
-    FlatBpmnEventDefinitionKind.ESCALATION -> BpmnEscalationEventDefinition(
-        escalationRef = requireField(escalationRef, type, "escalationRef", EVENT_CONTEXT),
     )
 }
 

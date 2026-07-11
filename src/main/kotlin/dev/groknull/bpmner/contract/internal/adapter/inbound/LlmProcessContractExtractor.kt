@@ -47,20 +47,15 @@ internal class LlmProcessContractExtractor(
 
         val flat = promptRunner
             .creating(FlatProcessContract::class.java)
-            // Typed few-shot examples for the five discrimination boundaries GPT-4.1
+            // Typed few-shot examples for the retained discrimination boundaries GPT-4.1
             // does not reliably reproduce from keyword descriptions alone (see ContractExtractionExamples).
             .withExample(ContractExtractionExamples.MESSAGE_END_LABEL, ContractExtractionExamples.messageEndExample)
-            .withExample(ContractExtractionExamples.ESCALATION_END_LABEL, ContractExtractionExamples.escalationEndExample)
             .withExample(ContractExtractionExamples.SEND_TASK_LABEL, ContractExtractionExamples.sendTaskExample)
             .withExample(ContractExtractionExamples.INTERMEDIATE_THROW_LABEL, ContractExtractionExamples.intermediateThrowExample)
             .withExample(ContractExtractionExamples.SEND_THEN_NORMAL_LABEL, ContractExtractionExamples.sendThenNormalExample)
             .withExample(ContractExtractionExamples.INCLUSIVE_GATEWAY_LABEL, ContractExtractionExamples.inclusiveGatewayExample)
             .withExample(ContractExtractionExamples.BUSINESS_RULE_TASK_LABEL, ContractExtractionExamples.businessRuleTaskExample)
             .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
-            .withExample(
-                ContractExtractionExamples.EVENT_SUB_PROCESS_LABEL,
-                ContractExtractionExamples.eventSubProcessExample,
-            )
             .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
         val contract = try {
             flat.toSealed()

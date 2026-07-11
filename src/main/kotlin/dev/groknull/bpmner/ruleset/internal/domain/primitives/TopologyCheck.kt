@@ -25,6 +25,8 @@ internal class TopologyCheck {
     ): List<RuleDiagnostic> = when (config.topology) {
         TopologyMode.NO_FAKE_JOIN -> noFakeJoin(model, metadata, config)
 
+        TopologyMode.NO_IMPLICIT_SPLIT -> noImplicitSplit(model, metadata, config)
+
         TopologyMode.NO_SUPERFLUOUS -> gatewayChecks(model, metadata, config) { incoming, outgoing, _ ->
             incoming == 1 && outgoing == 1
         }
@@ -53,6 +55,18 @@ internal class TopologyCheck {
                     val source = model.elementsById[flow.sourceRef]
                     source != null && source.isGateway() && (model.incomingCounts[source.id] ?: 0) >= 2
                 }
+        }
+        .map { metadata.diagnostic(it.id) }
+
+    private fun noImplicitSplit(
+        model: PrimitiveModelContext,
+        metadata: RuleMetadata,
+        config: TopologyCheckConfig,
+    ): List<RuleDiagnostic> = metadata.targetedElements(model)
+        .filterNot { it.isGateway() }
+        .filter { element ->
+            val id = element.id ?: return@filter false
+            (model.outgoingCounts[id] ?: 0) > (config.maxOutgoing ?: 1)
         }
         .map { metadata.diagnostic(it.id) }
 

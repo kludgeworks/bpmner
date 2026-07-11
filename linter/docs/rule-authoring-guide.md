@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD057 -->
+
 # Authoring BPMN Rules
 
 bpmner has three tiers of rule authoring, mapped to where the rule executes and how it's deployed.
@@ -188,6 +190,7 @@ The top-level `linter/pkl/BpmnerLintConfig.pkl` schema defines the modeller-owne
 | `discouragedBpmnTypes` | `GeneralRuleConfig.genBpmnSubset` |
 
 The packaged `linter/pkl/bpmner.pkl` amends `BpmnerLintConfig.pkl` and is the default `modulepath:` source. Team-specific convention files should amend the same template and be supplied to the application with `bpmner.rules.config-uri=file:/absolute/path/to/bpmner.pkl`.
+`discouragedBpmnTypes` is the profile's type-level rejection list; it includes deferred signal/escalation event definitions and data elements/associations. Attribute-based exclusions, such as event subprocesses and non-interrupting boundary events, are rejected by the converter rather than represented as synthetic BPMN types.
 
 ### Adding a new Kotlin rule bean
 

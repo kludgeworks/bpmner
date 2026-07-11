@@ -9,11 +9,9 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
-import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -31,7 +29,7 @@ class BpmnDefinitionContextTest {
     /**
      * Curated fixture: start → review → gateway → (approve | reject) → end, with the
      * approve branch marked as the default flow on the exclusive gateway. Catalogs are
-     * populated so the message/signal/error/escalation indexes have something to find.
+     * populated so the retained message and error indexes have something to find.
      */
     private fun fixture(): BpmnDefinition = BpmnDefinition(
         processId = "Process_test",
@@ -60,9 +58,7 @@ class BpmnDefinitionContextTest {
             BpmnEdge(id = "f_reject_end", sourceRef = "reject", targetRef = "end"),
         ),
         messages = listOf(BpmnMessageRef(id = "m_order_received", name = "OrderReceived")),
-        signals = listOf(BpmnSignalRef(id = "s_market_close", name = "MarketClose")),
         errors = listOf(BpmnErrorRef(id = "e_invalid_order", code = "INVALID")),
-        escalations = listOf(BpmnEscalationRef(id = "esc_supervisor", code = "ESCALATE")),
     )
 
     @Test
@@ -112,12 +108,10 @@ class BpmnDefinitionContextTest {
     }
 
     @Test
-    fun `messageIds signalIds errorIds escalationIds contain catalog entries`() {
+    fun `messageIds and errorIds contain catalog entries`() {
         val ctx = BpmnDefinitionContext(fixture())
         assertEquals(setOf("m_order_received"), ctx.messageIds)
-        assertEquals(setOf("s_market_close"), ctx.signalIds)
         assertEquals(setOf("e_invalid_order"), ctx.errorIds)
-        assertEquals(setOf("esc_supervisor"), ctx.escalationIds)
     }
 
     @Test
@@ -172,9 +166,7 @@ class BpmnDefinitionContextTest {
                 ),
             )
         assertEquals(emptySet<String>(), ctx.messageIds)
-        assertEquals(emptySet<String>(), ctx.signalIds)
         assertEquals(emptySet<String>(), ctx.errorIds)
-        assertEquals(emptySet<String>(), ctx.escalationIds)
         assertEquals(emptyMap<String, List<BpmnEdge>>(), ctx.defaultsBySource)
     }
 }

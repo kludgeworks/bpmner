@@ -15,9 +15,7 @@ import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.DefaultBranch
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
@@ -140,47 +138,6 @@ class GenerateBpmnTemplateTest {
         assertTrue(
             prompt.contains("[NORMAL]"),
             "Normal end state must appear as [NORMAL] in contractMarkdown for lossless prompt projection; got:\n$prompt",
-        )
-    }
-
-    @Test
-    fun `template teaches event-subprocess topology and renders the trigger and members`() {
-        val prompt = render(
-            request = BpmnRequest(processDescription = "Review a request; escalate if overdue."),
-            contract = eventSubProcessContract(),
-        )
-
-        assertTrue(prompt.contains("Event-subprocess topology:"))
-        assertTrue(prompt.contains("triggeredByEvent=true"))
-        assertTrue(
-            prompt.contains("[EVENT_SUBPROCESS trigger=TIMER non-interrupting contains=\"a-escalate\"]"),
-            "rendered event subprocess should show trigger, interrupting flag, and members; got:\n$prompt",
-        )
-    }
-
-    private fun eventSubProcessContract(): ProcessContract {
-        val sources = listOf("ev1")
-        return ProcessContract(
-            id = "contract-request-review",
-            processName = "Request review",
-            summary = "Review a request, escalating to a manager if it goes overdue.",
-            trigger = "Request submitted",
-            triggerSourceIds = sources,
-            activities = listOf(
-                ContractActivity(id = "a-review", name = "Review request", sourceIds = sources),
-                ContractActivity(id = "a-escalate", name = "Notify manager", sourceIds = sources),
-            ),
-            endStates = listOf(ContractEndState(id = "end-reviewed", name = "Request reviewed", sourceIds = sources)),
-            eventSubProcesses = listOf(
-                ContractEventSubProcess(
-                    id = "esp-overdue",
-                    name = "Escalate if overdue",
-                    containedActivityIds = listOf("a-escalate"),
-                    trigger = EventSubProcessTrigger.TIMER,
-                    interrupting = false,
-                    sourceIds = sources,
-                ),
-            ),
         )
     }
 
