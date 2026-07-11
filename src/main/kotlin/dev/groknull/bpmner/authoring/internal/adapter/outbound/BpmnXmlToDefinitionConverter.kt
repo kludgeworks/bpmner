@@ -56,8 +56,10 @@ import java.io.StringReader
 import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 
-// The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
-// surfaces them with a single helper.
+/**
+ * The non-flow-node artifacts parsed from a BPMN document in one pass, kept together so the parser
+ * surfaces them with a single helper.
+ */
 private data class ParsedArtifacts(
     val annotations: List<BpmnTextAnnotation>,
     val associations: List<BpmnAssociation>,
@@ -67,9 +69,11 @@ private data class ParsedArtifacts(
     val dataAssociations: List<BpmnDataAssociation>,
 )
 
-// Collaboration artifacts: participants (pools) + message flows from <collaboration>, and lanes from
-// each process's <laneSet>. Parsed top-level (off the converter class) so the projection stays a
-// single pass without inflating the class's function count.
+/**
+ * Collaboration artifacts: participants (pools) + message flows from <collaboration>, and lanes from
+ * each process's <laneSet>. Parsed top-level (off the converter class) so the projection stays a
+ * single pass without inflating the class's function count.
+ */
 private data class ParsedCollaboration(
     val participants: List<BpmnParticipant>,
     val lanes: List<BpmnLane>,
@@ -84,13 +88,15 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         private const val EXTERNAL_GENERAL_ENTITIES = "http://xml.org/sax/features/external-general-entities"
         private const val EXTERNAL_PARAMETER_ENTITIES = "http://xml.org/sax/features/external-parameter-entities"
 
-        // BPMN element local names that aren't `FlowNode`s (so the Camunda model walk misses
-        // them) and that the parser doesn't translate into typed Kotlin nodes. Surfaced via
-        // DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them through
-        // `BpmnSubset`'s `targetElements`. The parser surfaces all such elements; the Pkl
-        // rule decides what's discouraged. Includes both top-level constructs (Choreography,
-        // Conversation) and their child element types (e.g. choreographyTask), all picked up
-        // by `getElementsByTagNameNS` regardless of nesting.
+        /**
+         * BPMN element local names that aren't `FlowNode`s (so the Camunda model walk misses
+         * them) and that the parser doesn't translate into typed Kotlin nodes. Surfaced via
+         * DOM scan as `BpmnUnrecognizedNode` so the rule engine can flag them through
+         * `BpmnSubset`'s `targetElements`. The parser surfaces all such elements; the Pkl
+         * rule decides what's discouraged. Includes both top-level constructs (Choreography,
+         * Conversation) and their child element types (e.g. choreographyTask), all picked up
+         * by `getElementsByTagNameNS` regardless of nesting.
+         */
         private val EXOTIC_BPMN_LOCAL_NAMES = listOf(
             "choreography",
             "choreographyTask",
@@ -106,10 +112,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val document = parseDocument(xml)
         val model: BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
 
-        // Counts `<bpmndi:BPMNDiagram>` elements. The semantic model carries no DI; the count
-        // is surfaced on `BpmnDefinition` so the `NoDuplicateDiagrams` rule can enforce the
-        // policy (one diagram per document).
-        val diagramCount = model.getModelElementsByType(BpmnDiagram::class.java).size
+        val diagramCount = countDiagrams(model)
 
         val process =
             model.getModelElementsByType(Process::class.java).firstOrNull()
@@ -118,20 +121,7 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val eventMetadata = eventMetadataFrom(document)
         val taskMetadata = taskMetadataFrom(document)
         val typedNodes = model.getModelElementsByType(FlowNode::class.java).map { it.toBpmnNode(eventMetadata, taskMetadata) }
-        // Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
-        // typed scan above. Surface them as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can
-        // flag them via `targetElements`. The parser surfaces all such elements; the rule
-        // decides what's discouraged. Fallback ids are deterministic per-document so two parses
-        // of the same XML produce the same `elementId`s.
-        val unrecognizedExotics = EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
-            document.bpmnElements(localName).mapIndexed { elemIndex, element ->
-                BpmnUnrecognizedNode(
-                    id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
-                    name = element.getAttribute("name").takeIf { it.isNotBlank() },
-                    bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
-                )
-            }.toList()
-        }
+        val unrecognizedExotics = extractUnrecognizedExotics(document)
 
         val sequences =
             model.getModelElementsByType(SequenceFlow::class.java).map { flow ->
@@ -173,12 +163,38 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         )
     }
 
-    // All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
-    // text annotations + their association edges (sourceRef = annotated element, targetRef =
-    // annotation), groups, data objects/stores, and the read/write data associations parsed from
-    // each activity's `<dataInputAssociation>` (data id in `<sourceRef>`) /
-    // `<dataOutputAssociation>` (data id in `<targetRef>`) children (the association's `sourceRef`
-    // is the parent activity id).
+    /**
+     * Counts `<bpmndi:BPMNDiagram>` elements. The semantic model carries no DI; the count
+     * is surfaced on `BpmnDefinition` so the `NoDuplicateDiagrams` rule can enforce the
+     * policy (one diagram per document).
+     */
+    private fun countDiagrams(model: BpmnModelInstance): Int = model.getModelElementsByType(BpmnDiagram::class.java).size
+
+    /**
+     * Exotic constructs (Choreography, Conversation, etc.) aren't `FlowNode`s and miss the
+     * typed scan. Surface them as `BpmnUnrecognizedNode` so the `BpmnSubset` rule can
+     * flag them via `targetElements`. The parser surfaces all such elements; the rule
+     * decides what's discouraged. Fallback ids are deterministic per-document so two parses
+     * of the same XML produce the same `elementId`s.
+     */
+    private fun extractUnrecognizedExotics(document: Document): List<BpmnUnrecognizedNode> = EXOTIC_BPMN_LOCAL_NAMES.flatMapIndexed { typeIndex, localName ->
+        document.bpmnElements(localName).mapIndexed { elemIndex, element ->
+            BpmnUnrecognizedNode(
+                id = element.getAttribute("id").ifBlank { "${localName}_${typeIndex}_$elemIndex" },
+                name = element.getAttribute("name").takeIf { it.isNotBlank() },
+                bpmnType = "bpmn:${localName.replaceFirstChar { it.uppercase() }}",
+            )
+        }.toList()
+    }
+
+    /**
+     * All non-flow-node artifacts in one pass (one helper keeps the class function count in check):
+     * text annotations + their association edges (sourceRef = annotated element, targetRef =
+     * annotation), groups, data objects/stores, and the read/write data associations parsed from
+     * each activity's `<dataInputAssociation>` (data id in `<sourceRef>`) /
+     * `<dataOutputAssociation>` (data id in `<targetRef>`) children (the association's `sourceRef`
+     * is the parent activity id).
+     */
     private fun artifactsAndDataFrom(document: Document): ParsedArtifacts {
         val categoryValuesById = document.bpmnElements("categoryValue")
             .mapNotNull { el ->
@@ -400,17 +416,21 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     private fun Element.childElements(): Sequence<Element> = childNodes.elements()
 }
 
-// Parses an xsd:boolean attribute value: "true" / "1" (case-insensitive) → true, "false" / "0" →
-// false, blank (absent) → [default]. Top-level so the loop-characteristics parsers share it without
-// adding to the converter's method-complexity or class function count.
+/**
+ * Parses an xsd:boolean attribute value: "true" / "1" (case-insensitive) → true, "false" / "0" →
+ * false, blank (absent) → [default]. Top-level so the loop-characteristics parsers share it without
+ * adding to the converter's method-complexity or class function count.
+ */
 private fun xsdBooleanOrDefault(raw: String, default: Boolean): Boolean {
     if (raw.isBlank()) return default
     return raw.equals("true", ignoreCase = true) || raw == "1"
 }
 
-// Surfaces a FlowNode subtype the parser doesn't translate (CallActivity, Transaction, etc.) as a
-// BpmnUnrecognizedNode carrying its BPMN typename. Top-level so it stays off the converter's class
-// function count while serving both the SubProcess-variant and the catch-all `else` arm.
+/**
+ * Surfaces a FlowNode subtype the parser doesn't translate (CallActivity, Transaction, etc.) as a
+ * BpmnUnrecognizedNode carrying its BPMN typename. Top-level so it stays off the converter's class
+ * function count while serving both the SubProcess-variant and the catch-all `else` arm.
+ */
 internal fun FlowNode.toUnrecognizedNode(
     normalisedName: String?,
     parentRef: String?,
@@ -429,13 +449,17 @@ private fun String.localNameRef(): String? = trim()
 // (off the converter class) and don't inflate its function count.
 private const val BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 
-// Single-line expression body: splitting the qualifier and call across lines adds no readability
-// for this thin namespace-scan delegation, so the line-length warning is suppressed deliberately.
+/**
+ * Single-line expression body: splitting the qualifier and call across lines adds no readability
+ * for this thin namespace-scan delegation, so the line-length warning is suppressed deliberately.
+ */
 @Suppress("MaxLineLength")
 private fun Document.bpmnModelElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_MODEL_NS, localName).elements()
 
-// Walks up to the <process> enclosing this element, returning its id (or null). Binds a <lane> to
-// the white-box participant whose processRef names that process.
+/**
+ * Walks up to the <process> enclosing this element, returning its id (or null). Binds a <lane> to
+ * the white-box participant whose processRef names that process.
+ */
 private fun Element.enclosingProcessId(): String? {
     var node: org.w3c.dom.Node? = parentNode
     while (node != null) {
@@ -447,10 +471,12 @@ private fun Element.enclosingProcessId(): String? {
     return null
 }
 
-// Parses the collaboration view: participants + message flows from <collaboration>, lanes from each
-// <laneSet>. A white-box participant carries processRef; a black-box one omits it. Lane membership is
-// the <flowNodeRef> children only; a lane binds to the participant owning its process, or to no
-// participant when the process has a lane set without a surrounding collaboration.
+/**
+ * Parses the collaboration view: participants + message flows from <collaboration>, lanes from each
+ * <laneSet>. A white-box participant carries processRef; a black-box one omits it. Lane membership is
+ * the <flowNodeRef> children only; a lane binds to the participant owning its process, or to no
+ * participant when the process has a lane set without a surrounding collaboration.
+ */
 private fun parseCollaboration(document: Document): ParsedCollaboration {
     val participants = document.bpmnModelElements("participant")
         .map { el ->
@@ -486,14 +512,16 @@ private fun parseCollaboration(document: Document): ParsedCollaboration {
 }
 
 internal data class TaskMetadata(
-    // `messageRef` on send / receive tasks — BPMN spec attribute on the task element.
+    /** `messageRef` on send / receive tasks — BPMN spec attribute on the task element. */
     val messageRefs: Map<String, String>,
-    // `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
-    // spec defines no decisionRef on tBusinessRuleTask. See [BPMNER_EXT_NS].
+    /**
+     * `bpmner:decisionRef` on business-rule tasks — foreign-namespace extension since the
+     * spec defines no decisionRef on tBusinessRuleTask. See [BPMNER_EXT_NS].
+     */
     val decisionRefs: Map<String, String>,
-    // Multi-instance loop characteristics, keyed by task id. Applies to any task kind.
+    /** Multi-instance loop characteristics, keyed by task id. Applies to any task kind. */
     val multiInstance: Map<String, MultiInstanceLoopCharacteristics>,
-    // Standard-loop characteristics, keyed by task id. Applies to any task kind.
+    /** Standard-loop characteristics, keyed by task id. Applies to any task kind. */
     val standardLoop: Map<String, StandardLoopCharacteristics>,
 )
 
