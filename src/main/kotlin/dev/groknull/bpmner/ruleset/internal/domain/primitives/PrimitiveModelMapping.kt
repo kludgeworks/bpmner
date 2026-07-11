@@ -8,13 +8,10 @@ package dev.groknull.bpmner.ruleset.internal.domain.primitives
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
-import dev.groknull.bpmner.bpmn.BpmnDataObject
-import dev.groknull.bpmner.bpmn.BpmnDataStore
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
@@ -33,7 +30,6 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
@@ -138,7 +134,6 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
         .groupBy({ it.first }, { it.second })
         .mapValues { (_, texts) -> texts.joinToString(" ") }
     val annotationElements = annotationElementsOf(definition.annotations)
-    val dataElements = dataElementsOf(definition.dataObjects, definition.dataStores)
     val groupElements = groupElementsOf(definition.groups)
     val associations = definition.associations.map { association ->
         PrimitiveAssociation(id = association.id, sourceRef = association.sourceRef, targetRef = association.targetRef)
@@ -161,7 +156,6 @@ internal fun BpmnDefinitionContext.toPrimitiveModelContext(): PrimitiveModelCont
             definition.nodes.map { it.toPrimitiveElement(annotationTextByElementId) } +
             eventDefinitionElements +
             annotationElements +
-            dataElements +
             groupElements +
             participantElements +
             laneElements +
@@ -189,30 +183,6 @@ private fun annotationElementsOf(annotations: List<BpmnTextAnnotation>): List<Pr
     )
 }
 
-// Data objects/stores projected as their own `PrimitiveElement`s (like annotations) so the
-// data-naming rule can target `bpmn:DataObject`/`bpmn:DataStore` by exact type name. Not nodes, so
-// the sealed `when` over BpmnNode stays closed.
-private fun dataElementsOf(
-    dataObjects: List<BpmnDataObject>,
-    dataStores: List<BpmnDataStore>,
-): List<PrimitiveElement> {
-    val objects = dataObjects.map {
-        PrimitiveElement(
-            id = it.id,
-            typeName = BpmnTypeName.DATA_OBJECT,
-            properties = mapOf("id" to it.id, "name" to it.name),
-        )
-    }
-    val stores = dataStores.map {
-        PrimitiveElement(
-            id = it.id,
-            typeName = BpmnTypeName.DATA_STORE,
-            properties = mapOf("id" to it.id, "name" to it.name),
-        )
-    }
-    return objects + stores
-}
-
 private fun groupElementsOf(groups: List<BpmnGroup>): List<PrimitiveElement> = groups.map {
     PrimitiveElement(
         id = it.id,
@@ -228,9 +198,7 @@ private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {
     is BpmnNoneEventDefinition -> null
     is BpmnTimerEventDefinition -> "bpmn:TimerEventDefinition"
     is BpmnMessageEventDefinition -> "bpmn:MessageEventDefinition"
-    is BpmnSignalEventDefinition -> "bpmn:SignalEventDefinition"
     is BpmnErrorEventDefinition -> "bpmn:ErrorEventDefinition"
-    is BpmnEscalationEventDefinition -> "bpmn:EscalationEventDefinition"
     is BpmnTerminateEventDefinition -> "bpmn:TerminateEventDefinition"
     is BpmnUnrecognizedEventDefinition -> typeName
     else -> null
@@ -249,7 +217,6 @@ internal fun BpmnNode.toPrimitiveElement(
         if (this@toPrimitiveElement is BpmnReceiveTask) put("messageRef", messageRef)
         if (this@toPrimitiveElement is BpmnBoundaryEvent) {
             put("attachedToRef", attachedToRef)
-            put("cancelActivity", cancelActivity.toString())
         }
         // Presence flag the loop/MI rules narrow on via `appliesWhenProperty`. Only set on tasks
         // that actually carry a multi-instance marker, so ordinary tasks stay out of scope.
@@ -348,11 +315,7 @@ private fun eventDefinitionProperties(
 
             is BpmnMessageEventDefinition -> "MESSAGE"
 
-            is BpmnSignalEventDefinition -> "SIGNAL"
-
             is BpmnErrorEventDefinition -> "ERROR"
-
-            is BpmnEscalationEventDefinition -> "ESCALATION"
 
             is BpmnTerminateEventDefinition -> "TERMINATE"
 
@@ -373,11 +336,7 @@ private fun eventDefinitionProperties(
 
         is BpmnMessageEventDefinition -> put("messageRef", eventDefinition.messageRef)
 
-        is BpmnSignalEventDefinition -> put("signalRef", eventDefinition.signalRef)
-
         is BpmnErrorEventDefinition -> put("errorRef", eventDefinition.errorRef)
-
-        is BpmnEscalationEventDefinition -> put("escalationRef", eventDefinition.escalationRef)
 
         is BpmnNoneEventDefinition -> Unit
         is BpmnTerminateEventDefinition -> Unit

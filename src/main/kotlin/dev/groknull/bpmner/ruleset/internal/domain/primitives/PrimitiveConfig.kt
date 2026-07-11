@@ -93,6 +93,7 @@ internal data class TopologyCheckConfig(
 
 internal enum class TopologyMode {
     NO_FAKE_JOIN,
+    NO_IMPLICIT_SPLIT,
     NO_SUPERFLUOUS,
     NO_JOIN_FORK,
     CONVERGING_UNNAMED,

@@ -18,12 +18,9 @@ import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
-import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
-import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -37,7 +34,6 @@ import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
-import dev.groknull.bpmner.contract.ContractEventSubProcess
 import dev.groknull.bpmner.contract.ContractGatewayKind
 import dev.groknull.bpmner.contract.ContractIntermediateThrow
 import dev.groknull.bpmner.contract.ContractIteration
@@ -45,7 +41,6 @@ import dev.groknull.bpmner.contract.ContractLoop
 import dev.groknull.bpmner.contract.ContractStart
 import dev.groknull.bpmner.contract.ContractTrigger
 import dev.groknull.bpmner.contract.DefaultBranch
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.UnconditionalBranch
 import kotlin.test.Test
@@ -299,128 +294,6 @@ class BpmnContractFidelityCheckerTest {
             BpmnEdge("Fin2", "act-validate", "act-estimate", parentRef = "sub-assess"),
             BpmnEdge("Fin3", "act-estimate", "EndEvent_assess", parentRef = "sub-assess"),
         ) + extra,
-    )
-
-    @Test
-    fun `event subprocess realised correctly passes`() {
-        val report = checker.checkDetailed(eventSubProcessContract(), eventSubProcessDefinition())
-
-        assertTrue(report.isValid, "expected valid; got ${report.issues}")
-    }
-
-    @Test
-    fun `event subprocess with no corresponding node flags EVENT_SUBPROCESS_NODE_MISSING`() {
-        val definition = eventSubProcessDefinition().let { def ->
-            def.copy(nodes = def.nodes.filterNot { it.id == "esp-overdue" })
-        }
-        val report = checker.checkDetailed(eventSubProcessContract(), definition)
-
-        assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_NODE_MISSING))
-    }
-
-    @Test
-    fun `event subprocess realised with triggeredByEvent=false flags EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED`() {
-        val definition = eventSubProcessDefinition().let { def ->
-            def.copy(
-                nodes = def.nodes.map { node ->
-                    if (node.id == "esp-overdue") BpmnSubProcess("esp-overdue", "Escalate", triggeredByEvent = false) else node
-                },
-            )
-        }
-        val report = checker.checkDetailed(eventSubProcessContract(), definition)
-
-        assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_NOT_EVENT_TRIGGERED))
-    }
-
-    @Test
-    fun `event subprocess inner start with the wrong event definition flags EVENT_SUBPROCESS_START_MISMATCH`() {
-        // Contract trigger is TIMER but the inner start is rendered as a plain (none) start.
-        val definition = eventSubProcessDefinition().let { def ->
-            def.copy(
-                nodes = def.nodes.map { node ->
-                    if (node.id == "StartEvent_overdue") {
-                        BpmnStartEvent("StartEvent_overdue", isInterrupting = false, parentRef = "esp-overdue")
-                    } else {
-                        node
-                    }
-                },
-            )
-        }
-        val report = checker.checkDetailed(eventSubProcessContract(), definition)
-
-        assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_START_MISMATCH))
-    }
-
-    @Test
-    fun `event subprocess inner start with the wrong interrupting flag flags EVENT_SUBPROCESS_INTERRUPTING_MISMATCH`() {
-        // Contract interrupting=false but the inner start is rendered isInterrupting=true.
-        val definition = eventSubProcessDefinition().let { def ->
-            def.copy(
-                nodes = def.nodes.map { node ->
-                    if (node.id == "StartEvent_overdue") {
-                        BpmnStartEvent(
-                            "StartEvent_overdue",
-                            eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
-                            isInterrupting = true,
-                            parentRef = "esp-overdue",
-                        )
-                    } else {
-                        node
-                    }
-                },
-            )
-        }
-        val report = checker.checkDetailed(eventSubProcessContract(), definition)
-
-        assertTrue(report.issues.map { it.code }.contains(BpmnFidelityCode.EVENT_SUBPROCESS_INTERRUPTING_MISMATCH))
-    }
-
-    private fun eventSubProcessContract(): ProcessContract = ProcessContract(
-        id = "c-esp",
-        processName = "Request review",
-        summary = "Review a request, with a non-interrupting overdue-escalation handler.",
-        start = ContractStart(ContractTrigger.None("request submitted")),
-        activities = listOf(
-            ContractActivity.User("act-review", "Review request"),
-            ContractActivity.Service("act-escalate", "Notify manager"),
-        ),
-        endStates = listOf(ContractEndState.Normal("end-reviewed", "Request reviewed")),
-        eventSubProcesses = listOf(
-            ContractEventSubProcess(
-                id = "esp-overdue",
-                name = "Escalate if overdue",
-                containedActivityIds = listOf("act-escalate"),
-                trigger = EventSubProcessTrigger.TIMER,
-                interrupting = false,
-            ),
-        ),
-    )
-
-    // A faithful realisation: an event-triggered SUB_PROCESS with a typed (TIMER) inner start whose
-    // isInterrupting matches the contract, members parentRef'd, and no connecting flow on the main process.
-    private fun eventSubProcessDefinition(): BpmnDefinition = BpmnDefinition(
-        processId = "P",
-        processName = "Request review",
-        nodes = listOf(
-            BpmnStartEvent("StartEvent_1", "Submitted"),
-            BpmnUserTask("act-review", "Review request"),
-            BpmnEndEvent("end-reviewed", "Reviewed"),
-            BpmnSubProcess("esp-overdue", "Escalate if overdue", triggeredByEvent = true),
-            BpmnStartEvent(
-                "StartEvent_overdue",
-                eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT24H"),
-                isInterrupting = false,
-                parentRef = "esp-overdue",
-            ),
-            BpmnServiceTask("act-escalate", "Notify manager", parentRef = "esp-overdue"),
-            BpmnEndEvent("EndEvent_overdue", parentRef = "esp-overdue"),
-        ),
-        sequences = listOf(
-            BpmnEdge("F1", "StartEvent_1", "act-review"),
-            BpmnEdge("F2", "act-review", "end-reviewed"),
-            BpmnEdge("Fesp1", "StartEvent_overdue", "act-escalate", parentRef = "esp-overdue"),
-            BpmnEdge("Fesp2", "act-escalate", "EndEvent_overdue", parentRef = "esp-overdue"),
-        ),
     )
 
     @Test
@@ -780,9 +653,9 @@ class BpmnContractFidelityCheckerTest {
         val report =
             checker.checkDetailed(
                 typedIntermediateThrowContract(
-                    ContractIntermediateThrow.Signal("throw-stock", "Broadcast stock change", "stock changed"),
+                    ContractIntermediateThrow.Message("throw-stock", "Broadcast stock change", "stock changed"),
                 ),
-                typedIntermediateThrowDefinition("throw-stock", BpmnSignalEventDefinition("Signal_StockChanged")),
+                typedIntermediateThrowDefinition("throw-stock", BpmnMessageEventDefinition("Message_StockChanged")),
             )
 
         assertTrue(report.isValid, "expected valid report for matching intermediate throw; got: ${report.issues}")
@@ -838,18 +711,18 @@ class BpmnContractFidelityCheckerTest {
         val report =
             checker.checkDetailed(
                 typedIntermediateThrowContract(
-                    ContractIntermediateThrow.Escalation("throw-overdue", "Escalate overdue", "APPROVAL_OVERDUE"),
+                    ContractIntermediateThrow.Message("throw-overdue", "Escalate overdue", "overdue"),
                 ),
-                typedIntermediateThrowDefinition("throw-overdue", BpmnSignalEventDefinition("Signal_Overdue")),
+                typedIntermediateThrowDefinition("throw-overdue", BpmnNoneEventDefinition),
             )
 
         assertFalse(report.isValid)
         assertTrue(
             report.issues.any {
                 it.code == BpmnFidelityCode.INTERMEDIATE_THROW_KIND_MISMATCH &&
-                    it.message.contains("kind=ESCALATION") &&
-                    it.message.contains("BpmnSignalEventDefinition") &&
-                    it.message.contains("BpmnEscalationEventDefinition")
+                    it.message.contains("kind=MESSAGE") &&
+                    it.message.contains("BpmnNoneEventDefinition") &&
+                    it.message.contains("BpmnMessageEventDefinition")
             },
             "expected INTERMEDIATE_THROW_KIND_MISMATCH citing wrong event definition; got: ${report.issues}",
         )
@@ -873,8 +746,6 @@ class BpmnContractFidelityCheckerTest {
                     is ContractEndState.Terminate -> endState.copy(sourceIds = sources)
                     is ContractEndState.Error -> endState.copy(sourceIds = sources)
                     is ContractEndState.Message -> endState.copy(sourceIds = sources)
-                    is ContractEndState.Signal -> endState.copy(sourceIds = sources)
-                    is ContractEndState.Escalation -> endState.copy(sourceIds = sources)
                 },
             ),
         )
@@ -912,8 +783,6 @@ class BpmnContractFidelityCheckerTest {
             listOf(
                 when (intermediateThrow) {
                     is ContractIntermediateThrow.Message -> intermediateThrow.copy(sourceIds = sources)
-                    is ContractIntermediateThrow.Signal -> intermediateThrow.copy(sourceIds = sources)
-                    is ContractIntermediateThrow.Escalation -> intermediateThrow.copy(sourceIds = sources)
                 },
             ),
             endStates = listOf(ContractEndState.Normal("end-done", "Done", sourceIds = sources)),

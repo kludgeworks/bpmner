@@ -36,5 +36,12 @@ data class BpmnerLintConfig(
         "bpmn:Transaction",
         "bpmn:CompensateEventDefinition",
         "bpmn:EscalationEventDefinition",
+        "bpmn:SignalEventDefinition",
+        "bpmn:DataObject",
+        "bpmn:DataObjectReference",
+        "bpmn:DataStore",
+        "bpmn:DataStoreReference",
+        "bpmn:DataInputAssociation",
+        "bpmn:DataOutputAssociation",
     ),
 )

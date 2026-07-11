@@ -148,6 +148,22 @@ internal class GatewayRuleConfig {
     )
 
     @Bean
+    fun gwNoImplicitSplit(nlp: BpmnNlp): BpmnRule = primitiveRule(
+        name = "No Implicit Split",
+        category = RuleCategory.Gateway,
+        intent = "Require an explicit gateway when control flow splits.",
+        forModellers = "Place a gateway before an activity or event that has more than one outgoing sequence flow.",
+        forAI = "Detect non-gateway flow nodes with multiple outgoing sequence flows; do not auto-fix because the gateway semantics cannot be inferred safely.",
+        targetElements = listOf("bpmn:FlowNode"),
+        errorMessages = mapOf(
+            "default" to "Non-gateway flow node has multiple outgoing flows; add an explicit gateway",
+        ),
+        check = TopologyCheckConfig(topology = TopologyMode.NO_IMPLICIT_SPLIT),
+        nlp = nlp,
+        severity = RuleSeverity.ERROR,
+    )
+
+    @Bean
     fun gwGatewayNoWorkLabel(nlp: BpmnNlp): BpmnRule = primitiveRule(
         name = "Gateway No Work Label",
         category = RuleCategory.Gateway,

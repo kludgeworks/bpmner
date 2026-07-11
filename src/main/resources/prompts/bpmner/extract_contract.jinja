@@ -12,11 +12,9 @@ Source grounding (provenance):
 - `start.sourceIds` must list at least one source id grounding the trigger.
 - Schedule language (dates, delays, cycles, cron-like intervals): set `trigger.type` = TIMER and populate `timerKind` + `expression` + `description`.
 - Webhook/API/event-bus triggers intended for one process/listener: set `trigger.type` = MESSAGE and populate `messageName` + `description`.
-- Broadcast or multi-listener triggers: set `trigger.type` = SIGNAL and populate `signalName` + `description`.
 - Ordinary untyped process starts: set `trigger.type` = NONE and populate `description`.
 - Mid-flow sends that do not complete the process are intermediate throws, not tasks or end states:
-  set `intermediateThrows[].kind` = MESSAGE for point-to-point messages, SIGNAL for broadcasts,
-  and ESCALATION for non-interrupting business escalations. Populate the matching payload field.
+  set `intermediateThrows[].kind` = MESSAGE for point-to-point messages and populate its payload field.
 
 {% include "bpmner/elements/activity_kinds" %}
 
@@ -27,8 +25,6 @@ Source grounding (provenance):
 {% include "bpmner/elements/branch_kinds" %}
 
 {% include "bpmner/elements/topology_rules" %}
-
-{% include "bpmner/elements/data_artifacts" %}
 
 {% include "bpmner/elements/actors" %}
 

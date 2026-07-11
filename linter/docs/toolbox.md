@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD036 -->
+
 # Plugin BPMN Style Rules
 
 Author: Rovo Chat (AI assistant)
@@ -10,7 +12,7 @@ Scope: BPMN modeling guidance for the supported subset of BPMN 2.0 enforced by t
 **GEN‑01 – Use only the supported BPMN subset**
 
 - **For modellers:**
-  Use only the BPMN elements described in the supported BPMN subset (activities, events, gateways, pools/lanes, connecting objects, artifacts, data elements). Avoid other “exotic” BPMN 2.0 elements.
+  Use only activities (including embedded subprocesses and call activities), none/message/timer start events, timer/error boundary events, message intermediate throws, none/error/message/terminate end events, gateways (including timer/message event-based gateways), pools/lanes, sequence/message flows, text annotations, groups, and ordinary associations. Avoid event subprocesses, signal/escalation/compensation events, non-interrupting boundary events, data objects/stores, and data associations.
 - **For AI:**
   - Maintain an *allow‑list* of permitted element types exactly as listed in the supported subset.
   - Flag and propose replacements for any BPMN element not in the allow‑list.
@@ -211,12 +213,12 @@ Source: 2.1.2 Intermediate events
 Source: 2.1.2 boundary events; 4.1 Events
 
 - **For modellers:**
-  - Attach boundary events (Message, Error, Escalation, Signal, etc.) to a task or subprocess to represent exception or compensation paths.
-  - Error boundary events are always **interrupting**.
+  - Attach only Timer or Error boundary events to a task or embedded subprocess to represent an interrupting timeout or error path.
+  - Retained boundary events are always **interrupting**.
 - **For AI:**
   - Enforce:
     - Boundary events have **no incoming** sequence flows and **one** outgoing sequence flow.
-    - Error boundary events are marked interrupting.
+    - Timer and Error boundary events are interrupting.
     - Boundary events are attached to a task or subprocess, not floating.
 
 **EVT‑15 – Error end event pairing**
@@ -470,20 +472,20 @@ Source: 2.1.5 Message Flow
 
 ### 6.3 Associations
 
-**ASSOC‑01 – Associations for annotations and artifacts**
+**ASSOC‑01 – Associations for annotations and groups**
 
 Source: 2.1.5 Association; 2.1.6 Text Annotation
 
 - **For modellers:**
-  - Use **Associations** to link Text Annotations, Groups, and other artifacts to BPMN elements.
+  - Use **Associations** to link Text Annotations and Groups to BPMN elements.
 - **For AI:**
   - Verify:
     - Loop and multi‑instance tasks have an associated Text Annotation via association.
-    - Actor artifacts, groups, and annotations are connected where their purpose is to clarify a specific element.
+    - Groups and annotations are connected where their purpose is to clarify a specific element.
 
 ---
 
-## 7. Artifact & Data Rules (2.1.6–2.1.7 + 4.1 Data)
+## 7. Artifact Rules (2.1.6)
 
 ### 7.1 Artifacts
 
@@ -509,29 +511,6 @@ Source: 2.1.6 Text Annotation
     - Loop tasks → loop condition annotation.
     - Multi‑instance tasks → `For each <item>` annotation.
     - Complex gateway joins → optional clarifying annotation.
-
-### 7.2 Data naming and application representation
-
-**DATA‑01 – Data object naming**
-
-Source: 4.1 Data – guideline 1
-
-- **For modellers:**
-  - Name data objects with a **qualified noun** that is the name of a business or information object meaningful to the business (e.g., `Customer record`, `Order line data`).
-- **For AI:**
-  - Enforce that data object names are nouns or noun phrases, not actions.
-  - Reject labels that include `activity`, `process`, etc., in the name.
-
-**DATA‑02 – Information Item vs Application Component**
-
-Source: 2.1.7 Data
-
-- **For modellers:**
-  - Use `Information Item` as a temporary custom BPMN artifact in Function Allocation Diagrams (FAD) to allocate Application Components to Business Processes or Activities.
-  - Where the local convention forbids `Application Component (Archimate)` for depicting IT applications, `Information Item` is used instead until a central repository integration is available.
-- **For AI:**
-  - In FAD contexts that follow this convention, prefer `Information Item` for application allocation, not `Application Component`.
-  - When analyzing older diagrams, be prepared to see `Application Component` but promote convergence toward `Information Item` per the local convention.
 
 ---
 

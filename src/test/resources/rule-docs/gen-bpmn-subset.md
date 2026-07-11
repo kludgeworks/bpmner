@@ -7,7 +7,7 @@ markdownlint-disable: MD013
 - **Name**: BPMN Subset
 - **Category**: General
 - **Severity**: ERROR
-- **Target Elements**: `bpmn:Choreography`, `bpmn:ChoreographyTask`, `bpmn:SubChoreography`, `bpmn:CallChoreography`, `bpmn:Conversation`, `bpmn:ConversationLink`, `bpmn:ConversationAssociation`, `bpmn:Transaction`, `bpmn:CompensateEventDefinition`, `bpmn:EscalationEventDefinition`
+- **Target Elements**: `bpmn:Choreography`, `bpmn:ChoreographyTask`, `bpmn:SubChoreography`, `bpmn:CallChoreography`, `bpmn:Conversation`, `bpmn:ConversationLink`, `bpmn:ConversationAssociation`, `bpmn:Transaction`, `bpmn:CompensateEventDefinition`, `bpmn:EscalationEventDefinition`, `bpmn:SignalEventDefinition`, `bpmn:DataObject`, `bpmn:DataObjectReference`, `bpmn:DataStore`, `bpmn:DataStoreReference`, `bpmn:DataInputAssociation`, `bpmn:DataOutputAssociation`
 
 ## Intent
 

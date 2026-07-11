@@ -6,18 +6,11 @@
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinition
-import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnEventDefinition
-import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnEventDefinitionKind
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNode
 import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnNodeKind
-import dev.groknull.bpmner.bpmn.BpmnDataAssociation
-import dev.groknull.bpmner.bpmn.BpmnDataObject
-import dev.groknull.bpmner.bpmn.BpmnDataStore
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnLane
 import dev.groknull.bpmner.bpmn.BpmnParticipant
-import dev.groknull.bpmner.bpmn.BpmnTimerKind
-import dev.groknull.bpmner.bpmn.DataFlowDirection
 
 /**
  * Typed few-shot examples attached to the BPMN-generation call via
@@ -37,17 +30,9 @@ internal object GenerationExamples {
     const val INCLUSIVE_LABEL: String =
         "INCLUSIVE fork with a DEFAULT branch: conditions are independent; the join waits only for the branches that fired"
 
-    const val DATA_ARTIFACTS_LABEL: String =
-        "Data objects/stores: an activity reads a data store + data object and writes a data object; " +
-            "each link is a READ/WRITE data association"
-
     const val SUB_PROCESS_LABEL: String =
         "Embedded subprocess: a SUB_PROCESS node on the main flow whose members carry parentRef = the " +
             "subprocess id; the subprocess has its own inner start/end and no flow crosses its boundary"
-
-    const val EVENT_SUB_PROCESS_LABEL: String =
-        "Event subprocess: a SUB_PROCESS node with triggeredByEvent=true and a typed inner start " +
-            "(isInterrupting per the contract); members carry parentRef and it has no connecting flow"
 
     const val POOLS_AND_LANES_LABEL: String =
         "White-box pool with lanes: one participant whose processRef is the process and whose name is " +
@@ -127,41 +112,6 @@ internal object GenerationExamples {
             ),
         )
 
-    private const val DATA_START = "StartEvent_1"
-    private const val VALIDATE = "act-validate-order"
-    private const val DATA_END = "end-validated"
-    private const val ORDER = "DataObject_order"
-    private const val VALIDATED = "DataObject_validated_order"
-    private const val CUSTOMER_DB = "DataStore_customer"
-
-    val dataArtifacts: FlatBpmnDefinition =
-        FlatBpmnDefinition(
-            processId = "Process_order_validation",
-            processName = "Order validation",
-            nodes = listOf(
-                FlatBpmnNode(DATA_START, FlatBpmnNodeKind.START_EVENT, "Order received"),
-                FlatBpmnNode(VALIDATE, FlatBpmnNodeKind.SERVICE_TASK, "Validate order"),
-                FlatBpmnNode(DATA_END, FlatBpmnNodeKind.END_EVENT, "Order validated"),
-            ),
-            sequences = listOf(
-                BpmnEdge("Flow_1", DATA_START, VALIDATE),
-                BpmnEdge("Flow_2", VALIDATE, DATA_END),
-            ),
-            // Business-noun names only — no "activity"/"process"/"event" type words.
-            dataObjects = listOf(
-                BpmnDataObject(ORDER, "Order"),
-                BpmnDataObject(VALIDATED, "Validated order"),
-            ),
-            dataStores = listOf(
-                BpmnDataStore(CUSTOMER_DB, "Customer database"),
-            ),
-            dataAssociations = listOf(
-                BpmnDataAssociation("DataAssoc_1", VALIDATE, ORDER, DataFlowDirection.READ),
-                BpmnDataAssociation("DataAssoc_2", VALIDATE, CUSTOMER_DB, DataFlowDirection.READ),
-                BpmnDataAssociation("DataAssoc_3", VALIDATE, VALIDATED, DataFlowDirection.WRITE),
-            ),
-        )
-
     // Embedded subprocess (matches ContractExtractionExamples.subProcessExample). The SUB_PROCESS
     // node sits on the main flow (Start → Assess claim → Pay claim → End); its three members and
     // their inner flow — including a self-contained inner start and end — all carry parentRef = the
@@ -203,54 +153,6 @@ internal object GenerationExamples {
                 BpmnEdge("Flow_in_2", SUB_VALIDATE, SUB_ESTIMATE, parentRef = SUB_ASSESS),
                 BpmnEdge("Flow_in_3", SUB_ESTIMATE, SUB_DECIDE, parentRef = SUB_ASSESS),
                 BpmnEdge("Flow_in_4", SUB_DECIDE, SUB_INNER_END, parentRef = SUB_ASSESS),
-            ),
-        )
-
-    // Event subprocess. The SUB_PROCESS node has triggeredByEvent=true and a typed inner start whose
-    // eventDefinition matches the trigger (TIMER here) with isInterrupting=false (non-interrupting:
-    // the escalation runs alongside the main flow). Members and inner edges carry parentRef = the
-    // event-subprocess id, and the event subprocess has NO connecting flow on the main process — it
-    // runs when its inner start fires. Main flow: Start → Review request → End.
-    private const val ESP_MAIN_START = "StartEvent_1"
-    private const val ESP_REVIEW = "act-review-request"
-    private const val ESP_MAIN_END = "end-reviewed"
-    private const val ESP_OVERDUE = "esp-escalate-overdue"
-    private const val ESP_INNER_START = "StartEvent_overdue"
-    private const val ESP_ESCALATE = "act-notify-manager"
-    private const val ESP_INNER_END = "EndEvent_overdue"
-
-    val eventSubProcess: FlatBpmnDefinition =
-        FlatBpmnDefinition(
-            processId = "Process_request_review",
-            processName = "Request review",
-            nodes = listOf(
-                FlatBpmnNode(ESP_MAIN_START, FlatBpmnNodeKind.START_EVENT, "Request submitted"),
-                FlatBpmnNode(ESP_REVIEW, FlatBpmnNodeKind.USER_TASK, "Review request"),
-                FlatBpmnNode(ESP_MAIN_END, FlatBpmnNodeKind.END_EVENT, "Request reviewed"),
-                // Event subprocess: triggeredByEvent=true, off the main flow.
-                FlatBpmnNode(ESP_OVERDUE, FlatBpmnNodeKind.SUB_PROCESS, "Escalate if overdue", triggeredByEvent = true),
-                // Typed inner start: TIMER eventDefinition, non-interrupting.
-                FlatBpmnNode(
-                    ESP_INNER_START,
-                    FlatBpmnNodeKind.START_EVENT,
-                    eventDefinition = FlatBpmnEventDefinition(
-                        type = FlatBpmnEventDefinitionKind.TIMER,
-                        timerKind = BpmnTimerKind.DURATION,
-                        expression = "PT24H",
-                    ),
-                    isInterrupting = false,
-                    parentRef = ESP_OVERDUE,
-                ),
-                FlatBpmnNode(ESP_ESCALATE, FlatBpmnNodeKind.SERVICE_TASK, "Notify manager", parentRef = ESP_OVERDUE),
-                FlatBpmnNode(ESP_INNER_END, FlatBpmnNodeKind.END_EVENT, parentRef = ESP_OVERDUE),
-            ),
-            sequences = listOf(
-                // Main flow only — the event subprocess has no connecting flow.
-                BpmnEdge("Flow_1", ESP_MAIN_START, ESP_REVIEW),
-                BpmnEdge("Flow_2", ESP_REVIEW, ESP_MAIN_END),
-                // Inner handler flow, all parentRef'd to the event subprocess.
-                BpmnEdge("Flow_esp_1", ESP_INNER_START, ESP_ESCALATE, parentRef = ESP_OVERDUE),
-                BpmnEdge("Flow_esp_2", ESP_ESCALATE, ESP_INNER_END, parentRef = ESP_OVERDUE),
             ),
         )
 
@@ -302,9 +204,7 @@ internal object GenerationExamples {
     val all: List<Pair<String, FlatBpmnDefinition>> = listOf(
         PARALLEL_LABEL to parallelForkJoin,
         INCLUSIVE_LABEL to inclusiveWithDefault,
-        DATA_ARTIFACTS_LABEL to dataArtifacts,
         SUB_PROCESS_LABEL to embeddedSubProcess,
-        EVENT_SUB_PROCESS_LABEL to eventSubProcess,
         POOLS_AND_LANES_LABEL to whiteBoxPoolWithLanes,
     )
 }

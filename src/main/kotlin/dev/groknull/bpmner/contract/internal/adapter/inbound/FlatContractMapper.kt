@@ -44,13 +44,16 @@ public fun FlatProcessContract.toSealed(): ProcessContract = ProcessContract(
     activities = activities.map { it.toSealed() } + subProcesses.map { it.toSealed() },
     decisions = decisions.map { it.toSealed() },
     actors = actors,
-    artifacts = artifacts,
     endStates = endStates.map { it.toSealed() },
     intermediateThrows = intermediateThrows.map { it.toSealed() },
-    // Event subprocesses are a separate collection (not folded into `activities`): they sit off the
-    // main flow with no incoming/outgoing edges, so they are not ContractActivity entries.
-    eventSubProcesses = eventSubProcesses.map { it.toSealed() },
     assumptions = assumptions,
+)
+
+public fun FlatContractSubProcess.toSealed(): ContractActivity.SubProcess = ContractActivity.SubProcess(
+    id = id,
+    name = name,
+    containedActivityIds = activityIds,
+    sourceIds = sourceIds,
 )
 
 public fun FlatContractActivity.toSealed(): ContractActivity = when (kind) {
@@ -152,20 +155,6 @@ public fun FlatContractEndState.toSealed(): ContractEndState = when (kind) {
         messageName = requireField(messageName, kind, "messageName", id),
         sourceIds = sourceIds,
     )
-
-    FlatEndStateKind.SIGNAL -> ContractEndState.Signal(
-        id = id,
-        name = name,
-        signalName = requireField(signalName, kind, "signalName", id),
-        sourceIds = sourceIds,
-    )
-
-    FlatEndStateKind.ESCALATION -> ContractEndState.Escalation(
-        id = id,
-        name = name,
-        escalationCode = requireField(escalationCode, kind, "escalationCode", id),
-        sourceIds = sourceIds,
-    )
 }
 
 public fun FlatContractIntermediateThrow.toSealed(): ContractIntermediateThrow = when (kind) {
@@ -173,20 +162,6 @@ public fun FlatContractIntermediateThrow.toSealed(): ContractIntermediateThrow =
         id = id,
         name = name,
         messageName = requireField(messageName, kind, "messageName", id),
-        sourceIds = sourceIds,
-    )
-
-    FlatIntermediateThrowKind.SIGNAL -> ContractIntermediateThrow.Signal(
-        id = id,
-        name = name,
-        signalName = requireField(signalName, kind, "signalName", id),
-        sourceIds = sourceIds,
-    )
-
-    FlatIntermediateThrowKind.ESCALATION -> ContractIntermediateThrow.Escalation(
-        id = id,
-        name = name,
-        escalationCode = requireField(escalationCode, kind, "escalationCode", id),
         sourceIds = sourceIds,
     )
 }
@@ -225,11 +200,6 @@ public fun FlatContractTrigger.toSealed(): ContractTrigger = when (type) {
         messageName = requireField(messageName, type, "messageName", description),
         description = description,
     )
-
-    FlatTriggerKind.SIGNAL -> ContractTrigger.Signal(
-        signalName = requireField(signalName, type, "signalName", description),
-        description = description,
-    )
 }
 
 public fun FlatContractDecision.toSealed(): ContractDecision = ContractDecision(
@@ -244,6 +214,4 @@ private fun FlatContractActivity.toModifiers(): ActivityModifiers = ActivityModi
     iteration = iteration?.toSealed(),
     boundaryEvents = boundaryEvents.map { it.toSealed() },
     loop = loop?.toSealed(),
-    dataInputIds = dataInputIds,
-    dataOutputIds = dataOutputIds,
 )

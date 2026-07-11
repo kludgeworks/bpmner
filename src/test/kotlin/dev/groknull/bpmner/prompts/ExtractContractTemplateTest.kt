@@ -96,15 +96,6 @@ class ExtractContractTemplateTest {
     }
 
     @Test
-    fun `template includes the event-subprocess extraction guidance`() {
-        val prompt = render(request(), assessment(), clarificationHistory = emptyList())
-
-        assertTrue(prompt.contains("Event subprocesses (optional `eventSubProcesses` list)"))
-        assertTrue(prompt.contains("MESSAGE | TIMER | ERROR | ESCALATION | SIGNAL"))
-        assertTrue(prompt.contains("interrupting"))
-    }
-
-    @Test
     fun `decision-kind recognition heuristics move from the template into the shipped schema`() {
         // Decision-kind recognition heuristics live in FlatContractDecision.kind's
         // @JsonPropertyDescription, not the rendered template. Guard both halves: the prose is

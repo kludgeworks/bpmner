@@ -8,8 +8,6 @@ package dev.groknull.bpmner.contract.internal.domain
 import dev.groknull.bpmner.contract.ConditionalBranch
 import dev.groknull.bpmner.contract.ContractActivity
 import dev.groknull.bpmner.contract.ContractActor
-import dev.groknull.bpmner.contract.ContractArtifact
-import dev.groknull.bpmner.contract.ContractArtifactKind
 import dev.groknull.bpmner.contract.ContractAssumption
 import dev.groknull.bpmner.contract.ContractDecision
 import dev.groknull.bpmner.contract.ContractEndState
@@ -49,9 +47,6 @@ class ProcessContractMarkdownRendererTest {
             - d-stock: Is the item in stock?
               - b-yes → "In stock" if "stock > 0"
               - b-no → "Out of stock" if "stock == 0"
-
-            ## Artifacts
-            - art-package: Package [DATA_OBJECT] — Wrapped order ready to ship
 
             ## Intermediate throws
             - throw-invoice: Notify invoice ready [MESSAGE messageName="invoice ready"]
@@ -166,7 +161,6 @@ class ProcessContractMarkdownRendererTest {
         assertTrue(markdown.contains("## End states"))
         assertTrue(!markdown.contains("## Actors"))
         assertTrue(!markdown.contains("## Decisions"))
-        assertTrue(!markdown.contains("## Artifacts"))
         assertTrue(!markdown.contains("## Intermediate throws"))
         assertTrue(!markdown.contains("## Assumptions"))
     }
@@ -184,18 +178,6 @@ class ProcessContractMarkdownRendererTest {
                         messageName = "customer notified",
                         sourceIds = sources,
                     ),
-                    ContractIntermediateThrow.Signal(
-                        id = "throw-sig",
-                        name = "Broadcast stock change",
-                        signalName = "stock changed",
-                        sourceIds = sources,
-                    ),
-                    ContractIntermediateThrow.Escalation(
-                        id = "throw-esc",
-                        name = "Escalate overdue approval",
-                        escalationCode = "APPROVAL_OVERDUE",
-                        sourceIds = sources,
-                    ),
                 ),
             )
 
@@ -203,10 +185,6 @@ class ProcessContractMarkdownRendererTest {
 
         assertTrue(markdown.contains("## Intermediate throws"))
         assertTrue(markdown.contains("- throw-msg: Notify customer [MESSAGE messageName=\"customer notified\"]"))
-        assertTrue(markdown.contains("- throw-sig: Broadcast stock change [SIGNAL signalName=\"stock changed\"]"))
-        assertTrue(
-            markdown.contains("- throw-esc: Escalate overdue approval [ESCALATION escalationCode=\"APPROVAL_OVERDUE\"]"),
-        )
         assertTrue(!renderer.render(contract.copy(intermediateThrows = emptyList())).contains("## Intermediate throws"))
     }
 
@@ -280,15 +258,6 @@ class ProcessContractMarkdownRendererTest {
                         ConditionalBranch(id = "b-no", label = "Out of stock", condition = "stock == 0"),
                     ),
                     sourceIds = sources,
-                ),
-            ),
-            artifacts =
-            listOf(
-                ContractArtifact(
-                    id = "art-package",
-                    name = "Package",
-                    kind = ContractArtifactKind.DATA_OBJECT,
-                    description = "Wrapped order ready to ship",
                 ),
             ),
             intermediateThrows =

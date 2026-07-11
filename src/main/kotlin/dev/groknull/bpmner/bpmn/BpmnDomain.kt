@@ -12,7 +12,6 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
-import jakarta.validation.constraints.NotNull
 import org.springframework.ai.tool.annotation.Tool
 
 data class BpmnRequest(
@@ -48,14 +47,8 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Reusable BPMN message declarations referenced by message event definitions")
     val messages: List<BpmnMessageRef> = emptyList(),
     @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN signal declarations referenced by signal event definitions")
-    val signals: List<BpmnSignalRef> = emptyList(),
-    @field:Valid
     @get:JsonPropertyDescription("Reusable BPMN error declarations referenced by error event definitions")
     val errors: List<BpmnErrorRef> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
-    val escalations: List<BpmnEscalationRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
     val annotations: List<BpmnTextAnnotation> = emptyList(),
@@ -65,15 +58,6 @@ data class BpmnDefinition(
     @field:Valid
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
     val associations: List<BpmnAssociation> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Data objects (transient information) flowing through the process")
-    val dataObjects: List<BpmnDataObject> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Data stores (persisted information: databases, files, queues) the process reads or writes")
-    val dataStores: List<BpmnDataStore> = emptyList(),
-    @field:Valid
-    @get:JsonPropertyDescription("Read/write links between activities and data objects/stores")
-    val dataAssociations: List<BpmnDataAssociation> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription(
         "Participants (pools): white-box (processRef set, owns the process) or black-box (external, processRef null)",
@@ -143,22 +127,7 @@ data class BpmnMessageRef(
     val name: String,
 )
 
-data class BpmnSignalRef(
-    @field:NotBlank
-    val id: String,
-    @field:NotBlank
-    val name: String,
-)
-
 data class BpmnErrorRef(
-    @field:NotBlank
-    val id: String,
-    @field:NotBlank
-    val code: String,
-    val name: String? = null,
-)
-
-data class BpmnEscalationRef(
     @field:NotBlank
     val id: String,
     @field:NotBlank
@@ -178,9 +147,7 @@ data class BpmnGroup(
     JsonSubTypes.Type(value = BpmnNoneEventDefinition::class, name = "NONE"),
     JsonSubTypes.Type(value = BpmnTimerEventDefinition::class, name = "TIMER"),
     JsonSubTypes.Type(value = BpmnMessageEventDefinition::class, name = "MESSAGE"),
-    JsonSubTypes.Type(value = BpmnSignalEventDefinition::class, name = "SIGNAL"),
     JsonSubTypes.Type(value = BpmnErrorEventDefinition::class, name = "ERROR"),
-    JsonSubTypes.Type(value = BpmnEscalationEventDefinition::class, name = "ESCALATION"),
     JsonSubTypes.Type(value = BpmnTerminateEventDefinition::class, name = "TERMINATE"),
 )
 sealed interface BpmnEventDefinition
@@ -198,19 +165,9 @@ data class BpmnMessageEventDefinition(
     val messageRef: String,
 ) : BpmnEventDefinition
 
-data class BpmnSignalEventDefinition(
-    @field:NotBlank
-    val signalRef: String,
-) : BpmnEventDefinition
-
 data class BpmnErrorEventDefinition(
     @field:NotBlank
     val errorRef: String,
-) : BpmnEventDefinition
-
-data class BpmnEscalationEventDefinition(
-    @field:NotBlank
-    val escalationRef: String,
 ) : BpmnEventDefinition
 
 data object BpmnTerminateEventDefinition : BpmnEventDefinition
@@ -594,8 +551,6 @@ data class BpmnBoundaryEvent(
     @field:NotBlank
     @get:JsonPropertyDescription("BPMN id of the activity this boundary event is attached to")
     val attachedToRef: String,
-    @get:JsonPropertyDescription("Whether the boundary event cancels the attached activity when it fires")
-    val cancelActivity: Boolean = true,
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
@@ -632,11 +587,6 @@ data class BpmnSubProcess(
     override val id: String,
     @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
     override val name: String? = null,
-    @get:JsonPropertyDescription(
-        "false for an ordinary embedded subprocess; true for an event subprocess (triggered by an " +
-            "inner event start rather than an incoming sequence flow).",
-    )
-    val triggeredByEvent: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode {
@@ -732,45 +682,6 @@ data class BpmnAssociation(
     @field:NotBlank
     @get:JsonPropertyDescription("Target element id (the text annotation)")
     val targetRef: String,
-)
-
-@JsonClassDescription("BPMN data object: transient information flowing through the process")
-data class BpmnDataObject(
-    @field:NotBlank
-    @get:JsonPropertyDescription("Unique data-object id, e.g. DataObject_1")
-    val id: String,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Business name of the data object, e.g. \"Order\"")
-    val name: String,
-)
-
-@JsonClassDescription("BPMN data store: persisted information (database, file, queue) the process reads or writes")
-data class BpmnDataStore(
-    @field:NotBlank
-    @get:JsonPropertyDescription("Unique data-store id, e.g. DataStore_1")
-    val id: String,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Business name of the data store, e.g. \"Customer database\"")
-    val name: String,
-)
-
-/** Direction of a [BpmnDataAssociation]: the activity reads from, or writes to, the data element. */
-enum class DataFlowDirection { READ, WRITE }
-
-@JsonClassDescription("Read/write link between an activity and a data object or store")
-data class BpmnDataAssociation(
-    @field:NotBlank
-    @get:JsonPropertyDescription("Unique data-association id, e.g. DataAssociation_1")
-    val id: String,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Source activity id (the reader or writer)")
-    val sourceRef: String,
-    @field:NotBlank
-    @get:JsonPropertyDescription("Target data object/store id")
-    val targetRef: String,
-    @field:NotNull
-    @get:JsonPropertyDescription("READ = activity consumes the data; WRITE = activity produces or updates it")
-    val direction: DataFlowDirection,
 )
 
 @JsonClassDescription("BPMN participant (pool): white-box owns a process, black-box is an external entity")

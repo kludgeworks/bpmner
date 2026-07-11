@@ -16,7 +16,6 @@ import dev.groknull.bpmner.bpmn.MultiInstanceMode
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
-import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 
 @JsonClassDescription("Source-grounded process start declaration")
@@ -35,7 +34,6 @@ data class ContractStart(
     JsonSubTypes.Type(value = ContractTrigger.None::class, name = "NONE"),
     JsonSubTypes.Type(value = ContractTrigger.Timer::class, name = "TIMER"),
     JsonSubTypes.Type(value = ContractTrigger.Message::class, name = "MESSAGE"),
-    JsonSubTypes.Type(value = ContractTrigger.Signal::class, name = "SIGNAL"),
 )
 sealed interface ContractTrigger {
     val description: String
@@ -52,11 +50,6 @@ sealed interface ContractTrigger {
 
     data class Message(
         val messageName: String,
-        override val description: String,
-    ) : ContractTrigger
-
-    data class Signal(
-        val signalName: String,
         override val description: String,
     ) : ContractTrigger
 }
@@ -91,10 +84,6 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Actors referenced by the process contract")
     val actors: List<ContractActor> = emptyList(),
-    @field:Valid
-    @field:Size(max = 100)
-    @get:JsonPropertyDescription("Artifacts referenced by the process contract")
-    val artifacts: List<ContractArtifact> = emptyList(),
     @field:NotEmpty
     @field:Valid
     @field:Size(max = 50)
@@ -104,10 +93,6 @@ data class ProcessContract(
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Intermediate throw events required in the middle of the process")
     val intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
-    @field:Valid
-    @field:Size(max = 50)
-    @get:JsonPropertyDescription("Event subprocesses — event-triggered handlers off the main flow")
-    val eventSubProcesses: List<ContractEventSubProcess> = emptyList(),
     @field:Valid
     @field:Size(max = 50)
     @get:JsonPropertyDescription("Assumptions made while extracting the contract")
@@ -135,10 +120,8 @@ data class ProcessContract(
         activities: List<ContractActivity>,
         decisions: List<ContractDecision> = emptyList(),
         actors: List<ContractActor> = emptyList(),
-        artifacts: List<ContractArtifact> = emptyList(),
         endStates: List<ContractEndState>,
         intermediateThrows: List<ContractIntermediateThrow> = emptyList(),
-        eventSubProcesses: List<ContractEventSubProcess> = emptyList(),
         assumptions: List<ContractAssumption> = emptyList(),
     ) : this(
         id = id,
@@ -148,10 +131,8 @@ data class ProcessContract(
         activities = activities,
         decisions = decisions,
         actors = actors,
-        artifacts = artifacts,
         endStates = endStates,
         intermediateThrows = intermediateThrows,
-        eventSubProcesses = eventSubProcesses,
         assumptions = assumptions,
     )
 }
@@ -200,9 +181,9 @@ sealed interface ContractActivity {
     val sourceIds: List<String>
 
     /**
-     * Cross-cutting modifiers (iteration, boundary events, loop, data associations) shared by every
+     * Cross-cutting modifiers (iteration, boundary events, loop) shared by every
      * activity kind. Grouped into one value object so the subtypes carry only their kind-specific
-     * payload; the [iteration], [boundaryEvents], [loop], [dataInputIds], and [dataOutputIds]
+     * payload; the [iteration], [boundaryEvents], and [loop]
      * extension accessors read them polymorphically without a `when` over the subtypes.
      */
     val modifiers: ActivityModifiers
@@ -279,7 +260,7 @@ sealed interface ContractActivity {
 
     @JsonClassDescription(
         "Embedded subprocess — a composite activity grouping member activities into one step on the " +
-            "main flow. Maps to BpmnSubProcess (triggeredByEvent=false) containing the member nodes.",
+            "main flow. Maps to BpmnSubProcess containing the member nodes.",
     )
     data class SubProcess(
         override val id: String,
@@ -319,16 +300,12 @@ sealed interface ContractActivity {
 
 /**
  * Cross-cutting modifiers shared by every [ContractActivity] kind: a per-item [iteration] marker,
- * attached [boundaryEvents], a standard [loop] marker, and the artifact ids the activity reads
- * ([dataInputIds]) / writes ([dataOutputIds]). The defaults describe an ordinary single-run
- * activity that touches no declared data.
+ * attached [boundaryEvents], and a standard [loop] marker.
  */
 data class ActivityModifiers(
     val iteration: ContractIteration? = null,
     val boundaryEvents: List<ContractBoundaryEvent> = emptyList(),
     val loop: ContractLoop? = null,
-    val dataInputIds: List<String> = emptyList(),
-    val dataOutputIds: List<String> = emptyList(),
 )
 
 /** Per-item iteration marker, read polymorphically across activity kinds via [ContractActivity.modifiers]. */
@@ -339,12 +316,6 @@ val ContractActivity.boundaryEvents: List<ContractBoundaryEvent> get() = modifie
 
 /** Standard-loop marker, read polymorphically via [ContractActivity.modifiers]. */
 val ContractActivity.loop: ContractLoop? get() = modifiers.loop
-
-/** Ids of artifacts the activity reads, read polymorphically via [ContractActivity.modifiers]. */
-val ContractActivity.dataInputIds: List<String> get() = modifiers.dataInputIds
-
-/** Ids of artifacts the activity writes, read polymorphically via [ContractActivity.modifiers]. */
-val ContractActivity.dataOutputIds: List<String> get() = modifiers.dataOutputIds
 
 @JsonClassDescription(
     "Per-item iteration over a collection (multi-instance): the activity runs once per item, " +
@@ -369,14 +340,14 @@ data class ContractIteration(
 )
 
 @JsonClassDescription(
-    "A boundary event attached to an activity: a timeout (TIMER), caught business error (ERROR), " +
-        "or raised escalation (ESCALATION) that interrupts the activity and routes the flow to " +
+    "A boundary event attached to an activity: a timeout (TIMER) or caught business error (ERROR) " +
+        "that interrupts the activity and routes the flow to " +
         "`nextRef`. Realized as a `BpmnBoundaryEvent` on the activity's BPMN task.",
 )
 data class ContractBoundaryEvent(
     @get:JsonPropertyDescription(
         "Event kind: TIMER (a deadline/duration elapses), ERROR (the activity throws a named " +
-            "business error), ESCALATION (the activity raises a business escalation).",
+            "business error).",
     )
     val kind: BoundaryEventKind,
     @field:NotBlank
@@ -389,15 +360,10 @@ data class ContractBoundaryEvent(
         "Id of the activity, decision, or end state the exception path routes to when this event fires.",
     )
     val nextRef: String,
-    @get:JsonPropertyDescription(
-        "Whether firing interrupts (cancels) the attached activity. Default true. ERROR boundary " +
-            "events must be interrupting; TIMER/ESCALATION may be non-interrupting.",
-    )
-    val cancelActivity: Boolean = true,
     @field:Size(max = 200)
     @get:JsonPropertyDescription(
         "Optional kind-specific detail: an ISO-8601 duration for TIMER (e.g. \"PT24H\"), a business " +
-            "error code for ERROR (e.g. \"CHARGEBACK\"), or an escalation code for ESCALATION.",
+            "error code for ERROR (e.g. \"CHARGEBACK\").",
     )
     val detail: String? = null,
 )
@@ -455,33 +421,6 @@ fun ContractActivity.withSourceIds(sourceIds: List<String>): ContractActivity = 
 }
 
 /**
- * The event that starts an [ContractEventSubProcess]. Unlike [EventTriggerKind] (event-based gateway
- * branches, which only route on TIMER / MESSAGE / SIGNAL), an event subprocess may also be triggered
- * by a caught business ERROR or a raised ESCALATION, so it carries its own wider enum.
- */
-enum class EventSubProcessTrigger { MESSAGE, TIMER, ERROR, ESCALATION, SIGNAL }
-
-/**
- * An event subprocess: an event-triggered handler that sits off the main flow and runs when its inner
- * start event fires, rather than being reached by a sequence flow. Distinct from
- * [ContractActivity.SubProcess] (an embedded subprocess on the main flow) — it is deliberately NOT a
- * [ContractActivity] because it has no incoming/outgoing edges. Realized as a
- * [dev.groknull.bpmner.bpmn.BpmnSubProcess] with `triggeredByEvent = true` containing a typed inner
- * start event matching [trigger]; [interrupting] maps to that start event's `isInterrupting`.
- *
- * Members in [containedActivityIds] are ordinary entries in `ProcessContract.activities`; the event
- * subprocess only names which of them form its handler body.
- */
-data class ContractEventSubProcess(
-    val id: String,
-    val name: String,
-    val containedActivityIds: List<String>,
-    val trigger: EventSubProcessTrigger,
-    val interrupting: Boolean = true,
-    val sourceIds: List<String> = emptyList(),
-)
-
-/**
  * How the branches of a [ContractDecision] are selected at runtime.
  *
  * Defaults to [EXCLUSIVE] so existing contracts (exclusive choice — exactly one branch
@@ -515,7 +454,7 @@ enum class ContractGatewayKind {
     /**
      * The flow waits for one of several events; the first to fire selects its branch. Maps to
      * `<bpmn:eventBasedGateway>`. Branches are [EventGatewayBranch] — each names the event
-     * (TIMER / MESSAGE / SIGNAL) that triggers it rather than carrying a condition.
+     * (TIMER / MESSAGE) that triggers it rather than carrying a condition.
      */
     EVENT_BASED,
 }
@@ -626,18 +565,17 @@ data class UnconditionalBranch(
 
 /**
  * The event that selects an [EventGatewayBranch] of an EVENT_BASED decision: a deadline elapsing
- * (`TIMER`), a named message arriving (`MESSAGE`), or a broadcast being observed (`SIGNAL`).
+ * (`TIMER`) or a named message arriving (`MESSAGE`).
  * Realized as the intermediate catch event the event-based gateway routes to on that branch.
  */
 enum class EventTriggerKind {
     TIMER,
     MESSAGE,
-    SIGNAL,
 }
 
 @JsonClassDescription(
     "Branch of an EVENT_BASED decision — taken when its event fires first. Names the triggering " +
-        "event kind (TIMER / MESSAGE / SIGNAL) instead of a condition.",
+        "event kind (TIMER / MESSAGE) instead of a condition.",
 )
 data class EventGatewayBranch(
     override val id: String,
@@ -662,38 +600,12 @@ data class ContractActor(
     val role: String? = null,
 )
 
-enum class ContractArtifactKind { DATA_OBJECT, DATA_STORE }
-
-@JsonClassDescription(
-    "Data artifact referenced by the contract: a DATA_OBJECT (transient information flowing through " +
-        "the process) or a DATA_STORE (persisted store — database, file, queue).",
-)
-data class ContractArtifact(
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Stable artifact id")
-    val id: String,
-    @field:NotBlank
-    @field:Size(max = 200)
-    @get:JsonPropertyDescription("Business name of the artifact, e.g. \"Order\" or \"Customer database\"")
-    val name: String,
-    @field:NotNull
-    @get:JsonPropertyDescription(
-        "DATA_OBJECT = transient information flowing through the process; DATA_STORE = persisted " +
-            "information (database, file, queue) the process reads or writes.",
-    )
-    val kind: ContractArtifactKind,
-    @field:Size(max = 500)
-    @get:JsonPropertyDescription("Optional artifact description")
-    val description: String? = null,
-)
-
 /**
  * Required end state for the extracted process contract.
  *
  * Mirrors the sealed-subtype pattern used by [ContractTrigger], [ContractBranch],
  * and [ContractActivity]: the `kind` discriminator dispatches
- * to one of six subtypes, each carrying exactly the payload its end-event kind needs.
+ * to one of four subtypes, each carrying exactly the payload its end-event kind needs.
  * Kind / payload coupling is enforced by the type system — [Error] always carries an
  * `errorCode`, [Message] always carries a `messageName`, etc.
  *
@@ -708,16 +620,9 @@ data class ContractArtifact(
  *    [dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
  *  - [Message] — point-to-point send on completion →
  *    [dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
- *  - [Signal] — broadcast to every subscribing process →
- *    [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] + matching `BpmnSignalRef`
- *  - [Escalation] — non-error notification that propagates to an escalation catcher
- *    (per Camunda best practice: use for "report back" rather than "this failed") →
- *    [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition] + matching `BpmnEscalationRef`
- *
- * Field naming follows the convention from [ContractTrigger]: Message/Signal carry
- * human-readable **names** (extracted from prose; mapped to catalogue ids at generation
- * time), Error/Escalation carry **codes** (the BPMN-spec matching identifier on
- * `<bpmn:error errorCode="...">` / `<bpmn:escalation escalationCode="...">`).
+ * Field naming follows the convention from [ContractTrigger]: Message carries a human-readable
+ * name (extracted from prose; mapped to a catalogue id at generation time), and Error carries
+ * the BPMN-spec matching code.
  *
  * The companion `invoke` keeps existing flat-constructor call sites compiling by
  * defaulting to [Normal] — the most common end-state kind in practice.
@@ -729,8 +634,6 @@ data class ContractArtifact(
     JsonSubTypes.Type(value = ContractEndState.Terminate::class, name = "TERMINATE"),
     JsonSubTypes.Type(value = ContractEndState.Error::class, name = "ERROR"),
     JsonSubTypes.Type(value = ContractEndState.Message::class, name = "MESSAGE"),
-    JsonSubTypes.Type(value = ContractEndState.Signal::class, name = "SIGNAL"),
-    JsonSubTypes.Type(value = ContractEndState.Escalation::class, name = "ESCALATION"),
 )
 sealed interface ContractEndState {
     val id: String
@@ -776,29 +679,6 @@ sealed interface ContractEndState {
         override val sourceIds: List<String> = emptyList(),
     ) : ContractEndState
 
-    @JsonClassDescription(
-        "Signal end — broadcast to every subscribing process. Distinct from Message in being " +
-            "one-to-many. Maps to BpmnEndEvent with SignalEventDefinition.",
-    )
-    data class Signal(
-        override val id: String,
-        override val name: String,
-        val signalName: String,
-        override val sourceIds: List<String> = emptyList(),
-    ) : ContractEndState
-
-    @JsonClassDescription(
-        "Escalation end — non-error notification that propagates to an escalation catcher. " +
-            "Distinct from Error: signals \"please nudge\" rather than \"this failed\". Maps to " +
-            "BpmnEndEvent with EscalationEventDefinition.",
-    )
-    data class Escalation(
-        override val id: String,
-        override val name: String,
-        val escalationCode: String,
-        override val sourceIds: List<String> = emptyList(),
-    ) : ContractEndState
-
     companion object {
         // Convenience factory: lets existing call sites that don't specify a kind keep working
         // (`ContractEndState("id", "name")` → Normal). Most end states are NORMAL in practice;
@@ -822,8 +702,6 @@ val ContractEndState.kindName: String
             is ContractEndState.Terminate -> "TERMINATE"
             is ContractEndState.Error -> "ERROR"
             is ContractEndState.Message -> "MESSAGE"
-            is ContractEndState.Signal -> "SIGNAL"
-            is ContractEndState.Escalation -> "ESCALATION"
         }
 
 sealed interface ContractIntermediateThrow {
@@ -837,28 +715,12 @@ sealed interface ContractIntermediateThrow {
         val messageName: String,
         override val sourceIds: List<String> = emptyList(),
     ) : ContractIntermediateThrow
-
-    data class Signal(
-        override val id: String,
-        override val name: String,
-        val signalName: String,
-        override val sourceIds: List<String> = emptyList(),
-    ) : ContractIntermediateThrow
-
-    data class Escalation(
-        override val id: String,
-        override val name: String,
-        val escalationCode: String,
-        override val sourceIds: List<String> = emptyList(),
-    ) : ContractIntermediateThrow
 }
 
 val ContractIntermediateThrow.kindName: String
     get() =
         when (this) {
             is ContractIntermediateThrow.Message -> "MESSAGE"
-            is ContractIntermediateThrow.Signal -> "SIGNAL"
-            is ContractIntermediateThrow.Escalation -> "ESCALATION"
         }
 
 @JsonClassDescription("Assumption made while extracting the process contract")

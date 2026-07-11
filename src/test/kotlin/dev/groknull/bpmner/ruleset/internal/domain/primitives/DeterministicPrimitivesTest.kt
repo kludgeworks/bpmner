@@ -193,6 +193,36 @@ class DeterministicPrimitivesTest {
     }
 
     @Test
+    fun `topology rejects implicit task splits but permits gateway splits`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnStartEvent("start", "Start"),
+                BpmnUserTask("task", "Work"),
+                BpmnExclusiveGateway("gateway", "Which path?"),
+                BpmnUserTask("left", "Left"),
+                BpmnUserTask("right", "Right"),
+                BpmnEndEvent("end", "End"),
+            ),
+            edges = listOf(
+                BpmnEdge("f1", "start", "task"),
+                BpmnEdge("f2", "task", "left"),
+                BpmnEdge("f3", "task", "right"),
+                BpmnEdge("f4", "left", "gateway"),
+                BpmnEdge("f5", "gateway", "right"),
+                BpmnEdge("f6", "gateway", "end"),
+            ),
+        )
+
+        val diagnostics = TopologyCheck().evaluate(
+            ctx,
+            metadata("no-implicit-split", "bpmn:FlowNode"),
+            TopologyCheckConfig(TopologyMode.NO_IMPLICIT_SPLIT),
+        )
+
+        assertEquals(listOf("task"), diagnostics.map { it.elementId })
+    }
+
+    @Test
     fun `connectivity handles no incoming named flows and pool semantics`() {
         val ctx = context(
             nodes = listOf(BpmnStartEvent("s", "Start"), BpmnUserTask("t", "Task"), BpmnEndEvent("e", "End")),

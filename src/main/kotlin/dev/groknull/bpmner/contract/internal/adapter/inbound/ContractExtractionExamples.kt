@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import dev.groknull.bpmner.contract.ContractGatewayKind
-import dev.groknull.bpmner.contract.EventSubProcessTrigger
 
 /**
  * Typed few-shot examples attached to the contract-extraction call via
@@ -30,9 +29,6 @@ internal object ContractExtractionExamples {
     const val MESSAGE_END_LABEL: String =
         "MESSAGE end state: process ends by sending a specific message — use kind=MESSAGE, not NORMAL"
 
-    const val ESCALATION_END_LABEL: String =
-        "ESCALATION end state: process ends by escalating to a manager — use kind=ESCALATION, not NORMAL"
-
     const val SEND_TASK_LABEL: String =
         "SEND activity: fire-and-forget outbound notification — use kind=SEND, not SERVICE"
 
@@ -53,24 +49,18 @@ internal object ContractExtractionExamples {
         "Embedded subprocess: a named group of activities handled as one composite step —" +
             " list its member ids in a subProcesses entry; members stay in the activities array"
 
-    const val EVENT_SUB_PROCESS_LABEL: String =
-        "Event subprocess: an event-triggered handler off the main flow (\"at any point, if X …\") —" +
-            " use an eventSubProcesses entry with a trigger; members stay in the activities array"
-
     // ──────────────────────────────────────────────────────────────────────────
     // Shared node ids
     // ──────────────────────────────────────────────────────────────────────────
 
     private const val ACT_VALIDATE = "act-validate"
     private const val ACT_SEND_INVOICE = "act-send-invoice"
-    private const val ACT_REVIEW = "act-review"
     private const val ACT_PROCESS = "act-process"
     private const val ACT_SEND_CONFIRM = "act-send-confirmation"
     private const val ACT_ARCHIVE = "act-archive"
     private const val ACT_NOTIFY_MANAGER = "act-notify-manager"
     private const val END_NORMAL = "end-complete"
     private const val END_MESSAGE = "end-invoice-sent"
-    private const val END_ESCALATION = "end-overdue"
     private const val THROW_BILLING = "throw-billing-notification"
 
     // ──────────────────────────────────────────────────────────────────────────
@@ -113,46 +103,7 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 2 — ESCALATION end state
-    //
-    // Prose: "The process begins when started. If the approval is overdue, we trigger
-    //          a manager escalation."
-    // The process terminates by escalating → end state kind = ESCALATION.
-    // ──────────────────────────────────────────────────────────────────────────
-
-    val escalationEndExample: FlatProcessContract =
-        FlatProcessContract(
-            id = "contract-approval",
-            processName = "Approval process",
-            summary = "Process that ends with a manager escalation when approval is overdue.",
-            start = FlatContractStart(
-                trigger = FlatContractTrigger(
-                    type = FlatTriggerKind.NONE,
-                    description = "Process started",
-                ),
-                sourceIds = listOf("src-1"),
-            ),
-            activities = listOf(
-                FlatContractActivity(
-                    id = ACT_REVIEW,
-                    name = "Review approval request",
-                    kind = FlatActivityKind.USER,
-                    sourceIds = listOf("src-1"),
-                ),
-            ),
-            endStates = listOf(
-                FlatContractEndState(
-                    id = END_ESCALATION,
-                    name = "Approval overdue escalation",
-                    kind = FlatEndStateKind.ESCALATION,
-                    escalationCode = "APPROVAL_OVERDUE",
-                    sourceIds = listOf("src-1"),
-                ),
-            ),
-        )
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Example 3 — SEND activity (not SERVICE)
+    // Example 2 — SEND activity (not SERVICE)
     //
     // Prose: "When the registration is complete, the application sends a confirmation
     //          email to the user. Then the process completes."
@@ -192,7 +143,7 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 4 — Intermediate throw (mid-flow; does NOT end the process)
+    // Example 3 — Intermediate throw (mid-flow; does NOT end the process)
     //
     // Prose: "The process starts when requested. The system sends a confirmation message
     //          to billing without ending the process. Then the process completes normally."
@@ -245,7 +196,7 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 5 — SEND activity + NORMAL end (counter-example)
+    // Example 4 — SEND activity + NORMAL end (counter-example)
     //
     // This contrasts with Example 1 (MESSAGE end): here the SEND is an in-flow
     // activity and the process then ends NORMALLY. The difference: if there are
@@ -289,7 +240,7 @@ internal object ContractExtractionExamples {
             ),
         )
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 6 — INCLUSIVE gateway
+    // Example 5 — INCLUSIVE gateway
     //
     // Prose: "Depending on the application, we may send an optional customer
     //          notification AND/OR an optional manager notification."
@@ -361,7 +312,7 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 7 — BUSINESS_RULE activity
+    // Example 6 — BUSINESS_RULE activity
     //
     // Prose: "The system evaluates the pricing rules using the order discount
     //          table to determine the final price."
@@ -411,7 +362,7 @@ internal object ContractExtractionExamples {
         )
 
     // ──────────────────────────────────────────────────────────────────────────
-    // Example 8 — embedded subprocess
+    // Example 7 — embedded subprocess
     //
     // Prose: "To assess a claim, the adjuster validates the documents, estimates the
     //          damage, then decides the payout. Once the claim has been assessed, it is paid."
@@ -475,80 +426,6 @@ internal object ContractExtractionExamples {
                 FlatContractEndState(
                     id = END_NORMAL,
                     name = "Claim paid",
-                    kind = FlatEndStateKind.NORMAL,
-                    sourceIds = listOf("src-1"),
-                ),
-            ),
-        )
-
-    // ──────────────────────────────────────────────────────────────────────────
-    // Example 9 — event subprocess
-    //
-    // Prose: "An order is processed and shipped. At any point before shipping, if a cancellation
-    //          request arrives, the order is refunded and the customer is notified of the cancellation."
-    // The cancellation handler runs off the main flow on an inbound message → an eventSubProcesses
-    // entry (trigger=MESSAGE, interrupting). Its handler steps stay in `activities`.
-    // ──────────────────────────────────────────────────────────────────────────
-
-    private const val ACT_PROCESS_ORDER = "act-process-order"
-    private const val ACT_SHIP_ORDER = "act-ship-order"
-    private const val ACT_REFUND = "act-refund"
-    private const val ACT_NOTIFY_CANCEL = "act-notify-cancellation"
-    private const val ESP_CANCEL = "esp-handle-cancellation"
-
-    val eventSubProcessExample: FlatProcessContract =
-        FlatProcessContract(
-            id = "contract-order-cancellation",
-            processName = "Order with cancellation handler",
-            summary = "Process that ships an order, with an event-triggered cancellation handler.",
-            start = FlatContractStart(
-                trigger = FlatContractTrigger(
-                    type = FlatTriggerKind.NONE,
-                    description = "Order placed",
-                ),
-                sourceIds = listOf("src-1"),
-            ),
-            activities = listOf(
-                FlatContractActivity(
-                    id = ACT_PROCESS_ORDER,
-                    name = "Process order",
-                    kind = FlatActivityKind.SERVICE,
-                    sourceIds = listOf("src-1"),
-                ),
-                FlatContractActivity(
-                    id = ACT_SHIP_ORDER,
-                    name = "Ship order",
-                    kind = FlatActivityKind.SERVICE,
-                    sourceIds = listOf("src-1"),
-                ),
-                FlatContractActivity(
-                    id = ACT_REFUND,
-                    name = "Refund order",
-                    kind = FlatActivityKind.SERVICE,
-                    sourceIds = listOf("src-1"),
-                ),
-                FlatContractActivity(
-                    id = ACT_NOTIFY_CANCEL,
-                    name = "Send cancellation notification",
-                    kind = FlatActivityKind.SEND,
-                    messageName = "cancellation notification",
-                    sourceIds = listOf("src-1"),
-                ),
-            ),
-            eventSubProcesses = listOf(
-                FlatContractEventSubProcess(
-                    id = ESP_CANCEL,
-                    name = "Handle cancellation",
-                    activityIds = listOf(ACT_REFUND, ACT_NOTIFY_CANCEL),
-                    trigger = EventSubProcessTrigger.MESSAGE,
-                    interrupting = true,
-                    sourceIds = listOf("src-1"),
-                ),
-            ),
-            endStates = listOf(
-                FlatContractEndState(
-                    id = END_NORMAL,
-                    name = "Order shipped",
                     kind = FlatEndStateKind.NORMAL,
                     sourceIds = listOf("src-1"),
                 ),

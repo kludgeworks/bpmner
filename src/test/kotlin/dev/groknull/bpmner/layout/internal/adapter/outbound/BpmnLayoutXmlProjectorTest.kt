@@ -12,7 +12,7 @@ class BpmnLayoutXmlProjectorTest {
     private val projector = BpmnLayoutXmlProjector()
 
     @Test
-    fun `strips data artifacts and preserves valid XML`() {
+    fun `preserves unsupported data artifacts for converter rejection`() {
         val originalXml = """<?xml version="1.0" encoding="UTF-8" standalone="no"?><definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="def_1">
             <process id="proc_1">
                 <dataObject id="do_1" />
@@ -35,13 +35,13 @@ class BpmnLayoutXmlProjectorTest {
 
         val projected = projector.projectForLayout(originalXml)
 
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataObject")
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataObjectReference")
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataStore")
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataStoreReference")
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataOutputAssociation")
-        assertXml(projected).doesNotHaveXPath("//bpmn:dataInputAssociation")
-        assertXml(projected).doesNotHaveXPath("//bpmn:association[@id='assoc_1']")
+        assertXml(projected).nodesByXPath("//bpmn:dataObject").exist()
+        assertXml(projected).nodesByXPath("//bpmn:dataObjectReference").exist()
+        assertXml(projected).nodesByXPath("//bpmn:dataStore").exist()
+        assertXml(projected).nodesByXPath("//bpmn:dataStoreReference").exist()
+        assertXml(projected).nodesByXPath("//bpmn:dataOutputAssociation").exist()
+        assertXml(projected).nodesByXPath("//bpmn:dataInputAssociation").exist()
+        assertXml(projected).nodesByXPath("//bpmn:association[@id='assoc_1']").exist()
 
         assertXml(projected).nodesByXPath("//bpmn:association[@id='assoc_keep']").exist()
         assertXml(projected).nodesByXPath("//bpmn:userTask[@id='task_1']").exist()

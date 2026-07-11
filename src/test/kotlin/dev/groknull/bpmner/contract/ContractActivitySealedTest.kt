@@ -86,8 +86,6 @@ class ContractActivitySealedTest {
                         collectionDescription = "each reviewer on the panel",
                     ),
                     loop = ContractLoop(loopCondition = "not yet approved"),
-                    dataInputIds = listOf("art-order"),
-                    dataOutputIds = listOf("art-decision"),
                 ),
             )
 
@@ -97,8 +95,6 @@ class ContractActivitySealedTest {
         // Polymorphic extension accessors read through `modifiers`.
         assertEquals(MultiInstanceMode.PARALLEL, roundTripped.iteration?.mode)
         assertEquals("not yet approved", roundTripped.loop?.loopCondition)
-        assertEquals(listOf("art-order"), roundTripped.dataInputIds)
-        assertEquals(listOf("art-decision"), roundTripped.dataOutputIds)
     }
 
     @Test
