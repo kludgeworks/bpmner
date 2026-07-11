@@ -140,9 +140,8 @@ class BpmnSummarizer {
         visited: TraversalState,
     ) {
         val queue: Queue<String> = LinkedList()
-        // Roots: every start event, plus event-subprocess markers — an event subprocess has no
-        // incoming flow by design (it is triggered by its inner start), so it would otherwise be
-        // reported unreachable. Its inner nodes are reached via the inner start, itself a root.
+        // Roots: every top-level and inner start event. Inner start events reach the members
+        // of their containing subprocess via the inner flow.
         definition.nodes
             .filterIsInstance<BpmnStartEvent>()
             .sortedBy { it.id }

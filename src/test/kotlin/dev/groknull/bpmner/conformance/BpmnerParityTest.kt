@@ -128,7 +128,15 @@ class BpmnerParityTest {
         scenario: String,
         def: BpmnDefinition,
     ) {
-        val rawValidatorErrors = validator.validate(def).filterNot { it.startsWith("process contains disconnected flow nodes:") }
+        // Connectivity errors from validateScopeWeakConnectivity are excluded from parity
+        // comparison: the compiled rule engine has no equivalent check, so these errors
+        // would always produce a false parity break. Disconnected-component cases are
+        // covered by dedicated BpmnDefinitionValidatorTest assertions instead.
+        val rawValidatorErrors = validator.validate(def)
+            .filterNot {
+                it.startsWith("process contains disconnected flow nodes:") ||
+                    (it.startsWith("subprocess '") && it.contains("contains disconnected flow nodes:"))
+            }
         // Catch-all: every validator string must match exactly one pattern in the
         // translation table. Drift in validator output gets surfaced loudly.
         val unmatched = rawValidatorErrors.filter { msg -> TRANSLATION_TABLE.none { it.first.containsMatchIn(msg) } }
@@ -366,6 +374,13 @@ class BpmnerParityTest {
                 Regex("^edge .* isDefault is only valid when sourceRef points to an EXCLUSIVE_GATEWAY or INCLUSIVE_GATEWAY$")
                     to "def-default-flow-non-gateway",
                 Regex("^node \\S+ has \\d+ default flows .*at most one is allowed$") to "def-multiple-default-flows",
+                // Validator-only: no compiled rule emits a disconnected-component code, so this
+                // entry only exists to satisfy the catch-all. Scenarios that need to assert on
+                // disconnected-component errors must call validator.validate() directly (see
+                // BpmnDefinitionValidatorTest) — they must NOT be exercised via parity() because
+                // the rule engine will never emit the matching code.
+                Regex("^(subprocess '\\S+'|process) contains disconnected flow nodes: .+$")
+                    to "def-disconnected-nodes",
             )
 
         // Every diagnosticCode the compiled rules can emit. Verified by `git grep

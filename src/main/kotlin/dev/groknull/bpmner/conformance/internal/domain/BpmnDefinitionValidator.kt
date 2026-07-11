@@ -95,11 +95,12 @@ internal class BpmnDefinitionValidator {
             }
         }
 
+        val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
         definition.nodes
             .filterNot { it is BpmnBoundaryEvent }
             .groupBy { it.parentRef }
             .forEach { (parentRef, nodes) ->
-                validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, errors)
+                validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
             }
     }
 
@@ -107,12 +108,22 @@ internal class BpmnDefinitionValidator {
         parentRef: String?,
         nodes: List<BpmnNode>,
         sequences: List<BpmnEdge>,
+        boundaryEventIds: Set<String>,
         errors: MutableList<String>,
     ) {
         if (nodes.size < 2) return
 
         val nodeIds = nodes.map { it.id }.toSet()
         val adjacent = nodeIds.associateWith { mutableSetOf<String>() }
+        // Handler targets reachable only via a boundary-event outgoing edge. The boundary event
+        // itself is not in the node set (it is an attached exception, not a flow-node anchor),
+        // so its outgoing edge is not added to the undirected adjacency. Instead the target is
+        // recorded here and seeded directly into the BFS visited set — preventing a false-positive
+        // disconnected-component report for a task that is only reachable via a boundary event.
+        val boundaryHandlerIds = sequences
+            .filter { it.parentRef == parentRef && it.sourceRef in boundaryEventIds && it.targetRef in nodeIds }
+            .map { it.targetRef }
+            .toSet()
         sequences
             .filter { it.parentRef == parentRef && it.sourceRef in nodeIds && it.targetRef in nodeIds }
             .forEach { edge ->
@@ -121,7 +132,10 @@ internal class BpmnDefinitionValidator {
             }
 
         val visited = mutableSetOf(nodes.first().id)
-        val pending = ArrayDeque<String>().apply { add(nodes.first().id) }
+        visited.addAll(boundaryHandlerIds)
+        val pending = ArrayDeque<String>()
+        pending.add(nodes.first().id)
+        pending.addAll(boundaryHandlerIds)
         while (pending.isNotEmpty()) {
             adjacent.getValue(pending.removeFirst())
                 .filter { visited.add(it) }
