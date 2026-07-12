@@ -87,6 +87,20 @@ class BpmnerArchitectureTest {
     }
 
     @Test
+    fun `ELK layout engine is restricted to the layout module`() {
+        // ELK is confined to the layout module. This mirrors the GraalJS rule above:
+        // any class outside ..layout.. that acquires an org.eclipse.elk dependency
+        // must justify it and update this rule.
+        noClasses()
+            .that()
+            .resideOutsideOfPackages("..layout..")
+            .should()
+            .dependOnClassesThat()
+            .resideInAPackage("org.eclipse.elk..")
+            .check(classes)
+    }
+
+    @Test
     fun `OpenNLP imports are restricted to the nlp package`() {
         // Phase 3 (#218) added OpenNLP behind the [BpmnNlp] facade. Same intent as the
         // GraalJS pin above: keep the vendor dependency on one side of the interface so

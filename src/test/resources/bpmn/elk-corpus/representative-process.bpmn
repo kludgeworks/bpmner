@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_repr" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_repr" name="Representative Flat Process" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_prepare" name="Prepare Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:callActivity id="Call_1" name="Run External Check" calledElement="Process_Check">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:callActivity>
+    <bpmn:exclusiveGateway id="Gw_split" name="Check passed?" default="Flow_default">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_default</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_process" name="Process Result">
+      <bpmn:incoming>Flow_ok</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_ok</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_handle_fail" name="Handle Failure">
+      <bpmn:incoming>Flow_default</bpmn:incoming>
+      <bpmn:outgoing>Flow_join_fail</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gw_join">
+      <bpmn:incoming>Flow_join_ok</bpmn:incoming>
+      <bpmn:incoming>Flow_join_fail</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Call_1"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Call_1" targetRef="Gw_split"/>
+    <bpmn:sequenceFlow id="Flow_ok" name="Check passed" sourceRef="Gw_split" targetRef="Task_process">
+      <bpmn:conditionExpression>${checkPassed}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_default" sourceRef="Gw_split" targetRef="Task_handle_fail"/>
+    <bpmn:sequenceFlow id="Flow_join_ok" sourceRef="Task_process" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_join_fail" sourceRef="Task_handle_fail" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_join" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>
