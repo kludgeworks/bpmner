@@ -46,7 +46,7 @@ linter/docs/rules/*.md
 .bazelbsp/
 .bsp/
 projectview.bazelproject
-# Maven artifact resolution lock — generated on first build, intentionally untracked (907c01b7)
+# Maven artifact resolution lock — generated on first build, intentionally untracked
 rules_jvm_external++maven+maven_install.json
 
 # Serena MCP server local metadata

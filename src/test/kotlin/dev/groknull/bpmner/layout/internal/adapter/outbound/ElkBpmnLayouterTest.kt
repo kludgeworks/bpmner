@@ -8,176 +8,60 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
+import org.xml.sax.InputSource
 import org.xmlunit.assertj.XmlAssert
+import java.io.StringReader
+import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
- * Verifies the test-internal ELK layout path over the flat-geometry corpus.
- *
- * Assertions target semantic invariants (ID coverage, positive bounds, waypoint order,
- * label clearance, determinism) — never exact coordinates (AD-557-05, plan §7).
- *
- * This class exercises ElkBpmnLayouter directly; it is NOT a Spring boot test and
- * does not involve BpmnLayoutPort or BpmnLayoutService (those remain the production path).
+ * Verifies semantic DI coverage, positive geometry, routed edges, label clearance,
+ * and deterministic output. Never compares exact coordinates or asserts parity
+ * with the JavaScript layout engine.
  */
 class ElkBpmnLayouterTest {
 
     private val layouter = ElkBpmnLayouter()
 
-    // ── Corpus: each geometry class laid out successfully ────────────────────────────────────────
+    // ── Generic corpus invariants ─────────────────────────────────────────────
 
-    @ParameterizedTest(name = "corpus: {0}")
+    @ParameterizedTest(name = "corpus invariants: {0}")
     @ValueSource(
         strings = [
-            "linear-flow.bpmn",
-            "exclusive-branch.bpmn",
-            "parallel-branch.bpmn",
-            "inclusive-branch.bpmn",
-            "event-based-gateway.bpmn",
-            "long-labels.bpmn",
-            "call-activity.bpmn",
+            "representative-process.bpmn",
             "explicit-cycle.bpmn",
             "annotation-and-group.bpmn",
+            "long-labels.bpmn",
         ],
     )
-    fun `corpus fixture produces complete and valid DI`(fixture: String) {
-        val xml = loadCorpus(fixture)
-        val result = layouter.layout(xml)
+    fun `corpus fixture satisfies all DI invariants`(fixture: String) {
+        val inputXml = loadCorpus(fixture)
+        val result = layouter.layout(inputXml)
 
-        val asserter = assertXml(result)
+        // Derive expected IDs from the input so the assertion is not hand-maintained.
+        val (expectedShapeIds, expectedEdgeIds) = semanticIds(inputXml)
 
-        // 1. Exactly one BPMNDiagram and one BPMNPlane
-        asserter.nodesByXPath("//bpmndi:BPMNDiagram").exist()
-        asserter.nodesByXPath("//bpmndi:BPMNPlane").exist()
         assertExactlyOneDiagram(result)
 
-        // 2. At least one BPMNShape
-        asserter.nodesByXPath("//bpmndi:BPMNShape").exist()
-    }
-
-    @Test
-    fun `linear flow has shape and edge for every semantic element`() {
-        val xml = loadCorpus("linear-flow.bpmn")
-        val result = layouter.layout(xml)
         val asserter = assertXml(result)
-
-        // Flow node shapes
-        listOf("Start_1", "Task_1", "Task_2", "End_1").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
+        for (id in expectedShapeIds) {
+            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']")
+                .exist()
+        }
+        for (id in expectedEdgeIds) {
+            asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']")
+                .exist()
         }
 
-        // Sequence flow edges
-        listOf("Flow_1", "Flow_2", "Flow_3").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
-        }
-    }
-
-    @Test
-    fun `exclusive branch has shape for every node and edge for every flow`() {
-        val xml = loadCorpus("exclusive-branch.bpmn")
-        val result = layouter.layout(xml)
-        val asserter = assertXml(result)
-
-        listOf("Start_1", "Gw_split", "Task_yes", "Task_no", "Gw_join", "End_1").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
-        }
-
-        listOf("Flow_1", "Flow_yes", "Flow_no", "Flow_join_yes", "Flow_join_no", "Flow_end").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
-        }
-    }
-
-    @Test
-    fun `parallel branch has shapes and edges`() {
-        val xml = loadCorpus("parallel-branch.bpmn")
-        val result = layouter.layout(xml)
-        val asserter = assertXml(result)
-
-        listOf("Gw_fork", "Task_a", "Task_b", "Gw_join").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
-        }
-
-        listOf("Flow_a", "Flow_b", "Flow_join_a", "Flow_join_b").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
-        }
-    }
-
-    @Test
-    fun `event-based gateway produces shapes for intermediate catch events`() {
-        val xml = loadCorpus("event-based-gateway.bpmn")
-        val result = layouter.layout(xml)
-        val asserter = assertXml(result)
-
-        listOf("Gw_event", "Timer_1", "Msg_1", "End_timeout", "End_approved").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
-        }
-    }
-
-    @Test
-    fun `long labels fixture produces shapes with positive bounds`() {
-        val xml = loadCorpus("long-labels.bpmn")
-        val result = layouter.layout(xml)
-
-        // All shape bounds must be positive (non-zero width and height)
         assertPositiveBounds(result)
-    }
-
-    @Test
-    fun `explicit cycle is laid out without error`() {
-        val xml = loadCorpus("explicit-cycle.bpmn")
-        val result = layouter.layout(xml)
-        val asserter = assertXml(result)
-
-        // Loop-back edge must have DI
-        asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_retry']").exist()
-    }
-
-    @Test
-    fun `annotation and group fixture produces DI for annotation shape and association edge`() {
-        val xml = loadCorpus("annotation-and-group.bpmn")
-        val result = layouter.layout(xml)
-        val asserter = assertXml(result)
-
-        // Text annotation shape
-        asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Anno_1']").exist()
-        // Group shape (plan §6: groups receive DI)
-        asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Group_1']").exist()
-        // Association edge
-        asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Assoc_1']").exist()
-        // Flow nodes still have shapes
-        listOf("Task_1", "Task_2").forEach { id ->
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
-        }
-    }
-
-    @Test
-    fun `call activity receives a shape`() {
-        val xml = loadCorpus("call-activity.bpmn")
-        val result = layouter.layout(xml)
-        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Call_1']").exist()
-    }
-
-    // ── Sequence-flow edges have ≥ 2 waypoints ────────────────────────────────────────────────────
-
-    @Test
-    fun `all sequence-flow edges have at least two waypoints`() {
-        val xml = loadCorpus("exclusive-branch.bpmn")
-        val result = layouter.layout(xml)
         assertMinWaypoints(result, minCount = 2)
     }
 
-    @Test
-    fun `cycle edges have at least two waypoints`() {
-        val xml = loadCorpus("explicit-cycle.bpmn")
-        val result = layouter.layout(xml)
-        assertMinWaypoints(result, minCount = 2)
-    }
-
-    // ── Old DI is replaced, not duplicated ────────────────────────────────────────────────────────
+    // ── Focused behavioral tests ──────────────────────────────────────────────
 
     @Test
-    fun `existing DI in input is replaced not duplicated`() {
-        // Input has an existing BPMNDiagram; output must have exactly one
+    fun `existing DI is replaced not duplicated`() {
         val xmlWithDi = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
@@ -190,7 +74,7 @@ class ElkBpmnLayouterTest {
   </bpmn:process>
   <bpmndi:BPMNDiagram id="OldDiagram">
     <bpmndi:BPMNPlane id="OldPlane" bpmnElement="Process_1">
-      <bpmndi:BPMNShape id="OldShape_Start" bpmnElement="Start_1">
+      <bpmndi:BPMNShape id="OldShape" bpmnElement="Start_1">
         <dc:Bounds x="0" y="0" width="36" height="36"/>
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
@@ -198,122 +82,86 @@ class ElkBpmnLayouterTest {
 </bpmn:definitions>"""
 
         val result = layouter.layout(xmlWithDi)
-        val asserter = assertXml(result)
-
         assertExactlyOneDiagram(result)
-        asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1']").exist()
-        asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1']").exist()
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1']").exist()
+        assertXml(result).nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1']").exist()
     }
-
-    // ── Determinism: byte-identical output on repeated runs ──────────────────────────────────────
-
-    @ParameterizedTest(name = "determinism: {0}")
-    @ValueSource(
-        strings = [
-            "linear-flow.bpmn",
-            "exclusive-branch.bpmn",
-            "explicit-cycle.bpmn",
-        ],
-    )
-    fun `repeated layout of same input produces identical DI coordinates`(fixture: String) {
-        val xml = loadCorpus(fixture)
-        val first = layouter.layout(xml)
-        val second = layouter.layout(xml)
-        // Compare DI coordinates semantically (not attribute order) to verify determinism.
-        // ELK with a fixed seed and stable insertion order must produce numerically stable results.
-        val firstDi = extractDiCoordinates(first)
-        val secondDi = extractDiCoordinates(second)
-        assertEquals(firstDi, secondDi, "Layout DI coordinates of '$fixture' were not deterministic")
-    }
-
-    // ── Malformed input ───────────────────────────────────────────────────────────────────────────
 
     @Test
-    fun `throws BpmnAutoLayoutException on malformed XML`() {
+    fun `explicit cycle produces routed feedback edge`() {
+        val result = layouter.layout(loadCorpus("explicit-cycle.bpmn"))
+        // The loop-back edge must have DI; ELK must handle the cycle without failure.
+        assertXml(result).nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_retry']").exist()
+    }
+
+    @Test
+    fun `repeated layout of same input produces stable DI geometry`() {
+        val xml = loadCorpus("representative-process.bpmn")
+        val firstDi = diCoordinates(layouter.layout(xml))
+        val secondDi = diCoordinates(layouter.layout(xml))
+        assertEquals(firstDi, secondDi, "ELK layout geometry was not deterministic")
+    }
+
+    @Test
+    fun `malformed XML throws BpmnAutoLayoutException`() {
         kotlin.test.assertFailsWith<dev.groknull.bpmner.layout.BpmnAutoLayoutException> {
             layouter.layout("not xml")
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────────────────────────
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /** Extract a canonical list of DI coordinates for determinism comparison. */
-    private fun extractDiCoordinates(xml: String): List<String> {
-        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-        }
-        val doc = factory.newDocumentBuilder().parse(
-            org.xml.sax.InputSource(java.io.StringReader(xml)),
+    /**
+     * Derives the shape and edge IDs that must appear in the DI output by reading
+     * flow-node IDs, text-annotation IDs, group IDs, sequence-flow IDs, and
+     * association IDs directly from the input BPMN XML.
+     */
+    private fun semanticIds(xml: String): Pair<Set<String>, Set<String>> {
+        val doc = parseXmlDoc(xml)
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+
+        val shapeIds = mutableSetOf<String>()
+        val edgeIds = mutableSetOf<String>()
+
+        val shapeElements = listOf(
+            "startEvent", "endEvent", "intermediateCatchEvent", "intermediateThrowEvent",
+            "boundaryEvent", "userTask", "serviceTask", "sendTask", "receiveTask",
+            "manualTask", "businessRuleTask", "scriptTask", "task",
+            "callActivity", "subProcess",
+            "exclusiveGateway", "parallelGateway", "inclusiveGateway",
+            "eventBasedGateway", "complexGateway",
+            "textAnnotation", "group",
         )
-        val results = mutableListOf<String>()
-        val diNs = "http://www.omg.org/spec/BPMN/20100524/DI"
-        val dcNs = "http://www.omg.org/spec/DD/20100524/DC"
-        val diDiNs = "http://www.omg.org/spec/DD/20100524/DI"
-
-        // Shapes: sorted by bpmnElement for deterministic comparison
-        val shapes = doc.getElementsByTagNameNS(diNs, "BPMNShape")
-        val shapeList = (0 until shapes.length).map { shapes.item(it) as org.w3c.dom.Element }
-        for (shape in shapeList.sortedBy { it.getAttribute("bpmnElement") }) {
-            val bounds = shape.getElementsByTagNameNS(dcNs, "Bounds")
-            if (bounds.length > 0) {
-                val b = bounds.item(0) as org.w3c.dom.Element
-                val id = shape.getAttribute("bpmnElement")
-                val coords = "${b.getAttribute("x")},${b.getAttribute("y")}," +
-                    "${b.getAttribute("width")},${b.getAttribute("height")}"
-                results.add("shape:$id:$coords")
+        for (tag in shapeElements) {
+            val nodes = doc.getElementsByTagNameNS(bpmnNs, tag)
+            for (i in 0 until nodes.length) {
+                val id = (nodes.item(i) as org.w3c.dom.Element).getAttribute("id")
+                if (id.isNotBlank()) shapeIds.add(id)
             }
         }
 
-        // Edges: sorted by bpmnElement
-        val edges = doc.getElementsByTagNameNS(diNs, "BPMNEdge")
-        val edgeList = (0 until edges.length).map { edges.item(it) as org.w3c.dom.Element }
-        for (edge in edgeList.sortedBy { it.getAttribute("bpmnElement") }) {
-            val waypoints = edge.getElementsByTagNameNS(diDiNs, "waypoint")
-            val wps = (0 until waypoints.length).map { i ->
-                val wp = waypoints.item(i) as org.w3c.dom.Element
-                "${wp.getAttribute("x")},${wp.getAttribute("y")}"
-            }.joinToString(";")
-            results.add("edge:${edge.getAttribute("bpmnElement")}:$wps")
+        for (tag in listOf("sequenceFlow", "association")) {
+            val nodes = doc.getElementsByTagNameNS(bpmnNs, tag)
+            for (i in 0 until nodes.length) {
+                val id = (nodes.item(i) as org.w3c.dom.Element).getAttribute("id")
+                if (id.isNotBlank()) edgeIds.add(id)
+            }
         }
 
-        return results
+        return Pair(shapeIds, edgeIds)
     }
 
     private fun assertExactlyOneDiagram(xml: String) {
-        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-        }
-        val doc = factory.newDocumentBuilder().parse(
-            org.xml.sax.InputSource(java.io.StringReader(xml)),
-        )
-        val diagrams = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNDiagram")
+        val doc = parseXmlDoc(xml)
+        val diNs = "http://www.omg.org/spec/BPMN/20100524/DI"
+        val diagrams = doc.getElementsByTagNameNS(diNs, "BPMNDiagram")
         assertEquals(1, diagrams.length, "Expected exactly one BPMNDiagram but got ${diagrams.length}")
-        val planes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNPlane")
+        val planes = doc.getElementsByTagNameNS(diNs, "BPMNPlane")
         assertEquals(1, planes.length, "Expected exactly one BPMNPlane but got ${planes.length}")
     }
 
-    private fun loadCorpus(filename: String): String {
-        val stream = javaClass.classLoader.getResourceAsStream("bpmn/elk-corpus/$filename")
-            ?: error("Corpus fixture not found: bpmn/elk-corpus/$filename")
-        return stream.use { it.readBytes().toString(Charsets.UTF_8) }
-    }
-
-    private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml).withNamespaceContext(
-        mapOf(
-            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
-            "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
-            "dc" to "http://www.omg.org/spec/DD/20100524/DC",
-            "di" to "http://www.omg.org/spec/DD/20100524/DI",
-        ),
-    )
-
     private fun assertPositiveBounds(xml: String) {
-        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-        }
-        val doc = factory.newDocumentBuilder().parse(
-            org.xml.sax.InputSource(java.io.StringReader(xml)),
-        )
+        val doc = parseXmlDoc(xml)
         val shapes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
         for (i in 0 until shapes.length) {
             val shape = shapes.item(i) as org.w3c.dom.Element
@@ -323,28 +171,80 @@ class ElkBpmnLayouterTest {
                 val bounds = boundsNodes.item(0) as org.w3c.dom.Element
                 val w = bounds.getAttribute("width").toDoubleOrNull() ?: 0.0
                 val h = bounds.getAttribute("height").toDoubleOrNull() ?: 0.0
-                kotlin.test.assertTrue(w > 0.0, "Shape '$shapeId' has non-positive width: $w")
-                kotlin.test.assertTrue(h > 0.0, "Shape '$shapeId' has non-positive height: $h")
+                assertTrue(w > 0.0, "Shape '$shapeId' has non-positive width: $w")
+                assertTrue(h > 0.0, "Shape '$shapeId' has non-positive height: $h")
             }
         }
     }
 
     private fun assertMinWaypoints(xml: String, minCount: Int) {
-        val factory = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
-            isNamespaceAware = true
-        }
-        val doc = factory.newDocumentBuilder().parse(
-            org.xml.sax.InputSource(java.io.StringReader(xml)),
-        )
+        val doc = parseXmlDoc(xml)
         val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
         for (i in 0 until edges.length) {
             val edge = edges.item(i) as org.w3c.dom.Element
             val edgeId = edge.getAttribute("bpmnElement")
             val waypoints = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
-            kotlin.test.assertTrue(
+            assertTrue(
                 waypoints.length >= minCount,
                 "Edge '$edgeId' has only ${waypoints.length} waypoint(s); expected at least $minCount",
             )
         }
     }
+
+    /** Canonical sorted list of shape/edge geometry strings for determinism comparison. */
+    private fun diCoordinates(xml: String): List<String> {
+        val doc = parseXmlDoc(xml)
+        val results = mutableListOf<String>()
+        val diNs = "http://www.omg.org/spec/BPMN/20100524/DI"
+        val dcNs = "http://www.omg.org/spec/DD/20100524/DC"
+        val diDiNs = "http://www.omg.org/spec/DD/20100524/DI"
+
+        val shapes = doc.getElementsByTagNameNS(diNs, "BPMNShape")
+        (0 until shapes.length)
+            .map { shapes.item(it) as org.w3c.dom.Element }
+            .sortedBy { it.getAttribute("bpmnElement") }
+            .forEach { shape ->
+                val bounds = shape.getElementsByTagNameNS(dcNs, "Bounds")
+                if (bounds.length > 0) {
+                    val b = bounds.item(0) as org.w3c.dom.Element
+                    results.add(
+                        "shape:${shape.getAttribute("bpmnElement")}:" +
+                            "${b.getAttribute("x")},${b.getAttribute("y")}," +
+                            "${b.getAttribute("width")},${b.getAttribute("height")}",
+                    )
+                }
+            }
+
+        val edges = doc.getElementsByTagNameNS(diNs, "BPMNEdge")
+        (0 until edges.length)
+            .map { edges.item(it) as org.w3c.dom.Element }
+            .sortedBy { it.getAttribute("bpmnElement") }
+            .forEach { edge ->
+                val wps = edge.getElementsByTagNameNS(diDiNs, "waypoint")
+                val coords = (0 until wps.length).joinToString(";") { i ->
+                    val wp = wps.item(i) as org.w3c.dom.Element
+                    "${wp.getAttribute("x")},${wp.getAttribute("y")}"
+                }
+                results.add("edge:${edge.getAttribute("bpmnElement")}:$coords")
+            }
+
+        return results
+    }
+
+    private fun parseXmlDoc(xml: String) = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+        .newDocumentBuilder()
+        .parse(InputSource(StringReader(xml)))
+
+    private fun loadCorpus(filename: String): String = javaClass.classLoader.getResourceAsStream("bpmn/elk-corpus/$filename")
+        ?.use { it.readBytes().toString(Charsets.UTF_8) }
+        ?: error("Corpus fixture not found: bpmn/elk-corpus/$filename")
+
+    private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml).withNamespaceContext(
+        mapOf(
+            "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+            "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
+            "dc" to "http://www.omg.org/spec/DD/20100524/DC",
+            "di" to "http://www.omg.org/spec/DD/20100524/DI",
+        ),
+    )
 }

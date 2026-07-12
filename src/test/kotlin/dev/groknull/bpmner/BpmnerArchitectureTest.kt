@@ -88,9 +88,9 @@ class BpmnerArchitectureTest {
 
     @Test
     fun `ELK layout engine is restricted to the layout module`() {
-        // 557-2 adds ELK as a test-internal capability inside ..layout.. only.
-        // This pin mirrors the GraalJS rule above: nobody else may reach for
-        // `org.eclipse.elk` without first justifying the dep and updating this rule.
+        // ELK is confined to the layout module. This mirrors the GraalJS rule above:
+        // any class outside ..layout.. that acquires an org.eclipse.elk dependency
+        // must justify it and update this rule.
         noClasses()
             .that()
             .resideOutsideOfPackages("..layout..")
