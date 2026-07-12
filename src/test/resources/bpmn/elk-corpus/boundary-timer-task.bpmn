@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_boundary_timer" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Boundary Timer" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_process" name="Process Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_timer" name="Timeout" attachedToRef="Task_process" cancelActivity="true">
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_ship" name="Ship Order">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ok" name="Order Shipped">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_cancel" name="Cancel Order">
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_timeout" name="Order Cancelled">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="Task_process" targetRef="Task_ship"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ship" targetRef="End_ok"/>
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_cancel"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_cancel" targetRef="End_timeout"/>
+  </bpmn:process>
+</bpmn:definitions>

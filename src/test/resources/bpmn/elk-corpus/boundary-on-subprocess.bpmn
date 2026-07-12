@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_boundary_on_subprocess" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Boundary on Subprocess" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="SubProcess_1" name="Execute">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart" name="Begin">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SubTask" name="Do Work">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SubEnd" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="SubTask"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask" targetRef="SubEnd"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_timer" name="Timeout" attachedToRef="SubProcess_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_review" name="Review">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_ok" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_escalate" name="Escalate">
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_escalated" name="Escalated">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="SubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="SubProcess_1" targetRef="Task_review"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_review" targetRef="End_ok"/>
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_escalate"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_escalate" targetRef="End_escalated"/>
+  </bpmn:process>
+</bpmn:definitions>

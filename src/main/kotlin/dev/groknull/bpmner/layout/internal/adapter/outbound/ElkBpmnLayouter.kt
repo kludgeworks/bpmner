@@ -17,7 +17,8 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 /**
- * Stateless ELK layout path for flat retained BPMN processes.
+ * Stateless ELK layout path for retained BPMN processes including subprocesses
+ * and boundary events.
  *
  * Not annotated with @Service or @SecondaryAdapter; not wired into BpmnLayoutPort.
  * The GraalJS BpmnLayoutService is the sole production layout authority.
@@ -37,9 +38,9 @@ internal class ElkBpmnLayouter {
     fun layout(xml: String): String {
         val model = parseXml(xml)
         removeExistingDi(model)
-        val (elkRoot, nodeMap, edgeMap) = BpmnToElkMapper.map(model)
-        RecursiveGraphLayoutEngine().layout(elkRoot, BasicProgressMonitor())
-        ElkToBpmnDiWriter.write(model, nodeMap, edgeMap)
+        val result = BpmnToElkMapper.map(model)
+        RecursiveGraphLayoutEngine().layout(result.root, BasicProgressMonitor())
+        ElkToBpmnDiWriter.write(model, result)
         return serializeXml(model)
     }
 

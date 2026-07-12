@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- STATUS: VALIDATED (human-reviewed in bpmn-js, 2026-07-12) — original review notes: open in https://demo.bpmn.io/ and confirm:
+     1. The subprocess box ("Execute") is visible and expanded, with child shapes inside.
+     2. The timer boundary event (clock icon) sits on the BOTTOM edge of the subprocess BOX
+        (not on a task inside it — the host is the subprocess itself).
+     3. The normal flow runs: Start → Execute subprocess → Review → End (top row).
+     4. The exception flow exits downward from the boundary circle on the subprocess box,
+        goes to "Escalate", then to a separate end event below.
+     5. The child shapes inside the subprocess (Begin, Do Work, Done) are inside the box.
+     6. All normal-path shapes share the same horizontal centre line.
+     7. The boundary circle does not overlap child shapes inside the subprocess.
+-->
+<!--
+  COORDINATE TABLE  (normal path centre line: y=160)
+  ─────────────────────────────────────────────────────────────────────────────────────
+  Shape               x      y     w    h    cx    cy    right
+  ─────────────────────────────────────────────────────────────────────────────────────
+  Start_1            80    142    36   36    98   160      116
+  SubProcess_1      166     60   340  200   336   160      506
+    SubStart        216    142    36   36   234   160      252
+    SubTask         302    120   100   80   352   160      402
+    SubEnd          452    142    36   36   470   160      488
+  Boundary_timer    318    242    36   36   336   260      354  ← SOUTH of subprocess
+  Task_review       556    120   100   80   606   160      656
+  End_ok            706    142    36   36   724   160      742
+  Task_escalate     316    340   100   80   366   380      416  ← exception path
+  End_escalated     466    362    36   36   484   380      502
+  ─────────────────────────────────────────────────────────────────────────────────────
+  Subprocess box: x=166, y=60, w=340, h=200 → spans y=60→260, centre y=160.
+  Subprocess bottom edge: y=260.
+  Boundary timer: centre at subprocess horizontal centre (166+170=336), y=260 (subprocess bottom).
+    top-left: x=318 (336-18), y=242 (260-18).
+  Task_review: 50px right of subprocess right edge (506+50=556).
+  End_ok: 50px right of Task_review right (656+50=706).
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_ref_boundary_on_subprocess"
+                  targetNamespace="https://groknull.dev/bpmner">
+
+  <bpmn:process id="Process_1" name="Boundary on Subprocess Reference" isExecutable="true">
+
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:subProcess id="SubProcess_1" name="Execute">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+
+      <bpmn:startEvent id="SubStart" name="Begin">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SubTask" name="Do Work">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SubEnd" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="SubTask"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask"  targetRef="SubEnd"/>
+    </bpmn:subProcess>
+
+    <!-- Timer boundary on the subprocess itself — interrupting -->
+    <bpmn:boundaryEvent id="Boundary_timer" name="Timeout" attachedToRef="SubProcess_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+    </bpmn:boundaryEvent>
+
+    <bpmn:userTask id="Task_review" name="Review">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_ok" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Exception path -->
+    <bpmn:serviceTask id="Task_escalate" name="Escalate">
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_escalated" name="Escalated">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1"      sourceRef="Start_1"       targetRef="SubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="SubProcess_1"   targetRef="Task_review"/>
+    <bpmn:sequenceFlow id="Flow_2"      sourceRef="Task_review"    targetRef="End_ok"/>
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_escalate"/>
+    <bpmn:sequenceFlow id="Flow_3"      sourceRef="Task_escalate"  targetRef="End_escalated"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+
+      <!-- Normal path — centre line y=160 -->
+
+      <!-- Start_1: centre (98, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_Start_1" bpmnElement="Start_1">
+        <dc:Bounds x="80" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="66" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubProcess_1: x=166, y=60, w=340, h=200 → bottom edge y=260 -->
+      <bpmndi:BPMNShape id="BPMNShape_SubProcess_1" bpmnElement="SubProcess_1" isExpanded="true">
+        <dc:Bounds x="166" y="60" width="340" height="200"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="311" y="64" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Child shapes — absolute coordinates, centre y=160 -->
+      <!-- SubStart: centre (234, 160) — 50px inset from subprocess left (166+50=216) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubStart" bpmnElement="SubStart">
+        <dc:Bounds x="216" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="202" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubTask: centre (352, 160) — 50px right of SubStart right (252+50=302) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubTask" bpmnElement="SubTask">
+        <dc:Bounds x="302" y="120" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="317" y="153" width="70" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubEnd: centre (506, 160) — straddles subprocess right edge (166+340=506) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubEnd" bpmnElement="SubEnd">
+        <dc:Bounds x="488" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="474" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Boundary_timer: SOUTH of subprocess
+           Subprocess bottom edge: y=260. Horizontal centre of subprocess: x=166+170=336.
+           Boundary centre: (336, 260). top-left: (318, 242). -->
+      <bpmndi:BPMNShape id="BPMNShape_Boundary_timer" bpmnElement="Boundary_timer">
+        <dc:Bounds x="318" y="242" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="304" y="285" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_review: centre (606, 160) — 50px right of subprocess right (506+50=556) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_review" bpmnElement="Task_review">
+        <dc:Bounds x="556" y="120" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="581" y="153" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_ok: centre (724, 160) — 50px right of Task_review right (656+50=706) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_ok" bpmnElement="End_ok">
+        <dc:Bounds x="706" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="699" y="185" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Exception path — below subprocess, centre line y=380 -->
+      <!-- Task_escalate: centre (366, 380) — below boundary, shifted right for clarity -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_escalate" bpmnElement="Task_escalate">
+        <dc:Bounds x="316" y="340" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="341" y="373" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_escalated: centre (484, 380) — 50px right of Task_escalate right (416+50=466) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_escalated" bpmnElement="End_escalated">
+        <dc:Bounds x="466" y="362" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="452" y="405" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Normal flow edges — all at y=160 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="160"/>
+        <di:waypoint x="166" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_normal" bpmnElement="Flow_normal">
+        <di:waypoint x="524" y="160"/>
+        <di:waypoint x="556" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="656" y="160"/>
+        <di:waypoint x="706" y="160"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Child edges — all at y=160 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_SubFlow_1" bpmnElement="SubFlow_1">
+        <di:waypoint x="252" y="160"/>
+        <di:waypoint x="302" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SubFlow_2" bpmnElement="SubFlow_2">
+        <di:waypoint x="402" y="160"/>
+        <di:waypoint x="488" y="160"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Exception: boundary bottom (336,278) → down to Task_escalate top (366,340) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_timeout" bpmnElement="Flow_timeout">
+        <di:waypoint x="336" y="278"/>
+        <di:waypoint x="336" y="309"/>
+        <di:waypoint x="366" y="309"/>
+        <di:waypoint x="366" y="340"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_3" bpmnElement="Flow_3">
+        <di:waypoint x="416" y="380"/>
+        <di:waypoint x="466" y="380"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

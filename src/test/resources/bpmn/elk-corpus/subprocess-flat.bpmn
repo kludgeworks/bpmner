@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_subprocess_flat" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Subprocess Flat" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_to_before</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_before" name="Prepare">
+      <bpmn:incoming>Flow_to_before</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_sub</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:subProcess id="SubProcess_1" name="Execute">
+      <bpmn:incoming>Flow_to_sub</bpmn:incoming>
+      <bpmn:outgoing>Flow_from_sub</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_1" name="Begin">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SubTask_1" name="Do Work">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SubEnd_1" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart_1" targetRef="SubTask_1"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask_1" targetRef="SubEnd_1"/>
+    </bpmn:subProcess>
+    <bpmn:userTask id="Task_after" name="Review">
+      <bpmn:incoming>Flow_from_sub</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_1" name="End">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_to_before" sourceRef="Start_1" targetRef="Task_before"/>
+    <bpmn:sequenceFlow id="Flow_to_sub" sourceRef="Task_before" targetRef="SubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_from_sub" sourceRef="SubProcess_1" targetRef="Task_after"/>
+    <bpmn:sequenceFlow id="Flow_to_end" sourceRef="Task_after" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

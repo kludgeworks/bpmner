@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- STATUS: VALIDATED (human-reviewed in bpmn-js, 2026-07-12) — original review notes: open in https://demo.bpmn.io/ and confirm:
+     1. The subprocess box is visible and expanded (not collapsed).
+     2. The child start event, task, and end event are centred vertically within the subprocess box.
+     3. The child sequence flows are routed inside the subprocess box.
+     4. The outer task and outer sequence flows are outside the subprocess box.
+     5. No shapes overlap.
+-->
+<!--
+  COORDINATE TABLE  (all centres on y=160)
+  ─────────────────────────────────────────────────────────────
+  Shape              x      y     w    h    cx    cy
+  Start_1           80    142    36   36    98   160
+  Task_before      166    120   100   80   216   160
+  SubProcess_1     316     40   340   240   486   160   ← taller box: label at top, content centred
+    SubStart_1     366    142    36   36   384   160
+    SubTask_1      452    120   100   80   502   160
+    SubEnd_1       602    142    36   36   620   160
+  Task_after       706    120   100   80   756   160
+  End_1            856    142    36   36   874   160
+  ─────────────────────────────────────────────────────────────
+  Subprocess box: y=40, h=240 → spans 40→280, centre y=160.
+  Children at centre y=160 sit exactly in the middle of the 240px box.
+  50px horizontal padding inside the subprocess on each side.
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_ref_subprocess_flat"
+                  targetNamespace="https://groknull.dev/bpmner">
+
+  <bpmn:process id="Process_1" name="Subprocess Flat Reference" isExecutable="true">
+
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_to_before</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:userTask id="Task_before" name="Prepare">
+      <bpmn:incoming>Flow_to_before</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_sub</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:subProcess id="SubProcess_1" name="Execute">
+      <bpmn:incoming>Flow_to_sub</bpmn:incoming>
+      <bpmn:outgoing>Flow_from_sub</bpmn:outgoing>
+
+      <bpmn:startEvent id="SubStart_1" name="Begin">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="SubTask_1" name="Do Work">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="SubEnd_1" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart_1" targetRef="SubTask_1"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask_1"  targetRef="SubEnd_1"/>
+    </bpmn:subProcess>
+
+    <bpmn:userTask id="Task_after" name="Review">
+      <bpmn:incoming>Flow_from_sub</bpmn:incoming>
+      <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_1" name="End">
+      <bpmn:incoming>Flow_to_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_to_before" sourceRef="Start_1"     targetRef="Task_before"/>
+    <bpmn:sequenceFlow id="Flow_to_sub"    sourceRef="Task_before"  targetRef="SubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_from_sub"  sourceRef="SubProcess_1" targetRef="Task_after"/>
+    <bpmn:sequenceFlow id="Flow_to_end"    sourceRef="Task_after"   targetRef="End_1"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+
+      <!-- Start_1: centre (98, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_Start_1" bpmnElement="Start_1">
+        <dc:Bounds x="80" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="66" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_before: centre (216, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_before" bpmnElement="Task_before">
+        <dc:Bounds x="166" y="120" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="191" y="153" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubProcess_1: x=316, y=70, w=340, h=180
+           50px padding top and bottom around the tallest child (task h=80).
+           Spans y=70→250; centre y=160. Children centred at cy=160. -->
+      <bpmndi:BPMNShape id="BPMNShape_SubProcess_1" bpmnElement="SubProcess_1" isExpanded="true">
+        <dc:Bounds x="316" y="70" width="340" height="180"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="461" y="74" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubStart_1: centre (384, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubStart_1" bpmnElement="SubStart_1">
+        <dc:Bounds x="366" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="352" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubTask_1: centre (502, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubTask_1" bpmnElement="SubTask_1">
+        <dc:Bounds x="452" y="120" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="467" y="153" width="70" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- SubEnd_1: centre (620, 160) -->
+      <bpmndi:BPMNShape id="BPMNShape_SubEnd_1" bpmnElement="SubEnd_1">
+        <dc:Bounds x="602" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="588" y="185" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_after: centre (756, 160) — 50px right of subprocess right edge (656+50=706) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_after" bpmnElement="Task_after">
+        <dc:Bounds x="706" y="120" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="727" y="153" width="57" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_1: centre (874, 160) — 50px right of Task_after right edge (806+50=856) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_1" bpmnElement="End_1">
+        <dc:Bounds x="856" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="849" y="185" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Outer edges — all at y=160 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_to_before" bpmnElement="Flow_to_before">
+        <di:waypoint x="116" y="160"/>
+        <di:waypoint x="166" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_to_sub" bpmnElement="Flow_to_sub">
+        <di:waypoint x="266" y="160"/>
+        <di:waypoint x="316" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_from_sub" bpmnElement="Flow_from_sub">
+        <di:waypoint x="656" y="160"/>
+        <di:waypoint x="706" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_to_end" bpmnElement="Flow_to_end">
+        <di:waypoint x="806" y="160"/>
+        <di:waypoint x="856" y="160"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Inner (child) edges — all at cy=160 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_SubFlow_1" bpmnElement="SubFlow_1">
+        <di:waypoint x="402" y="160"/>
+        <di:waypoint x="452" y="160"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_SubFlow_2" bpmnElement="SubFlow_2">
+        <di:waypoint x="552" y="160"/>
+        <di:waypoint x="602" y="160"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

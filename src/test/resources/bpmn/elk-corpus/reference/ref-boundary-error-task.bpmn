@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- STATUS: VALIDATED (human-reviewed in bpmn-js, 2026-07-12) — original review notes: open in https://demo.bpmn.io/ and confirm:
+     1. The error boundary event (lightning bolt icon) sits on the bottom edge of
+        "Process Payment", roughly centred horizontally.
+     2. The normal flow runs horizontally: Start → Process Payment → Confirm → End (top row).
+     3. The exception flow exits downward from the error boundary circle.
+     4. The exception path goes: error boundary → Handle Error → then rejoins the main
+        flow at the Confirm task (not a dead-end separate end event).
+     5. The rejoin edge enters Confirm from below (or left), visually distinct from the
+        normal entry edge.
+     6. All normal-path shapes are on the same horizontal centre line.
+     7. No shapes overlap except the boundary circle on the task edge.
+-->
+<!--
+  COORDINATE TABLE  (normal path centre line: y=120)
+  ─────────────────────────────────────────────────────────────────────────────────
+  Shape               x      y     w    h    cx    cy    right
+  ─────────────────────────────────────────────────────────────────────────────────
+  Start_1            80    102    36   36    98   120      116
+  Task_process      166     80   100   80   216   120      266
+  Boundary_error    198    142    36   36   216   160      234   ← bottom of task y=160
+  Task_confirm      316     80   100   80   366   120      416
+  End_1             466    102    36   36   484   120      502
+  Task_handle       216    270   100   80   266   310      316   ← exception path
+  ─────────────────────────────────────────────────────────────────────────────────
+  Error boundary centre: x=216 (task horizontal centre), y=160 (task bottom edge).
+  Boundary top-left: x=198, y=142 (straddles bottom edge).
+  Handle Error: directly below Task_process, centre y=310.
+  Rejoin edge: from Task_handle right (316, 310) routes up-right to Task_confirm bottom (366, 160).
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_ref_boundary_error"
+                  targetNamespace="https://groknull.dev/bpmner">
+
+  <bpmn:process id="Process_1" name="Boundary Error Reference" isExecutable="true">
+
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_process" name="Process Payment">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Error boundary on Task_process — interrupting -->
+    <bpmn:boundaryEvent id="Boundary_error" name="Payment Error" attachedToRef="Task_process" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1"/>
+    </bpmn:boundaryEvent>
+
+    <!-- Normal path continues to Confirm -->
+    <bpmn:userTask id="Task_confirm" name="Confirm">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:incoming>Flow_rejoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Exception path: handle error then rejoin at Confirm -->
+    <bpmn:serviceTask id="Task_handle" name="Handle Error">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_rejoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="Flow_1"      sourceRef="Start_1"      targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="Task_process"  targetRef="Task_confirm"/>
+    <bpmn:sequenceFlow id="Flow_2"      sourceRef="Task_confirm"  targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_error"  sourceRef="Boundary_error" targetRef="Task_handle"/>
+    <bpmn:sequenceFlow id="Flow_rejoin" sourceRef="Task_handle"   targetRef="Task_confirm"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+
+      <!-- Normal path — centre line y=120 -->
+
+      <!-- Start_1: centre (98, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_Start_1" bpmnElement="Start_1">
+        <dc:Bounds x="80" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="66" y="145" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_process: centre (216, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_process" bpmnElement="Task_process">
+        <dc:Bounds x="166" y="80" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="176" y="113" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Boundary_error: centre (216, 160) — bottom edge of task, horizontally centred -->
+      <bpmndi:BPMNShape id="BPMNShape_Boundary_error" bpmnElement="Boundary_error">
+        <dc:Bounds x="198" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="179" y="185" width="74" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_confirm: centre (366, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_confirm" bpmnElement="Task_confirm">
+        <dc:Bounds x="316" y="80" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="341" y="113" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_1: centre (484, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_1" bpmnElement="End_1">
+        <dc:Bounds x="466" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="459" y="145" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Exception path -->
+      <!-- Task_handle: centre (266, 310) — directly below Task_process, shifted right to align rejoin -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_handle" bpmnElement="Task_handle">
+        <dc:Bounds x="216" y="270" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="231" y="303" width="70" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Normal flow edges — all at y=120 -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="120"/>
+        <di:waypoint x="166" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_normal" bpmnElement="Flow_normal">
+        <di:waypoint x="266" y="120"/>
+        <di:waypoint x="316" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="416" y="120"/>
+        <di:waypoint x="466" y="120"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Exception: boundary bottom (216,178) → down to Task_handle top (266,270) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_error" bpmnElement="Flow_error">
+        <di:waypoint x="216" y="178"/>
+        <di:waypoint x="216" y="224"/>
+        <di:waypoint x="266" y="224"/>
+        <di:waypoint x="266" y="270"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Rejoin: Task_handle right (316,310) → right then up to Task_confirm bottom (366,160) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_rejoin" bpmnElement="Flow_rejoin">
+        <di:waypoint x="316" y="310"/>
+        <di:waypoint x="366" y="310"/>
+        <di:waypoint x="366" y="160"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

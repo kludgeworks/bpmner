@@ -16,17 +16,20 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Verifies semantic DI coverage, positive geometry, routed edges, label clearance,
- * and deterministic output. Never compares exact coordinates or asserts parity
- * with the JavaScript layout engine.
+ * Layer 4: end-to-end pipeline tests through [ElkBpmnLayouter].
+ *
+ * Verifies semantic DI coverage, positive geometry, routed edges, containment,
+ * boundary attachment, spatial invariants, and deterministic output.
+ * Never compares exact coordinates or asserts parity with the JavaScript layout engine.
  */
+@Suppress("TooManyFunctions")
 class ElkBpmnLayouterTest {
 
     private val layouter = ElkBpmnLayouter()
 
-    // ── Generic corpus invariants ─────────────────────────────────────────────
+    // ── Flat corpus — invariants (existing 4 fixtures) ────────────────────────
 
-    @ParameterizedTest(name = "corpus invariants: {0}")
+    @ParameterizedTest(name = "flat corpus invariants: {0}")
     @ValueSource(
         strings = [
             "representative-process.bpmn",
@@ -35,30 +38,147 @@ class ElkBpmnLayouterTest {
             "long-labels.bpmn",
         ],
     )
-    fun `corpus fixture satisfies all DI invariants`(fixture: String) {
+    fun `flat corpus fixture satisfies all DI invariants`(fixture: String) {
         val inputXml = loadCorpus(fixture)
         val result = layouter.layout(inputXml)
-
-        // Derive expected IDs from the input so the assertion is not hand-maintained.
         val (expectedShapeIds, expectedEdgeIds) = semanticIds(inputXml)
-
         assertExactlyOneDiagram(result)
-
         val asserter = assertXml(result)
-        for (id in expectedShapeIds) {
-            asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']")
-                .exist()
-        }
-        for (id in expectedEdgeIds) {
-            asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']")
-                .exist()
-        }
-
+        for (id in expectedShapeIds) asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
+        for (id in expectedEdgeIds) asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
         assertPositiveBounds(result)
         assertMinWaypoints(result, minCount = 2)
     }
 
-    // ── Focused behavioral tests ──────────────────────────────────────────────
+    // ── Subprocess corpus — invariants ────────────────────────────────────────
+
+    @ParameterizedTest(name = "subprocess corpus invariants: {0}")
+    @ValueSource(
+        strings = [
+            "subprocess-flat.bpmn",
+            "subprocess-nested.bpmn",
+            "subprocess-branch.bpmn",
+        ],
+    )
+    fun `subprocess corpus fixture satisfies all DI invariants`(fixture: String) {
+        val inputXml = loadCorpus(fixture)
+        val result = layouter.layout(inputXml)
+        val (expectedShapeIds, expectedEdgeIds) = semanticIds(inputXml)
+        assertExactlyOneDiagram(result)
+        val asserter = assertXml(result)
+        for (id in expectedShapeIds) asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
+        for (id in expectedEdgeIds) asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
+        assertPositiveBounds(result)
+        assertMinWaypoints(result, minCount = 2)
+    }
+
+    // ── Boundary event corpus — invariants ────────────────────────────────────
+
+    @ParameterizedTest(name = "boundary corpus invariants: {0}")
+    @ValueSource(
+        strings = [
+            "boundary-timer-task.bpmn",
+            "boundary-error-task.bpmn",
+            "boundary-multi.bpmn",
+            "boundary-on-subprocess.bpmn",
+        ],
+    )
+    fun `boundary corpus fixture satisfies all DI invariants`(fixture: String) {
+        val inputXml = loadCorpus(fixture)
+        val result = layouter.layout(inputXml)
+        val (expectedShapeIds, expectedEdgeIds) = semanticIds(inputXml)
+        assertExactlyOneDiagram(result)
+        val asserter = assertXml(result)
+        for (id in expectedShapeIds) asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
+        for (id in expectedEdgeIds) asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
+        assertPositiveBounds(result)
+        assertMinWaypoints(result, minCount = 2)
+    }
+
+    // ── Spatial invariants: subprocess containment ────────────────────────────
+
+    @Test
+    fun `subprocess child shapes are contained within their parent subprocess shape bounds`() {
+        val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
+        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubStart_1", "SubTask_1", "SubEnd_1"))
+    }
+
+    @Test
+    fun `two-level nested subprocess grandchild is inside inner which is inside outer`() {
+        val result = layouter.layout(loadCorpus("subprocess-nested.bpmn"))
+        assertChildrenContainedInParent(result, "SubProcess_outer", listOf("SubProcess_inner"))
+        assertChildrenContainedInParent(result, "SubProcess_inner", listOf("GrandchildTask"))
+    }
+
+    @Test
+    fun `subprocess BPMNShapes have isExpanded true`() {
+        val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='SubProcess_1' and @isExpanded='true']").exist()
+    }
+
+    @Test
+    fun `subprocess with internal branch children contained in subprocess`() {
+        val result = layouter.layout(loadCorpus("subprocess-branch.bpmn"))
+        assertChildrenContainedInParent(
+            result,
+            "SubProcess_1",
+            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join", "SubEnd"),
+        )
+    }
+
+    // ── Spatial invariants: boundary event attachment ─────────────────────────
+
+    @Test
+    fun `timer boundary event centre lies on host task perimeter`() {
+        val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
+        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "Task_process")
+    }
+
+    @Test
+    fun `error boundary event centre lies on host task perimeter`() {
+        val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
+        assertBoundaryOnHostPerimeter(result, "Boundary_error", "Task_process")
+    }
+
+    @Test
+    fun `two boundary events on same host both lie on host perimeter`() {
+        val result = layouter.layout(loadCorpus("boundary-multi.bpmn"))
+        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "Task_process")
+        assertBoundaryOnHostPerimeter(result, "Boundary_error", "Task_process")
+    }
+
+    @Test
+    fun `boundary event on subprocess lies on subprocess perimeter`() {
+        val result = layouter.layout(loadCorpus("boundary-on-subprocess.bpmn"))
+        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "SubProcess_1")
+    }
+
+    @Test
+    fun `exception flow first waypoint is near boundary event centre`() {
+        val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
+        assertExceptionEdgeNearBoundary(result, "Flow_timeout", "Boundary_timer")
+    }
+
+    // ── Determinism (parametric, all corpus fixtures) ─────────────────────────
+
+    @ParameterizedTest(name = "determinism: {0}")
+    @ValueSource(
+        strings = [
+            "representative-process.bpmn",
+            "subprocess-flat.bpmn",
+            "subprocess-nested.bpmn",
+            "boundary-timer-task.bpmn",
+            "boundary-multi.bpmn",
+        ],
+    )
+    fun `repeated layout of same input produces stable DI geometry`(fixture: String) {
+        val xml = loadCorpus(fixture)
+        val firstDi = diCoordinates(layouter.layout(xml))
+        val secondDi = diCoordinates(layouter.layout(xml))
+        assertEquals(firstDi, secondDi, "ELK layout geometry was not deterministic for $fixture")
+    }
+
+    // ── Existing focused behavioral tests ─────────────────────────────────────
 
     @Test
     fun `existing DI is replaced not duplicated`() {
@@ -80,7 +200,6 @@ class ElkBpmnLayouterTest {
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>"""
-
         val result = layouter.layout(xmlWithDi)
         assertExactlyOneDiagram(result)
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1']").exist()
@@ -90,16 +209,7 @@ class ElkBpmnLayouterTest {
     @Test
     fun `explicit cycle produces routed feedback edge`() {
         val result = layouter.layout(loadCorpus("explicit-cycle.bpmn"))
-        // The loop-back edge must have DI; ELK must handle the cycle without failure.
         assertXml(result).nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_retry']").exist()
-    }
-
-    @Test
-    fun `repeated layout of same input produces stable DI geometry`() {
-        val xml = loadCorpus("representative-process.bpmn")
-        val firstDi = diCoordinates(layouter.layout(xml))
-        val secondDi = diCoordinates(layouter.layout(xml))
-        assertEquals(firstDi, secondDi, "ELK layout geometry was not deterministic")
     }
 
     @Test
@@ -109,7 +219,115 @@ class ElkBpmnLayouterTest {
         }
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Spatial assertion helpers ─────────────────────────────────────────────
+
+    /**
+     * Asserts every child ID's shape bounds are fully contained within the parent shape bounds.
+     * Applies a 1px tolerance for rounding artefacts.
+     */
+    private fun assertChildrenContainedInParent(xml: String, parentId: String, childIds: List<String>) {
+        val doc = parseXmlDoc(xml)
+        val parentBounds = shapeBounds(doc, parentId)
+        for (childId in childIds) {
+            val childBounds = shapeBounds(doc, childId)
+            val tolerance = 1.0
+            assertTrue(
+                childBounds["x"]!! >= parentBounds["x"]!! - tolerance,
+                "$childId left (${childBounds["x"]}) must be inside $parentId left (${parentBounds["x"]})",
+            )
+            assertTrue(
+                childBounds["y"]!! >= parentBounds["y"]!! - tolerance,
+                "$childId top (${childBounds["y"]}) must be inside $parentId top (${parentBounds["y"]})",
+            )
+            assertTrue(
+                childBounds["x"]!! + childBounds["width"]!! <= parentBounds["x"]!! + parentBounds["width"]!! + tolerance,
+                "$childId right must be inside $parentId right",
+            )
+            assertTrue(
+                childBounds["y"]!! + childBounds["height"]!! <= parentBounds["y"]!! + parentBounds["height"]!! + tolerance,
+                "$childId bottom must be inside $parentId bottom",
+            )
+        }
+    }
+
+    /**
+     * Asserts the boundary event centre is within EVENT_SIZE/2 of at least one edge of the host.
+     * This verifies straddling without requiring exact perimeter placement.
+     */
+    private fun assertBoundaryOnHostPerimeter(xml: String, boundaryId: String, hostId: String) {
+        val doc = parseXmlDoc(xml)
+        val hostBounds = shapeBounds(doc, hostId)
+        val beBounds = shapeBounds(doc, boundaryId)
+        val tolerance = EVENT_SIZE
+        val beCx = beBounds["x"]!! + beBounds["width"]!! / 2.0
+        val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
+        val hostLeft = hostBounds["x"]!!
+        val hostRight = hostLeft + hostBounds["width"]!!
+        val hostTop = hostBounds["y"]!!
+        val hostBottom = hostTop + hostBounds["height"]!!
+
+        val nearLeft = Math.abs(beCx - hostLeft) <= tolerance
+        val nearRight = Math.abs(beCx - hostRight) <= tolerance
+        val nearTop = Math.abs(beCy - hostTop) <= tolerance
+        val nearBottom = Math.abs(beCy - hostBottom) <= tolerance
+
+        assertTrue(
+            nearLeft || nearRight || nearTop || nearBottom,
+            "Boundary '$boundaryId' centre ($beCx,$beCy) must be within $tolerance of a host '$hostId' edge " +
+                "(left=$hostLeft, right=$hostRight, top=$hostTop, bottom=$hostBottom)",
+        )
+    }
+
+    /**
+     * Asserts the first waypoint of the exception edge is within EVENT_SIZE of the boundary event centre.
+     */
+    private fun assertExceptionEdgeNearBoundary(xml: String, edgeId: String, boundaryId: String) {
+        val doc = parseXmlDoc(xml)
+        val beBounds = shapeBounds(doc, boundaryId)
+        val beCx = beBounds["x"]!! + beBounds["width"]!! / 2.0
+        val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
+
+        val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as org.w3c.dom.Element
+            if (edge.getAttribute("bpmnElement") == edgeId) {
+                val waypoints = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+                assertTrue(waypoints.length >= 1, "Edge $edgeId must have at least one waypoint")
+                val wp = waypoints.item(0) as org.w3c.dom.Element
+                val wpx = wp.getAttribute("x").toDouble()
+                val wpy = wp.getAttribute("y").toDouble()
+                val dist = Math.sqrt((wpx - beCx) * (wpx - beCx) + (wpy - beCy) * (wpy - beCy))
+                assertTrue(
+                    dist <= EVENT_SIZE * 2,
+                    "Edge '$edgeId' first waypoint must be near boundary '$boundaryId' centre; dist=$dist",
+                )
+                return
+            }
+        }
+        error("Edge $edgeId not found in DI")
+    }
+
+    private fun shapeBounds(doc: org.w3c.dom.Document, bpmnElementId: String): Map<String, Double> {
+        val shapes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
+        for (i in 0 until shapes.length) {
+            val shape = shapes.item(i) as org.w3c.dom.Element
+            if (shape.getAttribute("bpmnElement") == bpmnElementId) {
+                val bounds = shape.getElementsByTagNameNS(
+                    "http://www.omg.org/spec/DD/20100524/DC",
+                    "Bounds",
+                ).item(0) as org.w3c.dom.Element
+                return mapOf(
+                    "x" to bounds.getAttribute("x").toDouble(),
+                    "y" to bounds.getAttribute("y").toDouble(),
+                    "width" to bounds.getAttribute("width").toDouble(),
+                    "height" to bounds.getAttribute("height").toDouble(),
+                )
+            }
+        }
+        error("No BPMNShape found for bpmnElement='$bpmnElementId'")
+    }
+
+    // ── Existing helpers ──────────────────────────────────────────────────────
 
     /**
      * Derives the shape and edge IDs that must appear in the DI output by reading
@@ -247,4 +465,8 @@ class ElkBpmnLayouterTest {
             "di" to "http://www.omg.org/spec/DD/20100524/DI",
         ),
     )
+
+    private companion object {
+        const val EVENT_SIZE = 36.0
+    }
 }

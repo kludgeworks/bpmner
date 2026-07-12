@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- STATUS: VALIDATED (human-reviewed in bpmn-js, 2026-07-12) — original review notes: open in https://demo.bpmn.io/ and confirm:
+     1. The timer boundary event (clock icon) sits on the BOTTOM-LEFT of "Process Order".
+     2. The error boundary event (lightning bolt) sits on the BOTTOM-RIGHT of "Process Order".
+     3. Both boundary circles straddle the bottom edge — partially inside, partially outside.
+     4. The normal flow exits cleanly from the RIGHT edge of "Process Order" to "Ship Order",
+        with no boundary circle in its path.
+     5. The timer exception exits downward-left to "Cancel Order".
+     6. The error exception exits downward-right to "Handle Error".
+     7. Ship Order and Handle Error have clear space between them — no touching borders.
+     8. Both exception paths end at separate end events.
+-->
+<!--
+  COORDINATE TABLE  (normal path centre: y=120)
+  ──────────────────────────────────────────────────────────────────────────────────
+  Shape               x      y     w    h    cx    cy    right   bottom
+  ──────────────────────────────────────────────────────────────────────────────────
+  Start_1            80    102    36   36    98   120      116
+  Task_process      166     80   100   80   216   120      266      160
+  Boundary_timer    175    142    36   36   193   160      211   ← SOUTH-LEFT  (cx=193, 9px left margin)
+  Boundary_error    221    142    36   36   239   160      257   ← SOUTH-RIGHT (cx=239, 10px gap between)
+  Task_ship         366     80   100   80   416   120      466   ← 100px right of task_process right,
+                                                                    normal flow (266→366) is clean
+  End_ok            516    102    36   36   534   120      552
+  Task_cancel       166    310   100   80   216   350      266   ← timer lane: aligned with Task_process left
+  End_timeout       316    332    36   36   334   350      352   ← 50px right of Task_cancel right
+  Task_handle       316    220   100   80   366   260      416   ← error lane: below Task_ship
+  End_error         466    242    36   36   484   260      502
+  ──────────────────────────────────────────────────────────────────────────────────
+  Both boundaries on the bottom edge (y=142, straddling y=160).
+  Equal spacing: 9px left margin | 36px timer | 10px gap | 36px error | 9px right margin = 100px total.
+  Timer cx=193, Error cx=239. Gap between circles: 221-(175+36)=10px.
+  Two exception lanes do not share x-space: timer x=166→352, error x=316→502 overlap in x
+  but timer lane y=310→390 is below error lane y=220→300 — no visual overlap.
+  Normal flow: Task_process right-centre (266,120) → Task_ship left (366,120). Unobstructed.
+  Task_ship top=80, Handle Error top=220 → 140px gap between them. Clear.
+-->
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
+                  xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
+                  xmlns:di="http://www.omg.org/spec/DD/20100524/DI"
+                  id="Definitions_ref_boundary_multi"
+                  targetNamespace="https://groknull.dev/bpmner">
+
+  <bpmn:process id="Process_1" name="Multi-Boundary Reference" isExecutable="true">
+
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask id="Task_process" name="Process Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <!-- Timer boundary — SOUTH-LEFT -->
+    <bpmn:boundaryEvent id="Boundary_timer" name="Timeout" attachedToRef="Task_process" cancelActivity="true">
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+    </bpmn:boundaryEvent>
+
+    <!-- Error boundary — SOUTH-RIGHT -->
+    <bpmn:boundaryEvent id="Boundary_error" name="Error" attachedToRef="Task_process" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1"/>
+    </bpmn:boundaryEvent>
+
+    <bpmn:serviceTask id="Task_ship" name="Ship Order">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_ok" name="Shipped">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="Task_cancel" name="Cancel Order">
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_timeout" name="Cancelled">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask id="Task_handle" name="Handle Error">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_error" name="Failed">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1"       sourceRef="Start_1"       targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_normal"  sourceRef="Task_process"   targetRef="Task_ship"/>
+    <bpmn:sequenceFlow id="Flow_2"       sourceRef="Task_ship"      targetRef="End_ok"/>
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_cancel"/>
+    <bpmn:sequenceFlow id="Flow_3"       sourceRef="Task_cancel"    targetRef="End_timeout"/>
+    <bpmn:sequenceFlow id="Flow_error"   sourceRef="Boundary_error" targetRef="Task_handle"/>
+    <bpmn:sequenceFlow id="Flow_4"       sourceRef="Task_handle"    targetRef="End_error"/>
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
+
+      <!-- Normal path — centre line y=120 -->
+
+      <!-- Start_1: centre (98, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_Start_1" bpmnElement="Start_1">
+        <dc:Bounds x="80" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="66" y="145" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_process: centre (216, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_process" bpmnElement="Task_process">
+        <dc:Bounds x="166" y="80" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="176" y="113" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Boundary_timer: SOUTH-LEFT — centre cx=193, label centred below -->
+      <bpmndi:BPMNShape id="BPMNShape_Boundary_timer" bpmnElement="Boundary_timer">
+        <dc:Bounds x="175" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="168" y="185" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Boundary_error: SOUTH-RIGHT — centre cx=239, label centred below -->
+      <bpmndi:BPMNShape id="BPMNShape_Boundary_error" bpmnElement="Boundary_error">
+        <dc:Bounds x="221" y="142" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="222" y="185" width="35" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Task_ship: centre (416, 120) — 100px right of Task_process right (266+100=366) -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_ship" bpmnElement="Task_ship">
+        <dc:Bounds x="366" y="80" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="384" y="113" width="64" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_ok: centre (534, 120) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_ok" bpmnElement="End_ok">
+        <dc:Bounds x="516" y="102" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="503" y="145" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Timer exception — same column as error exception (x=316 for tasks, x=466 for end events) -->
+      <!-- Task_cancel: x=316, cy=350 — column-aligned with Task_handle -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_cancel" bpmnElement="Task_cancel">
+        <dc:Bounds x="316" y="310" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="326" y="343" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_timeout: x=466, cy=350 — column-aligned with End_error.
+           "Cancelled" label centred at cx=484: x=452, w=65 -->
+      <bpmndi:BPMNShape id="BPMNShape_End_timeout" bpmnElement="End_timeout">
+        <dc:Bounds x="466" y="332" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="452" y="375" width="65" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Error exception lane — y=220→300, flows left-to-right -->
+      <!-- Task_handle: centre (366, 260) — below Task_ship -->
+      <bpmndi:BPMNShape id="BPMNShape_Task_handle" bpmnElement="Task_handle">
+        <dc:Bounds x="316" y="220" width="100" height="80"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="326" y="253" width="80" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- End_error: centre (484, 260) -->
+      <bpmndi:BPMNShape id="BPMNShape_End_error" bpmnElement="End_error">
+        <dc:Bounds x="466" y="242" width="36" height="36"/>
+        <bpmndi:BPMNLabel><dc:Bounds x="460" y="285" width="50" height="14"/></bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+
+      <!-- Normal flow — straight at y=120, nothing in its path -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_1" bpmnElement="Flow_1">
+        <di:waypoint x="116" y="120"/>
+        <di:waypoint x="166" y="120"/>
+      </bpmndi:BPMNEdge>
+      <!-- Normal flow: Task_process right-centre (266,120) → Task_ship left (366,120) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_normal" bpmnElement="Flow_normal">
+        <di:waypoint x="266" y="120"/>
+        <di:waypoint x="366" y="120"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_2" bpmnElement="Flow_2">
+        <di:waypoint x="466" y="120"/>
+        <di:waypoint x="516" y="120"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Timer exception: boundary bottom (193,178) → down to cy=350, right into Task_cancel left (316,350) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_timeout" bpmnElement="Flow_timeout">
+        <di:waypoint x="193" y="178"/>
+        <di:waypoint x="193" y="350"/>
+        <di:waypoint x="316" y="350"/>
+      </bpmndi:BPMNEdge>
+      <!-- Task_cancel right (416,350) → End_timeout left (466,350) — flows right -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_3" bpmnElement="Flow_3">
+        <di:waypoint x="416" y="350"/>
+        <di:waypoint x="466" y="350"/>
+      </bpmndi:BPMNEdge>
+
+      <!-- Error exception: boundary bottom (239,178) → down to cy=260, right into Task_handle left (316,260) -->
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_error" bpmnElement="Flow_error">
+        <di:waypoint x="239" y="178"/>
+        <di:waypoint x="239" y="260"/>
+        <di:waypoint x="316" y="260"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="BPMNEdge_Flow_4" bpmnElement="Flow_4">
+        <di:waypoint x="416" y="260"/>
+        <di:waypoint x="466" y="260"/>
+      </bpmndi:BPMNEdge>
+
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

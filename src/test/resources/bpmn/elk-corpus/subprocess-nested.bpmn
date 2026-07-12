@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_subprocess_nested" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Nested Subprocess" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="SubProcess_outer" name="Outer">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+      <bpmn:startEvent id="OuterStart" name="Begin">
+        <bpmn:outgoing>OuterFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:subProcess id="SubProcess_inner" name="Inner">
+        <bpmn:incoming>OuterFlow_1</bpmn:incoming>
+        <bpmn:outgoing>OuterFlow_2</bpmn:outgoing>
+        <bpmn:startEvent id="InnerStart" name="Begin">
+          <bpmn:outgoing>InnerFlow_1</bpmn:outgoing>
+        </bpmn:startEvent>
+        <bpmn:serviceTask id="GrandchildTask" name="Do Work">
+          <bpmn:incoming>InnerFlow_1</bpmn:incoming>
+          <bpmn:outgoing>InnerFlow_2</bpmn:outgoing>
+        </bpmn:serviceTask>
+        <bpmn:endEvent id="InnerEnd" name="Done">
+          <bpmn:incoming>InnerFlow_2</bpmn:incoming>
+        </bpmn:endEvent>
+        <bpmn:sequenceFlow id="InnerFlow_1" sourceRef="InnerStart" targetRef="GrandchildTask"/>
+        <bpmn:sequenceFlow id="InnerFlow_2" sourceRef="GrandchildTask" targetRef="InnerEnd"/>
+      </bpmn:subProcess>
+      <bpmn:endEvent id="OuterEnd" name="Done">
+        <bpmn:incoming>OuterFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="OuterFlow_1" sourceRef="OuterStart" targetRef="SubProcess_inner"/>
+      <bpmn:sequenceFlow id="OuterFlow_2" sourceRef="SubProcess_inner" targetRef="OuterEnd"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="End_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="SubProcess_outer"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="SubProcess_outer" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>
