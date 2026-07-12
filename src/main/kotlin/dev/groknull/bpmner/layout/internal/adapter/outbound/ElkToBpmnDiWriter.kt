@@ -113,15 +113,10 @@ internal object ElkToBpmnDiWriter {
             writeWaypoints(model, bpmnEdge, elkEdge)
             if (elkEdge.labels.isNotEmpty() && !sf.name.isNullOrBlank()) {
                 val elkLabel = elkEdge.labels.first()
-                val offsetX = elkEdge.sections.firstOrNull()?.startX ?: 0.0
-                val offsetY = elkEdge.sections.firstOrNull()?.startY ?: 0.0
                 val bpmnLabel = model.newInstance(BpmnLabel::class.java)
-                bpmnLabel.bounds = model.newBounds(
-                    offsetX + elkLabel.x,
-                    offsetY + elkLabel.y,
-                    elkLabel.width,
-                    elkLabel.height,
-                )
+                // ELK reports label x/y in absolute root-graph coordinates (same space as
+                // node bounds and section waypoints), so use them directly without offset.
+                bpmnLabel.bounds = model.newBounds(elkLabel.x, elkLabel.y, elkLabel.width, elkLabel.height)
                 bpmnEdge.bpmnLabel = bpmnLabel
             }
             plane.addChildElement(bpmnEdge)
@@ -135,11 +130,14 @@ internal object ElkToBpmnDiWriter {
     ) {
         for (assoc in model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Association::class.java)
             .sortedBy { it.id }) {
+            val sourceShape = shapeById[assoc.source?.id]
+            val targetShape = shapeById[assoc.target?.id]
+            if (sourceShape == null || targetShape == null) continue
             val bpmnEdge = model.newInstance(BpmnEdge::class.java)
             bpmnEdge.id = "BPMNEdge_${assoc.id}"
             bpmnEdge.bpmnElement = assoc
-            val (s1x, s1y) = shapeById[assoc.source?.id]?.let { shapeCenter(it) } ?: Pair(0.0, 0.0)
-            val (s2x, s2y) = shapeById[assoc.target?.id]?.let { shapeCenter(it) } ?: Pair(0.0, 0.0)
+            val (s1x, s1y) = shapeCenter(sourceShape)
+            val (s2x, s2y) = shapeCenter(targetShape)
             model.newWaypoint(s1x, s1y).also { bpmnEdge.waypoints.add(it) }
             model.newWaypoint(s2x, s2y).also { bpmnEdge.waypoints.add(it) }
             plane.addChildElement(bpmnEdge)
