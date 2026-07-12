@@ -9,6 +9,7 @@ import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.FlowNode
+import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
@@ -111,6 +112,7 @@ internal class ElkBpmnLayouter {
         mapFlowNodes(model, root, nodeMap)
         mapSequenceFlows(model, nodeMap, edgeMap)
         mapAnnotations(model, root, nodeMap)
+        mapGroups(model, root, nodeMap)
         return ElkGraphResult(root, nodeMap, edgeMap)
     }
 
@@ -182,6 +184,20 @@ internal class ElkBpmnLayouter {
         }
     }
 
+    private fun mapGroups(
+        model: BpmnModelInstance,
+        root: ElkNode,
+        nodeMap: MutableMap<String, ElkNode>,
+    ) {
+        for (group in model.getModelElementsByType(Group::class.java).sortedBy { it.id }) {
+            val elkNode = ElkGraphUtil.createNode(root)
+            elkNode.identifier = group.id
+            elkNode.width = GROUP_WIDTH
+            elkNode.height = GROUP_HEIGHT
+            nodeMap[group.id] = elkNode
+        }
+    }
+
     private fun applyLayoutOptions(root: ElkNode) {
         root.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
@@ -235,6 +251,15 @@ internal class ElkBpmnLayouter {
             shape.bounds = model.newBounds(elkNode.x, elkNode.y, elkNode.width, elkNode.height)
             plane.addChildElement(shape)
             shapeById[ann.id] = shape
+        }
+        for (group in model.getModelElementsByType(Group::class.java).sortedBy { it.id }) {
+            val elkNode = nodeMap[group.id] ?: continue
+            val shape = model.newInstance(BpmnShape::class.java)
+            shape.id = "BPMNShape_${group.id}"
+            shape.bpmnElement = group
+            shape.bounds = model.newBounds(elkNode.x, elkNode.y, elkNode.width, elkNode.height)
+            plane.addChildElement(shape)
+            shapeById[group.id] = shape
         }
         return Pair(plane, shapeById)
     }
@@ -361,6 +386,8 @@ internal class ElkBpmnLayouter {
         private const val GATEWAY_SIZE = 50.0
         private const val ANNOTATION_WIDTH = 100.0
         private const val ANNOTATION_HEIGHT = 60.0
+        private const val GROUP_WIDTH = 300.0
+        private const val GROUP_HEIGHT = 200.0
 
         // Label sizing — fixed glyph approximation, no font metrics (plan §lean-design-5)
         private const val GLYPH_WIDTH = 7.0

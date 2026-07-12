@@ -140,6 +140,8 @@ class ElkBpmnLayouterTest {
 
         // Text annotation shape
         asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Anno_1']").exist()
+        // Group shape (plan §6: groups receive DI)
+        asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Group_1']").exist()
         // Association edge
         asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Assoc_1']").exist()
         // Flow nodes still have shapes
@@ -321,8 +323,8 @@ class ElkBpmnLayouterTest {
                 val bounds = boundsNodes.item(0) as org.w3c.dom.Element
                 val w = bounds.getAttribute("width").toDoubleOrNull() ?: 0.0
                 val h = bounds.getAttribute("height").toDoubleOrNull() ?: 0.0
-                assert(w > 0.0) { "Shape '$shapeId' has non-positive width: $w" }
-                assert(h > 0.0) { "Shape '$shapeId' has non-positive height: $h" }
+                kotlin.test.assertTrue(w > 0.0, "Shape '$shapeId' has non-positive width: $w")
+                kotlin.test.assertTrue(h > 0.0, "Shape '$shapeId' has non-positive height: $h")
             }
         }
     }
@@ -339,9 +341,10 @@ class ElkBpmnLayouterTest {
             val edge = edges.item(i) as org.w3c.dom.Element
             val edgeId = edge.getAttribute("bpmnElement")
             val waypoints = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
-            assert(waypoints.length >= minCount) {
-                "Edge '$edgeId' has only ${waypoints.length} waypoint(s); expected at least $minCount"
-            }
+            kotlin.test.assertTrue(
+                waypoints.length >= minCount,
+                "Edge '$edgeId' has only ${waypoints.length} waypoint(s); expected at least $minCount",
+            )
         }
     }
 }
