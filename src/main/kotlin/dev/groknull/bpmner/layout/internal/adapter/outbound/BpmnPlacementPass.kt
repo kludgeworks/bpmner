@@ -201,10 +201,12 @@ internal object BpmnPlacementPass {
                 val elkEdge = skeleton.edgeMap[sf.id] ?: return@forEach
                 val section = elkEdge.sections.firstOrNull() ?: return@forEach
                 val bRect = shapes[boundaryId] ?: return@forEach
-                // Start waypoint = boundary shape centre (placed by rule 2)
+                // ELK edge coordinates are relative to the edge's containing (LCA) node.
+                val (ox, oy) = edgeContainerOffset(elkEdge)
+                // Start waypoint = boundary shape centre (placed by rule 2, already absolute)
                 val waypoints = mutableListOf(Point(bRect.x + bRect.w / 2.0, bRect.y + bRect.h / 2.0))
-                section.bendPoints.mapTo(waypoints) { Point(it.x, it.y) }
-                waypoints.add(Point(section.endX, section.endY))
+                section.bendPoints.mapTo(waypoints) { Point(it.x + ox, it.y + oy) }
+                waypoints.add(Point(section.endX + ox, section.endY + oy))
                 edges[sf.id] = waypoints
             }
     }
@@ -229,9 +231,11 @@ internal object BpmnPlacementPass {
             .forEach { sf ->
                 val elkEdge = skeleton.edgeMap[sf.id] ?: return@forEach
                 val section = elkEdge.sections.firstOrNull() ?: return@forEach
-                val waypoints = mutableListOf(Point(section.startX, section.startY))
-                section.bendPoints.mapTo(waypoints) { Point(it.x, it.y) }
-                waypoints.add(Point(section.endX, section.endY))
+                // ELK edge coordinates are relative to the edge's containing (LCA) node.
+                val (ox, oy) = edgeContainerOffset(elkEdge)
+                val waypoints = mutableListOf(Point(section.startX + ox, section.startY + oy))
+                section.bendPoints.mapTo(waypoints) { Point(it.x + ox, it.y + oy) }
+                waypoints.add(Point(section.endX + ox, section.endY + oy))
                 edges[sf.id] = waypoints
             }
     }
@@ -396,6 +400,19 @@ internal object BpmnPlacementPass {
             parent = parent.parent
         }
         return x to y
+    }
+
+    /**
+     * ELK reports edge section coordinates relative to the edge's containing node (the
+     * lowest common ancestor of its endpoints). For an edge inside a subprocess compound
+     * node, that container is offset from the root, so its waypoints must be shifted by the
+     * container's absolute position to become canvas-absolute — the edge equivalent of
+     * [absolutePosition]. The root graph has a null identifier and contributes no offset.
+     */
+    internal fun edgeContainerOffset(edge: org.eclipse.elk.graph.ElkEdge): Pair<Double, Double> {
+        val container = edge.containingNode ?: return 0.0 to 0.0
+        if (container.identifier == null) return 0.0 to 0.0 // root graph
+        return absolutePosition(container)
     }
 
     // ── Baseline snap helpers ─────────────────────────────────────────────────

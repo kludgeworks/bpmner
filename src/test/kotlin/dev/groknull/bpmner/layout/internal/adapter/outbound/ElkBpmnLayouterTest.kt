@@ -127,6 +127,28 @@ class ElkBpmnLayouterTest {
         )
     }
 
+    // ── Edge connectivity: waypoints actually touch their source/target shapes ─
+    // These catch the double-offset bug where intra-subprocess / cross-hierarchy edge
+    // waypoints are reported relative to the compound node but shapes are absolute.
+
+    @ParameterizedTest(name = "edges connect endpoints: {0}")
+    @ValueSource(
+        strings = [
+            "subprocess-flat.bpmn",
+            "subprocess-nested.bpmn",
+            "subprocess-branch.bpmn",
+            "subprocess-loop.bpmn",
+            "boundary-timer-task.bpmn",
+            "boundary-error-task.bpmn",
+            "boundary-multi.bpmn",
+            "boundary-on-subprocess.bpmn",
+        ],
+    )
+    fun `every sequence flow first and last waypoint touch its source and target shapes`(fixture: String) {
+        val result = layouter.layout(loadCorpus(fixture))
+        assertEdgesConnectEndpoints(result, loadCorpus(fixture))
+    }
+
     // ── Spatial invariants: boundary event attachment ─────────────────────────
 
     @Test
@@ -379,6 +401,66 @@ class ElkBpmnLayouterTest {
         assertTrue(
             dist <= EVENT_SIZE * 2,
             "Edge '$edgeId' first waypoint must be near boundary '$boundaryId' centre; dist=$dist",
+        )
+    }
+
+    /**
+     * For every sequence flow, asserts its first waypoint lies on/near the source shape and
+     * its last waypoint on/near the target shape. Catches detached edges (the double-offset
+     * bug for intra-subprocess and cross-hierarchy edges).
+     */
+    private fun assertEdgesConnectEndpoints(resultXml: String, inputXml: String) {
+        val resultDoc = parseXmlDoc(resultXml)
+        val inputDoc = parseXmlDoc(inputXml)
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        val flows = inputDoc.getElementsByTagNameNS(bpmnNs, "sequenceFlow")
+        for (i in 0 until flows.length) {
+            val flow = flows.item(i) as org.w3c.dom.Element
+            val flowId = flow.getAttribute("id")
+            val srcId = flow.getAttribute("sourceRef")
+            val tgtId = flow.getAttribute("targetRef")
+            val wps = edgeWaypoints(resultDoc, flowId)
+            assertTrue(wps.size >= 2, "Flow '$flowId' must have >= 2 waypoints")
+            assertWaypointNearShape(resultDoc, wps.first(), srcId, flowId, "source")
+            assertWaypointNearShape(resultDoc, wps.last(), tgtId, flowId, "target")
+        }
+    }
+
+    private fun edgeWaypoints(doc: org.w3c.dom.Document, edgeId: String): List<Pair<Double, Double>> {
+        val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as org.w3c.dom.Element
+            if (edge.getAttribute("bpmnElement") != edgeId) continue
+            val wps = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+            return (0 until wps.length).map {
+                val wp = wps.item(it) as org.w3c.dom.Element
+                wp.getAttribute("x").toDouble() to wp.getAttribute("y").toDouble()
+            }
+        }
+        error("Edge $edgeId not found")
+    }
+
+    private fun assertWaypointNearShape(
+        doc: org.w3c.dom.Document,
+        wp: Pair<Double, Double>,
+        shapeId: String,
+        flowId: String,
+        role: String,
+    ) {
+        val b = shapeBounds(doc, shapeId)
+        val left = b["x"]!!
+        val top = b["y"]!!
+        val right = left + b["width"]!!
+        val bottom = top + b["height"]!!
+        // Waypoint must lie within the shape's bounds expanded by a tolerance (edges attach to
+        // the border, not the centre; a detached edge lands hundreds of px away).
+        val tol = 40.0
+        val (wx, wy) = wp
+        val inside = wx >= left - tol && wx <= right + tol && wy >= top - tol && wy <= bottom + tol
+        assertTrue(
+            inside,
+            "Flow '$flowId' $role waypoint ($wx,$wy) is not near shape '$shapeId' " +
+                "bounds [$left,$top,$right,$bottom] (tol $tol) — edge is detached",
         )
     }
 
