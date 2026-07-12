@@ -44,6 +44,9 @@ class ElkGoldenLayoutTest {
     fun `subprocess-branch output matches golden`() = assertMatchesGolden("subprocess-branch")
 
     @Test
+    fun `subprocess-loop output matches golden`() = assertMatchesGolden("subprocess-loop")
+
+    @Test
     fun `boundary-timer-task output matches golden`() = assertMatchesGolden("boundary-timer-task")
 
     @Test

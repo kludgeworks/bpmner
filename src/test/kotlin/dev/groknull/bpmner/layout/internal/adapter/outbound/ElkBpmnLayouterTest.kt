@@ -58,6 +58,7 @@ class ElkBpmnLayouterTest {
             "subprocess-flat.bpmn",
             "subprocess-nested.bpmn",
             "subprocess-branch.bpmn",
+            "subprocess-loop.bpmn",
         ],
     )
     fun `subprocess corpus fixture satisfies all DI invariants`(fixture: String) {
@@ -129,34 +130,55 @@ class ElkBpmnLayouterTest {
     // ── Spatial invariants: boundary event attachment ─────────────────────────
 
     @Test
-    fun `timer boundary event centre lies on host task perimeter`() {
+    fun `timer boundary event centre lies on host task BOTTOM edge`() {
         val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
-        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "Task_process")
+        assertBoundaryOnHostBottomEdge(result, "Boundary_timer", "Task_process")
     }
 
     @Test
-    fun `error boundary event centre lies on host task perimeter`() {
+    fun `error boundary event centre lies on host task BOTTOM edge`() {
         val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
-        assertBoundaryOnHostPerimeter(result, "Boundary_error", "Task_process")
+        assertBoundaryOnHostBottomEdge(result, "Boundary_error", "Task_process")
     }
 
     @Test
-    fun `two boundary events on same host both lie on host perimeter`() {
+    fun `two boundary events on same host both lie on host BOTTOM edge`() {
         val result = layouter.layout(loadCorpus("boundary-multi.bpmn"))
-        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "Task_process")
-        assertBoundaryOnHostPerimeter(result, "Boundary_error", "Task_process")
+        assertBoundaryOnHostBottomEdge(result, "Boundary_timer", "Task_process")
+        assertBoundaryOnHostBottomEdge(result, "Boundary_error", "Task_process")
     }
 
     @Test
-    fun `boundary event on subprocess lies on subprocess perimeter`() {
+    fun `boundary event on subprocess lies on subprocess BOTTOM edge`() {
         val result = layouter.layout(loadCorpus("boundary-on-subprocess.bpmn"))
-        assertBoundaryOnHostPerimeter(result, "Boundary_timer", "SubProcess_1")
+        assertBoundaryOnHostBottomEdge(result, "Boundary_timer", "SubProcess_1")
     }
 
     @Test
     fun `exception flow first waypoint is near boundary event centre`() {
         val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
         assertExceptionEdgeNearBoundary(result, "Flow_timeout", "Boundary_timer")
+    }
+
+    // ── Label invariants: labels below nodes (AD-557-10 named rule 5) ─────────
+
+    @Test
+    fun `named node labels are placed below their node shape (not on top of it)`() {
+        val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
+        assertLabelsBelow(result)
+    }
+
+    @Test
+    fun `subprocess with inner loop satisfies all DI invariants`() {
+        val result = layouter.layout(loadCorpus("subprocess-loop.bpmn"))
+        val inputXml = loadCorpus("subprocess-loop.bpmn")
+        val (expectedShapeIds, expectedEdgeIds) = semanticIds(inputXml)
+        assertExactlyOneDiagram(result)
+        val asserter = assertXml(result)
+        for (id in expectedShapeIds) asserter.nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='$id']").exist()
+        for (id in expectedEdgeIds) asserter.nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='$id']").exist()
+        assertPositiveBounds(result)
+        assertMinWaypoints(result, minCount = 2)
     }
 
     // ── Determinism (parametric, all corpus fixtures) ─────────────────────────
@@ -251,9 +273,64 @@ class ElkBpmnLayouterTest {
     }
 
     /**
-     * Asserts the boundary event centre is within EVENT_SIZE/2 of at least one edge of the host.
-     * This verifies straddling without requiring exact perimeter placement.
+     * Asserts the boundary event centre is within EVENT_SIZE/2 of the host's BOTTOM edge.
+     * Per AD-557-10: all retained boundary events (timer/error) exit the host's bottom edge.
      */
+    private fun assertBoundaryOnHostBottomEdge(xml: String, boundaryId: String, hostId: String) {
+        val doc = parseXmlDoc(xml)
+        val hostBounds = shapeBounds(doc, hostId)
+        val beBounds = shapeBounds(doc, boundaryId)
+        val tolerance = EVENT_SIZE
+        val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
+        val hostBottom = hostBounds["y"]!! + hostBounds["height"]!!
+
+        assertTrue(
+            Math.abs(beCy - hostBottom) <= tolerance,
+            "Boundary '$boundaryId' centre Y ($beCy) must be near host '$hostId' BOTTOM edge ($hostBottom) ±$tolerance",
+        )
+    }
+
+    /**
+     * Asserts every named shape's BPMNLabel (if present) has its top-left Y at or below the
+     * shape's own top-left Y. This is the direct regression guard for BLOCK-557-3 symptom 1
+     * (label placed at the same coordinates as its node, visually on top of it).
+     */
+    private fun assertLabelsBelow(xml: String) {
+        val doc = parseXmlDoc(xml)
+        val diNs = "http://www.omg.org/spec/BPMN/20100524/DI"
+        val dcNs = "http://www.omg.org/spec/DD/20100524/DC"
+        val shapes = doc.getElementsByTagNameNS(diNs, "BPMNShape")
+        for (i in 0 until shapes.length) {
+            assertShapeLabelBelow(shapes.item(i) as org.w3c.dom.Element, diNs, dcNs)
+        }
+    }
+
+    @Suppress("ReturnCount")
+    private fun assertShapeLabelBelow(shape: org.w3c.dom.Element, diNs: String, dcNs: String) {
+        val shapeId = shape.getAttribute("bpmnElement")
+        val shapeBoundsNodes = shape.getElementsByTagNameNS(dcNs, "Bounds")
+        if (shapeBoundsNodes.length == 0) return
+        val shapeB = shapeBoundsNodes.item(0) as org.w3c.dom.Element
+        val shapeY = shapeB.getAttribute("y").toDoubleOrNull() ?: return
+        val labels = shape.getElementsByTagNameNS(diNs, "BPMNLabel")
+        if (labels.length == 0) return
+        val label = labels.item(0) as org.w3c.dom.Element
+        val lbNodes = label.getElementsByTagNameNS(dcNs, "Bounds")
+        if (lbNodes.length == 0) return
+        val lb = lbNodes.item(0) as org.w3c.dom.Element
+        val labelY = lb.getAttribute("y").toDoubleOrNull() ?: return
+        // Core check: label must not be placed AT the node's own top (the BLOCK-557-3 defect)
+        assertTrue(
+            labelY >= shapeY,
+            "Label for '$shapeId': y=$labelY must not coincide with node top=$shapeY (label on node)",
+        )
+    }
+
+    /**
+     * Asserts the boundary event centre is within EVENT_SIZE/2 of at least one edge of the host.
+     * Kept for any tests that use the less-strict perimeter check.
+     */
+    @Suppress("unused")
     private fun assertBoundaryOnHostPerimeter(xml: String, boundaryId: String, hostId: String) {
         val doc = parseXmlDoc(xml)
         val hostBounds = shapeBounds(doc, hostId)
@@ -288,23 +365,21 @@ class ElkBpmnLayouterTest {
         val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
 
         val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
-        for (i in 0 until edges.length) {
-            val edge = edges.item(i) as org.w3c.dom.Element
-            if (edge.getAttribute("bpmnElement") == edgeId) {
-                val waypoints = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
-                assertTrue(waypoints.length >= 1, "Edge $edgeId must have at least one waypoint")
-                val wp = waypoints.item(0) as org.w3c.dom.Element
-                val wpx = wp.getAttribute("x").toDouble()
-                val wpy = wp.getAttribute("y").toDouble()
-                val dist = Math.sqrt((wpx - beCx) * (wpx - beCx) + (wpy - beCy) * (wpy - beCy))
-                assertTrue(
-                    dist <= EVENT_SIZE * 2,
-                    "Edge '$edgeId' first waypoint must be near boundary '$boundaryId' centre; dist=$dist",
-                )
-                return
-            }
-        }
-        error("Edge $edgeId not found in DI")
+        val edge = (0 until edges.length)
+            .map { edges.item(it) as org.w3c.dom.Element }
+            .firstOrNull { it.getAttribute("bpmnElement") == edgeId }
+            ?: error("Edge $edgeId not found in DI")
+
+        val waypoints = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+        assertTrue(waypoints.length >= 1, "Edge $edgeId must have at least one waypoint")
+        val wp = waypoints.item(0) as org.w3c.dom.Element
+        val wpx = wp.getAttribute("x").toDouble()
+        val wpy = wp.getAttribute("y").toDouble()
+        val dist = Math.sqrt((wpx - beCx) * (wpx - beCx) + (wpy - beCy) * (wpy - beCy))
+        assertTrue(
+            dist <= EVENT_SIZE * 2,
+            "Edge '$edgeId' first waypoint must be near boundary '$boundaryId' centre; dist=$dist",
+        )
     }
 
     private fun shapeBounds(doc: org.w3c.dom.Document, bpmnElementId: String): Map<String, Double> {

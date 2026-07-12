@@ -29,28 +29,44 @@ import org.eclipse.elk.graph.ElkPort
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
 /**
- * Maps a Camunda [BpmnModelInstance] to an ELK graph ready for layout.
+ * Phase 1a — maps a Camunda [BpmnModelInstance] to a LEAN ELK skeleton graph.
+ *
+ * "Lean" means: flow nodes, sequence flows, subprocess compound nodes, and boundary
+ * events as SOUTH-side host ports carrying their exception edges. No [ElkLabel]s, no
+ * artifacts in the ELK graph, no message flows. [omitNodeMicroLayout] is set so ELK
+ * does not attempt to place node-internal content.
+ *
+ * Per AD-557-10: ELK owns structural layout only. Labels, boundary-event shape positions,
+ * artifacts, and baseline alignment are owned by [BpmnPlacementPass] (phase 2).
  *
  * Runs three ordered passes over the model:
  * 1. [mapProcess] — recursive; builds compound nodes for subprocesses, flat nodes for
- *    everything else. BoundaryEvents are skipped here.
- * 2. [mapBoundaryEvents] — creates a port on each host node and a sibling node for each
- *    boundary event. Requires pass 1 to have populated [nodeMap] first.
+ *    other flow nodes. BoundaryEvents are skipped here.
+ * 2. [mapBoundaryEvents] — creates a SOUTH port on each host node (for ELK to route the
+ *    exception edge) and a sibling node (so the handler edge has a target in nodeMap).
+ *    Requires pass 1 to have populated [nodeMap] first.
  * 3. [mapSequenceFlows] — creates ELK edges; checks [portMap] before [nodeMap] for sources
  *    so exception flows route from the boundary port. Requires passes 1 and 2.
  *
- * The result is an [ElkGraphResult] carrying all identity maps needed by [ElkToBpmnDiWriter].
+ * Artifacts (TextAnnotation, Group) are tracked in [nodeMap] with placeholder sizes for
+ * the placement pass to position, but are NOT added to the ELK graph.
+ *
+ * The result is an [ElkSkeleton] carrying all identity maps needed by [BpmnPlacementPass].
  */
 internal object BpmnToElkMapper {
 
-    internal data class ElkGraphResult(
+    /**
+     * The mapper→placement-pass seam: the raw ELK skeleton after layout.
+     * Phase 2 ([BpmnPlacementPass]) reads ELK's output through this object.
+     */
+    internal data class ElkSkeleton(
         val root: ElkNode,
         val nodeMap: Map<String, ElkNode>,
         val portMap: Map<String, ElkPort>,
         val edgeMap: Map<String, ElkEdge>,
     )
 
-    fun map(model: BpmnModelInstance): ElkGraphResult {
+    fun map(model: BpmnModelInstance): ElkSkeleton {
         val root = ElkGraphUtil.createGraph()
         applyRootLayoutOptions(root)
         val nodeMap = mutableMapOf<String, ElkNode>()
@@ -59,15 +75,15 @@ internal object BpmnToElkMapper {
 
         // Pass 1: build node tree (recursive for subprocesses).
         // FlowElements covers FlowNodes (tasks, events, gateways) and SubProcess.
-        // TextAnnotation and Group are Artifacts, not FlowElements — handled separately below.
+        // TextAnnotation and Group are Artifacts, not FlowElements — tracked separately.
         val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
             .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
             .sortedBy { it.id }
         mapProcess(root, topLevelElements, nodeMap, model)
 
-        // Artifacts (TextAnnotation, Group) are not FlowElements; query them globally.
-        mapAnnotations(model, root, nodeMap)
-        mapGroups(model, root, nodeMap)
+        // Artifacts tracked for placement pass but NOT added to ELK skeleton.
+        trackAnnotations(model, nodeMap)
+        trackGroups(model, nodeMap)
 
         // Pass 2: boundary events (need host nodes from pass 1)
         mapBoundaryEvents(model, nodeMap, portMap)
@@ -75,14 +91,14 @@ internal object BpmnToElkMapper {
         // Pass 3: sequence flows (need both nodes and ports)
         mapSequenceFlows(model, nodeMap, portMap, edgeMap)
 
-        return ElkGraphResult(root, nodeMap, portMap, edgeMap)
+        return ElkSkeleton(root, nodeMap, portMap, edgeMap)
     }
 
     /**
      * Recursively maps flow elements into the given [container].
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
-     * TextAnnotations and Groups are added as sidecar nodes in [container].
+     * No labels are added to the ELK graph — labels are phase-2 responsibility.
      */
     private fun mapProcess(
         container: ElkNode,
@@ -99,12 +115,7 @@ internal object BpmnToElkMapper {
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
                     compound.setProperty(CoreOptions.PADDING, ElkPadding(SUBPROCESS_PADDING))
-                    element.name?.takeIf { it.isNotBlank() }?.let { label ->
-                        val elkLabel = ElkGraphUtil.createLabel(label, compound)
-                        val (lw, lh) = labelDimensions(label)
-                        elkLabel.width = lw
-                        elkLabel.height = lh
-                    }
+                    // No ElkLabel on the compound — labels are owned by BpmnPlacementPass.
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children
                     val children = element.flowElements.sortedBy { it.id }
@@ -117,47 +128,44 @@ internal object BpmnToElkMapper {
                     val (w, h) = nodeDimensions(element)
                     elkNode.width = w
                     elkNode.height = h
-                    element.name?.takeIf { it.isNotBlank() }?.let { label ->
-                        val elkLabel = ElkGraphUtil.createLabel(label, elkNode)
-                        val (lw, lh) = labelDimensions(label)
-                        elkLabel.width = lw
-                        elkLabel.height = lh
-                    }
+                    // No ElkLabel — labels are owned by BpmnPlacementPass.
                     nodeMap[element.id] = elkNode
                 }
 
-                else -> Unit // TextAnnotation/Group are Artifacts, not FlowElements; handled separately
+                else -> Unit // TextAnnotation/Group are Artifacts, tracked separately
             }
         }
     }
 
-    private fun mapAnnotations(
+    /**
+     * Tracks TextAnnotations in [nodeMap] with their placeholder sizes.
+     * They are NOT added to the ELK graph — the placement pass positions them as
+     * sidecar geometry. The nodeMap entry lets the placement pass find their dimensions.
+     */
+    private fun trackAnnotations(
         model: BpmnModelInstance,
-        root: ElkNode,
         nodeMap: MutableMap<String, ElkNode>,
     ) {
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            val elkNode = ElkGraphUtil.createNode(root)
+            // Use a detached ElkNode (no parent) to carry the size info for the placement pass.
+            // It will NOT be in the ELK graph; the placement pass reads it from nodeMap.
+            val elkNode = ElkGraphUtil.createGraph() // detached root — just a size carrier
             elkNode.identifier = ann.id
             elkNode.width = ANNOTATION_WIDTH
             elkNode.height = ANNOTATION_HEIGHT
-            ann.text?.textContent?.takeIf { it.isNotBlank() }?.let { labelText ->
-                val lbl = ElkGraphUtil.createLabel(labelText, elkNode)
-                val (lw, lh) = labelDimensions(labelText)
-                lbl.width = lw
-                lbl.height = lh
-            }
             nodeMap[ann.id] = elkNode
         }
     }
 
-    private fun mapGroups(
+    /**
+     * Tracks Groups in [nodeMap] with their placeholder sizes (not in ELK graph).
+     */
+    private fun trackGroups(
         model: BpmnModelInstance,
-        root: ElkNode,
         nodeMap: MutableMap<String, ElkNode>,
     ) {
         for (group in model.getModelElementsByType(Group::class.java).sortedBy { it.id }) {
-            val elkNode = ElkGraphUtil.createNode(root)
+            val elkNode = ElkGraphUtil.createGraph() // detached root — size carrier only
             elkNode.identifier = group.id
             elkNode.width = GROUP_WIDTH
             elkNode.height = GROUP_HEIGHT
@@ -166,11 +174,18 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Pass 2: for each [BoundaryEvent], create a port on the host node and a sibling node
-     * in the host's container. The port anchors the exception edge; the sibling node
-     * receives its own DI shape from [ElkToBpmnDiWriter].
+     * Pass 2: for each [BoundaryEvent], create a SOUTH port on the host node and a
+     * sibling node in the host's container.
+     *
+     * Per AD-557-10: ALL boundary ports are SOUTH (not cycling through sides).
+     * ELK routes exception edges out the bottom of the host with crossing-minimisation.
+     * Multiple attachments on the same host all use SOUTH — the placement pass distributes
+     * their shapes evenly along the host's bottom edge in phase 2.
+     *
+     * The sibling node is needed so the exception edge's target (the handler) has a
+     * nodeMap entry; it also serves as a size carrier for phase-2 shape placement.
      */
-    @Suppress("ThrowsCount") // three distinct precondition failures: no host ref, host absent, host has no parent
+    @Suppress("ThrowsCount") // three distinct precondition failures
     private fun mapBoundaryEvents(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
@@ -185,18 +200,18 @@ internal object BpmnToElkMapper {
                 "ELK layout: boundary event '${be.id}' host '$hostId' not found in nodeMap",
             )
 
-            // Port on the host: side is SOUTH by default, rotated for additional attachments
-            val existingPorts = hostNode.ports.toList()
-            val portSide = assignBoundarySide(existingPorts)
+            // Port on the host: ALWAYS SOUTH (AD-557-10 — all exception edges exit bottom).
+            // Multiple attachments share SOUTH; the placement pass handles their shape distribution.
             val port = ElkGraphUtil.createPort(hostNode)
             port.identifier = "port_${be.id}"
             port.width = BOUNDARY_PORT_SIZE
             port.height = BOUNDARY_PORT_SIZE
             port.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
-            port.setProperty(CoreOptions.PORT_SIDE, portSide)
+            port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
             portMap[be.id] = port
 
-            // Sibling node in the host's container for DI shape placement
+            // Sibling node in the host's container — size carrier for phase-2 shape placement.
+            // Not used as an ELK layered node for routing; the port handles routing.
             val container = hostNode.parent ?: throw BpmnAutoLayoutException(
                 "ELK layout: host node '$hostId' has no parent container",
             )
@@ -204,12 +219,7 @@ internal object BpmnToElkMapper {
             beNode.identifier = be.id
             beNode.width = EVENT_SIZE
             beNode.height = EVENT_SIZE
-            be.name?.takeIf { it.isNotBlank() }?.let { label ->
-                val elkLabel = ElkGraphUtil.createLabel(label, beNode)
-                val (lw, lh) = labelDimensions(label)
-                elkLabel.width = lw
-                elkLabel.height = lh
-            }
+            // No ElkLabel — labels are owned by BpmnPlacementPass.
             nodeMap[be.id] = beNode
         }
     }
@@ -219,6 +229,8 @@ internal object BpmnToElkMapper {
      * (from [portMap]) as the source so ELK routes from the attachment point. For all other
      * sources uses the node from [nodeMap]. [ElkGraphUtil.createSimpleEdge] computes the
      * LCA container automatically.
+     *
+     * No edge labels are added to the ELK graph — edge labels are phase-2 responsibility.
      */
     private fun mapSequenceFlows(
         model: BpmnModelInstance,
@@ -236,26 +248,18 @@ internal object BpmnToElkMapper {
             val target: ElkConnectableShape = nodeMap[targetId]
                 ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' target '$targetId' not found")
 
+            // Skip edges to/from artifact tracker nodes (detached nodes with no parent in the ELK graph).
+            // A detached ElkNode (created with ElkGraphUtil.createGraph() for size-tracking only)
+            // has a null parent; real ELK graph nodes always have a parent.
+            val sourceIsArtifact = (source as? ElkNode)?.parent == null && source !is ElkPort
+            val targetIsArtifact = (target as? ElkNode)?.parent == null
+            if (sourceIsArtifact || targetIsArtifact) continue
+
             val elkEdge = ElkGraphUtil.createSimpleEdge(source, target)
             elkEdge.identifier = sf.id
-            sf.name?.takeIf { it.isNotBlank() }?.let { edgeLabel ->
-                val lbl = ElkGraphUtil.createLabel(edgeLabel, elkEdge)
-                val (lw, lh) = labelDimensions(edgeLabel)
-                lbl.width = lw
-                lbl.height = lh
-            }
+            // No edge label added here — phase 2 (BpmnPlacementPass) owns edge labels.
             edgeMap[sf.id] = elkEdge
         }
-    }
-
-    /**
-     * Assigns a deterministic side for a new boundary event port on a host node.
-     * First attachment: SOUTH. Additional attachments cycle EAST → NORTH → WEST.
-     */
-    private fun assignBoundarySide(existingPorts: List<ElkPort>): PortSide {
-        val usedSides = existingPorts.mapNotNull { it.getProperty(CoreOptions.PORT_SIDE) }.toSet()
-        return listOf(PortSide.SOUTH, PortSide.EAST, PortSide.NORTH, PortSide.WEST)
-            .firstOrNull { it !in usedSides } ?: PortSide.SOUTH
     }
 
     private fun applyRootLayoutOptions(root: ElkNode) {
@@ -266,6 +270,12 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
         root.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_NODE_SPACING)
         root.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
+        // omitNodeMicroLayout: prevents ELK from re-placing node-internal labels/ports —
+        // we supply node sizes ourselves (AD-557-10).
+        root.setProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT, true)
+        // separateConnectedComponents: disconnected subgraphs (e.g. exception paths) are
+        // laid out as separate components (AD-557-10 prior-art tables).
+        root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
     }
 
     private fun nodeDimensions(flowNode: FlowNode): Pair<Double, Double> {
@@ -277,16 +287,11 @@ internal object BpmnToElkMapper {
         }
     }
 
-    private fun labelDimensions(text: String): Pair<Double, Double> {
-        val width = (text.length * GLYPH_WIDTH).coerceAtLeast(LABEL_MIN_WIDTH)
-        return Pair(width, LABEL_HEIGHT)
-    }
-
     private const val RANDOM_SEED = 1
 
     private const val TASK_WIDTH = 100.0
     private const val TASK_HEIGHT = 80.0
-    private const val EVENT_SIZE = 36.0
+    internal const val EVENT_SIZE = 36.0
     private const val GATEWAY_SIZE = 50.0
     private const val ANNOTATION_WIDTH = 100.0
     private const val ANNOTATION_HEIGHT = 60.0
@@ -294,10 +299,6 @@ internal object BpmnToElkMapper {
     private const val GROUP_HEIGHT = 200.0
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
-
-    private const val GLYPH_WIDTH = 7.0
-    private const val LABEL_MIN_WIDTH = 20.0
-    private const val LABEL_HEIGHT = 14.0
 
     private const val NODE_NODE_SPACING = 30.0
     private const val EDGE_NODE_SPACING = 20.0

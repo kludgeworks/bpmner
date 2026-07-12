@@ -21,10 +21,16 @@ import java.io.ByteArrayOutputStream
  * and boundary events.
  *
  * Not annotated with @Service or @SecondaryAdapter; not wired into BpmnLayoutPort.
- * The GraalJS BpmnLayoutService is the sole production layout authority.
+ * The GraalJS BpmnLayoutService is the sole production layout authority (AD-557-08).
  *
- * Parses the input XML, removes existing BPMN-DI, runs ELK Layered layout via
- * [BpmnToElkMapper] and [ElkToBpmnDiWriter], then serializes the result.
+ * Implements the AD-557-10 skeleton-then-refine pipeline:
+ *   Phase 1a: [BpmnToElkMapper] builds a LEAN ELK graph (no labels; boundary events
+ *             as SOUTH ports).
+ *   Phase 1b: [RecursiveGraphLayoutEngine] runs ELK; output coordinates are immutable.
+ *   Phase 2:  [BpmnPlacementPass] applies BPMN placement conventions as named rules
+ *             (boundary shapes on host bottom, labels below nodes, baseline snap, etc.).
+ *   Phase 3:  [ElkToBpmnDiWriter] serialises the [BpmnPlacementPass.PlacedLayout] into
+ *             Camunda BPMN-DI.
  */
 internal class ElkBpmnLayouter {
 
@@ -38,9 +44,14 @@ internal class ElkBpmnLayouter {
     fun layout(xml: String): String {
         val model = parseXml(xml)
         removeExistingDi(model)
-        val result = BpmnToElkMapper.map(model)
-        RecursiveGraphLayoutEngine().layout(result.root, BasicProgressMonitor())
-        ElkToBpmnDiWriter.write(model, result)
+        // Phase 1a: build lean ELK skeleton
+        val skeleton = BpmnToElkMapper.map(model)
+        // Phase 1b: run ELK; skeleton.root now contains layout coordinates
+        RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
+        // Phase 2: apply BPMN placement conventions
+        val placed = BpmnPlacementPass.place(model, skeleton)
+        // Phase 3: write DI from PlacedLayout
+        ElkToBpmnDiWriter.write(model, placed)
         return serializeXml(model)
     }
 

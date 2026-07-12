@@ -5,15 +5,13 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
-import dev.groknull.bpmner.layout.BpmnAutoLayoutException
-import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkGraphResult
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.PlacedLayout
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Point
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.core.data.LayoutMetaDataService
-import org.eclipse.elk.core.options.CoreOptions
-import org.eclipse.elk.core.options.PortConstraints
-import org.eclipse.elk.core.options.PortSide
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.util.ElkGraphUtil
 import org.junit.jupiter.api.BeforeAll
@@ -24,14 +22,19 @@ import java.io.ByteArrayInputStream
 import java.io.StringReader
 import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.assertEquals
-import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
 
 /**
- * Layer 3: verifies [ElkToBpmnDiWriter] coordinate translation using manually constructed
- * ELK graphs with known geometry. Does NOT run the layout engine.
+ * Layer 3: verifies [ElkToBpmnDiWriter] serialisation using [PlacedLayout] objects with
+ * known geometry. Does NOT run the layout engine or placement pass.
  *
- * Every test builds a minimal ELK node tree, manually sets x/y/width/height as ELK would
- * after layout, then calls [ElkToBpmnDiWriter.write] and asserts the emitted DI.
+ * Every test builds a minimal [PlacedLayout] with hand-crafted geometry, calls
+ * [ElkToBpmnDiWriter.write], and asserts the emitted DI — isolating DI serialisation
+ * from placement decisions.
+ *
+ * Also tests that [ElkToBpmnDiWriter.absolutePosition] (delegating to [BpmnPlacementPass])
+ * accumulates parent ELK node offsets correctly.
  */
 class ElkToBpmnDiWriterTest {
 
@@ -62,21 +65,6 @@ class ElkToBpmnDiWriterTest {
   <bpmn:process id="Process_1" isExecutable="true">
     <bpmn:subProcess id="Sub_1">
       <bpmn:startEvent id="Child_1"/>
-    </bpmn:subProcess>
-  </bpmn:process>
-</bpmn:definitions>"""
-            return Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
-        }
-
-        private fun twoLevelSubprocessModel(): BpmnModelInstance {
-            val xml = """<?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
-                  id="D1" targetNamespace="https://groknull.dev/bpmner">
-  <bpmn:process id="Process_1" isExecutable="true">
-    <bpmn:subProcess id="Outer">
-      <bpmn:subProcess id="Inner">
-        <bpmn:startEvent id="Grandchild"/>
-      </bpmn:subProcess>
     </bpmn:subProcess>
   </bpmn:process>
 </bpmn:definitions>"""
@@ -120,6 +108,29 @@ class ElkToBpmnDiWriterTest {
             error("No BPMNShape found for bpmnElement='$bpmnElementId'")
         }
 
+        private fun labelBoundsOf(xml: String, bpmnElementId: String): Map<String, Double>? {
+            val doc = parseDoc(xml)
+            val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+            for (i in 0 until shapes.length) {
+                val shape = shapes.item(i) as org.w3c.dom.Element
+                if (shape.getAttribute("bpmnElement") == bpmnElementId) {
+                    val labels = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel")
+                    if (labels.length == 0) return null
+                    val label = labels.item(0) as org.w3c.dom.Element
+                    val bounds = label.getElementsByTagNameNS(DC_NS, "Bounds")
+                    if (bounds.length == 0) return null
+                    val b = bounds.item(0) as org.w3c.dom.Element
+                    return mapOf(
+                        "x" to b.getAttribute("x").toDouble(),
+                        "y" to b.getAttribute("y").toDouble(),
+                        "width" to b.getAttribute("width").toDouble(),
+                        "height" to b.getAttribute("height").toDouble(),
+                    )
+                }
+            }
+            return null
+        }
+
         private fun serialize(model: BpmnModelInstance): String {
             val out = java.io.ByteArrayOutputStream()
             Bpmn.writeModelToStream(out, model)
@@ -137,9 +148,17 @@ class ElkToBpmnDiWriterTest {
             node.height = h
             return root to node
         }
+
+        /** Minimal PlacedLayout with one shape and no labels/edges. */
+        private fun singleShape(id: String, x: Double, y: Double, w: Double, h: Double): PlacedLayout = PlacedLayout(
+            shapes = mapOf(id to Rect(x, y, w, h)),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = emptySet(),
+        )
     }
 
-    // ── absolutePosition ──────────────────────────────────────────────────────
+    // ── absolutePosition (shared helper, lives in BpmnPlacementPass) ──────────
 
     @Test
     fun `absolutePosition of top-level node is its own coordinates`() {
@@ -196,190 +215,164 @@ class ElkToBpmnDiWriterTest {
         assertEquals(80.0, ay, "grandchild absolute y = 50+20+10")
     }
 
-    // ── DI write-back: subprocess shapes ─────────────────────────────────────
+    // ── DI write-back: shape bounds from PlacedLayout ─────────────────────────
 
     @Test
-    fun `child shape bounds use absolute position not relative ELK coordinates`() {
-        val model = subprocessModel()
-        val root = ElkGraphUtil.createGraph()
-
-        val compound = ElkGraphUtil.createNode(root)
-        compound.identifier = "Sub_1"
-        compound.x = 100.0
-        compound.y = 50.0
-        compound.width = 300.0
-        compound.height = 200.0
-
-        val child = ElkGraphUtil.createNode(compound)
-        child.identifier = "Child_1"
-        child.x = 10.0
-        child.y = 20.0
-        child.width = 36.0
-        child.height = 36.0
-
-        val result = ElkGraphResult(root, mapOf("Sub_1" to compound, "Child_1" to child), emptyMap(), emptyMap())
-        ElkToBpmnDiWriter.write(model, result)
-        val xml = serialize(model)
-
-        val childBounds = boundsOf(xml, "Child_1")
-        assertEquals(110.0, childBounds["x"]!!, "Child_1 absolute x = 100+10")
-        assertEquals(70.0, childBounds["y"]!!, "Child_1 absolute y = 50+20")
-    }
-
-    @Test
-    fun `two-level nesting produces correct grandchild absolute position`() {
-        val model = twoLevelSubprocessModel()
-        val root = ElkGraphUtil.createGraph()
-
-        val outer = ElkGraphUtil.createNode(root)
-        outer.identifier = "Outer"
-        outer.x = 100.0
-        outer.y = 50.0
-        outer.width = 400.0
-        outer.height = 300.0
-
-        val inner = ElkGraphUtil.createNode(outer)
-        inner.identifier = "Inner"
-        inner.x = 20.0
-        inner.y = 20.0
-        inner.width = 200.0
-        inner.height = 160.0
-
-        val grandchild = ElkGraphUtil.createNode(inner)
-        grandchild.identifier = "Grandchild"
-        grandchild.x = 10.0
-        grandchild.y = 10.0
-        grandchild.width = 36.0
-        grandchild.height = 36.0
-
-        val result = ElkGraphResult(
-            root,
-            mapOf("Outer" to outer, "Inner" to inner, "Grandchild" to grandchild),
-            emptyMap(),
-            emptyMap(),
+    fun `shape bounds are written verbatim from PlacedLayout`() {
+        val model = minimalModel(
+            """<bpmn:startEvent id="S1"/>""",
         )
-        ElkToBpmnDiWriter.write(model, result)
+        val layout = singleShape("S1", 42.0, 55.0, 36.0, 36.0)
+        ElkToBpmnDiWriter.write(model, layout)
         val xml = serialize(model)
-
-        val gcBounds = boundsOf(xml, "Grandchild")
-        assertEquals(130.0, gcBounds["x"]!!, "Grandchild absolute x = 100+20+10")
-        assertEquals(80.0, gcBounds["y"]!!, "Grandchild absolute y = 50+20+10")
+        val b = boundsOf(xml, "S1")
+        assertEquals(42.0, b["x"]!!, "x")
+        assertEquals(55.0, b["y"]!!, "y")
+        assertEquals(36.0, b["width"]!!, "width")
+        assertEquals(36.0, b["height"]!!, "height")
     }
 
     @Test
     fun `subprocess BPMNShape has isExpanded true`() {
         val model = subprocessModel()
-        val root = ElkGraphUtil.createGraph()
-
-        val compound = ElkGraphUtil.createNode(root)
-        compound.identifier = "Sub_1"
-        compound.x = 100.0
-        compound.y = 50.0
-        compound.width = 300.0
-        compound.height = 200.0
-
-        val child = ElkGraphUtil.createNode(compound)
-        child.identifier = "Child_1"
-        child.x = 10.0
-        child.y = 20.0
-        child.width = 36.0
-        child.height = 36.0
-
-        val result = ElkGraphResult(root, mapOf("Sub_1" to compound, "Child_1" to child), emptyMap(), emptyMap())
-        ElkToBpmnDiWriter.write(model, result)
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "Sub_1" to Rect(0.0, 0.0, 200.0, 150.0),
+                "Child_1" to Rect(10.0, 10.0, 36.0, 36.0),
+            ),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = setOf("Sub_1"),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
         val xml = serialize(model)
-
         XmlAssert.assertThat(xml).withNamespaceContext(
             mapOf("bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI"),
         ).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Sub_1' and @isExpanded='true']").exist()
     }
 
-    // ── DI write-back: boundary event shapes ─────────────────────────────────
+    // ── DI write-back: label bounds from PlacedLayout (not element coords) ────
 
     @Test
-    fun `boundary event shape is positioned at host perimeter via port offset`() {
-        val model = boundaryModel()
-        val root = ElkGraphUtil.createGraph()
-
-        // Host node at absolute (200, 100)
-        val hostNode = ElkGraphUtil.createNode(root)
-        hostNode.identifier = "Task_1"
-        hostNode.x = 200.0
-        hostNode.y = 100.0
-        hostNode.width = 100.0
-        hostNode.height = 80.0
-
-        // Port on host representing the boundary attachment point at (45, 70) relative to host
-        val port = ElkGraphUtil.createPort(hostNode)
-        port.identifier = "port_Boundary_1"
-        port.x = 45.0
-        port.y = 70.0
-        port.width = 10.0
-        port.height = 10.0
-        port.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
-        port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
-
-        // Boundary event sibling node (size EVENT_SIZE x EVENT_SIZE = 36x36)
-        val beNode = ElkGraphUtil.createNode(root)
-        beNode.identifier = "Boundary_1"
-        beNode.x = 0.0
-        beNode.y = 0.0
-        beNode.width = 36.0
-        beNode.height = 36.0
-
-        val portMap = mapOf("Boundary_1" to port)
-        val nodeMap = mapOf("Task_1" to hostNode, "Boundary_1" to beNode)
-        val result = ElkGraphResult(root, nodeMap, portMap, emptyMap())
-        ElkToBpmnDiWriter.write(model, result)
+    fun `label bounds come from PlacedLayout not element own coordinates`() {
+        val model = minimalModel(
+            """<bpmn:startEvent id="S1" name="Start"/>""",
+        )
+        // Shape at (100, 50); label deliberately placed BELOW the shape
+        val layout = PlacedLayout(
+            shapes = mapOf("S1" to Rect(100.0, 50.0, 36.0, 36.0)),
+            labels = mapOf("S1" to Rect(55.0, 90.0, 90.0, 20.0)),
+            edges = emptyMap(),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
         val xml = serialize(model)
 
-        // Boundary centre = host abs (200,100) + port offset (45+5, 70+5) - half event (18,18)
-        // = (200+50-18, 100+75-18) = (232, 157)
-        // → shape top-left = (232, 157)
-        val beBounds = boundsOf(xml, "Boundary_1")
-        assertEquals(232.0, beBounds["x"]!!, "Boundary_1 x = host.x + port.x + port.w/2 - beW/2")
-        assertEquals(157.0, beBounds["y"]!!, "Boundary_1 y = host.y + port.y + port.h/2 - beH/2")
+        val labelBounds = labelBoundsOf(xml, "S1")
+        assertNotNull(labelBounds, "Label bounds should be present for named element")
+        // Label must be at (55,90), not at the shape's own (100,50)
+        assertEquals(55.0, labelBounds["x"]!!, "label x from PlacedLayout (not element x)")
+        assertEquals(90.0, labelBounds["y"]!!, "label y from PlacedLayout (not element y)")
+        assertEquals(90.0, labelBounds["width"]!!, "label width from PlacedLayout")
+        assertEquals(20.0, labelBounds["height"]!!, "label height from PlacedLayout")
     }
 
-    // ── (0,0) waypoint fallback replaced with exception ───────────────────────
+    @Test
+    fun `element without label in PlacedLayout gets no BPMNLabel child`() {
+        val model = minimalModel(
+            """<bpmn:startEvent id="S1" name="Start"/>""",
+        )
+        // No label entry in PlacedLayout
+        val layout = singleShape("S1", 100.0, 50.0, 36.0, 36.0)
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
+
+        val labelBounds = labelBoundsOf(xml, "S1")
+        assertTrue(labelBounds == null, "Element without label in PlacedLayout must not have BPMNLabel")
+    }
+
+    // ── DI write-back: boundary event shape from PlacedLayout ─────────────────
 
     @Test
-    fun `writeWaypoints throws BpmnAutoLayoutException when ELK edge has no section`() {
+    fun `boundary event shape uses PlacedLayout bounds directly`() {
+        val model = boundaryModel()
+        // Phase 2 already computed the boundary position — writer just serialises it
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "Task_1" to Rect(200.0, 100.0, 100.0, 80.0),
+                "Boundary_1" to Rect(232.0, 162.0, 36.0, 36.0), // placed on host bottom
+            ),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
+
+        val beBounds = boundsOf(xml, "Boundary_1")
+        assertEquals(232.0, beBounds["x"]!!, "Boundary_1 x from PlacedLayout")
+        assertEquals(162.0, beBounds["y"]!!, "Boundary_1 y from PlacedLayout (host bottom)")
+    }
+
+    // ── DI write-back: edge waypoints from PlacedLayout ─────────────────────
+
+    @Test
+    fun `sequence edge waypoints are written verbatim from PlacedLayout`() {
         val model = minimalModel(
             """<bpmn:startEvent id="S"><bpmn:outgoing>F</bpmn:outgoing></bpmn:startEvent>
                <bpmn:endEvent id="E"><bpmn:incoming>F</bpmn:incoming></bpmn:endEvent>
                <bpmn:sequenceFlow id="F" sourceRef="S" targetRef="E"/>""",
         )
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "S" to Rect(0.0, 0.0, 36.0, 36.0),
+                "E" to Rect(200.0, 0.0, 36.0, 36.0),
+            ),
+            labels = emptyMap(),
+            edges = mapOf("F" to listOf(Point(36.0, 18.0), Point(100.0, 18.0), Point(200.0, 18.0))),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
 
-        val root = ElkGraphUtil.createGraph()
-        val source = ElkGraphUtil.createNode(root)
-        source.identifier = "S"
-        source.x = 0.0
-        source.y = 0.0
-        source.width = 36.0
-        source.height = 36.0
-        val target = ElkGraphUtil.createNode(root)
-        target.identifier = "E"
-        target.x = 200.0
-        target.y = 0.0
-        target.width = 36.0
-        target.height = 36.0
+        val doc = parseDoc(xml)
+        val edges = doc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        var found = false
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as org.w3c.dom.Element
+            if (edge.getAttribute("bpmnElement") == "F") {
+                found = true
+                val wps = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
+                assertEquals(3, wps.length, "Expected 3 waypoints")
+                val wp0 = wps.item(0) as org.w3c.dom.Element
+                assertEquals(36.0, wp0.getAttribute("x").toDouble(), "wp0.x")
+                assertEquals(18.0, wp0.getAttribute("y").toDouble(), "wp0.y")
+            }
+        }
+        assertTrue(found, "BPMNEdge for F must exist")
+    }
 
-        // Manually create an edge with NO sections (simulates ELK producing no routing)
-        val sectionlessEdge = ElkGraphUtil.createEdge(root)
-        sectionlessEdge.identifier = "F"
-        sectionlessEdge.sources.add(source)
-        sectionlessEdge.targets.add(target)
-        // Do NOT add any sections — sections list remains empty
-
-        val nodeMap = mapOf("S" to source, "E" to target)
-        val edgeMap = mapOf("F" to sectionlessEdge)
-        val result = ElkGraphResult(root, nodeMap, emptyMap(), edgeMap)
-
-        assertFailsWith<BpmnAutoLayoutException>(
-            message = "Should throw when ELK edge has no routing section",
+    @Test
+    fun `missing sequence edge waypoints throws BpmnAutoLayoutException`() {
+        val model = minimalModel(
+            """<bpmn:startEvent id="S"><bpmn:outgoing>F</bpmn:outgoing></bpmn:startEvent>
+               <bpmn:endEvent id="E"><bpmn:incoming>F</bpmn:incoming></bpmn:endEvent>
+               <bpmn:sequenceFlow id="F" sourceRef="S" targetRef="E"/>""",
+        )
+        // No edge waypoints for F in PlacedLayout
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "S" to Rect(0.0, 0.0, 36.0, 36.0),
+                "E" to Rect(200.0, 0.0, 36.0, 36.0),
+            ),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = emptySet(),
+        )
+        kotlin.test.assertFailsWith<dev.groknull.bpmner.layout.BpmnAutoLayoutException>(
+            message = "Should throw when sequence flow has no waypoints in PlacedLayout",
         ) {
-            ElkToBpmnDiWriter.write(model, result)
+            ElkToBpmnDiWriter.write(model, layout)
         }
     }
 
@@ -388,22 +381,16 @@ class ElkToBpmnDiWriterTest {
     @Test
     fun `plane bpmnElement references the top-level Process not a subprocess`() {
         val model = subprocessModel()
-        val root = ElkGraphUtil.createGraph()
-        val compound = ElkGraphUtil.createNode(root)
-        compound.identifier = "Sub_1"
-        compound.x = 0.0
-        compound.y = 0.0
-        compound.width = 200.0
-        compound.height = 150.0
-        val child = ElkGraphUtil.createNode(compound)
-        child.identifier = "Child_1"
-        child.x = 10.0
-        child.y = 10.0
-        child.width = 36.0
-        child.height = 36.0
-
-        val result = ElkGraphResult(root, mapOf("Sub_1" to compound, "Child_1" to child), emptyMap(), emptyMap())
-        ElkToBpmnDiWriter.write(model, result)
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "Sub_1" to Rect(0.0, 0.0, 200.0, 150.0),
+                "Child_1" to Rect(10.0, 10.0, 36.0, 36.0),
+            ),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = setOf("Sub_1"),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
         val xml = serialize(model)
 
         XmlAssert.assertThat(xml).withNamespaceContext(

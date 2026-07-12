@@ -17,6 +17,9 @@ import kotlin.test.assertTrue
 /**
  * Layer 1: asserts ELK graph structure produced by [BpmnToElkMapper].
  * Does NOT run the layout engine — inspects the graph object model directly.
+ *
+ * Post AD-557-10 assertions: the lean skeleton has NO ElkLabels anywhere,
+ * all boundary ports are SOUTH, and SubProcesses are compound nodes.
  */
 class BpmnToElkMapperTest {
 
@@ -187,6 +190,66 @@ class BpmnToElkMapperTest {
         val normalEdge = result.edgeMap["Flow_normal"]
         assertNotNull(normalEdge, "Flow_normal must be in edgeMap")
         assertNull(result.portMap["Task_1"], "Task_1 must not be in portMap")
+    }
+
+    // ── AD-557-10 lean-skeleton assertions ────────────────────────────────────
+
+    @Test
+    fun `lean skeleton has NO ElkLabels on any node (labels are phase-2 responsibility)`() {
+        val xml = BOUNDARY_TIMER_XML
+        val model = parseXml(xml)
+        val result = BpmnToElkMapper.map(model)
+
+        // Walk every node in the ELK graph and assert no labels
+        fun assertNoLabels(node: org.eclipse.elk.graph.ElkNode, path: String) {
+            assertTrue(
+                node.labels.isEmpty(),
+                "ELK node '$path' must have no labels — labels are owned by BpmnPlacementPass",
+            )
+            for (child in node.children) assertNoLabels(child, "$path/${child.identifier}")
+        }
+        assertNoLabels(result.root, "root")
+    }
+
+    @Test
+    fun `all boundary event ports have PORT_SIDE SOUTH (not cycled)`() {
+        // Multi-boundary model so we can check that the 2nd port is also SOUTH
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:serviceTask id="Task_1">
+      <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ok"><bpmn:incoming>Flow_ok</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="End_A"><bpmn:incoming>Flow_A</bpmn:incoming></bpmn:endEvent>
+    <bpmn:endEvent id="End_B"><bpmn:incoming>Flow_B</bpmn:incoming></bpmn:endEvent>
+    <bpmn:boundaryEvent id="Boundary_A" attachedToRef="Task_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_A</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TD_A"/>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_B" attachedToRef="Task_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_B</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ED_B"/>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_ok" sourceRef="Task_1" targetRef="End_ok"/>
+    <bpmn:sequenceFlow id="Flow_A" sourceRef="Boundary_A" targetRef="End_A"/>
+    <bpmn:sequenceFlow id="Flow_B" sourceRef="Boundary_B" targetRef="End_B"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+        val model = parseXml(xml)
+        val result = BpmnToElkMapper.map(model)
+
+        for (boundaryId in listOf("Boundary_A", "Boundary_B")) {
+            val port = result.portMap[boundaryId]
+            assertNotNull(port, "$boundaryId must be in portMap")
+            val side = port.getProperty(org.eclipse.elk.core.options.CoreOptions.PORT_SIDE)
+            assertEquals(
+                org.eclipse.elk.core.options.PortSide.SOUTH,
+                side,
+                "Port for $boundaryId must be SOUTH (AD-557-10) not $side",
+            )
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

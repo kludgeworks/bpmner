@@ -20,6 +20,7 @@ fun main() {
         "subprocess-flat",
         "subprocess-nested",
         "subprocess-branch",
+        "subprocess-loop",
         "boundary-timer-task",
         "boundary-error-task",
         "boundary-multi",

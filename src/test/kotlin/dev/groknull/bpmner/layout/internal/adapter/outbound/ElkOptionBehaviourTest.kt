@@ -190,4 +190,107 @@ class ElkOptionBehaviourTest {
             "child.y=${child.y} should be relative to compound (< ${compound.height}), not absolute",
         )
     }
+
+    // ── AD-557-10 Phase-boundary risk: south-port routing proof ──────────────
+    // These two tests verify the empirical assumption that underpins AD-557-10:
+    // a FIXED_SIDE/SOUTH port on a flow node carries its exception edge with real
+    // routing sections (non-zero, non-null). If either test fails the architect
+    // must be consulted before proceeding (see PLAN-557-3.md Phase-boundary risk).
+
+    @Test
+    fun `SOUTH port exception edge produces non-empty routing sections`() {
+        // Simulates: host node (task) with a SOUTH boundary port → exception handler
+        val root = ElkGraphUtil.createGraph()
+        applyBaseOptions(root)
+        root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
+
+        val host = ElkGraphUtil.createNode(root)
+        host.width = 100.0
+        host.height = 80.0
+        host.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
+
+        val port = ElkGraphUtil.createPort(host)
+        port.width = 10.0
+        port.height = 10.0
+        port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
+
+        val handler = ElkGraphUtil.createNode(root)
+        handler.width = 100.0
+        handler.height = 80.0
+
+        // Edge from SOUTH port to handler — simulates the exception edge
+        val edge = ElkGraphUtil.createEdge(root)
+        edge.sources.add(port)
+        edge.targets.add(handler)
+
+        runLayout(root)
+
+        // The edge must have at least one routing section with non-zero coordinates
+        assertTrue(
+            edge.sections.isNotEmpty(),
+            "Exception edge from SOUTH port must have routing sections after layout",
+        )
+        val section = edge.sections.first()
+        val hasNonZero = section.startX != 0.0 ||
+            section.startY != 0.0 ||
+            section.endX != 0.0 ||
+            section.endY != 0.0
+        assertTrue(
+            hasNonZero,
+            "Exception edge section must have non-zero coordinates: " +
+                "start=(${section.startX},${section.startY}) end=(${section.endX},${section.endY})",
+        )
+    }
+
+    @Test
+    fun `cross-hierarchy SOUTH port edge (boundary on subprocess) produces routing sections`() {
+        // Simulates: boundary event on a subprocess host — the port is on the compound node,
+        // the exception handler is a root-level node, so the edge crosses hierarchy.
+        val root = ElkGraphUtil.createGraph()
+        applyBaseOptions(root)
+        root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+
+        val compound = ElkGraphUtil.createNode(root)
+        compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+        compound.setProperty(CoreOptions.PADDING, ElkPadding(30.0))
+        compound.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
+
+        val compoundPort = ElkGraphUtil.createPort(compound)
+        compoundPort.width = 10.0
+        compoundPort.height = 10.0
+        compoundPort.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
+
+        // Child inside compound
+        val child = ElkGraphUtil.createNode(compound)
+        child.width = 100.0
+        child.height = 80.0
+
+        // Handler at root level (cross-hierarchy target)
+        val handler = ElkGraphUtil.createNode(root)
+        handler.width = 100.0
+        handler.height = 80.0
+
+        // Cross-hierarchy exception edge from compound's SOUTH port to root handler
+        val crossEdge = ElkGraphUtil.createEdge(root)
+        crossEdge.sources.add(compoundPort)
+        crossEdge.targets.add(handler)
+
+        runLayout(root)
+
+        // The cross-hierarchy edge must have sections
+        assertTrue(
+            crossEdge.sections.isNotEmpty(),
+            "Cross-hierarchy exception edge from SOUTH port must have routing sections",
+        )
+        val section = crossEdge.sections.first()
+        val hasNonZero = section.startX != 0.0 ||
+            section.startY != 0.0 ||
+            section.endX != 0.0 ||
+            section.endY != 0.0
+        assertTrue(
+            hasNonZero,
+            "Cross-hierarchy edge section must have non-zero coordinates: " +
+                "start=(${section.startX},${section.startY}) end=(${section.endX},${section.endY})",
+        )
+    }
 }
