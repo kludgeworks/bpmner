@@ -206,18 +206,17 @@
         <di:waypoint x="644.0" y="242.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_lower_join" id="BPMNEdge_SubFlow_lower_join">
-        <di:waypoint x="694.0" y="202.0"/>
-        <di:waypoint x="694.0" y="168.66666666666666"/>
-        <di:waypoint x="859.0" y="168.66666666666666"/>
+        <di:waypoint x="744.0" y="242.0"/>
+        <di:waypoint x="859.0" y="242.0"/>
         <di:waypoint x="859.0" y="135.33333333333331"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper" id="BPMNEdge_SubFlow_upper">
-        <di:waypoint x="554.0" y="102.0"/>
-        <di:waypoint x="644.0" y="102.0"/>
+        <di:waypoint x="554.0" y="110.33333333333333"/>
+        <di:waypoint x="644.0" y="110.33333333333333"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper_join" id="BPMNEdge_SubFlow_upper_join">
-        <di:waypoint x="744.0" y="102.0"/>
-        <di:waypoint x="834.0" y="102.0"/>
+        <di:waypoint x="744.0" y="110.33333333333333"/>
+        <di:waypoint x="834.0" y="110.33333333333333"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

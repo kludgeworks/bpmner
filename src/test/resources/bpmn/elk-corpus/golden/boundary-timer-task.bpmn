@@ -79,9 +79,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
-        <dc:Bounds height="36.0" width="36.0" x="12.0" y="106.66666666666666"/>
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="90.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="144.66666666666666"/>
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="128.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_cancel" id="BPMNShape_Task_cancel">
@@ -91,9 +91,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
-        <dc:Bounds height="80.0" width="100.0" x="138.0" y="84.66666666666666"/>
+        <dc:Bounds height="80.0" width="100.0" x="138.0" y="68.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
-          <dc:Bounds height="20.0" width="90.0" x="143.0" y="166.66666666666666"/>
+          <dc:Bounds height="20.0" width="90.0" x="143.0" y="150.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
@@ -109,8 +109,8 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
-        <di:waypoint x="48.0" y="124.66666666666666"/>
-        <di:waypoint x="138.0" y="124.66666666666666"/>
+        <di:waypoint x="48.0" y="108.0"/>
+        <di:waypoint x="138.0" y="108.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
         <di:waypoint x="438.0" y="108.0"/>

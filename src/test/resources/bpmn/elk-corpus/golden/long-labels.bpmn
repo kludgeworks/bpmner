@@ -109,12 +109,11 @@
         <di:waypoint x="658.0" y="139.66666666666666"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_fail" id="BPMNEdge_Flow_fail">
-        <di:waypoint x="353.0" y="114.66666666666666"/>
-        <di:waypoint x="353.0" y="81.33333333333333"/>
-        <di:waypoint x="486.0" y="81.33333333333333"/>
+        <di:waypoint x="378.0" y="139.66666666666666"/>
+        <di:waypoint x="486.0" y="139.66666666666666"/>
         <di:waypoint x="486.0" y="48.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_fail">
-          <dc:Bounds height="20.0" width="90.0" x="374.5" y="57.33333333333333"/>
+          <dc:Bounds height="20.0" width="90.0" x="432.8333333333333" y="115.66666666666666"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">

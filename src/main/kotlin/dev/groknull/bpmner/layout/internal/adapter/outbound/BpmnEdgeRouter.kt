@@ -8,7 +8,10 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
+import org.camunda.bpm.model.bpmn.instance.SubProcess
+import org.camunda.bpm.model.xml.instance.ModelElementInstance
 
 private typealias Rect = BpmnPlacementPass.Rect
 private typealias Point = BpmnPlacementPass.Point
@@ -267,7 +270,6 @@ internal object BpmnEdgeRouter {
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
     ) {
-        val allBoxes = shapes.values.toList()
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val id = sf.id
             val s = shapes[sf.source?.id] ?: return@forEach
@@ -279,7 +281,7 @@ internal object BpmnEdgeRouter {
             val leftBox = if (s.x <= t.x) s else t
             val rightBox = if (s.x <= t.x) t else s
             val gap = Rect(leftBox.x + leftBox.w, sCy, rightBox.x - (leftBox.x + leftBox.w), 0.0)
-            if (gap.w > 0.0 && corridorClear(allBoxes, s, t, gap)) {
+            if (gap.w > 0.0 && corridorClear(model, shapes, s, t, gap)) {
                 edges[id] = listOf(Point(gap.x, sCy), Point(gap.x + gap.w, sCy))
             }
         }
@@ -289,16 +291,25 @@ internal object BpmnEdgeRouter {
      * True if no shape other than [s]/[t] intrudes on the horizontal corridor [gap] — a zero-height
      * rectangle at the row's centre Y spanning the x gap between the two shapes.
      */
-    private fun corridorClear(allBoxes: List<Rect>, s: Rect, t: Rect, gap: Rect): Boolean {
+    private fun corridorClear(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        s: Rect,
+        t: Rect,
+        gap: Rect,
+    ): Boolean {
         val gapR = gap.x + gap.w
-        return allBoxes.none { b ->
-            b !== s &&
-                b !== t &&
-                b.x < gapR &&
-                b.x + b.w > gap.x &&
-                // horizontally within the gap
-                b.y < gap.y + 1.0 &&
-                b.y + b.h > gap.y - 1.0 // vertically crosses the row
+        return shapes.entries.none { (id, b) ->
+            if (b === s || b === t) {
+                false
+            } else {
+                val isOverlappingX = b.x < gapR && b.x + b.w > gap.x
+                val isOverlappingY = b.y < gap.y + 1.0 && b.y + b.h > gap.y - 1.0
+                val isObstacle = isOverlappingX && isOverlappingY
+                val elem = model.getModelElementById<ModelElementInstance>(id)
+                val isContainer = elem is SubProcess || elem is Group
+                isObstacle && !isContainer
+            }
         }
     }
 
@@ -316,7 +327,11 @@ internal object BpmnEdgeRouter {
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
     ) {
-        val allBoxes = shapes.values.toList()
+        val nonContainers = shapes.filterKeys { id ->
+            val elem = model.getModelElementById<ModelElementInstance>(id)
+            elem !is SubProcess && elem !is Group
+        }
+        val allBoxes = nonContainers.values.toList()
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val id = sf.id
             if (id !in edges) return@forEach
@@ -407,19 +422,23 @@ internal object BpmnEdgeRouter {
             val tgtCx = t.x + t.w / 2.0
             val startY = s.y // source top
             val endY = t.y + t.h // target bottom edge
-            edges[id] = if (kotlin.math.abs(srcCx - tgtCx) < BpmnPlacementPass.POSITION_EPSILON) {
-                // Directly below: a single vertical rise into the bottom edge.
-                listOf(Point(srcCx, startY), Point(tgtCx, endY))
-            } else {
-                // Rise from the source, run across at a corridor between the two shapes, then step
-                // up into the target's bottom edge so the arrowhead points UP into the border.
-                val corridorY = (endY + startY) / 2.0
-                listOf(
-                    Point(srcCx, startY),
-                    Point(srcCx, corridorY),
-                    Point(tgtCx, corridorY),
-                    Point(tgtCx, endY),
-                )
+            edges[id] = when {
+                // Source is to the left: exit right edge, run horizontally to tgtCx, rise to target bottom
+                s.x + s.w <= tgtCx -> {
+                    val exitX = s.x + s.w
+                    val exitY = s.y + s.h / 2.0
+                    listOf(Point(exitX, exitY), Point(tgtCx, exitY), Point(tgtCx, endY))
+                }
+                // Source is to the right: exit left edge, run horizontally to tgtCx, rise to target bottom
+                s.x >= tgtCx -> {
+                    val exitX = s.x
+                    val exitY = s.y + s.h / 2.0
+                    listOf(Point(exitX, exitY), Point(tgtCx, exitY), Point(tgtCx, endY))
+                }
+                // Directly below or overlapping: a single vertical rise into the bottom edge.
+                else -> {
+                    listOf(Point(srcCx, startY), Point(tgtCx, endY))
+                }
             }
         }
     }

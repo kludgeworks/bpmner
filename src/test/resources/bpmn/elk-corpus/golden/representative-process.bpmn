@@ -158,9 +158,8 @@
         <di:waypoint x="988.0" y="60.33333333333333"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_join_fail" id="BPMNEdge_Flow_join_fail">
-        <di:waypoint x="708.0" y="152.0"/>
-        <di:waypoint x="708.0" y="118.66666666666666"/>
-        <di:waypoint x="873.0" y="118.66666666666666"/>
+        <di:waypoint x="758.0" y="192.0"/>
+        <di:waypoint x="873.0" y="192.0"/>
         <di:waypoint x="873.0" y="85.33333333333333"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_join_ok" id="BPMNEdge_Flow_join_ok">
