@@ -98,14 +98,15 @@ internal object BpmnPlacementPass {
         val expanded = mutableSetOf<String>()
 
         placeNodeShapes(model, skeleton, shapes, expanded)
-        val straddled = straddleSubprocessEnds(model, shapes)
+        val straddle = straddleSubprocessEnds(model, shapes)
         // AD-557-10: exception handlers must not sit on the primary baseline. Push each boundary's
         // exclusive exception subgraph below the main flow BEFORE routing, so its edges route down.
         val exceptionNodes = pushExceptionHandlersBelow(model, shapes)
         placeBoundaryShapes(model, skeleton, shapes)
         reconcileExceptionEdges(model, shapes, edges)
         placeSequenceEdgeWaypoints(model, skeleton, shapes, exceptionNodes, edges)
-        reattachStraddledEndEdges(model, shapes, edges, straddled)
+        reattachStraddledEndEdges(model, shapes, edges, straddle.movedEnds)
+        reanchorSubprocessExits(model, shapes, edges, straddle.subprocessEnd)
         placeLabels(model, shapes, edges, labels)
         placeArtifacts(model, skeleton, shapes)
         snapBaseline(model, shapes, exceptionNodes)
@@ -152,8 +153,9 @@ internal object BpmnPlacementPass {
     private fun straddleSubprocessEnds(
         model: BpmnModelInstance,
         shapes: MutableMap<String, Rect>,
-    ): Set<String> {
+    ): StraddleResult {
         val moved = mutableSetOf<String>()
+        val subprocessEnd = mutableMapOf<String, String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val subRect = shapes[sub.id] ?: return@forEach
             val rightBorder = subRect.x + subRect.w
@@ -166,10 +168,49 @@ internal object BpmnPlacementPass {
                     if (kotlin.math.abs(newX - r.x) > POSITION_EPSILON) {
                         shapes[end.id] = r.copy(x = newX)
                         moved.add(end.id)
+                        subprocessEnd[sub.id] = end.id
                     }
                 }
         }
-        return moved
+        return StraddleResult(moved, subprocessEnd)
+    }
+
+    /**
+     * @param movedEnds        end events relocated onto their container's right border.
+     * @param subprocessEnd    subprocess id -> the straddling end event on its right border.
+     */
+    private data class StraddleResult(
+        val movedEnds: Set<String>,
+        val subprocessEnd: Map<String, String>,
+    )
+
+    /**
+     * A sequence flow leaving a subprocess is routed by ELK from the subprocess box's right edge,
+     * but visually a straddling end event ("Done") sits on that edge — so the flow should appear to
+     * start from that end event's RIGHT edge, not the container border. Re-anchor the first
+     * waypoint of each such flow to the straddling end event's right edge at its centre height.
+     */
+    private fun reanchorSubprocessExits(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+        subprocessEnd: Map<String, String>,
+    ) {
+        if (subprocessEnd.isEmpty()) return
+        model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { it.source?.id in subprocessEnd.keys }
+            .forEach { sf ->
+                val endId = subprocessEnd[sf.source?.id] ?: return@forEach
+                val endRect = shapes[endId] ?: return@forEach
+                val wps = edges[sf.id]?.toMutableList() ?: return@forEach
+                if (wps.size < 2) return@forEach
+                val exitX = endRect.x + endRect.w
+                val exitY = endRect.y + endRect.h / 2.0
+                wps[0] = Point(exitX, exitY)
+                // Keep the second point's Y aligned so the first segment stays horizontal.
+                wps[1] = Point(wps[1].x, exitY)
+                edges[sf.id] = wps
+            }
     }
 
     /**
@@ -488,24 +529,31 @@ internal object BpmnPlacementPass {
     }
 
     /**
-     * Clean orthogonal (L-shaped) route between two shapes' borders. Exits [from] horizontally
-     * toward [to], then turns vertically to enter [to]. Used when a shape has been relocated
-     * (exception lane) so ELK's original route no longer applies.
+     * Clean orthogonal route between two shapes' borders. Exits [from] on the side facing [to]
+     * and, crucially, ENTERS [to] on its near vertical edge (left if [to] is to the right, right
+     * if to the left) at [to]'s centre height — so the arrowhead lands on the target's border,
+     * not in its middle. Used when a shape has been relocated (exception lane) so ELK's original
+     * route no longer applies.
      */
     private fun routeOrthogonalBetween(from: Rect, to: Rect): List<Point> {
+        val fromCx = from.x + from.w / 2.0
         val fromCy = from.y + from.h / 2.0
-        val toCx = to.x + to.w / 2.0
         val toCy = to.y + to.h / 2.0
-        val exitRight = toCx >= from.x + from.w / 2.0
+        val exitRight = to.x + to.w / 2.0 >= fromCx
         val startX = if (exitRight) from.x + from.w else from.x
-        // Horizontal out of source at its centre height, vertical down/up, into target top/bottom.
-        val enterTop = toCy >= fromCy
-        val endY = if (enterTop) to.y else to.y + to.h
-        return listOf(
-            Point(startX, fromCy),
-            Point(toCx, fromCy),
-            Point(toCx, endY),
-        )
+        // Enter the target on the vertical edge facing the source, at the target's centre height.
+        val endX = if (exitRight) to.x else to.x + to.w
+        // Exit source horizontally at its centre height, run vertically at the target's near-edge
+        // x to the target's centre height, then a short horizontal stub into the target edge.
+        return if (kotlin.math.abs(fromCy - toCy) < POSITION_EPSILON) {
+            listOf(Point(startX, fromCy), Point(endX, toCy))
+        } else {
+            listOf(
+                Point(startX, fromCy),
+                Point(endX, fromCy),
+                Point(endX, toCy),
+            )
+        }
     }
 
     // ── Named rule 5: labels below nodes / at edge-waypoint mid ───────────────

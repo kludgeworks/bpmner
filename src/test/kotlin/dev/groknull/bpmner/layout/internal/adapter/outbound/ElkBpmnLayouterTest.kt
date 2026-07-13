@@ -8,10 +8,7 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
-import org.xml.sax.InputSource
 import org.xmlunit.assertj.XmlAssert
-import java.io.StringReader
-import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -190,6 +187,61 @@ class ElkBpmnLayouterTest {
     fun `exception flow first waypoint is near boundary event centre`() {
         val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
         assertExceptionEdgeNearBoundary(result, "Flow_timeout", "Boundary_timer")
+    }
+
+    // ── Edge endpoints land on the target's border, not its centre ────────────
+
+    @Test
+    fun `exception-lane edges end on the target event's near border not its centre`() {
+        val result = layouter.layout(loadCorpus("boundary-multi.bpmn"))
+        val doc = parseXmlDoc(result)
+        // Handle Error -> Failed (End_error) and Cancel Order -> Cancelled (End_timeout).
+        assertEdgeEndsOnBorder(doc, "Flow_4", "End_error")
+        assertEdgeEndsOnBorder(doc, "Flow_3", "End_timeout")
+    }
+
+    @Test
+    fun `timer exception edge ends on the target event's border`() {
+        val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
+        val doc = parseXmlDoc(result)
+        assertEdgeEndsOnBorder(doc, "Flow_3", "End_timeout")
+    }
+
+    /** The last waypoint of [edgeId] must lie on the border of [targetId], not inside it. */
+    private fun assertEdgeEndsOnBorder(doc: org.w3c.dom.Document, edgeId: String, targetId: String) {
+        val t = shapeBounds(doc, targetId)
+        val end = edgeWaypoints(doc, edgeId).last()
+        val left = t["x"]!!
+        val right = left + t["width"]!!
+        val top = t["y"]!!
+        val bottom = top + t["height"]!!
+        val cx = left + t["width"]!! / 2.0
+        val cy = top + t["height"]!! / 2.0
+        // On the border = within tolerance of an edge line AND not near the centre.
+        val onVertical = (kotlin.math.abs(end.first - left) < 2.0 || kotlin.math.abs(end.first - right) < 2.0) &&
+            end.second in (top - 2.0)..(bottom + 2.0)
+        val onHorizontal = (kotlin.math.abs(end.second - top) < 2.0 || kotlin.math.abs(end.second - bottom) < 2.0) &&
+            end.first in (left - 2.0)..(right + 2.0)
+        val distToCentre = Math.hypot(end.first - cx, end.second - cy)
+        assertTrue(
+            (onVertical || onHorizontal) && distToCentre > 5.0,
+            "Edge '$edgeId' end $end must be on the border of '$targetId' [$left,$top,$right,$bottom], not its centre",
+        )
+    }
+
+    @Test
+    fun `subprocess exit flow starts from the straddling end event's right edge`() {
+        val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
+        val doc = parseXmlDoc(result)
+        // Flow_from_sub is SubProcess_1 -> Task_after; visually it must start from Done (SubEnd_1).
+        val done = shapeBounds(doc, "SubEnd_1")
+        val start = edgeWaypoints(doc, "Flow_from_sub").first()
+        val doneRight = done["x"]!! + done["width"]!!
+        val doneCy = done["y"]!! + done["height"]!! / 2.0
+        assertTrue(
+            kotlin.math.abs(start.first - doneRight) < 3.0 && kotlin.math.abs(start.second - doneCy) < 3.0,
+            "Flow_from_sub must start at Done's right edge ($doneRight,$doneCy), not the subprocess box; was $start",
+        )
     }
 
     // ── Exception-lane invariants (AD-557-10: handler not on primary baseline) ──
@@ -516,19 +568,7 @@ class ElkBpmnLayouterTest {
         }
     }
 
-    private fun edgeWaypoints(doc: org.w3c.dom.Document, edgeId: String): List<Pair<Double, Double>> {
-        val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
-        for (i in 0 until edges.length) {
-            val edge = edges.item(i) as org.w3c.dom.Element
-            if (edge.getAttribute("bpmnElement") != edgeId) continue
-            val wps = edge.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DI", "waypoint")
-            return (0 until wps.length).map {
-                val wp = wps.item(it) as org.w3c.dom.Element
-                wp.getAttribute("x").toDouble() to wp.getAttribute("y").toDouble()
-            }
-        }
-        error("Edge $edgeId not found")
-    }
+    private fun edgeWaypoints(doc: org.w3c.dom.Document, edgeId: String) = LayoutDiInspector.edgeWaypoints(doc, edgeId)
 
     private fun assertWaypointNearShape(
         doc: org.w3c.dom.Document,
@@ -570,25 +610,7 @@ class ElkBpmnLayouterTest {
         )
     }
 
-    private fun shapeBounds(doc: org.w3c.dom.Document, bpmnElementId: String): Map<String, Double> {
-        val shapes = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
-        for (i in 0 until shapes.length) {
-            val shape = shapes.item(i) as org.w3c.dom.Element
-            if (shape.getAttribute("bpmnElement") == bpmnElementId) {
-                val bounds = shape.getElementsByTagNameNS(
-                    "http://www.omg.org/spec/DD/20100524/DC",
-                    "Bounds",
-                ).item(0) as org.w3c.dom.Element
-                return mapOf(
-                    "x" to bounds.getAttribute("x").toDouble(),
-                    "y" to bounds.getAttribute("y").toDouble(),
-                    "width" to bounds.getAttribute("width").toDouble(),
-                    "height" to bounds.getAttribute("height").toDouble(),
-                )
-            }
-        }
-        error("No BPMNShape found for bpmnElement='$bpmnElementId'")
-    }
+    private fun shapeBounds(doc: org.w3c.dom.Document, bpmnElementId: String) = LayoutDiInspector.shapeBounds(doc, bpmnElementId)
 
     // ── Existing helpers ──────────────────────────────────────────────────────
 
@@ -712,13 +734,9 @@ class ElkBpmnLayouterTest {
         return results
     }
 
-    private fun parseXmlDoc(xml: String) = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
-        .newDocumentBuilder()
-        .parse(InputSource(StringReader(xml)))
+    private fun parseXmlDoc(xml: String) = LayoutDiInspector.parse(xml)
 
-    private fun loadCorpus(filename: String): String = javaClass.classLoader.getResourceAsStream("bpmn/elk-corpus/$filename")
-        ?.use { it.readBytes().toString(Charsets.UTF_8) }
-        ?: error("Corpus fixture not found: bpmn/elk-corpus/$filename")
+    private fun loadCorpus(filename: String): String = LayoutDiInspector.loadCorpus(javaClass.classLoader, filename)
 
     private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml).withNamespaceContext(
         mapOf(
