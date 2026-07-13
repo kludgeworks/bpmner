@@ -115,6 +115,10 @@ internal object BpmnToElkMapper {
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
                     compound.setProperty(CoreOptions.PADDING, ElkPadding(SUBPROCESS_PADDING))
+                    // Spacing options do not propagate from the root to child graphs, so the same
+                    // label-clearing spacing (Bug A) must be set on each compound node too, or the
+                    // inner flow packs tight and its labels collide (e.g. subprocess-loop).
+                    applyFlowSpacing(compound)
                     // No ElkLabel on the compound — labels are owned by BpmnPlacementPass.
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children
@@ -268,22 +272,31 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
-        // Spacing must leave room for the external labels the placement pass adds below each
-        // node (90x20). ELK does not see those labels (they are phase-2), so we widen its
-        // spacing to reserve the space itself:
-        //  - in-layer (vertical for RIGHT): a node's below-label must clear the node beneath it.
-        //  - between-layer (horizontal): a node's 90px-wide centred label must not reach the
-        //    next layer's node, and edges must be long enough to be visible.
-        root.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_NODE_SPACING)
-        root.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
-        root.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
-        root.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_BETWEEN_LAYERS)
+        applyFlowSpacing(root)
         // omitNodeMicroLayout: prevents ELK from re-placing node-internal labels/ports —
         // we supply node sizes ourselves (AD-557-10).
         root.setProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT, true)
         // separateConnectedComponents: disconnected subgraphs (e.g. exception paths) are
         // laid out as separate components (AD-557-10 prior-art tables).
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
+    }
+
+    /**
+     * Applies node/edge spacing that leaves room for the external labels the placement pass adds
+     * below each node (90x20). ELK does not see those labels (they are phase-2), so its spacing is
+     * widened to reserve the space itself:
+     *  - in-layer (vertical for RIGHT): a node's below-label must clear the node beneath it.
+     *  - between-layer (horizontal): a node's 90px-wide centred label must not reach the next
+     *    layer's node, and edges must be long enough to be visible.
+     *
+     * Must be applied to the root AND to every subprocess compound node, because ELK spacing does
+     * not propagate from a parent graph to its child graphs.
+     */
+    private fun applyFlowSpacing(node: ElkNode) {
+        node.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_NODE_SPACING)
+        node.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
+        node.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
+        node.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_BETWEEN_LAYERS)
     }
 
     private fun nodeDimensions(flowNode: FlowNode): Pair<Double, Double> {

@@ -74,8 +74,8 @@ internal object BpmnPlacementPass {
     /** Vertical gap between a node's bottom edge and the top of its external label. */
     internal const val LABEL_GAP_BELOW = 2.0
 
-    /** Horizontal indent for edge labels from the waypoint midpoint (bpmn-js convention). */
-    internal const val EDGE_LABEL_INDENT = 15.0
+    /** Vertical gap between an edge label's bottom and the edge it sits above. */
+    internal const val EDGE_LABEL_GAP_ABOVE = 4.0
 
     /** Half of EVENT_SIZE — used for boundary straddle offset. */
     private const val BOUNDARY_HALF = BpmnToElkMapper.EVENT_SIZE / 2.0
@@ -513,7 +513,8 @@ internal object BpmnPlacementPass {
     /**
      * Places label bounds using the bpmn-js DEFAULT_LABEL_SIZE (90×20) convention:
      * - Node labels: centred below the node shape (x = shape.cx - 45, y = shape.bottom + gap).
-     * - Edge labels: at the midpoint of the edge waypoints, offset by indent.
+     * - Edge labels: centred on the true geometric midpoint of the edge polyline, nudged just
+     *   above the edge, so the label sits on the line it describes and never on a node.
      *
      * Never copies the element's own coordinates — this is the direct fix for
      * BLOCK-557-3 symptom 1 (labels colliding with their nodes).
@@ -535,16 +536,42 @@ internal object BpmnPlacementPass {
                 labels[flowNode.id] = Rect(labelX, labelY, LABEL_WIDTH, LABEL_HEIGHT)
             }
 
-        // Sequence-flow edge labels at waypoint midpoint
+        // Sequence-flow edge labels centred on the polyline midpoint, just above the edge.
         model.getModelElementsByType(SequenceFlow::class.java)
             .filter { !it.name.isNullOrBlank() }
             .sortedBy { it.id }
             .forEach { sf ->
                 val wps = edges[sf.id]?.takeIf { it.size >= 2 } ?: return@forEach
-                val mid = wps[wps.size / 2]
-                labels[sf.id] = Rect(mid.x + EDGE_LABEL_INDENT, mid.y, LABEL_WIDTH, LABEL_HEIGHT)
+                val mid = polylineMidpoint(wps)
+                labels[sf.id] = Rect(
+                    mid.x - LABEL_WIDTH / 2.0,
+                    mid.y - LABEL_HEIGHT - EDGE_LABEL_GAP_ABOVE,
+                    LABEL_WIDTH,
+                    LABEL_HEIGHT,
+                )
             }
     }
+
+    /** The point halfway along the total length of a polyline. */
+    private fun polylineMidpoint(wps: List<Point>): Point {
+        val total = (1 until wps.size).sumOf { i -> dist(wps[i - 1], wps[i]) }
+        if (total == 0.0) return wps.first()
+        var remaining = total / 2.0
+        for (i in 1 until wps.size) {
+            val seg = dist(wps[i - 1], wps[i])
+            if (remaining <= seg) {
+                val t = if (seg == 0.0) 0.0 else remaining / seg
+                return Point(
+                    wps[i - 1].x + (wps[i].x - wps[i - 1].x) * t,
+                    wps[i - 1].y + (wps[i].y - wps[i - 1].y) * t,
+                )
+            }
+            remaining -= seg
+        }
+        return wps.last()
+    }
+
+    private fun dist(a: Point, b: Point): Double = kotlin.math.hypot(b.x - a.x, b.y - a.y)
 
     // ── Named rule 6: artifacts as sidecar geometry ───────────────────────────
 

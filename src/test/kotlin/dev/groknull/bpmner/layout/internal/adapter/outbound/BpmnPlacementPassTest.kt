@@ -385,14 +385,20 @@ class BpmnPlacementPassTest {
         val labelRect = layout.labels["Flow_1"]
         assertNotNull(labelRect, "Named sequence flow must have a label")
 
-        // Label must be near the edge midpoint (not at node coordinates)
+        // Label must be centred on the true geometric midpoint of the edge polyline, not at a
+        // node. Edge runs (36,58)->(200,58): true mid x = 118; label (90 wide) centred there.
         val edgeWps = layout.edges["Flow_1"] ?: error("Flow_1 must have waypoints")
-        assertTrue(edgeWps.isNotEmpty())
-        val midIdx = edgeWps.size / 2
-        val midX = edgeWps[midIdx].x
+        assertTrue(edgeWps.size >= 2)
+        val trueMidX = (edgeWps.first().x + edgeWps.last().x) / 2.0
+        val labelCentreX = labelRect.x + labelRect.w / 2.0
         assertTrue(
-            abs(labelRect.x - midX) < 50.0,
-            "Edge label x (${labelRect.x}) should be near waypoint mid-x ($midX)",
+            abs(labelCentreX - trueMidX) < 20.0,
+            "Edge label centre x ($labelCentreX) should be near the true edge midpoint ($trueMidX)",
+        )
+        // The label must not sit on the target node E1 (x=200): its right edge stays left of E1.
+        assertTrue(
+            labelRect.x + labelRect.w < e1.x,
+            "Edge label (right=${labelRect.x + labelRect.w}) must not overlap target node E1 (x=${e1.x})",
         )
     }
 
