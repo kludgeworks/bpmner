@@ -99,13 +99,16 @@ internal object BpmnPlacementPass {
 
         placeNodeShapes(model, skeleton, shapes, expanded)
         val straddled = straddleSubprocessEnds(model, shapes)
+        // AD-557-10: exception handlers must not sit on the primary baseline. Push each boundary's
+        // exclusive exception subgraph below the main flow BEFORE routing, so its edges route down.
+        val exceptionNodes = pushExceptionHandlersBelow(model, shapes)
         placeBoundaryShapes(model, skeleton, shapes)
         reconcileExceptionEdges(model, shapes, edges)
-        placeSequenceEdgeWaypoints(model, skeleton, edges)
+        placeSequenceEdgeWaypoints(model, skeleton, shapes, exceptionNodes, edges)
         reattachStraddledEndEdges(model, shapes, edges, straddled)
         placeLabels(model, shapes, edges, labels)
         placeArtifacts(model, skeleton, shapes)
-        snapBaseline(model, shapes)
+        snapBaseline(model, shapes, exceptionNodes)
         placeAssociationEdges(model, shapes, edges)
 
         return PlacedLayout(shapes, labels, edges, expanded)
@@ -195,6 +198,106 @@ internal object BpmnPlacementPass {
                 wps[wps.size - 2] = Point(prev.x, entryY)
                 edges[sf.id] = wps
             }
+    }
+
+    // ── Named rule 1c: exception handlers below the primary baseline ──────────
+
+    /**
+     * AD-557-10: "the placement pass ensures [the handler] is not on the primary baseline."
+     *
+     * Identifies each boundary event's exclusive exception subgraph — nodes reachable from the
+     * boundary that are NOT reachable from a start event without passing through a boundary — and
+     * shifts those shapes down so they sit below the main flow. This keeps error/exception paths
+     * off the happy-path line and lets their edges route downward (never up through the host).
+     *
+     * A node shared with the main flow (e.g. a rejoin target reachable from the start) is left in
+     * place; only nodes exclusive to the exception path are moved.
+     *
+     * Returns the set of moved (exception) node IDs so later passes can treat them specially.
+     */
+    private fun pushExceptionHandlersBelow(
+        model: BpmnModelInstance,
+        shapes: MutableMap<String, Rect>,
+    ): Set<String> {
+        val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
+            .mapTo(mutableSetOf()) { it.id }
+        if (boundaryIds.isEmpty()) return emptySet()
+
+        val successors = buildSuccessorMap(model)
+        val mainFlow = reachableMainFlow(model, successors, boundaryIds)
+        val exceptionNodes = reachableExceptionNodes(successors, boundaryIds, mainFlow)
+        if (exceptionNodes.isEmpty()) return emptySet()
+
+        shiftExceptionNodesBelow(shapes, mainFlow, exceptionNodes)
+        return exceptionNodes
+    }
+
+    /** Sequence-flow adjacency: source id -> list of target ids. */
+    private fun buildSuccessorMap(model: BpmnModelInstance): Map<String, List<String>> {
+        val successors = mutableMapOf<String, MutableList<String>>()
+        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+            val s = sf.source?.id ?: return@forEach
+            val t = sf.target?.id ?: return@forEach
+            successors.getOrPut(s) { mutableListOf() }.add(t)
+        }
+        return successors
+    }
+
+    /**
+     * Breadth-first reachable set from [seeds] over [successors]. A node is visited if [accept]
+     * returns true for it; only accepted nodes are expanded further. Returns all accepted nodes.
+     */
+    private fun reachable(
+        seeds: Collection<String>,
+        successors: Map<String, List<String>>,
+        accept: (String) -> Boolean,
+    ): Set<String> {
+        val visited = mutableSetOf<String>()
+        val stack = ArrayDeque(seeds)
+        while (stack.isNotEmpty()) {
+            val id = stack.removeLast()
+            if (id in visited || !accept(id)) continue
+            visited.add(id)
+            stack.addAll(successors[id].orEmpty())
+        }
+        return visited
+    }
+
+    /** Nodes reachable from any start event without traversing a boundary event. */
+    private fun reachableMainFlow(
+        model: BpmnModelInstance,
+        successors: Map<String, List<String>>,
+        boundaryIds: Set<String>,
+    ): Set<String> {
+        val starts = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java)
+            .map { it.id }
+        return reachable(starts, successors) { it !in boundaryIds }
+    }
+
+    /** Nodes reachable from a boundary event that are not part of the main flow. */
+    private fun reachableExceptionNodes(
+        successors: Map<String, List<String>>,
+        boundaryIds: Set<String>,
+        mainFlow: Set<String>,
+    ): Set<String> {
+        val seeds = boundaryIds.flatMap { successors[it].orEmpty() }
+        return reachable(seeds, successors) { it !in mainFlow && it !in boundaryIds }
+    }
+
+    /** Shifts all exception-node shapes down so their top clears the main flow's bottom. */
+    private fun shiftExceptionNodesBelow(
+        shapes: MutableMap<String, Rect>,
+        mainFlow: Set<String>,
+        exceptionNodes: Set<String>,
+    ) {
+        val mainBottom = shapes.filterKeys { it in mainFlow }.values.maxOfOrNull { it.y + it.h } ?: return
+        val exTop = shapes.filterKeys { it in exceptionNodes }.values.minOfOrNull { it.y } ?: return
+        val shift = (mainBottom + EXCEPTION_LANE_GAP) - exTop
+        if (shift > 0.0) {
+            exceptionNodes.forEach { id ->
+                shapes[id]?.let { r -> shapes[id] = r.copy(y = r.y + shift) }
+            }
+        }
     }
 
     // ── Named rule 2: boundary shapes on host bottom edge ─────────────────────
@@ -341,11 +444,18 @@ internal object BpmnPlacementPass {
 
     /**
      * For non-exception sequence flows, copies ELK routing sections as waypoints.
-     * Exception edges are already handled by [reconcileExceptionEdges].
+     * Exception edges (boundary→handler) are already handled by [reconcileExceptionEdges].
+     *
+     * Any flow whose source or target was moved into the exception lane
+     * ([pushExceptionHandlersBelow]) is re-routed with a clean orthogonal path from the source's
+     * border to the target's border, because ELK's original section no longer matches the moved
+     * shapes (and would otherwise cut across the main flow).
      */
     private fun placeSequenceEdgeWaypoints(
         model: BpmnModelInstance,
         skeleton: ElkSkeleton,
+        shapes: Map<String, Rect>,
+        exceptionNodes: Set<String>,
         edges: MutableMap<String, List<Point>>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
@@ -355,6 +465,17 @@ internal object BpmnPlacementPass {
             .filter { it.source?.id !in boundaryIds && it.id !in edges }
             .sortedBy { it.id }
             .forEach { sf ->
+                val srcId = sf.source?.id
+                val tgtId = sf.target?.id
+                val touchesMoved = srcId in exceptionNodes || tgtId in exceptionNodes
+                if (touchesMoved && srcId != null && tgtId != null) {
+                    val s = shapes[srcId]
+                    val t = shapes[tgtId]
+                    if (s != null && t != null) {
+                        edges[sf.id] = routeOrthogonalBetween(s, t)
+                        return@forEach
+                    }
+                }
                 val elkEdge = skeleton.edgeMap[sf.id] ?: return@forEach
                 val section = elkEdge.sections.firstOrNull() ?: return@forEach
                 // ELK edge coordinates are relative to the edge's containing (LCA) node.
@@ -364,6 +485,27 @@ internal object BpmnPlacementPass {
                 waypoints.add(Point(section.endX + ox, section.endY + oy))
                 edges[sf.id] = waypoints
             }
+    }
+
+    /**
+     * Clean orthogonal (L-shaped) route between two shapes' borders. Exits [from] horizontally
+     * toward [to], then turns vertically to enter [to]. Used when a shape has been relocated
+     * (exception lane) so ELK's original route no longer applies.
+     */
+    private fun routeOrthogonalBetween(from: Rect, to: Rect): List<Point> {
+        val fromCy = from.y + from.h / 2.0
+        val toCx = to.x + to.w / 2.0
+        val toCy = to.y + to.h / 2.0
+        val exitRight = toCx >= from.x + from.w / 2.0
+        val startX = if (exitRight) from.x + from.w else from.x
+        // Horizontal out of source at its centre height, vertical down/up, into target top/bottom.
+        val enterTop = toCy >= fromCy
+        val endY = if (enterTop) to.y else to.y + to.h
+        return listOf(
+            Point(startX, fromCy),
+            Point(toCx, fromCy),
+            Point(toCx, endY),
+        )
     }
 
     // ── Named rule 5: labels below nodes / at edge-waypoint mid ───────────────
@@ -513,8 +655,10 @@ internal object BpmnPlacementPass {
     private fun snapBaseline(
         model: BpmnModelInstance,
         shapes: MutableMap<String, Rect>,
+        exceptionNodes: Set<String>,
     ) {
-        // Collect non-boundary, non-artifact flow-node shapes
+        // Collect non-boundary, non-artifact, non-exception flow-node shapes. Exception-lane
+        // nodes were deliberately pushed below the baseline and must not be snapped back up.
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
         val artifactIds = (
@@ -525,7 +669,12 @@ internal object BpmnPlacementPass {
             .mapTo(mutableSetOf()) { it.id }
 
         val primaryCandidates = model.getModelElementsByType(FlowNode::class.java)
-            .filter { it.id !in boundaryIds && it.id !in artifactIds && it.id !in subprocessIds }
+            .filter {
+                it.id !in boundaryIds &&
+                    it.id !in artifactIds &&
+                    it.id !in subprocessIds &&
+                    it.id !in exceptionNodes
+            }
             .mapNotNull { fn ->
                 val s = shapes[fn.id] ?: return@mapNotNull null
                 fn.id to (s.y + s.h / 2.0) // centre Y
@@ -565,11 +714,34 @@ internal object BpmnPlacementPass {
             .forEach { assoc ->
                 val sourceRect = shapes[assoc.source?.id] ?: return@forEach
                 val targetRect = shapes[assoc.target?.id] ?: return@forEach
+                // Attach the connector at each shape's border facing the other shape, not the centre.
                 edges[assoc.id] = listOf(
-                    Point(sourceRect.x + sourceRect.w / 2.0, sourceRect.y + sourceRect.h / 2.0),
-                    Point(targetRect.x + targetRect.w / 2.0, targetRect.y + targetRect.h / 2.0),
+                    borderPoint(sourceRect, targetRect),
+                    borderPoint(targetRect, sourceRect),
                 )
             }
+    }
+
+    /**
+     * Returns the point on [rect]'s border that faces [toward] — the intersection of the border
+     * with the line from [rect]'s centre to [toward]'s centre. Used so connectors start/end on
+     * shape edges, never in the middle of a node.
+     */
+    private fun borderPoint(rect: Rect, toward: Rect): Point {
+        val cx = rect.x + rect.w / 2.0
+        val cy = rect.y + rect.h / 2.0
+        val tx = toward.x + toward.w / 2.0
+        val ty = toward.y + toward.h / 2.0
+        val dx = tx - cx
+        val dy = ty - cy
+        if (dx == 0.0 && dy == 0.0) return Point(cx, cy)
+        // Scale the direction vector to hit the nearest border (half-width / half-height).
+        val hw = rect.w / 2.0
+        val hh = rect.h / 2.0
+        val scaleX = if (dx != 0.0) hw / kotlin.math.abs(dx) else Double.MAX_VALUE
+        val scaleY = if (dy != 0.0) hh / kotlin.math.abs(dy) else Double.MAX_VALUE
+        val scale = kotlin.math.min(scaleX, scaleY)
+        return Point(cx + dx * scale, cy + dy * scale)
     }
 
     // ── Shared coordinate helper ──────────────────────────────────────────────
@@ -615,6 +787,9 @@ internal object BpmnPlacementPass {
     private const val ARTIFACT_MARGIN = 30.0
     private const val BASELINE_BUCKET = 5.0
     private const val BASELINE_TOLERANCE = 15.0
+
+    /** Vertical gap between the main flow's bottom and the top of the exception lane. */
+    private const val EXCEPTION_LANE_GAP = 40.0
 
     /** Padding between a group box and the flow bounding box it encloses. */
     private const val GROUP_PADDING = 25.0

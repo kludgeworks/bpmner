@@ -192,6 +192,51 @@ class ElkBpmnLayouterTest {
         assertExceptionEdgeNearBoundary(result, "Flow_timeout", "Boundary_timer")
     }
 
+    // ── Exception-lane invariants (AD-557-10: handler not on primary baseline) ──
+
+    @Test
+    fun `error handler is below the main flow baseline not inline with it`() {
+        val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
+        val doc = parseXmlDoc(result)
+        // Task_process, Task_confirm, End_1 are main flow; Task_handle is the exception handler.
+        val host = shapeBounds(doc, "Task_process")
+        val handler = shapeBounds(doc, "Task_handle")
+        val hostCy = host["y"]!! + host["height"]!! / 2.0
+        val handlerCy = handler["y"]!! + handler["height"]!! / 2.0
+        assertTrue(
+            handlerCy > hostCy + host["height"]!! / 2.0,
+            "Exception handler 'Task_handle' (cy=$handlerCy) must be below the host baseline (cy=$hostCy)",
+        )
+    }
+
+    @Test
+    fun `timer exception handler is below the main flow baseline`() {
+        val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
+        val doc = parseXmlDoc(result)
+        val host = shapeBounds(doc, "Task_process")
+        val handler = shapeBounds(doc, "Task_cancel")
+        val hostBottom = host["y"]!! + host["height"]!!
+        val handlerCy = handler["y"]!! + handler["height"]!! / 2.0
+        assertTrue(handlerCy > hostBottom, "Timer handler 'Task_cancel' must be below the host bottom")
+    }
+
+    @Test
+    fun `exception edge does not pass through its host node`() {
+        val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
+        val doc = parseXmlDoc(result)
+        val host = shapeBounds(doc, "Task_process")
+        val wps = edgeWaypoints(doc, "Flow_error")
+        // No waypoint may lie strictly inside the host box (edge must route around/below it).
+        val hostL = host["x"]!!
+        val hostR = hostL + host["width"]!!
+        val hostT = host["y"]!!
+        val hostB = hostT + host["height"]!!
+        for ((x, y) in wps) {
+            val inside = x > hostL + 1 && x < hostR - 1 && y > hostT + 1 && y < hostB - 1
+            assertTrue(!inside, "Flow_error waypoint ($x,$y) must not be inside host box [$hostL,$hostT,$hostR,$hostB]")
+        }
+    }
+
     // ── Label invariants: labels below nodes (AD-557-10 named rule 5) ─────────
 
     @Test
