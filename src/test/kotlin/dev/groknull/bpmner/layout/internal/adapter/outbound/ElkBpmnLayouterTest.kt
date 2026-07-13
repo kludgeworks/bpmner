@@ -261,26 +261,38 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `text annotation and group shapes do not overlap each other`() {
+    fun `group box encloses the whole process flow`() {
         val result = layouter.layout(loadCorpus("annotation-and-group.bpmn"))
         val doc = parseXmlDoc(result)
-        // Anno_1 and Group_1 are unrelated artifacts; their shapes must not overlap.
-        val anno = shapeBounds(doc, "Anno_1")
+        // A BPMN group is a visual box drawn AROUND a region — it must enclose the flow nodes,
+        // not float empty in a corner. Every flow-node shape must lie inside the group box.
         val group = shapeBounds(doc, "Group_1")
-        val overlap = rectsOverlap(anno, group)
-        assertTrue(!overlap, "Annotation and Group shapes must not overlap: anno=$anno group=$group")
+        for (id in listOf("Start_1", "Task_1", "Task_2", "End_1")) {
+            val node = shapeBounds(doc, id)
+            assertTrue(
+                node["x"]!! >= group["x"]!! &&
+                    node["y"]!! >= group["y"]!! &&
+                    node["x"]!! + node["width"]!! <= group["x"]!! + group["width"]!! &&
+                    node["y"]!! + node["height"]!! <= group["y"]!! + group["height"]!!,
+                "Flow node '$id' ($node) must be enclosed by the group box ($group)",
+            )
+        }
     }
 
-    private fun rectsOverlap(a: Map<String, Double>, b: Map<String, Double>): Boolean {
-        val aL = a["x"]!!
-        val aR = aL + a["width"]!!
-        val aT = a["y"]!!
-        val aB = aT + a["height"]!!
-        val bL = b["x"]!!
-        val bR = bL + b["width"]!!
-        val bT = b["y"]!!
-        val bB = bT + b["height"]!!
-        return aL < bR && aR > bL && aT < bB && aB > bT
+    @Test
+    fun `text annotation is placed near its associated task`() {
+        val result = layouter.layout(loadCorpus("annotation-and-group.bpmn"))
+        val doc = parseXmlDoc(result)
+        // Anno_1 is associated with Task_1; its shape should sit near Task_1 (short connector),
+        // not dumped in a far corner.
+        val anno = shapeBounds(doc, "Anno_1")
+        val task = shapeBounds(doc, "Task_1")
+        val annoCx = anno["x"]!! + anno["width"]!! / 2.0
+        val annoCy = anno["y"]!! + anno["height"]!! / 2.0
+        val taskCx = task["x"]!! + task["width"]!! / 2.0
+        val taskCy = task["y"]!! + task["height"]!! / 2.0
+        val dist = Math.hypot(annoCx - taskCx, annoCy - taskCy)
+        assertTrue(dist < 250.0, "Annotation must be near its associated task Task_1; dist=$dist")
     }
 
     @Test

@@ -423,7 +423,6 @@ internal object BpmnPlacementPass {
         shapes: MutableMap<String, Rect>,
     ) {
         val skeletonBottom = shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
-        val skeletonLeft = shapes.values.minOfOrNull { it.x } ?: 0.0
 
         // Map each annotation to the element it is associated with (if any).
         val annotationHost = mutableMapOf<String, String>()
@@ -437,7 +436,7 @@ internal object BpmnPlacementPass {
         }
 
         placeAnnotations(model, skeleton, shapes, annotationHost, skeletonBottom)
-        placeGroups(model, skeleton, shapes, skeletonLeft, skeletonBottom)
+        placeGroups(model, shapes)
     }
 
     private fun placeAnnotations(
@@ -470,22 +469,35 @@ internal object BpmnPlacementPass {
 
     private fun placeGroups(
         model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
         shapes: MutableMap<String, Rect>,
-        skeletonLeft: Double,
-        skeletonBottom: Double,
     ) {
-        // Groups sit below everything else (including annotations) so nothing overlaps.
-        val artifactsBottom = shapes.values.maxOfOrNull { it.y + it.h } ?: skeletonBottom
-        var groupX = skeletonLeft
-        val groupY = artifactsBottom + ARTIFACT_MARGIN
-        model.getModelElementsByType(Group::class.java)
-            .sortedBy { it.id }
-            .forEach { group ->
-                val elkNode = skeleton.nodeMap[group.id] ?: return@forEach
-                shapes[group.id] = Rect(groupX, groupY, elkNode.width, elkNode.height)
-                groupX += elkNode.width + ARTIFACT_MARGIN
-            }
+        val groups = model.getModelElementsByType(Group::class.java).sortedBy { it.id }
+        if (groups.isEmpty()) return
+
+        // A BPMN group is a visual box drawn AROUND a region of the diagram — its purpose is to
+        // enclose related elements, not to sit empty in a corner. With no per-element membership
+        // in the retained profile, we enclose the whole flow: draw each group as a padded box
+        // around the bounding box of the flow-node shapes (events, tasks, gateways, subprocesses).
+        // Multiple groups nest concentrically with increasing padding so they remain distinct.
+        val flowNodeIds = model.getModelElementsByType(FlowNode::class.java)
+            .mapTo(mutableSetOf()) { it.id }
+        val flowShapes = shapes.filterKeys { it in flowNodeIds }.values
+        if (flowShapes.isEmpty()) return
+
+        val minX = flowShapes.minOf { it.x }
+        val minY = flowShapes.minOf { it.y }
+        val maxX = flowShapes.maxOf { it.x + it.w }
+        val maxY = flowShapes.maxOf { it.y + it.h }
+
+        groups.forEachIndexed { index, group ->
+            val pad = GROUP_PADDING + index * GROUP_NEST_STEP
+            shapes[group.id] = Rect(
+                minX - pad,
+                minY - pad,
+                (maxX - minX) + 2 * pad,
+                (maxY - minY) + 2 * pad,
+            )
+        }
     }
 
     // ── Named rule 7: baseline snap ───────────────────────────────────────────
@@ -603,4 +615,10 @@ internal object BpmnPlacementPass {
     private const val ARTIFACT_MARGIN = 30.0
     private const val BASELINE_BUCKET = 5.0
     private const val BASELINE_TOLERANCE = 15.0
+
+    /** Padding between a group box and the flow bounding box it encloses. */
+    private const val GROUP_PADDING = 25.0
+
+    /** Extra padding per additional group so multiple groups nest concentrically, not overlap. */
+    private const val GROUP_NEST_STEP = 15.0
 }
