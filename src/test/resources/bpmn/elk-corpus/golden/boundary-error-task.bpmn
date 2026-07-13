@@ -93,9 +93,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Boundary_error" id="BPMNShape_Boundary_error">
-        <dc:Bounds height="36.0" width="36.0" x="170.0" y="141.66666666666666"/>
+        <dc:Bounds height="36.0" width="36.0" x="170.0" y="143.33333333333331"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_error">
-          <dc:Bounds height="20.0" width="90.0" x="143.0" y="179.66666666666666"/>
+          <dc:Bounds height="20.0" width="90.0" x="143.0" y="181.33333333333331"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
@@ -107,7 +107,7 @@
         <di:waypoint x="718.0" y="121.33333333333333"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_error" id="BPMNEdge_Flow_error">
-        <di:waypoint x="188.0" y="177.66666666666666"/>
+        <di:waypoint x="188.0" y="179.33333333333331"/>
         <di:waypoint x="188.0" y="241.33333333333331"/>
         <di:waypoint x="338.0" y="241.33333333333331"/>
       </bpmndi:BPMNEdge>

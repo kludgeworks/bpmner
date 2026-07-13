@@ -114,7 +114,15 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-                    compound.setProperty(CoreOptions.PADDING, ElkPadding(SUBPROCESS_PADDING))
+                    compound.setProperty(
+                        CoreOptions.PADDING,
+                        ElkPadding(
+                            SUBPROCESS_TOP_PADDING,
+                            SUBPROCESS_PADDING,
+                            SUBPROCESS_PADDING,
+                            SUBPROCESS_PADDING,
+                        ),
+                    )
                     // Spacing options do not propagate from the root to child graphs, so the same
                     // label-clearing spacing (Bug A) must be set on each compound node too, or the
                     // inner flow packs tight and its labels collide (e.g. subprocess-loop).
@@ -318,6 +326,7 @@ internal object BpmnToElkMapper {
     private const val ANNOTATION_HEIGHT = 60.0
     private const val GROUP_WIDTH = 300.0
     private const val GROUP_HEIGHT = 200.0
+    internal const val SUBPROCESS_TOP_PADDING = 90.0
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
 

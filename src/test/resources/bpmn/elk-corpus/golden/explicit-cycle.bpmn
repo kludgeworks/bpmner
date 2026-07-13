@@ -82,7 +82,7 @@
         <di:waypoint x="378.0" y="47.0"/>
         <di:waypoint x="468.0" y="47.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="20.0" width="90.0" x="378.0" y="23.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="363.0" y="23.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
@@ -91,7 +91,7 @@
         <di:waypoint x="188.0" y="-23.0"/>
         <di:waypoint x="188.0" y="7.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="90.0" x="233.0" y="-47.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="218.0" y="-47.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

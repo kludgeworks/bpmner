@@ -8,6 +8,7 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.Gateway
 import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
@@ -71,6 +72,7 @@ internal object BpmnEdgeRouter {
         edges: MutableMap<String, List<Point>>,
     ) {
         reconcileExceptionEdges(model, shapes, edges)
+        routeGatewayBranches(model, shapes, edges)
         placeSequenceEdgeWaypoints(model, skeleton, shapes, hints.exceptionNodes, edges)
         straightenClearHorizontalEdges(model, shapes, edges)
         reattachStraddledEndEdges(model, shapes, edges, hints.straddle.movedEnds)
@@ -207,6 +209,52 @@ internal object BpmnEdgeRouter {
                 Point(startX, targetCy),
                 Point(endX, targetCy),
             )
+        }
+    }
+
+    private fun routeGatewayBranches(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+    ) {
+        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+            val srcId = sf.source?.id ?: return@forEach
+            val tgtId = sf.target?.id ?: return@forEach
+            val s = shapes[srcId] ?: return@forEach
+            val t = shapes[tgtId] ?: return@forEach
+            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
+            if (srcElement is Gateway) {
+                computeGatewayBranchRoute(s, t)?.let { route ->
+                    edges[sf.id] = route
+                }
+            }
+        }
+    }
+
+    private fun computeGatewayBranchRoute(s: Rect, t: Rect): List<Point>? {
+        val startX = s.x + s.w / 2.0
+        val targetCy = t.y + t.h / 2.0
+        val isTargetBelow = t.y >= s.y + s.h - BpmnPlacementPass.POSITION_EPSILON
+        val isTargetAbove = t.y + t.h <= s.y + BpmnPlacementPass.POSITION_EPSILON
+
+        return when {
+            isTargetBelow -> {
+                val startY = s.y + s.h
+                when {
+                    t.x >= startX -> listOf(Point(startX, startY), Point(startX, targetCy), Point(t.x, targetCy))
+                    t.x + t.w <= startX -> listOf(Point(startX, startY), Point(startX, targetCy), Point(t.x + t.w, targetCy))
+                    else -> listOf(Point(startX, startY), Point(startX, t.y))
+                }
+            }
+            isTargetAbove -> {
+                val startY = s.y
+                when {
+                    t.x >= startX -> listOf(Point(startX, startY), Point(startX, targetCy), Point(t.x, targetCy))
+                    t.x + t.w <= startX -> listOf(Point(startX, startY), Point(startX, targetCy), Point(t.x + t.w, targetCy))
+                    else -> listOf(Point(startX, startY), Point(startX, t.y + t.h))
+                }
+            }
+            else -> null
         }
     }
 

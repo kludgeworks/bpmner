@@ -68,6 +68,9 @@ internal object BpmnPlacementPass {
     /** bpmn-js DEFAULT_LABEL_SIZE width (see bpmn-js lib/util/LabelUtil.js). */
     internal const val LABEL_WIDTH = 90.0
 
+    /** Width of sequence-flow edge labels, widened to prevent text wrapping/splitting. */
+    internal const val EDGE_LABEL_WIDTH = 120.0
+
     /** bpmn-js DEFAULT_LABEL_SIZE height. */
     internal const val LABEL_HEIGHT = 20.0
 
@@ -102,10 +105,10 @@ internal object BpmnPlacementPass {
         // AD-557-10: exception handlers must not sit on the primary baseline. Push each boundary's
         // exclusive exception subgraph below the main flow BEFORE routing, so its edges route down.
         val exceptionNodes = pushExceptionHandlersBelow(model, shapes)
-        placeBoundaryShapes(model, skeleton, shapes)
-        // Snap the primary flow to one baseline BEFORE routing edges, so co-row shapes share an
-        // exact centre Y and straight-line straightening can recognise a clear horizontal corridor.
+        // Snap the primary flow to one baseline BEFORE placing boundary shapes, so boundaries are placed
+        // relative to the snapped host positions.
         snapBaseline(model, shapes, exceptionNodes)
+        placeBoundaryShapes(model, skeleton, shapes)
         BpmnEdgeRouter.route(
             model,
             skeleton,
@@ -164,14 +167,18 @@ internal object BpmnPlacementPass {
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val subRect = shapes[sub.id] ?: return@forEach
             val rightBorder = subRect.x + subRect.w
+            val subCenterY = subRect.y + subRect.h / 2.0
             sub.flowElements
                 .filterIsInstance<org.camunda.bpm.model.bpmn.instance.EndEvent>()
                 .forEach { end ->
                     val r = shapes[end.id] ?: return@forEach
-                    // Centre the end event on the subprocess right border.
+                    // Centre the end event on the subprocess right border (horizontally and vertically).
                     val newX = rightBorder - r.w / 2.0
-                    if (kotlin.math.abs(newX - r.x) > POSITION_EPSILON) {
-                        shapes[end.id] = r.copy(x = newX)
+                    val newY = subCenterY - r.h / 2.0
+                    val isMovedX = kotlin.math.abs(newX - r.x) > POSITION_EPSILON
+                    val isMovedY = kotlin.math.abs(newY - r.y) > POSITION_EPSILON
+                    if (isMovedX || isMovedY) {
+                        shapes[end.id] = r.copy(x = newX, y = newY)
                         moved.add(end.id)
                         subprocessEnd[sub.id] = end.id
                     }
@@ -407,9 +414,9 @@ internal object BpmnPlacementPass {
                 val wps = edges[sf.id]?.takeIf { it.size >= 2 } ?: return@forEach
                 val mid = BpmnEdgeRouter.polylineMidpoint(wps)
                 labels[sf.id] = Rect(
-                    mid.x - LABEL_WIDTH / 2.0,
+                    mid.x - EDGE_LABEL_WIDTH / 2.0,
                     mid.y - LABEL_HEIGHT - EDGE_LABEL_GAP_ABOVE,
-                    LABEL_WIDTH,
+                    EDGE_LABEL_WIDTH,
                     LABEL_HEIGHT,
                 )
             }
