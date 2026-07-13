@@ -86,6 +86,9 @@ internal object BpmnPlacementPass {
     /** Sub-pixel threshold below which a position change is treated as no-op. */
     private const val POSITION_EPSILON = 0.5
 
+    /** Max centre-Y difference for two shapes to count as sharing a horizontal row. */
+    private const val SAME_ROW_TOLERANCE = 3.0
+
     /** Minimum snap delta below which baseline adjustment is skipped (sub-pixel). */
     private const val BASELINE_SNAP_EPSILON = 0.01
 
@@ -103,13 +106,16 @@ internal object BpmnPlacementPass {
         // exclusive exception subgraph below the main flow BEFORE routing, so its edges route down.
         val exceptionNodes = pushExceptionHandlersBelow(model, shapes)
         placeBoundaryShapes(model, skeleton, shapes)
+        // Snap the primary flow to one baseline BEFORE routing edges, so co-row shapes share an
+        // exact centre Y and straight-line straightening can recognise a clear horizontal corridor.
+        snapBaseline(model, shapes, exceptionNodes)
         reconcileExceptionEdges(model, shapes, edges)
         placeSequenceEdgeWaypoints(model, skeleton, shapes, exceptionNodes, edges)
+        straightenClearHorizontalEdges(model, shapes, edges)
         reattachStraddledEndEdges(model, shapes, edges, straddle.movedEnds)
         reanchorSubprocessExits(model, shapes, edges, straddle.subprocessEnd)
         placeLabels(model, shapes, edges, labels)
         placeArtifacts(model, skeleton, shapes)
-        snapBaseline(model, shapes, exceptionNodes)
         placeAssociationEdges(model, shapes, edges)
 
         return PlacedLayout(shapes, labels, edges, expanded)
@@ -526,6 +532,56 @@ internal object BpmnPlacementPass {
                 waypoints.add(Point(section.endX + ox, section.endY + oy))
                 edges[sf.id] = waypoints
             }
+    }
+
+    /**
+     * Straightens any sequence flow whose endpoints sit on the same horizontal row with a clear
+     * corridor between them, replacing a stale ELK detour with a direct border-to-border line.
+     *
+     * ELK routes around obstacles; when the placement pass later relocates a node (e.g. pushes an
+     * exception handler down into its own lane), an edge ELK had routed *around* that node keeps
+     * its now-pointless detour. This pass detects the case — source and target share a centre Y,
+     * are horizontally separated, and no other placed shape's box intrudes on that row between
+     * them — and draws a straight horizontal line instead.
+     */
+    private fun straightenClearHorizontalEdges(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+    ) {
+        val allBoxes = shapes.values.toList()
+        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+            val id = sf.id
+            val s = shapes[sf.source?.id] ?: return@forEach
+            val t = shapes[sf.target?.id] ?: return@forEach
+            if (id !in edges) return@forEach
+            val sCy = s.y + s.h / 2.0
+            // Treat near-aligned rows as the same row (small ELK jitter tolerated).
+            if (kotlin.math.abs(sCy - (t.y + t.h / 2.0)) > SAME_ROW_TOLERANCE) return@forEach
+            val leftBox = if (s.x <= t.x) s else t
+            val rightBox = if (s.x <= t.x) t else s
+            val gap = Rect(leftBox.x + leftBox.w, sCy, rightBox.x - (leftBox.x + leftBox.w), 0.0)
+            if (gap.w > 0.0 && corridorClear(allBoxes, s, t, gap)) {
+                edges[id] = listOf(Point(gap.x, sCy), Point(gap.x + gap.w, sCy))
+            }
+        }
+    }
+
+    /**
+     * True if no shape other than [s]/[t] intrudes on the horizontal corridor [gap] — a zero-height
+     * rectangle at the row's centre Y spanning the x gap between the two shapes.
+     */
+    private fun corridorClear(allBoxes: List<Rect>, s: Rect, t: Rect, gap: Rect): Boolean {
+        val gapR = gap.x + gap.w
+        return allBoxes.none { b ->
+            b !== s &&
+                b !== t &&
+                b.x < gapR &&
+                b.x + b.w > gap.x &&
+                // horizontally within the gap
+                b.y < gap.y + 1.0 &&
+                b.y + b.h > gap.y - 1.0 // vertically crosses the row
+        }
     }
 
     /**

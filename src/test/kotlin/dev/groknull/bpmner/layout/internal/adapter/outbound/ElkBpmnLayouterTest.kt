@@ -244,6 +244,20 @@ class ElkBpmnLayouterTest {
         )
     }
 
+    @Test
+    fun `main-flow edge between two co-row nodes with a clear corridor is a straight line`() {
+        // Task_process -> Task_confirm sit on the same row with nothing between them (the error
+        // handler is on its own lane below). The edge must be a straight 2-point horizontal line.
+        val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
+        val doc = parseXmlDoc(result)
+        val wps = edgeWaypoints(doc, "Flow_normal")
+        assertEquals(2, wps.size, "Flow_normal must be a straight line (2 waypoints), was $wps")
+        assertTrue(
+            kotlin.math.abs(wps.first().second - wps.last().second) < 1.0,
+            "Flow_normal must be horizontal (equal y at both ends), was $wps",
+        )
+    }
+
     // ── Exception-lane invariants (AD-557-10: handler not on primary baseline) ──
 
     @Test
