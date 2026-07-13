@@ -110,10 +110,10 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_fail" id="BPMNEdge_Flow_fail">
         <di:waypoint x="378.0" y="139.66666666666666"/>
-        <di:waypoint x="486.0" y="30.0"/>
-        <di:waypoint x="468.0" y="30.0"/>
+        <di:waypoint x="486.0" y="139.66666666666666"/>
+        <di:waypoint x="486.0" y="48.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_fail">
-          <dc:Bounds height="20.0" width="120.0" x="378.3150472654934" y="54.420831634730476"/>
+          <dc:Bounds height="20.0" width="120.0" x="417.8333333333333" y="115.66666666666666"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">

@@ -114,10 +114,11 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+                    val topPadding = if (hasLoop(element)) SUBPROCESS_TOP_PADDING else SUBPROCESS_PADDING
                     compound.setProperty(
                         CoreOptions.PADDING,
                         ElkPadding(
-                            SUBPROCESS_TOP_PADDING,
+                            topPadding,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
@@ -341,4 +342,30 @@ internal object BpmnToElkMapper {
 
     private const val EDGE_NODE_SPACING = 25.0
     private const val EDGE_NODE_BETWEEN_LAYERS = 25.0
+
+    private fun hasLoop(sub: SubProcess): Boolean {
+        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
+        val adj = mutableMapOf<String, MutableList<String>>()
+        flows.forEach { sf ->
+            val s = sf.source?.id ?: return@forEach
+            val t = sf.target?.id ?: return@forEach
+            adj.getOrPut(s) { mutableListOf() }.add(t)
+        }
+        val visited = mutableSetOf<String>()
+        val stack = mutableSetOf<String>()
+
+        fun dfs(node: String): Boolean {
+            if (node in stack) return true
+            if (node in visited) return false
+            visited.add(node)
+            stack.add(node)
+            for (next in adj[node].orEmpty()) {
+                if (dfs(next)) return true
+            }
+            stack.remove(node)
+            return false
+        }
+
+        return adj.keys.any { dfs(it) }
+    }
 }

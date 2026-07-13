@@ -71,17 +71,18 @@ internal object BpmnEdgeRouter {
         hints: RoutingHints,
         edges: MutableMap<String, List<Point>>,
     ) {
-        reconcileExceptionEdges(model, shapes, edges)
-        routeGatewayBranches(model, shapes, edges)
+        val customRouted = mutableSetOf<String>()
+        reconcileExceptionEdges(model, shapes, edges, customRouted)
+        routeGatewayBranches(model, shapes, edges, customRouted)
         placeSequenceEdgeWaypoints(model, skeleton, shapes, hints.exceptionNodes, edges)
         straightenClearHorizontalEdges(model, shapes, edges)
-        reattachStraddledEndEdges(model, shapes, edges, hints.straddle.movedEnds)
-        reanchorSubprocessExits(model, shapes, edges, hints.straddle.subprocessEnd)
+        reattachStraddledEndEdges(model, shapes, edges, hints.straddle.movedEnds, customRouted)
+        reanchorSubprocessExits(model, shapes, edges, hints.straddle.subprocessEnd, customRouted)
         // BPMN convention: edges rising from a below node merge into the target's bottom edge.
-        enterRejoinTargetsFromBelow(model, shapes, edges)
+        enterRejoinTargetsFromBelow(model, shapes, edges, customRouted)
         // BPMN convention: a backward (loop) edge routes up and over the top, not along the row.
-        routeLoopBackEdges(model, shapes, edges)
-        reconcileEdgeEndpointsToBorders(model, shapes, edges)
+        routeLoopBackEdges(model, shapes, edges, customRouted)
+        reconcileEdgeEndpointsToBorders(model, shapes, edges, customRouted)
     }
 
     /**
@@ -100,6 +101,7 @@ internal object BpmnEdgeRouter {
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
         subprocessEnd: Map<String, String>,
+        customRouted: MutableSet<String>,
     ) {
         if (subprocessEnd.isEmpty()) return
         model.getModelElementsByType(SequenceFlow::class.java)
@@ -126,6 +128,7 @@ internal object BpmnEdgeRouter {
                         Point(entryX, entryY),
                     )
                 }
+                customRouted.add(sf.id)
             }
     }
 
@@ -138,6 +141,7 @@ internal object BpmnEdgeRouter {
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
         straddled: Set<String>,
+        customRouted: MutableSet<String>,
     ) {
         if (straddled.isEmpty()) return
         model.getModelElementsByType(SequenceFlow::class.java)
@@ -160,6 +164,7 @@ internal object BpmnEdgeRouter {
                             Point(midX, entryY),
                             Point(entryX, entryY),
                         )
+                        customRouted.add(sf.id)
                         return@forEach
                     }
                 }
@@ -169,6 +174,7 @@ internal object BpmnEdgeRouter {
                 val prev = wps[wps.size - 2]
                 wps[wps.size - 2] = Point(prev.x, entryY)
                 edges[sf.id] = wps
+                customRouted.add(sf.id)
             }
     }
 
@@ -183,6 +189,7 @@ internal object BpmnEdgeRouter {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
+        customRouted: MutableSet<String>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
@@ -196,6 +203,7 @@ internal object BpmnEdgeRouter {
                 val bRect = shapes[boundaryId] ?: return@forEach
                 val tRect = shapes[tgtId] ?: return@forEach
                 edges[sf.id] = routeExceptionEdge(bRect, tRect)
+                customRouted.add(sf.id)
             }
     }
 
@@ -232,6 +240,7 @@ internal object BpmnEdgeRouter {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
+        customRouted: MutableSet<String>,
     ) {
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val srcId = sf.source?.id ?: return@forEach
@@ -242,6 +251,7 @@ internal object BpmnEdgeRouter {
             if (srcElement is Gateway) {
                 computeGatewayBranchRoute(s, t)?.let { route ->
                     edges[sf.id] = route
+                    customRouted.add(sf.id)
                 }
             }
         }
@@ -390,6 +400,7 @@ internal object BpmnEdgeRouter {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
+        customRouted: MutableSet<String>,
     ) {
         val nonContainers = shapes.filterKeys { id ->
             val elem = model.getModelElementById<ModelElementInstance>(id)
@@ -420,6 +431,7 @@ internal object BpmnEdgeRouter {
                 Point(tCx, arcY), // run left over the top
                 Point(tCx, t.y), // drop into target top
             )
+            customRouted.add(id)
         }
     }
 
@@ -470,6 +482,7 @@ internal object BpmnEdgeRouter {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
+        customRouted: MutableSet<String>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
@@ -504,6 +517,7 @@ internal object BpmnEdgeRouter {
                     listOf(Point(srcCx, startY), Point(tgtCx, endY))
                 }
             }
+            customRouted.add(id)
         }
     }
 
@@ -578,13 +592,14 @@ internal object BpmnEdgeRouter {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
+        customRouted: Set<String>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val id = sf.id
-            // Skip exception edges
-            if (sf.source?.id in boundaryIds) return@forEach
+            // Skip exception edges and custom-routed edges
+            if (id in customRouted || sf.source?.id in boundaryIds) return@forEach
             val srcId = sf.source?.id ?: return@forEach
             val tgtId = sf.target?.id ?: return@forEach
             val srcElement = model.getModelElementById<ModelElementInstance>(srcId)

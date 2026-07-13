@@ -626,7 +626,7 @@ internal object BpmnPlacementPass {
 
     private const val ARTIFACT_MARGIN = 30.0
     private const val BASELINE_BUCKET = 5.0
-    private const val BASELINE_TOLERANCE = 40.0
+    private const val BASELINE_TOLERANCE = 65.0
 
     /** Vertical gap between the main flow's bottom and the top of the exception lane. */
     private const val EXCEPTION_LANE_GAP = 40.0
