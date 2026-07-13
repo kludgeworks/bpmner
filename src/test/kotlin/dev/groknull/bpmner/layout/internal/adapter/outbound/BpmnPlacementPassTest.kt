@@ -448,18 +448,29 @@ class BpmnPlacementPassTest {
 
         val bRect = layout.shapes["Boundary_1"]!!
         val bCentreX = bRect.x + bRect.w / 2.0
-        val bCentreY = bRect.y + bRect.h / 2.0
+        val bBottomY = bRect.y + bRect.h
+        val handler = layout.shapes["Handler_1"]!!
 
         val edgeWps = layout.edges["Flow_ex"]
         assertNotNull(edgeWps, "Exception edge must have waypoints")
-        assertTrue(edgeWps.isNotEmpty(), "Exception edge must have at least one waypoint")
+        assertTrue(edgeWps.size >= 2, "Exception edge must have at least two waypoints")
 
+        // First waypoint exits the boundary's BOTTOM edge (not its centre — BLOCK feedback).
         val wp0 = edgeWps.first()
-        val dist = kotlin.math.sqrt((wp0.x - bCentreX) * (wp0.x - bCentreX) + (wp0.y - bCentreY) * (wp0.y - bCentreY))
-        assertTrue(
-            dist < 1.0,
-            "Exception edge first waypoint ($wp0) must be at boundary centre ($bCentreX, $bCentreY); dist=$dist",
-        )
+        assertEquals(bCentreX, wp0.x, 0.5, "Exception edge must start at boundary bottom-centre X")
+        assertEquals(bBottomY, wp0.y, 0.5, "Exception edge must start at boundary BOTTOM edge, not centre")
+
+        // The route must be fully orthogonal (every segment axis-aligned).
+        for (i in 1 until edgeWps.size) {
+            val a = edgeWps[i - 1]
+            val b = edgeWps[i]
+            val axisAligned = kotlin.math.abs(a.x - b.x) < 0.5 || kotlin.math.abs(a.y - b.y) < 0.5
+            assertTrue(axisAligned, "Exception edge segment $a->$b must be horizontal or vertical (orthogonal)")
+        }
+
+        // Last waypoint enters the handler's left edge (handler is to the right of the boundary).
+        val wpN = edgeWps.last()
+        assertEquals(handler.x, wpN.x, 0.5, "Exception edge must end at handler's near (left) edge")
     }
 
     // ── Named rule 6: artifact placement off the skeleton ─────────────────────

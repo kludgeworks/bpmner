@@ -101,7 +101,15 @@ class ElkBpmnLayouterTest {
     @Test
     fun `subprocess child shapes are contained within their parent subprocess shape bounds`() {
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
-        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubStart_1", "SubTask_1", "SubEnd_1"))
+        // Non-terminating children are fully contained; the terminating end event straddles
+        // the right border (asserted separately below).
+        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubStart_1", "SubTask_1"))
+    }
+
+    @Test
+    fun `subprocess-terminating end event straddles the container right border`() {
+        val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
+        assertStraddlesRightBorder(result, "SubEnd_1", "SubProcess_1")
     }
 
     @Test
@@ -120,11 +128,13 @@ class ElkBpmnLayouterTest {
     @Test
     fun `subprocess with internal branch children contained in subprocess`() {
         val result = layouter.layout(loadCorpus("subprocess-branch.bpmn"))
+        // SubEnd straddles the right border (asserted separately); the rest are fully contained.
         assertChildrenContainedInParent(
             result,
             "SubProcess_1",
-            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join", "SubEnd"),
+            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join"),
         )
+        assertStraddlesRightBorder(result, "SubEnd", "SubProcess_1")
     }
 
     // ── Edge connectivity: waypoints actually touch their source/target shapes ─
@@ -248,6 +258,29 @@ class ElkBpmnLayouterTest {
         assertExactlyOneDiagram(result)
         assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_1']").exist()
         assertXml(result).nodesByXPath("//bpmndi:BPMNEdge[@bpmnElement='Flow_1']").exist()
+    }
+
+    @Test
+    fun `text annotation and group shapes do not overlap each other`() {
+        val result = layouter.layout(loadCorpus("annotation-and-group.bpmn"))
+        val doc = parseXmlDoc(result)
+        // Anno_1 and Group_1 are unrelated artifacts; their shapes must not overlap.
+        val anno = shapeBounds(doc, "Anno_1")
+        val group = shapeBounds(doc, "Group_1")
+        val overlap = rectsOverlap(anno, group)
+        assertTrue(!overlap, "Annotation and Group shapes must not overlap: anno=$anno group=$group")
+    }
+
+    private fun rectsOverlap(a: Map<String, Double>, b: Map<String, Double>): Boolean {
+        val aL = a["x"]!!
+        val aR = aL + a["width"]!!
+        val aT = a["y"]!!
+        val aB = aT + a["height"]!!
+        val bL = b["x"]!!
+        val bR = bL + b["width"]!!
+        val bT = b["y"]!!
+        val bB = bT + b["height"]!!
+        return aL < bR && aR > bL && aT < bB && aB > bT
     }
 
     @Test
@@ -461,6 +494,22 @@ class ElkBpmnLayouterTest {
             inside,
             "Flow '$flowId' $role waypoint ($wx,$wy) is not near shape '$shapeId' " +
                 "bounds [$left,$top,$right,$bottom] (tol $tol) — edge is detached",
+        )
+    }
+
+    /**
+     * Asserts the given end event's horizontal centre lies on the container's right border
+     * (within EVENT_SIZE/2 tolerance) — the subprocess-terminating straddle convention.
+     */
+    private fun assertStraddlesRightBorder(xml: String, endId: String, containerId: String) {
+        val doc = parseXmlDoc(xml)
+        val end = shapeBounds(doc, endId)
+        val container = shapeBounds(doc, containerId)
+        val endCx = end["x"]!! + end["width"]!! / 2.0
+        val rightBorder = container["x"]!! + container["width"]!!
+        assertTrue(
+            Math.abs(endCx - rightBorder) <= EVENT_SIZE / 2.0,
+            "End '$endId' centre X ($endCx) must straddle container '$containerId' right border ($rightBorder)",
         )
     }
 

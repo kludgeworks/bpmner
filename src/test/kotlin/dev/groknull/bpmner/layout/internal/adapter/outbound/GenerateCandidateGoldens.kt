@@ -17,6 +17,12 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 fun main() {
     val layouter = ElkBpmnLayouter()
     val fixtures = listOf(
+        // Flat corpus (557-2)
+        "representative-process",
+        "explicit-cycle",
+        "annotation-and-group",
+        "long-labels",
+        // Subprocess + boundary corpus (557-3)
         "subprocess-flat",
         "subprocess-nested",
         "subprocess-branch",

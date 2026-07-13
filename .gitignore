@@ -57,3 +57,4 @@ rules_jvm_external++maven+maven_install.json
 *.lcov
 /coverage_report.dat
 /reports/
+.DS_Store

@@ -268,8 +268,16 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
+        // Spacing must leave room for the external labels the placement pass adds below each
+        // node (90x20). ELK does not see those labels (they are phase-2), so we widen its
+        // spacing to reserve the space itself:
+        //  - in-layer (vertical for RIGHT): a node's below-label must clear the node beneath it.
+        //  - between-layer (horizontal): a node's 90px-wide centred label must not reach the
+        //    next layer's node, and edges must be long enough to be visible.
         root.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_NODE_SPACING)
+        root.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
         root.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
+        root.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_BETWEEN_LAYERS)
         // omitNodeMicroLayout: prevents ELK from re-placing node-internal labels/ports —
         // we supply node sizes ourselves (AD-557-10).
         root.setProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT, true)
@@ -300,6 +308,15 @@ internal object BpmnToElkMapper {
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
 
-    private const val NODE_NODE_SPACING = 30.0
-    private const val EDGE_NODE_SPACING = 20.0
+    // In-layer spacing (vertical for RIGHT direction). Must exceed LABEL_HEIGHT (20) +
+    // LABEL_GAP_BELOW (2) so a node's external label clears the node in the row below.
+    private const val NODE_NODE_SPACING = 60.0
+
+    // Between-layer spacing (horizontal for RIGHT direction). A node's centred 90px label
+    // overhangs ~25px past a 100px task / ~27px past a 36px event on each side; the next
+    // layer must start beyond that, and the connecting edge must be long enough to be visible.
+    private const val NODE_NODE_BETWEEN_LAYERS = 90.0
+
+    private const val EDGE_NODE_SPACING = 25.0
+    private const val EDGE_NODE_BETWEEN_LAYERS = 25.0
 }
