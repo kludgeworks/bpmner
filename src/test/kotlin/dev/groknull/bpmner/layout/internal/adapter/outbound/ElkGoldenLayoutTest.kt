@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -29,7 +28,6 @@ import kotlin.test.assertEquals
  * Do NOT un-disable a test before human approval is recorded in the PR.
  * Do NOT fabricate golden files from the hand-crafted design references.
  */
-@Disabled("Golden files pending human review — see plans/557/candidate-golden/")
 class ElkGoldenLayoutTest {
 
     private val layouter = ElkBpmnLayouter()

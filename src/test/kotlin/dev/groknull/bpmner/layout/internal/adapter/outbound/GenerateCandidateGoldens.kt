@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
+import java.io.File
+
 /**
  * Generates the layout engine's output for each corpus input fixture and prints
  * each result to stdout, delimited by a header line.
@@ -33,17 +35,34 @@ fun main() {
         "boundary-on-subprocess",
     )
 
-    for (name in fixtures) {
-        val resource = "bpmn/elk-corpus/$name.bpmn"
-        val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
-            ?.use { it.readBytes().toString(Charsets.UTF_8) }
-            ?: error("Fixture not found: $resource")
+    val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
+    if (workspaceDir != null) {
+        val goldenDir = File(workspaceDir, "src/test/resources/bpmn/elk-corpus/golden")
+        goldenDir.mkdirs()
+        for (name in fixtures) {
+            val resource = "bpmn/elk-corpus/$name.bpmn"
+            val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
+                ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                ?: error("Fixture not found: $resource")
 
-        val output = layouter.layout(input)
+            val output = layouter.layout(input)
+            val file = File(goldenDir, "$name.bpmn")
+            file.writeText(output)
+            println("Wrote golden file to ${file.absolutePath}")
+        }
+    } else {
+        for (name in fixtures) {
+            val resource = "bpmn/elk-corpus/$name.bpmn"
+            val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
+                ?.use { it.readBytes().toString(Charsets.UTF_8) }
+                ?: error("Fixture not found: $resource")
 
-        println("=== BEGIN $name.bpmn ===")
-        println(output)
-        println("=== END $name.bpmn ===")
-        println()
+            val output = layouter.layout(input)
+
+            println("=== BEGIN $name.bpmn ===")
+            println(output)
+            println("=== END $name.bpmn ===")
+            println()
+        }
     }
 }

@@ -133,6 +133,7 @@ internal object ElkToBpmnDiWriter {
     ) {
         val labelRect = layout.labels[ownerId] ?: return
         val bpmnLabel = model.newInstance(BpmnLabel::class.java)
+        bpmnLabel.id = "BPMNLabel_$ownerId"
         bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
         shape.bpmnLabel = bpmnLabel
     }
@@ -157,6 +158,7 @@ internal object ElkToBpmnDiWriter {
             // Edge label from PlacedLayout (never from ELK label coordinates)
             layout.labels[sf.id]?.let { labelRect ->
                 val bpmnLabel = model.newInstance(BpmnLabel::class.java)
+                bpmnLabel.id = "BPMNLabel_${sf.id}"
                 bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
                 bpmnEdge.bpmnLabel = bpmnLabel
             }

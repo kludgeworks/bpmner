@@ -65,6 +65,9 @@ internal class ElkBpmnLayouter {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
         out.toString(Charsets.UTF_8)
+            .lineSequence()
+            .map { it.trimEnd() }
+            .joinToString("\n")
     } catch (e: java.io.IOException) {
         throw BpmnAutoLayoutException("ELK layout failed: could not serialize BPMN XML: ${e.message}", e)
     }

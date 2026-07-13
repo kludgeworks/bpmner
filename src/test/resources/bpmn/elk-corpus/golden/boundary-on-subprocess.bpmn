@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_boundary_on_subprocess" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Boundary on Subprocess" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:subProcess completionQuantity="1" id="SubProcess_1" isForCompensation="false" name="Execute" startQuantity="1" triggeredByEvent="false">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+
+      <bpmn:startEvent id="SubStart" isInterrupting="true" name="Begin" parallelMultiple="false">
+
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="SubTask" implementation="##WebService" isForCompensation="false" name="Do Work" startQuantity="1">
+
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+
+      </bpmn:serviceTask>
+
+      <bpmn:endEvent id="SubEnd" name="Done">
+
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="SubTask"/>
+
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask" targetRef="SubEnd"/>
+
+    </bpmn:subProcess>
+
+    <bpmn:boundaryEvent attachedToRef="SubProcess_1" cancelActivity="true" id="Boundary_timer" name="Timeout" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
+
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+
+    </bpmn:boundaryEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_review" implementation="##unspecified" isForCompensation="false" name="Review" startQuantity="1">
+
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_ok" name="End">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_escalate" implementation="##WebService" isForCompensation="false" name="Escalate" startQuantity="1">
+
+      <bpmn:incoming>Flow_timeout</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_escalated" name="Escalated">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="SubProcess_1"/>
+
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="SubProcess_1" targetRef="Task_review"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_review" targetRef="End_ok"/>
+
+    <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_escalate"/>
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_escalate" targetRef="End_escalated"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_escalated" id="BPMNShape_End_escalated">
+        <dc:Bounds height="36.0" width="36.0" x="880.0" y="366.6666666666667"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_escalated">
+          <dc:Bounds height="20.0" width="90.0" x="853.0" y="404.6666666666667"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
+        <dc:Bounds height="36.0" width="36.0" x="880.0" y="230.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_ok">
+          <dc:Bounds height="20.0" width="90.0" x="853.0" y="268.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="196.66666666666669"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="234.66666666666669"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubEnd" id="BPMNShape_SubEnd">
+        <dc:Bounds height="36.0" width="36.0" x="572.0" y="196.66666666666669"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubEnd">
+          <dc:Bounds height="20.0" width="90.0" x="545.0" y="234.66666666666669"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubProcess_1" id="BPMNShape_SubProcess_1" isExpanded="true">
+        <dc:Bounds height="180.0" width="452.0" x="138.0" y="124.66666666666669"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_1">
+          <dc:Bounds height="20.0" width="90.0" x="319.0" y="306.6666666666667"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubStart" id="BPMNShape_SubStart">
+        <dc:Bounds height="36.0" width="36.0" x="188.0" y="196.66666666666669"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubStart">
+          <dc:Bounds height="20.0" width="90.0" x="161.0" y="234.66666666666669"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubTask" id="BPMNShape_SubTask">
+        <dc:Bounds height="80.0" width="100.0" x="314.0" y="174.66666666666669"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubTask">
+          <dc:Bounds height="20.0" width="90.0" x="319.0" y="256.6666666666667"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_escalate" id="BPMNShape_Task_escalate">
+        <dc:Bounds height="80.0" width="100.0" x="690.0" y="344.6666666666667"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_escalate">
+          <dc:Bounds height="20.0" width="90.0" x="695.0" y="426.6666666666667"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_review" id="BPMNShape_Task_review">
+        <dc:Bounds height="80.0" width="100.0" x="690.0" y="208.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_review">
+          <dc:Bounds height="20.0" width="90.0" x="695.0" y="290.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Boundary_timer" id="BPMNShape_Boundary_timer">
+        <dc:Bounds height="36.0" width="36.0" x="346.0" y="286.6666666666667"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Boundary_timer">
+          <dc:Bounds height="20.0" width="90.0" x="319.0" y="324.6666666666667"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="48.0" y="214.66666666666669"/>
+        <di:waypoint x="138.0" y="214.66666666666669"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="790.0" y="248.0"/>
+        <di:waypoint x="880.0" y="248.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+        <di:waypoint x="790.0" y="384.6666666666667"/>
+        <di:waypoint x="880.0" y="384.6666666666667"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_normal" id="BPMNEdge_Flow_normal">
+        <di:waypoint x="608.0" y="214.66666666666669"/>
+        <di:waypoint x="649.0" y="214.66666666666669"/>
+        <di:waypoint x="649.0" y="248.0"/>
+        <di:waypoint x="690.0" y="248.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_timeout" id="BPMNEdge_Flow_timeout">
+        <di:waypoint x="364.0" y="322.6666666666667"/>
+        <di:waypoint x="364.0" y="384.6666666666667"/>
+        <di:waypoint x="690.0" y="384.6666666666667"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SubFlow_1" id="BPMNEdge_SubFlow_1">
+        <di:waypoint x="224.0" y="214.66666666666669"/>
+        <di:waypoint x="314.0" y="214.66666666666669"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="SubFlow_2" id="BPMNEdge_SubFlow_2">
+        <di:waypoint x="414.0" y="214.66666666666669"/>
+        <di:waypoint x="572.0" y="214.66666666666669"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
