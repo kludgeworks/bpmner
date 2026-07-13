@@ -81,6 +81,7 @@ internal object BpmnEdgeRouter {
         enterRejoinTargetsFromBelow(model, shapes, edges)
         // BPMN convention: a backward (loop) edge routes up and over the top, not along the row.
         routeLoopBackEdges(model, shapes, edges)
+        reconcileEdgeEndpointsToBorders(model, shapes, edges)
     }
 
     /**
@@ -148,6 +149,21 @@ internal object BpmnEdgeRouter {
                 // Snap the final waypoint to the end event's left edge at its vertical centre.
                 val entryX = endRect.x
                 val entryY = endRect.y + endRect.h / 2.0
+
+                if (wps.size == 2) {
+                    val dy = entryY - wps[1].y
+                    if (kotlin.math.abs(dy) > BpmnPlacementPass.POSITION_EPSILON) {
+                        val midX = (wps[0].x + entryX) / 2.0
+                        edges[sf.id] = listOf(
+                            wps[0],
+                            Point(midX, wps[0].y),
+                            Point(midX, entryY),
+                            Point(entryX, entryY),
+                        )
+                        return@forEach
+                    }
+                }
+
                 wps[wps.size - 1] = Point(entryX, entryY)
                 // Keep the penultimate point's Y aligned so the last segment stays horizontal.
                 val prev = wps[wps.size - 2]
@@ -556,5 +572,66 @@ internal object BpmnEdgeRouter {
         val scaleY = if (dy != 0.0) hh / kotlin.math.abs(dy) else Double.MAX_VALUE
         val scale = kotlin.math.min(scaleX, scaleY)
         return Point(cx + dx * scale, cy + dy * scale)
+    }
+
+    private fun reconcileEdgeEndpointsToBorders(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+    ) {
+        val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
+            .mapTo(mutableSetOf()) { it.id }
+        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+            val id = sf.id
+            // Skip exception edges
+            if (sf.source?.id in boundaryIds) return@forEach
+            val srcId = sf.source?.id ?: return@forEach
+            val tgtId = sf.target?.id ?: return@forEach
+            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
+            // Skip flows leaving subprocess containers (their exits are re-anchored to straddling ends)
+            if (srcElement is SubProcess) return@forEach
+            val s = shapes[srcId] ?: return@forEach
+            val t = shapes[tgtId] ?: return@forEach
+            val wps = edges[id] ?: return@forEach
+            if (wps.size < 2) return@forEach
+
+            // Only handle left-to-right flows for this cleanup
+            if (s.x + s.w <= t.x) {
+                edges[id] = reconcileEndpoints(wps, s, t)
+            }
+        }
+    }
+
+    private fun reconcileEndpoints(wps: List<Point>, s: Rect, t: Rect): List<Point> {
+        val startX = s.x + s.w
+        val startY = s.y + s.h / 2.0
+        val endX = t.x
+        val endY = t.y + t.h / 2.0
+
+        var result = wps.toMutableList()
+        val isStartMovedX = kotlin.math.abs(wps[0].x - startX) > BpmnPlacementPass.POSITION_EPSILON
+        val isStartMovedY = kotlin.math.abs(wps[0].y - startY) > BpmnPlacementPass.POSITION_EPSILON
+        if (isStartMovedX || isStartMovedY) {
+            if (result.size == 2) {
+                val midX = (startX + result[1].x) / 2.0
+                result = mutableListOf(Point(startX, startY), Point(midX, startY), Point(midX, result[1].y), result[1])
+            } else {
+                result[0] = Point(startX, startY)
+                result[1] = Point(result[1].x, startY)
+            }
+        }
+
+        val isEndMovedX = kotlin.math.abs(result.last().x - endX) > BpmnPlacementPass.POSITION_EPSILON
+        val isEndMovedY = kotlin.math.abs(result.last().y - endY) > BpmnPlacementPass.POSITION_EPSILON
+        if (isEndMovedX || isEndMovedY) {
+            if (result.size == 2) {
+                val midX = (result[0].x + endX) / 2.0
+                result = mutableListOf(result[0], Point(midX, result[0].y), Point(midX, endY), Point(endX, endY))
+            } else {
+                result[result.size - 1] = Point(endX, endY)
+                result[result.size - 2] = Point(result[result.size - 2].x, endY)
+            }
+        }
+        return result
     }
 }

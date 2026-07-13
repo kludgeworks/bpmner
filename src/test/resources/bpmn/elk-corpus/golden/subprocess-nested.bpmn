@@ -149,7 +149,9 @@
         <di:waypoint x="748.0" y="192.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="OuterFlow_1" id="BPMNEdge_OuterFlow_1">
-        <di:waypoint x="224.0" y="212.0"/>
+        <di:waypoint x="224.0" y="192.0"/>
+        <di:waypoint x="269.0" y="192.0"/>
+        <di:waypoint x="269.0" y="212.0"/>
         <di:waypoint x="314.0" y="212.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="OuterFlow_2" id="BPMNEdge_OuterFlow_2">

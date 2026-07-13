@@ -194,26 +194,32 @@
         <di:waypoint x="504.0" y="150.33333333333331"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_end" id="BPMNEdge_SubFlow_end">
-        <di:waypoint x="884.0" y="192.0"/>
+        <di:waypoint x="884.0" y="150.33333333333331"/>
+        <di:waypoint x="963.0" y="150.33333333333331"/>
+        <di:waypoint x="963.0" y="192.0"/>
         <di:waypoint x="1042.0" y="192.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_lower" id="BPMNEdge_SubFlow_lower">
-        <di:waypoint x="529.0" y="175.33333333333331"/>
-        <di:waypoint x="529.0" y="282.0"/>
+        <di:waypoint x="554.0" y="150.33333333333331"/>
+        <di:waypoint x="529.0" y="150.33333333333331"/>
         <di:waypoint x="644.0" y="282.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_lower_join" id="BPMNEdge_SubFlow_lower_join">
         <di:waypoint x="744.0" y="282.0"/>
-        <di:waypoint x="859.0" y="282.0"/>
-        <di:waypoint x="859.0" y="175.33333333333331"/>
+        <di:waypoint x="859.0" y="150.33333333333331"/>
+        <di:waypoint x="834.0" y="150.33333333333331"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper" id="BPMNEdge_SubFlow_upper">
-        <di:waypoint x="554.0" y="142.0"/>
+        <di:waypoint x="554.0" y="150.33333333333331"/>
+        <di:waypoint x="599.0" y="150.33333333333331"/>
+        <di:waypoint x="599.0" y="142.0"/>
         <di:waypoint x="644.0" y="142.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper_join" id="BPMNEdge_SubFlow_upper_join">
         <di:waypoint x="744.0" y="142.0"/>
-        <di:waypoint x="834.0" y="142.0"/>
+        <di:waypoint x="789.0" y="142.0"/>
+        <di:waypoint x="789.0" y="150.33333333333331"/>
+        <di:waypoint x="834.0" y="150.33333333333331"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

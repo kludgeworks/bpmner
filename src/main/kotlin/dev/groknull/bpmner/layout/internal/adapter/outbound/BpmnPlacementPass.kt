@@ -179,9 +179,9 @@ internal object BpmnPlacementPass {
                     val isMovedY = kotlin.math.abs(newY - r.y) > POSITION_EPSILON
                     if (isMovedX || isMovedY) {
                         shapes[end.id] = r.copy(x = newX, y = newY)
-                        moved.add(end.id)
-                        subprocessEnd[sub.id] = end.id
                     }
+                    moved.add(end.id)
+                    subprocessEnd[sub.id] = end.id
                 }
         }
         return StraddleResult(moved, subprocessEnd)
