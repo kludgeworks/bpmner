@@ -5,6 +5,12 @@
 
 package dev.groknull.bpmner.conformance
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import dev.groknull.bpmner.bpmn.BpmnDefinition
+import dev.groknull.bpmner.bpmn.BpmnEdge
+import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotEquals
@@ -12,6 +18,42 @@ import kotlin.test.assertTrue
 
 class BpmnFingerprintServiceTest {
     private val service = BpmnFingerprintService()
+    private val objectMapper = jacksonObjectMapper()
+
+    @Test
+    fun `definition serialization is parseable and fingerprints semantic changes`() {
+        val definition = representativeDefinition()
+        val serialized = service.serializeDefinition(definition)
+        val json = objectMapper.readTree(serialized)
+
+        assertTrue(serialized.isNotBlank())
+        assertEquals(
+            setOf(
+                "processId",
+                "processName",
+                "nodes",
+                "sequences",
+                "messages",
+                "errors",
+                "annotations",
+                "groups",
+                "associations",
+                "participants",
+                "lanes",
+                "messageFlows",
+            ),
+            json.fieldNames().asSequence().toSet(),
+        )
+        assertEquals(definition.processId, json["processId"].asText())
+        assertEquals(definition.nodes.size, json["nodes"].size())
+        assertEquals(definition.sequences.size, json["sequences"].size())
+
+        assertEquals(service.definitionFingerprint(definition), service.definitionFingerprint(definition))
+        assertNotEquals(
+            service.definitionFingerprint(definition),
+            service.definitionFingerprint(definition.copy(processName = "Approve reimbursement claim")),
+        )
+    }
 
     @Test
     fun `diagnosticFingerprint differs when any field changes`() {
@@ -107,5 +149,21 @@ class BpmnFingerprintServiceTest {
         severity = severity,
         rule = rule,
         elementId = "node-1",
+    )
+
+    private fun representativeDefinition() = BpmnDefinition(
+        processId = "Process_reimbursement",
+        processName = "Review reimbursement claim",
+        nodes =
+        listOf(
+            BpmnStartEvent(id = "Start_claim", name = "Claim received"),
+            BpmnUserTask(id = "Task_review", name = "Review claim"),
+            BpmnEndEvent(id = "End_claim", name = "Claim completed"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge(id = "Flow_start_review", sourceRef = "Start_claim", targetRef = "Task_review"),
+            BpmnEdge(id = "Flow_review_end", sourceRef = "Task_review", targetRef = "End_claim"),
+        ),
     )
 }
