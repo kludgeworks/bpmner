@@ -104,11 +104,27 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `subprocess-terminating end event is inside the container bounds (AD-557-11 - no straddle)`() {
-        // straddleSubprocessEnds was deleted (AD-557-11/AD-557-12): end events are where ELK
-        // placed them — inside the subprocess container, not straddling its right border.
+    fun `subprocess-terminating end event straddles the container right border`() {
+        // straddleSubprocessEnds (phase-2 named rule): end events in a subprocess are placed
+        // so their centre sits on the subprocess right border (half inside, half outside).
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
-        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubEnd_1"))
+        assertStraddlesRightBorder(result, "SubEnd_1", "SubProcess_1")
+    }
+
+    private fun assertStraddlesRightBorder(xml: String, endId: String, containerId: String) {
+        val doc = parseXmlDoc(xml)
+        val end = shapeBounds(doc, endId)
+        val container = shapeBounds(doc, containerId)
+        val endCx = end["x"]!! + end["width"]!! / 2.0
+        val rightBorder = container["x"]!! + container["width"]!!
+        val endRight = end["x"]!! + end["width"]!!
+        // Centre must be near the right border, and the shape must overlap (straddle) it
+        assertTrue(
+            kotlin.math.abs(endCx - rightBorder) <= BpmnToElkMapper.EVENT_SIZE / 2.0 + 1.0,
+            "End '$endId' centre ($endCx) must be near container '$containerId' right border ($rightBorder)",
+        )
+        // Right half must be outside (endRight > rightBorder)
+        assertTrue(endRight > rightBorder - 1.0, "End '$endId' right ($endRight) must be at or past the border ($rightBorder)")
     }
 
     @Test
@@ -128,12 +144,13 @@ class ElkBpmnLayouterTest {
     fun `subprocess with internal branch children contained in subprocess`() {
         val result = layouter.layout(loadCorpus("subprocess-branch.bpmn"))
         // SubEnd straddles the right border (asserted separately); the rest are fully contained.
-        // straddleSubprocessEnds deleted (AD-557-11): SubEnd is ELK-placed inside the container.
+        // SubEnd straddles the right border; the other children are fully inside.
         assertChildrenContainedInParent(
             result,
             "SubProcess_1",
-            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join", "SubEnd"),
+            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join"),
         )
+        assertStraddlesRightBorder(result, "SubEnd", "SubProcess_1")
     }
 
     // ── Edge connectivity: waypoints actually touch their source/target shapes ─
@@ -232,18 +249,16 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `subprocess exit flow starts from the subprocess right border (AD-557-11 - no straddle)`() {
-        // straddleSubprocessEnds deleted: the exit flow starts from the subprocess box boundary,
-        // not from a straddling end event. ELK routes it from the subprocess compound node.
+    fun `subprocess exit flow starts from the straddling end event's right edge`() {
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
         val doc = parseXmlDoc(result)
-        val sub = shapeBounds(doc, "SubProcess_1")
+        val done = shapeBounds(doc, "SubEnd_1")
         val start = edgeWaypoints(doc, "Flow_from_sub").first()
-        // The edge must start at or near the subprocess right border.
-        val subRight = sub["x"]!! + sub["width"]!!
+        val doneRight = done["x"]!! + done["width"]!!
+        val doneCy = done["y"]!! + done["height"]!! / 2.0
         assertTrue(
-            kotlin.math.abs(start.first - subRight) < 5.0,
-            "Flow_from_sub must start at subprocess right border (~$subRight), was $start",
+            kotlin.math.abs(start.first - doneRight) < 5.0 && kotlin.math.abs(start.second - doneCy) < 5.0,
+            "Flow_from_sub must start at Done's right edge ($doneRight,$doneCy), was $start",
         )
     }
 
