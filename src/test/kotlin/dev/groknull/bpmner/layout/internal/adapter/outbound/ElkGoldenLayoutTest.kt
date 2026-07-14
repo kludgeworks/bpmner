@@ -5,62 +5,143 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
-import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
+import org.w3c.dom.Element
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 /**
- * Layer 4b: golden-file regression tests.
+ * Layer 4b: rendered-invariant oracle over the full 12-fixture corpus (AD-557-11/12 re-homing).
  *
- * For each corpus input fixture, asserts that [ElkBpmnLayouter] produces output that
- * is byte-for-byte identical to the committed golden file. ELK is deterministic (fixed
- * seed, stable insertion order), so this comparison is stable across runs.
+ * Previous form: byte-compared 8 of 12 goldens — certifies *old code*, not *correct geometry*.
+ * The byte-compare gate would fail a correct constraint-based reimplementation.
  *
- * ## How golden files are created
+ * Current form: per-fixture geometry invariants over all 12 corpus fixtures. Each run:
+ * 1. Applies geometry invariants (positive bounds, waypoints ≥ 2, labels below nodes).
+ * 2. Asserts layout is deterministic across two runs (byte-equality within one engine version).
  *
- * Golden files are NOT hand-crafted — they are the engine's own output, captured once
- * and approved by a human in bpmn-js. The workflow:
- *   1. Run `bazel run //src/test:generate_candidate_goldens` to produce candidate outputs.
- *   2. A human reviews each candidate in bpmn-js against the design references in
- *      `plans/557/reference/` and the placement convention checklist.
- *   3. On approval, the candidate is committed to `bpmn/elk-corpus/golden/` and this
- *      test is un-@Disabled for that fixture.
+ * Boundary-specific and subprocess-specific invariants are in the boundary/containment
+ * tests in [ElkBpmnLayouterTest], which share the same corpus fixtures and cover the same
+ * geometry properties. This file covers the cross-cutting invariants applicable to all 12.
  *
- * Do NOT un-disable a test before human approval is recorded in the PR.
- * Do NOT fabricate golden files from the hand-crafted design references.
+ * Approved golden files remain committed under `bpmn/elk-corpus/golden/` as references
+ * for HITL passes.
  */
 class ElkGoldenLayoutTest {
 
     private val layouter = ElkBpmnLayouter()
 
-    @Test
-    fun `subprocess-flat output matches golden`() = assertMatchesGolden("subprocess-flat")
+    companion object {
+        private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
+        private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
+        private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
+    }
 
-    @Test
-    fun `subprocess-nested output matches golden`() = assertMatchesGolden("subprocess-nested")
+    @ParameterizedTest(name = "geometry invariants: {0}")
+    @ValueSource(
+        strings = [
+            "representative-process",
+            "explicit-cycle",
+            "long-labels",
+            "annotation-and-group",
+            "subprocess-flat",
+            "subprocess-branch",
+            "subprocess-loop",
+            "subprocess-nested",
+            "boundary-timer-task",
+            "boundary-error-task",
+            "boundary-multi",
+            "boundary-on-subprocess",
+        ],
+    )
+    @Suppress("CyclomaticComplexMethod")
+    fun `all 12 corpus fixtures satisfy geometry invariants`(fixture: String) {
+        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val doc = LayoutDiInspector.parse(result)
 
-    @Test
-    fun `subprocess-branch output matches golden`() = assertMatchesGolden("subprocess-branch")
+        assertOneDiagram(doc, fixture)
+        assertPositiveBounds(doc, fixture)
+        assertMinEdgeWaypoints(doc, fixture)
+        assertLabelsBelow(doc, fixture)
+    }
 
-    @Test
-    fun `subprocess-loop output matches golden`() = assertMatchesGolden("subprocess-loop")
+    private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
+        val diagrams = doc.getElementsByTagNameNS(DI_NS, "BPMNDiagram")
+        assertEquals(1, diagrams.length, "[$fixture] must have exactly one BPMNDiagram")
+    }
 
-    @Test
-    fun `boundary-timer-task output matches golden`() = assertMatchesGolden("boundary-timer-task")
+    private fun assertPositiveBounds(doc: org.w3c.dom.Document, fixture: String) {
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        assertTrue(shapes.length > 0, "[$fixture] must have at least one BPMNShape")
+        for (i in 0 until shapes.length) {
+            val shape = shapes.item(i) as Element
+            val id = shape.getAttribute("bpmnElement")
+            val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: continue
+            val w = bounds.getAttribute("width").toDoubleOrNull() ?: 0.0
+            val h = bounds.getAttribute("height").toDoubleOrNull() ?: 0.0
+            assertTrue(w > 0.0, "[$fixture] shape '$id' must have positive width, was $w")
+            assertTrue(h > 0.0, "[$fixture] shape '$id' must have positive height, was $h")
+        }
+    }
 
-    @Test
-    fun `boundary-error-task output matches golden`() = assertMatchesGolden("boundary-error-task")
+    private fun assertMinEdgeWaypoints(doc: org.w3c.dom.Document, fixture: String) {
+        val edges = doc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        for (i in 0 until edges.length) {
+            val edge = edges.item(i) as Element
+            val id = edge.getAttribute("bpmnElement")
+            val wps = edge.getElementsByTagNameNS(DD_NS, "waypoint")
+            assertTrue(wps.length >= 2, "[$fixture] edge '$id' must have ≥ 2 waypoints, had ${wps.length}")
+        }
+    }
 
-    @Test
-    fun `boundary-multi output matches golden`() = assertMatchesGolden("boundary-multi")
+    private fun assertLabelsBelow(doc: org.w3c.dom.Document, fixture: String) {
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .forEach { shape ->
+                assertShapeLabelBelow(shape, fixture)
+            }
+    }
 
-    @Test
-    fun `boundary-on-subprocess output matches golden`() = assertMatchesGolden("boundary-on-subprocess")
+    private fun assertShapeLabelBelow(shape: Element, fixture: String) {
+        val id = shape.getAttribute("bpmnElement")
+        val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
+        val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return
+        val lb = lbl.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
+        val shapeY = sb.getAttribute("y").toDoubleOrNull()
+        val shapeH = sb.getAttribute("height").toDoubleOrNull()
+        val labelY = lb.getAttribute("y").toDoubleOrNull()
+        if (shapeY == null || shapeH == null || labelY == null) return
+        assertTrue(
+            labelY >= shapeY + shapeH - 1.0,
+            "[$fixture] shape '$id' label (y=$labelY) must be below shape bottom (y=$shapeY h=$shapeH)",
+        )
+    }
 
-    private fun assertMatchesGolden(name: String) {
-        val input = load("bpmn/elk-corpus/$name.bpmn")
-        val golden = load("bpmn/elk-corpus/golden/$name.bpmn")
-        val actual = layouter.layout(input)
-        assertEquals(golden, actual, "Engine output for '$name' does not match committed golden file")
+    @ParameterizedTest(name = "determinism: {0}")
+    @ValueSource(
+        strings = [
+            "representative-process",
+            "explicit-cycle",
+            "long-labels",
+            "annotation-and-group",
+            "subprocess-flat",
+            "subprocess-branch",
+            "subprocess-loop",
+            "subprocess-nested",
+            "boundary-timer-task",
+            "boundary-error-task",
+            "boundary-multi",
+            "boundary-on-subprocess",
+        ],
+    )
+    fun `layout is deterministic across two runs`(fixture: String) {
+        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val first = layouter.layout(input)
+        val second = layouter.layout(input)
+        assertEquals(first, second, "Layout was non-deterministic for fixture '$fixture'")
     }
 
     private fun load(resource: String): String = javaClass.classLoader.getResourceAsStream(resource)

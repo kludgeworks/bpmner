@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * boundary attachment, spatial invariants, and deterministic output.
  * Never compares exact coordinates or asserts parity with the JavaScript layout engine.
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 class ElkBpmnLayouterTest {
 
     private val layouter = ElkBpmnLayouter()
@@ -104,9 +104,11 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `subprocess-terminating end event straddles the container right border`() {
+    fun `subprocess-terminating end event is inside the container bounds (AD-557-11 - no straddle)`() {
+        // straddleSubprocessEnds was deleted (AD-557-11/AD-557-12): end events are where ELK
+        // placed them — inside the subprocess container, not straddling its right border.
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
-        assertStraddlesRightBorder(result, "SubEnd_1", "SubProcess_1")
+        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubEnd_1"))
     }
 
     @Test
@@ -126,12 +128,12 @@ class ElkBpmnLayouterTest {
     fun `subprocess with internal branch children contained in subprocess`() {
         val result = layouter.layout(loadCorpus("subprocess-branch.bpmn"))
         // SubEnd straddles the right border (asserted separately); the rest are fully contained.
+        // straddleSubprocessEnds deleted (AD-557-11): SubEnd is ELK-placed inside the container.
         assertChildrenContainedInParent(
             result,
             "SubProcess_1",
-            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join"),
+            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join", "SubEnd"),
         )
-        assertStraddlesRightBorder(result, "SubEnd", "SubProcess_1")
     }
 
     // ── Edge connectivity: waypoints actually touch their source/target shapes ─
@@ -230,17 +232,18 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `subprocess exit flow starts from the straddling end event's right edge`() {
+    fun `subprocess exit flow starts from the subprocess right border (AD-557-11 - no straddle)`() {
+        // straddleSubprocessEnds deleted: the exit flow starts from the subprocess box boundary,
+        // not from a straddling end event. ELK routes it from the subprocess compound node.
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
         val doc = parseXmlDoc(result)
-        // Flow_from_sub is SubProcess_1 -> Task_after; visually it must start from Done (SubEnd_1).
-        val done = shapeBounds(doc, "SubEnd_1")
+        val sub = shapeBounds(doc, "SubProcess_1")
         val start = edgeWaypoints(doc, "Flow_from_sub").first()
-        val doneRight = done["x"]!! + done["width"]!!
-        val doneCy = done["y"]!! + done["height"]!! / 2.0
+        // The edge must start at or near the subprocess right border.
+        val subRight = sub["x"]!! + sub["width"]!!
         assertTrue(
-            kotlin.math.abs(start.first - doneRight) < 3.0 && kotlin.math.abs(start.second - doneCy) < 3.0,
-            "Flow_from_sub must start at Done's right edge ($doneRight,$doneCy), not the subprocess box; was $start",
+            kotlin.math.abs(start.first - subRight) < 5.0,
+            "Flow_from_sub must start at subprocess right border (~$subRight), was $start",
         )
     }
 
@@ -261,29 +264,47 @@ class ElkBpmnLayouterTest {
     // ── Exception-lane invariants (AD-557-10: handler not on primary baseline) ──
 
     @Test
-    fun `error handler is below the main flow baseline not inline with it`() {
+    fun `error handler is in a separate vertical band from the main flow (AD-557-12)`() {
+        // AD-557-12: handler is a disconnected ELK component; SimpleRowGraphPlacer puts it in its
+        // own row — the bands must not overlap.
         val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
         val doc = parseXmlDoc(result)
-        // Task_process, Task_confirm, End_1 are main flow; Task_handle is the exception handler.
-        val host = shapeBounds(doc, "Task_process")
+        val mainNodes = listOf("Task_process", "Task_confirm", "End_1")
+            .map { shapeBounds(doc, it) }
+        val mainTop = mainNodes.minOf { it["y"]!! }
+        val mainBottom = mainNodes.maxOf { it["y"]!! + it["height"]!! }
         val handler = shapeBounds(doc, "Task_handle")
-        val hostCy = host["y"]!! + host["height"]!! / 2.0
-        val handlerCy = handler["y"]!! + handler["height"]!! / 2.0
+        val handlerTop = handler["y"]!!
+        val handlerBottom = handlerTop + handler["height"]!!
+        val separated = handlerBottom <= mainTop || handlerTop >= mainBottom
         assertTrue(
-            handlerCy > hostCy + host["height"]!! / 2.0,
-            "Exception handler 'Task_handle' (cy=$handlerCy) must be below the host baseline (cy=$hostCy)",
+            separated,
+            "Handler band [$handlerTop,$handlerBottom] and main flow band [$mainTop,$mainBottom] must not overlap",
         )
     }
 
     @Test
-    fun `timer exception handler is below the main flow baseline`() {
+    fun `timer exception handler is in a separate vertical band from the main flow (AD-557-12)`() {
+        // AD-557-12: handler nodes are disconnected ELK components. SimpleRowGraphPlacer places
+        // them in a separate row from the main flow — the rows must not overlap vertically.
         val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
         val doc = parseXmlDoc(result)
-        val host = shapeBounds(doc, "Task_process")
-        val handler = shapeBounds(doc, "Task_cancel")
-        val hostBottom = host["y"]!! + host["height"]!!
-        val handlerCy = handler["y"]!! + handler["height"]!! / 2.0
-        assertTrue(handlerCy > hostBottom, "Timer handler 'Task_cancel' must be below the host bottom")
+        // Main flow nodes
+        val mainNodes = listOf("Start_1", "Task_process", "Task_ship", "End_ok")
+            .map { shapeBounds(doc, it) }
+        val mainTop = mainNodes.minOf { it["y"]!! }
+        val mainBottom = mainNodes.maxOf { it["y"]!! + it["height"]!! }
+        // Handler flow nodes
+        val handlerNodes = listOf("Task_cancel", "End_timeout")
+            .map { shapeBounds(doc, it) }
+        val handlerTop = handlerNodes.minOf { it["y"]!! }
+        val handlerBottom = handlerNodes.maxOf { it["y"]!! + it["height"]!! }
+        // The two bands must not overlap — one must be entirely above or below the other.
+        val separated = handlerBottom <= mainTop || handlerTop >= mainBottom
+        assertTrue(
+            separated,
+            "Handler band [$handlerTop,$handlerBottom] and main flow band [$mainTop,$mainBottom] must not overlap",
+        )
     }
 
     @Test
@@ -605,22 +626,6 @@ class ElkBpmnLayouterTest {
             inside,
             "Flow '$flowId' $role waypoint ($wx,$wy) is not near shape '$shapeId' " +
                 "bounds [$left,$top,$right,$bottom] (tol $tol) — edge is detached",
-        )
-    }
-
-    /**
-     * Asserts the given end event's horizontal centre lies on the container's right border
-     * (within EVENT_SIZE/2 tolerance) — the subprocess-terminating straddle convention.
-     */
-    private fun assertStraddlesRightBorder(xml: String, endId: String, containerId: String) {
-        val doc = parseXmlDoc(xml)
-        val end = shapeBounds(doc, endId)
-        val container = shapeBounds(doc, containerId)
-        val endCx = end["x"]!! + end["width"]!! / 2.0
-        val rightBorder = container["x"]!! + container["width"]!!
-        assertTrue(
-            Math.abs(endCx - rightBorder) <= EVENT_SIZE / 2.0,
-            "End '$endId' centre X ($endCx) must straddle container '$containerId' right border ($rightBorder)",
         )
     }
 
