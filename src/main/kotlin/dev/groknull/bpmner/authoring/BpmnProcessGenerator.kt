@@ -15,9 +15,9 @@ import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@PrimaryPort
+@ApplicationRing
 interface BpmnProcessGenerator {
     fun createOutline(ready: ReadyBpmnContext, contract: ValidatedProcessContract, context: OperationContext): ValidatedOutline
 

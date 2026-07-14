@@ -8,9 +8,9 @@ package dev.groknull.bpmner.conformance
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@PrimaryPort
+@ApplicationRing
 interface BpmnValidator {
     fun evaluate(
         graph: LaidOutProcessGraph,

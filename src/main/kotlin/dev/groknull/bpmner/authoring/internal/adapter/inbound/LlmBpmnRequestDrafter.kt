@@ -11,10 +11,10 @@ import com.embabel.chat.UserMessage
 import dev.groknull.bpmner.authoring.BpmnRequestDraft
 import dev.groknull.bpmner.authoring.BpmnRequestDrafter
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 internal class LlmBpmnRequestDrafter(
     private val config: BpmnReadinessConfig,

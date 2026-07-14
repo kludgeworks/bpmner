@@ -19,7 +19,7 @@ import java.io.ByteArrayOutputStream
 /**
  * Stateless ELK layout path for flat retained BPMN processes.
  *
- * Not annotated with @Service or @SecondaryAdapter; not wired into BpmnLayoutPort.
+ * Not annotated with @Service; not wired into BpmnLayoutPort.
  * The GraalJS BpmnLayoutService is the sole production layout authority.
  *
  * Parses the input XML, removes existing BPMN-DI, runs ELK Layered layout via

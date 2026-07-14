@@ -20,10 +20,10 @@ import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
 import dev.groknull.bpmner.readiness.ReadinessVerdict
-import org.jmolecules.architecture.hexagonal.Application
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
 
-@Application
+@InfrastructureRing
 @Agent(description = "Assess whether source text is ready for BPMN generation")
 internal class BpmnReadinessAgent(
     private val config: BpmnReadinessConfig,

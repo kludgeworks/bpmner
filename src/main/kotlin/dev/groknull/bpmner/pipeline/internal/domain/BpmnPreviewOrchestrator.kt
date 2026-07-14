@@ -19,9 +19,7 @@ import java.nio.file.Paths
  * Application-layer service that orchestrates the post-generation BPMN preview flow.
  *
  * Sits between the [dev.groknull.bpmner.pipeline.internal.adapter.inbound.BpmnShellCommands]
- * primary adapter and the secondary ports ([BpmnPreviewWriter], [BrowserOpenPort]) so the adapter
- * is not required to reference secondary-port types directly (which would violate the jMolecules
- * hexagonal architecture rule).
+ * primary adapter and the application APIs ([BpmnPreviewWriter], [BrowserOpenPort]).
  *
  * The preview is a best-effort, nice-to-have: any miss returns a [PreviewResult] the shell can
  * report, never an exception.

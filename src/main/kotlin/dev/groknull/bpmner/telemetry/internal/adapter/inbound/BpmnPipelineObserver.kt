@@ -16,13 +16,13 @@ import dev.groknull.bpmner.conformance.GlobalDiagnostics
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.telemetry.BpmnSnapshotEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnPipelineObserver(
     private val eventPublisher: ApplicationEventPublisher,

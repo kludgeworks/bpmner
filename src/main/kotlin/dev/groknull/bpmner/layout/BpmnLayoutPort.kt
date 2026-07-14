@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.layout
 
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 fun interface BpmnLayoutPort {
     fun layout(xml: String): String
 }

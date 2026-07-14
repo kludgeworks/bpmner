@@ -11,9 +11,9 @@ import dev.groknull.bpmner.bpmn.RenderedBpmn
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@PrimaryPort
+@ApplicationRing
 fun interface BpmnRepairer {
     fun validateInitial(
         ready: ReadyBpmnContext,

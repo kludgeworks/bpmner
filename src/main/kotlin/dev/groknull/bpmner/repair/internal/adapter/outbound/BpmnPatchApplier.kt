@@ -9,10 +9,10 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.repair.internal.domain.BpmnPatchApplicationPort
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 import dev.groknull.bpmner.repair.internal.domain.PatchApplicationResult
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal open class BpmnPatchApplier : BpmnPatchApplicationPort {
     override fun apply(

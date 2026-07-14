@@ -9,7 +9,7 @@ import com.embabel.agent.shell.ShellCommands
 import dev.groknull.bpmner.authoring.GENERATED_CONTENT_PREFIX
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.ObjectProvider
 import org.springframework.shell.standard.ShellComponent
@@ -34,7 +34,7 @@ import org.springframework.shell.standard.ShellOption
  * where the embabel shell is not active (e.g. non-shell `@SpringBootTest` contexts); the provider is
  * only dereferenced when the command actually runs, which only happens inside a live shell.
  */
-@PrimaryAdapter
+@InfrastructureRing
 @ShellComponent
 internal class BpmnShellCommands(
     private val shellCommands: ObjectProvider<ShellCommands>,

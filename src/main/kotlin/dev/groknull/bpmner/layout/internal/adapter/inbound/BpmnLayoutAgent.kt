@@ -15,13 +15,13 @@ import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.conformance.XsdValidationIssue
 import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
-import org.jmolecules.architecture.hexagonal.Application
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 
 /**
  * Owns the post-repair pipeline: auto-layout and final XSD validation.
  */
-@Application
+@InfrastructureRing
 @Agent(description = "Apply auto-layout and final validation to validated BPMN XML")
 internal class BpmnLayoutAgent(
     private val layoutService: BpmnLayoutPort,

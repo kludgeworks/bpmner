@@ -20,11 +20,11 @@ import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 internal class LlmProcessContractExtractor(
     private val config: BpmnContractConfig,

@@ -15,10 +15,8 @@ import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import com.tngtech.archunit.library.Architectures.LayeredArchitecture
 import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import org.jmolecules.archunit.JMoleculesArchitectureRules
-import org.jmolecules.archunit.JMoleculesArchitectureRules.VerificationDepth
 import org.jmolecules.archunit.JMoleculesDddRules
 import org.junit.jupiter.api.Test
 
@@ -36,30 +34,6 @@ class BpmnerArchitectureTest {
     @Test
     fun `verifies DDD building block rules`() {
         JMoleculesDddRules.all().check(classes)
-    }
-
-    @Test
-    fun `verifies hexagonal architecture`() {
-        // Mirrors what Modulith's verify() auto-applies through VerificationOptions.defaults()
-        // (jmolecules-hexagonal is on the classpath). Asserted here directly so the rule
-        // surfaces against the production-only ArchUnit scan even if Modulith config changes.
-        //
-        // The cast to LayeredArchitecture is safe: jMolecules' ensureHexagonal() builds the
-        // rule via Architectures.layeredArchitecture() and returns it as ArchRule; every
-        // chained .whereLayer/.mayOnlyAccessLayers/.mayOnlyBeAccessedByLayers method
-        // returns LayeredArchitecture (Architectures.java:612, 631 in the cloned ArchUnit).
-        //
-        // We chain ignoreDependency to drop dependencies where EITHER endpoint is a Kotlin
-        // synthetic class. ArchUnit's ClassResolverFromClasspath re-imports filtered classes
-        // as stubs when other imported classes reference them, so an ImportOption alone
-        // can't keep them out of the dependency graph; ignoreDependency filters
-        // post-resolution (Architectures.java:339-342, irrelevantDependenciesPredicate).
-        val rule =
-            JMoleculesArchitectureRules.ensureHexagonal(VerificationDepth.LENIENT) as LayeredArchitecture
-        rule
-            .ignoreDependency(isKotlinSyntheticClass, DescribedPredicate.alwaysTrue())
-            .ignoreDependency(DescribedPredicate.alwaysTrue(), isKotlinSyntheticClass)
-            .check(classes)
     }
 
     @Test

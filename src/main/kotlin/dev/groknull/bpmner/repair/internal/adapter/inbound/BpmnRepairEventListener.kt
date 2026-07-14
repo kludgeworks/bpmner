@@ -6,11 +6,11 @@
 package dev.groknull.bpmner.repair.internal.adapter.inbound
 
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.event.EventListener
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 internal class BpmnRepairEventListener {
     @EventListener
