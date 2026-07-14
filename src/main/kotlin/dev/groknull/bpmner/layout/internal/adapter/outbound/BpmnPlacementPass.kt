@@ -283,37 +283,97 @@ internal object BpmnPlacementPass {
         edges: Map<String, List<Point>>,
         labels: MutableMap<String, Rect>,
     ) {
-        // Node labels (flow nodes including boundaries)
+        placeNodeLabels(model, shapes, labels)
+        placeSequenceFlowLabels(model, edges, labels)
+    }
+
+    private fun placeNodeLabels(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        labels: MutableMap<String, Rect>,
+    ) {
         model.getModelElementsByType(FlowNode::class.java)
             .filter { !it.name.isNullOrBlank() }
             .sortedBy { it.id }
             .forEach { flowNode ->
                 val shape = shapes[flowNode.id] ?: return@forEach
-                val labelX = shape.x + shape.w / 2.0 - LABEL_WIDTH / 2.0
+                val name = flowNode.name ?: ""
+                val (labelWidth, labelHeight) = estimateLabelDimensions(name, LABEL_WIDTH)
+                val labelX = shape.x + shape.w / 2.0 - labelWidth / 2.0
                 val labelY = shape.y + shape.h + LABEL_GAP_BELOW
-                labels[flowNode.id] = Rect(labelX, labelY, LABEL_WIDTH, LABEL_HEIGHT)
+                labels[flowNode.id] = Rect(labelX, labelY, labelWidth, labelHeight)
             }
+    }
 
-        // Sequence-flow edge labels centred on the polyline midpoint, just above the edge (or below if backward).
+    private fun placeSequenceFlowLabels(
+        model: BpmnModelInstance,
+        edges: Map<String, List<Point>>,
+        labels: MutableMap<String, Rect>,
+    ) {
         model.getModelElementsByType(SequenceFlow::class.java)
             .filter { !it.name.isNullOrBlank() }
             .sortedBy { it.id }
             .forEach { sf ->
                 val wps = edges[sf.id]?.takeIf { it.size >= 2 } ?: return@forEach
-                val mid = BpmnEdgeRouter.polylineMidpoint(wps)
+                val name = sf.name ?: ""
+                val (labelWidth, labelHeight) = estimateLabelDimensions(name, EDGE_LABEL_WIDTH)
+
+                val horizSeg = findLongestHorizontalSegment(wps)
                 val isBackward = wps.first().x > wps.last().x
-                val labelY = if (isBackward) {
-                    mid.y + EDGE_LABEL_GAP_ABOVE
+
+                if (horizSeg != null) {
+                    val labelY = if (isBackward) {
+                        horizSeg.mid.y + EDGE_LABEL_GAP_ABOVE
+                    } else {
+                        horizSeg.mid.y - labelHeight - EDGE_LABEL_GAP_ABOVE
+                    }
+                    var labelX = horizSeg.mid.x - labelWidth / 2.0
+                    if (isBackward) {
+                        labelX = maxOf(labelX, horizSeg.endX + LABEL_MARGIN)
+                    } else {
+                        labelX = minOf(labelX, horizSeg.endX - labelWidth - LABEL_MARGIN)
+                    }
+                    labels[sf.id] = Rect(
+                        labelX,
+                        labelY,
+                        labelWidth,
+                        labelHeight,
+                    )
                 } else {
-                    mid.y - LABEL_HEIGHT - EDGE_LABEL_GAP_ABOVE
+                    placeNonHorizontalEdgeLabel(sf.id, wps, name, labels)
                 }
-                labels[sf.id] = Rect(
-                    mid.x - EDGE_LABEL_WIDTH / 2.0,
-                    labelY,
-                    EDGE_LABEL_WIDTH,
-                    LABEL_HEIGHT,
-                )
             }
+    }
+
+    private fun placeNonHorizontalEdgeLabel(
+        id: String,
+        wps: List<Point>,
+        name: String,
+        labels: MutableMap<String, Rect>,
+    ) {
+        val (labelWidth, labelHeight) = estimateLabelDimensions(name, EDGE_LABEL_WIDTH)
+        val isBackward = wps.first().x > wps.last().x
+        val mid = BpmnEdgeRouter.polylineMidpoint(wps)
+        if (isVerticalSegment(wps, mid)) {
+            labels[id] = Rect(
+                mid.x + EDGE_LABEL_GAP_ABOVE,
+                mid.y - labelHeight / 2.0,
+                labelWidth,
+                labelHeight,
+            )
+        } else {
+            val labelY = if (isBackward) {
+                mid.y + EDGE_LABEL_GAP_ABOVE
+            } else {
+                mid.y - labelHeight - EDGE_LABEL_GAP_ABOVE
+            }
+            labels[id] = Rect(
+                mid.x - labelWidth / 2.0,
+                labelY,
+                labelWidth,
+                labelHeight,
+            )
+        }
     }
 
     // ── Named rule 6: artifacts as sidecar geometry ───────────────────────────
@@ -456,6 +516,71 @@ internal object BpmnPlacementPass {
         return absolutePosition(container)
     }
 
+    data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)
+
+    private fun findLongestHorizontalSegment(wps: List<Point>): HorizontalSegment? {
+        var longestLen = -1.0
+        var bestSeg: HorizontalSegment? = null
+        for (i in 1 until wps.size) {
+            val p1 = wps[i - 1]
+            val p2 = wps[i]
+            if (kotlin.math.abs(p1.y - p2.y) < EPSILON) { // Horizontal
+                val len = kotlin.math.abs(p2.x - p1.x)
+                if (len > longestLen) {
+                    longestLen = len
+                    bestSeg = HorizontalSegment(Point((p1.x + p2.x) / 2.0, p1.y), p1.x, p2.x)
+                }
+            }
+        }
+        return bestSeg
+    }
+
+    private fun isVerticalSegment(wps: List<Point>, mid: Point): Boolean {
+        for (i in 1 until wps.size) {
+            val p1 = wps[i - 1]
+            val p2 = wps[i]
+            val minX = minOf(p1.x, p2.x)
+            val maxX = maxOf(p1.x, p2.x)
+            val minY = minOf(p1.y, p2.y)
+            val maxY = maxOf(p1.y, p2.y)
+            val inX = mid.x >= minX - EPSILON && mid.x <= maxX + EPSILON
+            val inY = mid.y >= minY - EPSILON && mid.y <= maxY + EPSILON
+            if (inX && inY) {
+                return kotlin.math.abs(p1.x - p2.x) < EPSILON
+            }
+        }
+        return false
+    }
+
+    private fun estimateLabelDimensions(name: String, maxWidth: Double): Pair<Double, Double> {
+        val words = name.split("\\s+".toRegex()).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return Pair(0.0, 0.0)
+
+        // Find longest word width
+        val longestWordWidth = words.maxOf { it.length } * CHAR_WIDTH
+        val finalWidth = maxOf(maxWidth, longestWordWidth)
+
+        var lines = 1
+        var currentLineLength = 0.0
+
+        for (word in words) {
+            val wordWidth = word.length * CHAR_WIDTH
+            if (currentLineLength == 0.0) {
+                currentLineLength = wordWidth
+            } else {
+                if (currentLineLength + SPACE_WIDTH + wordWidth > finalWidth) {
+                    lines++
+                    currentLineLength = wordWidth
+                } else {
+                    currentLineLength += SPACE_WIDTH + wordWidth
+                }
+            }
+        }
+
+        val finalHeight = lines * LINE_HEIGHT
+        return Pair(finalWidth, finalHeight)
+    }
+
     // ── Constants ─────────────────────────────────────────────────────────────
 
     private const val ARTIFACT_MARGIN = 30.0
@@ -465,4 +590,10 @@ internal object BpmnPlacementPass {
 
     /** Extra padding per additional group so multiple groups nest concentrically, not overlap. */
     private const val GROUP_NEST_STEP = 15.0
+
+    private const val LABEL_MARGIN = 8.0
+    private const val EPSILON = 0.001
+    private const val CHAR_WIDTH = 6.5
+    private const val SPACE_WIDTH = 4.0
+    private const val LINE_HEIGHT = 14.0
 }

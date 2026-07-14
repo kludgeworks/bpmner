@@ -337,11 +337,23 @@ internal object BpmnToElkMapper {
         return when {
             typeName.contains("Event") -> Pair(EVENT_SIZE, EVENT_SIZE)
             typeName.contains("Gateway") -> Pair(GATEWAY_SIZE, GATEWAY_SIZE)
-            else -> Pair(TASK_WIDTH, TASK_HEIGHT)
+            else -> {
+                val name = flowNode.name
+                if (name != null && name.length > LONG_NAME_THRESHOLD) {
+                    val extraChars = name.length - LONG_NAME_THRESHOLD
+                    val w = minOf(MAX_TASK_WIDTH, TASK_WIDTH + extraChars * EXTRA_CHAR_WIDTH_FACTOR)
+                    Pair(w, TASK_HEIGHT)
+                } else {
+                    Pair(TASK_WIDTH, TASK_HEIGHT)
+                }
+            }
         }
     }
 
     private const val RANDOM_SEED = 1
+    private const val LONG_NAME_THRESHOLD = 30
+    private const val MAX_TASK_WIDTH = 160.0
+    private const val EXTRA_CHAR_WIDTH_FACTOR = 2.0
 
     private const val TASK_WIDTH = 100.0
     private const val TASK_HEIGHT = 80.0
