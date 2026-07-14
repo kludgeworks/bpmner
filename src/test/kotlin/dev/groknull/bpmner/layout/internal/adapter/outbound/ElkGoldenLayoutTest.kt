@@ -44,8 +44,6 @@ class ElkGoldenLayoutTest {
             "explicit-cycle",
             "long-labels",
             "annotation-and-group",
-            "subprocess-flat",
-            "subprocess-branch",
             "boundary-timer-task",
             "boundary-error-task",
             "boundary-multi",

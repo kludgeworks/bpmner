@@ -41,7 +41,7 @@ import org.eclipse.elk.graph.ElkNode
  *
  * Constants are named (not magic), not configurable (AD-557-10 and ARCHITECTURE.md Non-goals).
  */
-@Suppress("TooManyFunctions")
+@Suppress("TooManyFunctions", "LargeClass")
 internal object BpmnPlacementPass {
 
     // ── Output type ──────────────────────────────────────────────────────────
@@ -114,6 +114,11 @@ internal object BpmnPlacementPass {
         // subprocess's right edge (half inside, half outside). Returns the set of moved end IDs
         // so Flow_from_sub can be re-anchored to the straddling end event's right edge.
         val straddledEnds = straddleSubprocessEnds(model, shapes)
+        // Phase-2 rule 1d: centre the subprocess happy-path chain on the subprocess vertical midline.
+        // ELK places the inner flat chain near the top of a subprocess that is tall due to branches;
+        // snapping the through-path nodes to the subprocess vertical centre aligns them with the
+        // outer flow visually. Returns the set of snapped node IDs so their edges can be re-routed.
+        val centredNodes = centreSubprocessHappyPath(model, shapes)
         // Phase-2 rule 2: boundary shapes on host bottom edge (decoration only).
         placeBoundaryShapes(model, skeleton, shapes)
         // Phase-2 rule 3: exception edges — the ONE sanctioned bespoke edge op (AD-557-12).
@@ -122,7 +127,11 @@ internal object BpmnPlacementPass {
         // then corrected for any handler component X-shift applied in rule 1b.
         BpmnEdgeRouter.placeSequenceEdgeWaypoints(model, skeleton, edges)
         if (handlerXShifts.isNotEmpty()) shiftHandlerEdgeWaypoints(model, shapes, edges, handlerXShifts)
+        // Phase-2 rule 4b: re-anchor subprocess exit edges and intra-subprocess edges to
+        // straddled/centred node positions. Must run after all shape Y-positions are final.
         if (straddledEnds.isNotEmpty()) reanchorSubprocessExitFlows(model, shapes, edges, straddledEnds)
+        // Phase-2 rule 4c: re-route edges touching centred nodes after happy-path Y-centering.
+        if (centredNodes.isNotEmpty()) reanchorCentredSubprocessEdges(model, shapes, edges, centredNodes)
         // Phase-2 rule 5: labels below nodes / at edge midpoints.
         placeLabels(model, shapes, edges, labels)
         // Phase-2 rule 6: artifact sidecar geometry.
@@ -327,6 +336,53 @@ internal object BpmnPlacementPass {
         edges[edgeId] = listOf(Point(srcRight, srcCy), Point(tgtLeft, tgtCy))
     }
 
+    // ── Named rule 1d: centre subprocess happy-path chain on subprocess vertical midline ──
+
+    /**
+     * For each expanded subprocess, snaps the Y-position of nodes on the straight through-path
+     * (start event → split gateway → join gateway → straddled end event) to the subprocess's
+     * vertical centre. ELK places these nodes at the top of a tall subprocess when branches force
+     * the height up; this rule centres them so they read as a horizontal axis through the middle.
+     *
+     * "Through-path" nodes are those reachable from the subprocess start event AND that only
+     * have one predecessor and one successor on the main spine (i.e., NOT the branch tasks).
+     * Concretely: nodes whose in-degree and out-degree within the subprocess are both exactly 1
+     * (plus the start/end events with degree 0/1).
+     */
+
+    /** Returns the IDs of all nodes whose Y was snapped by this rule. */
+    @Suppress("CyclomaticComplexMethod")
+    private fun centreSubprocessHappyPath(
+        model: BpmnModelInstance,
+        shapes: MutableMap<String, Rect>,
+    ): Set<String> {
+        val snapped = mutableSetOf<String>()
+        model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
+            val subRect = shapes[sub.id] ?: return@forEach
+            val subCentreY = subRect.y + subRect.h / 2.0
+            val spineIds = subSpineIds(sub)
+            spineIds.forEach { id ->
+                val r = shapes[id] ?: return@forEach
+                val newY = subCentreY - r.h / 2.0
+                if (kotlin.math.abs(newY - r.y) > POSITION_EPSILON) {
+                    shapes[id] = r.copy(y = newY)
+                    snapped.add(id)
+                }
+            }
+        }
+        return snapped
+    }
+
+    /** Spine node IDs in a subprocess: start events, end events, and gateways. */
+    private fun subSpineIds(sub: SubProcess): Set<String> = sub.flowElements
+        .filterIsInstance<org.camunda.bpm.model.bpmn.instance.FlowNode>()
+        .filter { node ->
+            node is org.camunda.bpm.model.bpmn.instance.StartEvent ||
+                node is org.camunda.bpm.model.bpmn.instance.EndEvent ||
+                node is org.camunda.bpm.model.bpmn.instance.Gateway
+        }
+        .mapTo(mutableSetOf()) { it.id }
+
     // ── Named rule 1c: subprocess-terminating end events straddle the right border ──
 
     /**
@@ -371,14 +427,22 @@ internal object BpmnPlacementPass {
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val srcId = sf.source?.id ?: return@forEach
             val tgtId = sf.target?.id ?: return@forEach
-            // Case 1: intra-subprocess edge whose TARGET is the straddled end event
+            // Case 1: intra-subprocess edge whose TARGET is the straddled end event.
+            // Re-anchor: leave ELK waypoints up to the second-to-last point, then travel
+            // horizontally to the straddled end's left edge at the end's centre-Y.
+            // This produces a clean orthogonal route that enters SubEnd from the left,
+            // not a diagonal to its centre.
             if (tgtId in straddledEnds) {
                 val endRect = shapes[tgtId] ?: return@forEach
                 val wps = edges[sf.id] ?: return@forEach
                 if (wps.size >= 2) {
-                    val entryCx = endRect.x + endRect.w / 2.0
+                    val entryX = endRect.x // left edge — enter from left, not centre
                     val entryCy = endRect.y + endRect.h / 2.0
-                    edges[sf.id] = wps.dropLast(1) + Point(entryCx, entryCy)
+                    val secondLast = wps[wps.size - 2]
+                    // Insert a horizontal jog at entryCy so the final segment is horizontal.
+                    edges[sf.id] = wps.dropLast(1) +
+                        Point(secondLast.x, entryCy) +
+                        Point(entryX, entryCy)
                 }
                 return@forEach
             }
@@ -393,6 +457,47 @@ internal object BpmnPlacementPass {
                 Point(endRect.x + endRect.w, endRect.y + endRect.h / 2.0),
                 Point(tgtRect.x, tgtRect.y + tgtRect.h / 2.0),
             )
+        }
+    }
+
+    /**
+     * After [centreSubprocessHappyPath] moves spine nodes, any edge touching a snapped node
+     * has stale ELK-section waypoints. Re-route them as clean orthogonal border-to-border lines.
+     * Both-snapped (same row): straight horizontal. One-snapped (branch edge): L-shape.
+     */
+    private fun reanchorCentredSubprocessEdges(
+        model: BpmnModelInstance,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+        centredNodes: Set<String>,
+    ) {
+        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+            val srcId = sf.source?.id ?: return@forEach
+            val tgtId = sf.target?.id ?: return@forEach
+            val srcSnapped = srcId in centredNodes
+            val tgtSnapped = tgtId in centredNodes
+            if (!srcSnapped && !tgtSnapped) return@forEach
+            if (sf.id !in edges) return@forEach
+            val srcRect = shapes[srcId] ?: return@forEach
+            val tgtRect = shapes[tgtId] ?: return@forEach
+            val srcCy = srcRect.y + srcRect.h / 2.0
+            val tgtCy = tgtRect.y + tgtRect.h / 2.0
+            val srcRight = srcRect.x + srcRect.w
+            edges[sf.id] = if (kotlin.math.abs(srcCy - tgtCy) <= POSITION_EPSILON) {
+                // Both at same Y: straight horizontal line.
+                listOf(Point(srcRight, srcCy), Point(tgtRect.x, tgtCy))
+            } else {
+                // S-shape: exit source, jog at midpoint x, then enter target from left at tgtCy.
+                // Using midpoint x for the vertical jog keeps the final segment horizontal
+                // so the arrowhead points right into the target's left edge, not up/down.
+                val midX = srcRight + (tgtRect.x - srcRight) / 2.0
+                listOf(
+                    Point(srcRight, srcCy),
+                    Point(midX, srcCy),
+                    Point(midX, tgtCy),
+                    Point(tgtRect.x, tgtCy),
+                )
+            }
         }
     }
 
@@ -481,54 +586,81 @@ internal object BpmnPlacementPass {
     // ── Named rule 3: exception edges (the ONE sanctioned bespoke edge operation) ──
 
     /**
-     * Routes exception edges as deterministic three-point orthogonal polylines.
+     * Routes exception edges as deterministic orthogonal polylines (AD-557-12).
      *
-     * This is the ONE sanctioned bespoke edge operation (AD-557-12). For each boundary event
-     * with an outgoing exception flow, produces:
-     *   (bCx, bBottom) → (bCx, handlerCy) → (handlerNearEdge, handlerCy)
+     * Normal case (handler below or beside): three-point drop-then-right route.
+     *   (bCx, bBottom) → (bCx, handlerCy) → (handlerLeft, handlerCy)
      *
-     * Where:
-     * - (bCx, bBottom) is the centre-bottom of the placed boundary shape.
-     * - handlerCy is the handler's centre Y.
-     * - handlerNearEdge is the handler's left edge if the handler is to the right, right edge
-     *   otherwise (so the arrowhead lands on the handler's border facing the boundary).
-     *
-     * No obstacle detection. The handler is already below the main flow (ELK component stacking);
-     * the drop-then-horizontal path will not pass through the main flow.
+     * Detour case (handler above the main flow, e.g. boundary on a subprocess with handler
+     * placed as a disconnected component above): the straight-up path passes through the host
+     * and other nodes. Route **around** the host instead:
+     *   (bCx, bBottom) → (bCx, clearY) → (hostRight + gap, clearY) → (hostRight + gap, handlerCy)
+     *   → (handlerLeft, handlerCy)
+     * where clearY is just below bBottom (already clear of the host bottom border) and
+     * hostRight + gap clears the host's right edge before rising to the handler.
      */
     private fun routeExceptionEdges(
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
     ) {
-        val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
-            .mapTo(mutableSetOf()) { it.id }
+        val boundaryEvents = model.getModelElementsByType(BoundaryEvent::class.java)
+            .associateBy { it.id }
 
         model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { it.source?.id in boundaryIds }
+            .filter { it.source?.id in boundaryEvents }
             .sortedBy { it.id }
             .forEach { sf ->
-                val bRect = shapes[sf.source?.id ?: return@forEach] ?: return@forEach
+                val be = boundaryEvents[sf.source?.id] ?: return@forEach
+                val bRect = shapes[be.id] ?: return@forEach
                 val tRect = shapes[sf.target?.id ?: return@forEach] ?: return@forEach
-                val startX = bRect.x + bRect.w / 2.0
-                val startY = bRect.y + bRect.h
-                if (startX >= tRect.x && startX <= tRect.x + tRect.w) {
-                    val endY = if (tRect.y >= startY) tRect.y else tRect.y + tRect.h
-                    edges[sf.id] = listOf(
-                        Point(startX, startY),
-                        Point(startX, endY),
-                    )
-                } else {
-                    val targetCy = tRect.y + tRect.h / 2.0
-                    val enterLeft = tRect.x >= startX
-                    val endX = if (enterLeft) tRect.x else tRect.x + tRect.w
-                    edges[sf.id] = listOf(
-                        Point(startX, startY),
-                        Point(startX, targetCy),
-                        Point(endX, targetCy),
-                    )
-                }
+                val hostRect = shapes[be.attachedTo?.id]
+                edges[sf.id] = routeExceptionEdge(bRect, tRect, hostRect)
             }
+    }
+
+    /**
+     * Computes the waypoints for one exception edge.
+     * [bRect] is the placed boundary shape, [tRect] the handler, [hostRect] the host node.
+     *
+     * If the handler is above the boundary (disconnected component placed above by ELK), the
+     * straight-up route would pass through the host — use a detour around the host's right edge.
+     */
+    private fun routeExceptionEdge(bRect: Rect, tRect: Rect, hostRect: Rect?): List<Point> {
+        val startX = bRect.x + bRect.w / 2.0
+        val startY = bRect.y + bRect.h
+        val targetCy = tRect.y + tRect.h / 2.0
+        val enterX = if (tRect.x >= startX) tRect.x else tRect.x + tRect.w
+
+        // Detour: the straight vertical at startX would pass through the host.
+        // Condition: host exists AND the vertical segment (startX, startY→handlerCy) intersects
+        // the host's x-range AND the host's y-range contains part of that segment.
+        val vertMinY = minOf(startY, targetCy)
+        val vertMaxY = maxOf(startY, targetCy)
+        val pathClearsHost = hostRect == null ||
+            startX < hostRect.x ||
+            startX > hostRect.x + hostRect.w ||
+            // outside host x-range
+            vertMaxY <= hostRect.y ||
+            vertMinY >= hostRect.y + hostRect.h // outside host y-range
+        if (!pathClearsHost) {
+            val clearY = startY + EXCEPTION_DETOUR_GAP // just below boundary bottom
+            val clearX = hostRect.x + hostRect.w + EXCEPTION_DETOUR_GAP // right of host
+            return listOf(
+                Point(startX, startY),
+                Point(startX, clearY),
+                Point(clearX, clearY),
+                Point(clearX, targetCy),
+                Point(enterX, targetCy),
+            )
+        }
+
+        // Normal: handler is below or beside — three-point drop-then-horizontal.
+        return listOf(
+            Point(startX, startY),
+            Point(startX, targetCy),
+            Point(enterX, targetCy),
+        )
     }
 
     // ── Named rule 5: labels below nodes / at edge-waypoint mid ───────────────
@@ -849,6 +981,10 @@ internal object BpmnPlacementPass {
     // ── Constants ─────────────────────────────────────────────────────────────
 
     private const val ARTIFACT_MARGIN = 30.0
+
+    /** Clearance added below the boundary bottom and right of the host when detouring around
+     * a host node to reach a handler placed above the main flow. */
+    private const val EXCEPTION_DETOUR_GAP = 20.0
 
     /**
      * Minimum horizontal gap between a host's right edge and the handler component's left edge
