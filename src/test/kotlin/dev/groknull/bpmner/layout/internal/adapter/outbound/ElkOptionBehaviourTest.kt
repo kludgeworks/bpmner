@@ -5,8 +5,11 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
+import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.alg.layered.options.LayeredOptions
+import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
+import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.math.ElkPadding
@@ -291,6 +294,203 @@ class ElkOptionBehaviourTest {
             hasNonZero,
             "Cross-hierarchy edge section must have non-zero coordinates: " +
                 "start=(${section.startX},${section.startY}) end=(${section.endX},${section.endY})",
+        )
+    }
+
+    // ── AD-557-11 Spike proofs: phase-1 ELK constraints replace phase-2 moves ──
+
+    /**
+     * Spike proof 1 (AD-557-11): NODE_PLACEMENT_STRATEGY = NETWORK_SIMPLEX keeps a
+     * primary flat chain on a single centre-Y (within ε), so the `snapBaseline` post-move
+     * can be deleted and replaced by this phase-1 constraint.
+     *
+     * Graph: start → task1 → task2 → end  (all same size, no branches)
+     * Asserts all four nodes share the same centre-Y after layout (within 2px tolerance).
+     */
+    @Test
+    fun `spike - NETWORK_SIMPLEX node placement keeps flat chain on one centre-Y`() {
+        val root = ElkGraphUtil.createGraph()
+        applyBaseOptions(root)
+        root.setProperty(
+            LayeredOptions.NODE_PLACEMENT_STRATEGY,
+            NodePlacementStrategy.NETWORK_SIMPLEX,
+        )
+        root.setProperty(CoreOptions.RANDOM_SEED, 1)
+
+        val start = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
+        val task1 = ElkGraphUtil.createNode(root).also {
+            it.width = 100.0
+            it.height = 80.0
+        }
+        val task2 = ElkGraphUtil.createNode(root).also {
+            it.width = 100.0
+            it.height = 80.0
+        }
+        val end = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
+
+        ElkGraphUtil.createSimpleEdge(start, task1)
+        ElkGraphUtil.createSimpleEdge(task1, task2)
+        ElkGraphUtil.createSimpleEdge(task2, end)
+
+        runLayout(root)
+
+        // Collect centre-Y for each node
+        val centreYs = listOf(start, task1, task2, end).map { it.y + it.height / 2.0 }
+        val minY = centreYs.min()
+        val maxY = centreYs.max()
+        val spread = maxY - minY
+
+        // Within a linear chain, NETWORK_SIMPLEX should keep all nodes on one horizontal row.
+        // We allow 2px jitter (ELK may add a sub-pixel offset for the differently-sized events).
+        assertTrue(
+            spread <= 2.0,
+            "NETWORK_SIMPLEX should align flat chain to single centre-Y: " +
+                "centres=$centreYs spread=$spread (expected ≤2.0)",
+        )
+    }
+
+    /**
+     * Spike proof 2 (AD-557-11): LAYERING_LAYER_CONSTRAINT = FIRST/LAST + CONSIDER_MODEL_ORDER
+     * pins the start node to the leftmost layer and the end node to the rightmost layer,
+     * replacing `snapBaseline`'s need to fix node ordering.
+     *
+     * Graph: start(FIRST) → task → end(LAST)
+     * Asserts start has smaller x than task, and task has smaller x than end.
+     */
+    @Test
+    fun `spike - LAYER_CONSTRAINT FIRST and LAST pin start and end nodes to outer layers`() {
+        val root = ElkGraphUtil.createGraph()
+        applyBaseOptions(root)
+        root.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY,
+            OrderingStrategy.NODES_AND_EDGES,
+        )
+        root.setProperty(CoreOptions.RANDOM_SEED, 1)
+
+        val start = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
+        start.setProperty(LayeredOptions.LAYERING_LAYER_CONSTRAINT, LayerConstraint.FIRST)
+
+        val task = ElkGraphUtil.createNode(root).also {
+            it.width = 100.0
+            it.height = 80.0
+        }
+
+        val end = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
+        end.setProperty(LayeredOptions.LAYERING_LAYER_CONSTRAINT, LayerConstraint.LAST)
+
+        ElkGraphUtil.createSimpleEdge(start, task)
+        ElkGraphUtil.createSimpleEdge(task, end)
+
+        runLayout(root)
+
+        // start must be to the left of task, task to the left of end (RIGHT direction)
+        assertTrue(
+            start.x < task.x,
+            "Start (x=${start.x}) must be to the left of task (x=${task.x}) with LAYER_CONSTRAINT FIRST",
+        )
+        assertTrue(
+            task.x < end.x,
+            "Task (x=${task.x}) must be to the left of end (x=${end.x}) with LAYER_CONSTRAINT LAST",
+        )
+    }
+
+    /**
+     * Spike proof 3 (AD-557-11, key decision gate): can ELK place the exception handler
+     * **below** the main flow in one pass, using only phase-1 constraints — so
+     * `pushExceptionHandlersBelow` (the post-ELK node move) can be deleted?
+     *
+     * Graph:
+     *   host (task, SOUTH boundary port) → main successor (end event)
+     *   boundary port → exception handler
+     *
+     * Inserted in model order: host, successor, handler (handler last so considerModelOrder
+     * puts it below).  With SEPARATE_CONNECTED_COMPONENTS the exception subgraph is its own
+     * component; its vertical band position relative to the main flow is what we probe here.
+     *
+     * Decision gate:
+     * - PASS: handler.y  >  max(host.y + host.height, successor.y + successor.height)
+     *   → proceed to delete pushExceptionHandlersBelow and its repair functions.
+     * - FAIL: handler is at or above the main flow
+     *   → stop and escalate to /architect 557 (cannot meet AD-557-11 for this clause
+     *     without a post-ELK move, which the architecture forbids).
+     */
+    @Test
+    fun `spike - exception handler placed below main flow by ELK in one pass (AD-557-11 decision gate)`() {
+        val root = ElkGraphUtil.createGraph()
+        applyBaseOptions(root)
+        root.setProperty(CoreOptions.RANDOM_SEED, 1)
+        // Insert main flow first, exception handler last so considerModelOrder biases it below.
+        root.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY,
+            OrderingStrategy.NODES_AND_EDGES,
+        )
+        // With SEPARATE_CONNECTED_COMPONENTS each disconnected subgraph is laid out independently;
+        // ELK stacks separate components vertically (for RIGHT direction: horizontally by default,
+        // then stacked).  We rely on model/insert order to determine stacking.
+        root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
+
+        // Main flow: host → successor (inserted first → component 1)
+        val host = ElkGraphUtil.createNode(root).also {
+            it.width = 100.0
+            it.height = 80.0
+        }
+        host.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
+
+        val port = ElkGraphUtil.createPort(host)
+        port.width = 10.0
+        port.height = 10.0
+        port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
+
+        val successor = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
+        ElkGraphUtil.createSimpleEdge(host, successor) // connects host + successor → component 1
+
+        // Exception handler (inserted last → component 2; model-order bias puts it second)
+        val handler = ElkGraphUtil.createNode(root).also {
+            it.width = 100.0
+            it.height = 80.0
+        }
+        // Edge from SOUTH port to handler — note: with SEPARATE_CONNECTED_COMPONENTS this edge
+        // CONNECTS the handler to the main flow's component, so they become ONE component.
+        // That is fine: ELK will rank/order within the single component; model order and the
+        // SOUTH port force the handler to a row below the host.
+        val exEdge = ElkGraphUtil.createEdge(root)
+        exEdge.sources.add(port)
+        exEdge.targets.add(handler)
+
+        runLayout(root)
+
+        // Record results for the decision gate
+        val mainBottom = maxOf(
+            host.y + host.height,
+            successor.y + successor.height,
+        )
+        val handlerTop = handler.y
+
+        // Decision gate: handler must start at or below the main flow's bottom edge.
+        // We allow a small epsilon because ELK's layered algorithm may co-rank the handler
+        // in the SOUTH port's layer but still place it below due to the port direction.
+        assertTrue(
+            handlerTop >= mainBottom - 1.0,
+            "AD-557-11 decision gate FAIL: exception handler top (${handler.y}) must be at or " +
+                "below main flow bottom ($mainBottom). " +
+                "Host: y=${host.y} h=${host.height}, Successor: y=${successor.y} h=${successor.height}. " +
+                "If this fails, escalate to /architect 557 — ELK cannot place the exception band " +
+                "below the main flow in one pass without a post-ELK node move.",
         )
     }
 }
