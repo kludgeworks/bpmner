@@ -43,47 +43,46 @@ the `bpmn` kernel retains `allowedDependencies = []`.
 
 ---
 
-## 2. Module shape, ports, and hexagonal layering
+## 2. Module shape, ports, and Onion layering
 
-Every Kotlin module in `dev.groknull.bpmner.*` is shaped as a hexagon: a small set of
-**ports** (interfaces declared in the module's public package) and a private interior
-of **adapters** and **domain services** under `internal/`. The roles are made explicit
-with jMolecules annotations, enforced at build time by `BpmnerArchitectureTest`.
+Every Kotlin module in `dev.groknull.bpmner.*` has a small set of **ports** (interfaces
+declared in the module's public package) and a private interior of **adapters** and
+**domain services** under `internal/`. Simplified jMolecules Onion annotations make the
+roles explicit and `BpmnerArchitectureTest` enforces them at build time.
 
-### The four roles
+### Onion roles
 
 | Annotation | Role | Plain-English meaning |
 | --- | --- | --- |
-| `@PrimaryPort` | Inbound port (use-case API) | What this module *offers* the rest of the system. |
-| `@PrimaryAdapter` | Inbound adapter | A specific way an outside party triggers the module (CLI command, Spring Shell, event listener, agent action). |
-| `@SecondaryPort` | Outbound port (SPI) | What this module *needs* from the outside world to do its job. |
-| `@SecondaryAdapter` | Outbound adapter | A specific implementation of an SPI, bound to a concrete technology (GraalJS, Camunda, file I/O). |
+| `@DomainRing` | Domain model and logic | Pure BPMN rules, values, and domain services. |
+| `@ApplicationRing` | Public capability API and use-case service | What this module offers, plus application services and existing ports it uses for in-process collaboration. |
+| `@InfrastructureRing` | Technical adapter | Spring, CLI, web, agent-platform, OS-command, XML, or other external-system integration. |
 
-All four come from `org.jmolecules.architecture.hexagonal`. The DDD building blocks
-(`@Service`, `@DomainEvent`) come from `org.jmolecules.ddd.annotation` and
+All three come from `org.jmolecules.architecture.onion.simplified`. The DDD building
+blocks (`@Service`, `@DomainEvent`) come from `org.jmolecules.ddd.annotation` and
 `org.jmolecules.event.annotation`.
 
 ### Module layout pattern
 
 ```text
 <module>/
-├── <PrimaryPort>.kt          # @PrimaryPort interfaces (use-cases)
-├── <SecondaryPort>.kt        # @SecondaryPort interfaces (SPIs)
+├── <CapabilityApi>.kt        # @ApplicationRing interfaces (use-cases)
+├── <CapabilityPort>.kt       # @ApplicationRing interfaces (existing ports)
 ├── <DomainEvent>.kt          # @DomainEvent classes (cross-module events)
 └── internal/
     ├── adapter/
-    │   ├── inbound/          # @PrimaryAdapter classes (triggers)
-    │   └── outbound/         # @SecondaryAdapter classes (integrations)
+    │   ├── inbound/          # @InfrastructureRing classes (triggers)
+    │   └── outbound/         # @InfrastructureRing classes (integrations)
     └── domain/               # @Service (DDD) classes (use-case implementations)
 ```
 
 | Component | Default location | Required annotations | Spring stereotype |
 | --- | --- | --- | --- |
-| Primary Port (API) | `<module>/` (public package) | `@PrimaryPort` | (none — it's an interface) |
-| Secondary Port (SPI) | `<module>/` *or* `<module>/internal/domain/` | `@SecondaryPort` | (none — it's an interface) |
+| Public capability API | `<module>/` (public package) | `@ApplicationRing` | (none — it's an interface) |
+| Existing port / internal use-case contract | `<module>/` *or* `<module>/internal/domain/` | `@ApplicationRing` | (none — it's an interface) |
 | Domain Service | `<module>/internal/domain/` | `@Service` (jMolecules DDD) | `@Component` |
-| Inbound Adapter | `<module>/internal/adapter/inbound/` | `@PrimaryAdapter` | `@Component` (or `@ShellComponent`, `@Agent`, etc.) |
-| Outbound Adapter | `<module>/internal/adapter/outbound/` | `@SecondaryAdapter` | `@Component` or `@Service` |
+| Inbound Adapter | `<module>/internal/adapter/inbound/` | `@InfrastructureRing` | `@Component` (or `@ShellComponent`, `@Agent`, etc.) |
+| Outbound Adapter | `<module>/internal/adapter/outbound/` | `@InfrastructureRing` | `@Component` or `@Service` |
 
 The `bpmn/` kernel uses no hexagonal annotations — the root holds the annotation-free BPMN
 language layer + rule SPI; `bpmn/internal/model/` holds the Jackson-bound implementations.
@@ -91,24 +90,24 @@ Per-capability `@ConfigurationProperties` classes live in each capability's publ
 
 ### Where the pattern bends
 
-- **Secondary ports inside `internal/domain/`** — `repair/internal/domain/BpmnRepairPorts.kt`
-  holds `@SecondaryPort internal interface BpmnRepairPromptPort` and `BpmnPatchApplicationPort`.
+- **Existing ports inside `internal/domain/`** — `repair/internal/domain/BpmnRepairPorts.kt`
+  holds `@ApplicationRing internal interface BpmnRepairPromptPort` and `BpmnPatchApplicationPort`.
   These are private to the module; placing them at root would advertise a contract nothing
   outside the module is allowed to fulfil.
-- **`telemetry/` has no `@SecondaryPort`** — it is a one-way sink: event listeners only,
+- **`telemetry/` has no outbound port** — it is a one-way sink: event listeners only,
   no SPI.
 
 ### When to use which annotation
 
-- **Adding a new way to trigger generation** — add a primary adapter for the new transport,
+- **Adding a new way to trigger generation** — add an infrastructure-ring adapter for the new transport,
   start an Embabel process through `BpmnAgentInvoker` or seed the same blackboard types.
 - **Adding a new validator** — `@Service` in `conformance/internal/domain/`.
-- **Swapping the rule engine** — write a new `@SecondaryAdapter` implementing `BpmnLintingPort`.
-- **Adding a brand-new module** — create `<module>/` with its `@PrimaryPort`, `@SecondaryPort`,
+- **Swapping the rule engine** — write a new `@InfrastructureRing` implementation of `BpmnLintingPort`.
+- **Adding a brand-new module** — create `<module>/` with its `@ApplicationRing` API and ports,
   `internal/domain/`, and `internal/adapter/{inbound,outbound}/` skeleton; the architecture
   and Modulith tests pick it up without configuration.
 - **Cross-module event** — `@DomainEvent` in the emitting module's public package; listeners
-  are `@PrimaryAdapter` in consuming modules.
+  are `@InfrastructureRing` adapters in consuming modules.
 
 ---
 
@@ -268,7 +267,7 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 | `telemetry/` | Event sink: process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
 | `llm/` | LLM provider registration (DeepSeek, OpenRouter). Platform-level; `allowedDependencies = []`. | Provider `@Configuration` classes. |
 | `browser/` | OS-level browser launch for post-generation preview. | `BrowserOpenPort` (port). |
-| `preview/` | BPMN → transient temp-dir `.preview.html` artifact. | `BpmnPreviewWriter` (`@SecondaryPort`), `ClasspathBpmnPreviewWriter` (`@SecondaryAdapter`). |
+| `preview/` | BPMN → transient temp-dir `.preview.html` artifact. | `BpmnPreviewWriter` (`@ApplicationRing`), `ClasspathBpmnPreviewWriter` (`@InfrastructureRing`). |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -366,9 +365,9 @@ The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and
   of 10** modules (`conformance`, `readiness`, `contract`, `alignment`, `ruleset`, `layout`;
   ADR-007 Decision 1 + epic #451 S7); `authoring`, `pipeline`, `repair`, `telemetry` keep
   `ALL_DEPENDENCIES` with documented rationale (deep transitive agent/event graph).
-- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, `ensureHexagonal(LENIENT)`, 5 bespoke
+- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, 5 bespoke
   pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `conformance` class
-  permitted to depend on `ruleset` `@PrimaryPort`s — ADR-007 Decision 2),
+  permitted to depend on `ruleset` `@ApplicationRing` APIs — ADR-007 Decision 2),
   `excludeBazelTestClasses`.
 - **`BpmnerArchitectureTest` (kernel gate)** — `bpmn kernel is free of framework, IO, and
   cross-module dependencies`: the `bpmn/` kernel module may not import other `bpmner` modules
