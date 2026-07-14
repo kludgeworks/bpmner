@@ -61,7 +61,7 @@
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="14.0" width="90.0" x="-15.0" y="72.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_attempt" id="BPMNShape_Task_attempt">
@@ -84,14 +84,14 @@
         <di:waypoint x="378.0" y="57.0"/>
         <di:waypoint x="468.0" y="57.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="14.0" width="120.0" x="340.0" y="39.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="340.0" y="33.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
         <di:waypoint x="328.0" y="65.0"/>
         <di:waypoint x="238.0" y="65.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="14.0" width="120.0" x="246.0" y="69.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="246.0" y="69.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

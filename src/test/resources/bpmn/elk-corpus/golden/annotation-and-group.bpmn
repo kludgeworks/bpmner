@@ -63,13 +63,13 @@
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="518.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="14.0" width="90.0" x="491.0" y="72.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="491.0" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="14.0" width="90.0" x="-15.0" y="72.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_1" id="BPMNShape_Task_1">
