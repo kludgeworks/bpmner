@@ -143,6 +143,55 @@ class BpmnPlacementPassTest {
             portMap: Map<String, ElkPort> = emptyMap(),
             edgeMap: Map<String, ElkEdge> = emptyMap(),
         ): ElkSkeleton = ElkSkeleton(root, nodeMap, portMap, edgeMap)
+
+        /**
+         * Builds a flat 3-node ELK skeleton (start→task→end) with known positions and edges,
+         * used by the no-relocation guard test.
+         */
+        private fun flatFlatProcessSkeleton(): Pair<BpmnModelInstance, ElkSkeleton> {
+            val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>F1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="Task_1">
+      <bpmn:incoming>F1</bpmn:incoming><bpmn:outgoing>F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1"><bpmn:incoming>F2</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_1" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+            val model = parse(xml)
+            val root = ElkGraphUtil.createGraph()
+            fun node(id: String, x: Double, y: Double, w: Double, h: Double) = ElkGraphUtil.createNode(root).also {
+                it.identifier = id
+                it.x = x
+                it.y = y
+                it.width = w
+                it.height = h
+            }
+            fun edge(id: String, sx: Double, sy: Double, ex: Double, ey: Double) = ElkGraphUtil.createEdge(root).also { e ->
+                e.identifier = id
+                ElkGraphUtil.createEdgeSection(e).also { s ->
+                    s.startX = sx
+                    s.startY = sy
+                    s.endX = ex
+                    s.endY = ey
+                }
+            }
+            val startNode = node("Start_1", 12.0, 57.0, 36.0, 36.0)
+            val taskNode = node("Task_1", 198.0, 40.0, 100.0, 80.0)
+            val endNode = node("End_1", 448.0, 57.0, 36.0, 36.0)
+            val f1 = edge("F1", 48.0, 75.0, 198.0, 80.0)
+            val f2 = edge("F2", 298.0, 80.0, 448.0, 75.0)
+            val sk = skeleton(
+                root = root,
+                nodeMap = mapOf("Start_1" to startNode, "Task_1" to taskNode, "End_1" to endNode),
+                edgeMap = mapOf("F1" to f1, "F2" to f2),
+            )
+            return model to sk
+        }
     }
 
     // ── Named rule 2: boundary shape on host BOTTOM edge ─────────────────────
@@ -402,10 +451,12 @@ class BpmnPlacementPassTest {
         )
     }
 
-    // ── Named rule 3: exception edge start reconciled to boundary centre ───────
+    // ── Named rule 3: exception edge routed as three-point orthogonal polyline (AD-557-12) ──
 
     @Test
-    fun `exception edge first waypoint is at boundary shape centre (reconciliation)`() {
+    fun `exception edge is routed as three-point polyline from boundary bottom to handler (AD-557-12)`() {
+        // AD-557-12: no ELK edge from port to handler; routeExceptionEdges produces the full route.
+        // Handler placed BELOW the main flow (ELK component stacking — no post-ELK node move).
         val model = boundaryModel()
         val root = ElkGraphUtil.createGraph()
 
@@ -419,9 +470,9 @@ class BpmnPlacementPassTest {
         val handlerNode = ElkGraphUtil.createNode(root)
         handlerNode.identifier = "Handler_1"
         handlerNode.x = 280.0
-        handlerNode.y = 160.0
-        handlerNode.width = 36.0
-        handlerNode.height = 36.0
+        handlerNode.y = 200.0 // below host bottom (50+80=130)
+        handlerNode.width = 100.0
+        handlerNode.height = 80.0
 
         val beNode = ElkGraphUtil.createNode(root)
         beNode.identifier = "Boundary_1"
@@ -430,24 +481,18 @@ class BpmnPlacementPassTest {
 
         val port = ElkGraphUtil.createPort(hostNode)
         port.identifier = "port_Boundary_1"
-        port.x = 45.0
-        port.y = hostNode.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE
+        port.setProperty(org.eclipse.elk.core.options.CoreOptions.PORT_SIDE, org.eclipse.elk.core.options.PortSide.SOUTH)
 
-        val elkEdge = ElkGraphUtil.createEdge(root)
-        elkEdge.identifier = "Flow_ex"
-        elkEdge.sources.add(port)
-        elkEdge.targets.add(handlerNode)
-        val section = ElkGraphUtil.createEdgeSection(elkEdge)
-        section.startX = 145.0
-        section.startY = 130.0
-        section.endX = 280.0
-        section.endY = 178.0
-
+        // No ELK edge from port to handler (AD-557-12): edgeMap is empty.
         val sk = skeleton(
             root = root,
-            nodeMap = mapOf("Task_1" to hostNode, "Handler_1" to handlerNode, "Boundary_1" to beNode),
+            nodeMap = mapOf(
+                "Task_1" to hostNode,
+                "Handler_1" to handlerNode,
+                "Boundary_1" to beNode,
+            ),
             portMap = mapOf("Boundary_1" to port),
-            edgeMap = mapOf("Flow_ex" to elkEdge),
+            edgeMap = emptyMap(),
         )
 
         val layout = BpmnPlacementPass.place(model, sk)
@@ -456,27 +501,52 @@ class BpmnPlacementPassTest {
         val bCentreX = bRect.x + bRect.w / 2.0
         val bBottomY = bRect.y + bRect.h
         val handler = layout.shapes["Handler_1"]!!
+        val handlerCy = handler.y + handler.h / 2.0
 
         val edgeWps = layout.edges["Flow_ex"]
         assertNotNull(edgeWps, "Exception edge must have waypoints")
-        assertTrue(edgeWps.size >= 2, "Exception edge must have at least two waypoints")
+        assertEquals(3, edgeWps.size, "Exception edge must be a three-point polyline")
 
-        // First waypoint exits the boundary's BOTTOM edge (not its centre — BLOCK feedback).
-        val wp0 = edgeWps.first()
-        assertEquals(bCentreX, wp0.x, 0.5, "Exception edge must start at boundary bottom-centre X")
-        assertEquals(bBottomY, wp0.y, 0.5, "Exception edge must start at boundary BOTTOM edge, not centre")
+        // wp0: boundary bottom centre.
+        assertEquals(bCentreX, edgeWps[0].x, 0.5, "wp0 x must be boundary centre-X")
+        assertEquals(bBottomY, edgeWps[0].y, 0.5, "wp0 y must be boundary bottom edge")
 
-        // The route must be fully orthogonal (every segment axis-aligned).
+        // wp1: same X as start, at handler centre-Y (the vertical drop).
+        assertEquals(bCentreX, edgeWps[1].x, 0.5, "wp1 x must stay at boundary centre-X (drop)")
+        assertEquals(handlerCy, edgeWps[1].y, 0.5, "wp1 y must be handler centre-Y")
+
+        // wp2: handler's left edge (handler is to the right of boundary centre-X).
+        assertEquals(handler.x, edgeWps[2].x, 0.5, "wp2 x must be handler left edge")
+        assertEquals(handlerCy, edgeWps[2].y, 0.5, "wp2 y must be handler centre-Y")
+
+        // The route must be fully orthogonal.
         for (i in 1 until edgeWps.size) {
             val a = edgeWps[i - 1]
             val b = edgeWps[i]
-            val axisAligned = kotlin.math.abs(a.x - b.x) < 0.5 || kotlin.math.abs(a.y - b.y) < 0.5
-            assertTrue(axisAligned, "Exception edge segment $a->$b must be horizontal or vertical (orthogonal)")
+            assertTrue(
+                kotlin.math.abs(a.x - b.x) < 0.5 || kotlin.math.abs(a.y - b.y) < 0.5,
+                "Segment $a->$b must be axis-aligned",
+            )
         }
+    }
 
-        // Last waypoint enters the handler's left edge (handler is to the right of the boundary).
-        val wpN = edgeWps.last()
-        assertEquals(handler.x, wpN.x, 0.5, "Exception edge must end at handler's near (left) edge")
+    // ── AD-557-11 no-relocation guard ─────────────────────────────────────────
+
+    @Test
+    fun `place() returns shape bounds identical to ELK bounds for every non-boundary flow node (AD-557-11)`() {
+        val (model, sk) = flatFlatProcessSkeleton()
+        val layout = BpmnPlacementPass.place(model, sk)
+        val eps = BpmnPlacementPass.POSITION_EPSILON
+        // AD-557-11 no-relocation guard: phase 2 must never move a node ELK placed.
+        for ((id, elkNode) in sk.nodeMap) {
+            val placed = layout.shapes[id] ?: continue
+            val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
+            assertTrue(
+                kotlin.math.abs(placed.x - ax) <= eps && kotlin.math.abs(placed.y - ay) <= eps,
+                "AD-557-11: phase 2 relocated node '$id'. " +
+                    "ELK: ($ax, $ay) placed: (${placed.x}, ${placed.y})",
+            )
+        }
     }
 
     // ── Named rule 6: artifact placement off the skeleton ─────────────────────
