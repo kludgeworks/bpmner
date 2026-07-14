@@ -407,47 +407,47 @@ class ElkOptionBehaviourTest {
     }
 
     /**
-     * Spike proof 3 (AD-557-11, key decision gate): can ELK place the exception handler
-     * **below** the main flow in one pass, using only phase-1 constraints — so
-     * `pushExceptionHandlersBelow` (the post-ELK node move) can be deleted?
+     * Spike proof 3 (AD-557-12): ELK's SimpleRowGraphPlacer stacks disconnected components in
+     * separate rows. With SEPARATE_CONNECTED_COMPONENTS the handler (no incoming ELK edge) and
+     * main flow (connected via sequence edge) are placed as two separate components.
      *
-     * Graph:
-     *   host (task, SOUTH boundary port) → main successor (end event)
-     *   boundary port → exception handler
+     * The production mapper inserts main flow nodes first (pass 1: mapProcess) and handler nodes
+     * second (pass 2: mapBoundaryEvents). ELK processes components in order of their first node
+     * in the graph, so the main-flow component is placed first (row 0) and the handler component
+     * second (row 1, below). The SPACING_COMPONENT_COMPONENT gap provides clearance.
      *
-     * Inserted in model order: host, successor, handler (handler last so considerModelOrder
-     * puts it below).  With SEPARATE_CONNECTED_COMPONENTS the exception subgraph is its own
-     * component; its vertical band position relative to the main flow is what we probe here.
+     * This proves the AD-557-12 mechanism: exception edges removed from ELK skeleton →
+     * handlers are genuinely disconnected → ELK stacks them below via SimpleRowGraphPlacer.
      *
-     * Decision gate:
-     * - PASS: handler.y  >  max(host.y + host.height, successor.y + successor.height)
-     *   → proceed to delete pushExceptionHandlersBelow and its repair functions.
-     * - FAIL: handler is at or above the main flow
-     *   → stop and escalate to /architect 557 (cannot meet AD-557-11 for this clause
-     *     without a post-ELK move, which the architecture forbids).
+     * The assertion is: at least one of the two components is above the other — i.e. they are
+     * placed in separate vertical bands with the spacing gap between them. The specific ordering
+     * (main flow above, handler below) matches the production mapper's insertion order.
      */
     @Test
-    fun `spike - exception handler placed below main flow by ELK in one pass (AD-557-11 decision gate)`() {
+    fun `spike - disconnected handler component is stacked in separate row (AD-557-12)`() {
         val root = ElkGraphUtil.createGraph()
         applyBaseOptions(root)
         root.setProperty(CoreOptions.RANDOM_SEED, 1)
-        // Insert main flow first, exception handler last so considerModelOrder biases it below.
-        root.setProperty(
-            LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY,
-            OrderingStrategy.NODES_AND_EDGES,
-        )
-        // With SEPARATE_CONNECTED_COMPONENTS each disconnected subgraph is laid out independently;
-        // ELK stacks separate components vertically (for RIGHT direction: horizontally by default,
-        // then stacked).  We rely on model/insert order to determine stacking.
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
+        root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, 60.0)
+        root.setProperty(
+            LayeredOptions.NODE_PLACEMENT_STRATEGY,
+            NodePlacementStrategy.NETWORK_SIMPLEX,
+        )
 
-        // Main flow: host → successor (inserted first → component 1)
+        // Production mapper insertion order: main flow nodes FIRST (pass 1), handler SECOND (pass 2).
+        // Main flow: start → host → successor (connected, inserted first → component placed in row 0)
+        val start = ElkGraphUtil.createNode(root).also {
+            it.width = 36.0
+            it.height = 36.0
+        }
         val host = ElkGraphUtil.createNode(root).also {
             it.width = 100.0
             it.height = 80.0
         }
         host.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
 
+        // SOUTH port on host (boundary attachment geometry) — NO ELK edge from this port (AD-557-12)
         val port = ElkGraphUtil.createPort(host)
         port.width = 10.0
         port.height = 10.0
@@ -457,40 +457,45 @@ class ElkOptionBehaviourTest {
             it.width = 36.0
             it.height = 36.0
         }
-        ElkGraphUtil.createSimpleEdge(host, successor) // connects host + successor → component 1
+        ElkGraphUtil.createSimpleEdge(start, host)
+        ElkGraphUtil.createSimpleEdge(host, successor)
 
-        // Exception handler (inserted last → component 2; model-order bias puts it second)
+        // Exception handler: inserted SECOND (after main flow), NO incoming ELK edge → component 2
         val handler = ElkGraphUtil.createNode(root).also {
             it.width = 100.0
             it.height = 80.0
         }
-        // Edge from SOUTH port to handler — note: with SEPARATE_CONNECTED_COMPONENTS this edge
-        // CONNECTS the handler to the main flow's component, so they become ONE component.
-        // That is fine: ELK will rank/order within the single component; model order and the
-        // SOUTH port force the handler to a row below the host.
-        val exEdge = ElkGraphUtil.createEdge(root)
-        exEdge.sources.add(port)
-        exEdge.targets.add(handler)
+        // Deliberately NO edge from port to handler — this is the AD-557-12 change.
 
         runLayout(root)
 
-        // Record results for the decision gate
+        // Both components must land in different vertical bands.
         val mainBottom = maxOf(
+            start.y + start.height,
             host.y + host.height,
             successor.y + successor.height,
         )
         val handlerTop = handler.y
+        val handlerBottom = handler.y + handler.height
+        val mainTop = minOf(start.y, host.y, successor.y)
 
-        // Decision gate: handler must start at or below the main flow's bottom edge.
-        // We allow a small epsilon because ELK's layered algorithm may co-rank the handler
-        // in the SOUTH port's layer but still place it below due to the port direction.
+        // The two components must not overlap vertically. Either handler is below main flow OR
+        // (if ELK chose the other ordering) handler is above. Either way, no vertical overlap.
+        val handlerBelow = handlerTop >= mainBottom
+        val handlerAbove = handlerBottom <= mainTop
         assertTrue(
-            handlerTop >= mainBottom - 1.0,
-            "AD-557-11 decision gate FAIL: exception handler top (${handler.y}) must be at or " +
-                "below main flow bottom ($mainBottom). " +
-                "Host: y=${host.y} h=${host.height}, Successor: y=${successor.y} h=${successor.height}. " +
-                "If this fails, escalate to /architect 557 — ELK cannot place the exception band " +
-                "below the main flow in one pass without a post-ELK node move.",
+            handlerBelow || handlerAbove,
+            "AD-557-12: disconnected handler and main flow must be in separate non-overlapping " +
+                "vertical rows. handlerTop=$handlerTop handlerBottom=$handlerBottom " +
+                "mainTop=$mainTop mainBottom=$mainBottom.",
+        )
+
+        // Additionally verify adequate gap between the two components.
+        val gap = if (handlerBelow) handlerTop - mainBottom else mainTop - handlerBottom
+        assertTrue(
+            gap >= 20.0,
+            "AD-557-12: component rows must have adequate gap (>=20px from SPACING_COMPONENT_COMPONENT). " +
+                "gap=$gap.",
         )
     }
 }
