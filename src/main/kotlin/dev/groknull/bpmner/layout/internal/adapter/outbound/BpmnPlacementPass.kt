@@ -294,16 +294,22 @@ internal object BpmnPlacementPass {
                 labels[flowNode.id] = Rect(labelX, labelY, LABEL_WIDTH, LABEL_HEIGHT)
             }
 
-        // Sequence-flow edge labels centred on the polyline midpoint, just above the edge.
+        // Sequence-flow edge labels centred on the polyline midpoint, just above the edge (or below if backward).
         model.getModelElementsByType(SequenceFlow::class.java)
             .filter { !it.name.isNullOrBlank() }
             .sortedBy { it.id }
             .forEach { sf ->
                 val wps = edges[sf.id]?.takeIf { it.size >= 2 } ?: return@forEach
                 val mid = BpmnEdgeRouter.polylineMidpoint(wps)
+                val isBackward = wps.first().x > wps.last().x
+                val labelY = if (isBackward) {
+                    mid.y + EDGE_LABEL_GAP_ABOVE
+                } else {
+                    mid.y - LABEL_HEIGHT - EDGE_LABEL_GAP_ABOVE
+                }
                 labels[sf.id] = Rect(
                     mid.x - EDGE_LABEL_WIDTH / 2.0,
-                    mid.y - LABEL_HEIGHT - EDGE_LABEL_GAP_ABOVE,
+                    labelY,
                     EDGE_LABEL_WIDTH,
                     LABEL_HEIGHT,
                 )
