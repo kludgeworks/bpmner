@@ -12,21 +12,20 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Layer 4b: rendered-invariant oracle over the full 12-fixture corpus (AD-557-11/12 re-homing).
+ * Layer 4b: golden-file regression oracle over the full 12-fixture corpus.
  *
- * Previous form: byte-compared 8 of 12 goldens — certifies *old code*, not *correct geometry*.
- * The byte-compare gate would fail a correct constraint-based reimplementation.
+ * For each approved golden under `bpmn/elk-corpus/golden/`, asserts that the engine
+ * produces byte-identical output. This is the regression gate: once a human approves
+ * a golden in bpmn-js and commits it, this test enforces that no subsequent engine
+ * change silently shifts its coordinates. A coordinate change requires a new HITL round
+ * before the golden can be re-blessed.
  *
- * Current form: per-fixture geometry invariants over all 12 corpus fixtures. Each run:
- * 1. Applies geometry invariants (positive bounds, waypoints ≥ 2, labels below nodes).
- * 2. Asserts layout is deterministic across two runs (byte-equality within one engine version).
+ * Fixtures whose golden has not yet been approved are skipped (no entry in the golden/
+ * directory matches their name) and covered only by the geometry-invariant sub-tests
+ * below until the human completes the HITL pass.
  *
- * Boundary-specific and subprocess-specific invariants are in the boundary/containment
- * tests in [ElkBpmnLayouterTest], which share the same corpus fixtures and cover the same
- * geometry properties. This file covers the cross-cutting invariants applicable to all 12.
- *
- * Approved golden files remain committed under `bpmn/elk-corpus/golden/` as references
- * for HITL passes.
+ * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
+ * labels below nodes) and determinism for all 12 fixtures.
  */
 class ElkGoldenLayoutTest {
 
@@ -36,6 +35,33 @@ class ElkGoldenLayoutTest {
         private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
         private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
         private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
+    }
+
+    @ParameterizedTest(name = "matches committed golden: {0}")
+    @ValueSource(
+        strings = [
+            "representative-process",
+            "explicit-cycle",
+            "long-labels",
+            "annotation-and-group",
+            "subprocess-flat",
+            "subprocess-branch",
+            "boundary-timer-task",
+            "boundary-error-task",
+            "boundary-multi",
+        ],
+    )
+    fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
+        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val golden = load("bpmn/elk-corpus/golden/$fixture.bpmn")
+        val actual = layouter.layout(input)
+        assertEquals(
+            golden,
+            actual,
+            "Engine output for '$fixture' does not match the committed golden. " +
+                "If the layout changed intentionally, run generate_candidate_goldens, " +
+                "review in bpmn-js, and re-bless the golden before updating this test.",
+        )
     }
 
     @ParameterizedTest(name = "geometry invariants: {0}")
