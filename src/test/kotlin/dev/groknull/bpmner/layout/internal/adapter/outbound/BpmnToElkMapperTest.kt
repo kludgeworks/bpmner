@@ -7,6 +7,10 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.eclipse.elk.alg.layered.options.LayerConstraint
+import org.eclipse.elk.alg.layered.options.LayeredOptions
+import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
+import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import kotlin.test.assertEquals
@@ -18,8 +22,10 @@ import kotlin.test.assertTrue
  * Layer 1: asserts ELK graph structure produced by [BpmnToElkMapper].
  * Does NOT run the layout engine — inspects the graph object model directly.
  *
- * Post AD-557-10 assertions: the lean skeleton has NO ElkLabels anywhere,
- * all boundary ports are SOUTH, and SubProcesses are compound nodes.
+ * Post AD-557-10/AD-557-11/AD-557-12 assertions: the lean skeleton has NO ElkLabels anywhere,
+ * all boundary ports are SOUTH, SubProcesses are compound nodes, exception edges are NOT in the
+ * ELK skeleton (AD-557-12), and AD-557-11 options are applied (NETWORK_SIMPLEX, model order,
+ * LAYER_CONSTRAINT on start/end events, SPACING_COMPONENT_COMPONENT).
  */
 class BpmnToElkMapperTest {
 
@@ -158,15 +164,16 @@ class BpmnToElkMapperTest {
     }
 
     @Test
-    fun `exception flow from boundary event is contained in root (cross-hierarchy LCA)`() {
+    fun `exception flow from boundary event is NOT in edgeMap (AD-557-12 - phase-2 edge only)`() {
         val xml = BOUNDARY_TIMER_XML
         val model = parseXml(xml)
         val result = BpmnToElkMapper.map(model)
 
-        val exceptionEdge = result.edgeMap["Flow_exception"]
-        assertNotNull(exceptionEdge, "Flow_exception must be in edgeMap")
-        // LCA of port (on root-level host) and root-level target is the root
-        assertEquals(result.root, exceptionEdge.containingNode, "Exception flow must be contained in root")
+        // AD-557-12: boundary exception edges are routed by phase 2, not by ELK.
+        // The exception flow must NOT appear in the ELK skeleton's edgeMap.
+        assertNull(result.edgeMap["Flow_exception"], "Flow_exception must NOT be in edgeMap (AD-557-12)")
+        // The SOUTH port still exists on the host (attachment geometry)
+        assertNotNull(result.portMap["Boundary_1"], "SOUTH port for Boundary_1 must still be in portMap")
     }
 
     @Test
@@ -181,15 +188,74 @@ class BpmnToElkMapperTest {
     }
 
     @Test
-    fun `normal flow source not in portMap falls back to nodeMap`() {
+    fun `normal sequence flow is in edgeMap and boundary exception flow is absent (AD-557-12)`() {
         val xml = BOUNDARY_TIMER_XML
         val model = parseXml(xml)
         val result = BpmnToElkMapper.map(model)
 
-        // Flow_normal goes Task_1 → End_ok; Task_1 is not a boundary event so not in portMap
-        val normalEdge = result.edgeMap["Flow_normal"]
-        assertNotNull(normalEdge, "Flow_normal must be in edgeMap")
-        assertNull(result.portMap["Task_1"], "Task_1 must not be in portMap")
+        // Normal flows (non-boundary source) are ELK edges.
+        assertNotNull(result.edgeMap["Flow_normal"], "Flow_normal must be in edgeMap")
+        assertNotNull(result.edgeMap["Flow_start"], "Flow_start must be in edgeMap")
+        assertNotNull(result.edgeMap["Flow_cancel"], "Flow_cancel must be in edgeMap")
+        // Boundary-source exception flow must NOT be an ELK edge (AD-557-12).
+        assertNull(result.edgeMap["Flow_exception"], "Flow_exception (boundary source) must NOT be in edgeMap")
+    }
+
+    // ── AD-557-11/AD-557-12 option assertions ─────────────────────────────────
+
+    @Test
+    fun `root options include NETWORK_SIMPLEX and model-order strategy (AD-557-11)`() {
+        val model = parseXml(BOUNDARY_TIMER_XML)
+        val result = BpmnToElkMapper.map(model)
+
+        val strategy = result.root.getProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY)
+        assertEquals(
+            NodePlacementStrategy.NETWORK_SIMPLEX,
+            strategy,
+            "NODE_PLACEMENT_STRATEGY must be NETWORK_SIMPLEX (AD-557-11 straight happy path)",
+        )
+        val modelOrder = result.root.getProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY)
+        assertEquals(
+            OrderingStrategy.NODES_AND_EDGES,
+            modelOrder,
+            "CONSIDER_MODEL_ORDER_STRATEGY must be NODES_AND_EDGES (AD-557-11)",
+        )
+    }
+
+    @Test
+    fun `root option SPACING_COMPONENT_COMPONENT is set for handler row clearance (AD-557-12)`() {
+        val model = parseXml(BOUNDARY_TIMER_XML)
+        val result = BpmnToElkMapper.map(model)
+
+        val spacing = result.root.getProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT)
+        assertTrue(
+            spacing != null && spacing >= 20.0,
+            "SPACING_COMPONENT_COMPONENT must be set and >=20 to clear handler rows (AD-557-12), was $spacing",
+        )
+    }
+
+    @Test
+    fun `start event node has LAYER_CONSTRAINT FIRST and end event has LAST (AD-557-11)`() {
+        val model = parseXml(BOUNDARY_TIMER_XML)
+        val result = BpmnToElkMapper.map(model)
+
+        val startNode = result.nodeMap["Start_1"]
+        assertNotNull(startNode)
+        val startConstraint = startNode.getProperty(LayeredOptions.LAYERING_LAYER_CONSTRAINT)
+        assertEquals(
+            LayerConstraint.FIRST,
+            startConstraint,
+            "StartEvent must have LAYERING_LAYER_CONSTRAINT = FIRST",
+        )
+
+        val endNode = result.nodeMap["End_ok"]
+        assertNotNull(endNode)
+        val endConstraint = endNode.getProperty(LayeredOptions.LAYERING_LAYER_CONSTRAINT)
+        assertEquals(
+            LayerConstraint.LAST,
+            endConstraint,
+            "EndEvent must have LAYERING_LAYER_CONSTRAINT = LAST",
+        )
     }
 
     // ── AD-557-10 lean-skeleton assertions ────────────────────────────────────
