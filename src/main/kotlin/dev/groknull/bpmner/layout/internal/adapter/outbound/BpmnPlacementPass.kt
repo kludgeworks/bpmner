@@ -108,16 +108,15 @@ internal object BpmnPlacementPass {
         // ELK places disconnected components starting from x=0 independently; without this rule
         // handler tasks land to the left of their host task, which renders as a backwards flow.
         // Returns a map of nodeId→xShift so sequence-flow waypoints can be corrected too.
-        val handlerXShifts = alignHandlerComponentsX(model, shapes)
+        val handlerXShifts = alignHandlerComponents(model, shapes)
         // Phase-2 rule 1c: straddle subprocess-terminating end events on the container right border.
         // BPMN convention: a flow that terminates a subprocess has its end event centred on the
         // subprocess's right edge (half inside, half outside). Returns the set of moved end IDs
         // so Flow_from_sub can be re-anchored to the straddling end event's right edge.
         val straddledEnds = straddleSubprocessEnds(model, shapes)
-        // Phase-2 rule 1d: centre the subprocess happy-path chain on the subprocess vertical midline.
-        // ELK places the inner flat chain near the top of a subprocess that is tall due to branches;
-        // snapping the through-path nodes to the subprocess vertical centre aligns them with the
-        // outer flow visually. Returns the set of snapped node IDs so their edges can be re-routed.
+        // Phase-2 rule 1d: centre the subprocess happy-path chain on the subprocess vertical midline,
+        // and snap outer process nodes connected to the subprocess to the same centre-Y so the
+        // full chain (Start → SubProcess → Review → End) is horizontally aligned.
         val centredNodes = centreSubprocessHappyPath(model, shapes)
         // Phase-2 rule 2: boundary shapes on host bottom edge (decoration only).
         placeBoundaryShapes(model, skeleton, shapes)
@@ -183,13 +182,13 @@ internal object BpmnPlacementPass {
      * where ELK placed it — only X is adjusted.
      */
 
-    /** Returns a map of nodeId → xShift for every handler node that was shifted. */
+    /** Returns a map of nodeId → (xShift, yShift) for every handler node that was shifted. */
     @Suppress("CyclomaticComplexMethod")
-    private fun alignHandlerComponentsX(
+    private fun alignHandlerComponents(
         model: BpmnModelInstance,
         shapes: MutableMap<String, Rect>,
-    ): Map<String, Double> {
-        val result = mutableMapOf<String, Double>()
+    ): Map<String, Pair<Double, Double>> {
+        val result = mutableMapOf<String, Pair<Double, Double>>()
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
         if (boundaryIds.isEmpty()) return result
@@ -241,7 +240,8 @@ internal object BpmnPlacementPass {
         return visited
     }
 
-    /** Shifts the handler component for a single boundary event if it is left of the host. */
+    /** Shifts the handler component for a single boundary event to the right of the host,
+     *  and below the main flow if ELK placed it above. */
     @Suppress("LongParameterList")
     private fun shiftHandlerComponentForBoundary(
         be: BoundaryEvent,
@@ -249,23 +249,39 @@ internal object BpmnPlacementPass {
         mainFlow: Set<String>,
         boundaryIds: Set<String>,
         shapes: MutableMap<String, Rect>,
-        result: MutableMap<String, Double>,
+        result: MutableMap<String, Pair<Double, Double>>,
     ) {
         val hostId = be.attachedTo?.id ?: return
-        val hostRight = (shapes[hostId] ?: return).let { it.x + it.w }
+        val hostRect = shapes[hostId] ?: return
+        val hostRight = hostRect.x + hostRect.w
         val thisHandlers = reachableFrom(
             seeds = successors[be.id].orEmpty(),
             successors = successors,
             exclude = mainFlow + boundaryIds,
         )
         if (thisHandlers.isEmpty()) return
+
+        // X alignment: shift handler component to the right of the host.
         val handlerLeft = thisHandlers.mapNotNull { shapes[it]?.x }.minOrNull() ?: return
-        val shift = (hostRight + HANDLER_COMPONENT_X_GAP) - handlerLeft
-        if (shift <= POSITION_EPSILON) return
+        val xShift = (hostRight + HANDLER_COMPONENT_X_GAP) - handlerLeft
+
+        // Y alignment: if the handler component landed above the main-flow bottom, shift it below.
+        // Compute main-flow bottom from all nodes in mainFlow that have placed shapes.
+        val mainBottom = mainFlow.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: 0.0
+        val handlerTop = thisHandlers.mapNotNull { shapes[it]?.y }.minOrNull() ?: return
+        val yShift = if (handlerTop < mainBottom) {
+            (mainBottom + HANDLER_COMPONENT_Y_GAP) - handlerTop
+        } else {
+            0.0
+        }
+
+        if (xShift <= POSITION_EPSILON && yShift <= POSITION_EPSILON) return
         thisHandlers.forEach { id ->
             shapes[id]?.let { r ->
-                shapes[id] = r.copy(x = r.x + shift)
-                result[id] = shift
+                val newX = if (xShift > POSITION_EPSILON) r.x + xShift else r.x
+                val newY = if (yShift > POSITION_EPSILON) r.y + yShift else r.y
+                shapes[id] = r.copy(x = newX, y = newY)
+                result[id] = xShift to yShift
             }
         }
     }
@@ -278,7 +294,7 @@ internal object BpmnPlacementPass {
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
-        handlerXShifts: Map<String, Double>,
+        handlerShifts: Map<String, Pair<Double, Double>>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
@@ -287,19 +303,22 @@ internal object BpmnPlacementPass {
             .forEach { sf ->
                 val srcId = sf.source?.id
                 val tgtId = sf.target?.id
-                val srcShift = handlerXShifts[srcId]
-                val tgtShift = handlerXShifts[tgtId]
-                val shift = srcShift ?: tgtShift ?: return@forEach
+                val srcShift = handlerShifts[srcId]
+                val tgtShift = handlerShifts[tgtId]
+                if (srcShift == null && tgtShift == null) return@forEach
                 if (edges[sf.id] == null) return@forEach
                 when {
-                    // Rejoin (handler→main): recompute exit-top-rise-across route.
+                    // Rejoin (handler→main): recompute from current placed shapes.
                     srcShift != null && tgtShift == null ->
                         routeRejoinEdge(srcId, tgtId, shapes, edges, sf.id)
-                    // Forward (main→handler): recompute right-to-left border route.
+                    // Forward (main→handler): recompute from current placed shapes.
                     tgtShift != null && srcShift == null ->
                         routeForwardToHandlerEdge(srcId, tgtId, shapes, edges, sf.id)
-                    // Both shifted: uniform shift.
-                    else -> edges[sf.id] = edges[sf.id]!!.map { it.copy(x = it.x + shift) }
+                    // Both handler nodes: apply both shifts uniformly.
+                    else -> {
+                        val (dx, dy) = srcShift ?: tgtShift!!
+                        edges[sf.id] = edges[sf.id]!!.map { it.copy(x = it.x + dx, y = it.y + dy) }
+                    }
                 }
             }
     }
@@ -350,7 +369,13 @@ internal object BpmnPlacementPass {
      * (plus the start/end events with degree 0/1).
      */
 
-    /** Returns the IDs of all nodes whose Y was snapped by this rule. */
+    /**
+     * Centres the subprocess happy-path spine on the subprocess vertical midline, then snaps all
+     * outer process nodes that are direct predecessors or successors of the subprocess (via sequence
+     * flows) to the same centre-Y, so the full visible chain is horizontally aligned.
+     *
+     * Returns the IDs of all nodes whose Y was moved.
+     */
     @Suppress("CyclomaticComplexMethod")
     private fun centreSubprocessHappyPath(
         model: BpmnModelInstance,
@@ -360,17 +385,39 @@ internal object BpmnPlacementPass {
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val subRect = shapes[sub.id] ?: return@forEach
             val subCentreY = subRect.y + subRect.h / 2.0
-            val spineIds = subSpineIds(sub)
-            spineIds.forEach { id ->
-                val r = shapes[id] ?: return@forEach
-                val newY = subCentreY - r.h / 2.0
-                if (kotlin.math.abs(newY - r.y) > POSITION_EPSILON) {
-                    shapes[id] = r.copy(y = newY)
-                    snapped.add(id)
+
+            // 1. Inner spine: start/end events and gateways inside the subprocess.
+            subSpineIds(sub).forEach { id ->
+                snapToCentreY(id, subCentreY, shapes, snapped)
+            }
+
+            // 2. Outer nodes directly connected to the subprocess via sequence flows — snap them
+            //    to the same centre-Y so the outer chain (Start → Sub → Task → End) is aligned.
+            model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
+                val srcId = sf.source?.id
+                val tgtId = sf.target?.id
+                when {
+                    srcId == sub.id && tgtId != null -> snapToCentreY(tgtId, subCentreY, shapes, snapped)
+                    tgtId == sub.id && srcId != null -> snapToCentreY(srcId, subCentreY, shapes, snapped)
                 }
             }
         }
         return snapped
+    }
+
+    /** Snaps [id]'s shape centre-Y to [targetCy], recording it in [snapped] if actually moved. */
+    private fun snapToCentreY(
+        id: String,
+        targetCy: Double,
+        shapes: MutableMap<String, Rect>,
+        snapped: MutableSet<String>,
+    ) {
+        val r = shapes[id] ?: return
+        val newY = targetCy - r.h / 2.0
+        if (kotlin.math.abs(newY - r.y) > POSITION_EPSILON) {
+            shapes[id] = r.copy(y = newY)
+            snapped.add(id)
+        }
     }
 
     /** Spine node IDs in a subprocess: start events, end events, and gateways. */
@@ -985,6 +1032,10 @@ internal object BpmnPlacementPass {
     /** Clearance added below the boundary bottom and right of the host when detouring around
      * a host node to reach a handler placed above the main flow. */
     private const val EXCEPTION_DETOUR_GAP = 20.0
+
+    /** Minimum vertical gap between the main-flow bottom and the top of a handler component
+     * that was shifted downward by [shiftHandlerComponentForBoundary]. */
+    private const val HANDLER_COMPONENT_Y_GAP = 40.0
 
     /**
      * Minimum horizontal gap between a host's right edge and the handler component's left edge

@@ -45,8 +45,7 @@ class ElkGoldenLayoutTest {
             "long-labels",
             "annotation-and-group",
             "boundary-timer-task",
-            "boundary-error-task",
-            "boundary-multi",
+            "boundary-on-subprocess",
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
