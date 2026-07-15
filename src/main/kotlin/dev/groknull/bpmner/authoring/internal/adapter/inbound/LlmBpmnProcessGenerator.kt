@@ -32,12 +32,12 @@ import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 internal class LlmBpmnProcessGenerator(
     private val config: BpmnAuthoringConfig,

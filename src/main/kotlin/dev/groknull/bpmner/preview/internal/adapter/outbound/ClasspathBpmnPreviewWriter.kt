@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.preview.internal.adapter.outbound
 
 import dev.groknull.bpmner.preview.BpmnPreviewWriter
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.nio.charset.StandardCharsets
@@ -15,7 +15,7 @@ import java.nio.file.Path
 import kotlin.io.path.exists
 import kotlin.io.path.nameWithoutExtension
 
-@SecondaryAdapter
+@InfrastructureRing
 @Service
 internal open class ClasspathBpmnPreviewWriter(
     private val resourceLoader: (String) -> String = ::loadClasspathResource,

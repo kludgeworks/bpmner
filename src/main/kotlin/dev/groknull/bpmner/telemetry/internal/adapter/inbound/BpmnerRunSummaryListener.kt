@@ -8,7 +8,7 @@ package dev.groknull.bpmner.telemetry.internal.adapter.inbound
 import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
@@ -19,7 +19,7 @@ import org.springframework.stereotype.Component
  * per-run cost summary surfaced in shell and server logs (bpmner's shell/web bypass embabel's
  * `formatProcessOutput`).
  */
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnerRunSummaryListener : AgenticEventListener {
     private val logger = LoggerFactory.getLogger(BpmnerRunSummaryListener::class.java)

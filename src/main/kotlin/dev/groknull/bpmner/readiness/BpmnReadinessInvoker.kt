@@ -7,9 +7,9 @@ package dev.groknull.bpmner.readiness
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 fun interface BpmnReadinessInvoker {
     fun assess(request: BpmnRequest): ProcessInputAssessment
 }

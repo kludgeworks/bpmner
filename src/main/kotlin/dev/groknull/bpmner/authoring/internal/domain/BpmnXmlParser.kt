@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.authoring.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 fun interface BpmnXmlParser {
     fun parse(xml: String): BpmnDefinition
 }

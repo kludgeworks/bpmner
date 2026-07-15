@@ -9,7 +9,7 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import dev.groknull.bpmner.telemetry.BpmnRunCostEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Component
  * platform (like `BpmnerRunSummaryListener`), so it fires once for every run. It must NOT also be
  * passed via `ProcessOptions.listeners`, or it would fire twice and duplicate the SSE cost line.
  */
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnRunCostEventPublisher(
     private val eventPublisher: ApplicationEventPublisher,

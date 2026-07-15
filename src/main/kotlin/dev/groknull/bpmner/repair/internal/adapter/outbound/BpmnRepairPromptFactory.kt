@@ -24,10 +24,10 @@ import dev.groknull.bpmner.repair.BpmnRepairAttempt
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPromptPort
 import dev.groknull.bpmner.repair.internal.domain.BpmnUnrecognizedElementScanner
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal class BpmnRepairPromptFactory(
     private val bpmnLintingPort: BpmnLintingPort,

@@ -8,9 +8,9 @@ package dev.groknull.bpmner.authoring
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.RenderedBpmn
-import org.jmolecules.architecture.hexagonal.Port
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@Port
+@ApplicationRing
 interface BpmnRenderer {
     fun render(definition: BpmnDefinition): RenderedBpmn
 

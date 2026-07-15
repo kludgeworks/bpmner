@@ -7,7 +7,7 @@ package dev.groknull.bpmner.browser.internal.adapter.outbound
 
 import dev.groknull.bpmner.browser.BrowserOpenOutcome
 import dev.groknull.bpmner.browser.BrowserOpenPort
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.io.IOException
@@ -25,7 +25,7 @@ private const val LAUNCH_TIMEOUT_SECONDS = 30L
  * `java.awt.Desktop`: the app runs headless (Spring Boot sets `java.awt.headless=true`), where
  * `Desktop.browse` throws `HeadlessException` — the OS launcher command works regardless.
  */
-@SecondaryAdapter
+@InfrastructureRing
 @Service
 internal open class OsCommandBrowserOpener(
     private val osNameSupplier: () -> String = { System.getProperty("os.name") ?: "unknown" },

@@ -5,9 +5,9 @@
 
 package dev.groknull.bpmner.conformance
 
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 fun interface BpmnXsdValidationPort {
     fun validateDetailed(bpmnXml: String): List<XsdValidationIssue>
 }

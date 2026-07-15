@@ -11,9 +11,9 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.repair.BpmnRepairAttempt
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 internal interface BpmnRepairPromptPort {
     fun initialMessages(
         request: BpmnRequest,
@@ -33,7 +33,7 @@ internal interface BpmnRepairPromptPort {
     fun lintRuleDocsPrompt(diagnostics: List<BpmnDiagnostic>): PromptContributor?
 }
 
-@SecondaryPort
+@ApplicationRing
 internal fun interface BpmnPatchApplicationPort {
     fun apply(
         definition: BpmnDefinition,

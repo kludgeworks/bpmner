@@ -5,11 +5,11 @@
 
 package dev.groknull.bpmner.preview
 
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 import java.nio.file.Path
 
 /** Writes a transient HTML preview for a generated BPMN file into a temp dir and returns its path. */
-@SecondaryPort
+@ApplicationRing
 fun interface BpmnPreviewWriter {
     fun writePreview(bpmnPath: Path): Path
 }

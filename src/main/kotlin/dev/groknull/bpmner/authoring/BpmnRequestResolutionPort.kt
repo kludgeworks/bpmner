@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.authoring
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
  * Published `authoring` port: resolves a shell [BpmnRequestDraft] (containing inline prose or
@@ -22,7 +22,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * `authoring.internal.domain` (completing disposition-a) and exposes this port as the
  * published cross-module seam, closing the mechanism-1 gap identified in REVIEW-451-9 #5.
  */
-@PrimaryPort
+@ApplicationRing
 fun interface BpmnRequestResolutionPort {
     /**
      * Resolves a shell [BpmnRequestDraft] — which may reference inline prose, file paths,

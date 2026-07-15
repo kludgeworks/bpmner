@@ -8,13 +8,13 @@ package dev.groknull.bpmner.readiness.internal.adapter.outbound
 import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
     override fun writeReport(

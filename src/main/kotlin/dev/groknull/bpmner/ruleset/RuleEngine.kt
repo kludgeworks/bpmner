@@ -7,7 +7,7 @@ package dev.groknull.bpmner.ruleset
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.RuleEvaluation
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
  * Primary inbound port for evaluating all active [dev.groknull.bpmner.api.BpmnRule]s
@@ -20,7 +20,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * pre-computed indexes out to every rule, so a rule that needs `nodesById` is doing the
  * work the context has already done.
  */
-@PrimaryPort
+@ApplicationRing
 fun interface RuleEngine {
     fun evaluate(definition: BpmnDefinition): RuleEvaluation
 }

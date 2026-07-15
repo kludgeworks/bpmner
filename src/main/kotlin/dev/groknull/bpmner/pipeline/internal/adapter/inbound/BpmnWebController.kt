@@ -13,7 +13,7 @@ import dev.groknull.bpmner.readiness.BpmnClarificationAnswers
 import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.Size
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.annotation.Profile
 import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
@@ -45,7 +45,7 @@ data class WebGenerationResponse(
     val sseUrl: String,
 )
 
-@PrimaryAdapter
+@InfrastructureRing
 @RestController
 @RequestMapping("/api/bpmn")
 @Profile("web")

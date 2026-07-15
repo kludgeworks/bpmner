@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
-import org.jmolecules.architecture.hexagonal.SecondaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@SecondaryPort
+@ApplicationRing
 interface BpmnLintingPort {
     fun lint(definition: BpmnDefinition): List<LintIssue>?
 
