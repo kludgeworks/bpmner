@@ -64,12 +64,17 @@ internal object BpmnToElkMapper {
     /**
      * The mapper→placement-pass seam: the raw ELK skeleton after layout.
      * Phase 2 ([BpmnPlacementPass]) reads ELK's output through this object.
+     *
+     * [loopBackFlowIds] carries the set of sequence-flow IDs that were excluded from the ELK
+     * skeleton (back-edges in cyclic subprocesses, per AD-557-12). Phase 2 routes these as
+     * bespoke over-the-top arcs so the writer always finds waypoints for every flow.
      */
     internal data class ElkSkeleton(
         val root: ElkNode,
         val nodeMap: Map<String, ElkNode>,
         val portMap: Map<String, ElkPort>,
         val edgeMap: Map<String, ElkEdge>,
+        val loopBackFlowIds: Set<String> = emptySet(),
     )
 
     fun map(model: BpmnModelInstance): ElkSkeleton {
@@ -79,6 +84,20 @@ internal object BpmnToElkMapper {
         val portMap = mutableMapOf<String, ElkPort>()
         val edgeMap = mutableMapOf<String, ElkEdge>()
 
+        // Pre-pass: identify cyclic subprocesses and their back-edges.
+        // findLoopBackEdges returns a non-empty set iff the subprocess has a cycle (replaces hasLoop).
+        // loopingSubIds drives top-padding in pass 1; loopBackFlowIds drives pass 3 exclusion and
+        // phase-2 bespoke routing.
+        val loopBackFlowIds = mutableSetOf<String>()
+        val loopingSubIds = mutableSetOf<String>()
+        model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
+            val backEdges = findLoopBackEdges(sub)
+            if (backEdges.isNotEmpty()) {
+                loopBackFlowIds.addAll(backEdges)
+                loopingSubIds.add(sub.id)
+            }
+        }
+
         // Pass 1: build node tree (recursive for subprocesses).
         // FlowElements covers FlowNodes (tasks, events, gateways) and SubProcess.
         // TextAnnotation and Group are Artifacts, not FlowElements — tracked separately.
@@ -86,7 +105,7 @@ internal object BpmnToElkMapper {
         // meaningful — alphabetical id sort would produce arbitrary layout ordering.
         val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
             .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
-        mapProcess(root, topLevelElements, nodeMap, model)
+        mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
 
         // Artifacts tracked for placement pass but NOT added to ELK skeleton.
         trackAnnotations(model, nodeMap)
@@ -95,10 +114,11 @@ internal object BpmnToElkMapper {
         // Pass 2: boundary events (need host nodes from pass 1)
         mapBoundaryEvents(model, nodeMap, portMap)
 
-        // Pass 3: sequence flows (process-flow nodes only — boundary exception edges are phase-2)
-        mapSequenceFlows(model, nodeMap, edgeMap)
+        // Pass 3: sequence flows (process-flow nodes only — boundary exception edges are phase-2,
+        // loop-back edges are phase-2 bespoke arcs).
+        mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
 
-        return ElkSkeleton(root, nodeMap, portMap, edgeMap)
+        return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
     }
 
     /**
@@ -106,12 +126,16 @@ internal object BpmnToElkMapper {
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
      * No labels are added to the ELK graph — labels are phase-2 responsibility.
+     *
+     * [loopingSubIds] is the set of subprocess IDs that have back-edges (pre-computed in [map]).
+     * Cyclic subprocesses get extra top padding so the phase-2 loop-back arc has clear headroom.
      */
     private fun mapProcess(
         container: ElkNode,
         elements: List<FlowElement>,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
+        loopingSubIds: Set<String> = emptySet(),
     ) {
         // Iterate in document order (elements list preserves Camunda's XML parse order).
         for (element in elements) {
@@ -122,7 +146,7 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-                    val topPadding = if (hasLoop(element)) SUBPROCESS_TOP_PADDING else SUBPROCESS_PADDING
+                    val topPadding = if (element.id in loopingSubIds) SUBPROCESS_TOP_PADDING else SUBPROCESS_PADDING
                     compound.setProperty(
                         CoreOptions.PADDING,
                         ElkPadding(
@@ -138,7 +162,7 @@ internal object BpmnToElkMapper {
                     // No ElkLabel on the compound — labels are owned by BpmnPlacementPass.
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children in document order.
-                    mapProcess(compound, element.flowElements.toList(), nodeMap, model)
+                    mapProcess(compound, element.flowElements.toList(), nodeMap, model, loopingSubIds)
                 }
 
                 is FlowNode -> {
@@ -259,25 +283,25 @@ internal object BpmnToElkMapper {
     /**
      * Pass 3: map sequence flows to ELK edges for process-flow nodes only.
      *
-     * AD-557-12: flows whose source is a [BoundaryEvent] are NOT added to the ELK skeleton —
-     * they are phase-2 bespoke-routed (three-point orthogonal polyline). This keeps handler
-     * nodes as genuinely disconnected ELK components so SimpleRowGraphPlacer stacks them below.
+     * AD-557-12: flows whose source is a [BoundaryEvent] are NOT added to the ELK skeleton.
+     * Loop-back edges (back-edges that create cycles in subprocess flows) are also excluded:
+     * ELK's cycle-breaking misplaces nodes in cyclic subprocesses, so the acyclic forward path
+     * is given to ELK and phase-2 routes the loop-back arc as a bespoke over-the-top edge.
      *
-     * All other flows use the node from [nodeMap] as their source. [ElkGraphUtil.createSimpleEdge]
-     * computes the LCA container automatically. No edge labels are added — phase-2 responsibility.
+     * The [loopBackFlowIds] set is pre-computed by [map] and passed in to avoid recomputation.
      */
     private fun mapSequenceFlows(
         model: BpmnModelInstance,
         nodeMap: Map<String, ElkNode>,
         edgeMap: MutableMap<String, ElkEdge>,
+        loopBackFlowIds: Set<String>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
 
-        // AD-557-12: skip exception edges (boundary → handler) — they are phase-2 bespoke-routed.
-        // Skip artifact edges — artifact tracker nodes are detached (null parent) and have no ELK slot.
         model.getModelElementsByType(SequenceFlow::class.java)
             .filterNot { it.source?.id in boundaryIds }
+            .filterNot { it.id in loopBackFlowIds }
             .forEach { sf ->
                 val sourceId = sf.source?.id
                 val targetId = sf.target?.id
@@ -290,6 +314,59 @@ internal object BpmnToElkMapper {
                 elkEdge.identifier = sf.id
                 edgeMap[sf.id] = elkEdge
             }
+    }
+
+    /**
+     * Returns the IDs of sequence flows that are back-edges in the subprocess (i.e. create
+     * cycles). Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
+     * (which would count against the TooManyFunctions detekt limit).
+     *
+     * Each stack frame is (nodeId, iteratorIndex): when the iterator is exhausted the node is
+     * popped from the DFS ancestor-stack and marked fully visited.
+     */
+    private fun findLoopBackEdges(sub: SubProcess): Set<String> {
+        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
+        val succFlows = mutableMapOf<String, MutableList<Pair<String, String>>>() // nodeId → [(targetId, flowId)]
+        flows.forEach { sf ->
+            val s = sf.source?.id ?: return@forEach
+            val t = sf.target?.id ?: return@forEach
+            succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
+        }
+        val startId = sub.flowElements.filterIsInstance<StartEvent>().firstOrNull()?.id
+            ?: return emptySet()
+
+        val backEdges = mutableSetOf<String>()
+        val visited = mutableSetOf<String>() // fully processed nodes
+        val ancestors = mutableSetOf<String>() // nodes on the current DFS path
+        // Explicit stack: each entry is (nodeId, index into succFlows list)
+        val callStack = ArrayDeque<Pair<String, Int>>()
+
+        visited.add(startId)
+        ancestors.add(startId)
+        callStack.addLast(startId to 0)
+
+        while (callStack.isNotEmpty()) {
+            val (nodeId, idx) = callStack.last()
+            val neighbours = succFlows[nodeId].orEmpty()
+            if (idx >= neighbours.size) {
+                // All neighbours processed — pop frame.
+                callStack.removeLast()
+                ancestors.remove(nodeId)
+            } else {
+                // Advance the iterator index for the current frame.
+                callStack[callStack.size - 1] = nodeId to (idx + 1)
+                val (targetId, flowId) = neighbours[idx]
+                when {
+                    targetId in ancestors -> backEdges.add(flowId) // back-edge
+                    targetId !in visited -> {
+                        visited.add(targetId)
+                        ancestors.add(targetId)
+                        callStack.addLast(targetId to 0)
+                    }
+                }
+            }
+        }
+        return backEdges
     }
 
     private fun applyRootLayoutOptions(root: ElkNode) {
@@ -378,30 +455,4 @@ internal object BpmnToElkMapper {
 
     private const val EDGE_NODE_SPACING = 25.0
     private const val EDGE_NODE_BETWEEN_LAYERS = 25.0
-
-    private fun hasLoop(sub: SubProcess): Boolean {
-        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
-        val adj = mutableMapOf<String, MutableList<String>>()
-        flows.forEach { sf ->
-            val s = sf.source?.id ?: return@forEach
-            val t = sf.target?.id ?: return@forEach
-            adj.getOrPut(s) { mutableListOf() }.add(t)
-        }
-        val visited = mutableSetOf<String>()
-        val stack = mutableSetOf<String>()
-
-        fun dfs(node: String): Boolean {
-            if (node in stack) return true
-            if (node in visited) return false
-            visited.add(node)
-            stack.add(node)
-            for (next in adj[node].orEmpty()) {
-                if (dfs(next)) return true
-            }
-            stack.remove(node)
-            return false
-        }
-
-        return adj.keys.any { dfs(it) }
-    }
 }

@@ -117,10 +117,14 @@ internal object BpmnPlacementPass {
         // Phase-2 rule 1d: centre the subprocess happy-path chain on the subprocess vertical midline,
         // and snap outer process nodes connected to the subprocess to the same centre-Y so the
         // full chain (Start → SubProcess → Review → End) is horizontally aligned.
-        val centredNodes = centreSubprocessHappyPath(model, shapes)
+        val centredNodes = centreSubprocessHappyPath(model, shapes, skeleton.loopBackFlowIds)
         // Phase-2 rule 2: boundary shapes on host bottom edge (decoration only).
         placeBoundaryShapes(model, skeleton, shapes)
-        // Phase-2 rule 3: exception edges — the ONE sanctioned bespoke edge op (AD-557-12).
+        // Phase-2 rule 3a: loop-back arcs — bespoke over-the-top routes for back-edges that were
+        // excluded from the ELK skeleton (AD-557-12 extension). Must run before rule 4 so the
+        // writer always finds waypoints for every sequence flow.
+        routeLoopBackEdges(model, skeleton, shapes, edges)
+        // Phase-2 rule 3b: exception edges — the ONE sanctioned bespoke edge op (AD-557-12).
         routeExceptionEdges(model, shapes, edges)
         // Phase-2 rule 4: ordinary sequence-flow waypoints copied verbatim from ELK sections,
         // then corrected for any handler component X-shift applied in rule 1b.
@@ -130,7 +134,18 @@ internal object BpmnPlacementPass {
         // straddled/centred node positions. Must run after all shape Y-positions are final.
         if (straddledEnds.isNotEmpty()) reanchorSubprocessExitFlows(model, shapes, edges, straddledEnds)
         // Phase-2 rule 4c: re-route edges touching centred nodes after happy-path Y-centering.
-        if (centredNodes.isNotEmpty()) reanchorCentredSubprocessEdges(model, shapes, edges, centredNodes)
+        // Loop-back edges are excluded: they were already routed as bespoke arcs in rule 3a and
+        // must not be overwritten by the generic re-anchor (which would collapse them onto the
+        // forward flow's centre-Y line and enter the wrong side of the target node).
+        if (centredNodes.isNotEmpty()) {
+            reanchorCentredSubprocessEdges(
+                model,
+                shapes,
+                edges,
+                centredNodes,
+                skeleton.loopBackFlowIds,
+            )
+        }
         // Phase-2 rule 5: labels below nodes / at edge midpoints.
         placeLabels(model, shapes, edges, labels)
         // Phase-2 rule 6: artifact sidecar geometry.
@@ -398,16 +413,16 @@ internal object BpmnPlacementPass {
     private fun centreSubprocessHappyPath(
         model: BpmnModelInstance,
         shapes: MutableMap<String, Rect>,
+        loopBackFlowIds: Set<String> = emptySet(),
     ): Set<String> {
         val snapped = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val subRect = shapes[sub.id] ?: return@forEach
             val subCentreY = subRect.y + subRect.h / 2.0
 
-            // 1. Inner spine: start/end events and gateways inside the subprocess.
-            subSpineIds(sub).forEach { id ->
-                snapToCentreY(id, subCentreY, shapes, snapped)
-            }
+            // 1. Inner spine: snap Y to subprocess vertical midline.
+            val spineIds = subSpineIds(sub, loopBackFlowIds)
+            spineIds.forEach { id -> snapToCentreY(id, subCentreY, shapes, snapped) }
 
             // 2. Outer nodes directly connected to the subprocess via sequence flows — snap them
             //    to the same centre-Y so the outer chain (Start → Sub → Task → End) is aligned.
@@ -438,15 +453,61 @@ internal object BpmnPlacementPass {
         }
     }
 
-    /** Spine node IDs in a subprocess: start events, end events, and gateways. */
-    private fun subSpineIds(sub: SubProcess): Set<String> = sub.flowElements
-        .filterIsInstance<org.camunda.bpm.model.bpmn.instance.FlowNode>()
-        .filter { node ->
-            node is org.camunda.bpm.model.bpmn.instance.StartEvent ||
-                node is org.camunda.bpm.model.bpmn.instance.EndEvent ||
-                node is org.camunda.bpm.model.bpmn.instance.Gateway
+    /**
+     * Spine node IDs in a subprocess: start events, end events, gateways, and any task that
+     * sits on the single straight-through path (i.e. its unique predecessor has out-degree=1,
+     * so it is not a branch task hanging off a split gateway).
+     *
+     * Branch tasks (e.g. Path A / Path B in subprocess-branch) are excluded because their
+     * predecessor gateway has out-degree > 1; they belong to a sub-row, not the centre axis.
+     * Loop-back edges are ignored when counting in-degree: a task that receives both a forward
+     * edge and a loop-back edge (e.g. SubTask_1 in subprocess-loop) is still a spine node
+     * when its single forward predecessor has out-degree=1.
+     *
+     * The [loopBackFlowIds] are supplied by the outer [centreSubprocessHappyPath] call to
+     * exclude back-edges from the predecessor out-degree calculation.
+     */
+    private fun subSpineIds(sub: SubProcess, loopBackFlowIds: Set<String> = emptySet()): Set<String> {
+        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
+            .filterNot { it.id in loopBackFlowIds }
+        val outDegree = mutableMapOf<String, Int>()
+        val inDegree = mutableMapOf<String, Int>()
+        val predOf = mutableMapOf<String, String>()
+        flows.forEach { sf ->
+            val s = sf.source?.id ?: return@forEach
+            val t = sf.target?.id ?: return@forEach
+            outDegree[s] = (outDegree[s] ?: 0) + 1
+            inDegree[t] = (inDegree[t] ?: 0) + 1
+            predOf[t] = s
         }
-        .mapTo(mutableSetOf()) { it.id }
+        return sub.flowElements
+            .filterIsInstance<org.camunda.bpm.model.bpmn.instance.FlowNode>()
+            .filter { isSpineNode(it, inDegree, outDegree, predOf) }
+            .mapTo(mutableSetOf()) { it.id }
+    }
+
+    /**
+     * True if [node] belongs on the subprocess centre-Y spine.
+     * Events and gateways always qualify; a task qualifies when its single forward-incoming
+     * predecessor is not a split (predecessor out-degree = 1).
+     */
+    private fun isSpineNode(
+        node: org.camunda.bpm.model.bpmn.instance.FlowNode,
+        inDegree: Map<String, Int>,
+        outDegree: Map<String, Int>,
+        predOf: Map<String, String>,
+    ): Boolean {
+        if (node is org.camunda.bpm.model.bpmn.instance.StartEvent ||
+            node is org.camunda.bpm.model.bpmn.instance.EndEvent ||
+            node is org.camunda.bpm.model.bpmn.instance.Gateway
+        ) {
+            return true
+        }
+        // Task on spine: single forward-incoming edge whose predecessor is not a split.
+        if ((inDegree[node.id] ?: 0) != 1) return false
+        val predId = predOf[node.id] ?: return false
+        return (outDegree[predId] ?: 0) == 1
+    }
 
     // ── Named rule 1c: subprocess-terminating end events straddle the right border ──
 
@@ -529,12 +590,16 @@ internal object BpmnPlacementPass {
      * After [centreSubprocessHappyPath] moves spine nodes, any edge touching a snapped node
      * has stale ELK-section waypoints. Re-route them as clean orthogonal border-to-border lines.
      * Both-snapped (same row): straight horizontal. One-snapped (branch edge): L-shape.
+     *
+     * [loopBackFlowIds] edges are skipped: they were already placed as bespoke over-the-top arcs
+     * by [routeLoopBackEdges] and must not be overwritten here.
      */
     private fun reanchorCentredSubprocessEdges(
         model: BpmnModelInstance,
         shapes: Map<String, Rect>,
         edges: MutableMap<String, List<Point>>,
         centredNodes: Set<String>,
+        loopBackFlowIds: Set<String> = emptySet(),
     ) {
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val srcId = sf.source?.id ?: return@forEach
@@ -543,6 +608,7 @@ internal object BpmnPlacementPass {
             val tgtSnapped = tgtId in centredNodes
             if (!srcSnapped && !tgtSnapped) return@forEach
             if (sf.id !in edges) return@forEach
+            if (sf.id in loopBackFlowIds) return@forEach // already placed as bespoke arc
             // Skip subprocess exit flows — already re-anchored by reanchorSubprocessExitFlows.
             val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
             if (srcElement is SubProcess) return@forEach
@@ -651,7 +717,61 @@ internal object BpmnPlacementPass {
         }
     }
 
-    // ── Named rule 3: exception edges (the ONE sanctioned bespoke edge operation) ──
+    // ── Named rule 3a: loop-back arcs (over-the-top bespoke route) ───────────────
+
+    /**
+     * Routes loop-back sequence flows (back-edges excluded from the ELK skeleton per AD-557-12)
+     * as deterministic over-the-top orthogonal arcs.
+     *
+     * A loop-back edge (e.g. Gw_check → SubTask_1 in subprocess-loop) runs backwards in the
+     * left-to-right flow. The route exits the source's top, rises above the subprocess top
+     * padding line, traverses left to above the target, and descends into the target's top:
+     *
+     *   srcCx, srcTop
+     *   → srcCx, aboveSubTop      (rise to arc lane)
+     *   → tgtCx, aboveSubTop      (traverse left)
+     *   → tgtCx, tgtTop           (descend into target)
+     *
+     * The arc lane Y is [SUBPROCESS_TOP_PADDING] / 2 above the subprocess top border, which
+     * falls within the extra top padding reserved by the mapper for exactly this route.
+     */
+    private fun routeLoopBackEdges(
+        model: BpmnModelInstance,
+        skeleton: ElkSkeleton,
+        shapes: Map<String, Rect>,
+        edges: MutableMap<String, List<Point>>,
+    ) {
+        if (skeleton.loopBackFlowIds.isEmpty()) return
+        model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { it.id in skeleton.loopBackFlowIds }
+            .sortedBy { it.id }
+            .forEach { sf ->
+                val srcRect = shapes[sf.source?.id ?: return@forEach] ?: return@forEach
+                val tgtRect = shapes[sf.target?.id ?: return@forEach] ?: return@forEach
+                // Find the enclosing subprocess to derive the arc lane Y.
+                val sub = model.getModelElementsByType(SubProcess::class.java)
+                    .firstOrNull { sub -> sub.flowElements.filterIsInstance<SequenceFlow>().any { it.id == sf.id } }
+                val subRect = sub?.let { shapes[it.id] }
+                val arcLaneY = if (subRect != null) {
+                    subRect.y + BpmnToElkMapper.SUBPROCESS_TOP_PADDING / 2.0
+                } else {
+                    minOf(srcRect.y, tgtRect.y) - LOOP_ARC_CLEARANCE
+                }
+                val srcCx = srcRect.x + srcRect.w / 2.0
+                val tgtCx = tgtRect.x + tgtRect.w / 2.0
+                edges[sf.id] = listOf(
+                    Point(srcCx, srcRect.y),
+                    Point(srcCx, arcLaneY),
+                    Point(tgtCx, arcLaneY),
+                    Point(tgtCx, tgtRect.y),
+                )
+            }
+    }
+
+    /** Clearance above the topmost node when no subprocess rect is available for the arc lane. */
+    private const val LOOP_ARC_CLEARANCE = 30.0
+
+    // ── Named rule 3b: exception edges (the ONE sanctioned bespoke edge operation) ──
 
     /**
      * Routes exception edges as deterministic orthogonal polylines (AD-557-12).

@@ -129,11 +129,11 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
         <di:waypoint x="529.0" y="97.0"/>
-        <di:waypoint x="529.0" y="52.0"/>
-        <di:waypoint x="364.0" y="52.0"/>
+        <di:waypoint x="529.0" y="57.0"/>
+        <di:waypoint x="364.0" y="57.0"/>
         <di:waypoint x="364.0" y="82.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="120.0" x="394.0" y="28.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="386.5" y="61.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">

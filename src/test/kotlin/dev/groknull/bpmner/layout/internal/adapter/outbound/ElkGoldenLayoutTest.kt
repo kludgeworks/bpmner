@@ -49,6 +49,7 @@ class ElkGoldenLayoutTest {
             "boundary-error-task",
             "boundary-multi",
             "subprocess-flat",
+            "subprocess-loop",
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
