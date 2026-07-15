@@ -81,8 +81,12 @@ class ConformanceModuleTest {
             nodes = listOf(BpmnUserTask("t", "Task")),
             sequences = emptyList(),
         )
-        val issues = lintingPort.lint(definition)!!
-        val requiredEventsIssue = issues.first { it.rule == "def-required-events" }
+        val issues = requireNotNull(lintingPort.lint(definition)) {
+            "BpmnLintingPort.lint() must return required-events diagnostics"
+        }
+        val requiredEventsIssue = requireNotNull(
+            issues.firstOrNull { it.rule == "def-required-events" },
+        ) { "Expected a def-required-events lint issue" }
 
         assertEquals("error", requiredEventsIssue.category)
 
@@ -91,11 +95,16 @@ class ConformanceModuleTest {
             BpmnElementIndex(processId = "P", nodeObjectRefs = emptyMap(), edgeObjectRefs = emptyMap()),
             TestBpmnFixtures.testLaidOutGraph(definition),
         )
-        val requiredEventsDiagnostic = diagnostics.first { it.rule == "def-required-events" }
+        val requiredEventsDiagnostic = requireNotNull(
+            diagnostics.firstOrNull { it.rule == "def-required-events" },
+        ) { "Expected a normalized def-required-events diagnostic" }
 
         assertEquals(BpmnDiagnosticSource.LINT, requiredEventsDiagnostic.source)
         assertEquals(BpmnDiagnosticSeverity.ERROR, requiredEventsDiagnostic.severity)
         assertTrue(requiredEventsDiagnostic.isBlocking)
+        assertEquals("def-required-events", lintingPort.lintRuleCapabilities()["def-required-events"]?.id)
+        assertTrue(lintingPort.ruleDocs(listOf("def-required-events")).getValue("def-required-events").isNotBlank())
+        assertNull(lintingPort.autoFix("", emptyList()))
     }
 
     @Test

@@ -389,6 +389,7 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | Slice-local vocabulary (rule id, repair kind, readiness enum) | owning slice's root package |
 | LLM-backed adapter (port impl) | `<module>/internal/adapter/inbound/` |
 | Deterministic outbound adapter | `<module>/internal/adapter/outbound/` |
+| Lateral application service | `<module>/internal/application/` |
 | Use-case orchestration | `<module>/internal/domain/` |
 
 ---
