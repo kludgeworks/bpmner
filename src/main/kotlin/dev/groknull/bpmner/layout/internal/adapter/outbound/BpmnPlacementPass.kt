@@ -203,9 +203,24 @@ internal object BpmnPlacementPass {
         val handlerSeeds = boundaryIds.flatMap { successors[it].orEmpty() }
         if (handlerSeeds.isEmpty()) return result
 
-        model.getModelElementsByType(BoundaryEvent::class.java).forEach { be ->
-            shiftHandlerComponentForBoundary(be, successors, mainFlow, boundaryIds, shapes, result)
-        }
+        // Process boundaries in deterministic order. Track the Y floor so each successive
+        // handler chain is stacked below the previous one — never on top of it.
+        val mainBottom = mainFlow.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: 0.0
+        var nextFloor = mainBottom + HANDLER_COMPONENT_Y_GAP
+
+        model.getModelElementsByType(BoundaryEvent::class.java)
+            .sortedBy { it.id }
+            .forEach { be ->
+                nextFloor = shiftHandlerComponentForBoundary(
+                    be,
+                    successors,
+                    mainFlow,
+                    boundaryIds,
+                    shapes,
+                    result,
+                    nextFloor,
+                )
+            }
         return result
     }
 
@@ -240,8 +255,14 @@ internal object BpmnPlacementPass {
         return visited
     }
 
-    /** Shifts the handler component for a single boundary event to the right of the host,
-     *  and below the main flow if ELK placed it above. */
+    /**
+     * Shifts the handler component for a single boundary event:
+     * - X: to the right of the host.
+     * - Y: to [floor] (the stacking floor passed in from [alignHandlerComponents], which advances
+     *   after each chain so successive chains land below each other, never on top).
+     *
+     * Returns the new floor (bottom of this chain + gap) for the next chain.
+     */
     @Suppress("LongParameterList")
     private fun shiftHandlerComponentForBoundary(
         be: BoundaryEvent,
@@ -250,40 +271,37 @@ internal object BpmnPlacementPass {
         boundaryIds: Set<String>,
         shapes: MutableMap<String, Rect>,
         result: MutableMap<String, Pair<Double, Double>>,
-    ) {
-        val hostId = be.attachedTo?.id ?: return
-        val hostRect = shapes[hostId] ?: return
-        val hostRight = hostRect.x + hostRect.w
+        floor: Double,
+    ): Double {
+        val hostId = be.attachedTo?.id ?: return floor
+        val hostRight = (shapes[hostId] ?: return floor).let { it.x + it.w }
         val thisHandlers = reachableFrom(
             seeds = successors[be.id].orEmpty(),
             successors = successors,
             exclude = mainFlow + boundaryIds,
         )
-        if (thisHandlers.isEmpty()) return
+        if (thisHandlers.isEmpty()) return floor
 
         // X alignment: shift handler component to the right of the host.
-        val handlerLeft = thisHandlers.mapNotNull { shapes[it]?.x }.minOrNull() ?: return
+        val handlerLeft = thisHandlers.mapNotNull { shapes[it]?.x }.minOrNull() ?: return floor
         val xShift = (hostRight + HANDLER_COMPONENT_X_GAP) - handlerLeft
 
-        // Y alignment: if the handler component landed above the main-flow bottom, shift it below.
-        // Compute main-flow bottom from all nodes in mainFlow that have placed shapes.
-        val mainBottom = mainFlow.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: 0.0
-        val handlerTop = thisHandlers.mapNotNull { shapes[it]?.y }.minOrNull() ?: return
-        val yShift = if (handlerTop < mainBottom) {
-            (mainBottom + HANDLER_COMPONENT_Y_GAP) - handlerTop
-        } else {
-            0.0
-        }
+        // Y alignment: place the top of this handler chain at [floor] — only shift downward.
+        // Never move a handler upward: if it is already below the floor it stays in place
+        // (and still advances the floor so the next chain stacks below it).
+        val handlerTop = thisHandlers.mapNotNull { shapes[it]?.y }.minOrNull() ?: return floor
+        val yShift = maxOf(0.0, floor - handlerTop)
 
-        if (xShift <= POSITION_EPSILON && yShift <= POSITION_EPSILON) return
         thisHandlers.forEach { id ->
             shapes[id]?.let { r ->
-                val newX = if (xShift > POSITION_EPSILON) r.x + xShift else r.x
-                val newY = if (yShift > POSITION_EPSILON) r.y + yShift else r.y
-                shapes[id] = r.copy(x = newX, y = newY)
+                shapes[id] = r.copy(x = r.x + xShift, y = r.y + yShift)
                 result[id] = xShift to yShift
             }
         }
+
+        // Advance the floor past this chain's bottom for the next chain.
+        val chainBottom = thisHandlers.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: floor
+        return chainBottom + HANDLER_COMPONENT_Y_GAP
     }
 
     /**

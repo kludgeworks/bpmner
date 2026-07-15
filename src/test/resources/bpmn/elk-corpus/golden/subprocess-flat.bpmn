@@ -144,7 +144,8 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_2" id="BPMNEdge_SubFlow_2">
         <di:waypoint x="604.0" y="102.0"/>
-        <di:waypoint x="780.0" y="102.0"/>
+        <di:waypoint x="604.0" y="102.0"/>
+        <di:waypoint x="762.0" y="102.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
