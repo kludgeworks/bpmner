@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_repr" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="Process_repr" isClosed="false" isExecutable="true" name="Representative Flat Process" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_prepare" implementation="##unspecified" isForCompensation="false" name="Prepare Request" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:callActivity calledElement="Process_Check" completionQuantity="1" id="Call_1" isForCompensation="false" name="Run External Check" startQuantity="1">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+    </bpmn:callActivity>
+
+    <bpmn:exclusiveGateway default="Flow_default" gatewayDirection="Unspecified" id="Gw_split" name="Check passed?">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+
+      <bpmn:outgoing>Flow_default</bpmn:outgoing>
+
+    </bpmn:exclusiveGateway>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_process" implementation="##WebService" isForCompensation="false" name="Process Result" startQuantity="1">
+
+      <bpmn:incoming>Flow_ok</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_join_ok</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_handle_fail" implementation="##WebService" isForCompensation="false" name="Handle Failure" startQuantity="1">
+
+      <bpmn:incoming>Flow_default</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_join_fail</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_join">
+
+      <bpmn:incoming>Flow_join_ok</bpmn:incoming>
+
+      <bpmn:incoming>Flow_join_fail</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_1" name="Done">
+
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Call_1"/>
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Call_1" targetRef="Gw_split"/>
+
+    <bpmn:sequenceFlow id="Flow_ok" name="Check passed" sourceRef="Gw_split" targetRef="Task_process">
+
+      <bpmn:conditionExpression>${checkPassed}</bpmn:conditionExpression>
+
+    </bpmn:sequenceFlow>
+
+    <bpmn:sequenceFlow id="Flow_default" sourceRef="Gw_split" targetRef="Task_handle_fail"/>
+
+    <bpmn:sequenceFlow id="Flow_join_ok" sourceRef="Task_process" targetRef="Gw_join"/>
+
+    <bpmn:sequenceFlow id="Flow_join_fail" sourceRef="Task_handle_fail" targetRef="Gw_join"/>
+
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_join" targetRef="End_1"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_repr" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="Call_1" id="BPMNShape_Call_1">
+        <dc:Bounds height="80.0" width="100.0" x="328.0" y="20.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Call_1">
+          <dc:Bounds height="28.0" width="90.0" x="333.0" y="102.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="988.0" y="42.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="90.0" x="961.0" y="80.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Gw_join" id="BPMNShape_Gw_join">
+        <dc:Bounds height="50.0" width="50.0" x="848.0" y="35.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Gw_split" id="BPMNShape_Gw_split">
+        <dc:Bounds height="50.0" width="50.0" x="518.0" y="35.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Gw_split">
+          <dc:Bounds height="20.0" width="90.0" x="498.0" y="87.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="42.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="80.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_handle_fail" id="BPMNShape_Task_handle_fail">
+        <dc:Bounds height="80.0" width="100.0" x="658.0" y="152.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_handle_fail">
+          <dc:Bounds height="20.0" width="90.0" x="663.0" y="234.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_prepare" id="BPMNShape_Task_prepare">
+        <dc:Bounds height="80.0" width="100.0" x="138.0" y="20.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_prepare">
+          <dc:Bounds height="28.0" width="90.0" x="143.0" y="102.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
+        <dc:Bounds height="80.0" width="100.0" x="658.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
+          <dc:Bounds height="20.0" width="90.0" x="663.0" y="94.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="48.0" y="60.0"/>
+        <di:waypoint x="138.0" y="60.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="238.0" y="60.0"/>
+        <di:waypoint x="328.0" y="60.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+        <di:waypoint x="428.0" y="60.0"/>
+        <di:waypoint x="518.0" y="60.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_default" id="BPMNEdge_Flow_default">
+        <di:waypoint x="568.0" y="68.0"/>
+        <di:waypoint x="593.0" y="68.0"/>
+        <di:waypoint x="593.0" y="192.0"/>
+        <di:waypoint x="658.0" y="192.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_end" id="BPMNEdge_Flow_end">
+        <di:waypoint x="898.0" y="60.0"/>
+        <di:waypoint x="988.0" y="60.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_join_fail" id="BPMNEdge_Flow_join_fail">
+        <di:waypoint x="758.0" y="192.0"/>
+        <di:waypoint x="783.0" y="192.0"/>
+        <di:waypoint x="783.0" y="68.0"/>
+        <di:waypoint x="848.0" y="68.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_join_ok" id="BPMNEdge_Flow_join_ok">
+        <di:waypoint x="758.0" y="52.0"/>
+        <di:waypoint x="848.0" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
+        <di:waypoint x="568.0" y="52.0"/>
+        <di:waypoint x="658.0" y="52.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
+          <dc:Bounds height="20.0" width="120.0" x="530.0" y="116.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

@@ -5,10 +5,14 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
+import dev.groknull.bpmner.layout.BpmnAutoLayoutException
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.PlacedLayout
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
+import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnEdge
@@ -17,28 +21,26 @@ import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnPlane
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnShape
 import org.camunda.bpm.model.bpmn.instance.dc.Bounds
 import org.camunda.bpm.model.bpmn.instance.di.Waypoint
-import org.eclipse.elk.graph.ElkEdge
-import org.eclipse.elk.graph.ElkNode
 
 /**
- * Writes ELK layout results back into a Camunda [BpmnModelInstance] as BPMN-DI.
+ * Writes [PlacedLayout] geometry into a Camunda [BpmnModelInstance] as BPMN-DI.
  *
- * Creates a single BPMNDiagram/BPMNPlane, then emits BPMNShape for each flow node,
- * text annotation, and group, and BPMNEdge for each sequence flow and association.
- * Association waypoints are derived from the center of the connected shapes because
- * associations are not ELK edges and carry no section data.
+ * This is a mechanical serialisation step: all geometry (shape bounds, label bounds,
+ * edge waypoints) comes pre-computed from [BpmnPlacementPass]. The writer makes no
+ * placement decisions — it only translates [PlacedLayout] into Camunda DI model objects.
+ *
+ * The writer never copies an element's own coordinates onto a label — labels come
+ * exclusively from [PlacedLayout.labels].
  */
 internal object ElkToBpmnDiWriter {
 
-    fun write(
-        model: BpmnModelInstance,
-        nodeMap: Map<String, ElkNode>,
-        edgeMap: Map<String, ElkEdge>,
-    ) {
+    fun write(model: BpmnModelInstance, layout: PlacedLayout) {
         val plane = createDiagramAndPlane(model)
-        val shapeById = writeNodeShapes(model, plane, nodeMap)
-        writeSequenceEdges(model, plane, edgeMap)
-        writeAssociationEdges(model, plane, shapeById)
+        writeFlowNodeShapes(model, plane, layout)
+        writeBoundaryShapes(model, plane, layout)
+        writeArtifactShapes(model, plane, layout)
+        writeSequenceEdges(model, plane, layout)
+        writeAssociationEdges(model, plane, layout)
     }
 
     private fun createDiagramAndPlane(model: BpmnModelInstance): BpmnPlane {
@@ -53,70 +55,110 @@ internal object ElkToBpmnDiWriter {
         return plane
     }
 
-    private fun writeNodeShapes(
+    /** Writes BPMNShape for all non-boundary FlowNodes using geometry from [PlacedLayout.shapes]. */
+    private fun writeFlowNodeShapes(
         model: BpmnModelInstance,
         plane: BpmnPlane,
-        nodeMap: Map<String, ElkNode>,
-    ): Map<String, BpmnShape> {
-        val shapeById = mutableMapOf<String, BpmnShape>()
-        for (flowNode in model.getModelElementsByType(FlowNode::class.java).sortedBy { it.id }) {
-            val elkNode = nodeMap[flowNode.id] ?: continue
+        layout: PlacedLayout,
+    ) {
+        for (flowNode in model.getModelElementsByType(FlowNode::class.java)
+            .filter { it !is BoundaryEvent }
+            .sortedBy { it.id }) {
+            val rect = layout.shapes[flowNode.id] ?: continue
             val shape = model.newInstance(BpmnShape::class.java)
             shape.id = "BPMNShape_${flowNode.id}"
             shape.bpmnElement = flowNode
-            shape.bounds = model.newBounds(elkNode.x, elkNode.y, elkNode.width, elkNode.height)
-            if (elkNode.labels.isNotEmpty()) {
-                val elkLabel = elkNode.labels.first()
-                val bpmnLabel = model.newInstance(BpmnLabel::class.java)
-                bpmnLabel.bounds = model.newBounds(
-                    elkNode.x + elkLabel.x,
-                    elkNode.y + elkLabel.y,
-                    elkLabel.width,
-                    elkLabel.height,
-                )
-                shape.bpmnLabel = bpmnLabel
-            }
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
+            if (flowNode is SubProcess) shape.isExpanded = flowNode.id in layout.expanded
+            writeLabelIfPresent(model, shape, flowNode.id, layout)
             plane.addChildElement(shape)
-            shapeById[flowNode.id] = shape
         }
+    }
+
+    /** Writes BPMNShape for BoundaryEvents using geometry from [PlacedLayout.shapes]. */
+    private fun writeBoundaryShapes(
+        model: BpmnModelInstance,
+        plane: BpmnPlane,
+        layout: PlacedLayout,
+    ) {
+        for (be in model.getModelElementsByType(BoundaryEvent::class.java).sortedBy { it.id }) {
+            val rect = layout.shapes[be.id] ?: continue
+            val shape = model.newInstance(BpmnShape::class.java)
+            shape.id = "BPMNShape_${be.id}"
+            shape.bpmnElement = be
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
+            writeLabelIfPresent(model, shape, be.id, layout)
+            plane.addChildElement(shape)
+        }
+    }
+
+    /** Writes BPMNShape for TextAnnotations and Groups using geometry from [PlacedLayout.shapes]. */
+    private fun writeArtifactShapes(
+        model: BpmnModelInstance,
+        plane: BpmnPlane,
+        layout: PlacedLayout,
+    ) {
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            val elkNode = nodeMap[ann.id] ?: continue
+            val rect = layout.shapes[ann.id] ?: continue
             val shape = model.newInstance(BpmnShape::class.java)
             shape.id = "BPMNShape_${ann.id}"
             shape.bpmnElement = ann
-            shape.bounds = model.newBounds(elkNode.x, elkNode.y, elkNode.width, elkNode.height)
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
             plane.addChildElement(shape)
-            shapeById[ann.id] = shape
         }
         for (group in model.getModelElementsByType(Group::class.java).sortedBy { it.id }) {
-            val elkNode = nodeMap[group.id] ?: continue
+            val rect = layout.shapes[group.id] ?: continue
             val shape = model.newInstance(BpmnShape::class.java)
             shape.id = "BPMNShape_${group.id}"
             shape.bpmnElement = group
-            shape.bounds = model.newBounds(elkNode.x, elkNode.y, elkNode.width, elkNode.height)
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
             plane.addChildElement(shape)
-            shapeById[group.id] = shape
         }
-        return shapeById
+    }
+
+    /**
+     * Writes a [BpmnLabel] from [PlacedLayout.labels] if the element has a label.
+     * Never copies the element's own coordinates — labels come exclusively from
+     * [PlacedLayout.labels] (fixes the label-collision defect from BLOCK-557-3).
+     */
+    private fun writeLabelIfPresent(
+        model: BpmnModelInstance,
+        shape: BpmnShape,
+        ownerId: String,
+        layout: PlacedLayout,
+    ) {
+        val labelRect = layout.labels[ownerId] ?: return
+        val bpmnLabel = model.newInstance(BpmnLabel::class.java)
+        bpmnLabel.id = "BPMNLabel_$ownerId"
+        bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
+        shape.bpmnLabel = bpmnLabel
     }
 
     private fun writeSequenceEdges(
         model: BpmnModelInstance,
         plane: BpmnPlane,
-        edgeMap: Map<String, ElkEdge>,
+        layout: PlacedLayout,
     ) {
         for (sf in model.getModelElementsByType(SequenceFlow::class.java).sortedBy { it.id }) {
-            val elkEdge = edgeMap[sf.id] ?: continue
+            val waypoints = layout.edges[sf.id]
+            if (waypoints.isNullOrEmpty()) {
+                throw BpmnAutoLayoutException(
+                    "ELK layout: sequence flow '${sf.id}' has no waypoints in PlacedLayout — " +
+                        "ELK did not produce routing for this edge",
+                )
+            }
             val bpmnEdge = model.newInstance(BpmnEdge::class.java)
             bpmnEdge.id = "BPMNEdge_${sf.id}"
             bpmnEdge.bpmnElement = sf
-            writeWaypoints(model, bpmnEdge, elkEdge)
-            if (elkEdge.labels.isNotEmpty() && !sf.name.isNullOrBlank()) {
-                val elkLabel = elkEdge.labels.first()
+            for ((index, waypoint) in waypoints.withIndex()) {
+                if (index > 0 && waypoint == waypoints[index - 1]) continue
+                model.newWaypoint(waypoint.x, waypoint.y).also { bpmnEdge.waypoints.add(it) }
+            }
+            // Edge label from PlacedLayout (never from ELK label coordinates)
+            layout.labels[sf.id]?.let { labelRect ->
                 val bpmnLabel = model.newInstance(BpmnLabel::class.java)
-                // ELK reports label x/y in absolute root-graph coordinates (same space as
-                // node bounds and section waypoints), so use them directly without offset.
-                bpmnLabel.bounds = model.newBounds(elkLabel.x, elkLabel.y, elkLabel.width, elkLabel.height)
+                bpmnLabel.id = "BPMNLabel_${sf.id}"
+                bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
                 bpmnEdge.bpmnLabel = bpmnLabel
             }
             plane.addChildElement(bpmnEdge)
@@ -126,43 +168,20 @@ internal object ElkToBpmnDiWriter {
     private fun writeAssociationEdges(
         model: BpmnModelInstance,
         plane: BpmnPlane,
-        shapeById: Map<String, BpmnShape>,
+        layout: PlacedLayout,
     ) {
         for (assoc in model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Association::class.java)
             .sortedBy { it.id }) {
-            val sourceShape = shapeById[assoc.source?.id]
-            val targetShape = shapeById[assoc.target?.id]
-            if (sourceShape == null || targetShape == null) continue
+            val waypoints = layout.edges[assoc.id] ?: continue
             val bpmnEdge = model.newInstance(BpmnEdge::class.java)
             bpmnEdge.id = "BPMNEdge_${assoc.id}"
             bpmnEdge.bpmnElement = assoc
-            val (s1x, s1y) = shapeCenter(sourceShape)
-            val (s2x, s2y) = shapeCenter(targetShape)
-            model.newWaypoint(s1x, s1y).also { bpmnEdge.waypoints.add(it) }
-            model.newWaypoint(s2x, s2y).also { bpmnEdge.waypoints.add(it) }
+            for ((index, waypoint) in waypoints.withIndex()) {
+                if (index > 0 && waypoint == waypoints[index - 1]) continue
+                model.newWaypoint(waypoint.x, waypoint.y).also { bpmnEdge.waypoints.add(it) }
+            }
             plane.addChildElement(bpmnEdge)
         }
-    }
-
-    private fun writeWaypoints(model: BpmnModelInstance, bpmnEdge: BpmnEdge, elkEdge: ElkEdge) {
-        val section = elkEdge.sections.firstOrNull()
-        if (section == null) {
-            // No section means ELK produced no routing; emit two zero-coordinate waypoints
-            // so the edge has the minimum valid DI rather than being omitted entirely.
-            model.newWaypoint(0.0, 0.0).also { bpmnEdge.waypoints.add(it) }
-            model.newWaypoint(0.0, 0.0).also { bpmnEdge.waypoints.add(it) }
-            return
-        }
-        model.newWaypoint(section.startX, section.startY).also { bpmnEdge.waypoints.add(it) }
-        for (bend in section.bendPoints) {
-            model.newWaypoint(bend.x, bend.y).also { bpmnEdge.waypoints.add(it) }
-        }
-        model.newWaypoint(section.endX, section.endY).also { bpmnEdge.waypoints.add(it) }
-    }
-
-    private fun shapeCenter(shape: BpmnShape): Pair<Double, Double> {
-        val b = shape.bounds ?: return Pair(0.0, 0.0)
-        return Pair(b.x + b.width / 2.0, b.y + b.height / 2.0)
     }
 
     private fun BpmnModelInstance.newBounds(x: Double, y: Double, w: Double, h: Double): Bounds {

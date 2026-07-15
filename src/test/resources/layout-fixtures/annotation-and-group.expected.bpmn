@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_anno" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="Process_anno" isClosed="false" isExecutable="true" name="Annotation and Group" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_1" implementation="##unspecified" isForCompensation="false" name="Review Document" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_2" implementation="##WebService" isForCompensation="false" name="Archive Document" startQuantity="1">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_1" name="Done">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <!-- Sequence flows must appear before artifacts (BPMN XSD ordering) -->
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Task_2"/>
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="End_1"/>
+
+    <!-- Artifacts follow flow elements -->
+
+    <bpmn:textAnnotation id="Anno_1" textFormat="text/plain">
+
+      <bpmn:text>Must be completed within 2 business days</bpmn:text>
+
+    </bpmn:textAnnotation>
+
+    <bpmn:group categoryValueRef="CategoryValue_1" id="Group_1"/>
+
+    <bpmn:association associationDirection="None" id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+
+  </bpmn:process>
+
+  <bpmn:category id="Category_1">
+
+    <bpmn:categoryValue id="CategoryValue_1" value="Document Processing"/>
+
+  </bpmn:category>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_anno" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="518.0" y="34.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="90.0" x="491.0" y="72.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="34.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="72.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="BPMNShape_Task_1">
+        <dc:Bounds height="80.0" width="100.0" x="138.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_1">
+          <dc:Bounds height="28.0" width="90.0" x="143.0" y="94.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_2" id="BPMNShape_Task_2">
+        <dc:Bounds height="80.0" width="100.0" x="328.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_2">
+          <dc:Bounds height="28.0" width="90.0" x="333.0" y="94.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Anno_1" id="BPMNShape_Anno_1">
+        <dc:Bounds height="60.0" width="100.0" x="268.0" y="147.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Group_1" id="BPMNShape_Group_1">
+        <dc:Bounds height="130.0" width="592.0" x="-13.0" y="-13.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="48.0" y="52.0"/>
+        <di:waypoint x="138.0" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="238.0" y="52.0"/>
+        <di:waypoint x="328.0" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+        <di:waypoint x="428.0" y="52.0"/>
+        <di:waypoint x="518.0" y="52.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Assoc_1" id="BPMNEdge_Assoc_1">
+        <di:waypoint x="229.6" y="92.0"/>
+        <di:waypoint x="286.8" y="147.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

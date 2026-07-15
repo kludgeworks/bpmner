@@ -17,13 +17,11 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 /**
- * Stateless ELK layout path for flat retained BPMN processes.
+ * Stateless ELK layout path for retained BPMN processes including subprocesses
+ * and boundary events.
  *
  * Not annotated with @Service; not wired into BpmnLayoutPort.
  * The GraalJS BpmnLayoutService is the sole production layout authority.
- *
- * Parses the input XML, removes existing BPMN-DI, runs ELK Layered layout via
- * [BpmnToElkMapper] and [ElkToBpmnDiWriter], then serializes the result.
  */
 internal class ElkBpmnLayouter {
 
@@ -33,13 +31,13 @@ internal class ElkBpmnLayouter {
         LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
     }
 
-    @Suppress("ThrowsCount") // parse, layout, and serialize are three distinct failure modes
     fun layout(xml: String): String {
         val model = parseXml(xml)
         removeExistingDi(model)
-        val (elkRoot, nodeMap, edgeMap) = BpmnToElkMapper.map(model)
-        RecursiveGraphLayoutEngine().layout(elkRoot, BasicProgressMonitor())
-        ElkToBpmnDiWriter.write(model, nodeMap, edgeMap)
+        val skeleton = BpmnToElkMapper.map(model)
+        RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
+        val placed = BpmnPlacementPass.place(model, skeleton)
+        ElkToBpmnDiWriter.write(model, placed)
         return serializeXml(model)
     }
 
@@ -52,7 +50,11 @@ internal class ElkBpmnLayouter {
     private fun serializeXml(model: BpmnModelInstance): String = try {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
+        // Camunda's DOM serializer emits trailing spaces on blank indent lines; strip them
+        // so the output is byte-clean and the golden gate needs no normalization.
         out.toString(Charsets.UTF_8)
+            .lines()
+            .joinToString("\n") { it.trimEnd() }
     } catch (e: java.io.IOException) {
         throw BpmnAutoLayoutException("ELK layout failed: could not serialize BPMN XML: ${e.message}", e)
     }

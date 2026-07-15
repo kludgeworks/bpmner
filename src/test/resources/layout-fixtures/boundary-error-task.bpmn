@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_boundary_error" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Boundary Error" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_process" name="Process Payment">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_normal</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_error" name="Payment Error" attachedToRef="Task_process" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_confirm" name="Confirm">
+      <bpmn:incoming>Flow_normal</bpmn:incoming>
+      <bpmn:incoming>Flow_rejoin</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_1" name="End">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_handle" name="Handle Error">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_rejoin</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_normal" sourceRef="Task_process" targetRef="Task_confirm"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_confirm" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_error" targetRef="Task_handle"/>
+    <bpmn:sequenceFlow id="Flow_rejoin" sourceRef="Task_handle" targetRef="Task_confirm"/>
+  </bpmn:process>
+</bpmn:definitions>

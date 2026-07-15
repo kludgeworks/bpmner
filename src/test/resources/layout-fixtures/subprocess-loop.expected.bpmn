@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_subprocess_loop" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Subprocess Loop" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_to_sub</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:subProcess completionQuantity="1" id="SubProcess_1" isForCompensation="false" name="Retry Loop" startQuantity="1" triggeredByEvent="false">
+
+      <bpmn:incoming>Flow_to_sub</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_from_sub</bpmn:outgoing>
+
+      <bpmn:startEvent id="SubStart" isInterrupting="true" name="Begin" parallelMultiple="false">
+
+        <bpmn:outgoing>Flow_s1</bpmn:outgoing>
+
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="SubTask_1" implementation="##WebService" isForCompensation="false" name="Process Item" startQuantity="1">
+
+        <bpmn:incoming>Flow_s1</bpmn:incoming>
+
+        <bpmn:incoming>Flow_retry</bpmn:incoming>
+
+        <bpmn:outgoing>Flow_check</bpmn:outgoing>
+
+      </bpmn:serviceTask>
+
+      <bpmn:exclusiveGateway gatewayDirection="Diverging" id="Gw_check" name="Success?">
+
+        <bpmn:incoming>Flow_check</bpmn:incoming>
+
+        <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+
+        <bpmn:outgoing>Flow_retry</bpmn:outgoing>
+
+      </bpmn:exclusiveGateway>
+
+      <bpmn:endEvent id="SubEnd" name="Done">
+
+        <bpmn:incoming>Flow_ok</bpmn:incoming>
+
+      </bpmn:endEvent>
+
+      <bpmn:sequenceFlow id="Flow_s1" sourceRef="SubStart" targetRef="SubTask_1"/>
+
+      <bpmn:sequenceFlow id="Flow_check" sourceRef="SubTask_1" targetRef="Gw_check"/>
+
+      <bpmn:sequenceFlow id="Flow_ok" name="yes" sourceRef="Gw_check" targetRef="SubEnd"/>
+
+      <bpmn:sequenceFlow id="Flow_retry" name="retry" sourceRef="Gw_check" targetRef="SubTask_1"/>
+
+    </bpmn:subProcess>
+
+    <bpmn:endEvent id="End_1" name="End">
+
+      <bpmn:incoming>Flow_from_sub</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_to_sub" sourceRef="Start_1" targetRef="SubProcess_1"/>
+
+    <bpmn:sequenceFlow id="Flow_from_sub" sourceRef="SubProcess_1" targetRef="End_1"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="820.0" y="104.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="90.0" x="793.0" y="142.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Gw_check" id="BPMNShape_Gw_check">
+        <dc:Bounds height="50.0" width="50.0" x="504.0" y="97.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Gw_check">
+          <dc:Bounds height="20.0" width="90.0" x="484.0" y="149.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="104.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="142.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubEnd" id="BPMNShape_SubEnd">
+        <dc:Bounds height="36.0" width="36.0" x="712.0" y="104.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubEnd">
+          <dc:Bounds height="20.0" width="90.0" x="685.0" y="142.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubProcess_1" id="BPMNShape_SubProcess_1" isExpanded="true">
+        <dc:Bounds height="220.0" width="592.0" x="138.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_1">
+          <dc:Bounds height="20.0" width="90.0" x="389.0" y="234.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubStart" id="BPMNShape_SubStart">
+        <dc:Bounds height="36.0" width="36.0" x="188.0" y="104.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubStart">
+          <dc:Bounds height="20.0" width="90.0" x="161.0" y="142.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="SubTask_1" id="BPMNShape_SubTask_1">
+        <dc:Bounds height="80.0" width="100.0" x="314.0" y="82.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_SubTask_1">
+          <dc:Bounds height="20.0" width="90.0" x="319.0" y="164.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_check" id="BPMNEdge_Flow_check">
+        <di:waypoint x="414.0" y="122.0"/>
+        <di:waypoint x="504.0" y="122.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_from_sub" id="BPMNEdge_Flow_from_sub">
+        <di:waypoint x="748.0" y="122.0"/>
+        <di:waypoint x="820.0" y="122.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
+        <di:waypoint x="554.0" y="122.0"/>
+        <di:waypoint x="712.0" y="122.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
+          <dc:Bounds height="20.0" width="120.0" x="573.0" y="98.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
+        <di:waypoint x="529.0" y="97.0"/>
+        <di:waypoint x="529.0" y="57.0"/>
+        <di:waypoint x="364.0" y="57.0"/>
+        <di:waypoint x="364.0" y="82.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
+          <dc:Bounds height="20.0" width="120.0" x="386.5" y="61.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
+        <di:waypoint x="224.0" y="122.0"/>
+        <di:waypoint x="314.0" y="122.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_to_sub" id="BPMNEdge_Flow_to_sub">
+        <di:waypoint x="48.0" y="122.0"/>
+        <di:waypoint x="138.0" y="122.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

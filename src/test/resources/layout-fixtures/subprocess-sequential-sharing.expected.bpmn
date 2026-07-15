@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="D1" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="P1" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" parallelMultiple="false">
+
+      <bpmn:outgoing>F1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:subProcess completionQuantity="1" id="Sub_1" isForCompensation="false" startQuantity="1" triggeredByEvent="false">
+
+      <bpmn:incoming>F1</bpmn:incoming>
+
+      <bpmn:outgoing>F2</bpmn:outgoing>
+
+      <bpmn:startEvent id="Start_sub1" isInterrupting="true" parallelMultiple="false">
+        <bpmn:outgoing>F_sub1</bpmn:outgoing>
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="Task_sub1" implementation="##WebService" isForCompensation="false" startQuantity="1">
+        <bpmn:incoming>F_sub1</bpmn:incoming>
+      </bpmn:serviceTask>
+
+      <bpmn:sequenceFlow id="F_sub1" sourceRef="Start_sub1" targetRef="Task_sub1"/>
+
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Sub_1"/>
+
+    <bpmn:serviceTask completionQuantity="1" id="IntermediateTask" implementation="##WebService" isForCompensation="false" startQuantity="1">
+
+      <bpmn:incoming>F2</bpmn:incoming>
+
+      <bpmn:outgoing>F3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:sequenceFlow id="F2" sourceRef="Sub_1" targetRef="IntermediateTask"/>
+
+    <bpmn:subProcess completionQuantity="1" id="Sub_2" isForCompensation="false" startQuantity="1" triggeredByEvent="false">
+
+      <bpmn:incoming>F3</bpmn:incoming>
+
+      <bpmn:outgoing>F4</bpmn:outgoing>
+
+      <bpmn:startEvent id="Start_sub2" isInterrupting="true" parallelMultiple="false">
+        <bpmn:outgoing>F_sub2</bpmn:outgoing>
+      </bpmn:startEvent>
+
+      <bpmn:serviceTask completionQuantity="1" id="Task_sub2" implementation="##WebService" isForCompensation="false" startQuantity="1">
+        <bpmn:incoming>F_sub2</bpmn:incoming>
+      </bpmn:serviceTask>
+
+      <bpmn:sequenceFlow id="F_sub2" sourceRef="Start_sub2" targetRef="Task_sub2"/>
+
+    </bpmn:subProcess>
+
+    <bpmn:sequenceFlow id="F3" sourceRef="IntermediateTask" targetRef="Sub_2"/>
+
+    <bpmn:endEvent id="End_1">
+
+      <bpmn:incoming>F4</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="F4" sourceRef="Sub_2" targetRef="End_1"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="P1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="1160.0" y="84.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="IntermediateTask" id="BPMNShape_IntermediateTask">
+        <dc:Bounds height="80.0" width="100.0" x="554.0" y="62.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="84.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_sub1" id="BPMNShape_Start_sub1">
+        <dc:Bounds height="36.0" width="36.0" x="188.0" y="84.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_sub2" id="BPMNShape_Start_sub2">
+        <dc:Bounds height="36.0" width="36.0" x="794.0" y="84.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Sub_1" id="BPMNShape_Sub_1" isExpanded="true">
+        <dc:Bounds height="180.0" width="326.0" x="138.0" y="12.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Sub_2" id="BPMNShape_Sub_2" isExpanded="true">
+        <dc:Bounds height="180.0" width="326.0" x="744.0" y="12.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_sub1" id="BPMNShape_Task_sub1">
+        <dc:Bounds height="80.0" width="100.0" x="314.0" y="62.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_sub2" id="BPMNShape_Task_sub2">
+        <dc:Bounds height="80.0" width="100.0" x="920.0" y="62.0"/>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="F1" id="BPMNEdge_F1">
+        <di:waypoint x="48.0" y="102.0"/>
+        <di:waypoint x="138.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="F2" id="BPMNEdge_F2">
+        <di:waypoint x="464.0" y="102.0"/>
+        <di:waypoint x="554.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="F3" id="BPMNEdge_F3">
+        <di:waypoint x="654.0" y="102.0"/>
+        <di:waypoint x="744.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="F4" id="BPMNEdge_F4">
+        <di:waypoint x="1070.0" y="102.0"/>
+        <di:waypoint x="1160.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="F_sub1" id="BPMNEdge_F_sub1">
+        <di:waypoint x="224.0" y="102.0"/>
+        <di:waypoint x="314.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="F_sub2" id="BPMNEdge_F_sub2">
+        <di:waypoint x="830.0" y="102.0"/>
+        <di:waypoint x="920.0" y="102.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>
