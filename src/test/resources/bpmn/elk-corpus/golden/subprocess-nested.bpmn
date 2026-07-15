@@ -146,6 +146,7 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="InnerFlow_2" id="BPMNEdge_InnerFlow_2">
         <di:waypoint x="590.0" y="152.0"/>
+        <di:waypoint x="590.0" y="152.0"/>
         <di:waypoint x="748.0" y="152.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="OuterFlow_1" id="BPMNEdge_OuterFlow_1">

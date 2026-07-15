@@ -492,36 +492,36 @@ internal object BpmnPlacementPass {
         model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
             val srcId = sf.source?.id ?: return@forEach
             val tgtId = sf.target?.id ?: return@forEach
+            // Case 2 first: exit edge whose SOURCE is the subprocess (higher priority — the
+            // exit flow must originate from the straddled end's right edge, not the subprocess
+            // border; checking case 1 first would incorrectly anchor the start to the ELK origin).
+            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
+            if (srcElement is SubProcess) {
+                val endId = srcElement.flowElements
+                    .filterIsInstance<org.camunda.bpm.model.bpmn.instance.EndEvent>()
+                    .firstOrNull { it.id in straddledEnds }?.id ?: return@forEach
+                val endRect = shapes[endId] ?: return@forEach
+                val tgtRect = shapes[tgtId] ?: return@forEach
+                edges[sf.id] = listOf(
+                    Point(endRect.x + endRect.w, endRect.y + endRect.h / 2.0),
+                    Point(tgtRect.x, tgtRect.y + tgtRect.h / 2.0),
+                )
+                return@forEach
+            }
             // Case 1: intra-subprocess edge whose TARGET is the straddled end event.
-            // Re-anchor: leave ELK waypoints up to the second-to-last point, then travel
-            // horizontally to the straddled end's left edge at the end's centre-Y.
-            // This produces a clean orthogonal route that enters SubEnd from the left,
-            // not a diagonal to its centre.
+            // Re-anchor the last waypoint to enter the straddled end's left edge horizontally.
             if (tgtId in straddledEnds) {
                 val endRect = shapes[tgtId] ?: return@forEach
                 val wps = edges[sf.id] ?: return@forEach
                 if (wps.size >= 2) {
-                    val entryX = endRect.x // left edge — enter from left, not centre
+                    val entryX = endRect.x
                     val entryCy = endRect.y + endRect.h / 2.0
                     val secondLast = wps[wps.size - 2]
-                    // Insert a horizontal jog at entryCy so the final segment is horizontal.
                     edges[sf.id] = wps.dropLast(1) +
                         Point(secondLast.x, entryCy) +
                         Point(entryX, entryCy)
                 }
-                return@forEach
             }
-            // Case 2: exit edge whose SOURCE is the subprocess
-            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
-            if (srcElement !is SubProcess) return@forEach
-            val endId = srcElement.flowElements.filterIsInstance<org.camunda.bpm.model.bpmn.instance.EndEvent>()
-                .firstOrNull { it.id in straddledEnds }?.id ?: return@forEach
-            val endRect = shapes[endId] ?: return@forEach
-            val tgtRect = shapes[tgtId] ?: return@forEach
-            edges[sf.id] = listOf(
-                Point(endRect.x + endRect.w, endRect.y + endRect.h / 2.0),
-                Point(tgtRect.x, tgtRect.y + tgtRect.h / 2.0),
-            )
         }
     }
 
@@ -543,6 +543,9 @@ internal object BpmnPlacementPass {
             val tgtSnapped = tgtId in centredNodes
             if (!srcSnapped && !tgtSnapped) return@forEach
             if (sf.id !in edges) return@forEach
+            // Skip subprocess exit flows — already re-anchored by reanchorSubprocessExitFlows.
+            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
+            if (srcElement is SubProcess) return@forEach
             val srcRect = shapes[srcId] ?: return@forEach
             val tgtRect = shapes[tgtId] ?: return@forEach
             val srcCy = srcRect.y + srcRect.h / 2.0
