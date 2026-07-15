@@ -3,13 +3,12 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.conformance.internal.adapter.outbound
+package dev.groknull.bpmner.conformance.internal.application
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnRule
 import dev.groknull.bpmner.bpmn.RuleMetadata
 import dev.groknull.bpmner.bpmn.RuleSeverity
-import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import dev.groknull.bpmner.conformance.BpmnAutoFixResult
 import dev.groknull.bpmner.conformance.BpmnLintRuleCapability
 import dev.groknull.bpmner.conformance.BpmnLintRuleIds
@@ -17,23 +16,20 @@ import dev.groknull.bpmner.conformance.BpmnLintingPort
 import dev.groknull.bpmner.conformance.LintIssue
 import dev.groknull.bpmner.ruleset.RuleEngine
 import dev.groknull.bpmner.ruleset.RuleRegistry
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 
 /**
- * Anti-Corruption Layer (ACL) backing [BpmnLintingPort] with the [RuleEngine].
- * Enforced as a sanctioned exception to ensure clean boundaries (ADR-007, ADR-010).
+ * Application service backing [BpmnLintingPort] with the ruleset application APIs.
  */
-// NOTE: @SecondaryAdapter is deliberately absent (ADR-007 Decision 2). This adapter is
-// an Anti-Corruption Layer (ACL) over rules' driving surface, not a pure secondary adapter.
-// The ACL exception is marked via @SanctionedArchitectureException (ADR-010).
 @Component
-@SanctionedArchitectureException(reason = "Anti-Corruption Layer over rules primary ports (ADR-010)")
-internal class RuleEngineLintingAdapter(
+@ApplicationRing
+internal class RuleEngineLintingService(
     private val ruleEngine: RuleEngine,
     private val ruleRegistry: RuleRegistry,
 ) : BpmnLintingPort {
-    private val logger = LoggerFactory.getLogger(RuleEngineLintingAdapter::class.java)
+    private val logger = LoggerFactory.getLogger(RuleEngineLintingService::class.java)
 
     private val capabilities: Map<String, BpmnLintRuleCapability> by lazy {
         buildMap {
