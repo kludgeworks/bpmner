@@ -158,6 +158,11 @@ class BpmnToElkMapperTest {
         // Host node must have the port
         val hostNode = result.nodeMap["Task_1"]!!
         assertTrue(hostNode.ports.contains(port), "Host node must own the boundary port")
+        assertEquals(
+            org.eclipse.elk.core.options.PortConstraints.FIXED_SIDE,
+            hostNode.getProperty(org.eclipse.elk.core.options.CoreOptions.PORT_CONSTRAINTS),
+            "Host node must have PORT_CONSTRAINTS set to FIXED_SIDE",
+        )
 
         // Sibling node must be in the same container as the host (the root)
         assertEquals(hostNode.parent, beNode.parent, "Boundary node must be sibling of host in same container")

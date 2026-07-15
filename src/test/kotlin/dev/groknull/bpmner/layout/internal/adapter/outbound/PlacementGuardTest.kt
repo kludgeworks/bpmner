@@ -62,6 +62,8 @@ class PlacementGuardTest {
             "subprocess-loop",
             "subprocess-branch",
             "subprocess-nested",
+            "subprocess-no-start-cycle",
+            "subprocess-sequential-sharing",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {

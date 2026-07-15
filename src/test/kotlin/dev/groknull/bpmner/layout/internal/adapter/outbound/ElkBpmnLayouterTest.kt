@@ -494,7 +494,7 @@ class ElkBpmnLayouterTest {
         val doc = parseXmlDoc(xml)
         val hostBounds = shapeBounds(doc, hostId)
         val beBounds = shapeBounds(doc, boundaryId)
-        val tolerance = EVENT_SIZE
+        val tolerance = EVENT_SIZE / 2.0
         val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
         val hostBottom = hostBounds["y"]!! + hostBounds["height"]!!
 

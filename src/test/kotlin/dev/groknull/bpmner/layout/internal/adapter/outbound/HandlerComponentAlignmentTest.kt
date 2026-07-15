@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Point
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.PlacementTestSkeletons.makeEdge
 import dev.groknull.bpmner.layout.internal.adapter.outbound.PlacementTestSkeletons.makeNode
 import dev.groknull.bpmner.layout.internal.adapter.outbound.PlacementTestSkeletons.makePort
@@ -194,5 +196,77 @@ class HandlerComponentAlignmentTest {
             "Intra-component relative X must be preserved (rigid translation). " +
                 "Before: $originalRelativeX After: $placedRelativeX",
         )
+    }
+
+    @Test
+    @Suppress("LongMethod", "MaxLineLength")
+    fun `Repair re-anchors rejoin and forward waypoints to shifted shapes`() {
+        val model = parse(
+            """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>F1</bpmn:outgoing><bpmn:outgoing>Flow_forward</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="Task_1">
+      <bpmn:incoming>F1</bpmn:incoming><bpmn:outgoing>F2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1"><bpmn:incoming>F2</bpmn:incoming><bpmn:incoming>Flow_rejoin</bpmn:incoming></bpmn:endEvent>
+    <bpmn:boundaryEvent id="Boundary_1" attachedToRef="Task_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_ex</bpmn:outgoing>
+    </bpmn:boundaryEvent>
+    <bpmn:sequenceFlow id="Flow_ex" sourceRef="Boundary_1" targetRef="Handler_1"/>
+    <bpmn:serviceTask id="Handler_1"><bpmn:incoming>Flow_ex</bpmn:incoming><bpmn:incoming>Flow_forward</bpmn:incoming><bpmn:outgoing>Flow_h</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:serviceTask id="Handler_2"><bpmn:incoming>Flow_h</bpmn:incoming><bpmn:outgoing>Flow_rejoin</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:sequenceFlow id="Flow_h" sourceRef="Handler_1" targetRef="Handler_2"/>
+    <bpmn:sequenceFlow id="Flow_rejoin" sourceRef="Handler_2" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_forward" sourceRef="Start_1" targetRef="Handler_1"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_1" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>""",
+        )
+
+        val shapes = mutableMapOf(
+            "Start_1" to Rect(10.0, 50.0, 30.0, 30.0),
+            "Task_1" to Rect(100.0, 50.0, 100.0, 80.0),
+            "End_1" to Rect(400.0, 50.0, 30.0, 30.0),
+            "Handler_1" to Rect(150.0, 200.0, 100.0, 80.0),
+            "Handler_2" to Rect(300.0, 200.0, 100.0, 80.0),
+        )
+
+        val edges = mutableMapOf(
+            "Flow_h" to listOf(Point(150.0, 190.0), Point(200.0, 190.0)),
+            "Flow_rejoin" to listOf(Point(300.0, 200.0), Point(400.0, 50.0)),
+            "Flow_forward" to listOf(Point(40.0, 65.0), Point(150.0, 200.0)),
+        )
+
+        val moves = mutableMapOf(
+            "Handler_1" to dev.groknull.bpmner.layout.internal.adapter.outbound.placement.MoveRecord("HandlerComponentAlignment", 100.0, 50.0),
+            "Handler_2" to dev.groknull.bpmner.layout.internal.adapter.outbound.placement.MoveRecord("HandlerComponentAlignment", 100.0, 50.0),
+        )
+
+        val root = ElkGraphUtil.createGraph()
+        val sk = skeleton(root, mapOf(), mapOf(), mapOf())
+
+        val ctx = dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext(
+            model = model,
+            skeleton = sk,
+            shapes = shapes,
+            labels = mutableMapOf(),
+            edges = edges,
+            expanded = mutableSetOf(),
+            moves = moves,
+        )
+
+        dev.groknull.bpmner.layout.internal.adapter.outbound.placement.HandlerComponentAlignment.Repair.process(ctx)
+
+        val expectedFlowH = listOf(Point(250.0, 240.0), Point(300.0, 240.0))
+        kotlin.test.assertEquals(expectedFlowH, edges["Flow_h"], "Flow_h waypoints must be shifted uniformly")
+
+        val expectedRejoin = listOf(Point(350.0, 200.0), Point(350.0, 65.0), Point(400.0, 65.0))
+        kotlin.test.assertEquals(expectedRejoin, edges["Flow_rejoin"], "Flow_rejoin must be correctly routed by routeRejoinEdge")
+
+        val expectedForward = listOf(Point(40.0, 65.0), Point(150.0, 240.0))
+        kotlin.test.assertEquals(expectedForward, edges["Flow_forward"], "Flow_forward must be correctly routed by routeForwardToHandlerEdge")
     }
 }

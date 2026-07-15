@@ -54,6 +54,8 @@ class ElkGoldenLayoutTest {
             "subprocess-loop",
             "subprocess-branch",
             "subprocess-nested",
+            "subprocess-no-start-cycle",
+            "subprocess-sequential-sharing",
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
@@ -84,6 +86,8 @@ class ElkGoldenLayoutTest {
             "boundary-error-task",
             "boundary-multi",
             "boundary-on-subprocess",
+            "subprocess-no-start-cycle",
+            "subprocess-sequential-sharing",
         ],
     )
     @Suppress("CyclomaticComplexMethod")
@@ -168,6 +172,8 @@ class ElkGoldenLayoutTest {
             "boundary-error-task",
             "boundary-multi",
             "boundary-on-subprocess",
+            "subprocess-no-start-cycle",
+            "subprocess-sequential-sharing",
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {

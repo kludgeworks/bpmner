@@ -258,11 +258,11 @@ internal object BpmnToElkMapper {
 
             // Port on the host: ALWAYS SOUTH (AD-557-10 — all exception edges exit bottom).
             // Multiple attachments share SOUTH; the placement pass handles their shape distribution.
+            hostNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
             val port = ElkGraphUtil.createPort(hostNode)
             port.identifier = "port_${be.id}"
             port.width = BOUNDARY_PORT_SIZE
             port.height = BOUNDARY_PORT_SIZE
-            port.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
             port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
             portMap[be.id] = port
 
@@ -324,6 +324,7 @@ internal object BpmnToElkMapper {
      * Each stack frame is (nodeId, iteratorIndex): when the iterator is exhausted the node is
      * popped from the DFS ancestor-stack and marked fully visited.
      */
+    @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
     private fun findLoopBackEdges(sub: SubProcess): Set<String> {
         val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
         val succFlows = mutableMapOf<String, MutableList<Pair<String, String>>>() // nodeId → [(targetId, flowId)]
@@ -332,36 +333,43 @@ internal object BpmnToElkMapper {
             val t = sf.target?.id ?: return@forEach
             succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
         }
-        val startId = sub.flowElements.filterIsInstance<StartEvent>().firstOrNull()?.id
-            ?: return emptySet()
+
+        val startEvents = sub.flowElements.filterIsInstance<StartEvent>()
+        val seeds = if (startEvents.isNotEmpty()) {
+            startEvents.map { it.id }
+        } else {
+            sub.flowElements.filterIsInstance<FlowNode>().map { it.id }
+        }
 
         val backEdges = mutableSetOf<String>()
         val visited = mutableSetOf<String>() // fully processed nodes
-        val ancestors = mutableSetOf<String>() // nodes on the current DFS path
-        // Explicit stack: each entry is (nodeId, index into succFlows list)
-        val callStack = ArrayDeque<Pair<String, Int>>()
 
-        visited.add(startId)
-        ancestors.add(startId)
-        callStack.addLast(startId to 0)
+        for (seed in seeds) {
+            if (seed in visited) continue
 
-        while (callStack.isNotEmpty()) {
-            val (nodeId, idx) = callStack.last()
-            val neighbours = succFlows[nodeId].orEmpty()
-            if (idx >= neighbours.size) {
-                // All neighbours processed — pop frame.
-                callStack.removeLast()
-                ancestors.remove(nodeId)
-            } else {
-                // Advance the iterator index for the current frame.
-                callStack[callStack.size - 1] = nodeId to (idx + 1)
-                val (targetId, flowId) = neighbours[idx]
-                when {
-                    targetId in ancestors -> backEdges.add(flowId) // back-edge
-                    targetId !in visited -> {
-                        visited.add(targetId)
-                        ancestors.add(targetId)
-                        callStack.addLast(targetId to 0)
+            val ancestors = mutableSetOf<String>() // nodes on the current DFS path
+            val callStack = ArrayDeque<Pair<String, Int>>()
+
+            visited.add(seed)
+            ancestors.add(seed)
+            callStack.addLast(seed to 0)
+
+            while (callStack.isNotEmpty()) {
+                val (nodeId, idx) = callStack.last()
+                val neighbours = succFlows[nodeId].orEmpty()
+                if (idx >= neighbours.size) {
+                    callStack.removeLast()
+                    ancestors.remove(nodeId)
+                } else {
+                    callStack[callStack.size - 1] = nodeId to (idx + 1)
+                    val (targetId, flowId) = neighbours[idx]
+                    when {
+                        targetId in ancestors -> backEdges.add(flowId) // back-edge
+                        targetId !in visited -> {
+                            visited.add(targetId)
+                            ancestors.add(targetId)
+                            callStack.addLast(targetId to 0)
+                        }
                     }
                 }
             }

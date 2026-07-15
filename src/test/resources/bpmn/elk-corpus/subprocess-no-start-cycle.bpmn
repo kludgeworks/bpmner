@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:startEvent id="Start_1">
+      <bpmn:outgoing>F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Sub_1">
+      <bpmn:incoming>F1</bpmn:incoming>
+      <bpmn:outgoing>F2</bpmn:outgoing>
+      <bpmn:serviceTask id="Task_A">
+        <bpmn:outgoing>Flow_h1</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_B">
+        <bpmn:incoming>Flow_h1</bpmn:incoming>
+        <bpmn:outgoing>Flow_h2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="Flow_h1" sourceRef="Task_A" targetRef="Task_B"/>
+      <bpmn:sequenceFlow id="Flow_h2" sourceRef="Task_B" targetRef="Task_A"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="End_1">
+      <bpmn:incoming>F2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Sub_1"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="Sub_1" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

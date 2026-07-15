@@ -39,13 +39,17 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance
 internal object SubprocessSpineCentring {
 
     val Move: PlacementProcessor = PlacementProcessor { ctx ->
+        val snappedNodes = mutableSetOf<String>()
         ctx.model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val subRect = ctx.shapes[sub.id] ?: return@forEach
             val subCentreY = subRect.y + subRect.h / 2.0
 
             // 1. Inner spine: snap Y to subprocess vertical midline.
             subSpineIds(sub, ctx.skeleton.loopBackFlowIds).forEach { id ->
-                snapToCentreY(id, subCentreY, ctx)
+                if (id !in snappedNodes) {
+                    snapToCentreY(id, subCentreY, ctx)
+                    snappedNodes.add(id)
+                }
             }
 
             // 2. Outer nodes directly connected to the subprocess.
@@ -53,8 +57,18 @@ internal object SubprocessSpineCentring {
                 val srcId = sf.source?.id
                 val tgtId = sf.target?.id
                 when {
-                    srcId == sub.id && tgtId != null -> snapToCentreY(tgtId, subCentreY, ctx)
-                    tgtId == sub.id && srcId != null -> snapToCentreY(srcId, subCentreY, ctx)
+                    srcId == sub.id && tgtId != null -> {
+                        if (tgtId !in snappedNodes) {
+                            snapToCentreY(tgtId, subCentreY, ctx)
+                            snappedNodes.add(tgtId)
+                        }
+                    }
+                    tgtId == sub.id && srcId != null -> {
+                        if (srcId !in snappedNodes) {
+                            snapToCentreY(srcId, subCentreY, ctx)
+                            snappedNodes.add(srcId)
+                        }
+                    }
                 }
             }
         }

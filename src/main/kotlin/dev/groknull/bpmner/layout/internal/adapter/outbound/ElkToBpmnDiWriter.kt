@@ -29,8 +29,7 @@ import org.camunda.bpm.model.bpmn.instance.di.Waypoint
  * edge waypoints) comes pre-computed from [BpmnPlacementPass]. The writer makes no
  * placement decisions — it only translates [PlacedLayout] into Camunda DI model objects.
  *
- * DI is MERGED, not wiped: pre-existing non-layout attributes (colours, bioc:, custom
- * extensions) on existing shapes are preserved (AD-557-10 / JS issue #116).
+ * DI is regenerated wholesale (merge of non-geometry attributes is deferred to 557-4 per AD-557-10 / Goals).
  *
  * The writer never copies an element's own coordinates onto a label — labels come
  * exclusively from [PlacedLayout.labels].

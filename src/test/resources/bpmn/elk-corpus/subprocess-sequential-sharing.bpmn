@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:startEvent id="Start_1">
+      <bpmn:outgoing>F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:subProcess id="Sub_1">
+      <bpmn:incoming>F1</bpmn:incoming>
+      <bpmn:outgoing>F2</bpmn:outgoing>
+      <bpmn:startEvent id="Start_sub1"><bpmn:outgoing>F_sub1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:serviceTask id="Task_sub1"><bpmn:incoming>F_sub1</bpmn:incoming></bpmn:serviceTask>
+      <bpmn:sequenceFlow id="F_sub1" sourceRef="Start_sub1" targetRef="Task_sub1"/>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Sub_1"/>
+    <bpmn:serviceTask id="IntermediateTask">
+      <bpmn:incoming>F2</bpmn:incoming>
+      <bpmn:outgoing>F3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="F2" sourceRef="Sub_1" targetRef="IntermediateTask"/>
+    <bpmn:subProcess id="Sub_2">
+      <bpmn:incoming>F3</bpmn:incoming>
+      <bpmn:outgoing>F4</bpmn:outgoing>
+      <bpmn:startEvent id="Start_sub2"><bpmn:outgoing>F_sub2</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:serviceTask id="Task_sub2"><bpmn:incoming>F_sub2</bpmn:incoming></bpmn:serviceTask>
+      <bpmn:sequenceFlow id="F_sub2" sourceRef="Start_sub2" targetRef="Task_sub2"/>
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="F3" sourceRef="IntermediateTask" targetRef="Sub_2"/>
+    <bpmn:endEvent id="End_1">
+      <bpmn:incoming>F4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F4" sourceRef="Sub_2" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

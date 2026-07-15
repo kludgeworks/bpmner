@@ -33,6 +33,8 @@ fun main() {
         "boundary-error-task",
         "boundary-multi",
         "boundary-on-subprocess",
+        "subprocess-no-start-cycle",
+        "subprocess-sequential-sharing",
     )
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
