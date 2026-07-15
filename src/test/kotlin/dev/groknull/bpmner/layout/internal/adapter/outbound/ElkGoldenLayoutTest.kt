@@ -8,7 +8,6 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
-import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -96,7 +95,7 @@ class ElkGoldenLayoutTest {
         assertPositiveBounds(doc, fixture)
         assertMinEdgeWaypoints(doc, fixture)
         assertLabelsBelow(doc, fixture)
-        assertNoTopLevelShapeOverlap(doc, fixture)
+        assertNoTopLevelShapeOverlap(doc, fixture, boundaryEventIds(result))
         assertLabelsDoNotOverlapOwnNode(doc, fixture)
     }
 
@@ -111,7 +110,8 @@ class ElkGoldenLayoutTest {
         for (i in 0 until shapes.length) {
             val shape = shapes.item(i) as Element
             val id = shape.getAttribute("bpmnElement")
-            val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: continue
+            val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element
+            assertTrue(bounds != null, "[$fixture] shape '$id' must have bounds")
             val w = bounds.getAttribute("width").toDoubleOrNull() ?: 0.0
             val h = bounds.getAttribute("height").toDoubleOrNull() ?: 0.0
             assertTrue(w > 0.0, "[$fixture] shape '$id' must have positive width, was $w")
@@ -187,7 +187,7 @@ class ElkGoldenLayoutTest {
      * because they contain their children by design. We test only "small" shapes (events, tasks,
      * gateways) that are neither boundaries nor containers.
      */
-    private fun assertNoTopLevelShapeOverlap(doc: org.w3c.dom.Document, fixture: String) {
+    private fun assertNoTopLevelShapeOverlap(doc: org.w3c.dom.Document, fixture: String, boundaryEventIds: Set<String>) {
         val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
         data class ShapeRect(val id: String, val x: Double, val y: Double, val w: Double, val h: Double)
 
@@ -195,9 +195,7 @@ class ElkGoldenLayoutTest {
             .map { shapes.item(it) as Element }
             .mapNotNull { shape ->
                 val id = shape.getAttribute("bpmnElement")
-                // Exclude boundary event shapes (isBoundaryEvent attribute or by convention).
-                // They straddle their host edge — designed overlap, not a defect.
-                if (shape.getAttribute("isQuantity") == "true") return@mapNotNull null
+                if (id in boundaryEventIds) return@mapNotNull null
                 val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@mapNotNull null
                 val x = bounds.getAttribute("x").toDoubleOrNull() ?: return@mapNotNull null
                 val y = bounds.getAttribute("y").toDoubleOrNull() ?: return@mapNotNull null
@@ -211,20 +209,10 @@ class ElkGoldenLayoutTest {
         // their children by design. Boundary events (area = 36×36 ≈ 1296) are small but excluded above.
         val nonContainer = rects.filter { it.w * it.h < 40_000 }
 
-        // Additionally exclude shapes whose bpmnElement matches a boundary event name pattern.
-        // Boundary events have small fixed size (EVENT_SIZE×EVENT_SIZE); we identify them by
-        // checking BPMNShape attribute isHorizontal absence and that they are placed on another
-        // shape's edge — too complex. Simpler: parse the actual BpmnModel from the output XML
-        // to get the definitive set. Since we just need to skip them, exclude shapes with the
-        // exact EVENT_SIZE area (BpmnToElkMapper.EVENT_SIZE = 36 → area = 1296).
-        val eventSize = BpmnToElkMapper.EVENT_SIZE
-        val eventArea = eventSize * eventSize
-        val candidateShapes = nonContainer.filter { abs(it.w * it.h - eventArea) > 1.0 }
-
-        for (i in 0 until candidateShapes.size) {
-            for (j in i + 1 until candidateShapes.size) {
-                val a = candidateShapes[i]
-                val b = candidateShapes[j]
+        for (i in 0 until nonContainer.size) {
+            for (j in i + 1 until nonContainer.size) {
+                val a = nonContainer[i]
+                val b = nonContainer[j]
                 val overlapX = minOf(a.x + a.w, b.x + b.w) - maxOf(a.x, b.x)
                 val overlapY = minOf(a.y + a.h, b.y + b.h) - maxOf(a.y, b.y)
                 assertTrue(
@@ -234,6 +222,14 @@ class ElkGoldenLayoutTest {
                 )
             }
         }
+    }
+
+    private fun boundaryEventIds(xml: String): Set<String> {
+        val model = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
+            java.io.ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)),
+        )
+        return model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
+            .mapTo(mutableSetOf()) { it.id }
     }
 
     /**

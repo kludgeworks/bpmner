@@ -118,10 +118,10 @@ class ElkBpmnLayouterTest {
         val endCx = end["x"]!! + end["width"]!! / 2.0
         val rightBorder = container["x"]!! + container["width"]!!
         val endRight = end["x"]!! + end["width"]!!
-        // Centre must be near the right border, and the shape must overlap (straddle) it
+        // Centre must be on the right border, and the shape must overlap (straddle) it.
         assertTrue(
-            kotlin.math.abs(endCx - rightBorder) <= BpmnToElkMapper.EVENT_SIZE / 2.0 + 1.0,
-            "End '$endId' centre ($endCx) must be near container '$containerId' right border ($rightBorder)",
+            kotlin.math.abs(endCx - rightBorder) <= 1.0,
+            "End '$endId' centre ($endCx) must be on container '$containerId' right border ($rightBorder)",
         )
         // Right half must be outside (endRight > rightBorder)
         assertTrue(endRight > rightBorder - 1.0, "End '$endId' right ($endRight) must be at or past the border ($rightBorder)")
@@ -326,14 +326,26 @@ class ElkBpmnLayouterTest {
         val doc = parseXmlDoc(result)
         val host = shapeBounds(doc, "Task_process")
         val wps = edgeWaypoints(doc, "Flow_error")
-        // No waypoint may lie strictly inside the host box (edge must route around/below it).
+        // No route segment may pass through the host box (edge must route around/below it).
         val hostL = host["x"]!!
         val hostR = hostL + host["width"]!!
         val hostT = host["y"]!!
         val hostB = hostT + host["height"]!!
-        for ((x, y) in wps) {
-            val inside = x > hostL + 1 && x < hostR - 1 && y > hostT + 1 && y < hostB - 1
-            assertTrue(!inside, "Flow_error waypoint ($x,$y) must not be inside host box [$hostL,$hostT,$hostR,$hostB]")
+        for ((start, end) in wps.zipWithNext()) {
+            val crossesHost = when {
+                kotlin.math.abs(start.first - end.first) < 1.0 ->
+                    start.first > hostL + 1 &&
+                        start.first < hostR - 1 &&
+                        maxOf(start.second, end.second) > hostT + 1 &&
+                        minOf(start.second, end.second) < hostB - 1
+                kotlin.math.abs(start.second - end.second) < 1.0 ->
+                    start.second > hostT + 1 &&
+                        start.second < hostB - 1 &&
+                        maxOf(start.first, end.first) > hostL + 1 &&
+                        minOf(start.first, end.first) < hostR - 1
+                else -> false
+            }
+            assertTrue(!crossesHost, "Flow_error segment $start → $end must not cross host box [$hostL,$hostT,$hostR,$hostB]")
         }
     }
 
@@ -493,6 +505,9 @@ class ElkBpmnLayouterTest {
         val hostBounds = shapeBounds(doc, hostId)
         val beBounds = shapeBounds(doc, boundaryId)
         val tolerance = EVENT_SIZE / 2.0
+        val beCx = beBounds["x"]!! + beBounds["width"]!! / 2.0
+        val hostLeft = hostBounds["x"]!!
+        val hostRight = hostLeft + hostBounds["width"]!!
         val beCy = beBounds["y"]!! + beBounds["height"]!! / 2.0
         val hostBottom = hostBounds["y"]!! + hostBounds["height"]!!
 
@@ -500,12 +515,14 @@ class ElkBpmnLayouterTest {
             Math.abs(beCy - hostBottom) <= tolerance,
             "Boundary '$boundaryId' centre Y ($beCy) must be near host '$hostId' BOTTOM edge ($hostBottom) ±$tolerance",
         )
+        assertTrue(
+            beCx in hostLeft..hostRight,
+            "Boundary '$boundaryId' centre X ($beCx) must lie on host '$hostId' bottom edge span [$hostLeft,$hostRight]",
+        )
     }
 
     /**
-     * Asserts every named shape's BPMNLabel (if present) has its top-left Y at or below the
-     * shape's own top-left Y. This is the direct regression guard for BLOCK-557-3 symptom 1
-     * (label placed at the same coordinates as its node, visually on top of it).
+     * Asserts every named shape's BPMNLabel (if present) is below its shape.
      */
     private fun assertLabelsBelow(xml: String) {
         val doc = parseXmlDoc(xml)
@@ -524,6 +541,7 @@ class ElkBpmnLayouterTest {
         if (shapeBoundsNodes.length == 0) return
         val shapeB = shapeBoundsNodes.item(0) as org.w3c.dom.Element
         val shapeY = shapeB.getAttribute("y").toDoubleOrNull() ?: return
+        val shapeH = shapeB.getAttribute("height").toDoubleOrNull() ?: return
         val labels = shape.getElementsByTagNameNS(diNs, "BPMNLabel")
         if (labels.length == 0) return
         val label = labels.item(0) as org.w3c.dom.Element
@@ -531,10 +549,9 @@ class ElkBpmnLayouterTest {
         if (lbNodes.length == 0) return
         val lb = lbNodes.item(0) as org.w3c.dom.Element
         val labelY = lb.getAttribute("y").toDoubleOrNull() ?: return
-        // Core check: label must not be placed AT the node's own top (the BLOCK-557-3 defect)
         assertTrue(
-            labelY >= shapeY,
-            "Label for '$shapeId': y=$labelY must not coincide with node top=$shapeY (label on node)",
+            labelY >= shapeY + shapeH - 1.0,
+            "Label for '$shapeId': y=$labelY must be below node bottom=${shapeY + shapeH}",
         )
     }
 

@@ -127,6 +127,7 @@ class PlacementGuardTest {
                     "[$fixture] Flow node '$id' has a move ledger entry with undeclared owner '${record.owner}'. " +
                         "Declared owners: $DECLARED_OWNERS",
                 )
+                assertLedgerMatchesDisplacement(fixture, id, record!!, placed, elkRect)
             }
 
         // Guard: every ledger entry must have a declared owner
@@ -137,6 +138,21 @@ class PlacementGuardTest {
                     "Declared owners: $DECLARED_OWNERS",
             )
         }
+    }
+
+    private fun assertLedgerMatchesDisplacement(
+        fixture: String,
+        id: String,
+        record: dev.groknull.bpmner.layout.internal.adapter.outbound.placement.MoveRecord,
+        placed: BpmnPlacementPass.Rect,
+        elkRect: BpmnPlacementPass.Rect,
+    ) {
+        assertTrue(
+            kotlin.math.abs(record.dx - (placed.x - elkRect.x)) <= EPS &&
+                kotlin.math.abs(record.dy - (placed.y - elkRect.y)) <= EPS,
+            "[$fixture] Ledger entry for '$id' records (${record.dx},${record.dy}) but final displacement is " +
+                "(${placed.x - elkRect.x},${placed.y - elkRect.y})",
+        )
     }
 
     /**

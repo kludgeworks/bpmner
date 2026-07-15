@@ -61,14 +61,9 @@ internal object ExceptionEdgeRoutes : PlacementProcessor {
             vertMaxY <= hostRect.y ||
             vertMinY >= hostRect.y + hostRect.h
 
-        if (!pathClearsHost) {
-            val h = hostRect ?: return listOf(
-                Point(startX, startY),
-                Point(startX, targetCy),
-                Point(enterX, targetCy),
-            )
+        if (hostRect != null && !pathClearsHost) {
             val clearY = startY + EXCEPTION_DETOUR_GAP
-            val clearX = h.x + h.w + EXCEPTION_DETOUR_GAP
+            val clearX = hostRect.x + hostRect.w + EXCEPTION_DETOUR_GAP
             return listOf(
                 Point(startX, startY),
                 Point(startX, clearY),
