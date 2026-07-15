@@ -15,8 +15,6 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
  *
  * Each implementation applies exactly one named BPMN placement rule to the shared
  * [PlacementContext] and records any node moves in the ledger for guard verification.
- *
- * See: AD-557-14
  */
 internal fun interface PlacementProcessor {
     /** Apply this processor's rule to [ctx], mutating its maps in place. */

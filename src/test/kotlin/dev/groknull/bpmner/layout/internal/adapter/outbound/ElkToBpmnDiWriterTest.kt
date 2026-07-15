@@ -163,7 +163,7 @@ class ElkToBpmnDiWriterTest {
     @Test
     fun `absolutePosition of top-level node is its own coordinates`() {
         val (_, node) = rootWithNode("N", 100.0, 50.0, 100.0, 80.0)
-        val (ax, ay) = ElkToBpmnDiWriter.absolutePosition(node)
+        val (ax, ay) = BpmnPlacementPass.absolutePosition(node)
         assertEquals(100.0, ax, "top-level node absolute x")
         assertEquals(50.0, ay, "top-level node absolute y")
     }
@@ -185,7 +185,7 @@ class ElkToBpmnDiWriterTest {
         child.width = 100.0
         child.height = 80.0
 
-        val (ax, ay) = ElkToBpmnDiWriter.absolutePosition(child)
+        val (ax, ay) = BpmnPlacementPass.absolutePosition(child)
         assertEquals(110.0, ax, "child absolute x = parent.x + child.x")
         assertEquals(70.0, ay, "child absolute y = parent.y + child.y")
     }
@@ -210,7 +210,7 @@ class ElkToBpmnDiWriterTest {
         child.width = 50.0
         child.height = 40.0
 
-        val (ax, ay) = ElkToBpmnDiWriter.absolutePosition(child)
+        val (ax, ay) = BpmnPlacementPass.absolutePosition(child)
         assertEquals(130.0, ax, "grandchild absolute x = 100+20+10")
         assertEquals(80.0, ay, "grandchild absolute y = 50+20+10")
     }

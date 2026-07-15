@@ -19,8 +19,6 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
  * Repair corrects sequence-flow waypoints whose source or target was shifted by Move to re-anchor
  * from the shifted positions. Exception-edge waypoints are not touched (they are produced
  * by [ExceptionEdgeRoutes] and already use placed shape positions).
- *
- * See: AD-557-14, AD-557-12
  */
 internal object HandlerComponentAlignment {
 
@@ -29,6 +27,13 @@ internal object HandlerComponentAlignment {
 
     /** Minimum vertical gap between the main-flow bottom and the top of a handler component. */
     private const val HANDLER_COMPONENT_Y_GAP = 40.0
+
+    private class AlignmentState(
+        val successors: Map<String, List<String>>,
+        val boundaryIds: Set<String>,
+        val mainFlow: Set<String>,
+        val ctx: PlacementContext,
+    )
 
     val Move: PlacementProcessor = PlacementProcessor { ctx ->
         val boundaryIds = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
@@ -48,10 +53,12 @@ internal object HandlerComponentAlignment {
         val mainBottom = mainFlow.mapNotNull { ctx.shapes[it] }.maxOfOrNull { it.y + it.h } ?: 0.0
         var nextFloor = mainBottom + HANDLER_COMPONENT_Y_GAP
 
+        val state = AlignmentState(successors, boundaryIds, mainFlow, ctx)
+
         ctx.model.getModelElementsByType(BoundaryEvent::class.java)
             .sortedBy { it.id }
             .forEach { be ->
-                nextFloor = shiftHandlerComponentForBoundary(be, successors, mainFlow, boundaryIds, ctx, nextFloor)
+                nextFloor = shiftHandlerComponentForBoundary(be, state, nextFloor)
             }
     }
 
@@ -113,38 +120,34 @@ internal object HandlerComponentAlignment {
         return visited
     }
 
-    @Suppress("LongParameterList")
     private fun shiftHandlerComponentForBoundary(
         be: BoundaryEvent,
-        successors: Map<String, List<String>>,
-        mainFlow: Set<String>,
-        boundaryIds: Set<String>,
-        ctx: PlacementContext,
+        state: AlignmentState,
         floor: Double,
     ): Double {
         val hostId = be.attachedTo?.id ?: return floor
-        val hostRight = (ctx.shapes[hostId] ?: return floor).let { it.x + it.w }
+        val hostRight = (state.ctx.shapes[hostId] ?: return floor).let { it.x + it.w }
         val thisHandlers = reachableFrom(
-            seeds = successors[be.id].orEmpty(),
-            successors = successors,
-            exclude = mainFlow + boundaryIds,
+            seeds = state.successors[be.id].orEmpty(),
+            successors = state.successors,
+            exclude = state.mainFlow + state.boundaryIds,
         )
         if (thisHandlers.isEmpty()) return floor
 
-        val handlerLeft = thisHandlers.mapNotNull { ctx.shapes[it]?.x }.minOrNull() ?: return floor
+        val handlerLeft = thisHandlers.mapNotNull { state.ctx.shapes[it]?.x }.minOrNull() ?: return floor
         val xShift = (hostRight + HANDLER_COMPONENT_X_GAP) - handlerLeft
 
-        val handlerTop = thisHandlers.mapNotNull { ctx.shapes[it]?.y }.minOrNull() ?: return floor
+        val handlerTop = thisHandlers.mapNotNull { state.ctx.shapes[it]?.y }.minOrNull() ?: return floor
         val yShift = maxOf(0.0, floor - handlerTop)
 
         thisHandlers.forEach { id ->
-            ctx.shapes[id]?.let { r ->
-                ctx.shapes[id] = r.copy(x = r.x + xShift, y = r.y + yShift)
-                ctx.moves[id] = MoveRecord("HandlerComponentAlignment", xShift, yShift)
+            state.ctx.shapes[id]?.let { r ->
+                state.ctx.shapes[id] = r.copy(x = r.x + xShift, y = r.y + yShift)
+                state.ctx.moves[id] = MoveRecord("HandlerComponentAlignment", xShift, yShift)
             }
         }
 
-        val chainBottom = thisHandlers.mapNotNull { ctx.shapes[it] }.maxOfOrNull { it.y + it.h } ?: floor
+        val chainBottom = thisHandlers.mapNotNull { state.ctx.shapes[it] }.maxOfOrNull { it.y + it.h } ?: floor
         return chainBottom + HANDLER_COMPONENT_Y_GAP
     }
 

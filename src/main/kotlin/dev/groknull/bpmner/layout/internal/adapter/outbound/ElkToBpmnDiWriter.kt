@@ -23,18 +23,15 @@ import org.camunda.bpm.model.bpmn.instance.dc.Bounds
 import org.camunda.bpm.model.bpmn.instance.di.Waypoint
 
 /**
- * Phase 3 — writes [PlacedLayout] geometry into a Camunda [BpmnModelInstance] as BPMN-DI.
+ * Writes [PlacedLayout] geometry into a Camunda [BpmnModelInstance] as BPMN-DI.
  *
  * This is a mechanical serialisation step: all geometry (shape bounds, label bounds,
  * edge waypoints) comes pre-computed from [BpmnPlacementPass]. The writer makes no
  * placement decisions — it only translates [PlacedLayout] into Camunda DI model objects.
  *
- * DI is regenerated wholesale (merge of non-geometry attributes is deferred to 557-4 per AD-557-10 / Goals).
- *
  * The writer never copies an element's own coordinates onto a label — labels come
  * exclusively from [PlacedLayout.labels].
  */
-@Suppress("TooManyFunctions")
 internal object ElkToBpmnDiWriter {
 
     fun write(model: BpmnModelInstance, layout: PlacedLayout) {
@@ -179,14 +176,6 @@ internal object ElkToBpmnDiWriter {
             for (wp in waypoints) model.newWaypoint(wp.x, wp.y).also { bpmnEdge.waypoints.add(it) }
             plane.addChildElement(bpmnEdge)
         }
-    }
-
-    /**
-     * Exposes [BpmnPlacementPass.absolutePosition] for tests that exercise the
-     * coordinate-translation path. The canonical implementation lives in the pass.
-     */
-    internal fun absolutePosition(node: org.eclipse.elk.graph.ElkNode): Pair<Double, Double> {
-        return BpmnPlacementPass.absolutePosition(node)
     }
 
     private fun BpmnModelInstance.newBounds(x: Double, y: Double, w: Double, h: Double): Bounds {

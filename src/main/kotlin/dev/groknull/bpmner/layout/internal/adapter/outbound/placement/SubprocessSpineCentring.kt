@@ -22,8 +22,6 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance
  * and snaps outer nodes directly connected to the subprocess to the same centre-Y.
  *
  * Repair re-routes edges touching snapped nodes as clean orthogonal lines.
- *
- * See: AD-557-14
  */
 internal object SubprocessSpineCentring {
 
@@ -77,7 +75,7 @@ internal object SubprocessSpineCentring {
             if (!srcSnapped && !tgtSnapped) return@forEach
             if (sf.id !in ctx.edges) return@forEach
             if (sf.id in ctx.skeleton.loopBackFlowIds) return@forEach
-            // Skip subprocess exit flows — already re-anchored by SubprocessEndStraddle.Repair.
+            // Skip subprocess exit flows — already re-anchored.
             val srcElement = ctx.model.getModelElementById<ModelElementInstance>(srcId)
             if (srcElement is SubProcess) return@forEach
             val srcRect = ctx.shapes[srcId] ?: return@forEach

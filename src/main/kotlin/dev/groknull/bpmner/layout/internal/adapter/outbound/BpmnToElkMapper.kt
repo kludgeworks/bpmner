@@ -127,7 +127,7 @@ internal object BpmnToElkMapper {
                     // Spacing options do not propagate from the root to child graphs, so the same
                     // label-clearing spacing must be set on each compound node too.
                     applyFlowSpacing(compound)
-                    // No ElkLabel on the compound — labels are owned by BpmnPlacementPass.
+                    // No ElkLabel on the compound — labels are managed during placement.
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children in document order.
                     mapProcess(compound, element.flowElements.toList(), nodeMap, model, loopingSubIds)
@@ -139,7 +139,7 @@ internal object BpmnToElkMapper {
                     val (w, h) = nodeDimensions(element)
                     elkNode.width = w
                     elkNode.height = h
-                    // AD-557-11: pin start events to the first layer, end events to the last.
+                    // Pin start events to the first layer, end events to the last.
                     when (element) {
                         is StartEvent -> elkNode.setProperty(
                             LayeredOptions.LAYERING_LAYER_CONSTRAINT,
@@ -151,7 +151,7 @@ internal object BpmnToElkMapper {
                         )
                         else -> Unit
                     }
-                    // No ElkLabel — labels are owned by BpmnPlacementPass.
+                    // No ElkLabel — labels are managed during placement.
                     nodeMap[element.id] = elkNode
                 }
 
@@ -162,17 +162,15 @@ internal object BpmnToElkMapper {
 
     /**
      * Tracks TextAnnotations in [nodeMap] with their placeholder sizes.
-     * They are NOT added to the ELK graph — the placement pass positions them as
-     * sidecar geometry. The nodeMap entry lets the placement pass find their dimensions.
+     * The nodeMap entry lets the placement pass find their dimensions.
      */
     private fun trackAnnotations(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
     ) {
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            // Use a detached ElkNode (no parent) to carry the size info for the placement pass.
-            // It will NOT be in the ELK graph; the placement pass reads it from nodeMap.
-            val elkNode = ElkGraphUtil.createGraph() // detached root — just a size carrier
+            // Use a detached ElkNode (no parent) to carry the size info.
+            val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
             elkNode.identifier = ann.id
             elkNode.width = ANNOTATION_WIDTH
             elkNode.height = ANNOTATION_HEIGHT
@@ -181,14 +179,14 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Tracks Groups in [nodeMap] with their placeholder sizes (not in ELK graph).
+     * Tracks Groups in [nodeMap] with their placeholder sizes.
      */
     private fun trackGroups(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
     ) {
         for (group in model.getModelElementsByType(Group::class.java).sortedBy { it.id }) {
-            val elkNode = ElkGraphUtil.createGraph() // detached root — size carrier only
+            val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
             elkNode.identifier = group.id
             elkNode.width = GROUP_WIDTH
             elkNode.height = GROUP_HEIGHT
@@ -197,17 +195,16 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Pass 2: for each [BoundaryEvent], create a SOUTH port on the host node (attachment
-     * geometry only — NO ELK edge from this port, per AD-557-12) and a sibling node for the
+     * For each [BoundaryEvent], create a SOUTH port on the host node (attachment
+     * geometry only — no ELK edge from this port) and a sibling node for the
      * handler in the host's container.
      *
-     * ALL boundary ports are SOUTH (per AD-557-10). The port communicates the attachment
-     * side to ELK but carries no exception edge. The sibling handler node has no incoming ELK
-     * edge, making it a genuinely disconnected component that ELK's SimpleRowGraphPlacer
-     * stacks below the main flow automatically.
+     * All boundary ports are SOUTH. The port communicates the attachment side to ELK
+     * but carries no exception edge. The sibling handler node has no incoming ELK
+     * edge, making it a disconnected component placed below the main flow.
      *
-     * The sibling node serves as a size carrier for phase-2 shape placement and as a target
-     * anchor for the phase-2 bespoke exception edge route.
+     * The sibling node serves as a size carrier for shape placement and as a target
+     * anchor for the exception edge route.
      */
     private fun mapBoundaryEvents(
         model: BpmnModelInstance,
@@ -238,24 +235,23 @@ internal object BpmnToElkMapper {
             port.setProperty(CoreOptions.PORT_SIDE, PortSide.SOUTH)
             portMap[be.id] = port
 
-            // Sibling node in the host's container — size carrier for phase-2 shape placement.
+            // Sibling node in the host's container — size carrier for shape placement.
             // Not used as an ELK layered node for routing; the port handles routing.
             val beNode = ElkGraphUtil.createNode(container)
             beNode.identifier = be.id
             beNode.width = EVENT_SIZE
             beNode.height = EVENT_SIZE
-            // No ElkLabel — labels are owned by BpmnPlacementPass.
+            // No ElkLabel — labels are managed during placement.
             nodeMap[be.id] = beNode
         }
     }
 
     /**
-     * Pass 3: map sequence flows to ELK edges for process-flow nodes only.
+     * Maps sequence flows to ELK edges for process-flow nodes only.
      *
-     * AD-557-12: flows whose source is a [BoundaryEvent] are NOT added to the ELK skeleton.
-     * Loop-back edges (back-edges that create cycles in subprocess flows) are also excluded:
-     * ELK's cycle-breaking misplaces nodes in cyclic subprocesses, so the acyclic forward path
-     * is given to ELK and phase-2 routes the loop-back arc as a bespoke over-the-top edge.
+     * Flows whose source is a [BoundaryEvent] are not added to the ELK skeleton.
+     * Loop-back edges (back-edges that create cycles in subprocess flows) are also excluded
+     * so that the acyclic forward path is layouted by ELK.
      *
      * The [loopBackFlowIds] set is pre-computed by [map] and passed in to avoid recomputation.
      */

@@ -18,8 +18,6 @@ import org.camunda.bpm.model.bpmn.instance.SubProcess
  * the target's top.
  *
  * Fallback: [LOOP_ARC_CLEARANCE] above the topmost node when no enclosing subprocess is found.
- *
- * See: AD-557-12
  */
 internal object LoopBackEdgeArcs : PlacementProcessor {
 

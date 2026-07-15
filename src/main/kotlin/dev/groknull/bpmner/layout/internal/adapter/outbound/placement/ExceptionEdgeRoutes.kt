@@ -19,8 +19,6 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
  * - Detour case (straight vertical would pass through the host): five-point route around host right edge.
  *
  * No obstacle detection — the geometry is deterministic from placed boundary shape and handler shape bounds.
- *
- * See: AD-557-12
  */
 internal object ExceptionEdgeRoutes : PlacementProcessor {
 

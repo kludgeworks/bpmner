@@ -20,8 +20,6 @@ import org.camunda.bpm.model.xml.instance.ModelElementInstance
  *
  * Repair re-anchors edges whose target is a straddled end to its new position, and exits
  * edges whose source is the subprocess container from the straddled end's right edge.
- *
- * See: AD-557-14
  */
 internal object SubprocessEndStraddle {
 
