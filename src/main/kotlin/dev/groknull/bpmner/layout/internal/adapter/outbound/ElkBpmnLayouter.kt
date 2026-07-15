@@ -50,7 +50,11 @@ internal class ElkBpmnLayouter {
     private fun serializeXml(model: BpmnModelInstance): String = try {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
+        // Camunda's DOM serializer emits trailing spaces on blank indent lines; strip them
+        // so the output is byte-clean and the golden gate needs no normalization.
         out.toString(Charsets.UTF_8)
+            .lines()
+            .joinToString("\n") { it.trimEnd() }
     } catch (e: java.io.IOException) {
         throw BpmnAutoLayoutException("ELK layout failed: could not serialize BPMN XML: ${e.message}", e)
     }

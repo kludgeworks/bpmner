@@ -59,7 +59,7 @@ class ElkGoldenLayoutTest {
         val actual = layouter.layout(input)
         assertEquals(
             golden,
-            actual.replace(Regex("(?m)[\\t ]+$"), ""),
+            actual,
             "Engine output for '$fixture' does not match the committed golden. " +
                 "If the layout changed intentionally, run generate_candidate_goldens, " +
                 "review in bpmn-js, and re-bless the golden before updating this test.",
