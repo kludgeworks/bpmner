@@ -102,8 +102,11 @@ class ConformanceModuleTest {
         assertEquals(BpmnDiagnosticSource.LINT, requiredEventsDiagnostic.source)
         assertEquals(BpmnDiagnosticSeverity.ERROR, requiredEventsDiagnostic.severity)
         assertTrue(requiredEventsDiagnostic.isBlocking)
-        assertEquals("def-required-events", lintingPort.lintRuleCapabilities()["def-required-events"]?.id)
-        assertTrue(lintingPort.ruleDocs(listOf("def-required-events")).getValue("def-required-events").isNotBlank())
+        val capabilities = lintingPort.lintRuleCapabilities()
+        assertEquals("def-required-events", capabilities["def-required-events"]?.id)
+        val ruleDocs = lintingPort.ruleDocs(capabilities.keys)
+        assertEquals(capabilities.keys, ruleDocs.keys)
+        assertTrue(ruleDocs.values.all { it.isNotBlank() })
         assertNull(lintingPort.autoFix("", emptyList()))
     }
 
