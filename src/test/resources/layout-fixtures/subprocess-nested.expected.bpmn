@@ -1,80 +1,80 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_subprocess_nested" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-    
+
   <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Nested Subprocess" processType="None">
-        
+
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
-            
+
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-          
+
     </bpmn:startEvent>
-        
+
     <bpmn:subProcess completionQuantity="1" id="SubProcess_outer" isForCompensation="false" name="Outer" startQuantity="1" triggeredByEvent="false">
-            
+
       <bpmn:incoming>Flow_1</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
-            
+
       <bpmn:startEvent id="OuterStart" isInterrupting="true" name="Begin" parallelMultiple="false">
-                
+
         <bpmn:outgoing>OuterFlow_1</bpmn:outgoing>
-              
+
       </bpmn:startEvent>
-            
+
       <bpmn:subProcess completionQuantity="1" id="SubProcess_inner" isForCompensation="false" name="Inner" startQuantity="1" triggeredByEvent="false">
-                
+
         <bpmn:incoming>OuterFlow_1</bpmn:incoming>
-                
+
         <bpmn:outgoing>OuterFlow_2</bpmn:outgoing>
-                
+
         <bpmn:startEvent id="InnerStart" isInterrupting="true" name="Begin" parallelMultiple="false">
-                    
+
           <bpmn:outgoing>InnerFlow_1</bpmn:outgoing>
-                  
+
         </bpmn:startEvent>
-                
+
         <bpmn:serviceTask completionQuantity="1" id="GrandchildTask" implementation="##WebService" isForCompensation="false" name="Do Work" startQuantity="1">
-                    
+
           <bpmn:incoming>InnerFlow_1</bpmn:incoming>
-                    
+
           <bpmn:outgoing>InnerFlow_2</bpmn:outgoing>
-                  
+
         </bpmn:serviceTask>
-                
+
         <bpmn:endEvent id="InnerEnd" name="Done">
-                    
+
           <bpmn:incoming>InnerFlow_2</bpmn:incoming>
-                  
+
         </bpmn:endEvent>
-                
+
         <bpmn:sequenceFlow id="InnerFlow_1" sourceRef="InnerStart" targetRef="GrandchildTask"/>
-                
+
         <bpmn:sequenceFlow id="InnerFlow_2" sourceRef="GrandchildTask" targetRef="InnerEnd"/>
-              
+
       </bpmn:subProcess>
-            
+
       <bpmn:endEvent id="OuterEnd" name="Done">
-                
+
         <bpmn:incoming>OuterFlow_2</bpmn:incoming>
-              
+
       </bpmn:endEvent>
-            
+
       <bpmn:sequenceFlow id="OuterFlow_1" sourceRef="OuterStart" targetRef="SubProcess_inner"/>
-            
+
       <bpmn:sequenceFlow id="OuterFlow_2" sourceRef="SubProcess_inner" targetRef="OuterEnd"/>
-          
+
     </bpmn:subProcess>
-        
+
     <bpmn:endEvent id="End_1" name="End">
-            
+
       <bpmn:incoming>Flow_2</bpmn:incoming>
-          
+
     </bpmn:endEvent>
-        
+
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="SubProcess_outer"/>
-        
+
     <bpmn:sequenceFlow id="Flow_2" sourceRef="SubProcess_outer" targetRef="End_1"/>
-      
+
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
@@ -146,7 +146,6 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="InnerFlow_2" id="BPMNEdge_InnerFlow_2">
         <di:waypoint x="590.0" y="152.0"/>
-        <di:waypoint x="590.0" y="152.0"/>
         <di:waypoint x="748.0" y="152.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="OuterFlow_1" id="BPMNEdge_OuterFlow_1">
@@ -159,5 +158,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
+
 </bpmn:definitions>

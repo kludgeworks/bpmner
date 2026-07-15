@@ -1,112 +1,112 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_subprocess_branch" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-    
+
   <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Subprocess Branch" processType="None">
-        
+
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
-            
+
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-          
+
     </bpmn:startEvent>
-        
+
     <bpmn:userTask completionQuantity="1" id="Task_outer" implementation="##unspecified" isForCompensation="false" name="Prepare" startQuantity="1">
-            
+
       <bpmn:incoming>Flow_1</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_to_sub</bpmn:outgoing>
-          
+
     </bpmn:userTask>
-        
+
     <bpmn:subProcess completionQuantity="1" id="SubProcess_1" isForCompensation="false" name="Decide and Act" startQuantity="1" triggeredByEvent="false">
-            
+
       <bpmn:incoming>Flow_to_sub</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_from_sub</bpmn:outgoing>
-            
+
       <bpmn:startEvent id="SubStart" isInterrupting="true" name="Begin" parallelMultiple="false">
-                
+
         <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
-              
+
       </bpmn:startEvent>
-            
+
       <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_split" name="Which path?">
-                
+
         <bpmn:incoming>SubFlow_1</bpmn:incoming>
-                
+
         <bpmn:outgoing>SubFlow_upper</bpmn:outgoing>
-                
+
         <bpmn:outgoing>SubFlow_lower</bpmn:outgoing>
-              
+
       </bpmn:exclusiveGateway>
-            
+
       <bpmn:serviceTask completionQuantity="1" id="Task_upper" implementation="##WebService" isForCompensation="false" name="Path A" startQuantity="1">
-                
+
         <bpmn:incoming>SubFlow_upper</bpmn:incoming>
-                
+
         <bpmn:outgoing>SubFlow_upper_join</bpmn:outgoing>
-              
+
       </bpmn:serviceTask>
-            
+
       <bpmn:serviceTask completionQuantity="1" id="Task_lower" implementation="##WebService" isForCompensation="false" name="Path B" startQuantity="1">
-                
+
         <bpmn:incoming>SubFlow_lower</bpmn:incoming>
-                
+
         <bpmn:outgoing>SubFlow_lower_join</bpmn:outgoing>
-              
+
       </bpmn:serviceTask>
-            
+
       <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_join">
-                
+
         <bpmn:incoming>SubFlow_upper_join</bpmn:incoming>
-                
+
         <bpmn:incoming>SubFlow_lower_join</bpmn:incoming>
-                
+
         <bpmn:outgoing>SubFlow_end</bpmn:outgoing>
-              
+
       </bpmn:exclusiveGateway>
-            
+
       <bpmn:endEvent id="SubEnd" name="Done">
-                
+
         <bpmn:incoming>SubFlow_end</bpmn:incoming>
-              
+
       </bpmn:endEvent>
-            
+
       <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="Gw_split"/>
-            
+
       <bpmn:sequenceFlow id="SubFlow_upper" sourceRef="Gw_split" targetRef="Task_upper"/>
-            
+
       <bpmn:sequenceFlow id="SubFlow_lower" sourceRef="Gw_split" targetRef="Task_lower"/>
-            
+
       <bpmn:sequenceFlow id="SubFlow_upper_join" sourceRef="Task_upper" targetRef="Gw_join"/>
-            
+
       <bpmn:sequenceFlow id="SubFlow_lower_join" sourceRef="Task_lower" targetRef="Gw_join"/>
-            
+
       <bpmn:sequenceFlow id="SubFlow_end" sourceRef="Gw_join" targetRef="SubEnd"/>
-          
+
     </bpmn:subProcess>
-        
+
     <bpmn:userTask completionQuantity="1" id="Task_outer2" implementation="##unspecified" isForCompensation="false" name="Review" startQuantity="1">
-            
+
       <bpmn:incoming>Flow_from_sub</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_to_end</bpmn:outgoing>
-          
+
     </bpmn:userTask>
-        
+
     <bpmn:endEvent id="End_1" name="End">
-            
+
       <bpmn:incoming>Flow_to_end</bpmn:incoming>
-          
+
     </bpmn:endEvent>
-        
+
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_outer"/>
-        
+
     <bpmn:sequenceFlow id="Flow_to_sub" sourceRef="Task_outer" targetRef="SubProcess_1"/>
-        
+
     <bpmn:sequenceFlow id="Flow_from_sub" sourceRef="SubProcess_1" targetRef="Task_outer2"/>
-        
+
     <bpmn:sequenceFlow id="Flow_to_end" sourceRef="Task_outer2" targetRef="End_1"/>
-      
+
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
@@ -223,5 +223,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
+
 </bpmn:definitions>

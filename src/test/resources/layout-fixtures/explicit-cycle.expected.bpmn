@@ -1,48 +1,48 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_cycle" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-    
+
   <bpmn:process id="Process_cycle" isClosed="false" isExecutable="true" name="Explicit Cycle" processType="None">
-        
+
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
-            
+
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-          
+
     </bpmn:startEvent>
-        
+
     <bpmn:userTask completionQuantity="1" id="Task_attempt" implementation="##unspecified" isForCompensation="false" name="Attempt Payment" startQuantity="1">
-            
+
       <bpmn:incoming>Flow_1</bpmn:incoming>
-            
+
       <bpmn:incoming>Flow_retry</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_check</bpmn:outgoing>
-          
+
     </bpmn:userTask>
-        
+
     <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_result" name="Payment succeeded?">
-            
+
       <bpmn:incoming>Flow_check</bpmn:incoming>
-            
+
       <bpmn:outgoing>Flow_ok</bpmn:outgoing>
-            
+
       <bpmn:outgoing>Flow_retry</bpmn:outgoing>
-          
+
     </bpmn:exclusiveGateway>
-        
+
     <bpmn:endEvent id="End_1" name="Payment Complete">
-            
+
       <bpmn:incoming>Flow_ok</bpmn:incoming>
-          
+
     </bpmn:endEvent>
-        
+
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_attempt"/>
-        
+
     <bpmn:sequenceFlow id="Flow_check" sourceRef="Task_attempt" targetRef="Gw_result"/>
-        
+
     <bpmn:sequenceFlow id="Flow_ok" name="Yes" sourceRef="Gw_result" targetRef="End_1"/>
-        
+
     <bpmn:sequenceFlow id="Flow_retry" name="No, retry" sourceRef="Gw_result" targetRef="Task_attempt"/>
-      
+
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_cycle" id="BPMNPlane_1">
@@ -84,17 +84,17 @@
         <di:waypoint x="378.0" y="57.0"/>
         <di:waypoint x="468.0" y="57.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="20.0" width="120.0" x="340.0" y="33.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="340.0" y="114.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
         <di:waypoint x="328.0" y="65.0"/>
         <di:waypoint x="238.0" y="65.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="120.0" x="246.0" y="69.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="246.0" y="124.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-  
+
 </bpmn:definitions>

@@ -30,6 +30,7 @@ internal object LabelPlacement : PlacementProcessor {
     }
 
     private fun placeNodeLabels(ctx: PlacementContext) {
+        val boundaries = ctx.model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
         ctx.model.getModelElementsByType(FlowNode::class.java)
             .filter { !it.name.isNullOrBlank() }
             .sortedBy { it.id }
@@ -38,9 +39,35 @@ internal object LabelPlacement : PlacementProcessor {
                 val name = flowNode.name ?: ""
                 val (labelWidth, labelHeight) = BpmnPlacementPass.estimateLabelDimensions(name, LABEL_WIDTH)
                 val labelX = shape.x + shape.w / 2.0 - labelWidth / 2.0
-                val labelY = shape.y + shape.h + LABEL_GAP_BELOW
+                val labelY = if (flowNode is org.camunda.bpm.model.bpmn.instance.BoundaryEvent) {
+                    shape.y + shape.h + LABEL_GAP_BELOW
+                } else {
+                    labelYBelowAttachedBoundary(flowNode.id, shape, boundaries, ctx)
+                }
                 ctx.labels[flowNode.id] = Rect(labelX, labelY, labelWidth, labelHeight)
             }
+    }
+
+    private fun labelYBelowAttachedBoundary(
+        flowNodeId: String,
+        shape: Rect,
+        boundaries: Collection<org.camunda.bpm.model.bpmn.instance.BoundaryEvent>,
+        ctx: PlacementContext,
+    ): Double {
+        val attached = boundaries.filter { it.attachedTo?.id == flowNodeId }
+        val attachedBottom = attached.maxOfOrNull { boundary ->
+            val boundaryShape = ctx.shapes[boundary.id] ?: return@maxOfOrNull shape.y + shape.h
+            val boundaryLabelHeight = boundary.name?.takeIf { it.isNotBlank() }
+                ?.let { BpmnPlacementPass.estimateLabelDimensions(it, LABEL_WIDTH).second }
+                ?: 0.0
+            boundaryShape.y + boundaryShape.h + LABEL_GAP_BELOW + boundaryLabelHeight
+        } ?: shape.y + shape.h
+        val routeBottom = attached.flatMap { boundary ->
+            ctx.model.getModelElementsByType(SequenceFlow::class.java)
+                .filter { it.source?.id == boundary.id }
+                .flatMap { ctx.edges[it.id].orEmpty() }
+        }.maxOfOrNull { it.y } ?: shape.y + shape.h
+        return maxOf(shape.y + shape.h, attachedBottom, routeBottom) + LABEL_GAP_BELOW
     }
 
     private fun placeSequenceFlowLabels(ctx: PlacementContext) {
@@ -67,7 +94,11 @@ internal object LabelPlacement : PlacementProcessor {
                     } else {
                         labelX = minOf(labelX, horizSeg.endX - labelWidth - LABEL_MARGIN)
                     }
-                    ctx.labels[sf.id] = Rect(labelX, labelY, labelWidth, labelHeight)
+                    ctx.labels[sf.id] = moveBelowEndpointBounds(
+                        Rect(labelX, labelY, labelWidth, labelHeight),
+                        sf,
+                        ctx,
+                    )
                 } else {
                     placeNonHorizontalEdgeLabel(sf.id, wps, name, ctx)
                 }
@@ -104,6 +135,28 @@ internal object LabelPlacement : PlacementProcessor {
             )
         }
     }
+
+    private fun moveBelowEndpointBounds(
+        label: Rect,
+        flow: SequenceFlow,
+        ctx: PlacementContext,
+    ): Rect {
+        val endpointIds = listOfNotNull(flow.source?.id, flow.target?.id)
+        val endpointBounds = endpointIds.mapNotNull { ctx.shapes[it] }
+        if (endpointBounds.none { overlaps(label, it) }) return label
+        val bottom = endpointIds.maxOf { id ->
+            maxOf(
+                ctx.shapes[id]?.let { it.y + it.h } ?: Double.NEGATIVE_INFINITY,
+                ctx.labels[id]?.let { it.y + it.h } ?: Double.NEGATIVE_INFINITY,
+            )
+        }
+        return label.copy(y = bottom + LABEL_GAP_BELOW)
+    }
+
+    private fun overlaps(first: Rect, second: Rect): Boolean = first.x < second.x + second.w &&
+        first.x + first.w > second.x &&
+        first.y < second.y + second.h &&
+        first.y + first.h > second.y
 
     private const val LABEL_MARGIN = 8.0
     private const val EPSILON = 0.001

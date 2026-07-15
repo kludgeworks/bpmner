@@ -150,7 +150,10 @@ internal object ElkToBpmnDiWriter {
             val bpmnEdge = model.newInstance(BpmnEdge::class.java)
             bpmnEdge.id = "BPMNEdge_${sf.id}"
             bpmnEdge.bpmnElement = sf
-            for (wp in waypoints) model.newWaypoint(wp.x, wp.y).also { bpmnEdge.waypoints.add(it) }
+            for ((index, waypoint) in waypoints.withIndex()) {
+                if (index > 0 && waypoint == waypoints[index - 1]) continue
+                model.newWaypoint(waypoint.x, waypoint.y).also { bpmnEdge.waypoints.add(it) }
+            }
             // Edge label from PlacedLayout (never from ELK label coordinates)
             layout.labels[sf.id]?.let { labelRect ->
                 val bpmnLabel = model.newInstance(BpmnLabel::class.java)
@@ -173,7 +176,10 @@ internal object ElkToBpmnDiWriter {
             val bpmnEdge = model.newInstance(BpmnEdge::class.java)
             bpmnEdge.id = "BPMNEdge_${assoc.id}"
             bpmnEdge.bpmnElement = assoc
-            for (wp in waypoints) model.newWaypoint(wp.x, wp.y).also { bpmnEdge.waypoints.add(it) }
+            for ((index, waypoint) in waypoints.withIndex()) {
+                if (index > 0 && waypoint == waypoints[index - 1]) continue
+                model.newWaypoint(waypoint.x, waypoint.y).also { bpmnEdge.waypoints.add(it) }
+            }
             plane.addChildElement(bpmnEdge)
         }
     }
