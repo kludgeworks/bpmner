@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound.placement
 
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.LABEL_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_HEIGHT
@@ -38,6 +39,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     private const val PARTICIPANT_PADDING = 20.0
     private const val MIN_LANE_HEIGHT = 120.0
     private const val DEFAULT_PARTICIPANT_Y = 12.0
+    private const val SAME_LANE_Y_EPSILON = 1.0
 
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
@@ -100,8 +102,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
      * Computes bounds for a participant with swim-lanes.
      *
      * Lane heights are derived from node sizes (not ELK Y positions). Lanes stack vertically in
-     * document order. Nodes are repositioned into their lane Y-band and sequence flow waypoints
-     * are refreshed so edges still connect the repositioned nodes.
+     * document order. Nodes are repositioned into their lane Y-band and nudged right when the
+     * leftmost node label would otherwise overlap the lane header band. Sequence flow waypoints
+     * are refreshed with orthogonal routing so cross-lane edges use right-angle bends.
      */
     private fun computeLanedParticipantBounds(
         participant: Participant,
@@ -111,54 +114,83 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
         val allNodeIds = collectAllFlowNodeIds(process)
 
-        // X extents come from ELK (horizontal ordering is correct).
         val nodeShapes = allNodeIds.mapNotNull { ctx.shapes[it] }
         val minX = if (nodeShapes.isEmpty()) 0.0 else nodeShapes.minOf { it.x }
         val maxX = if (nodeShapes.isEmpty()) BLACK_BOX_WIDTH else nodeShapes.maxOf { it.x + it.w }
 
-        // Each lane's height: tallest member node + 2*LANE_PADDING, minimum MIN_LANE_HEIGHT.
-        val laneHeights = lanes.map { lane ->
-            val memberShapes = lane.flowNodeRefs.mapNotNull { ctx.shapes[it.id] }
-            val maxNodeH = if (memberShapes.isEmpty()) 0.0 else memberShapes.maxOf { it.h }
-            maxOf(MIN_LANE_HEIGHT, maxNodeH + 2.0 * LANE_PADDING)
-        }
+        val laneHeights = laneCanonicalHeights(lanes, ctx)
         val totalLaneHeight = laneHeights.sum()
 
-        // Participant bounds in absolute coordinates.
         val contentLeft = minX - PARTICIPANT_PADDING
-        val contentRight = maxX + PARTICIPANT_PADDING
         val participantX = contentLeft - PARTICIPANT_HEADER_WIDTH
         val participantY = if (nodeShapes.isEmpty()) DEFAULT_PARTICIPANT_Y else nodeShapes.minOf { it.y } - PARTICIPANT_PADDING
-        val participantW = contentRight - participantX
-        val participantH = totalLaneHeight
-
-        // Lane X and width (same for all lanes: content area, not including header).
         val laneX = participantX + PARTICIPANT_HEADER_WIDTH
+
+        val dx = labelClearanceDx(nodeShapes, laneX)
+        if (dx > 0.0) shiftNodesX(allNodeIds, dx, ctx)
+
+        val participantW = (maxX + dx + PARTICIPANT_PADDING) - participantX
         val laneW = participantW - PARTICIPANT_HEADER_WIDTH
 
-        // Second pass: assign lane Y positions and reposition nodes.
-        var laneY = participantY
-        for ((i, lane) in lanes.withIndex()) {
-            val laneH = laneHeights[i]
-            ctx.shapes[lane.id] = Rect(laneX, laneY, laneW, laneH)
-            if (!lane.name.isNullOrBlank()) {
-                ctx.labels[lane.id] = Rect(participantX, laneY, PARTICIPANT_HEADER_WIDTH, laneH)
-            }
-
-            // Reposition each member node to be vertically centred in this lane's band.
-            for (nodeRef in lane.flowNodeRefs) {
-                val nodeShape = ctx.shapes[nodeRef.id] ?: continue
-                val newY = laneY + (laneH - nodeShape.h) / 2.0
-                ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
-            }
-
-            laneY += laneH
-        }
-
-        // Refresh sequence flow waypoints now that nodes have been repositioned.
+        stackLanes(lanes, laneHeights, LaneGeometry(laneX, laneW, participantX, participantY), ctx)
         refreshSequenceEdgeWaypoints(ctx, allNodeIds)
 
-        return Rect(participantX, participantY, participantW, participantH)
+        return Rect(participantX, participantY, participantW, totalLaneHeight)
+    }
+
+    /** Each lane's canonical height: tallest member node + 2×LANE_PADDING, minimum MIN_LANE_HEIGHT. */
+    private fun laneCanonicalHeights(lanes: List<Lane>, ctx: PlacementContext): List<Double> {
+        return lanes.map { lane ->
+            val maxNodeH = lane.flowNodeRefs.mapNotNull { ctx.shapes[it.id] }.maxOfOrNull { it.h } ?: 0.0
+            maxOf(MIN_LANE_HEIGHT, maxNodeH + 2.0 * LANE_PADDING)
+        }
+    }
+
+    /**
+     * Returns the X shift needed so the leftmost node's centred label (width [LABEL_WIDTH])
+     * does not intrude left of [laneX]. Zero if no nudge is needed.
+     */
+    private fun labelClearanceDx(nodeShapes: List<Rect>, laneX: Double): Double {
+        val leftmost = nodeShapes.minByOrNull { it.x } ?: return 0.0
+        val nodeCentreX = leftmost.x + leftmost.w / 2.0
+        return maxOf(0.0, laneX + LABEL_WIDTH / 2.0 - nodeCentreX)
+    }
+
+    private fun shiftNodesX(ids: Set<String>, dx: Double, ctx: PlacementContext) {
+        for (id in ids) {
+            val s = ctx.shapes[id] ?: continue
+            ctx.shapes[id] = s.copy(x = s.x + dx)
+        }
+    }
+
+    /** Geometry constants for writing lane and node shapes within one participant. */
+    private data class LaneGeometry(
+        val laneX: Double,
+        val laneW: Double,
+        val participantX: Double,
+        val startY: Double,
+    )
+
+    /** Assigns lane shapes, lane labels, and centres member nodes vertically within each band. */
+    private fun stackLanes(
+        lanes: List<Lane>,
+        laneHeights: List<Double>,
+        geo: LaneGeometry,
+        ctx: PlacementContext,
+    ) {
+        var laneY = geo.startY
+        for ((i, lane) in lanes.withIndex()) {
+            val laneH = laneHeights[i]
+            ctx.shapes[lane.id] = Rect(geo.laneX, laneY, geo.laneW, laneH)
+            if (!lane.name.isNullOrBlank()) {
+                ctx.labels[lane.id] = Rect(geo.participantX, laneY, PARTICIPANT_HEADER_WIDTH, laneH)
+            }
+            for (nodeRef in lane.flowNodeRefs) {
+                val nodeShape = ctx.shapes[nodeRef.id] ?: continue
+                ctx.shapes[nodeRef.id] = nodeShape.copy(y = laneY + (laneH - nodeShape.h) / 2.0)
+            }
+            laneY += laneH
+        }
     }
 
     /**
@@ -194,10 +226,15 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     /**
      * Refreshes sequence flow waypoints after lane repositioning.
      *
-     * After nodes are repositioned into their lane Y-bands, this method replaces each
-     * affected flow's waypoints with a fresh two-point route connecting the source
-     * node's right-centre to the target node's left-centre. Only flows whose source or
-     * target is in [repositionedIds] are updated; other flows keep their existing waypoints.
+     * For same-lane edges (source and target at the same Y-centre): two waypoints,
+     * straight horizontal.
+     *
+     * For cross-lane edges (source and target in different Y-bands): four waypoints,
+     * orthogonal L-shape — exit source right-centre → horizontal to midX → vertical to
+     * target Y-centre → enter target left-centre. This avoids diagonal lines across
+     * lane boundaries.
+     *
+     * Only flows whose source or target is in [repositionedIds] are updated.
      */
     private fun refreshSequenceEdgeWaypoints(
         ctx: PlacementContext,
@@ -212,9 +249,23 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             .forEach { sf ->
                 val srcShape = ctx.shapes[sf.source?.id ?: return@forEach] ?: return@forEach
                 val tgtShape = ctx.shapes[sf.target?.id ?: return@forEach] ?: return@forEach
-                val srcPt = Point(srcShape.x + srcShape.w, srcShape.y + srcShape.h / 2.0)
-                val tgtPt = Point(tgtShape.x, tgtShape.y + tgtShape.h / 2.0)
-                ctx.edges[sf.id] = listOf(srcPt, tgtPt)
+                val srcRight = srcShape.x + srcShape.w
+                val srcMidY = srcShape.y + srcShape.h / 2.0
+                val tgtLeft = tgtShape.x
+                val tgtMidY = tgtShape.y + tgtShape.h / 2.0
+                ctx.edges[sf.id] = if (kotlin.math.abs(srcMidY - tgtMidY) < SAME_LANE_Y_EPSILON) {
+                    // Same lane: straight horizontal connection.
+                    listOf(Point(srcRight, srcMidY), Point(tgtLeft, tgtMidY))
+                } else {
+                    // Cross-lane: orthogonal L-shape with a bend at the midpoint X.
+                    val midX = (srcRight + tgtLeft) / 2.0
+                    listOf(
+                        Point(srcRight, srcMidY),
+                        Point(midX, srcMidY),
+                        Point(midX, tgtMidY),
+                        Point(tgtLeft, tgtMidY),
+                    )
+                }
             }
     }
 
