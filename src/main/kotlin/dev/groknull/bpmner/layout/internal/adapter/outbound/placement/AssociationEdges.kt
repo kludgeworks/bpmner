@@ -10,9 +10,9 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Re
 import org.camunda.bpm.model.bpmn.instance.Association
 
 /**
- * Pipeline entry 14 — decoration: straight border-to-border connectors for associations.
+ * Straight border-to-border connectors for associations.
  *
- * Postcondition: every [Association] has a two-waypoint route in [PlacementContext.edges]
+ * Every [Association] has a two-waypoint route in [PlacementContext.edges]
  * connecting the nearest border points of its source and target shapes.
  */
 internal object AssociationEdges : PlacementProcessor {

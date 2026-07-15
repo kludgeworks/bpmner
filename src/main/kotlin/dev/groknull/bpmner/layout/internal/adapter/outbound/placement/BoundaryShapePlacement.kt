@@ -12,11 +12,10 @@ import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Pipeline entry 5 — decoration: boundary event shapes on host bottom edge.
+ * Boundary event shapes on host bottom edge.
  *
- * Postcondition: every boundary-event shape is placed on its host's BOTTOM edge, straddling
- * (centre on the edge), evenly distributed for multiple attachments, ordered by handler Y so
- * exception edges do not cross. Not ledgered: this is the AD-557-11 sanctioned shape decoration.
+ * Every boundary-event shape is placed on its host's BOTTOM edge, straddling
+ * (centre on the edge), evenly distributed for multiple attachments.
  *
  * Minimum gap between adjacent boundary shapes on the same host edge: [BOUNDARY_MIN_GAP].
  */

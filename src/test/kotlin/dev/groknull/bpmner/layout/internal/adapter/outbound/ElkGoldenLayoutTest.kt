@@ -15,15 +15,11 @@ import kotlin.test.assertTrue
 /**
  * Layer 4b: golden-file regression oracle over the full 12-fixture corpus.
  *
- * For each approved golden under `bpmn/elk-corpus/golden/`, asserts that the engine
+ * For each approved expected layout under `layout-fixtures/`, asserts that the engine
  * produces byte-identical output. This is the regression gate: once a human approves
- * a golden in bpmn-js and commits it, this test enforces that no subsequent engine
- * change silently shifts its coordinates. A coordinate change requires a new HITL round
- * before the golden can be re-blessed.
- *
- * Fixtures whose golden has not yet been approved are skipped (no entry in the golden/
- * directory matches their name) and covered only by the geometry-invariant sub-tests
- * below until the human completes the HITL pass.
+ * the output in bpmn-js and commits it, this test enforces that no subsequent engine
+ * change silently shifts its coordinates. A coordinate change requires a new review
+ * before the expected layout can be re-blessed.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
  * labels below nodes) and determinism for all 12 fixtures.
@@ -59,8 +55,8 @@ class ElkGoldenLayoutTest {
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
-        val input = load("bpmn/elk-corpus/$fixture.bpmn")
-        val golden = load("bpmn/elk-corpus/golden/$fixture.bpmn")
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val golden = load("layout-fixtures/$fixture.expected.bpmn")
         val actual = layouter.layout(input)
         assertEquals(
             golden,
@@ -92,7 +88,7 @@ class ElkGoldenLayoutTest {
     )
     @Suppress("CyclomaticComplexMethod")
     fun `all 12 corpus fixtures satisfy geometry invariants`(fixture: String) {
-        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
 
@@ -177,7 +173,7 @@ class ElkGoldenLayoutTest {
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {
-        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val input = load("layout-fixtures/$fixture.bpmn")
         val first = layouter.layout(input)
         val second = layouter.layout(input)
         assertEquals(first, second, "Layout was non-deterministic for fixture '$fixture'")

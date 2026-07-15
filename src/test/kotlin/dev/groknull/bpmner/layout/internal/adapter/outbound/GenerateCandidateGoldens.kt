@@ -39,22 +39,22 @@ fun main() {
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
     if (workspaceDir != null) {
-        val goldenDir = File(workspaceDir, "src/test/resources/bpmn/elk-corpus/golden")
+        val goldenDir = File(workspaceDir, "src/test/resources/layout-fixtures")
         goldenDir.mkdirs()
         for (name in fixtures) {
-            val resource = "bpmn/elk-corpus/$name.bpmn"
+            val resource = "layout-fixtures/$name.bpmn"
             val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
                 ?.use { it.readBytes().toString(Charsets.UTF_8) }
                 ?: error("Fixture not found: $resource")
 
             val output = layouter.layout(input)
-            val file = File(goldenDir, "$name.bpmn")
+            val file = File(goldenDir, "$name.expected.bpmn")
             file.writeText(output)
-            println("Wrote golden file to ${file.absolutePath}")
+            println("Wrote expected file to ${file.absolutePath}")
         }
     } else {
         for (name in fixtures) {
-            val resource = "bpmn/elk-corpus/$name.bpmn"
+            val resource = "layout-fixtures/$name.bpmn"
             val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
                 ?.use { it.readBytes().toString(Charsets.UTF_8) }
                 ?: error("Fixture not found: $resource")

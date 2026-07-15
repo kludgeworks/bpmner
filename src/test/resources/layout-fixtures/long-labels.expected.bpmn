@@ -1,62 +1,62 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_labels" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-
+    
   <bpmn:process id="Process_labels" isClosed="false" isExecutable="true" name="Long Labels" processType="None">
-
+        
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Order submission received from customer portal" parallelMultiple="false">
-
+            
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-
+          
     </bpmn:startEvent>
-
+        
     <bpmn:userTask completionQuantity="1" id="Task_1" implementation="##unspecified" isForCompensation="false" name="Validate customer identity and billing address completeness" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_1</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
-
+          
     </bpmn:userTask>
-
+        
     <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_1" name="Identity verification passed?">
-
+            
       <bpmn:incoming>Flow_2</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_ok</bpmn:outgoing>
-
+            
       <bpmn:outgoing>Flow_fail</bpmn:outgoing>
-
+          
     </bpmn:exclusiveGateway>
-
+        
     <bpmn:serviceTask completionQuantity="1" id="Task_2" implementation="##WebService" isForCompensation="false" name="Charge payment method and generate confirmation number" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_ok</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
-
+          
     </bpmn:serviceTask>
-
+        
     <bpmn:endEvent id="End_ok" name="Order confirmed and fulfilment dispatched">
-
+            
       <bpmn:incoming>Flow_3</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:endEvent id="End_fail" name="Order rejected due to failed identity check">
-
+            
       <bpmn:incoming>Flow_fail</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
-
+        
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="Gw_1"/>
-
+        
     <bpmn:sequenceFlow id="Flow_ok" name="Identity verified and billing address complete" sourceRef="Gw_1" targetRef="Task_2"/>
-
+        
     <bpmn:sequenceFlow id="Flow_fail" name="Verification failed or address incomplete" sourceRef="Gw_1" targetRef="End_fail"/>
-
+        
     <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="End_ok"/>
-
+      
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_labels" id="BPMNPlane_1">
@@ -126,5 +126,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
+  
 </bpmn:definitions>

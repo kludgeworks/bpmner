@@ -16,25 +16,14 @@ import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.xml.instance.ModelElementInstance
 
 /**
- * Pipeline entries 4 (Move) and 11 (Repair) — declared move: subprocess happy-path Y-snap.
+ * Declared move and repair: subprocess happy-path Y-snap.
  *
- * **AD-557-14 admission record for the move:**
- * Phase-1 attempt: ELK's `nodePlacement.bk` and node alignment options operate within one
- * connected component under `SEPARATE_CHILDREN`; cross-hierarchy alignment (outer tasks snapped
- * to subprocess centre-Y) is not expressible as an ELK constraint.
- * The human-approved corpus demands the spine be horizontally aligned through the subprocess mid.
+ * Move snaps nodes on the subprocess happy-path spine to the subprocess vertical centre-Y,
+ * and snaps outer nodes directly connected to the subprocess to the same centre-Y.
  *
- * ## Move (entry 4)
- * Postcondition: nodes on the subprocess happy-path spine are snapped to the subprocess
- * vertical centre-Y; branch tasks (predecessor gateway out-degree > 1) are excluded;
- * loop-back edges are ignored for in-degree (the :461-465 predicate);
- * outer nodes directly connected to the subprocess are snapped to the same centre-Y;
- * each moved node is ledgered with owner "SubprocessSpineCentring".
+ * Repair re-routes edges touching snapped nodes as clean orthogonal lines.
  *
- * ## Repair (entry 11)
- * Postcondition: edges touching snapped nodes are re-routed as clean orthogonal lines;
- * loop-back edges (already placed by [LoopBackEdgeArcs]) are excluded from the repair;
- * subprocess exit flows (already re-anchored by [SubprocessEndStraddle.Repair]) are excluded.
+ * See: AD-557-14
  */
 internal object SubprocessSpineCentring {
 

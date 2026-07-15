@@ -1,92 +1,92 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_boundary_on_subprocess" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-
+    
   <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Boundary on Subprocess" processType="None">
-
+        
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
-
+            
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-
+          
     </bpmn:startEvent>
-
+        
     <bpmn:subProcess completionQuantity="1" id="SubProcess_1" isForCompensation="false" name="Execute" startQuantity="1" triggeredByEvent="false">
-
+            
       <bpmn:incoming>Flow_1</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_normal</bpmn:outgoing>
-
+            
       <bpmn:startEvent id="SubStart" isInterrupting="true" name="Begin" parallelMultiple="false">
-
+                
         <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
-
+              
       </bpmn:startEvent>
-
+            
       <bpmn:serviceTask completionQuantity="1" id="SubTask" implementation="##WebService" isForCompensation="false" name="Do Work" startQuantity="1">
-
+                
         <bpmn:incoming>SubFlow_1</bpmn:incoming>
-
+                
         <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
-
+              
       </bpmn:serviceTask>
-
+            
       <bpmn:endEvent id="SubEnd" name="Done">
-
+                
         <bpmn:incoming>SubFlow_2</bpmn:incoming>
-
+              
       </bpmn:endEvent>
-
+            
       <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="SubTask"/>
-
+            
       <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask" targetRef="SubEnd"/>
-
+          
     </bpmn:subProcess>
-
+        
     <bpmn:boundaryEvent attachedToRef="SubProcess_1" cancelActivity="true" id="Boundary_timer" name="Timeout" parallelMultiple="false">
-
+            
       <bpmn:outgoing>Flow_timeout</bpmn:outgoing>
-
+            
       <bpmn:timerEventDefinition id="TimerDef_1"/>
-
+          
     </bpmn:boundaryEvent>
-
+        
     <bpmn:userTask completionQuantity="1" id="Task_review" implementation="##unspecified" isForCompensation="false" name="Review" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_normal</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
-
+          
     </bpmn:userTask>
-
+        
     <bpmn:endEvent id="End_ok" name="End">
-
+            
       <bpmn:incoming>Flow_2</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:serviceTask completionQuantity="1" id="Task_escalate" implementation="##WebService" isForCompensation="false" name="Escalate" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_timeout</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
-
+          
     </bpmn:serviceTask>
-
+        
     <bpmn:endEvent id="End_escalated" name="Escalated">
-
+            
       <bpmn:incoming>Flow_3</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="SubProcess_1"/>
-
+        
     <bpmn:sequenceFlow id="Flow_normal" sourceRef="SubProcess_1" targetRef="Task_review"/>
-
+        
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_review" targetRef="End_ok"/>
-
+        
     <bpmn:sequenceFlow id="Flow_timeout" sourceRef="Boundary_timer" targetRef="Task_escalate"/>
-
+        
     <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_escalate" targetRef="End_escalated"/>
-
+      
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
@@ -182,5 +182,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
+  
 </bpmn:definitions>

@@ -22,15 +22,6 @@ import java.io.ByteArrayOutputStream
  *
  * Not annotated with @Service; not wired into BpmnLayoutPort.
  * The GraalJS BpmnLayoutService is the sole production layout authority.
- *
- * Implements the AD-557-10 skeleton-then-refine pipeline:
- *   Phase 1a: [BpmnToElkMapper] builds a LEAN ELK graph (no labels; boundary events
- *             as SOUTH ports).
- *   Phase 1b: [RecursiveGraphLayoutEngine] runs ELK; output coordinates are immutable.
- *   Phase 2:  [BpmnPlacementPass] applies BPMN placement conventions as named rules
- *             (boundary shapes on host bottom, labels below nodes, baseline snap, etc.).
- *   Phase 3:  [ElkToBpmnDiWriter] serialises the [BpmnPlacementPass.PlacedLayout] into
- *             Camunda BPMN-DI.
  */
 internal class ElkBpmnLayouter {
 
@@ -40,17 +31,12 @@ internal class ElkBpmnLayouter {
         LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
     }
 
-    @Suppress("ThrowsCount") // parse, layout, and serialize are three distinct failure modes
     fun layout(xml: String): String {
         val model = parseXml(xml)
         removeExistingDi(model)
-        // Phase 1a: build lean ELK skeleton
         val skeleton = BpmnToElkMapper.map(model)
-        // Phase 1b: run ELK; skeleton.root now contains layout coordinates
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
-        // Phase 2: apply BPMN placement conventions
         val placed = BpmnPlacementPass.place(model, skeleton)
-        // Phase 3: write DI from PlacedLayout
         ElkToBpmnDiWriter.write(model, placed)
         return serializeXml(model)
     }
@@ -65,9 +51,6 @@ internal class ElkBpmnLayouter {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
         out.toString(Charsets.UTF_8)
-            .lineSequence()
-            .map { it.trimEnd() }
-            .joinToString("\n")
     } catch (e: java.io.IOException) {
         throw BpmnAutoLayoutException("ELK layout failed: could not serialize BPMN XML: ${e.message}", e)
     }

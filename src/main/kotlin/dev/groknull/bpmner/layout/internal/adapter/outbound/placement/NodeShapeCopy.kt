@@ -12,11 +12,11 @@ import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 
 /**
- * Pipeline entry 1 — ELK section copy (pure).
+ * Verbatim copy of ELK node coordinates.
  *
- * Postcondition: every non-boundary flow-node shape in [PlacementContext.shapes] holds the
+ * Every non-boundary flow-node shape in [PlacementContext.shapes] holds the
  * absolute ELK coordinates for that node, and every expanded SubProcess ID is in
- * [PlacementContext.expanded]. No move is ledgered (AD-557-11: ELK bounds are immutable).
+ * [PlacementContext.expanded].
  */
 internal object NodeShapeCopy : PlacementProcessor {
 

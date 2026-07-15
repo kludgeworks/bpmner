@@ -12,9 +12,9 @@ import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 
 /**
- * Pipeline entry 13 — decoration: text annotation and group sidecar geometry.
+ * Text annotation and group sidecar geometry.
  *
- * Postcondition: every [TextAnnotation] is placed below-and-right of its associated element
+ * Every [TextAnnotation] is placed below-and-right of its associated element
  * (if any association exists) or stacked below the skeleton at [ARTIFACT_MARGIN] intervals.
  * Every [Group] is placed as a padded bounding box around the flow-node shapes.
  */

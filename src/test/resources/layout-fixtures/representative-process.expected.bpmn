@@ -1,92 +1,92 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_repr" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-
+    
   <bpmn:process id="Process_repr" isClosed="false" isExecutable="true" name="Representative Flat Process" processType="None">
-
+        
     <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
-
+            
       <bpmn:outgoing>Flow_1</bpmn:outgoing>
-
+          
     </bpmn:startEvent>
-
+        
     <bpmn:userTask completionQuantity="1" id="Task_prepare" implementation="##unspecified" isForCompensation="false" name="Prepare Request" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_1</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_2</bpmn:outgoing>
-
+          
     </bpmn:userTask>
-
+        
     <bpmn:callActivity calledElement="Process_Check" completionQuantity="1" id="Call_1" isForCompensation="false" name="Run External Check" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_2</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_3</bpmn:outgoing>
-
+          
     </bpmn:callActivity>
-
+        
     <bpmn:exclusiveGateway default="Flow_default" gatewayDirection="Unspecified" id="Gw_split" name="Check passed?">
-
+            
       <bpmn:incoming>Flow_3</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_ok</bpmn:outgoing>
-
+            
       <bpmn:outgoing>Flow_default</bpmn:outgoing>
-
+          
     </bpmn:exclusiveGateway>
-
+        
     <bpmn:serviceTask completionQuantity="1" id="Task_process" implementation="##WebService" isForCompensation="false" name="Process Result" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_ok</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_join_ok</bpmn:outgoing>
-
+          
     </bpmn:serviceTask>
-
+        
     <bpmn:serviceTask completionQuantity="1" id="Task_handle_fail" implementation="##WebService" isForCompensation="false" name="Handle Failure" startQuantity="1">
-
+            
       <bpmn:incoming>Flow_default</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_join_fail</bpmn:outgoing>
-
+          
     </bpmn:serviceTask>
-
+        
     <bpmn:exclusiveGateway gatewayDirection="Unspecified" id="Gw_join">
-
+            
       <bpmn:incoming>Flow_join_ok</bpmn:incoming>
-
+            
       <bpmn:incoming>Flow_join_fail</bpmn:incoming>
-
+            
       <bpmn:outgoing>Flow_end</bpmn:outgoing>
-
+          
     </bpmn:exclusiveGateway>
-
+        
     <bpmn:endEvent id="End_1" name="Done">
-
+            
       <bpmn:incoming>Flow_end</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_prepare"/>
-
+        
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_prepare" targetRef="Call_1"/>
-
+        
     <bpmn:sequenceFlow id="Flow_3" sourceRef="Call_1" targetRef="Gw_split"/>
-
+        
     <bpmn:sequenceFlow id="Flow_ok" name="Check passed" sourceRef="Gw_split" targetRef="Task_process">
-
+            
       <bpmn:conditionExpression>${checkPassed}</bpmn:conditionExpression>
-
+          
     </bpmn:sequenceFlow>
-
+        
     <bpmn:sequenceFlow id="Flow_default" sourceRef="Gw_split" targetRef="Task_handle_fail"/>
-
+        
     <bpmn:sequenceFlow id="Flow_join_ok" sourceRef="Task_process" targetRef="Gw_join"/>
-
+        
     <bpmn:sequenceFlow id="Flow_join_fail" sourceRef="Task_handle_fail" targetRef="Gw_join"/>
-
+        
     <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_join" targetRef="End_1"/>
-
+      
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_repr" id="BPMNPlane_1">
@@ -176,5 +176,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
+  
 </bpmn:definitions>

@@ -13,20 +13,15 @@ import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.xml.instance.ModelElementInstance
 
 /**
- * Pipeline entries 3 (Move) and 10 (Repair) — declared move: subprocess-terminating end straddle.
+ * Declared move and repair: subprocess-terminating end straddle.
  *
- * **AD-557-14 admission record for the move:**
- * Phase-1 attempt: spike 2 confirmed layer constraints can guide ELK's end-event placement, but
- * ELK does not support the BPMN "straddle" convention (centre on container border) as a native
- * constraint. The human-approved corpus (`subprocess-nested` golden) demands this geometry.
+ * Move places each end event inside an expanded subprocess so that its centre is on the subprocess's
+ * right border (half inside, half outside).
  *
- * ## Move (entry 3)
- * Postcondition: each end event inside an expanded subprocess has its centre on the subprocess's
- * right border (half inside, half outside); the move is ledgered with owner "SubprocessEndStraddle".
+ * Repair re-anchors edges whose target is a straddled end to its new position, and exits
+ * edges whose source is the subprocess container from the straddled end's right edge.
  *
- * ## Repair (entry 10)
- * Postcondition: edges whose target is a straddled end are re-anchored to its new position;
- * edges whose source is the subprocess container exit from the straddled end's right edge.
+ * See: AD-557-14
  */
 internal object SubprocessEndStraddle {
 

@@ -11,13 +11,12 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkS
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 
 /**
- * Single-responsibility processor in the ordered placement pipeline (AD-557-14).
+ * Single-responsibility processor in the ordered placement pipeline.
  *
  * Each implementation applies exactly one named BPMN placement rule to the shared
  * [PlacementContext] and records any node moves in the ledger for guard verification.
  *
- * Modelled after ELK's own ILayoutProcessor contract, minus the IElkProgressMonitor
- * parameter (AD-557-14 rule 4: the slot machinery buys nothing for a linear list).
+ * See: AD-557-14
  */
 internal fun interface PlacementProcessor {
     /** Apply this processor's rule to [ctx], mutating its maps in place. */
@@ -27,12 +26,12 @@ internal fun interface PlacementProcessor {
 /**
  * The mutable shared state that the ordered processor pipeline threads through.
  *
- * Every coordinate mutation of a flow-node shape that is a **declared move** (i.e. one of the
+ * Every coordinate mutation of a flow-node shape that is a declared move (i.e. one of the
  * three moving conventions: [HandlerComponentAlignment], [SubprocessEndStraddle],
  * [SubprocessSpineCentring]) must record a [MoveRecord] in [moves] so the
  * no-undeclared-relocation guard can verify it.
  *
- * [BoundaryShapePlacement] is the AD-557-11 sanctioned decoration and is NOT ledgered.
+ * [BoundaryShapePlacement] is a sanctioned decoration and is NOT ledgered.
  */
 internal class PlacementContext(
     val model: BpmnModelInstance,

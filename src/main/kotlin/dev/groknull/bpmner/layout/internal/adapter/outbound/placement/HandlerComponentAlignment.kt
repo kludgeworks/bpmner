@@ -11,22 +11,16 @@ import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Pipeline entries 2 (Move) and 9 (Repair) — declared move: rigid whole-component X-translation.
+ * Declared move and repair: rigid whole-component X-translation.
  *
- * **AD-557-14 admission record for the move:**
- * Phase-1 attempt: ELK expresses no opinion on a disconnected component's X relative to another
- * component — [AD-557-12] component separation leaves handler X under-constrained by construction.
- * Result: handler tasks land at x≈0, to the left of their host, rendering as backwards flow.
+ * Move shifts every handler-component node's left edge to be at least its host's right edge +
+ * [HANDLER_COMPONENT_X_GAP], preserving intra-component relative offsets (rigid translation).
  *
- * ## Move (entry 2)
- * Postcondition: every handler-component node's left edge ≥ its host's right edge +
- * [HANDLER_COMPONENT_X_GAP]; intra-component relative offsets are preserved (rigid translation);
- * each moved node ID is recorded in the move ledger with owner "HandlerComponentAlignment".
+ * Repair corrects sequence-flow waypoints whose source or target was shifted by Move to re-anchor
+ * from the shifted positions. Exception-edge waypoints are not touched (they are produced
+ * by [ExceptionEdgeRoutes] and already use placed shape positions).
  *
- * ## Repair (entry 9)
- * Postcondition: sequence-flow waypoints whose source or target was shifted by Move are
- * corrected to re-anchor from the shifted positions. Exception-edge waypoints are not touched
- * (they are produced by [ExceptionEdgeRoutes] and already use placed shape positions).
+ * See: AD-557-14, AD-557-12
  */
 internal object HandlerComponentAlignment {
 

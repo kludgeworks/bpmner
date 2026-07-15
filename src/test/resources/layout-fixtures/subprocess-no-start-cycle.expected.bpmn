@@ -1,50 +1,50 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="D1" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
-
+    
   <bpmn:process id="P1" isClosed="false" isExecutable="true" processType="None">
-
+        
     <bpmn:startEvent id="Start_1" isInterrupting="true" parallelMultiple="false">
-
+            
       <bpmn:outgoing>F1</bpmn:outgoing>
-
+          
     </bpmn:startEvent>
-
+        
     <bpmn:subProcess completionQuantity="1" id="Sub_1" isForCompensation="false" startQuantity="1" triggeredByEvent="false">
-
+            
       <bpmn:incoming>F1</bpmn:incoming>
-
+            
       <bpmn:outgoing>F2</bpmn:outgoing>
-
+            
       <bpmn:serviceTask completionQuantity="1" id="Task_A" implementation="##WebService" isForCompensation="false" startQuantity="1">
-
+                
         <bpmn:outgoing>Flow_h1</bpmn:outgoing>
-
+              
       </bpmn:serviceTask>
-
+            
       <bpmn:serviceTask completionQuantity="1" id="Task_B" implementation="##WebService" isForCompensation="false" startQuantity="1">
-
+                
         <bpmn:incoming>Flow_h1</bpmn:incoming>
-
+                
         <bpmn:outgoing>Flow_h2</bpmn:outgoing>
-
+              
       </bpmn:serviceTask>
-
+            
       <bpmn:sequenceFlow id="Flow_h1" sourceRef="Task_A" targetRef="Task_B"/>
-
+            
       <bpmn:sequenceFlow id="Flow_h2" sourceRef="Task_B" targetRef="Task_A"/>
-
+          
     </bpmn:subProcess>
-
+        
     <bpmn:endEvent id="End_1">
-
+            
       <bpmn:incoming>F2</bpmn:incoming>
-
+          
     </bpmn:endEvent>
-
+        
     <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Sub_1"/>
-
+        
     <bpmn:sequenceFlow id="F2" sourceRef="Sub_1" targetRef="End_1"/>
-
+      
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="P1" id="BPMNPlane_1">
@@ -85,5 +85,5 @@
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
-
+  
 </bpmn:definitions>

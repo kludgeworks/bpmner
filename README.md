@@ -199,3 +199,9 @@ Publishing packages or artifacts is intentionally not configured. The release wo
 ## Contributing
 
 We follow [Conventional Commits](https://www.conventionalcommits.org/). Please refer to the [Linter README](linter/README.md) for details on adding new rules.
+
+## Acknowledgements
+
+This project acknowledges the following libraries and projects:
+- [bpmn-js](https://github.com/bpmn-io/bpmn-js) - BPMN 2.0 rendering toolkit and web modeler.
+- [YABAL](https://github.com/YABAL-BPMN) - Yet Another BPMN Auto Layout tool.

@@ -11,15 +11,15 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 
 /**
- * Pipeline entry 6 — bespoke edge: over-the-top arcs for loop-back sequence flows (AD-557-12).
+ * Bespoke edge: over-the-top arcs for loop-back sequence flows.
  *
- * Postcondition: every flow in [dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton.loopBackFlowIds]
- * has an orthogonal arc that exits the source's top, rises above the subprocess top-padding arc
- * lane ([BpmnToElkMapper.SUBPROCESS_TOP_PADDING] / 2 above the subprocess top), traverses left
- * to above the target, and descends into the target's top. Entries are added to [PlacementContext.edges]
- * before [SequenceEdgeElkCopy] runs so the ELK copy never overwrites a bespoke arc.
+ * Every flow in loopBackFlowIds has an orthogonal arc that exits the source's top, rises above
+ * the subprocess top-padding arc lane, traverses left to above the target, and descends into
+ * the target's top.
  *
  * Fallback: [LOOP_ARC_CLEARANCE] above the topmost node when no enclosing subprocess is found.
+ *
+ * See: AD-557-12
  */
 internal object LoopBackEdgeArcs : PlacementProcessor {
 

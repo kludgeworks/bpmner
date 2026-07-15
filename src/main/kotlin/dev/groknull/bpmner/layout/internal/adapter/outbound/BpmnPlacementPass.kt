@@ -23,38 +23,16 @@ import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
 /**
- * Phase 2 — BPMN placement pass: deterministic, BPMN-aware decoration.
+ * Applies BPMN placement conventions to the mutable shared state context.
  *
- * Reads the ELK skeleton's coordinates as fixed/immutable input and applies each
- * BPMN placement convention as a named rule in one place, via an ordered
- * [PlacementProcessor][dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementProcessor]
- * pipeline (AD-557-14). Per AD-557-11 this pass NEVER relocates a node ELK placed except for
- * the three declared, paired, guarded moving conventions ledgered in PlacementContext.moves.
+ * Reads the ELK skeleton's coordinates as fixed input and applies each
+ * BPMN placement convention (boundary shapes on bottom, labels below nodes,
+ * baseline snap, etc.) using an ordered pipeline of processors.
  *
- * Pipeline order (preserved exactly from the pre-extraction monolith):
- *  1. [NodeShapeCopy]                      — ELK copy (pure)
- *  2. [HandlerComponentAlignment.Move]     — declared move: rigid X-translation
- *  3. [SubprocessEndStraddle.Move]         — declared move: straddle
- *  4. [SubprocessSpineCentring.Move]       — declared move: Y-snap
- *  5. [BoundaryShapePlacement]             — decoration (AD-557-11 sanctioned)
- *  6. [LoopBackEdgeArcs]                   — bespoke edge (AD-557-12 extension)
- *  7. [ExceptionEdgeRoutes]               — bespoke edge (AD-557-12 sanctioned)
- *  8. [SequenceEdgeElkCopy]               — ELK copy (pure)
- *  9. [HandlerComponentAlignment.Repair]  — repair (reads ledger)
- * 10. [SubprocessEndStraddle.Repair]      — repair
- * 11. [SubprocessSpineCentring.Repair]    — repair
- * 12. [LabelPlacement]                    — decoration
- * 13. [ArtifactPlacement]                 — decoration
- * 14. [AssociationEdges]                  — decoration
- *
- * Outputs a [PlacedLayout] that is the only thing [ElkToBpmnDiWriter] reads.
- *
- * Constants are named (not magic), not configurable (AD-557-10 and ARCHITECTURE.md Non-goals).
+ * Outputs a [PlacedLayout] containing final shape bounds, label bounds,
+ * and waypoints for sequence flows and associations.
  */
-@Suppress("TooManyFunctions")
 internal object BpmnPlacementPass {
-
-    // ── Output types ──────────────────────────────────────────────────────────
 
     /** Simple rectangle (top-left corner + dimensions). */
     data class Rect(val x: Double, val y: Double, val w: Double, val h: Double)
@@ -78,15 +56,13 @@ internal object BpmnPlacementPass {
         val expanded: Set<String>,
     )
 
-    // ── Shared constants ──────────────────────────────────────────────────────
-
-    /** bpmn-js DEFAULT_LABEL_SIZE width (see bpmn-js lib/util/LabelUtil.js). */
+    /** DEFAULT_LABEL_SIZE width */
     internal const val LABEL_WIDTH = 90.0
 
     /** Width of sequence-flow edge labels, widened to prevent text wrapping/splitting. */
     internal const val EDGE_LABEL_WIDTH = 120.0
 
-    /** bpmn-js DEFAULT_LABEL_SIZE height. */
+    /** DEFAULT_LABEL_SIZE height */
     internal const val LABEL_HEIGHT = 20.0
 
     /** Vertical gap between a node's bottom edge and the top of its external label. */
@@ -98,13 +74,9 @@ internal object BpmnPlacementPass {
     /** Sub-pixel threshold below which a position change is treated as no-op. */
     internal const val POSITION_EPSILON = 0.5
 
-    // ── Pipeline constants ────────────────────────────────────────────────────
-
     private const val CHAR_WIDTH = 6.5
     private const val SPACE_WIDTH = 4.0
     private const val LINE_HEIGHT = 14.0
-
-    // ── Entry points ──────────────────────────────────────────────────────────
 
     fun place(model: BpmnModelInstance, skeleton: ElkSkeleton): PlacedLayout {
         val ctx = PlacementContext(
@@ -141,8 +113,6 @@ internal object BpmnPlacementPass {
         AssociationEdges,
     )
 
-    // ── Shared coordinate helpers ─────────────────────────────────────────────
-
     /**
      * Accumulates parent ELK node offsets to convert a node's ELK-relative coordinates
      * into absolute canvas coordinates for BPMN-DI.
@@ -174,8 +144,6 @@ internal object BpmnPlacementPass {
         if (container.identifier == null) return 0.0 to 0.0 // root graph
         return absolutePosition(container)
     }
-
-    // ── Shared label geometry helpers ─────────────────────────────────────────
 
     /** Segment record used by LabelPlacement when finding the longest horizontal segment. */
     internal data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)

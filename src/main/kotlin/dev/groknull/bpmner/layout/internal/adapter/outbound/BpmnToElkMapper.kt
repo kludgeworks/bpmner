@@ -33,41 +33,22 @@ import org.eclipse.elk.graph.ElkPort
 import org.eclipse.elk.graph.util.ElkGraphUtil
 
 /**
- * Phase 1a — maps a Camunda [BpmnModelInstance] to a LEAN ELK skeleton graph.
+ * Maps a Camunda [BpmnModelInstance] to a lean ELK skeleton graph.
  *
- * "Lean" means: flow nodes, sequence flows, subprocess compound nodes, and boundary
- * events as SOUTH-side host ports (attachment geometry only — no exception edges in ELK).
- * No [ElkLabel]s, no artifacts, no message flows. [omitNodeMicroLayout] is set so ELK
- * does not attempt to place node-internal content.
+ * Flow nodes, sequence flows, subprocess compound nodes, and boundary events as SOUTH-side host ports
+ * are mapped to the ELK graph. ELK owns structural layout only. Exception edges, labels, boundary-event
+ * shape positions, and artifacts are positioned by [BpmnPlacementPass].
  *
- * Per AD-557-10/AD-557-12: ELK owns structural layout only. Exception edges, labels,
- * boundary-event shape positions, and artifacts are owned by [BpmnPlacementPass] (phase 2).
- * Handler nodes are genuinely disconnected ELK components; ELK's SimpleRowGraphPlacer
- * stacks them below the main flow automatically (no post-ELK node move).
- *
- * Runs three ordered passes over the model:
- * 1. [mapProcess] — recursive; builds compound nodes for subprocesses, flat nodes for
- *    other flow nodes. BoundaryEvents are skipped here.
- * 2. [mapBoundaryEvents] — creates a SOUTH port on each host node (attachment geometry only;
- *    NO ELK edge from the port) and a sibling node for the handler (a disconnected component).
- *    Requires pass 1 to have populated [nodeMap] first.
- * 3. [mapSequenceFlows] — creates ELK edges for sequence flows only. Flows whose source is a
- *    BoundaryEvent are skipped (they are phase-2 bespoke-routed). Requires passes 1 and 2.
- *
- * Artifacts (TextAnnotation, Group) are tracked in [nodeMap] with placeholder sizes for
- * the placement pass to position, but are NOT added to the ELK graph.
- *
- * The result is an [ElkSkeleton] carrying all identity maps needed by [BpmnPlacementPass].
+ * Maps the process, boundary events, and sequence flows, and tracks artifacts (TextAnnotation, Group)
+ * in the node map for placement.
  */
 internal object BpmnToElkMapper {
 
     /**
-     * The mapper→placement-pass seam: the raw ELK skeleton after layout.
-     * Phase 2 ([BpmnPlacementPass]) reads ELK's output through this object.
+     * The raw ELK skeleton graph after layout.
      *
      * [loopBackFlowIds] carries the set of sequence-flow IDs that were excluded from the ELK
-     * skeleton (back-edges in cyclic subprocesses, per AD-557-12). Phase 2 routes these as
-     * bespoke over-the-top arcs so the writer always finds waypoints for every flow.
+     * skeleton (back-edges in cyclic subprocesses).
      */
     internal data class ElkSkeleton(
         val root: ElkNode,
@@ -84,10 +65,6 @@ internal object BpmnToElkMapper {
         val portMap = mutableMapOf<String, ElkPort>()
         val edgeMap = mutableMapOf<String, ElkEdge>()
 
-        // Pre-pass: identify cyclic subprocesses and their back-edges.
-        // findLoopBackEdges returns a non-empty set iff the subprocess has a cycle (replaces hasLoop).
-        // loopingSubIds drives top-padding in pass 1; loopBackFlowIds drives pass 3 exclusion and
-        // phase-2 bespoke routing.
         val loopBackFlowIds = mutableSetOf<String>()
         val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
@@ -98,24 +75,15 @@ internal object BpmnToElkMapper {
             }
         }
 
-        // Pass 1: build node tree (recursive for subprocesses).
-        // FlowElements covers FlowNodes (tasks, events, gateways) and SubProcess.
-        // TextAnnotation and Group are Artifacts, not FlowElements — tracked separately.
-        // Document order (Camunda preserves XML declaration order) so CONSIDER_MODEL_ORDER is
-        // meaningful — alphabetical id sort would produce arbitrary layout ordering.
         val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
             .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
         mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
 
-        // Artifacts tracked for placement pass but NOT added to ELK skeleton.
         trackAnnotations(model, nodeMap)
         trackGroups(model, nodeMap)
 
-        // Pass 2: boundary events (need host nodes from pass 1)
         mapBoundaryEvents(model, nodeMap, portMap)
 
-        // Pass 3: sequence flows (process-flow nodes only — boundary exception edges are phase-2,
-        // loop-back edges are phase-2 bespoke arcs).
         mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
@@ -241,7 +209,6 @@ internal object BpmnToElkMapper {
      * The sibling node serves as a size carrier for phase-2 shape placement and as a target
      * anchor for the phase-2 bespoke exception edge route.
      */
-    @Suppress("ThrowsCount") // three distinct precondition failures
     private fun mapBoundaryEvents(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
@@ -249,14 +216,19 @@ internal object BpmnToElkMapper {
     ) {
         val boundaryEvents = model.getModelElementsByType(BoundaryEvent::class.java).sortedBy { it.id }
         for (be in boundaryEvents) {
-            val hostId = be.attachedTo?.id ?: throw BpmnAutoLayoutException(
-                "ELK layout: boundary event '${be.id}' has no attachedToRef",
-            )
-            val hostNode = nodeMap[hostId] ?: throw BpmnAutoLayoutException(
-                "ELK layout: boundary event '${be.id}' host '$hostId' not found in nodeMap",
-            )
+            val hostId = be.attachedTo?.id
+            val hostNode = hostId?.let { nodeMap[it] }
+            val container = hostNode?.parent
+            if (hostId == null || hostNode == null || container == null) {
+                val reason = when {
+                    hostId == null -> "boundary event '${be.id}' has no attachedToRef"
+                    hostNode == null -> "boundary event '${be.id}' host '$hostId' not found in nodeMap"
+                    else -> "host node '$hostId' has no parent container"
+                }
+                throw BpmnAutoLayoutException("ELK layout: $reason")
+            }
 
-            // Port on the host: ALWAYS SOUTH (AD-557-10 — all exception edges exit bottom).
+            // Port on the host: ALWAYS SOUTH (all exception edges exit bottom).
             // Multiple attachments share SOUTH; the placement pass handles their shape distribution.
             hostNode.setProperty(CoreOptions.PORT_CONSTRAINTS, PortConstraints.FIXED_SIDE)
             val port = ElkGraphUtil.createPort(hostNode)
@@ -268,9 +240,6 @@ internal object BpmnToElkMapper {
 
             // Sibling node in the host's container — size carrier for phase-2 shape placement.
             // Not used as an ELK layered node for routing; the port handles routing.
-            val container = hostNode.parent ?: throw BpmnAutoLayoutException(
-                "ELK layout: host node '$hostId' has no parent container",
-            )
             val beNode = ElkGraphUtil.createNode(container)
             beNode.identifier = be.id
             beNode.width = EVENT_SIZE
@@ -384,18 +353,15 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
         applyFlowSpacing(root)
-        // omitNodeMicroLayout: prevents ELK from re-placing node-internal labels/ports —
-        // we supply node sizes ourselves (AD-557-10).
+        // Prevent ELK from placing node-internal labels/ports, as custom sizes are used.
         root.setProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT, true)
-        // separateConnectedComponents: handler nodes (no incoming ELK edge per AD-557-12) become
-        // disconnected components; SimpleRowGraphPlacer stacks them below the main flow.
+        // Handler nodes (no incoming ELK edge) become disconnected components placed below.
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
-        // AD-557-11: NETWORK_SIMPLEX keeps the primary flow on a single centre-Y (replaces snapBaseline).
+        // NETWORK_SIMPLEX keeps the primary flow on a single Y baseline.
         root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.NETWORK_SIMPLEX)
-        // AD-557-11: model order for deterministic, document-order branch ordering.
+        // Use model order for deterministic, document-order branch ordering.
         root.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
-        // AD-557-12: component-component spacing ensures adequate clearance between the main-flow
-        // component row and handler component rows placed below by SimpleRowGraphPlacer.
+        // Ensure adequate spacing between connected components.
         root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, NODE_NODE_SPACING)
     }
 

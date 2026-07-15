@@ -67,7 +67,7 @@ class PlacementGuardTest {
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {
-        val input = load("bpmn/elk-corpus/$fixture.bpmn")
+        val input = load("layout-fixtures/$fixture.bpmn")
         val model = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(
             java.io.ByteArrayInputStream(input.toByteArray(Charsets.UTF_8)),
         )

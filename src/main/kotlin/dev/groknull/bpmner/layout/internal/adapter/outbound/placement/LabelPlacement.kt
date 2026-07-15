@@ -16,12 +16,11 @@ import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Pipeline entry 12 — decoration: label placement.
+ * Label placement.
  *
- * Postcondition: every named flow node has a label in [PlacementContext.labels] placed below its
- * shape (centred, bpmn-js DEFAULT_LABEL_SIZE 90×20 minimum); every named sequence flow has a label
+ * Every named flow node has a label in [PlacementContext.labels] placed below its
+ * shape (centred, DEFAULT_LABEL_SIZE 90×20 minimum); every named sequence flow has a label
  * centred on the longest horizontal segment of its edge polyline, nudged above the line.
- * No element's label is placed at the element's own coordinates (direct fix for BLOCK-557-3 symptom 1).
  */
 internal object LabelPlacement : PlacementProcessor {
 

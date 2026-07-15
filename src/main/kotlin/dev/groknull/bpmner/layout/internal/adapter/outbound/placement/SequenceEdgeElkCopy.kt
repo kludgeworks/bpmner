@@ -11,11 +11,11 @@ import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Pipeline entry 8 — ELK copy (pure): copy ELK routing sections verbatim for ordinary sequence flows.
+ * Copies ELK routing sections verbatim for ordinary sequence flows.
  *
- * Postcondition: every ordinary (non-boundary-source, not already in [PlacementContext.edges])
+ * Every ordinary (non-boundary-source, not already in [PlacementContext.edges])
  * sequence flow has its ELK-computed waypoints recorded in absolute canvas coordinates.
- * Flows already placed by [LoopBackEdgeArcs] or [ExceptionEdgeRoutes] are not overwritten.
+ * Flows already placed by loopback or exception routing are not overwritten.
  */
 internal object SequenceEdgeElkCopy : PlacementProcessor {
 

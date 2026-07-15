@@ -62,7 +62,7 @@ internal object LayoutDiInspector {
     }
 
     /** Loads a corpus input fixture from test resources. */
-    fun loadCorpus(loader: ClassLoader, filename: String): String = loader.getResourceAsStream("bpmn/elk-corpus/$filename")
+    fun loadCorpus(loader: ClassLoader, filename: String): String = loader.getResourceAsStream("layout-fixtures/$filename")
         ?.use { it.readBytes().toString(Charsets.UTF_8) }
-        ?: error("Corpus fixture not found: bpmn/elk-corpus/$filename")
+        ?: error("Corpus fixture not found: layout-fixtures/$filename")
 }

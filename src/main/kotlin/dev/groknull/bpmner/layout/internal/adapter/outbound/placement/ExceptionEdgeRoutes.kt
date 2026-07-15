@@ -11,15 +11,16 @@ import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Pipeline entry 7 — bespoke edge: deterministic three-point exception edge routes (AD-557-12).
+ * Bespoke edge: deterministic three-point exception edge routes.
  *
- * Postcondition: every sequence flow whose source is a [BoundaryEvent] has a deterministic
+ * Every sequence flow whose source is a [BoundaryEvent] has a deterministic
  * orthogonal route in [PlacementContext.edges]:
  * - Normal case (handler below or beside): (bCx, bBottom) → (bCx, handlerCy) → (handlerEdge, handlerCy).
  * - Detour case (straight vertical would pass through the host): five-point route around host right edge.
  *
- * This is one of the two sanctioned bespoke edge operations (AD-557-12 enumeration). No obstacle
- * detection — the geometry is deterministic from placed boundary shape and handler shape bounds.
+ * No obstacle detection — the geometry is deterministic from placed boundary shape and handler shape bounds.
+ *
+ * See: AD-557-12
  */
 internal object ExceptionEdgeRoutes : PlacementProcessor {
 
