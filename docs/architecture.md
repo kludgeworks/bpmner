@@ -73,6 +73,7 @@ blocks (`@Service`, `@DomainEvent`) come from `org.jmolecules.ddd.annotation` an
     ├── adapter/
     │   ├── inbound/          # @InfrastructureRing classes (triggers)
     │   └── outbound/         # @InfrastructureRing classes (integrations)
+    ├── application/          # @ApplicationRing classes (lateral services)
     └── domain/               # @Service (DDD) classes (use-case implementations)
 ```
 
