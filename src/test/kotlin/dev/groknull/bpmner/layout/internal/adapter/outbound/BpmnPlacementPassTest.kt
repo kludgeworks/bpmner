@@ -451,11 +451,11 @@ class BpmnPlacementPassTest {
         )
     }
 
-    // ── Named rule 3: exception edge routed as three-point orthogonal polyline (AD-557-12) ──
+    // ── Exception edge routed as three-point orthogonal polyline ──
 
     @Test
-    fun `exception edge is routed as three-point polyline from boundary bottom to handler (AD-557-12)`() {
-        // AD-557-12: no ELK edge from port to handler; routeExceptionEdges produces the full route.
+    fun `exception edge is routed as three-point polyline from boundary bottom to handler`() {
+        // No ELK edge from port to handler: routeExceptionEdges produces the full route.
         // Handler placed BELOW the main flow (ELK component stacking — no post-ELK node move).
         val model = boundaryModel()
         val root = ElkGraphUtil.createGraph()
@@ -483,7 +483,7 @@ class BpmnPlacementPassTest {
         port.identifier = "port_Boundary_1"
         port.setProperty(org.eclipse.elk.core.options.CoreOptions.PORT_SIDE, org.eclipse.elk.core.options.PortSide.SOUTH)
 
-        // No ELK edge from port to handler (AD-557-12): edgeMap is empty.
+        // No ELK edge from port to handler: edgeMap is empty.
         val sk = skeleton(
             root = root,
             nodeMap = mapOf(
@@ -530,20 +530,20 @@ class BpmnPlacementPassTest {
         }
     }
 
-    // ── AD-557-11 no-relocation guard ─────────────────────────────────────────
+    // ── No-relocation guard ──────────────────────────────────────────────────
 
     @Test
-    fun `place() returns shape bounds identical to ELK bounds for every non-boundary flow node (AD-557-11)`() {
+    fun `place() returns shape bounds identical to ELK bounds for every non-boundary flow node`() {
         val (model, sk) = flatFlatProcessSkeleton()
         val layout = BpmnPlacementPass.place(model, sk)
         val eps = BpmnPlacementPass.POSITION_EPSILON
-        // AD-557-11 no-relocation guard: phase 2 must never move a node ELK placed.
+        // No-relocation guard: phase 2 must never move a node ELK placed.
         for ((id, elkNode) in sk.nodeMap) {
             val placed = layout.shapes[id] ?: continue
             val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
             assertTrue(
                 kotlin.math.abs(placed.x - ax) <= eps && kotlin.math.abs(placed.y - ay) <= eps,
-                "AD-557-11: phase 2 relocated node '$id'. " +
+                "No-relocation guard: phase 2 relocated node '$id'. " +
                     "ELK: ($ax, $ay) placed: (${placed.x}, ${placed.y})",
             )
         }

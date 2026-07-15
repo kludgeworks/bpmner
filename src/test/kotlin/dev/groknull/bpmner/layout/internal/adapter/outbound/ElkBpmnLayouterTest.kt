@@ -276,12 +276,11 @@ class ElkBpmnLayouterTest {
         )
     }
 
-    // ── Exception-lane invariants (AD-557-10: handler not on primary baseline) ──
+    // ── Exception-lane invariants (handler not on primary baseline) ──
 
     @Test
-    fun `error handler is in a separate vertical band from the main flow (AD-557-12)`() {
-        // AD-557-12: handler is a disconnected ELK component; SimpleRowGraphPlacer puts it in its
-        // own row — the bands must not overlap.
+    fun `error handler is in a separate vertical band from the main flow`() {
+        // Handler is placed in its own row — the bands must not overlap.
         val result = layouter.layout(loadCorpus("boundary-error-task.bpmn"))
         val doc = parseXmlDoc(result)
         val mainNodes = listOf("Task_process", "Task_confirm", "End_1")
@@ -299,9 +298,8 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `timer exception handler is in a separate vertical band from the main flow (AD-557-12)`() {
-        // AD-557-12: handler nodes are disconnected ELK components. SimpleRowGraphPlacer places
-        // them in a separate row from the main flow — the rows must not overlap vertically.
+    fun `timer exception handler is in a separate vertical band from the main flow`() {
+        // Handler nodes are placed in a separate row from the main flow — the rows must not overlap vertically.
         val result = layouter.layout(loadCorpus("boundary-timer-task.bpmn"))
         val doc = parseXmlDoc(result)
         // Main flow nodes
@@ -339,7 +337,7 @@ class ElkBpmnLayouterTest {
         }
     }
 
-    // ── Label invariants: labels below nodes (AD-557-10 named rule 5) ─────────
+    // ── Label invariants: labels below nodes ──
 
     @Test
     fun `named node labels are placed below their node shape (not on top of it)`() {

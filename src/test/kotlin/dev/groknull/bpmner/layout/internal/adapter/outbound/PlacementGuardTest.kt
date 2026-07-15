@@ -16,18 +16,17 @@ import org.junit.jupiter.params.provider.ValueSource
 import kotlin.test.assertTrue
 
 /**
- * Stage C2: No-undeclared-relocation guard (AD-557-14).
+ * No-undeclared-relocation guard test.
  *
- * For all 12 corpus fixtures:
+ * For all 14 corpus fixtures:
  *   1. Run mapper → ELK → snapshot ELK absolute bounds.
  *   2. Run the placement pipeline.
  *   3. Assert that every flow-node shape (excluding BoundaryEvent shapes — their placement is
- *      the AD-557-11 sanctioned decoration) whose bounds differ from its ELK bounds by more
+ *      sanctioned decoration) whose bounds differ from its ELK bounds by more
  *      than POSITION_EPSILON has a ledger entry.
  *   4. Assert every ledger owner is one of the three declared moving conventions.
  *
- * This is the enforcement that AD-557-11 and AD-557-14 ordered: any new post-ELK node move
- * that isn't declared + paired + ledgered will be caught here before it can accumulate.
+ * Enforces that any new post-ELK node move that isn't declared + paired + ledgered will be caught.
  */
 class PlacementGuardTest {
 
@@ -95,7 +94,7 @@ class PlacementGuardTest {
         BpmnPlacementPass.run(ctx)
 
         // Collect IDs that are NOT subject to the guard:
-        // - BoundaryEvent shapes: the AD-557-11 sanctioned decoration (not ledgered)
+        // - BoundaryEvent shapes: sanctioned decoration (not ledgered)
         // - TextAnnotation and Group: artifacts placed by ArtifactPlacement (not flow-nodes)
         val boundaryIds = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
@@ -121,7 +120,7 @@ class PlacementGuardTest {
                     record != null,
                     "[$fixture] Flow node '$id' was relocated by phase 2 " +
                         "(ELK: ${elkRect.x},${elkRect.y} → placed: ${placed.x},${placed.y}) " +
-                        "but has NO ledger entry. This violates the no-undeclared-relocation guard (AD-557-14).",
+                        "but has NO ledger entry. This violates the no-undeclared-relocation guard.",
                 )
                 assertTrue(
                     record!!.owner in DECLARED_OWNERS,
