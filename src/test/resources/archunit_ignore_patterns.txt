@@ -1,10 +1,10 @@
 # See #234 — Kotlin compiler synthetic classes (lambdas, $Companion, $WhenMappings,
-# SAM and inlined wrappers) inherit their enclosing class's hexagonal stereotype, but
+# SAM and inlined wrappers) inherit their enclosing class's Onion-ring stereotype, but
 # they're compiler artifacts, not architectural components. ArchUnit's
 # ClassResolverFromClasspath re-imports them as stubs even when filtered via
 # ImportOption, so a global ignore-patterns file is the only mechanism that filters
 # them out of Modulith's internal `modules.verify()` invocation (which doesn't expose
-# the LayeredArchitecture.ignoreDependency hook).
+# dependency-filtering hook).
 #
 # Patterns are regexes against the FULL violation message text. We match the synthetic
 # class name in any position. No production Kotlin class uses `$` in its declared

@@ -26,11 +26,11 @@ import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 internal class LlmBpmnAligner(
     private val config: BpmnAlignmentConfig,

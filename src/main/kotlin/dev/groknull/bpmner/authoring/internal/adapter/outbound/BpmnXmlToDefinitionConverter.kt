@@ -39,7 +39,7 @@ import org.camunda.bpm.model.bpmn.instance.Process
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 import org.w3c.dom.Document
 import org.w3c.dom.Element
@@ -69,7 +69,7 @@ private data class ParsedCollaboration(
     val messageFlows: List<BpmnMessageFlow>,
 )
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
     companion object {

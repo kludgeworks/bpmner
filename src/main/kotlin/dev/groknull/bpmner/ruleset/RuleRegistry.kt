@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.ruleset
 
 import dev.groknull.bpmner.bpmn.BpmnRule
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
  * Holds the [BpmnRule] instances the [RuleEngine] iterates over for each evaluation, plus
@@ -20,7 +20,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * `byId` lookup (last-wins). Detection of duplicates is handled by the registry implementation
  * via `require(...)` checks at construction time (#380).
  */
-@PrimaryPort
+@ApplicationRing
 interface RuleRegistry {
     /** Every rule currently active (executable). Empty when no `BpmnRule` beans are registered. */
     fun activeRules(): List<BpmnRule>

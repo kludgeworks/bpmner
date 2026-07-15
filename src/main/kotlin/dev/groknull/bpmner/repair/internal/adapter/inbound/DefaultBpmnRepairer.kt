@@ -17,12 +17,12 @@ import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.repair.BpmnRepairer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairAdvancer
 import dev.groknull.bpmner.repair.internal.domain.BpmnRepairLoop
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 import org.slf4j.LoggerFactory
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@ApplicationRing
 @Component
 internal class DefaultBpmnRepairer(
     private val advancer: BpmnRepairAdvancer,

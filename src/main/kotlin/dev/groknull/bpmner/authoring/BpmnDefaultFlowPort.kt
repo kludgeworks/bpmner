@@ -7,7 +7,7 @@ package dev.groknull.bpmner.authoring
 
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.contract.ProcessContract
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
  * Published `authoring` port: deterministically propagates contract-side
@@ -22,7 +22,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * implementation behind this port walls the concrete class inside `*.internal.*` so
  * Modulith's mechanism-1 enforcement fires on any future direct cross-module reach.
  */
-@PrimaryPort
+@ApplicationRing
 fun interface BpmnDefaultFlowPort {
     /**
      * Stamps `isDefault = true` on the outbound edge from each decision gateway that the

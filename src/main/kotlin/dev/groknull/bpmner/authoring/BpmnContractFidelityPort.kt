@@ -13,7 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
 import dev.groknull.bpmner.conformance.BpmnDiagnosticSeverity
 import dev.groknull.bpmner.contract.ProcessContract
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
 /**
  * Published `authoring` port: checks that a generated [BpmnDefinition] preserves the
@@ -28,7 +28,7 @@ import org.jmolecules.architecture.hexagonal.PrimaryPort
  * implementation behind this port walls the concrete class inside `*.internal.*` so
  * Modulith's mechanism-1 enforcement fires on any future direct cross-module reach.
  */
-@PrimaryPort
+@ApplicationRing
 interface BpmnContractFidelityPort {
     /**
      * Check that [definition] faithfully encodes the topology declared by [contract].

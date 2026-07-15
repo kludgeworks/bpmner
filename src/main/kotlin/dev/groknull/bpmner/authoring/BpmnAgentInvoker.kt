@@ -7,9 +7,9 @@ package dev.groknull.bpmner.authoring
 
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import org.jmolecules.architecture.hexagonal.Port
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@Port
+@ApplicationRing
 interface BpmnAgentInvoker {
     fun generate(
         request: BpmnRequest,

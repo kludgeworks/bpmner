@@ -12,7 +12,7 @@ import com.embabel.agent.api.event.AgentProcessWaitingEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import com.embabel.agent.core.hitl.FormBindingRequest
 import dev.groknull.bpmner.telemetry.BpmnClarificationRequestEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 import java.util.concurrent.ConcurrentHashMap
@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap
  * Observes the framework `AgentProcessWaitingEvent`; no agent modification (ADR-ss-003).
  * Mirrors [BpmnResultEventPublisher] structure exactly.
  */
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnClarificationRequestEventPublisher(
     private val eventPublisher: ApplicationEventPublisher,

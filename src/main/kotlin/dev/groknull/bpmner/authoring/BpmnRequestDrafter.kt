@@ -7,9 +7,9 @@ package dev.groknull.bpmner.authoring
 
 import com.embabel.agent.api.common.OperationContext
 import com.embabel.agent.domain.io.UserInput
-import org.jmolecules.architecture.hexagonal.PrimaryPort
+import org.jmolecules.architecture.onion.simplified.ApplicationRing
 
-@PrimaryPort
+@ApplicationRing
 fun interface BpmnRequestDrafter {
     fun draftRequest(userInput: UserInput, context: OperationContext): BpmnRequestDraft
 }

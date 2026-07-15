@@ -112,7 +112,6 @@ maven.install(
         "org.springframework.modulith:spring-modulith-starter-core:" + SPRING_MODULITH_VERSION,
         "org.springframework.boot:spring-boot-starter-web:" + SPRING_BOOT_VERSION,
         "org.springframework.modulith:spring-modulith-starter-test:" + SPRING_MODULITH_VERSION,
-        "org.jmolecules:jmolecules-hexagonal-architecture:" + JMOLECULES_VERSION,
         "org.jmolecules:jmolecules-onion-architecture:" + JMOLECULES_VERSION,
         "org.jmolecules:jmolecules-events:" + JMOLECULES_VERSION,
         "org.jmolecules:jmolecules-cqrs-architecture:" + JMOLECULES_VERSION,

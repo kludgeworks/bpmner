@@ -7,7 +7,7 @@ package dev.groknull.bpmner.conformance.internal.adapter.outbound
 
 import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
 import dev.groknull.bpmner.conformance.XsdValidationIssue
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import org.xml.sax.SAXException
@@ -18,7 +18,7 @@ import javax.xml.XMLConstants
 import javax.xml.transform.stream.StreamSource
 import javax.xml.validation.SchemaFactory
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal open class BpmnXsdValidator : BpmnXsdValidationPort {
     private val logger = LoggerFactory.getLogger(BpmnXsdValidator::class.java)

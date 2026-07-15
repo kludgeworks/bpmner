@@ -24,11 +24,11 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
 import org.camunda.bpm.model.xml.instance.ModelElementInstance
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 import java.io.ByteArrayOutputStream
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal open class BpmnDefinitionToXmlConverter : BpmnRenderer {
     companion object {

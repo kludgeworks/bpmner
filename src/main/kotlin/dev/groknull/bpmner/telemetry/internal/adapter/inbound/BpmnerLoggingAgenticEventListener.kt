@@ -9,10 +9,10 @@ import com.embabel.agent.api.event.AgentProcessEvent
 import com.embabel.agent.api.event.AgentProcessPlanFormulatedEvent
 import com.embabel.agent.api.event.AgentProcessReadyToPlanEvent
 import com.embabel.agent.spi.logging.LoggingAgenticEventListener
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnerLoggingAgenticEventListener : LoggingAgenticEventListener() {
     override fun onProcessEvent(event: AgentProcessEvent) {

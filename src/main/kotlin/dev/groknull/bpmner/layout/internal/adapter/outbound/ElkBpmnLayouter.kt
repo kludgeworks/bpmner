@@ -20,8 +20,8 @@ import java.io.ByteArrayOutputStream
  * Stateless ELK layout path for retained BPMN processes including subprocesses
  * and boundary events.
  *
- * Not annotated with @Service or @SecondaryAdapter; not wired into BpmnLayoutPort.
- * The GraalJS BpmnLayoutService is the sole production layout authority (AD-557-08).
+ * Not annotated with @Service; not wired into BpmnLayoutPort.
+ * The GraalJS BpmnLayoutService is the sole production layout authority.
  *
  * Implements the AD-557-10 skeleton-then-refine pipeline:
  *   Phase 1a: [BpmnToElkMapper] builds a LEAN ELK graph (no labels; boundary events

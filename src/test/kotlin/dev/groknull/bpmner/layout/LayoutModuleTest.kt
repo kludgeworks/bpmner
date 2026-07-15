@@ -20,7 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  *
  * BootstrapMode.DIRECT_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 2): `layout` grants only `bpmn` and
  * `conformance`; `BpmnLayoutService` has no cross-module Spring-bean dependencies of its own.
- * The `conformance` adapters constructor-inject two `ruleset` `@PrimaryPort` interfaces
+ * The `conformance` adapters constructor-inject two `ruleset` `@ApplicationRing` interfaces
  * (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
  * `conformance`'s dependency, not `layout`'s. Since `layout` never references either port
  * directly (zero `import dev.groknull.bpmner.ruleset` under `layout/`), both are mocked here

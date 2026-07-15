@@ -10,7 +10,7 @@ import com.embabel.agent.api.event.AgentProcessFinishedEvent
 import com.embabel.agent.api.event.AgenticEventListener
 import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.telemetry.BpmnResultEvent
-import org.jmolecules.architecture.hexagonal.PrimaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component
  * [com.embabel.agent.core.AgentProcess.resultOfType], which crashes silently on non-COMPLETED states
  * (documented caution at `AgentPlatformBpmnAgentInvoker.kt:48`).
  */
-@PrimaryAdapter
+@InfrastructureRing
 @Component
 class BpmnResultEventPublisher(
     private val eventPublisher: ApplicationEventPublisher,

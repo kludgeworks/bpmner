@@ -14,10 +14,10 @@ import dev.groknull.bpmner.authoring.BpmnResult
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringBudgetConfig
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
-import org.jmolecules.architecture.hexagonal.SecondaryAdapter
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
 
-@SecondaryAdapter
+@InfrastructureRing
 @Component
 internal class AgentPlatformBpmnAgentInvoker(
     private val agentPlatform: AgentPlatform,

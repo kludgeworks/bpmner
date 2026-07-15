@@ -19,9 +19,9 @@ class BpmnerModulithTest {
     @Test
     fun `verifies no illegal cross-module dependencies`() {
         // verify() applies Modulith's module-boundary rules AND the additional verifications
-        // registered by VerificationOptions.defaults() — including the jMolecules hexagonal
-        // architecture rule (auto-discovered via JMoleculesTypes.getRules() because
-        // jmolecules-hexagonal is on the classpath).
+        // registered by VerificationOptions.defaults() — including the jMolecules simplified
+        // Onion architecture rule (auto-discovered via JMoleculesTypes.getRules() because
+        // jmolecules-onion is on the classpath).
         //
         // Two filters are stacked to make this gate pass:
         //  1. The DescribedPredicate passed to ApplicationModules.of(...) above excludes
