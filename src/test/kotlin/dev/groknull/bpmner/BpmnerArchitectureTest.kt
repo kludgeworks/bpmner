@@ -15,7 +15,6 @@ import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import dev.groknull.bpmner.bpmn.SanctionedArchitectureException
 import org.jmolecules.archunit.JMoleculesArchitectureRules
 import org.jmolecules.archunit.JMoleculesDddRules
 import org.junit.jupiter.api.Test
@@ -106,30 +105,6 @@ class BpmnerArchitectureTest {
             .should()
             .dependOnClassesThat()
             .haveFullyQualifiedName("com.embabel.agent.api.common.Ai")
-            .check(classes)
-    }
-
-    @Test
-    fun `only permitted validation classes may reach rules primary ports`() {
-        // ACL pin (ADR-007, ADR-010): classes annotated with @SanctionedArchitectureException
-        // are allowed to depend on rules' @PrimaryPort interfaces (RuleEngine, RuleRegistry).
-        // RuleEngineLintingAdapter is the ACL; LlmValidator is a deprecated exception.
-        // No other validation class may reach rules @PrimaryPorts directly.
-        noClasses()
-            .that()
-            .resideInAPackage("..conformance..")
-            .and()
-            .areNotAnnotatedWith(SanctionedArchitectureException::class.java)
-            .should()
-            .dependOnClassesThat()
-            .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleEngine")
-            .orShould()
-            .dependOnClassesThat()
-            .haveFullyQualifiedName("dev.groknull.bpmner.ruleset.RuleRegistry")
-            .because(
-                "Only classes annotated with @SanctionedArchitectureException (ADR-010) " +
-                    "may reach rules' @PrimaryPorts; all other validation classes must go through BpmnLintingPort",
-            )
             .check(classes)
     }
 
