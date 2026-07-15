@@ -102,7 +102,9 @@ Per-capability `@ConfigurationProperties` classes live in each capability's publ
 - **Adding a new way to trigger generation** — add an infrastructure-ring adapter for the new transport,
   start an Embabel process through `BpmnAgentInvoker` or seed the same blackboard types.
 - **Adding a new validator** — `@Service` in `conformance/internal/domain/`.
-- **Swapping the rule engine** — write a new `@InfrastructureRing` implementation of `BpmnLintingPort`.
+- **Adding a technical rule engine** — write an `@InfrastructureRing` implementation of
+  `BpmnLintingPort`. The in-process `ruleset` collaboration is instead the
+  `@ApplicationRing` `RuleEngineLintingService`.
 - **Adding a brand-new module** — create `<module>/` with its `@ApplicationRing` API and ports,
   `internal/domain/`, and `internal/adapter/{inbound,outbound}/` skeleton; the architecture
   and Modulith tests pick it up without configuration.
@@ -365,10 +367,9 @@ The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and
   of 10** modules (`conformance`, `readiness`, `contract`, `alignment`, `ruleset`, `layout`;
   ADR-007 Decision 1 + epic #451 S7); `authoring`, `pipeline`, `repair`, `telemetry` keep
   `ALL_DEPENDENCIES` with documented rationale (deep transitive agent/event graph).
-- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, 5 bespoke
-  pin rules (including the ACL pin: `RuleEngineLintingAdapter` is the sole `conformance` class
-  permitted to depend on `ruleset` `@ApplicationRing` APIs — ADR-007 Decision 2),
-  `excludeBazelTestClasses`.
+- **`BpmnerArchitectureTest`** — `ensureOnionSimple`, 4 bespoke pin rules, and
+  `excludeBazelTestClasses`. `RuleEngineLintingService` is a permitted lateral
+  application-ring collaboration with the `ruleset` APIs; no ACL-specific pin is needed.
 - **`BpmnerArchitectureTest` (kernel gate)** — `bpmn kernel is free of framework, IO, and
   cross-module dependencies`: the `bpmn/` kernel module may not import other `bpmner` modules
   or framework/prompt-construction glue (ported from deleted `BpmnerModuleBoundariesTest` in
@@ -404,7 +405,7 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) | Module placement rule & boundaries | Accepted — current on `main` |
 | [ADR-005](./adr/adr-005-prompt-contribution-seam.md) | Prompt contribution lives in the `bpmn` kernel | Accepted — current on `main` |
 | [ADR-006](./adr/adr-006-agent-platform-and-module-bootstrap.md) | Agent platform wiring & module-test bootstrap | Accepted — current on `main` |
-| [ADR-007](./adr/adr-007-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Accepted — current on `main` |
+| [ADR-007](./adr/adr-007-conformance-ruleset-acl.md) | The sanctioned `conformance→ruleset` ACL | Superseded by simplified Onion stage 540-3 |
 | [ADR-008](./adr/adr-008-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
 | [ADR-009](./adr/adr-009-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
 | [ADR-010](./adr/adr-010-sanctioned-architecture-exceptions.md) | Sanctioned architecture-test exceptions via opt-in marker | Accepted — current on `main` |

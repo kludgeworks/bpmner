@@ -188,7 +188,7 @@ These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocat
 ## Project Structure
 - `src/`: Kotlin/JVM application (Spring Boot + Embabel).
 - `linter/`: Pkl-authored rule catalog (`linter/pkl/`) consumed by the in-process rule engine.
-- `docs/`: In-depth documentation in the consolidated [Architecture doc](docs/architecture.md) (covers the pipeline, hexagonal design, GOAP lifecycle, agent overview, and module map) plus the [Operator Guide](docs/operator-guide.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
+- `docs/`: In-depth documentation in the consolidated [Architecture doc](docs/architecture.md) (covers the pipeline, Simplified Sliced Onion design, GOAP lifecycle, agent overview, and module map) plus the [Operator Guide](docs/operator-guide.md). Writing a new rule? See [`linter/docs/rule-authoring-guide.md`](linter/docs/rule-authoring-guide.md).
 
 ## Releases
 

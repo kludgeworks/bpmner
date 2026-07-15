@@ -5,9 +5,11 @@
 
 package dev.groknull.bpmner.conformance
 
+import dev.groknull.bpmner.TestBpmnFixtures
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnElementIndex
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
+import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.ComposedProcessGraph
 import dev.groknull.bpmner.bpmn.LaidOutProcessGraph
 import dev.groknull.bpmner.bpmn.OwnedElementGraph
@@ -56,6 +58,9 @@ class ConformanceModuleTest {
     @Autowired
     private lateinit var xsdValidationPort: BpmnXsdValidationPort
 
+    @Autowired
+    private lateinit var diagnosticNormalizer: BpmnDiagnosticNormalizer
+
     private fun <T> anyNonNull(): T {
         org.mockito.ArgumentMatchers.any<T>()
         @Suppress("UNCHECKED_CAST") // mockito any() matchers return null but we cast to non-null T
@@ -66,6 +71,31 @@ class ConformanceModuleTest {
     fun `conformance module bootstraps and exposes its ports`() {
         assertNotNull(lintingPort, "BpmnLintingPort should be available in the conformance module context")
         assertNotNull(xsdValidationPort, "BpmnXsdValidationPort should be available in the conformance module context")
+    }
+
+    @Test
+    fun `ruleset errors become blocking lint diagnostics`() {
+        val definition = BpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes = listOf(BpmnUserTask("t", "Task")),
+            sequences = emptyList(),
+        )
+        val issues = lintingPort.lint(definition)!!
+        val requiredEventsIssue = issues.first { it.rule == "def-required-events" }
+
+        assertEquals("error", requiredEventsIssue.category)
+
+        val diagnostics = diagnosticNormalizer.normalizeLintDiagnostics(
+            issues,
+            BpmnElementIndex(processId = "P", nodeObjectRefs = emptyMap(), edgeObjectRefs = emptyMap()),
+            TestBpmnFixtures.testLaidOutGraph(definition),
+        )
+        val requiredEventsDiagnostic = diagnostics.first { it.rule == "def-required-events" }
+
+        assertEquals(BpmnDiagnosticSource.LINT, requiredEventsDiagnostic.source)
+        assertEquals(BpmnDiagnosticSeverity.ERROR, requiredEventsDiagnostic.severity)
+        assertTrue(requiredEventsDiagnostic.isBlocking)
     }
 
     @Test
