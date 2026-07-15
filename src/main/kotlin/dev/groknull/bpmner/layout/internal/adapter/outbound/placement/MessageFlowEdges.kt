@@ -17,12 +17,14 @@ import org.camunda.bpm.model.bpmn.instance.MessageFlow
  *
  * Postcondition: [PlacementContext.edges] contains a two-point waypoint list for every MessageFlow.
  *
- * Route: a single deterministic straight line from the source element's right-edge midpoint to the
- * target element's left-edge midpoint (AD-557-11 / AD-557-04 permissible approach (b)):
- *   `(srcRight, srcMidY) → (tgtLeft, tgtMidY)`
+ * Route: a single deterministic straight line whose axis follows the relative position of the two
+ * elements (AD-557-11 / AD-557-04 permissible approach (b)):
+ *   - Participants stacked vertically (target centre is below source centre): bottom-centre → top-centre.
+ *   - Participants arranged horizontally (target centre is to the right of source centre):
+ *     right-centre → left-centre.
  *
  * When the source or target is a Participant boundary (no specific flow-node ref resolves),
- * the participant shape's right/left border mid-point is used.
+ * the participant shape's border mid-point is used.
  *
  * Label (if any): placed at the segment midpoint, nudged above the line — the same fixed-box
  * heuristic used for sequence-flow labels.
@@ -44,16 +46,23 @@ internal object MessageFlowEdges : PlacementProcessor {
         val srcShape = resolveShape(mf.source, ctx) ?: return
         val tgtShape = resolveShape(mf.target, ctx) ?: return
 
-        val srcX = srcShape.x + srcShape.w // right-edge X
-        val srcY = srcShape.y + srcShape.h / 2.0 // mid Y
-        val tgtX = tgtShape.x // left-edge X
-        val tgtY = tgtShape.y + tgtShape.h / 2.0 // mid Y
+        val srcCy = srcShape.y + srcShape.h / 2.0
+        val tgtCy = tgtShape.y + tgtShape.h / 2.0
+        val vertical = tgtCy > srcCy + srcShape.h / 2.0
 
-        ctx.edges[mf.id] = listOf(Point(srcX, srcY), Point(tgtX, tgtY))
+        val (srcPt, tgtPt) = if (vertical) {
+            Point(srcShape.x + srcShape.w / 2.0, srcShape.y + srcShape.h) to
+                Point(tgtShape.x + tgtShape.w / 2.0, tgtShape.y)
+        } else {
+            Point(srcShape.x + srcShape.w, srcCy) to
+                Point(tgtShape.x, tgtCy)
+        }
+
+        ctx.edges[mf.id] = listOf(srcPt, tgtPt)
 
         if (!mf.name.isNullOrBlank()) {
-            val midX = (srcX + tgtX) / 2.0
-            val midY = (srcY + tgtY) / 2.0
+            val midX = (srcPt.x + tgtPt.x) / 2.0
+            val midY = (srcPt.y + tgtPt.y) / 2.0
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
             ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh - LABEL_GAP, lw, lh)
         }
