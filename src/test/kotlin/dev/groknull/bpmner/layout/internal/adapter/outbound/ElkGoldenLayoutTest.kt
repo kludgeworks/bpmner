@@ -28,6 +28,7 @@ import kotlin.test.assertTrue
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
  * labels below nodes) and determinism for all 12 fixtures.
  */
+@Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
 
     private val layouter = ElkBpmnLayouter()
