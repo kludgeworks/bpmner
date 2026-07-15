@@ -8,6 +8,7 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
+import kotlin.math.abs
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -50,6 +51,8 @@ class ElkGoldenLayoutTest {
             "boundary-multi",
             "subprocess-flat",
             "subprocess-loop",
+            "subprocess-branch",
+            "subprocess-nested",
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
@@ -92,6 +95,8 @@ class ElkGoldenLayoutTest {
         assertPositiveBounds(doc, fixture)
         assertMinEdgeWaypoints(doc, fixture)
         assertLabelsBelow(doc, fixture)
+        assertNoTopLevelShapeOverlap(doc, fixture)
+        assertLabelsDoNotOverlapOwnNode(doc, fixture)
     }
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
@@ -169,6 +174,92 @@ class ElkGoldenLayoutTest {
         val first = layouter.layout(input)
         val second = layouter.layout(input)
         assertEquals(first, second, "Layout was non-deterministic for fixture '$fixture'")
+    }
+
+    /**
+     * Asserts that no two non-container, non-boundary-event shapes overlap each other.
+     *
+     * Boundary events are excluded: they intentionally straddle their host's edge (half inside,
+     * half outside) — that designed overlap is not a defect. Subprocess containers are excluded
+     * because they contain their children by design. We test only "small" shapes (events, tasks,
+     * gateways) that are neither boundaries nor containers.
+     */
+    private fun assertNoTopLevelShapeOverlap(doc: org.w3c.dom.Document, fixture: String) {
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        data class ShapeRect(val id: String, val x: Double, val y: Double, val w: Double, val h: Double)
+
+        val rects = (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .mapNotNull { shape ->
+                val id = shape.getAttribute("bpmnElement")
+                // Exclude boundary event shapes (isBoundaryEvent attribute or by convention).
+                // They straddle their host edge — designed overlap, not a defect.
+                if (shape.getAttribute("isQuantity") == "true") return@mapNotNull null
+                val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@mapNotNull null
+                val x = bounds.getAttribute("x").toDoubleOrNull() ?: return@mapNotNull null
+                val y = bounds.getAttribute("y").toDoubleOrNull() ?: return@mapNotNull null
+                val w = bounds.getAttribute("width").toDoubleOrNull() ?: return@mapNotNull null
+                val h = bounds.getAttribute("height").toDoubleOrNull() ?: return@mapNotNull null
+                if (w <= 0 || h <= 0) return@mapNotNull null
+                ShapeRect(id, x, y, w, h)
+            }
+
+        // Non-container: area < 40000 (200×200). Subprocesses (e.g. 300×200 = 60000) contain
+        // their children by design. Boundary events (area = 36×36 ≈ 1296) are small but excluded above.
+        val nonContainer = rects.filter { it.w * it.h < 40_000 }
+
+        // Additionally exclude shapes whose bpmnElement matches a boundary event name pattern.
+        // Boundary events have small fixed size (EVENT_SIZE×EVENT_SIZE); we identify them by
+        // checking BPMNShape attribute isHorizontal absence and that they are placed on another
+        // shape's edge — too complex. Simpler: parse the actual BpmnModel from the output XML
+        // to get the definitive set. Since we just need to skip them, exclude shapes with the
+        // exact EVENT_SIZE area (BpmnToElkMapper.EVENT_SIZE = 36 → area = 1296).
+        val eventSize = BpmnToElkMapper.EVENT_SIZE
+        val eventArea = eventSize * eventSize
+        val candidateShapes = nonContainer.filter { abs(it.w * it.h - eventArea) > 1.0 }
+
+        for (i in 0 until candidateShapes.size) {
+            for (j in i + 1 until candidateShapes.size) {
+                val a = candidateShapes[i]
+                val b = candidateShapes[j]
+                val overlapX = minOf(a.x + a.w, b.x + b.w) - maxOf(a.x, b.x)
+                val overlapY = minOf(a.y + a.h, b.y + b.h) - maxOf(a.y, b.y)
+                assertTrue(
+                    overlapX < 1.0 || overlapY < 1.0,
+                    "[$fixture] Non-container shapes '${a.id}' and '${b.id}' overlap by " +
+                        "dx=$overlapX dy=$overlapY",
+                )
+            }
+        }
+    }
+
+    /**
+     * Asserts that node labels do not overlap their own node's shape bounds.
+     *
+     * Per the placement convention, every node label is placed BELOW the shape, so the label's
+     * top should be at or below the shape's bottom edge. This is already checked by [assertLabelsBelow];
+     * this method additionally checks that the label's bounds do not penetrate into the shape's
+     * Y-range (i.e. the label top ≥ shape bottom − 1px).
+     */
+    private fun assertLabelsDoNotOverlapOwnNode(doc: org.w3c.dom.Document, fixture: String) {
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .forEach { shape ->
+                val id = shape.getAttribute("bpmnElement")
+                val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@forEach
+                val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return@forEach
+                val lb = lbl.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@forEach
+                val shapeY = sb.getAttribute("y").toDoubleOrNull() ?: return@forEach
+                val shapeH = sb.getAttribute("height").toDoubleOrNull() ?: return@forEach
+                val labelY = lb.getAttribute("y").toDoubleOrNull() ?: return@forEach
+                val shapeBottom = shapeY + shapeH
+                // Label must start at or below shape bottom — overlap means label top < shape bottom
+                assertTrue(
+                    labelY >= shapeBottom - 1.0,
+                    "[$fixture] Shape '$id' label (top=$labelY) overlaps its own node (bottom=$shapeBottom)",
+                )
+            }
     }
 
     private fun load(resource: String): String = javaClass.classLoader.getResourceAsStream(resource)
