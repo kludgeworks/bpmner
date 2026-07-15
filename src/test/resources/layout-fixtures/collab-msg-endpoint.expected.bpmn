@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_collab_msg_endpoint" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:collaboration id="Collab_msg_endpoint" isClosed="false">
+
+    <bpmn:participant id="Participant_A" name="Service A" processRef="Process_A"/>
+
+    <bpmn:participant id="Participant_B" name="Service B" processRef="Process_B"/>
+
+    <bpmn:messageFlow id="MsgFlow_1" sourceRef="Task_A1" targetRef="Task_B1"/>
+
+    <bpmn:messageFlow id="MsgFlow_2" sourceRef="Task_B2" targetRef="Task_A2"/>
+
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_A" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_A" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_A1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_A1" implementation="##WebService" isForCompensation="false" name="Call Service B" startQuantity="1">
+
+      <bpmn:incoming>Flow_A1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_A2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:userTask completionQuantity="1" id="Task_A2" implementation="##unspecified" isForCompensation="false" name="Handle Response" startQuantity="1">
+
+      <bpmn:incoming>Flow_A2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_A3</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_A" name="Done">
+
+      <bpmn:incoming>Flow_A3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Start_A" targetRef="Task_A1"/>
+
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_A1" targetRef="Task_A2"/>
+
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Task_A2" targetRef="End_A"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_B" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_B" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_B1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_B1" implementation="##WebService" isForCompensation="false" name="Process Request" startQuantity="1">
+
+      <bpmn:incoming>Flow_B1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_B2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_B2" implementation="##WebService" isForCompensation="false" name="Send Result" startQuantity="1">
+
+      <bpmn:incoming>Flow_B2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_B3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_B" name="Done">
+
+      <bpmn:incoming>Flow_B3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_B1" sourceRef="Start_B" targetRef="Task_B1"/>
+
+    <bpmn:sequenceFlow id="Flow_B2" sourceRef="Task_B1" targetRef="Task_B2"/>
+
+    <bpmn:sequenceFlow id="Flow_B3" sourceRef="Task_B2" targetRef="End_B"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Collab_msg_endpoint" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="Participant_A" id="BPMNShape_Participant_A" isHorizontal="true">
+        <dc:Bounds height="120.0" width="612.0" x="-18.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_A">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_B" id="BPMNShape_Participant_B" isHorizontal="true">
+        <dc:Bounds height="120.0" width="612.0" x="-18.0" y="192.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_B">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="192.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_A" id="BPMNShape_End_A">
+        <dc:Bounds height="36.0" width="36.0" x="538.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_A">
+          <dc:Bounds height="20.0" width="90.0" x="511.0" y="92.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_B" id="BPMNShape_End_B">
+        <dc:Bounds height="36.0" width="36.0" x="538.0" y="234.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_B">
+          <dc:Bounds height="20.0" width="90.0" x="511.0" y="272.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_A" id="BPMNShape_Start_A">
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_A">
+          <dc:Bounds height="20.0" width="90.0" x="5.0" y="92.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_B" id="BPMNShape_Start_B">
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="234.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_B">
+          <dc:Bounds height="20.0" width="90.0" x="5.0" y="272.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_A1" id="BPMNShape_Task_A1">
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_A1">
+          <dc:Bounds height="20.0" width="90.0" x="163.0" y="114.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_A2" id="BPMNShape_Task_A2">
+        <dc:Bounds height="80.0" width="100.0" x="348.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_A2">
+          <dc:Bounds height="28.0" width="90.0" x="353.0" y="114.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_B1" id="BPMNShape_Task_B1">
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="212.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_B1">
+          <dc:Bounds height="28.0" width="90.0" x="163.0" y="294.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_B2" id="BPMNShape_Task_B2">
+        <dc:Bounds height="80.0" width="100.0" x="348.0" y="212.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_B2">
+          <dc:Bounds height="20.0" width="90.0" x="353.0" y="294.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_A1" id="BPMNEdge_Flow_A1">
+        <di:waypoint x="68.0" y="72.0"/>
+        <di:waypoint x="158.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_A2" id="BPMNEdge_Flow_A2">
+        <di:waypoint x="258.0" y="72.0"/>
+        <di:waypoint x="348.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_A3" id="BPMNEdge_Flow_A3">
+        <di:waypoint x="448.0" y="72.0"/>
+        <di:waypoint x="538.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_B1" id="BPMNEdge_Flow_B1">
+        <di:waypoint x="68.0" y="252.0"/>
+        <di:waypoint x="158.0" y="252.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_B2" id="BPMNEdge_Flow_B2">
+        <di:waypoint x="258.0" y="252.0"/>
+        <di:waypoint x="348.0" y="252.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_B3" id="BPMNEdge_Flow_B3">
+        <di:waypoint x="448.0" y="252.0"/>
+        <di:waypoint x="538.0" y="252.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
+        <di:waypoint x="258.0" y="72.0"/>
+        <di:waypoint x="158.0" y="252.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_2" id="BPMNEdge_MsgFlow_2">
+        <di:waypoint x="448.0" y="252.0"/>
+        <di:waypoint x="348.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_lanes" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_lanes">
+    <bpmn:participant id="Participant_1" name="Order Fulfillment" processRef="Process_1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" name="Order Fulfillment" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_sales" name="Sales">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_receive</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_split</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_warehouse" name="Warehouse">
+        <bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_pack</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_delivery" name="Delivery">
+        <bpmn:flowNodeRef>Task_ship</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_receive" name="Receive Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_split" name="In Stock?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_pick" name="Pick Items">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_pack" name="Pack Order">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_ship" name="Ship Order">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Shipped">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_receive"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_receive" targetRef="Gw_split"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gw_split" targetRef="Task_pick"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_pick" targetRef="Task_pack"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_pack" targetRef="Task_ship"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_ship" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -9,16 +9,19 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkS
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ArtifactPlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.AssociationEdges
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.BoundaryShapePlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelPlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LoopBackEdgeArcs
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.MessageFlowEdges
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SequenceEdgeElkCopy
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessEndStraddle
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessSpineCentring
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.Lane
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
@@ -79,6 +82,8 @@ internal object BpmnPlacementPass {
     private const val LINE_HEIGHT = 14.0
 
     fun place(model: BpmnModelInstance, skeleton: ElkSkeleton): PlacedLayout {
+        val laneMap = model.getModelElementsByType(Lane::class.java)
+            .associateBy { it.id }
         val ctx = PlacementContext(
             model = model,
             skeleton = skeleton,
@@ -86,6 +91,7 @@ internal object BpmnPlacementPass {
             labels = mutableMapOf(),
             edges = mutableMapOf(),
             expanded = mutableSetOf(),
+            laneMap = laneMap,
         )
         run(ctx)
         return PlacedLayout(ctx.shapes, ctx.labels, ctx.edges, ctx.expanded)
@@ -108,6 +114,8 @@ internal object BpmnPlacementPass {
         HandlerComponentAlignment.Repair,
         SubprocessEndStraddle.Repair,
         SubprocessSpineCentring.Repair,
+        CollaborationShapePlacement,
+        MessageFlowEdges,
         LabelPlacement,
         ArtifactPlacement,
         AssociationEdges,

@@ -12,7 +12,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Layer 4b: golden-file regression oracle over the full 12-fixture corpus.
+ * Layer 4b: golden-file regression oracle over the full 21-fixture corpus.
  *
  * For each approved expected layout under `layout-fixtures/`, asserts that the engine
  * produces byte-identical output. This is the regression gate: once a human approves
@@ -21,7 +21,7 @@ import kotlin.test.assertTrue
  * before the expected layout can be re-blessed.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 12 fixtures.
+ * labels below nodes) and determinism for all 21 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -51,6 +51,13 @@ class ElkGoldenLayoutTest {
             "subprocess-nested",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
         ],
     )
     fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
@@ -83,10 +90,17 @@ class ElkGoldenLayoutTest {
             "boundary-on-subprocess",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
         ],
     )
     @Suppress("CyclomaticComplexMethod")
-    fun `all 12 corpus fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 21 corpus fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
@@ -97,6 +111,110 @@ class ElkGoldenLayoutTest {
         assertLabelsBelow(doc, fixture)
         assertNoTopLevelShapeOverlap(doc, fixture, boundaryEventIds(result))
         assertLabelsDoNotOverlapOwnNode(doc, fixture)
+    }
+
+    @ParameterizedTest(name = "collaboration plane binds to Collaboration: {0}")
+    @ValueSource(
+        strings = [
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+        ],
+    )
+    fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val doc = LayoutDiInspector.parse(result)
+        val planes = doc.getElementsByTagNameNS(DI_NS, "BPMNPlane")
+        assertEquals(1, planes.length, "[$fixture] must have exactly one BPMNPlane")
+        val plane = planes.item(0) as Element
+        val bpmnElement = plane.getAttribute("bpmnElement")
+        // Plane must reference a Collaboration element, not a Process.
+        assertTrue(bpmnElement.isNotBlank(), "[$fixture] BPMNPlane bpmnElement must not be blank")
+        assertTrue(
+            bpmnElement.startsWith("Collab"),
+            "[$fixture] BPMNPlane bpmnElement '$bpmnElement' must reference Collaboration (starts with 'Collab')",
+        )
+    }
+
+    @ParameterizedTest(name = "participant shapes present: {0}")
+    @ValueSource(
+        strings = [
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+        ],
+    )
+    fun `collaboration fixture has BPMNShape for each participant`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val inputDoc = LayoutDiInspector.parse(input)
+        val resultDoc = LayoutDiInspector.parse(result)
+
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        val participants = inputDoc.getElementsByTagNameNS(bpmnNs, "participant")
+        val shapes = resultDoc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        val shapeElementIds = (0 until shapes.length).map {
+            (shapes.item(it) as Element).getAttribute("bpmnElement")
+        }.toSet()
+
+        for (i in 0 until participants.length) {
+            val participantId = (participants.item(i) as Element).getAttribute("id")
+            assertTrue(
+                participantId in shapeElementIds,
+                "[$fixture] must have BPMNShape for participant '$participantId'",
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "message flow edges present: {0}")
+    @ValueSource(
+        strings = [
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+        ],
+    )
+    fun `collaboration fixture has BPMNEdge for each message flow`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val inputDoc = LayoutDiInspector.parse(input)
+        val resultDoc = LayoutDiInspector.parse(result)
+
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        val msgFlows = inputDoc.getElementsByTagNameNS(bpmnNs, "messageFlow")
+        val edges = resultDoc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        val edgeElementIds = (0 until edges.length).map {
+            (edges.item(it) as Element).getAttribute("bpmnElement")
+        }.toSet()
+
+        for (i in 0 until msgFlows.length) {
+            val mfId = (msgFlows.item(i) as Element).getAttribute("id")
+            assertTrue(
+                mfId in edgeElementIds,
+                "[$fixture] must have BPMNEdge for messageFlow '$mfId'",
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "bioc colours survive DI-merge: collab-bioc.bpmn")
+    @ValueSource(strings = ["collab-bioc"])
+    fun `DI-merge preserves bioc colour attributes on re-laid-out shapes`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        assertTrue(result.contains("bioc:stroke"), "[$fixture] bioc:stroke must be preserved after re-layout")
+        assertTrue(result.contains("bioc:fill"), "[$fixture] bioc:fill must be preserved after re-layout")
     }
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
@@ -138,8 +256,13 @@ class ElkGoldenLayoutTest {
             }
     }
 
+    @Suppress("ReturnCount")
     private fun assertShapeLabelBelow(shape: Element, fixture: String) {
         val id = shape.getAttribute("bpmnElement")
+        // Participants and lanes use a left-side header band label (isHorizontal=true), not a
+        // below-node label. Skip them so the "labels below nodes" invariant only applies to
+        // flow-node shapes where below-placement is the convention.
+        if (shape.getAttribute("isHorizontal") == "true") return
         val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
         val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return
         val lb = lbl.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
@@ -170,6 +293,13 @@ class ElkGoldenLayoutTest {
             "boundary-on-subprocess",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {
@@ -196,6 +326,8 @@ class ElkGoldenLayoutTest {
             .mapNotNull { shape ->
                 val id = shape.getAttribute("bpmnElement")
                 if (id in boundaryEventIds) return@mapNotNull null
+                // Participants and lanes are horizontal pool containers — skip from overlap check.
+                if (shape.getAttribute("isHorizontal") == "true") return@mapNotNull null
                 val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@mapNotNull null
                 val x = bounds.getAttribute("x").toDoubleOrNull() ?: return@mapNotNull null
                 val y = bounds.getAttribute("y").toDoubleOrNull() ?: return@mapNotNull null
@@ -245,6 +377,9 @@ class ElkGoldenLayoutTest {
         (0 until shapes.length)
             .map { shapes.item(it) as Element }
             .forEach { shape ->
+                // Skip participants and lanes — their labels are in the left-side header band,
+                // not below the shape. This is correct BPMN-DI convention for horizontal pools.
+                if (shape.getAttribute("isHorizontal") == "true") return@forEach
                 val id = shape.getAttribute("bpmnElement")
                 val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@forEach
                 val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return@forEach

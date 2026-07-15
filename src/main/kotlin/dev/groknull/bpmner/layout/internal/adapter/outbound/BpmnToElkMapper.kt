@@ -8,10 +8,12 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.FlowElement
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
+import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
@@ -42,6 +44,7 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
  * Maps the process, boundary events, and sequence flows, and tracks artifacts (TextAnnotation, Group)
  * in the node map for placement.
  */
+@Suppress("TooManyFunctions")
 internal object BpmnToElkMapper {
 
     /**
@@ -75,9 +78,14 @@ internal object BpmnToElkMapper {
             }
         }
 
-        val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
-            .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
-        mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
+        val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
+        if (collaboration != null) {
+            mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
+        } else {
+            val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
+                .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
+            mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
+        }
 
         trackAnnotations(model, nodeMap)
         trackGroups(model, nodeMap)
@@ -87,6 +95,61 @@ internal object BpmnToElkMapper {
         mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
+    }
+
+    /**
+     * Maps a collaboration to the ELK graph.
+     *
+     * Each white-box [Participant] becomes a compound ELK node ([HierarchyHandling.INCLUDE_CHILDREN])
+     * containing its process's flow nodes. Black-box participants (no processRef) are tracked as
+     * detached size-carrier nodes — their bounds are computed by [placement.CollaborationShapePlacement].
+     *
+     * Message flows are NOT added to the ELK graph (per AD-557-12 / AD-557-04): they are
+     * collaboration-level, cross-participant connections owned by the placement pass.
+     *
+     * Lane membership is not expressed as ELK nodes; lanes are phase-2 placement geometry
+     * derived from [org.camunda.bpm.model.bpmn.instance.Lane.flowNodeRefs].
+     */
+    private fun mapCollaboration(
+        root: ElkNode,
+        collaboration: Collaboration,
+        model: BpmnModelInstance,
+        nodeMap: MutableMap<String, ElkNode>,
+        loopingSubIds: Set<String>,
+    ) {
+        for (participant in collaboration.participants) {
+            val process = participant.process
+            if (process != null) {
+                // White-box participant: compound ELK node containing the process graph.
+                val compound = ElkGraphUtil.createNode(root)
+                compound.identifier = participant.id
+                compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+                // SEPARATE_CHILDREN = false: the process is one connected graph, not separate components.
+                // (Root SEPARATE_CHILDREN = true governs inter-participant separation.)
+                compound.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+                compound.setProperty(
+                    CoreOptions.PADDING,
+                    ElkPadding(
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                    ),
+                )
+                applyFlowSpacing(compound)
+                nodeMap[participant.id] = compound
+
+                val topLevelElements = process.flowElements.toList()
+                mapProcess(compound, topLevelElements, nodeMap, model, loopingSubIds)
+            } else {
+                // Black-box participant: detached size-carrier node; placement pass assigns bounds.
+                val bb = ElkGraphUtil.createGraph()
+                bb.identifier = participant.id
+                bb.width = BLACK_BOX_WIDTH
+                bb.height = BLACK_BOX_HEIGHT
+                nodeMap[participant.id] = bb
+            }
+        }
     }
 
     /**
@@ -413,6 +476,14 @@ internal object BpmnToElkMapper {
     internal const val SUBPROCESS_TOP_PADDING = 90.0
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
+
+    // Collaboration geometry constants
+    internal const val PARTICIPANT_HEADER_WIDTH = 30.0
+    internal const val LANE_HEADER_HEIGHT = 30.0
+    internal const val PARTICIPANT_GAP = 40.0
+    internal const val BLACK_BOX_WIDTH = 100.0
+    internal const val BLACK_BOX_HEIGHT = 60.0
+    private const val PARTICIPANT_CONTENT_PADDING = 20.0
 
     // In-layer spacing (vertical for RIGHT direction). Must exceed LABEL_HEIGHT (20) +
     // LABEL_GAP_BELOW (2) so a node's external label clears the node in the row below.

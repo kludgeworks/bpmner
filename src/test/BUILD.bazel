@@ -1,6 +1,10 @@
 # Copyright 2026 The Project Contributors
 # SPDX-License-Identifier: MIT
 
+# js_library wrapper so the golden fixtures can be passed as extra_data to
+# bpmner_node_test targets in //web (aspect_rules_js requires cross-package
+# data to be wrapped in js_library).
+load("@aspect_rules_js//js:defs.bzl", "js_library")
 load("@contrib_rules_jvm//java:defs.bzl", "java_junit5_test")
 load("@rules_java//java:defs.bzl", "java_binary")
 load("@rules_kotlin//kotlin:jvm.bzl", "kt_jvm_library")
@@ -74,6 +78,18 @@ java_binary(
 filegroup(
     name = "analysis_srcs",
     srcs = glob(["kotlin/**/*.kt"]),
+    visibility = ["//visibility:public"],
+)
+
+filegroup(
+    name = "layout_golden_fixtures",
+    srcs = glob(["resources/layout-fixtures/*.expected.bpmn"]),
+    visibility = ["//visibility:public"],
+)
+
+js_library(
+    name = "layout_golden_fixtures_js",
+    srcs = glob(["resources/layout-fixtures/*.expected.bpmn"]),
     visibility = ["//visibility:public"],
 )
 
