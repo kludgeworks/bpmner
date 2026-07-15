@@ -7,7 +7,6 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_HEIGHT
-import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
@@ -180,8 +179,12 @@ class CollaborationShapePlacementTest {
 
         val bbBounds = ctx.shapes["P_bb"]
         assertNotNull(bbBounds, "Black-box participant must have a shape")
-        assertEquals(BLACK_BOX_WIDTH, bbBounds.w, "Black-box must have canonical width $BLACK_BOX_WIDTH")
+        // Black-box height is the fixed canonical height.
         assertEquals(BLACK_BOX_HEIGHT, bbBounds.h, "Black-box must have canonical height $BLACK_BOX_HEIGHT")
+        // Black-box width matches the white-box participant width for visual alignment.
+        val wbBounds = ctx.shapes["P_wb"]
+        assertNotNull(wbBounds, "White-box participant must have a shape")
+        assertEquals(wbBounds.w, bbBounds.w, "Black-box width must match white-box participant width")
     }
 
     @Test

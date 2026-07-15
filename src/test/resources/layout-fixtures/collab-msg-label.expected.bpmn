@@ -175,15 +175,15 @@
         <di:waypoint x="538.0" y="252.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_notify" id="BPMNEdge_MsgFlow_notify">
-        <di:waypoint x="448.0" y="252.0"/>
-        <di:waypoint x="348.0" y="72.0"/>
+        <di:waypoint x="398.0" y="212.0"/>
+        <di:waypoint x="398.0" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_notify">
           <dc:Bounds height="28.0" width="120.0" x="338.0" y="130.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_order" id="BPMNEdge_MsgFlow_order">
-        <di:waypoint x="258.0" y="252.0"/>
-        <di:waypoint x="158.0" y="72.0"/>
+        <di:waypoint x="208.0" y="212.0"/>
+        <di:waypoint x="208.0" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_order">
           <dc:Bounds height="20.0" width="120.0" x="148.0" y="138.0"/>
         </bpmndi:BPMNLabel>

@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound.placement
 
+import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_HEIGHT
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_WIDTH
@@ -13,42 +14,43 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PART
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
+import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Phase-2 processor: derives [Rect] bounds for every [Participant] shape and every [Lane] shape.
+ * Phase-2 processor: derives [Rect] bounds for every [Participant] shape and every [Lane] shape,
+ * and repositions flow nodes into their swim-lane Y-bands.
  *
  * Postcondition: [PlacementContext.shapes] contains a [Rect] for every Participant and Lane.
+ * For laned participants, each flow node's Y is centered within its lane's band, and every
+ * sequence flow whose endpoints were repositioned has its waypoints refreshed.
  *
- * For white-box participants the bounds are derived from the union of already-placed flow-node
- * shapes (populated by [NodeShapeCopy] and the move processors). A fixed header band is added
- * on the left side (PARTICIPANT_HEADER_WIDTH). Lanes (if any) are stacked vertically within the
- * participant, each band containing its member nodes.
+ * For white-box participants the horizontal (X/width) bounds come from the union of already-placed
+ * ELK node X positions. Lane heights are computed from member node sizes (not positions), stacked
+ * vertically in document order so every lane is tall enough to contain its tallest node. A fixed
+ * header band is added on the left side (PARTICIPANT_HEADER_WIDTH).
  *
  * For black-box participants the width matches the white-box participants and a fixed height
- * ([BLACK_BOX_HEIGHT]) is used. They are stacked below all white-box participants, aligned to the
- * same left edge, separated by [PARTICIPANT_GAP].
- *
- * This processor makes no ELK node relocations — it is a pure aggregation over already-placed shapes.
+ * ([BLACK_BOX_HEIGHT]) is used. They are stacked below all white-box participants with [PARTICIPANT_GAP].
  */
 internal object CollaborationShapePlacement : PlacementProcessor {
 
-    private const val LANE_PADDING = 10.0
+    private const val LANE_PADDING = 20.0
     private const val PARTICIPANT_PADDING = 20.0
+    private const val MIN_LANE_HEIGHT = 120.0
+    private const val DEFAULT_PARTICIPANT_Y = 12.0
 
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
-            ?: return // Not a collaboration diagram — nothing to do.
+            ?: return
 
         val participants = collaboration.participants.toList()
-
-        // Separate white-box (has processRef) and black-box (no processRef).
         val whiteBox = participants.filter { it.process != null }
         val blackBox = participants.filter { it.process == null }
 
-        // Compute white-box participant bounds first (they anchor the layout).
         var maxWhiteBoxBottom = 0.0
         var whiteBoxLeft = 0.0
         var whiteBoxWidth = BLACK_BOX_WIDTH
+
         for (participant in whiteBox) {
             val bounds = computeWhiteBoxBounds(participant, ctx)
             ctx.shapes[participant.id] = bounds
@@ -56,16 +58,11 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             whiteBoxLeft = bounds.x
             whiteBoxWidth = bounds.w
 
-            // Compute lane bounds within this participant.
-            computeLaneBounds(participant, bounds, ctx)
-
-            // Participant label rect (for LabelPlacement): left header band.
             if (!participant.name.isNullOrBlank()) {
                 ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
             }
         }
 
-        // Place black-box participants below all white-box participants, same width and left edge.
         var bbY = maxWhiteBoxBottom + PARTICIPANT_GAP
         for (participant in blackBox) {
             val bounds = Rect(whiteBoxLeft, bbY, whiteBoxWidth, BLACK_BOX_HEIGHT)
@@ -78,18 +75,103 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     }
 
     /**
-     * Computes the bounding box for a white-box participant by taking the union of all contained
-     * flow-node shapes (already populated in [PlacementContext.shapes]) and adding the header band
-     * on the left and uniform padding on the other three sides.
+     * Computes the bounding box for a white-box participant.
+     *
+     * When the participant's process has lanes, lanes are stacked vertically with heights derived
+     * from the tallest member node (not from ELK Y positions). Nodes are then repositioned to be
+     * vertically centred within their lane's band, and sequence flow waypoints are refreshed.
+     *
+     * When there are no lanes, bounds are derived from the union of all placed node shapes plus
+     * uniform padding and a header band on the left.
      */
     private fun computeWhiteBoxBounds(participant: Participant, ctx: PlacementContext): Rect {
         val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
-        val nodeIds = collectAllFlowNodeIds(process)
+        val lanes = mutableListOf<Lane>()
+        process.laneSets.forEach { ls -> lanes.addAll(ls.lanes) }
 
-        val nodeShapes = nodeIds.mapNotNull { ctx.shapes[it] }
-        if (nodeShapes.isEmpty()) {
-            return Rect(0.0, 0.0, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
+        return if (lanes.isNotEmpty()) {
+            computeLanedParticipantBounds(participant, lanes, ctx)
+        } else {
+            computeUnlanedParticipantBounds(participant, ctx)
         }
+    }
+
+    /**
+     * Computes bounds for a participant with swim-lanes.
+     *
+     * Lane heights are derived from node sizes (not ELK Y positions). Lanes stack vertically in
+     * document order. Nodes are repositioned into their lane Y-band and sequence flow waypoints
+     * are refreshed so edges still connect the repositioned nodes.
+     */
+    private fun computeLanedParticipantBounds(
+        participant: Participant,
+        lanes: List<Lane>,
+        ctx: PlacementContext,
+    ): Rect {
+        val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+        val allNodeIds = collectAllFlowNodeIds(process)
+
+        // X extents come from ELK (horizontal ordering is correct).
+        val nodeShapes = allNodeIds.mapNotNull { ctx.shapes[it] }
+        val minX = if (nodeShapes.isEmpty()) 0.0 else nodeShapes.minOf { it.x }
+        val maxX = if (nodeShapes.isEmpty()) BLACK_BOX_WIDTH else nodeShapes.maxOf { it.x + it.w }
+
+        // Each lane's height: tallest member node + 2*LANE_PADDING, minimum MIN_LANE_HEIGHT.
+        val laneHeights = lanes.map { lane ->
+            val memberShapes = lane.flowNodeRefs.mapNotNull { ctx.shapes[it.id] }
+            val maxNodeH = if (memberShapes.isEmpty()) 0.0 else memberShapes.maxOf { it.h }
+            maxOf(MIN_LANE_HEIGHT, maxNodeH + 2.0 * LANE_PADDING)
+        }
+        val totalLaneHeight = laneHeights.sum()
+
+        // Participant bounds in absolute coordinates.
+        val contentLeft = minX - PARTICIPANT_PADDING
+        val contentRight = maxX + PARTICIPANT_PADDING
+        val participantX = contentLeft - PARTICIPANT_HEADER_WIDTH
+        val participantY = if (nodeShapes.isEmpty()) DEFAULT_PARTICIPANT_Y else nodeShapes.minOf { it.y } - PARTICIPANT_PADDING
+        val participantW = contentRight - participantX
+        val participantH = totalLaneHeight
+
+        // Lane X and width (same for all lanes: content area, not including header).
+        val laneX = participantX + PARTICIPANT_HEADER_WIDTH
+        val laneW = participantW - PARTICIPANT_HEADER_WIDTH
+
+        // Second pass: assign lane Y positions and reposition nodes.
+        var laneY = participantY
+        for ((i, lane) in lanes.withIndex()) {
+            val laneH = laneHeights[i]
+            ctx.shapes[lane.id] = Rect(laneX, laneY, laneW, laneH)
+            if (!lane.name.isNullOrBlank()) {
+                ctx.labels[lane.id] = Rect(participantX, laneY, PARTICIPANT_HEADER_WIDTH, laneH)
+            }
+
+            // Reposition each member node to be vertically centred in this lane's band.
+            for (nodeRef in lane.flowNodeRefs) {
+                val nodeShape = ctx.shapes[nodeRef.id] ?: continue
+                val newY = laneY + (laneH - nodeShape.h) / 2.0
+                ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
+            }
+
+            laneY += laneH
+        }
+
+        // Refresh sequence flow waypoints now that nodes have been repositioned.
+        refreshSequenceEdgeWaypoints(ctx, allNodeIds)
+
+        return Rect(participantX, participantY, participantW, participantH)
+    }
+
+    /**
+     * Computes bounds for a participant with no lanes.
+     *
+     * Bounds are the union of all placed node shapes plus uniform padding and a left header band.
+     */
+    private fun computeUnlanedParticipantBounds(participant: Participant, ctx: PlacementContext): Rect {
+        val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+        val nodeIds = collectAllFlowNodeIds(process)
+        val nodeShapes = nodeIds.mapNotNull { ctx.shapes[it] }
+
+        if (nodeShapes.isEmpty()) return Rect(0.0, 0.0, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
 
         val minX = nodeShapes.minOf { it.x }
         val minY = nodeShapes.minOf { it.y }
@@ -101,7 +183,6 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val contentRight = maxX + PARTICIPANT_PADDING
         val contentBottom = maxY + PARTICIPANT_PADDING
 
-        // Participant left border: PARTICIPANT_HEADER_WIDTH to the left of content area.
         val participantX = contentX - PARTICIPANT_HEADER_WIDTH
         val participantY = contentY
         val participantW = contentRight - participantX
@@ -111,67 +192,30 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     }
 
     /**
-     * Computes [Rect] bounds for each [Lane] in a white-box participant.
+     * Refreshes sequence flow waypoints after lane repositioning.
      *
-     * Lanes are stacked vertically (for horizontal pools). Each lane's Y-span is derived from
-     * the Y-positions of its member nodes. Lane X starts at the participant left + PARTICIPANT_HEADER_WIDTH;
-     * lane width = participant width − PARTICIPANT_HEADER_WIDTH.
-     *
-     * If a lane has no member nodes with placed shapes, it gets a default band.
+     * After nodes are repositioned into their lane Y-bands, this method replaces each
+     * affected flow's waypoints with a fresh two-point route connecting the source
+     * node's right-centre to the target node's left-centre. Only flows whose source or
+     * target is in [repositionedIds] are updated; other flows keep their existing waypoints.
      */
-    @Suppress("NestedBlockDepth")
-    private fun computeLaneBounds(participant: Participant, participantBounds: Rect, ctx: PlacementContext) {
-        val process = participant.process ?: return
-        val lanes = mutableListOf<Lane>()
-        process.laneSets.forEach { ls -> lanes.addAll(ls.lanes) }
-        if (lanes.isEmpty()) return
-
-        // For each lane, find the Y-span of its member nodes.
-        data class LaneBand(val lane: Lane, val minY: Double, val maxY: Double)
-
-        val bands = lanes.map { lane ->
-            val memberShapes = lane.flowNodeRefs.mapNotNull { ctx.shapes[it.id] }
-            if (memberShapes.isEmpty()) {
-                LaneBand(lane, participantBounds.y, participantBounds.y + participantBounds.h / lanes.size)
-            } else {
-                val minY = memberShapes.minOf { it.y } - LANE_PADDING
-                val maxY = memberShapes.maxOf { it.y + it.h } + LANE_PADDING
-                LaneBand(lane, minY, maxY)
+    private fun refreshSequenceEdgeWaypoints(
+        ctx: PlacementContext,
+        repositionedIds: Set<String>,
+    ) {
+        ctx.model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { sf ->
+                val srcId = sf.source?.id
+                val tgtId = sf.target?.id
+                (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
             }
-        }
-
-        // Ensure lanes fill the full participant height without gaps: clamp to participant bounds.
-        val laneX = participantBounds.x + PARTICIPANT_HEADER_WIDTH
-        val laneW = participantBounds.w - PARTICIPANT_HEADER_WIDTH
-
-        // Distribute vertically: lanes in document order, each from its band top to next band top.
-        val sortedBands = bands // already in document order from the lane set
-        val participantTop = participantBounds.y
-
-        // Assign each lane a Y-range that covers its member nodes, clamped to participant bounds.
-        // Simple approach: divide participant height equally among lanes if bands overlap.
-        val laneCount = sortedBands.size
-        for ((i, band) in sortedBands.withIndex()) {
-            val laneY: Double
-            val laneH: Double
-            if (laneCount == 1) {
-                laneY = participantTop
-                laneH = participantBounds.h
-            } else {
-                // Assign bands by clamping to non-overlapping vertical strips.
-                laneY = participantTop + i * (participantBounds.h / laneCount)
-                laneH = participantTop + (i + 1) * (participantBounds.h / laneCount) - laneY
+            .forEach { sf ->
+                val srcShape = ctx.shapes[sf.source?.id ?: return@forEach] ?: return@forEach
+                val tgtShape = ctx.shapes[sf.target?.id ?: return@forEach] ?: return@forEach
+                val srcPt = Point(srcShape.x + srcShape.w, srcShape.y + srcShape.h / 2.0)
+                val tgtPt = Point(tgtShape.x, tgtShape.y + tgtShape.h / 2.0)
+                ctx.edges[sf.id] = listOf(srcPt, tgtPt)
             }
-            ctx.shapes[band.lane.id] = Rect(laneX, laneY, laneW, laneH)
-            if (!band.lane.name.isNullOrBlank()) {
-                ctx.labels[band.lane.id] = Rect(
-                    participantBounds.x,
-                    laneY,
-                    PARTICIPANT_HEADER_WIDTH,
-                    laneH,
-                )
-            }
-        }
     }
 
     /** Recursively collects all flow-node IDs from a process, including subprocess children. */
