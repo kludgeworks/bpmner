@@ -24,8 +24,9 @@ import org.camunda.bpm.model.bpmn.instance.Participant
  * on the left side (PARTICIPANT_HEADER_WIDTH). Lanes (if any) are stacked vertically within the
  * participant, each band containing its member nodes.
  *
- * For black-box participants a fixed canonical size is used ([BLACK_BOX_WIDTH] × [BLACK_BOX_HEIGHT]),
- * placed to the right of all white-box participants.
+ * For black-box participants the width matches the white-box participants and a fixed height
+ * ([BLACK_BOX_HEIGHT]) is used. They are stacked below all white-box participants, aligned to the
+ * same left edge, separated by [PARTICIPANT_GAP].
  *
  * This processor makes no ELK node relocations — it is a pure aggregation over already-placed shapes.
  */
@@ -45,11 +46,15 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val blackBox = participants.filter { it.process == null }
 
         // Compute white-box participant bounds first (they anchor the layout).
-        var maxWhiteBoxRight = 0.0
+        var maxWhiteBoxBottom = 0.0
+        var whiteBoxLeft = 0.0
+        var whiteBoxWidth = BLACK_BOX_WIDTH
         for (participant in whiteBox) {
             val bounds = computeWhiteBoxBounds(participant, ctx)
             ctx.shapes[participant.id] = bounds
-            maxWhiteBoxRight = maxOf(maxWhiteBoxRight, bounds.x + bounds.w)
+            maxWhiteBoxBottom = maxOf(maxWhiteBoxBottom, bounds.y + bounds.h)
+            whiteBoxLeft = bounds.x
+            whiteBoxWidth = bounds.w
 
             // Compute lane bounds within this participant.
             computeLaneBounds(participant, bounds, ctx)
@@ -60,12 +65,12 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             }
         }
 
-        // Place black-box participants to the right of all white-box participants.
-        var bbX = maxWhiteBoxRight + PARTICIPANT_GAP
+        // Place black-box participants below all white-box participants, same width and left edge.
+        var bbY = maxWhiteBoxBottom + PARTICIPANT_GAP
         for (participant in blackBox) {
-            val bounds = Rect(bbX, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+            val bounds = Rect(whiteBoxLeft, bbY, whiteBoxWidth, BLACK_BOX_HEIGHT)
             ctx.shapes[participant.id] = bounds
-            bbX += BLACK_BOX_WIDTH + PARTICIPANT_GAP
+            bbY += BLACK_BOX_HEIGHT + PARTICIPANT_GAP
             if (!participant.name.isNullOrBlank()) {
                 ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
             }

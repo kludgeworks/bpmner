@@ -11,6 +11,7 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Re
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.estimateLabelDimensions
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.MessageFlow
+import org.camunda.bpm.model.bpmn.instance.Participant
 
 /**
  * Phase-2 processor: derives waypoints for every [MessageFlow] in the model.
@@ -48,11 +49,28 @@ internal object MessageFlowEdges : PlacementProcessor {
 
         val srcCy = srcShape.y + srcShape.h / 2.0
         val tgtCy = tgtShape.y + tgtShape.h / 2.0
-        val vertical = tgtCy > srcCy + srcShape.h / 2.0
+        val yCentreDiff = Math.abs(tgtCy - srcCy)
+        val xCentreDiff = Math.abs((tgtShape.x + tgtShape.w / 2.0) - (srcShape.x + srcShape.w / 2.0))
+        val vertical = yCentreDiff > xCentreDiff
+
+        val srcIsParticipant = mf.source is Participant
+        val tgtIsParticipant = mf.target is Participant
 
         val (srcPt, tgtPt) = if (vertical) {
-            Point(srcShape.x + srcShape.w / 2.0, srcShape.y + srcShape.h) to
-                Point(tgtShape.x + tgtShape.w / 2.0, tgtShape.y)
+            // Straight vertical line: use the flow-node's x-centre for both endpoints so the
+            // line is perpendicular to the participant border rather than diagonal.
+            val srcCx = srcShape.x + srcShape.w / 2.0
+            val tgtCx = tgtShape.x + tgtShape.w / 2.0
+            val x = when {
+                srcIsParticipant -> tgtCx
+                tgtIsParticipant -> srcCx
+                else -> srcCx
+            }
+            if (tgtCy > srcCy) {
+                Point(x, srcShape.y + srcShape.h) to Point(x, tgtShape.y)
+            } else {
+                Point(x, srcShape.y) to Point(x, tgtShape.y + tgtShape.h)
+            }
         } else {
             Point(srcShape.x + srcShape.w, srcCy) to
                 Point(tgtShape.x, tgtCy)
