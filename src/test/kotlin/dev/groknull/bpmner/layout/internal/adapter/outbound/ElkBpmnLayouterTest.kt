@@ -208,6 +208,13 @@ class ElkBpmnLayouterTest {
         assertExceptionEdgeNearBoundary(result, "Flow_timeout", "Boundary_timer")
     }
 
+    @ParameterizedTest(name = "boundary label clears exception route: {0}")
+    @ValueSource(strings = ["boundary-timer-task.bpmn", "boundary-on-subprocess.bpmn"])
+    fun `boundary label is below its outgoing exception route`(fixture: String) {
+        val result = layouter.layout(loadCorpus(fixture))
+        assertBoundaryLabelClearsOutgoingFlow(result, "Boundary_timer", "Flow_timeout")
+    }
+
     // ── Edge endpoints land on the target's border, not its centre ────────────
 
     @Test
@@ -608,6 +615,23 @@ class ElkBpmnLayouterTest {
         assertTrue(
             dist <= EVENT_SIZE * 2,
             "Edge '$edgeId' first waypoint must be near boundary '$boundaryId' centre; dist=$dist",
+        )
+    }
+
+    private fun assertBoundaryLabelClearsOutgoingFlow(xml: String, boundaryId: String, edgeId: String) {
+        val doc = parseXmlDoc(xml)
+        val shape = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNShape")
+            .let { shapes ->
+                (0 until shapes.length)
+                    .map { shapes.item(it) as org.w3c.dom.Element }
+                    .first { it.getAttribute("bpmnElement") == boundaryId }
+            }
+        val labelBounds = shape.getElementsByTagNameNS("http://www.omg.org/spec/DD/20100524/DC", "Bounds")
+            .item(1) as org.w3c.dom.Element
+        val routeBottom = edgeWaypoints(doc, edgeId).maxOf { it.second }
+        assertTrue(
+            labelBounds.getAttribute("y").toDouble() >= routeBottom + 2.0,
+            "Boundary label for '$boundaryId' must clear outgoing route '$edgeId'",
         )
     }
 

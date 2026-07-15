@@ -147,7 +147,7 @@
       <bpmndi:BPMNShape bpmnElement="Boundary_timer" id="BPMNShape_Boundary_timer">
         <dc:Bounds height="36.0" width="36.0" x="346.0" y="314.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_timer">
-          <dc:Bounds height="20.0" width="90.0" x="319.0" y="352.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="319.0" y="414.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

@@ -69,7 +69,7 @@ internal object ElkToBpmnDiWriter {
             shape.id = "BPMNShape_${flowNode.id}"
             shape.bpmnElement = flowNode
             shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
-            if (flowNode is SubProcess) shape.isExpanded = true
+            if (flowNode is SubProcess) shape.isExpanded = flowNode.id in layout.expanded
             writeLabelIfPresent(model, shape, flowNode.id, layout)
             plane.addChildElement(shape)
         }

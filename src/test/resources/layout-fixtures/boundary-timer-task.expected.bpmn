@@ -105,7 +105,7 @@
       <bpmndi:BPMNShape bpmnElement="Boundary_timer" id="BPMNShape_Boundary_timer">
         <dc:Bounds height="36.0" width="36.0" x="170.0" y="214.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_timer">
-          <dc:Bounds height="20.0" width="90.0" x="143.0" y="252.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="143.0" y="314.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

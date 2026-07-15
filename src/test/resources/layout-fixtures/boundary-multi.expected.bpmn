@@ -143,13 +143,13 @@
       <bpmndi:BPMNShape bpmnElement="Boundary_error" id="BPMNShape_Boundary_error">
         <dc:Bounds height="36.0" width="36.0" x="148.0" y="354.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_error">
-          <dc:Bounds height="20.0" width="90.0" x="121.0" y="392.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="121.0" y="454.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Boundary_timer" id="BPMNShape_Boundary_timer">
         <dc:Bounds height="36.0" width="36.0" x="192.0" y="354.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_timer">
-          <dc:Bounds height="20.0" width="90.0" x="165.0" y="392.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="165.0" y="574.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

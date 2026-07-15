@@ -40,7 +40,11 @@ internal object LabelPlacement : PlacementProcessor {
                 val (labelWidth, labelHeight) = BpmnPlacementPass.estimateLabelDimensions(name, LABEL_WIDTH)
                 val labelX = shape.x + shape.w / 2.0 - labelWidth / 2.0
                 val labelY = if (flowNode is org.camunda.bpm.model.bpmn.instance.BoundaryEvent) {
-                    shape.y + shape.h + LABEL_GAP_BELOW
+                    val routeBottom = ctx.model.getModelElementsByType(SequenceFlow::class.java)
+                        .filter { it.source?.id == flowNode.id }
+                        .flatMap { ctx.edges[it.id].orEmpty() }
+                        .maxOfOrNull { it.y }
+                    maxOf(shape.y + shape.h, routeBottom ?: Double.NEGATIVE_INFINITY) + LABEL_GAP_BELOW
                 } else {
                     labelYBelowAttachedBoundary(flowNode.id, shape, boundaries, ctx)
                 }

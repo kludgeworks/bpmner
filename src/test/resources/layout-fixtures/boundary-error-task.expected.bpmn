@@ -95,7 +95,7 @@
       <bpmndi:BPMNShape bpmnElement="Boundary_error" id="BPMNShape_Boundary_error">
         <dc:Bounds height="36.0" width="36.0" x="170.0" y="170.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_error">
-          <dc:Bounds height="20.0" width="90.0" x="143.0" y="208.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="143.0" y="300.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

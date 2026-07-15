@@ -251,6 +251,25 @@ class ElkToBpmnDiWriterTest {
         ).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Sub_1' and @isExpanded='true']").exist()
     }
 
+    @Test
+    fun `subprocess BPMNShape remains collapsed when absent from expanded layout IDs`() {
+        val model = subprocessModel()
+        val layout = PlacedLayout(
+            shapes = mapOf(
+                "Sub_1" to Rect(0.0, 0.0, 200.0, 150.0),
+                "Child_1" to Rect(10.0, 10.0, 36.0, 36.0),
+            ),
+            labels = emptyMap(),
+            edges = emptyMap(),
+            expanded = emptySet(),
+        )
+        ElkToBpmnDiWriter.write(model, layout)
+        val xml = serialize(model)
+        XmlAssert.assertThat(xml).withNamespaceContext(
+            mapOf("bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI"),
+        ).nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Sub_1' and @isExpanded='true']").doNotExist()
+    }
+
     // ── DI write-back: label bounds from PlacedLayout (not element coords) ────
 
     @Test

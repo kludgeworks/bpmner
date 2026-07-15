@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound.placement
 
+import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
@@ -26,7 +27,8 @@ internal object NodeShapeCopy : PlacementProcessor {
             .filter { it !is BoundaryEvent }
             .sortedBy { it.id }
         ) {
-            val elkNode = ctx.skeleton.nodeMap[flowNode.id] ?: continue
+            val elkNode = ctx.skeleton.nodeMap[flowNode.id]
+                ?: throw BpmnAutoLayoutException("ELK layout: flow node '${flowNode.id}' has no corresponding ELK node")
             val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
             ctx.shapes[flowNode.id] = Rect(ax, ay, elkNode.width, elkNode.height)
             if (flowNode is SubProcess) ctx.expanded.add(flowNode.id)

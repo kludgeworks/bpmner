@@ -8,6 +8,8 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.LABEL_HEIGHT
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.LABEL_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.NodeShapeCopy
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
@@ -195,6 +197,25 @@ class BpmnPlacementPassTest {
     }
 
     // ── Named rule 2: boundary shape on host BOTTOM edge ─────────────────────
+
+    @Test
+    fun `missing ELK node for a flow node throws instead of omitting its DI shape`() {
+        val model = taskModel()
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton(ElkGraphUtil.createGraph(), emptyMap()),
+            shapes = mutableMapOf(),
+            labels = mutableMapOf(),
+            edges = mutableMapOf(),
+            expanded = mutableSetOf(),
+        )
+
+        val error = kotlin.test.assertFailsWith<dev.groknull.bpmner.layout.BpmnAutoLayoutException> {
+            NodeShapeCopy.process(ctx)
+        }
+
+        assertTrue(error.message!!.contains("Task_1"))
+    }
 
     @Test
     fun `boundary shape is placed on host BOTTOM edge (centre straddles)`() {
