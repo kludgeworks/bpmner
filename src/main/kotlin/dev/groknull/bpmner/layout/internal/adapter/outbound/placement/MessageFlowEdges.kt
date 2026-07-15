@@ -34,8 +34,6 @@ import org.camunda.bpm.model.bpmn.instance.Participant
  */
 internal object MessageFlowEdges : PlacementProcessor {
 
-    private const val LABEL_GAP = 4.0
-
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
@@ -82,7 +80,9 @@ internal object MessageFlowEdges : PlacementProcessor {
             val midX = (srcPt.x + tgtPt.x) / 2.0
             val midY = (srcPt.y + tgtPt.y) / 2.0
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
-            ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh - LABEL_GAP, lw, lh)
+            // Centre the label vertically on the edge mid-point so that labels on parallel
+            // vertical edges (same midY) share the same top Y regardless of text height.
+            ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
     }
 
