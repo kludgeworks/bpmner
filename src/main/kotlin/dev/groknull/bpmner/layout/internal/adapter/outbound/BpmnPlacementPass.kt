@@ -6,45 +6,55 @@
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ArtifactPlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.AssociationEdges
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.BoundaryShapePlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.HandlerComponentAlignment
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelPlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LoopBackEdgeArcs
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.NodeShapeCopy
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SequenceEdgeElkCopy
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessEndStraddle
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessSpineCentring
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
-import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
-import org.camunda.bpm.model.bpmn.instance.FlowNode
-import org.camunda.bpm.model.bpmn.instance.Group
-import org.camunda.bpm.model.bpmn.instance.SequenceFlow
-import org.camunda.bpm.model.bpmn.instance.SubProcess
-import org.camunda.bpm.model.bpmn.instance.TextAnnotation
-import org.camunda.bpm.model.xml.instance.ModelElementInstance
+import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
 /**
  * Phase 2 — BPMN placement pass: deterministic, BPMN-aware decoration.
  *
  * Reads the ELK skeleton's coordinates as fixed/immutable input and applies each
- * BPMN placement convention as a NAMED RULE in one place. Per AD-557-11 this pass
- * NEVER relocates a node ELK placed — every "put a node here" convention is a phase-1
- * ELK constraint, not a post-ELK coordinate patch.
+ * BPMN placement convention as a named rule in one place, via an ordered
+ * [PlacementProcessor][dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementProcessor]
+ * pipeline (AD-557-14). Per AD-557-11 this pass NEVER relocates a node ELK placed except for
+ * the three declared, paired, guarded moving conventions ledgered in PlacementContext.moves.
  *
- * - [placeNodeShapes] — all non-boundary flow nodes at their absolute ELK coordinates (immutable).
- * - [alignHandlerComponentsX] — shifts handler component nodes rightward so they do not appear
- *   visually "behind" (to the left of) their host. ELK places disconnected components
- *   independently from x=0; this rule ensures handlers start at or after the host's right edge.
- * - [placeBoundaryShapes] — boundary-event shapes on the host's BOTTOM edge, straddling,
- *   evenly distributed for multiple attachments.
- * - [routeExceptionEdges] — the ONE sanctioned bespoke edge op (AD-557-12): three-point
- *   orthogonal polyline from each placed boundary shape to its handler.
- * - [BpmnEdgeRouter.placeSequenceEdgeWaypoints] — copies ELK section waypoints verbatim.
- * - [placeLabels] — fixed 90×20 box below nodes / at edge-waypoint mid.
- * - [placeArtifacts] — text annotations and groups as sidecar geometry.
- * - [BpmnEdgeRouter.placeAssociationEdges] — association connectors between shape borders.
+ * Pipeline order (preserved exactly from the pre-extraction monolith):
+ *  1. [NodeShapeCopy]                      — ELK copy (pure)
+ *  2. [HandlerComponentAlignment.Move]     — declared move: rigid X-translation
+ *  3. [SubprocessEndStraddle.Move]         — declared move: straddle
+ *  4. [SubprocessSpineCentring.Move]       — declared move: Y-snap
+ *  5. [BoundaryShapePlacement]             — decoration (AD-557-11 sanctioned)
+ *  6. [LoopBackEdgeArcs]                   — bespoke edge (AD-557-12 extension)
+ *  7. [ExceptionEdgeRoutes]               — bespoke edge (AD-557-12 sanctioned)
+ *  8. [SequenceEdgeElkCopy]               — ELK copy (pure)
+ *  9. [HandlerComponentAlignment.Repair]  — repair (reads ledger)
+ * 10. [SubprocessEndStraddle.Repair]      — repair
+ * 11. [SubprocessSpineCentring.Repair]    — repair
+ * 12. [LabelPlacement]                    — decoration
+ * 13. [ArtifactPlacement]                 — decoration
+ * 14. [AssociationEdges]                  — decoration
  *
  * Outputs a [PlacedLayout] that is the only thing [ElkToBpmnDiWriter] reads.
  *
  * Constants are named (not magic), not configurable (AD-557-10 and ARCHITECTURE.md Non-goals).
  */
-@Suppress("TooManyFunctions", "LargeClass")
+@Suppress("TooManyFunctions")
 internal object BpmnPlacementPass {
 
-    // ── Output type ──────────────────────────────────────────────────────────
+    // ── Output types ──────────────────────────────────────────────────────────
 
     /** Simple rectangle (top-left corner + dimensions). */
     data class Rect(val x: Double, val y: Double, val w: Double, val h: Double)
@@ -68,7 +78,7 @@ internal object BpmnPlacementPass {
         val expanded: Set<String>,
     )
 
-    // ── Constants (named rules, not magic numbers) ────────────────────────────
+    // ── Shared constants ──────────────────────────────────────────────────────
 
     /** bpmn-js DEFAULT_LABEL_SIZE width (see bpmn-js lib/util/LabelUtil.js). */
     internal const val LABEL_WIDTH = 90.0
@@ -85,989 +95,53 @@ internal object BpmnPlacementPass {
     /** Vertical gap between an edge label's bottom and the edge it sits above. */
     internal const val EDGE_LABEL_GAP_ABOVE = 4.0
 
-    /** Half of EVENT_SIZE — used for boundary straddle offset. */
-    private const val BOUNDARY_HALF = BpmnToElkMapper.EVENT_SIZE / 2.0
-
-    /** Minimum horizontal gap between adjacent boundary-event shapes on the same host edge. */
-    private const val BOUNDARY_MIN_GAP = 8.0
-
     /** Sub-pixel threshold below which a position change is treated as no-op. */
     internal const val POSITION_EPSILON = 0.5
 
-    // ── Entry point ───────────────────────────────────────────────────────────
+    // ── Pipeline constants ────────────────────────────────────────────────────
+
+    private const val CHAR_WIDTH = 6.5
+    private const val SPACE_WIDTH = 4.0
+    private const val LINE_HEIGHT = 14.0
+
+    // ── Entry points ──────────────────────────────────────────────────────────
 
     fun place(model: BpmnModelInstance, skeleton: ElkSkeleton): PlacedLayout {
-        val shapes = mutableMapOf<String, Rect>()
-        val labels = mutableMapOf<String, Rect>()
-        val edges = mutableMapOf<String, List<Point>>()
-        val expanded = mutableSetOf<String>()
-
-        // Phase-2 rule 1: copy ELK node bounds verbatim (AD-557-11 — no node relocation).
-        placeNodeShapes(model, skeleton, shapes, expanded)
-        // Phase-2 rule 1b: align handler component X so handlers appear to the right of their host.
-        // ELK places disconnected components starting from x=0 independently; without this rule
-        // handler tasks land to the left of their host task, which renders as a backwards flow.
-        // Returns a map of nodeId→xShift so sequence-flow waypoints can be corrected too.
-        val handlerXShifts = alignHandlerComponents(model, shapes)
-        // Phase-2 rule 1c: straddle subprocess-terminating end events on the container right border.
-        // BPMN convention: a flow that terminates a subprocess has its end event centred on the
-        // subprocess's right edge (half inside, half outside). Returns the set of moved end IDs
-        // so Flow_from_sub can be re-anchored to the straddling end event's right edge.
-        val straddledEnds = straddleSubprocessEnds(model, shapes)
-        // Phase-2 rule 1d: centre the subprocess happy-path chain on the subprocess vertical midline,
-        // and snap outer process nodes connected to the subprocess to the same centre-Y so the
-        // full chain (Start → SubProcess → Review → End) is horizontally aligned.
-        val centredNodes = centreSubprocessHappyPath(model, shapes, skeleton.loopBackFlowIds)
-        // Phase-2 rule 2: boundary shapes on host bottom edge (decoration only).
-        placeBoundaryShapes(model, skeleton, shapes)
-        // Phase-2 rule 3a: loop-back arcs — bespoke over-the-top routes for back-edges that were
-        // excluded from the ELK skeleton (AD-557-12 extension). Must run before rule 4 so the
-        // writer always finds waypoints for every sequence flow.
-        routeLoopBackEdges(model, skeleton, shapes, edges)
-        // Phase-2 rule 3b: exception edges — the ONE sanctioned bespoke edge op (AD-557-12).
-        routeExceptionEdges(model, shapes, edges)
-        // Phase-2 rule 4: ordinary sequence-flow waypoints copied verbatim from ELK sections,
-        // then corrected for any handler component X-shift applied in rule 1b.
-        BpmnEdgeRouter.placeSequenceEdgeWaypoints(model, skeleton, edges)
-        if (handlerXShifts.isNotEmpty()) shiftHandlerEdgeWaypoints(model, shapes, edges, handlerXShifts)
-        // Phase-2 rule 4b: re-anchor subprocess exit edges and intra-subprocess edges to
-        // straddled/centred node positions. Must run after all shape Y-positions are final.
-        if (straddledEnds.isNotEmpty()) reanchorSubprocessExitFlows(model, shapes, edges, straddledEnds)
-        // Phase-2 rule 4c: re-route edges touching centred nodes after happy-path Y-centering.
-        // Loop-back edges are excluded: they were already routed as bespoke arcs in rule 3a and
-        // must not be overwritten by the generic re-anchor (which would collapse them onto the
-        // forward flow's centre-Y line and enter the wrong side of the target node).
-        if (centredNodes.isNotEmpty()) {
-            reanchorCentredSubprocessEdges(
-                model,
-                shapes,
-                edges,
-                centredNodes,
-                skeleton.loopBackFlowIds,
-            )
-        }
-        // Phase-2 rule 5: labels below nodes / at edge midpoints.
-        placeLabels(model, shapes, edges, labels)
-        // Phase-2 rule 6: artifact sidecar geometry.
-        placeArtifacts(model, skeleton, shapes)
-        // Phase-2 rule 7: association connectors between shape borders.
-        BpmnEdgeRouter.placeAssociationEdges(model, shapes, edges)
-
-        return PlacedLayout(shapes, labels, edges, expanded)
-    }
-
-    // ── Named rule 1: node shapes ─────────────────────────────────────────────
-
-    /**
-     * Copies ELK bounds for all non-boundary flow nodes through the single
-     * absolute-coordinate path [absolutePosition].
-     * SubProcess IDs are added to [expanded].
-     */
-    private fun placeNodeShapes(
-        model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
-        shapes: MutableMap<String, Rect>,
-        expanded: MutableSet<String>,
-    ) {
-        for (flowNode in model.getModelElementsByType(FlowNode::class.java)
-            .filter { it !is BoundaryEvent }
-            .sortedBy { it.id }) {
-            val elkNode = skeleton.nodeMap[flowNode.id] ?: continue
-            val (ax, ay) = absolutePosition(elkNode)
-            shapes[flowNode.id] = Rect(ax, ay, elkNode.width, elkNode.height)
-            if (flowNode is SubProcess) expanded.add(flowNode.id)
-        }
-    }
-
-    // ── Named rule 1b: handler component X alignment ─────────────────────────
-
-    /**
-     * Shifts handler-component nodes rightward so they appear to the right of their host,
-     * not behind it.
-     *
-     * ELK places each disconnected component starting from x=0 in its own coordinate space.
-     * When the handler component's leftmost node lands to the LEFT of the host task's left
-     * edge, it renders as a "backwards" flow in bpmn-js. This named rule corrects the X
-     * alignment by shifting the entire handler component by the delta needed to place its
-     * leftmost node at `hostRight + HANDLER_COMPONENT_X_GAP`.
-     *
-     * This is a decoration correction analogous to [placeBoundaryShapes]: the handler node's
-     * absolute X has no BPMN-semantic meaning assigned by ELK (it is an artefact of component
-     * independence), so phase 2 owns it. The Y position (the vertical band) remains exactly
-     * where ELK placed it — only X is adjusted.
-     */
-
-    /** Returns a map of nodeId → (xShift, yShift) for every handler node that was shifted. */
-    @Suppress("CyclomaticComplexMethod")
-    private fun alignHandlerComponents(
-        model: BpmnModelInstance,
-        shapes: MutableMap<String, Rect>,
-    ): Map<String, Pair<Double, Double>> {
-        val result = mutableMapOf<String, Pair<Double, Double>>()
-        val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
-            .mapTo(mutableSetOf()) { it.id }
-        if (boundaryIds.isEmpty()) return result
-
-        val successors = buildFlowSuccessors(model)
-        val mainFlow = reachableFrom(
-            seeds = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.StartEvent::class.java)
-                .map { it.id },
-            successors = successors,
-            exclude = boundaryIds,
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton,
+            shapes = mutableMapOf(),
+            labels = mutableMapOf(),
+            edges = mutableMapOf(),
+            expanded = mutableSetOf(),
         )
-        val handlerSeeds = boundaryIds.flatMap { successors[it].orEmpty() }
-        if (handlerSeeds.isEmpty()) return result
-
-        // Process boundaries in deterministic order. Track the Y floor so each successive
-        // handler chain is stacked below the previous one — never on top of it.
-        val mainBottom = mainFlow.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: 0.0
-        var nextFloor = mainBottom + HANDLER_COMPONENT_Y_GAP
-
-        model.getModelElementsByType(BoundaryEvent::class.java)
-            .sortedBy { it.id }
-            .forEach { be ->
-                nextFloor = shiftHandlerComponentForBoundary(
-                    be,
-                    successors,
-                    mainFlow,
-                    boundaryIds,
-                    shapes,
-                    result,
-                    nextFloor,
-                )
-            }
-        return result
+        run(ctx)
+        return PlacedLayout(ctx.shapes, ctx.labels, ctx.edges, ctx.expanded)
     }
 
-    /** Builds a sequence-flow successor map: sourceId → list of targetIds. */
-    private fun buildFlowSuccessors(model: BpmnModelInstance): Map<String, List<String>> {
-        val map = mutableMapOf<String, MutableList<String>>()
-        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
-            val s = sf.source?.id ?: return@forEach
-            val t = sf.target?.id ?: return@forEach
-            map.getOrPut(s) { mutableListOf() }.add(t)
-        }
-        return map
+    /** Runs the ordered processor pipeline; exposed for tests that need to inspect the context. */
+    internal fun run(ctx: PlacementContext) {
+        pipeline.forEach { it.process(ctx) }
     }
 
-    /**
-     * BFS from [seeds] over [successors], excluding nodes in [exclude].
-     * Returns all reachable node IDs (excluding seeds not passing the exclude check).
-     */
-    private fun reachableFrom(
-        seeds: Collection<String>,
-        successors: Map<String, List<String>>,
-        exclude: Set<String>,
-    ): Set<String> {
-        val visited = mutableSetOf<String>()
-        val queue = ArrayDeque(seeds)
-        while (queue.isNotEmpty()) {
-            val id = queue.removeLast()
-            if (id in visited || id in exclude) continue
-            visited.add(id)
-            queue.addAll(successors[id].orEmpty())
-        }
-        return visited
-    }
+    private val pipeline = listOf(
+        NodeShapeCopy,
+        HandlerComponentAlignment.Move,
+        SubprocessEndStraddle.Move,
+        SubprocessSpineCentring.Move,
+        BoundaryShapePlacement,
+        LoopBackEdgeArcs,
+        ExceptionEdgeRoutes,
+        SequenceEdgeElkCopy,
+        HandlerComponentAlignment.Repair,
+        SubprocessEndStraddle.Repair,
+        SubprocessSpineCentring.Repair,
+        LabelPlacement,
+        ArtifactPlacement,
+        AssociationEdges,
+    )
 
-    /**
-     * Shifts the handler component for a single boundary event:
-     * - X: to the right of the host.
-     * - Y: to [floor] (the stacking floor passed in from [alignHandlerComponents], which advances
-     *   after each chain so successive chains land below each other, never on top).
-     *
-     * Returns the new floor (bottom of this chain + gap) for the next chain.
-     */
-    @Suppress("LongParameterList")
-    private fun shiftHandlerComponentForBoundary(
-        be: BoundaryEvent,
-        successors: Map<String, List<String>>,
-        mainFlow: Set<String>,
-        boundaryIds: Set<String>,
-        shapes: MutableMap<String, Rect>,
-        result: MutableMap<String, Pair<Double, Double>>,
-        floor: Double,
-    ): Double {
-        val hostId = be.attachedTo?.id ?: return floor
-        val hostRight = (shapes[hostId] ?: return floor).let { it.x + it.w }
-        val thisHandlers = reachableFrom(
-            seeds = successors[be.id].orEmpty(),
-            successors = successors,
-            exclude = mainFlow + boundaryIds,
-        )
-        if (thisHandlers.isEmpty()) return floor
-
-        // X alignment: shift handler component to the right of the host.
-        val handlerLeft = thisHandlers.mapNotNull { shapes[it]?.x }.minOrNull() ?: return floor
-        val xShift = (hostRight + HANDLER_COMPONENT_X_GAP) - handlerLeft
-
-        // Y alignment: place the top of this handler chain at [floor] — only shift downward.
-        // Never move a handler upward: if it is already below the floor it stays in place
-        // (and still advances the floor so the next chain stacks below it).
-        val handlerTop = thisHandlers.mapNotNull { shapes[it]?.y }.minOrNull() ?: return floor
-        val yShift = maxOf(0.0, floor - handlerTop)
-
-        thisHandlers.forEach { id ->
-            shapes[id]?.let { r ->
-                shapes[id] = r.copy(x = r.x + xShift, y = r.y + yShift)
-                result[id] = xShift to yShift
-            }
-        }
-
-        // Advance the floor past this chain's bottom for the next chain.
-        val chainBottom = thisHandlers.mapNotNull { shapes[it] }.maxOfOrNull { it.y + it.h } ?: floor
-        return chainBottom + HANDLER_COMPONENT_Y_GAP
-    }
-
-    /**
-     * Corrects ELK-section waypoints for flows whose source or target was shifted by
-     * [alignHandlerComponentsX]. Non-boundary-source flows only; exception edges are already correct.
-     */
-    private fun shiftHandlerEdgeWaypoints(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-        handlerShifts: Map<String, Pair<Double, Double>>,
-    ) {
-        val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
-            .mapTo(mutableSetOf()) { it.id }
-        model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { it.source?.id !in boundaryIds }
-            .forEach { sf ->
-                val srcId = sf.source?.id
-                val tgtId = sf.target?.id
-                val srcShift = handlerShifts[srcId]
-                val tgtShift = handlerShifts[tgtId]
-                if (srcShift == null && tgtShift == null) return@forEach
-                if (edges[sf.id] == null) return@forEach
-                when {
-                    // Rejoin (handler→main): recompute from current placed shapes.
-                    srcShift != null && tgtShift == null ->
-                        routeRejoinEdge(srcId, tgtId, shapes, edges, sf.id)
-                    // Forward (main→handler): recompute from current placed shapes.
-                    tgtShift != null && srcShift == null ->
-                        routeForwardToHandlerEdge(srcId, tgtId, shapes, edges, sf.id)
-                    // Both handler nodes: apply both shifts uniformly.
-                    else -> {
-                        val (dx, dy) = srcShift ?: tgtShift!!
-                        edges[sf.id] = edges[sf.id]!!.map { it.copy(x = it.x + dx, y = it.y + dy) }
-                    }
-                }
-            }
-    }
-
-    private fun routeRejoinEdge(
-        srcId: String?,
-        tgtId: String?,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-        edgeId: String,
-    ) {
-        val srcRect = shapes[srcId] ?: return
-        val tgtRect = shapes[tgtId] ?: return
-        val srcCx = srcRect.x + srcRect.w / 2.0
-        val srcTop = srcRect.y
-        val tgtCy = tgtRect.y + tgtRect.h / 2.0
-        val enterX = if (srcCx <= tgtRect.x) tgtRect.x else tgtRect.x + tgtRect.w
-        edges[edgeId] = listOf(Point(srcCx, srcTop), Point(srcCx, tgtCy), Point(enterX, tgtCy))
-    }
-
-    private fun routeForwardToHandlerEdge(
-        srcId: String?,
-        tgtId: String?,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-        edgeId: String,
-    ) {
-        val srcRect = shapes[srcId] ?: return
-        val tgtRect = shapes[tgtId] ?: return
-        val srcRight = srcRect.x + srcRect.w
-        val srcCy = srcRect.y + srcRect.h / 2.0
-        val tgtLeft = tgtRect.x
-        val tgtCy = tgtRect.y + tgtRect.h / 2.0
-        edges[edgeId] = listOf(Point(srcRight, srcCy), Point(tgtLeft, tgtCy))
-    }
-
-    // ── Named rule 1d: centre subprocess happy-path chain on subprocess vertical midline ──
-
-    /**
-     * For each expanded subprocess, snaps the Y-position of nodes on the straight through-path
-     * (start event → split gateway → join gateway → straddled end event) to the subprocess's
-     * vertical centre. ELK places these nodes at the top of a tall subprocess when branches force
-     * the height up; this rule centres them so they read as a horizontal axis through the middle.
-     *
-     * "Through-path" nodes are those reachable from the subprocess start event AND that only
-     * have one predecessor and one successor on the main spine (i.e., NOT the branch tasks).
-     * Concretely: nodes whose in-degree and out-degree within the subprocess are both exactly 1
-     * (plus the start/end events with degree 0/1).
-     */
-
-    /**
-     * Centres the subprocess happy-path spine on the subprocess vertical midline, then snaps all
-     * outer process nodes that are direct predecessors or successors of the subprocess (via sequence
-     * flows) to the same centre-Y, so the full visible chain is horizontally aligned.
-     *
-     * Returns the IDs of all nodes whose Y was moved.
-     */
-    @Suppress("CyclomaticComplexMethod")
-    private fun centreSubprocessHappyPath(
-        model: BpmnModelInstance,
-        shapes: MutableMap<String, Rect>,
-        loopBackFlowIds: Set<String> = emptySet(),
-    ): Set<String> {
-        val snapped = mutableSetOf<String>()
-        model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
-            val subRect = shapes[sub.id] ?: return@forEach
-            val subCentreY = subRect.y + subRect.h / 2.0
-
-            // 1. Inner spine: snap Y to subprocess vertical midline.
-            val spineIds = subSpineIds(sub, loopBackFlowIds)
-            spineIds.forEach { id -> snapToCentreY(id, subCentreY, shapes, snapped) }
-
-            // 2. Outer nodes directly connected to the subprocess via sequence flows — snap them
-            //    to the same centre-Y so the outer chain (Start → Sub → Task → End) is aligned.
-            model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
-                val srcId = sf.source?.id
-                val tgtId = sf.target?.id
-                when {
-                    srcId == sub.id && tgtId != null -> snapToCentreY(tgtId, subCentreY, shapes, snapped)
-                    tgtId == sub.id && srcId != null -> snapToCentreY(srcId, subCentreY, shapes, snapped)
-                }
-            }
-        }
-        return snapped
-    }
-
-    /** Snaps [id]'s shape centre-Y to [targetCy], recording it in [snapped] if actually moved. */
-    private fun snapToCentreY(
-        id: String,
-        targetCy: Double,
-        shapes: MutableMap<String, Rect>,
-        snapped: MutableSet<String>,
-    ) {
-        val r = shapes[id] ?: return
-        val newY = targetCy - r.h / 2.0
-        if (kotlin.math.abs(newY - r.y) > POSITION_EPSILON) {
-            shapes[id] = r.copy(y = newY)
-            snapped.add(id)
-        }
-    }
-
-    /**
-     * Spine node IDs in a subprocess: start events, end events, gateways, and any task that
-     * sits on the single straight-through path (i.e. its unique predecessor has out-degree=1,
-     * so it is not a branch task hanging off a split gateway).
-     *
-     * Branch tasks (e.g. Path A / Path B in subprocess-branch) are excluded because their
-     * predecessor gateway has out-degree > 1; they belong to a sub-row, not the centre axis.
-     * Loop-back edges are ignored when counting in-degree: a task that receives both a forward
-     * edge and a loop-back edge (e.g. SubTask_1 in subprocess-loop) is still a spine node
-     * when its single forward predecessor has out-degree=1.
-     *
-     * The [loopBackFlowIds] are supplied by the outer [centreSubprocessHappyPath] call to
-     * exclude back-edges from the predecessor out-degree calculation.
-     */
-    private fun subSpineIds(sub: SubProcess, loopBackFlowIds: Set<String> = emptySet()): Set<String> {
-        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
-            .filterNot { it.id in loopBackFlowIds }
-        val outDegree = mutableMapOf<String, Int>()
-        val inDegree = mutableMapOf<String, Int>()
-        val predOf = mutableMapOf<String, String>()
-        flows.forEach { sf ->
-            val s = sf.source?.id ?: return@forEach
-            val t = sf.target?.id ?: return@forEach
-            outDegree[s] = (outDegree[s] ?: 0) + 1
-            inDegree[t] = (inDegree[t] ?: 0) + 1
-            predOf[t] = s
-        }
-        return sub.flowElements
-            .filterIsInstance<org.camunda.bpm.model.bpmn.instance.FlowNode>()
-            .filter { isSpineNode(it, inDegree, outDegree, predOf) }
-            .mapTo(mutableSetOf()) { it.id }
-    }
-
-    /**
-     * True if [node] belongs on the subprocess centre-Y spine.
-     * Events and gateways always qualify; a task qualifies when its single forward-incoming
-     * predecessor is not a split (predecessor out-degree = 1).
-     */
-    private fun isSpineNode(
-        node: org.camunda.bpm.model.bpmn.instance.FlowNode,
-        inDegree: Map<String, Int>,
-        outDegree: Map<String, Int>,
-        predOf: Map<String, String>,
-    ): Boolean {
-        if (node is org.camunda.bpm.model.bpmn.instance.StartEvent ||
-            node is org.camunda.bpm.model.bpmn.instance.EndEvent ||
-            node is org.camunda.bpm.model.bpmn.instance.Gateway
-        ) {
-            return true
-        }
-        // Task on spine: single forward-incoming edge whose predecessor is not a split.
-        if ((inDegree[node.id] ?: 0) != 1) return false
-        val predId = predOf[node.id] ?: return false
-        return (outDegree[predId] ?: 0) == 1
-    }
-
-    // ── Named rule 1c: subprocess-terminating end events straddle the right border ──
-
-    /**
-     * Moves each subprocess-terminating end event so its centre sits on the subprocess's RIGHT
-     * border (half inside, half outside) — the BPMN convention for a flow that ends at the
-     * container boundary. Returns the set of moved end-event IDs.
-     */
-    private fun straddleSubprocessEnds(
-        model: BpmnModelInstance,
-        shapes: MutableMap<String, Rect>,
-    ): Set<String> {
-        val moved = mutableSetOf<String>()
-        model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
-            val subRect = shapes[sub.id] ?: return@forEach
-            val rightBorder = subRect.x + subRect.w
-            val subCentreY = subRect.y + subRect.h / 2.0
-            sub.flowElements.filterIsInstance<org.camunda.bpm.model.bpmn.instance.EndEvent>()
-                .forEach { end ->
-                    val r = shapes[end.id] ?: return@forEach
-                    val newX = rightBorder - r.w / 2.0
-                    val newY = subCentreY - r.h / 2.0
-                    shapes[end.id] = r.copy(x = newX, y = newY)
-                    moved.add(end.id)
-                }
-        }
-        return moved
-    }
-
-    /**
-     * Re-anchors edges affected by [straddleSubprocessEnds]:
-     * 1. Intra-subprocess edges whose target is the straddled end event — snap their last
-     *    waypoint to the end event's new (straddled) position.
-     * 2. Exit edges whose source is the subprocess — re-route from the straddled end's right
-     *    edge to the outer target's left edge.
-     */
-    private fun reanchorSubprocessExitFlows(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-        straddledEnds: Set<String>,
-    ) {
-        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
-            val srcId = sf.source?.id ?: return@forEach
-            val tgtId = sf.target?.id ?: return@forEach
-            // Case 2 first: exit edge whose SOURCE is the subprocess (higher priority — the
-            // exit flow must originate from the straddled end's right edge, not the subprocess
-            // border; checking case 1 first would incorrectly anchor the start to the ELK origin).
-            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
-            if (srcElement is SubProcess) {
-                val endId = srcElement.flowElements
-                    .filterIsInstance<org.camunda.bpm.model.bpmn.instance.EndEvent>()
-                    .firstOrNull { it.id in straddledEnds }?.id ?: return@forEach
-                val endRect = shapes[endId] ?: return@forEach
-                val tgtRect = shapes[tgtId] ?: return@forEach
-                edges[sf.id] = listOf(
-                    Point(endRect.x + endRect.w, endRect.y + endRect.h / 2.0),
-                    Point(tgtRect.x, tgtRect.y + tgtRect.h / 2.0),
-                )
-                return@forEach
-            }
-            // Case 1: intra-subprocess edge whose TARGET is the straddled end event.
-            // Re-anchor the last waypoint to enter the straddled end's left edge horizontally.
-            if (tgtId in straddledEnds) {
-                val endRect = shapes[tgtId] ?: return@forEach
-                val wps = edges[sf.id] ?: return@forEach
-                if (wps.size >= 2) {
-                    val entryX = endRect.x
-                    val entryCy = endRect.y + endRect.h / 2.0
-                    val secondLast = wps[wps.size - 2]
-                    edges[sf.id] = wps.dropLast(1) +
-                        Point(secondLast.x, entryCy) +
-                        Point(entryX, entryCy)
-                }
-            }
-        }
-    }
-
-    /**
-     * After [centreSubprocessHappyPath] moves spine nodes, any edge touching a snapped node
-     * has stale ELK-section waypoints. Re-route them as clean orthogonal border-to-border lines.
-     * Both-snapped (same row): straight horizontal. One-snapped (branch edge): L-shape.
-     *
-     * [loopBackFlowIds] edges are skipped: they were already placed as bespoke over-the-top arcs
-     * by [routeLoopBackEdges] and must not be overwritten here.
-     */
-    private fun reanchorCentredSubprocessEdges(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-        centredNodes: Set<String>,
-        loopBackFlowIds: Set<String> = emptySet(),
-    ) {
-        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
-            val srcId = sf.source?.id ?: return@forEach
-            val tgtId = sf.target?.id ?: return@forEach
-            val srcSnapped = srcId in centredNodes
-            val tgtSnapped = tgtId in centredNodes
-            if (!srcSnapped && !tgtSnapped) return@forEach
-            if (sf.id !in edges) return@forEach
-            if (sf.id in loopBackFlowIds) return@forEach // already placed as bespoke arc
-            // Skip subprocess exit flows — already re-anchored by reanchorSubprocessExitFlows.
-            val srcElement = model.getModelElementById<ModelElementInstance>(srcId)
-            if (srcElement is SubProcess) return@forEach
-            val srcRect = shapes[srcId] ?: return@forEach
-            val tgtRect = shapes[tgtId] ?: return@forEach
-            val srcCy = srcRect.y + srcRect.h / 2.0
-            val tgtCy = tgtRect.y + tgtRect.h / 2.0
-            val srcRight = srcRect.x + srcRect.w
-            edges[sf.id] = if (kotlin.math.abs(srcCy - tgtCy) <= POSITION_EPSILON) {
-                // Both at same Y: straight horizontal line.
-                listOf(Point(srcRight, srcCy), Point(tgtRect.x, tgtCy))
-            } else {
-                // S-shape: exit source, jog at midpoint x, then enter target from left at tgtCy.
-                // Using midpoint x for the vertical jog keeps the final segment horizontal
-                // so the arrowhead points right into the target's left edge, not up/down.
-                val midX = srcRight + (tgtRect.x - srcRight) / 2.0
-                listOf(
-                    Point(srcRight, srcCy),
-                    Point(midX, srcCy),
-                    Point(midX, tgtCy),
-                    Point(tgtRect.x, tgtCy),
-                )
-            }
-        }
-    }
-
-    // ── Named rule 2: boundary shapes on host bottom edge ─────────────────────
-
-    /**
-     * Places each boundary-event SHAPE on its host's BOTTOM edge, straddling (centre
-     * on the edge), evenly distributed for multiple attachments.
-     *
-     * The ELK-routed exception edge is reconciled to the placed shape in
-     * [BpmnEdgeRouter]. This is the direct fix for BLOCK-557-3 symptom 2.
-     *
-     * Distribution rule: N boundaries on a host are spaced equidistantly along the
-     * host's bottom edge, ordered by boundary event ID for determinism.
-     */
-    private fun placeBoundaryShapes(
-        model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
-        shapes: MutableMap<String, Rect>,
-    ) {
-        // Map each boundary to its handler (exception-flow target) for ordering.
-        val handlerOf = mutableMapOf<String, String>()
-        model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
-            val src = sf.source?.id
-            val tgt = sf.target?.id
-            if (src != null && tgt != null) handlerOf[src] = tgt
-        }
-
-        // Group boundaries by host ID.
-        val byHost = model.getModelElementsByType(BoundaryEvent::class.java)
-            .groupBy { it.attachedTo?.id }
-
-        for ((hostId, boundaries) in byHost.filterKeys { it != null }) {
-            val hostNode = skeleton.nodeMap[hostId] ?: continue
-            val hostRect = shapes[hostId] ?: run {
-                val (hx, hy) = absolutePosition(hostNode)
-                Rect(hx, hy, hostNode.width, hostNode.height)
-            }
-            placeBoundariesOnHost(hostRect, boundaries, shapes, handlerOf)
-        }
-    }
-
-    /**
-     * Places N boundary events on the host's bottom edge, straddling, ordered left-to-right by
-     * their handler's vertical position so their (drop-then-right) exception edges do not cross,
-     * and spaced so the shapes never overlap.
-     *
-     * Ordering rule: the boundary whose handler sits highest is placed leftmost. Because each
-     * exception edge drops straight down and then runs right, nesting the drops by handler height
-     * keeps the horizontal runs from crossing another boundary's drop.
-     */
-    private fun placeBoundariesOnHost(
-        hostRect: Rect,
-        boundaries: List<BoundaryEvent>,
-        shapes: MutableMap<String, Rect>,
-        handlerOf: Map<String, String>,
-    ) {
-        val eventSize = BpmnToElkMapper.EVENT_SIZE
-        // Order by handler Y (topmost handler first); fall back to boundary id for determinism.
-        val ordered = boundaries.sortedWith(
-            compareBy({ be -> shapes[handlerOf[be.id]]?.y ?: Double.MAX_VALUE }, { it.id }),
-        )
-        val n = ordered.size
-        val centreY = hostRect.y + hostRect.h // bottom edge y
-        val pitch = eventSize + BOUNDARY_MIN_GAP // centre-to-centre distance guaranteeing no overlap
-
-        // Even distribution would give this centre-to-centre step:
-        val evenStep = hostRect.w / (n + 1).toDouble()
-        if (evenStep >= pitch) {
-            // Even spacing already keeps shapes from overlapping.
-            ordered.forEachIndexed { index, be ->
-                val centreX = hostRect.x + evenStep * (index + 1)
-                shapes[be.id] = Rect(centreX - BOUNDARY_HALF, centreY - BOUNDARY_HALF, eventSize, eventSize)
-            }
-        } else {
-            // Too tight for even spacing: pack at the minimum pitch, centred on the host edge.
-            val totalSpan = (n - 1) * pitch
-            var centreX = hostRect.x + hostRect.w / 2.0 - totalSpan / 2.0
-            ordered.forEach { be ->
-                shapes[be.id] = Rect(centreX - BOUNDARY_HALF, centreY - BOUNDARY_HALF, eventSize, eventSize)
-                centreX += pitch
-            }
-        }
-    }
-
-    // ── Named rule 3a: loop-back arcs (over-the-top bespoke route) ───────────────
-
-    /**
-     * Routes loop-back sequence flows (back-edges excluded from the ELK skeleton per AD-557-12)
-     * as deterministic over-the-top orthogonal arcs.
-     *
-     * A loop-back edge (e.g. Gw_check → SubTask_1 in subprocess-loop) runs backwards in the
-     * left-to-right flow. The route exits the source's top, rises above the subprocess top
-     * padding line, traverses left to above the target, and descends into the target's top:
-     *
-     *   srcCx, srcTop
-     *   → srcCx, aboveSubTop      (rise to arc lane)
-     *   → tgtCx, aboveSubTop      (traverse left)
-     *   → tgtCx, tgtTop           (descend into target)
-     *
-     * The arc lane Y is [SUBPROCESS_TOP_PADDING] / 2 above the subprocess top border, which
-     * falls within the extra top padding reserved by the mapper for exactly this route.
-     */
-    private fun routeLoopBackEdges(
-        model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-    ) {
-        if (skeleton.loopBackFlowIds.isEmpty()) return
-        model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { it.id in skeleton.loopBackFlowIds }
-            .sortedBy { it.id }
-            .forEach { sf ->
-                val srcRect = shapes[sf.source?.id ?: return@forEach] ?: return@forEach
-                val tgtRect = shapes[sf.target?.id ?: return@forEach] ?: return@forEach
-                // Find the enclosing subprocess to derive the arc lane Y.
-                val sub = model.getModelElementsByType(SubProcess::class.java)
-                    .firstOrNull { sub -> sub.flowElements.filterIsInstance<SequenceFlow>().any { it.id == sf.id } }
-                val subRect = sub?.let { shapes[it.id] }
-                val arcLaneY = if (subRect != null) {
-                    subRect.y + BpmnToElkMapper.SUBPROCESS_TOP_PADDING / 2.0
-                } else {
-                    minOf(srcRect.y, tgtRect.y) - LOOP_ARC_CLEARANCE
-                }
-                val srcCx = srcRect.x + srcRect.w / 2.0
-                val tgtCx = tgtRect.x + tgtRect.w / 2.0
-                edges[sf.id] = listOf(
-                    Point(srcCx, srcRect.y),
-                    Point(srcCx, arcLaneY),
-                    Point(tgtCx, arcLaneY),
-                    Point(tgtCx, tgtRect.y),
-                )
-            }
-    }
-
-    /** Clearance above the topmost node when no subprocess rect is available for the arc lane. */
-    private const val LOOP_ARC_CLEARANCE = 30.0
-
-    // ── Named rule 3b: exception edges (the ONE sanctioned bespoke edge operation) ──
-
-    /**
-     * Routes exception edges as deterministic orthogonal polylines (AD-557-12).
-     *
-     * Normal case (handler below or beside): three-point drop-then-right route.
-     *   (bCx, bBottom) → (bCx, handlerCy) → (handlerLeft, handlerCy)
-     *
-     * Detour case (handler above the main flow, e.g. boundary on a subprocess with handler
-     * placed as a disconnected component above): the straight-up path passes through the host
-     * and other nodes. Route **around** the host instead:
-     *   (bCx, bBottom) → (bCx, clearY) → (hostRight + gap, clearY) → (hostRight + gap, handlerCy)
-     *   → (handlerLeft, handlerCy)
-     * where clearY is just below bBottom (already clear of the host bottom border) and
-     * hostRight + gap clears the host's right edge before rising to the handler.
-     */
-    private fun routeExceptionEdges(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        edges: MutableMap<String, List<Point>>,
-    ) {
-        val boundaryEvents = model.getModelElementsByType(BoundaryEvent::class.java)
-            .associateBy { it.id }
-
-        model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { it.source?.id in boundaryEvents }
-            .sortedBy { it.id }
-            .forEach { sf ->
-                val be = boundaryEvents[sf.source?.id] ?: return@forEach
-                val bRect = shapes[be.id] ?: return@forEach
-                val tRect = shapes[sf.target?.id ?: return@forEach] ?: return@forEach
-                val hostRect = shapes[be.attachedTo?.id]
-                edges[sf.id] = routeExceptionEdge(bRect, tRect, hostRect)
-            }
-    }
-
-    /**
-     * Computes the waypoints for one exception edge.
-     * [bRect] is the placed boundary shape, [tRect] the handler, [hostRect] the host node.
-     *
-     * If the handler is above the boundary (disconnected component placed above by ELK), the
-     * straight-up route would pass through the host — use a detour around the host's right edge.
-     */
-    private fun routeExceptionEdge(bRect: Rect, tRect: Rect, hostRect: Rect?): List<Point> {
-        val startX = bRect.x + bRect.w / 2.0
-        val startY = bRect.y + bRect.h
-        val targetCy = tRect.y + tRect.h / 2.0
-        val enterX = if (tRect.x >= startX) tRect.x else tRect.x + tRect.w
-
-        // Detour: the straight vertical at startX would pass through the host.
-        // Condition: host exists AND the vertical segment (startX, startY→handlerCy) intersects
-        // the host's x-range AND the host's y-range contains part of that segment.
-        val vertMinY = minOf(startY, targetCy)
-        val vertMaxY = maxOf(startY, targetCy)
-        val pathClearsHost = hostRect == null ||
-            startX < hostRect.x ||
-            startX > hostRect.x + hostRect.w ||
-            // outside host x-range
-            vertMaxY <= hostRect.y ||
-            vertMinY >= hostRect.y + hostRect.h // outside host y-range
-        if (!pathClearsHost) {
-            val clearY = startY + EXCEPTION_DETOUR_GAP // just below boundary bottom
-            val clearX = hostRect.x + hostRect.w + EXCEPTION_DETOUR_GAP // right of host
-            return listOf(
-                Point(startX, startY),
-                Point(startX, clearY),
-                Point(clearX, clearY),
-                Point(clearX, targetCy),
-                Point(enterX, targetCy),
-            )
-        }
-
-        // Normal: handler is below or beside — three-point drop-then-horizontal.
-        return listOf(
-            Point(startX, startY),
-            Point(startX, targetCy),
-            Point(enterX, targetCy),
-        )
-    }
-
-    // ── Named rule 5: labels below nodes / at edge-waypoint mid ───────────────
-
-    /**
-     * Places label bounds using the bpmn-js DEFAULT_LABEL_SIZE (90×20) convention:
-     * - Node labels: centred below the node shape (x = shape.cx - 45, y = shape.bottom + gap).
-     * - Edge labels: centred on the true geometric midpoint of the edge polyline, nudged just
-     *   above the edge, so the label sits on the line it describes and never on a node.
-     *
-     * Never copies the element's own coordinates — this is the direct fix for
-     * BLOCK-557-3 symptom 1 (labels colliding with their nodes).
-     */
-    private fun placeLabels(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        edges: Map<String, List<Point>>,
-        labels: MutableMap<String, Rect>,
-    ) {
-        placeNodeLabels(model, shapes, labels)
-        placeSequenceFlowLabels(model, edges, labels)
-    }
-
-    private fun placeNodeLabels(
-        model: BpmnModelInstance,
-        shapes: Map<String, Rect>,
-        labels: MutableMap<String, Rect>,
-    ) {
-        model.getModelElementsByType(FlowNode::class.java)
-            .filter { !it.name.isNullOrBlank() }
-            .sortedBy { it.id }
-            .forEach { flowNode ->
-                val shape = shapes[flowNode.id] ?: return@forEach
-                val name = flowNode.name ?: ""
-                val (labelWidth, labelHeight) = estimateLabelDimensions(name, LABEL_WIDTH)
-                val labelX = shape.x + shape.w / 2.0 - labelWidth / 2.0
-                val labelY = shape.y + shape.h + LABEL_GAP_BELOW
-                labels[flowNode.id] = Rect(labelX, labelY, labelWidth, labelHeight)
-            }
-    }
-
-    private fun placeSequenceFlowLabels(
-        model: BpmnModelInstance,
-        edges: Map<String, List<Point>>,
-        labels: MutableMap<String, Rect>,
-    ) {
-        model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { !it.name.isNullOrBlank() }
-            .sortedBy { it.id }
-            .forEach { sf ->
-                val wps = edges[sf.id]?.takeIf { it.size >= 2 } ?: return@forEach
-                val name = sf.name ?: ""
-                val (labelWidth, labelHeight) = estimateLabelDimensions(name, EDGE_LABEL_WIDTH)
-
-                val horizSeg = findLongestHorizontalSegment(wps)
-                val isBackward = wps.first().x > wps.last().x
-
-                if (horizSeg != null) {
-                    val labelY = if (isBackward) {
-                        horizSeg.mid.y + EDGE_LABEL_GAP_ABOVE
-                    } else {
-                        horizSeg.mid.y - labelHeight - EDGE_LABEL_GAP_ABOVE
-                    }
-                    var labelX = horizSeg.mid.x - labelWidth / 2.0
-                    if (isBackward) {
-                        labelX = maxOf(labelX, horizSeg.endX + LABEL_MARGIN)
-                    } else {
-                        labelX = minOf(labelX, horizSeg.endX - labelWidth - LABEL_MARGIN)
-                    }
-                    labels[sf.id] = Rect(
-                        labelX,
-                        labelY,
-                        labelWidth,
-                        labelHeight,
-                    )
-                } else {
-                    placeNonHorizontalEdgeLabel(sf.id, wps, name, labels)
-                }
-            }
-    }
-
-    private fun placeNonHorizontalEdgeLabel(
-        id: String,
-        wps: List<Point>,
-        name: String,
-        labels: MutableMap<String, Rect>,
-    ) {
-        val (labelWidth, labelHeight) = estimateLabelDimensions(name, EDGE_LABEL_WIDTH)
-        val isBackward = wps.first().x > wps.last().x
-        val mid = BpmnEdgeRouter.polylineMidpoint(wps)
-        if (isVerticalSegment(wps, mid)) {
-            labels[id] = Rect(
-                mid.x + EDGE_LABEL_GAP_ABOVE,
-                mid.y - labelHeight / 2.0,
-                labelWidth,
-                labelHeight,
-            )
-        } else {
-            val labelY = if (isBackward) {
-                mid.y + EDGE_LABEL_GAP_ABOVE
-            } else {
-                mid.y - labelHeight - EDGE_LABEL_GAP_ABOVE
-            }
-            labels[id] = Rect(
-                mid.x - labelWidth / 2.0,
-                labelY,
-                labelWidth,
-                labelHeight,
-            )
-        }
-    }
-
-    // ── Named rule 6: artifacts as sidecar geometry ───────────────────────────
-
-    /**
-     * Places text annotations and groups as non-precedence sidecar geometry off the skeleton.
-     *
-     * - Text annotations are placed near the element they annotate (following the association
-     *   source→target), below-and-right of that element, so the connector is short — this is the
-     *   BPMN convention. Annotations with no association fall back to below the primary flow.
-     * - Groups are placed below the primary flow, spanning left-to-right, laid out in a row so
-     *   they never overlap each other or the annotations.
-     *
-     * Artifacts are deterministically stacked so unrelated artifact shapes never collide.
-     */
-    private fun placeArtifacts(
-        model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
-        shapes: MutableMap<String, Rect>,
-    ) {
-        val skeletonBottom = shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
-
-        // Map each annotation to the element it is associated with (if any).
-        val annotationHost = mutableMapOf<String, String>()
-        for (assoc in model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Association::class.java)) {
-            val src = assoc.source?.id
-            val tgt = assoc.target?.id
-            // Association may point either way; the annotation is whichever end is a TextAnnotation.
-            val annId = listOf(src, tgt).firstOrNull { id -> shapes[id] == null && id != null }
-            val hostId = listOf(src, tgt).firstOrNull { it != annId }
-            if (annId != null && hostId != null) annotationHost[annId] = hostId
-        }
-
-        // Groups first: they enclose the whole flow, so an associated annotation must be placed
-        // clear of the group's bottom border (below), not tucked right against it. Compute the
-        // group bottom now (used to drop annotations below the enclosing box).
-        placeGroups(model, shapes)
-        placeAnnotations(model, skeleton, shapes, annotationHost, skeletonBottom)
-    }
-
-    private fun placeAnnotations(
-        model: BpmnModelInstance,
-        skeleton: ElkSkeleton,
-        shapes: MutableMap<String, Rect>,
-        annotationHost: Map<String, String>,
-        skeletonBottom: Double,
-    ) {
-        val groupBottom = model.getModelElementsByType(Group::class.java)
-            .mapNotNull { shapes[it.id] }
-            .maxOfOrNull { it.y + it.h }
-        var fallbackY = skeletonBottom + ARTIFACT_MARGIN
-        model.getModelElementsByType(TextAnnotation::class.java)
-            .sortedBy { it.id }
-            .forEach { ann ->
-                val elkNode = skeleton.nodeMap[ann.id] ?: return@forEach
-                val host = annotationHost[ann.id]?.let { shapes[it] }
-                if (host != null) {
-                    // Place below-and-right of the associated element (short connector). If a group
-                    // box encloses the flow, drop below its bottom border so the annotation text
-                    // clears the enclosing box instead of crowding it.
-                    val belowHost = host.y + host.h + ARTIFACT_MARGIN
-                    val belowGroup = groupBottom?.let { it + ARTIFACT_MARGIN } ?: belowHost
-                    shapes[ann.id] = Rect(
-                        host.x + host.w + ARTIFACT_MARGIN,
-                        maxOf(belowHost, belowGroup),
-                        elkNode.width,
-                        elkNode.height,
-                    )
-                } else {
-                    shapes[ann.id] = Rect(0.0, fallbackY, elkNode.width, elkNode.height)
-                    fallbackY += elkNode.height + ARTIFACT_MARGIN
-                }
-            }
-    }
-
-    private fun placeGroups(
-        model: BpmnModelInstance,
-        shapes: MutableMap<String, Rect>,
-    ) {
-        val groups = model.getModelElementsByType(Group::class.java).sortedBy { it.id }
-        if (groups.isEmpty()) return
-
-        // A BPMN group is a visual box drawn AROUND a region of the diagram — its purpose is to
-        // enclose related elements, not to sit empty in a corner. With no per-element membership
-        // in the retained profile, we enclose the whole flow: draw each group as a padded box
-        // around the bounding box of the flow-node shapes (events, tasks, gateways, subprocesses).
-        // Multiple groups nest concentrically with increasing padding so they remain distinct.
-        val flowNodeIds = model.getModelElementsByType(FlowNode::class.java)
-            .mapTo(mutableSetOf()) { it.id }
-        val flowShapes = shapes.filterKeys { it in flowNodeIds }.values
-        if (flowShapes.isEmpty()) return
-
-        val minX = flowShapes.minOf { it.x }
-        val minY = flowShapes.minOf { it.y }
-        val maxX = flowShapes.maxOf { it.x + it.w }
-        val maxY = flowShapes.maxOf { it.y + it.h }
-
-        groups.forEachIndexed { index, group ->
-            val pad = GROUP_PADDING + index * GROUP_NEST_STEP
-            shapes[group.id] = Rect(
-                minX - pad,
-                minY - pad,
-                (maxX - minX) + 2 * pad,
-                (maxY - minY) + 2 * pad,
-            )
-        }
-    }
-
-    // ── Shared coordinate helper ──────────────────────────────────────────────
+    // ── Shared coordinate helpers ─────────────────────────────────────────────
 
     /**
      * Accumulates parent ELK node offsets to convert a node's ELK-relative coordinates
@@ -1095,53 +169,25 @@ internal object BpmnPlacementPass {
      * container's absolute position to become canvas-absolute — the edge equivalent of
      * [absolutePosition]. The root graph has a null identifier and contributes no offset.
      */
-    internal fun edgeContainerOffset(edge: org.eclipse.elk.graph.ElkEdge): Pair<Double, Double> {
+    internal fun edgeContainerOffset(edge: ElkEdge): Pair<Double, Double> {
         val container = edge.containingNode ?: return 0.0 to 0.0
         if (container.identifier == null) return 0.0 to 0.0 // root graph
         return absolutePosition(container)
     }
 
-    data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)
+    // ── Shared label geometry helpers ─────────────────────────────────────────
 
-    private fun findLongestHorizontalSegment(wps: List<Point>): HorizontalSegment? {
-        var longestLen = -1.0
-        var bestSeg: HorizontalSegment? = null
-        for (i in 1 until wps.size) {
-            val p1 = wps[i - 1]
-            val p2 = wps[i]
-            if (kotlin.math.abs(p1.y - p2.y) < EPSILON) { // Horizontal
-                val len = kotlin.math.abs(p2.x - p1.x)
-                if (len > longestLen) {
-                    longestLen = len
-                    bestSeg = HorizontalSegment(Point((p1.x + p2.x) / 2.0, p1.y), p1.x, p2.x)
-                }
-            }
-        }
-        return bestSeg
-    }
+    /** Segment record used by LabelPlacement when finding the longest horizontal segment. */
+    internal data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)
 
-    private fun isVerticalSegment(wps: List<Point>, mid: Point): Boolean {
-        for (i in 1 until wps.size) {
-            val p1 = wps[i - 1]
-            val p2 = wps[i]
-            val minX = minOf(p1.x, p2.x)
-            val maxX = maxOf(p1.x, p2.x)
-            val minY = minOf(p1.y, p2.y)
-            val maxY = maxOf(p1.y, p2.y)
-            val inX = mid.x >= minX - EPSILON && mid.x <= maxX + EPSILON
-            val inY = mid.y >= minY - EPSILON && mid.y <= maxY + EPSILON
-            if (inX && inY) {
-                return kotlin.math.abs(p1.x - p2.x) < EPSILON
-            }
-        }
-        return false
-    }
-
-    private fun estimateLabelDimensions(name: String, maxWidth: Double): Pair<Double, Double> {
+    /**
+     * Estimates label dimensions for [name] given [maxWidth]: wraps words at [maxWidth]
+     * using [CHAR_WIDTH] per character and returns (width, height).
+     */
+    internal fun estimateLabelDimensions(name: String, maxWidth: Double): Pair<Double, Double> {
         val words = name.split("\\s+".toRegex()).filter { it.isNotEmpty() }
         if (words.isEmpty()) return Pair(0.0, 0.0)
 
-        // Find longest word width
         val longestWordWidth = words.maxOf { it.length } * CHAR_WIDTH
         val finalWidth = maxOf(maxWidth, longestWordWidth)
 
@@ -1165,35 +211,4 @@ internal object BpmnPlacementPass {
         val finalHeight = maxOf(LABEL_HEIGHT, lines * LINE_HEIGHT)
         return Pair(finalWidth, finalHeight)
     }
-
-    // ── Constants ─────────────────────────────────────────────────────────────
-
-    private const val ARTIFACT_MARGIN = 30.0
-
-    /** Clearance added below the boundary bottom and right of the host when detouring around
-     * a host node to reach a handler placed above the main flow. */
-    private const val EXCEPTION_DETOUR_GAP = 20.0
-
-    /** Minimum vertical gap between the main-flow bottom and the top of a handler component
-     * that was shifted downward by [shiftHandlerComponentForBoundary]. */
-    private const val HANDLER_COMPONENT_Y_GAP = 40.0
-
-    /**
-     * Minimum horizontal gap between a host's right edge and the handler component's left edge
-     * when [alignHandlerComponentsX] shifts the handler component rightward.
-     * Matches NODE_NODE_BETWEEN_LAYERS so the handler appears in the next visual column.
-     */
-    private const val HANDLER_COMPONENT_X_GAP = 30.0
-
-    /** Padding between a group box and the flow bounding box it encloses. */
-    private const val GROUP_PADDING = 25.0
-
-    /** Extra padding per additional group so multiple groups nest concentrically, not overlap. */
-    private const val GROUP_NEST_STEP = 15.0
-
-    private const val LABEL_MARGIN = 8.0
-    private const val EPSILON = 0.001
-    private const val CHAR_WIDTH = 6.5
-    private const val SPACE_WIDTH = 4.0
-    private const val LINE_HEIGHT = 14.0
 }
