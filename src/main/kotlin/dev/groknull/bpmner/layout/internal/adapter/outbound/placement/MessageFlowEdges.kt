@@ -41,12 +41,6 @@ internal object MessageFlowEdges : PlacementProcessor {
 
         val flows = collaboration.messageFlows.toList()
 
-        // Pre-compute nodes that are both source and target of vertical message flows on
-        // the same x-centre. These need a lateral offset to prevent overlapping lines.
-        val srcIds = flows.mapNotNull { (it.source as? BaseElement)?.id }.toSet()
-        val tgtIds = flows.mapNotNull { (it.target as? BaseElement)?.id }.toSet()
-        val bidirectionalIds = srcIds intersect tgtIds
-
         // Build a map from flow-node ID → owning participant shape, for gap-centre computation.
         val nodeToParticipant: Map<String, Rect> = collaboration.participants
             .mapNotNull { p ->
@@ -58,13 +52,39 @@ internal object MessageFlowEdges : PlacementProcessor {
             .flatten()
             .toMap()
 
-        flows.forEach { mf -> routeMessageFlow(mf, ctx, bidirectionalIds, nodeToParticipant) }
+        // Detect x-corridors shared by more than one vertical flow — those need a lateral offset.
+        val sharedCorridors = sharedVerticalCorridors(flows, ctx)
+
+        flows.forEach { mf -> routeMessageFlow(mf, ctx, sharedCorridors, nodeToParticipant) }
+    }
+
+    /**
+     * Computes the set of x-corridors (baseCx values) used by more than one vertical message flow.
+     * Flows sharing a corridor would overlap without a lateral offset.
+     */
+    private fun sharedVerticalCorridors(flows: List<MessageFlow>, ctx: PlacementContext): Set<Double> {
+        val counts = mutableMapOf<Double, Int>()
+        flows.forEach { mf ->
+            val srcShape = resolveShape(mf.source, ctx) ?: return@forEach
+            val tgtShape = resolveShape(mf.target, ctx) ?: return@forEach
+            val vertical = srcShape.y + srcShape.h <= tgtShape.y || tgtShape.y + tgtShape.h <= srcShape.y
+            if (!vertical) return@forEach
+            val srcCx = srcShape.x + srcShape.w / 2.0
+            val tgtCx = tgtShape.x + tgtShape.w / 2.0
+            val baseCx = when {
+                mf.source is Participant -> tgtCx
+                mf.target is Participant -> srcCx
+                else -> srcCx
+            }
+            counts[baseCx] = (counts[baseCx] ?: 0) + 1
+        }
+        return counts.filterValues { it > 1 }.keys
     }
 
     private fun routeMessageFlow(
         mf: MessageFlow,
         ctx: PlacementContext,
-        bidirectionalIds: Set<String>,
+        sharedCorridors: Set<Double>,
         nodeToParticipant: Map<String, Rect>,
     ) {
         val srcShape = resolveShape(mf.source, ctx) ?: return
@@ -89,13 +109,13 @@ internal object MessageFlowEdges : PlacementProcessor {
                 verticalDownWaypoints(
                     srcShape, tgtShape, srcId, tgtId,
                     srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
-                    bidirectionalIds, nodeToParticipant,
+                    sharedCorridors, nodeToParticipant,
                 )
             } else {
                 verticalUpWaypoints(
                     srcShape, tgtShape, srcId, tgtId,
                     srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
-                    bidirectionalIds, nodeToParticipant,
+                    sharedCorridors, nodeToParticipant,
                 )
             }
         } else {
@@ -126,11 +146,12 @@ internal object MessageFlowEdges : PlacementProcessor {
         baseCx: Double,
         srcIsParticipant: Boolean,
         tgtIsParticipant: Boolean,
-        bidirectionalIds: Set<String>,
+        sharedCorridors: Set<Double>,
         nodeToParticipant: Map<String, Rect>,
     ): List<Point> {
-        val offset = if (!srcIsParticipant && !tgtIsParticipant && srcId in bidirectionalIds) {
-            BIDIRECTIONAL_OFFSET
+        // Downward flow exits left of centre so it does not cross the returning upward flow.
+        val offset = if (!srcIsParticipant && !tgtIsParticipant && baseCx in sharedCorridors) {
+            -BIDIRECTIONAL_OFFSET
         } else {
             0.0
         }
@@ -157,11 +178,12 @@ internal object MessageFlowEdges : PlacementProcessor {
         baseCx: Double,
         srcIsParticipant: Boolean,
         tgtIsParticipant: Boolean,
-        bidirectionalIds: Set<String>,
+        sharedCorridors: Set<Double>,
         nodeToParticipant: Map<String, Rect>,
     ): List<Point> {
-        val offset = if (!srcIsParticipant && !tgtIsParticipant && tgtId in bidirectionalIds) {
-            -BIDIRECTIONAL_OFFSET
+        // Upward (return) flow exits right of centre, mirroring the downward flow on the other side.
+        val offset = if (!srcIsParticipant && !tgtIsParticipant && baseCx in sharedCorridors) {
+            BIDIRECTIONAL_OFFSET
         } else {
             0.0
         }
