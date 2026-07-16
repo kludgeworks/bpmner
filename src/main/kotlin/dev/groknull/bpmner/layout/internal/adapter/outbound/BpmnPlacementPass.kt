@@ -159,14 +159,18 @@ internal object BpmnPlacementPass {
      * advance-width table ([LabelMetrics]) and the diagram-js semantic wrap
      * algorithm ([LabelWrap]).
      *
-     * Returns (width, height) where width is the widest fitted line (capped at
-     * [maxWidth]) and height is `lineCount × LINE_HEIGHT` floored at [LABEL_HEIGHT].
+     * Returns (width, height) where width is [maxWidth] (the wrap-box width bpmn-js
+     * must re-use when it renders the label) and height is `lineCount × LINE_HEIGHT`
+     * floored at [LABEL_HEIGHT].
+     *
+     * The DI `dc:Bounds width` is the container bpmn-js wraps text inside; it must
+     * equal the budget used to compute line count, otherwise bpmn-js re-wraps at a
+     * narrower width and clips glyphs at the box edge.
      */
     internal fun estimateLabelDimensions(name: String, maxWidth: Double): Pair<Double, Double> {
         if (name.isBlank()) return 0.0 to 0.0
-        val result = LabelWrap.layout(name, maxWidth)
-        val width = minOf(result.maxLineWidth, maxWidth)
-        val height = maxOf(LABEL_HEIGHT, result.lineCount * LabelMetrics.LINE_HEIGHT)
-        return width to height
+        val lines = LabelWrap.lineCount(name, maxWidth)
+        val height = maxOf(LABEL_HEIGHT, lines * LabelMetrics.LINE_HEIGHT)
+        return maxWidth to height
     }
 }

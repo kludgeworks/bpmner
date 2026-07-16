@@ -81,55 +81,55 @@
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="1032.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="20.0" width="21.3515625" x="1039.32421875" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="1005.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="GrandchildTask" id="BPMNShape_GrandchildTask">
         <dc:Bounds height="80.0" width="100.0" x="490.0" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_GrandchildTask">
-          <dc:Bounds height="20.0" width="46.669921875" x="516.6650390625" y="194.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="495.0" y="194.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="InnerEnd" id="BPMNShape_InnerEnd">
         <dc:Bounds height="36.0" width="36.0" x="748.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_InnerEnd">
-          <dc:Bounds height="20.0" width="28.6875" x="751.65625" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="721.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="InnerStart" id="BPMNShape_InnerStart">
         <dc:Bounds height="36.0" width="36.0" x="364.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_InnerStart">
-          <dc:Bounds height="20.0" width="30.69140625" x="366.654296875" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="337.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="OuterEnd" id="BPMNShape_OuterEnd">
         <dc:Bounds height="36.0" width="36.0" x="924.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_OuterEnd">
-          <dc:Bounds height="20.0" width="28.6875" x="927.65625" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="897.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="OuterStart" id="BPMNShape_OuterStart">
         <dc:Bounds height="36.0" width="36.0" x="188.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_OuterStart">
-          <dc:Bounds height="20.0" width="30.69140625" x="190.654296875" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="161.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="134.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="25.341796875" x="17.3291015625" y="172.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="172.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubProcess_inner" id="BPMNShape_SubProcess_inner" isExpanded="true">
         <dc:Bounds height="180.0" width="452.0" x="314.0" y="62.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_inner">
-          <dc:Bounds height="20.0" width="27.3515625" x="526.32421875" y="244.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="495.0" y="244.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubProcess_outer" id="BPMNShape_SubProcess_outer" isExpanded="true">
         <dc:Bounds height="280.0" width="804.0" x="138.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_outer">
-          <dc:Bounds height="20.0" width="30.01171875" x="524.994140625" y="294.0"/>
+          <dc:Bounds height="20.0" width="90.0" x="495.0" y="294.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
