@@ -38,3 +38,111 @@ includes = [".mise/tasks.toml", "tasks.toml", "mise-tasks"]
 
 [hooks]
 postinstall = 'hk install --mise && vale sync && { [[ -n "${CI}" ]] || cs launch org.jetbrains.bsp:bazel-bsp:3.2.0 -M org.jetbrains.bsp.bazel.install.Install; }'
+
+[tasks.native-trace]
+description = "Run the application with the native-image-agent to generate metadata"
+run = """
+bazel build //src:bpmner_app
+mkdir -p src/native-config
+java -agentlib:native-image-agent=config-output-dir=src/native-config \
+  -Dspring.profiles.active=githubmodels \
+  -Dspring.main.web-application-type=none \
+  -Dspring.shell.interactive.enabled=false \
+  -jar bazel-bin/src/bpmner_app.jar \
+  generate "review process for code review" || true
+
+node -e "
+const fs = require('fs');
+const path = require('path');
+const metadataFile = 'src/native-config/reachability-metadata.json';
+if (!fs.existsSync(metadataFile)) { console.error('reachability-metadata.json not found'); process.exit(1); }
+const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
+const legacyEntries = [
+  { name: 'kotlin.reflect.jvm.internal.ReflectionFactoryImpl', allDeclaredConstructors: true },
+  { name: 'org.hibernate.validator.internal.util.logging.Log_$$logger', allDeclaredConstructors: true },
+  { name: 'org.hibernate.validator.internal.util.logging.Messages_$$bundle', allDeclaredConstructors: true, allDeclaredFields: true },
+  { name: 'com.embabel.agent.config.models.anthropic.AnthropicModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.anthropic.AnthropicModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.anthropic.ThinkingConfiguration', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.gemini.GeminiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.gemini.GeminiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.mistralai.MistralAiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.mistralai.MistralAiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.openai.OpenAiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.openai.OpenAiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.openai.OpenAiEmbeddingModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.openai.EmbeddingPricingModel', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.config.models.openai.SpecialHandlingConfiguration', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.common.ai.model.PerTokenPricingModel', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.common.ai.model.LlmOptions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.common.ai.model.Thinking', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
+  { name: 'com.embabel.agent.spi.support.LlmDataBindingProperties', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true }
+];
+const reflectMap = new Map(legacyEntries.map(e => [e.name, e]));
+const proxies = [];
+const serializations = [];
+if (metadata.reflection) {
+  for (const item of metadata.reflection) {
+    const rawType = item.type;
+    if (!rawType) continue;
+    if (typeof rawType === 'object') {
+      if (rawType.proxy) {
+        if (!rawType.proxy.some(p => p.startsWith('org.pkl.') || p.startsWith('com.oracle.truffle.') || p.startsWith('org.graalvm.') || p.toLowerCase().includes('pkl'))) {
+          proxies.push(rawType.proxy);
+        }
+      }
+      else if (rawType.lambda) {
+        if (!rawType.lambda.declaringClass.startsWith('org.pkl.') && !rawType.lambda.declaringClass.startsWith('com.oracle.truffle.') && !rawType.lambda.declaringClass.startsWith('org.graalvm.') && !rawType.lambda.declaringClass.toLowerCase().includes('pkl')) {
+          serializations.push({ name: rawType.lambda.declaringClass, lambda: rawType.lambda });
+        }
+      }
+      continue;
+    }
+    const className = rawType;
+    if (className.startsWith('org.pkl.') || className.startsWith('com.oracle.truffle.') || className.startsWith('org.graalvm.') || className.toLowerCase().includes('pkl')) {
+      continue;
+    }
+    const existing = reflectMap.get(className) || { name: className };
+    if (item.allDeclaredConstructors || item.allPublicConstructors) existing.allDeclaredConstructors = true;
+    if (item.allDeclaredFields || item.allPublicFields) existing.allDeclaredFields = true;
+    if (item.allDeclaredMethods || item.allPublicMethods) existing.allDeclaredMethods = true;
+    if (item.methods) {
+      existing.methods = existing.methods || [];
+      const methodKey = m => m.name + '(' + (m.parameterTypes || []).join(',') + ')';
+      const existingMethods = new Map(existing.methods.map(m => [methodKey(m), m]));
+      for (const m of item.methods) {
+        if (!existingMethods.has(methodKey(m))) existing.methods.push(m);
+      }
+    }
+    if (item.fields) {
+      existing.fields = existing.fields || [];
+      const existingFields = new Set(existing.fields.map(f => f.name));
+      for (const f of item.fields) {
+        if (!existingFields.has(f.name)) existing.fields.push(f);
+      }
+    }
+    reflectMap.set(className, existing);
+  }
+}
+const sortedReflect = Array.from(reflectMap.values()).filter(a => a && typeof a.name === 'string').sort((a, b) => a.name.localeCompare(b.name));
+fs.writeFileSync('src/native-config/reflect-config.json', JSON.stringify(sortedReflect, null, 2) + '\\n');
+if (proxies.length > 0) fs.writeFileSync('src/native-config/proxy-config.json', JSON.stringify(proxies, null, 2) + '\\n');
+if (serializations.length > 0) fs.writeFileSync('src/native-config/serialization-config.json', JSON.stringify(serializations, null, 2) + '\\n');
+const resourceIncludes = [];
+if (metadata.resources) {
+  const seenPatterns = new Set();
+  for (const item of metadata.resources) {
+    let pattern = item.glob ? item.glob.replace(/\\./g, '\\\\.') : item.pattern;
+    if (pattern && !seenPatterns.has(pattern)) {
+      if (pattern.includes('org/pkl') || pattern.includes('truffle') || pattern.includes('graalvm') || pattern.includes('org.pkl')) {
+        continue;
+      }
+      seenPatterns.add(pattern);
+      resourceIncludes.push({ pattern });
+    }
+  }
+}
+fs.writeFileSync('src/native-config/resource-config.json', JSON.stringify({ resources: { includes: resourceIncludes } }, null, 2) + '\\n');
+console.log('Successfully formatted and merged metadata!');
+"
+"""

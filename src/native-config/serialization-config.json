@@ -1,0 +1,107 @@
+[
+	{
+		"name": "com.embabel.common.core.NameGeneratorKt",
+		"lambda": {
+			"declaringClass": "com.embabel.common.core.NameGeneratorKt",
+			"interfaces": ["com.embabel.common.core.NameGenerator"]
+		}
+	},
+	{
+		"name": "org.springframework.boot.LazyInitializationExcludeFilter",
+		"lambda": {
+			"declaringClass": "org.springframework.boot.LazyInitializationExcludeFilter",
+			"interfaces": ["org.springframework.boot.LazyInitializationExcludeFilter"]
+		}
+	},
+	{
+		"name": "org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$ClassProxyingConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.boot.autoconfigure.aop.AopAutoConfiguration$ClassProxyingConfiguration",
+			"interfaces": [
+				"org.springframework.beans.factory.config.BeanFactoryPostProcessor"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.boot.autoconfigure.http.codec.CodecsAutoConfiguration$JacksonCodecConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.boot.autoconfigure.http.codec.CodecsAutoConfiguration$JacksonCodecConfiguration",
+			"interfaces": ["org.springframework.boot.web.codec.CodecCustomizer"]
+		}
+	},
+	{
+		"name": "org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$BootstrapExecutorConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.boot.autoconfigure.task.TaskExecutorConfigurations$BootstrapExecutorConfiguration",
+			"interfaces": [
+				"org.springframework.beans.factory.config.BeanFactoryPostProcessor"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter",
+		"lambda": {
+			"declaringClass": "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter",
+			"interfaces": [
+				"org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+			"interfaces": [
+				"org.springframework.shell.boot.CommandRegistrationCustomizer"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+			"interfaces": [
+				"org.springframework.shell.command.CommandCatalogCustomizer"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.CommandCatalogAutoConfiguration",
+			"interfaces": [
+				"org.springframework.shell.command.CommandRegistration$BuilderSupplier"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.ExitCodeAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.ExitCodeAutoConfiguration",
+			"interfaces": ["org.springframework.shell.exit.ExitCodeExceptionProvider"]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.SpringShellAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.SpringShellAutoConfiguration",
+			"interfaces": [
+				"org.springframework.shell.config.ShellConversionServiceSupplier"
+			]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.ThemingAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.ThemingAutoConfiguration",
+			"interfaces": ["org.springframework.shell.style.ThemeActive"]
+		}
+	},
+	{
+		"name": "org.springframework.shell.boot.UserConfigAutoConfiguration",
+		"lambda": {
+			"declaringClass": "org.springframework.shell.boot.UserConfigAutoConfiguration",
+			"interfaces": ["org.springframework.shell.config.UserConfigPathProvider"]
+		}
+	}
+]

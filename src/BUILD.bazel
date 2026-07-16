@@ -270,126 +270,6 @@ java_import(
 )
 
 genrule(
-    name = "native_reflection_config",
-    outs = ["native-reflect-config.json"],
-    cmd = """
-    cat > $@ <<'EOF'
-[
-  {
-    "name": "kotlin.reflect.jvm.internal.ReflectionFactoryImpl",
-    "allDeclaredConstructors": true
-  },
-  {
-    "name": "org.hibernate.validator.internal.util.logging.Log_$$logger",
-    "allDeclaredConstructors": true
-  },
-  {
-    "name": "org.hibernate.validator.internal.util.logging.Messages_$$bundle",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.anthropic.AnthropicModelDefinitions",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.anthropic.AnthropicModelDefinition",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.anthropic.ThinkingConfiguration",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.gemini.GeminiModelDefinitions",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.gemini.GeminiModelDefinition",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.mistralai.MistralAiModelDefinitions",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.mistralai.MistralAiModelDefinition",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.openai.OpenAiModelDefinitions",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.openai.OpenAiModelDefinition",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.openai.OpenAiEmbeddingModelDefinition",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.openai.EmbeddingPricingModel",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.config.models.openai.SpecialHandlingConfiguration",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.common.ai.model.PerTokenPricingModel",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.common.ai.model.LlmOptions",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.common.ai.model.Thinking",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  },
-  {
-    "name": "com.embabel.agent.spi.support.LlmDataBindingProperties",
-    "allDeclaredConstructors": true,
-    "allDeclaredFields": true,
-    "allDeclaredMethods": true
-  }
-]
-EOF
-    """,
-)
-
-genrule(
     name = "native_launcher_sources",
     outs = ["native_launcher.srcjar"],
     cmd = """
@@ -438,6 +318,11 @@ java_library(
 
 native_image(
     name = "bpmner_native",
+    data = [
+        "native-config/proxy-config.json",
+        "native-config/resource-config.json",
+        "native-config/serialization-config.json",
+    ],
     extra_args = [
         "--no-fallback",
         "-H:+UnlockExperimentalVMOptions",
@@ -445,10 +330,13 @@ native_image(
         "-H:Class=dev.groknull.bpmner.NativeBpmnerApplication",
         "--initialize-at-build-time=org.springframework.boot.loader.nio.file.NestedFileSystemProvider",
         "--enable-preview",
+        "-H:DynamicProxyConfigurationFiles=src/native-config/proxy-config.json",
+        "-H:ResourceConfigurationFiles=src/native-config/resource-config.json",
+        "-H:SerializationConfigurationFiles=src/native-config/serialization-config.json",
     ],
     include_resources = ".*\\.kotlin_builtins|.*\\.kotlin_metadata|logback.*\\.xml|models/.*\\.yml|embabel-.*\\.properties",
     main_class = "dev.groknull.bpmner.NativeBpmnerApplication",
-    reflection_configuration = ":native-reflect-config.json",
+    reflection_configuration = "native-config/reflect-config.json",
     tags = ["local"],
     deps = [
         ":bpmner_aot_lib",
