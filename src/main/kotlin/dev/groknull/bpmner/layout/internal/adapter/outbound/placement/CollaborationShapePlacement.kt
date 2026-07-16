@@ -49,34 +49,23 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val whiteBox = participants.filter { it.process != null }
         val blackBox = participants.filter { it.process == null }
 
-        // First pass: compute each white-box participant's geometry (node placement, lane
-        // stacking). The y position from ELK reflects internal layout but not inter-participant
-        // ordering, which must follow declaration order (first-declared = primary = top).
-        val whiteBoxBounds = whiteBox.map { it to computeWhiteBoxBounds(it, ctx) }
-
-        // Second pass: re-stack white-box participants in declaration order top-to-bottom,
-        // shifting each participant and its contained nodes by the delta to the new y.
+        // Stack white-box participants in declaration order top-to-bottom.
+        // Pass the target startY into computeWhiteBoxBounds so nodes are placed at the
+        // correct absolute y from the start, avoiding a post-hoc shift that would need
+        // to untangle which nodes belong to which participant.
         var stackY = DEFAULT_PARTICIPANT_Y
         var whiteBoxLeft = 0.0
         var whiteBoxWidth = BLACK_BOX_WIDTH
 
-        for ((participant, bounds) in whiteBoxBounds) {
-            val dy = stackY - bounds.y
-            val restacked = bounds.copy(y = stackY)
-            ctx.shapes[participant.id] = restacked
-            if (dy != 0.0) {
-                val nodeIds = participant.process?.let { collectAllFlowNodeIds(it) } ?: emptySet()
-                for (id in nodeIds) {
-                    val s = ctx.shapes[id] ?: continue
-                    ctx.shapes[id] = s.copy(y = s.y + dy)
-                }
-            }
+        for (participant in whiteBox) {
+            val bounds = computeWhiteBoxBounds(participant, ctx, startY = stackY)
+            ctx.shapes[participant.id] = bounds
             if (!participant.name.isNullOrBlank()) {
-                ctx.labels[participant.id] = Rect(restacked.x, restacked.y, PARTICIPANT_HEADER_WIDTH, restacked.h)
+                ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
             }
-            stackY += restacked.h + PARTICIPANT_GAP
-            whiteBoxLeft = restacked.x
-            whiteBoxWidth = restacked.w
+            stackY += bounds.h + PARTICIPANT_GAP
+            whiteBoxLeft = bounds.x
+            whiteBoxWidth = bounds.w
         }
 
         var bbY = stackY
@@ -100,15 +89,15 @@ internal object CollaborationShapePlacement : PlacementProcessor {
      * When there are no lanes, bounds are derived from the union of all placed node shapes plus
      * uniform padding and a header band on the left.
      */
-    private fun computeWhiteBoxBounds(participant: Participant, ctx: PlacementContext): Rect {
-        val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+    private fun computeWhiteBoxBounds(participant: Participant, ctx: PlacementContext, startY: Double): Rect {
+        val process = participant.process ?: return Rect(0.0, startY, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
         val lanes = mutableListOf<Lane>()
         process.laneSets.forEach { ls -> lanes.addAll(ls.lanes) }
 
         return if (lanes.isNotEmpty()) {
-            computeLanedParticipantBounds(participant, lanes, ctx)
+            computeLanedParticipantBounds(participant, lanes, ctx, startY)
         } else {
-            computeUnlanedParticipantBounds(participant, ctx)
+            computeUnlanedParticipantBounds(participant, ctx, startY)
         }
     }
 
@@ -124,8 +113,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         participant: Participant,
         lanes: List<Lane>,
         ctx: PlacementContext,
+        startY: Double,
     ): Rect {
-        val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+        val process = participant.process ?: return Rect(0.0, startY, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
         val allNodeIds = collectAllFlowNodeIds(process)
 
         val nodeShapes = allNodeIds.mapNotNull { ctx.shapes[it] }
@@ -137,7 +127,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
 
         val contentLeft = minX - PARTICIPANT_PADDING
         val participantX = contentLeft - PARTICIPANT_HEADER_WIDTH
-        val participantY = if (nodeShapes.isEmpty()) DEFAULT_PARTICIPANT_Y else nodeShapes.minOf { it.y } - PARTICIPANT_PADDING
+        val participantY = startY
         val laneX = participantX + PARTICIPANT_HEADER_WIDTH
 
         val dx = labelClearanceDx(nodeShapes, laneX)
@@ -212,27 +202,38 @@ internal object CollaborationShapePlacement : PlacementProcessor {
      *
      * Bounds are the union of all placed node shapes plus uniform padding and a left header band.
      */
-    private fun computeUnlanedParticipantBounds(participant: Participant, ctx: PlacementContext): Rect {
-        val process = participant.process ?: return Rect(0.0, 0.0, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
+    private fun computeUnlanedParticipantBounds(
+        participant: Participant,
+        ctx: PlacementContext,
+        startY: Double,
+    ): Rect {
+        val process = participant.process ?: return Rect(0.0, startY, BLACK_BOX_WIDTH, BLACK_BOX_HEIGHT)
         val nodeIds = collectAllFlowNodeIds(process)
         val nodeShapes = nodeIds.mapNotNull { ctx.shapes[it] }
 
-        if (nodeShapes.isEmpty()) return Rect(0.0, 0.0, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
+        if (nodeShapes.isEmpty()) return Rect(0.0, startY, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
 
-        val minX = nodeShapes.minOf { it.x }
-        val minY = nodeShapes.minOf { it.y }
-        val maxX = nodeShapes.maxOf { it.x + it.w }
-        val maxY = nodeShapes.maxOf { it.y + it.h }
+        // Shift nodes so the topmost node sits PARTICIPANT_PADDING below startY.
+        val elkMinY = nodeShapes.minOf { it.y }
+        val targetMinY = startY + PARTICIPANT_PADDING
+        val dy = targetMinY - elkMinY
+        if (dy != 0.0) {
+            for (id in nodeIds) {
+                val s = ctx.shapes[id] ?: continue
+                ctx.shapes[id] = s.copy(y = s.y + dy)
+            }
+        }
 
-        val contentX = minX - PARTICIPANT_PADDING
-        val contentY = minY - PARTICIPANT_PADDING
-        val contentRight = maxX + PARTICIPANT_PADDING
-        val contentBottom = maxY + PARTICIPANT_PADDING
+        val shifted = nodeIds.mapNotNull { ctx.shapes[it] }
+        val minX = shifted.minOf { it.x }
+        val minY = shifted.minOf { it.y }
+        val maxX = shifted.maxOf { it.x + it.w }
+        val maxY = shifted.maxOf { it.y + it.h }
 
-        val participantX = contentX - PARTICIPANT_HEADER_WIDTH
-        val participantY = contentY
-        val participantW = contentRight - participantX
-        val participantH = contentBottom - contentY
+        val participantX = minX - PARTICIPANT_PADDING - PARTICIPANT_HEADER_WIDTH
+        val participantY = minY - PARTICIPANT_PADDING
+        val participantW = maxX + PARTICIPANT_PADDING - participantX
+        val participantH = maxY + PARTICIPANT_PADDING - participantY
 
         return Rect(participantX, participantY, participantW, participantH)
     }
