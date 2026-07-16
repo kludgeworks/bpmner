@@ -75,7 +75,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_2" id="BPMNShape_Participant_2" isHorizontal="true">
 
-        <dc:Bounds height="120.0" width="422.0" x="-18.0" y="192.0"/>
+        <dc:Bounds height="120.0" width="422.0" x="-18.0" y="172.0"/>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffcdd2" bioc:stroke="#831311" bpmnElement="End_1" id="BPMNShape_End_1">
@@ -85,7 +85,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_2" id="BPMNShape_End_2">
 
-        <dc:Bounds height="36.0" width="36.0" x="348.0" y="234.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="348.0" y="214.0"/>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#b5efcd" bioc:stroke="#005b1d" bpmnElement="Start_1" id="BPMNShape_Start_1">
@@ -95,7 +95,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_2" id="BPMNShape_Start_2">
 
-        <dc:Bounds height="36.0" width="36.0" x="32.0" y="234.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="214.0"/>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#bbdefb" bioc:stroke="#0d4372" bpmnElement="Task_1" id="BPMNShape_Task_1">
@@ -105,7 +105,7 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffe0b2" bioc:stroke="#6b3a0b" bpmnElement="Task_3" id="BPMNShape_Task_3">
 
-        <dc:Bounds height="80.0" width="100.0" x="158.0" y="212.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="192.0"/>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
@@ -138,7 +138,7 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
         <di:waypoint x="208.0" y="112.0"/>
-        <di:waypoint x="208.0" y="212.0"/>
+        <di:waypoint x="208.0" y="192.0"/>
 
 
 

@@ -49,23 +49,37 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val whiteBox = participants.filter { it.process != null }
         val blackBox = participants.filter { it.process == null }
 
-        var maxWhiteBoxBottom = 0.0
+        // First pass: compute each white-box participant's geometry (node placement, lane
+        // stacking). The y position from ELK reflects internal layout but not inter-participant
+        // ordering, which must follow declaration order (first-declared = primary = top).
+        val whiteBoxBounds = whiteBox.map { it to computeWhiteBoxBounds(it, ctx) }
+
+        // Second pass: re-stack white-box participants in declaration order top-to-bottom,
+        // shifting each participant and its contained nodes by the delta to the new y.
+        var stackY = DEFAULT_PARTICIPANT_Y
         var whiteBoxLeft = 0.0
         var whiteBoxWidth = BLACK_BOX_WIDTH
 
-        for (participant in whiteBox) {
-            val bounds = computeWhiteBoxBounds(participant, ctx)
-            ctx.shapes[participant.id] = bounds
-            maxWhiteBoxBottom = maxOf(maxWhiteBoxBottom, bounds.y + bounds.h)
-            whiteBoxLeft = bounds.x
-            whiteBoxWidth = bounds.w
-
-            if (!participant.name.isNullOrBlank()) {
-                ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
+        for ((participant, bounds) in whiteBoxBounds) {
+            val dy = stackY - bounds.y
+            val restacked = bounds.copy(y = stackY)
+            ctx.shapes[participant.id] = restacked
+            if (dy != 0.0) {
+                val nodeIds = participant.process?.let { collectAllFlowNodeIds(it) } ?: emptySet()
+                for (id in nodeIds) {
+                    val s = ctx.shapes[id] ?: continue
+                    ctx.shapes[id] = s.copy(y = s.y + dy)
+                }
             }
+            if (!participant.name.isNullOrBlank()) {
+                ctx.labels[participant.id] = Rect(restacked.x, restacked.y, PARTICIPANT_HEADER_WIDTH, restacked.h)
+            }
+            stackY += restacked.h + PARTICIPANT_GAP
+            whiteBoxLeft = restacked.x
+            whiteBoxWidth = restacked.w
         }
 
-        var bbY = maxWhiteBoxBottom + PARTICIPANT_GAP
+        var bbY = stackY
         for (participant in blackBox) {
             val bounds = Rect(whiteBoxLeft, bbY, whiteBoxWidth, BLACK_BOX_HEIGHT)
             ctx.shapes[participant.id] = bounds
