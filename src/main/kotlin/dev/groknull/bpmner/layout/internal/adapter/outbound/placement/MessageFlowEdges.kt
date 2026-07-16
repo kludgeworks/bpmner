@@ -38,25 +38,7 @@ internal object MessageFlowEdges : PlacementProcessor {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
 
-        val flows = collaboration.messageFlows.toList()
-
-        // First pass: route all edges so waypoints are available.
-        flows.forEach { mf -> routeMessageFlow(mf, ctx) }
-
-        // Second pass: place labels. For vertical flows, all labels share a common label-centre
-        // x (average of all vertical edge x values) so they form a vertical column. Horizontal
-        // flow labels keep their individual midpoint x.
-        val verticalEdgeXValues = flows.mapNotNull { mf ->
-            val wps = ctx.edges[mf.id] ?: return@mapNotNull null
-            if (isVerticalEdge(wps)) wps[0].x else null
-        }
-        val sharedLabelCentreX = if (verticalEdgeXValues.isEmpty()) {
-            null
-        } else {
-            verticalEdgeXValues.average()
-        }
-
-        flows.forEach { mf -> placeLabel(mf, sharedLabelCentreX, ctx) }
+        collaboration.messageFlows.forEach { mf -> routeMessageFlow(mf, ctx) }
     }
 
     private fun routeMessageFlow(mf: MessageFlow, ctx: PlacementContext) {
@@ -73,6 +55,8 @@ internal object MessageFlowEdges : PlacementProcessor {
         val tgtIsParticipant = mf.target is Participant
 
         val (srcPt, tgtPt) = if (vertical) {
+            // Straight vertical line: use the flow-node's x-centre for both endpoints so the
+            // line is perpendicular to the participant border rather than diagonal.
             val srcCx = srcShape.x + srcShape.w / 2.0
             val tgtCx = tgtShape.x + tgtShape.w / 2.0
             val x = when {
@@ -86,32 +70,21 @@ internal object MessageFlowEdges : PlacementProcessor {
                 Point(x, srcShape.y) to Point(x, tgtShape.y + tgtShape.h)
             }
         } else {
-            Point(srcShape.x + srcShape.w, srcCy) to Point(tgtShape.x, tgtCy)
+            Point(srcShape.x + srcShape.w, srcCy) to
+                Point(tgtShape.x, tgtCy)
         }
 
         ctx.edges[mf.id] = listOf(srcPt, tgtPt)
-    }
 
-    private fun placeLabel(mf: MessageFlow, sharedLabelCentreX: Double?, ctx: PlacementContext) {
-        if (mf.name.isNullOrBlank()) return
-        val wps = ctx.edges[mf.id]?.takeIf { it.size >= 2 } ?: return
-        val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
-        val midY = (wps[0].y + wps[1].y) / 2.0
-
-        val labelCentreX = if (isVerticalEdge(wps) && sharedLabelCentreX != null) {
-            // All vertical message-flow labels share one x centre so they form a column.
-            sharedLabelCentreX
-        } else {
-            (wps[0].x + wps[1].x) / 2.0
+        if (!mf.name.isNullOrBlank()) {
+            val midX = (srcPt.x + tgtPt.x) / 2.0
+            val midY = (srcPt.y + tgtPt.y) / 2.0
+            val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
+            // Centre the label vertically on the edge mid-point so that labels on parallel
+            // vertical edges (same midY) share the same top Y regardless of text height.
+            ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
-        ctx.labels[mf.id] = Rect(labelCentreX - lw / 2.0, midY - lh / 2.0, lw, lh)
     }
-
-    private fun isVerticalEdge(wps: List<Point>): Boolean {
-        return wps.size >= 2 && Math.abs(wps[0].x - wps[1].x) < VERTICAL_EPSILON
-    }
-
-    private const val VERTICAL_EPSILON = 1.0
 
     /**
      * Resolves the shape [Rect] for a [org.camunda.bpm.model.bpmn.instance.InteractionNode].
