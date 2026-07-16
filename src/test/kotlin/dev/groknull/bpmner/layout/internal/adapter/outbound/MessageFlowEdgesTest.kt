@@ -165,6 +165,69 @@ class MessageFlowEdgesTest {
         )
     }
 
+    private val verticalOffsetPools = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Def4" targetNamespace="https://test">
+  <bpmn:collaboration id="Collab_4">
+    <bpmn:participant id="P_top" processRef="Proc_top"/>
+    <bpmn:participant id="P_bot" processRef="Proc_bot"/>
+    <bpmn:messageFlow id="MF_cross" name="Result" sourceRef="Task_top" targetRef="Task_bot"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Proc_top" isExecutable="true">
+    <bpmn:serviceTask id="Task_top" name="Provide Help"/>
+  </bpmn:process>
+  <bpmn:process id="Proc_bot" isExecutable="true">
+    <bpmn:serviceTask id="Task_bot" name="Finalize"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+    @Test
+    fun `vertical message flow with different x-centres produces 4-point L-shape`() {
+        // Mirrors the collab-subprocess MsgFlow_2 geometry:
+        // Task_top in top pool, Task_bot in bottom pool, different x-centres.
+        val taskTop = Rect(158.0, 32.0, 100.0, 80.0) // cx=208, bottom=112
+        val taskBot = Rect(890.0, 262.0, 100.0, 80.0) // cx=940, top=262
+        val ctx = makeCtx(verticalOffsetPools, mapOf("Task_top" to taskTop, "Task_bot" to taskBot))
+
+        MessageFlowEdges.process(ctx)
+
+        val wps = ctx.edges["MF_cross"]
+        assertNotNull(wps, "MF_cross must have waypoints")
+        assertEquals(4, wps.size, "Cross-x vertical message flow must have 4 waypoints (L-shape)")
+
+        // wp0: source bottom-centre
+        assertEquals(208.0, wps[0].x, "wp0 x must be source centre-x")
+        assertEquals(112.0, wps[0].y, "wp0 y must be source bottom")
+        // wp1: bend down to gap mid-y, same x as source
+        assertEquals(208.0, wps[1].x, "wp1 x must be source centre-x")
+        val gapMidY = (112.0 + 262.0) / 2.0
+        assertEquals(gapMidY, wps[1].y, "wp1 y must be inter-pool gap mid-y")
+        // wp2: horizontal to target x, same gap mid-y
+        assertEquals(940.0, wps[2].x, "wp2 x must be target centre-x")
+        assertEquals(gapMidY, wps[2].y, "wp2 y must be inter-pool gap mid-y")
+        // wp3: target top-centre
+        assertEquals(940.0, wps[3].x, "wp3 x must be target centre-x")
+        assertEquals(262.0, wps[3].y, "wp3 y must be target top")
+    }
+
+    @Test
+    fun `vertical message flow with same x-centre stays 2-point straight`() {
+        // Same x-centre: straight vertical, no L-shape needed.
+        val taskTop = Rect(158.0, 32.0, 100.0, 80.0) // cx=208
+        val taskBot = Rect(158.0, 262.0, 100.0, 80.0) // cx=208, same
+        val ctx = makeCtx(verticalOffsetPools, mapOf("Task_top" to taskTop, "Task_bot" to taskBot))
+
+        MessageFlowEdges.process(ctx)
+
+        val wps = ctx.edges["MF_cross"]
+        assertNotNull(wps)
+        assertEquals(2, wps.size, "Same-x vertical message flow must stay 2 waypoints")
+        assertEquals(208.0, wps[0].x)
+        assertEquals(112.0, wps[0].y)
+        assertEquals(208.0, wps[1].x)
+        assertEquals(262.0, wps[1].y)
+    }
+
     @Test
     fun `non-collaboration model produces no message flow edges`() {
         val flatXml = """<?xml version="1.0" encoding="UTF-8"?>

@@ -9,82 +9,176 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.ED
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.estimateLabelDimensions
+import org.camunda.bpm.model.bpmn.instance.BaseElement
 import org.camunda.bpm.model.bpmn.instance.Collaboration
+import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.MessageFlow
 import org.camunda.bpm.model.bpmn.instance.Participant
 
 /**
  * Phase-2 processor: derives waypoints for every [MessageFlow] in the model.
  *
- * Postcondition: [PlacementContext.edges] contains a two-point waypoint list for every MessageFlow.
+ * Routes message flows orthogonally (AD-557-11 / AD-557-04):
+ *   - Vertically-stacked pools: exit/enter perpendicular to the pool boundary, with an
+ *     L-shape through the inter-pool gap when source and target have different x-centres.
+ *   - Horizontally-arranged pools: straight horizontal line, right-centre → left-centre.
  *
- * Route: a single deterministic straight line whose axis follows the relative position of the two
- * elements (AD-557-11 / AD-557-04 permissible approach (b)):
- *   - Participants stacked vertically (target centre is below source centre): bottom-centre → top-centre.
- *   - Participants arranged horizontally (target centre is to the right of source centre):
- *     right-centre → left-centre.
- *
- * When the source or target is a Participant boundary (no specific flow-node ref resolves),
- * the participant shape's border mid-point is used.
- *
- * Label (if any): placed at the segment midpoint, nudged above the line — the same fixed-box
- * heuristic used for sequence-flow labels.
+ * Bidirectional offset: when a non-participant node is both the source of one vertical
+ * message flow and the target of another on the same x-centre, the two flows would
+ * overlap. An offset ([BIDIRECTIONAL_OFFSET]) is applied — outbound flow shifts right,
+ * inbound flow shifts left — so the parallel lines are visually distinct.
  *
  * No ELK edges are created for message flows; this processor is the sole owner of their routing.
  */
 internal object MessageFlowEdges : PlacementProcessor {
 
+    /** Lateral offset applied to each side of a bidirectional vertical message flow pair. */
+    private const val BIDIRECTIONAL_OFFSET = 7.5
+
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
 
-        collaboration.messageFlows.forEach { mf -> routeMessageFlow(mf, ctx) }
+        val flows = collaboration.messageFlows.toList()
+
+        // Pre-compute nodes that are both source and target of vertical message flows on
+        // the same x-centre. These need a lateral offset to prevent overlapping lines.
+        val srcIds = flows.mapNotNull { (it.source as? BaseElement)?.id }.toSet()
+        val tgtIds = flows.mapNotNull { (it.target as? BaseElement)?.id }.toSet()
+        val bidirectionalIds = srcIds intersect tgtIds
+
+        // Build a map from flow-node ID → owning participant shape, for gap-centre computation.
+        val nodeToParticipant: Map<String, Rect> = collaboration.participants
+            .mapNotNull { p ->
+                val pShape = ctx.shapes[p.id] ?: return@mapNotNull null
+                p.process?.flowElements
+                    ?.filterIsInstance<FlowNode>()
+                    ?.map { it.id to pShape }
+            }
+            .flatten()
+            .toMap()
+
+        flows.forEach { mf -> routeMessageFlow(mf, ctx, bidirectionalIds, nodeToParticipant) }
     }
 
-    private fun routeMessageFlow(mf: MessageFlow, ctx: PlacementContext) {
+    private fun routeMessageFlow(
+        mf: MessageFlow,
+        ctx: PlacementContext,
+        bidirectionalIds: Set<String>,
+        nodeToParticipant: Map<String, Rect>,
+    ) {
         val srcShape = resolveShape(mf.source, ctx) ?: return
         val tgtShape = resolveShape(mf.target, ctx) ?: return
-
-        val srcCy = srcShape.y + srcShape.h / 2.0
-        val tgtCy = tgtShape.y + tgtShape.h / 2.0
-        val yCentreDiff = Math.abs(tgtCy - srcCy)
-        val xCentreDiff = Math.abs((tgtShape.x + tgtShape.w / 2.0) - (srcShape.x + srcShape.w / 2.0))
-        val vertical = yCentreDiff > xCentreDiff
-
+        val srcId = (mf.source as? BaseElement)?.id
+        val tgtId = (mf.target as? BaseElement)?.id
         val srcIsParticipant = mf.source is Participant
         val tgtIsParticipant = mf.target is Participant
 
-        val (srcPt, tgtPt) = if (vertical) {
-            // Straight vertical line: use the flow-node's x-centre for both endpoints so the
-            // line is perpendicular to the participant border rather than diagonal.
+        val vertical = srcShape.y + srcShape.h <= tgtShape.y || tgtShape.y + tgtShape.h <= srcShape.y
+        val waypoints = if (vertical) {
             val srcCx = srcShape.x + srcShape.w / 2.0
             val tgtCx = tgtShape.x + tgtShape.w / 2.0
-            val x = when {
+            val baseCx = when {
                 srcIsParticipant -> tgtCx
                 tgtIsParticipant -> srcCx
                 else -> srcCx
             }
+            val srcCy = srcShape.y + srcShape.h / 2.0
+            val tgtCy = tgtShape.y + tgtShape.h / 2.0
             if (tgtCy > srcCy) {
-                Point(x, srcShape.y + srcShape.h) to Point(x, tgtShape.y)
+                verticalDownWaypoints(
+                    srcShape, tgtShape, srcId, tgtId,
+                    srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
+                    bidirectionalIds, nodeToParticipant,
+                )
             } else {
-                Point(x, srcShape.y) to Point(x, tgtShape.y + tgtShape.h)
+                verticalUpWaypoints(
+                    srcShape, tgtShape, srcId, tgtId,
+                    srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
+                    bidirectionalIds, nodeToParticipant,
+                )
             }
         } else {
-            Point(srcShape.x + srcShape.w, srcCy) to
-                Point(tgtShape.x, tgtCy)
+            val srcCy = srcShape.y + srcShape.h / 2.0
+            val tgtCy = tgtShape.y + tgtShape.h / 2.0
+            listOf(Point(srcShape.x + srcShape.w, srcCy), Point(tgtShape.x, tgtCy))
         }
 
-        ctx.edges[mf.id] = listOf(srcPt, tgtPt)
+        ctx.edges[mf.id] = waypoints
 
         if (!mf.name.isNullOrBlank()) {
-            val midX = (srcPt.x + tgtPt.x) / 2.0
-            val midY = (srcPt.y + tgtPt.y) / 2.0
+            val midX = (waypoints.first().x + waypoints.last().x) / 2.0
+            val midY = (waypoints.first().y + waypoints.last().y) / 2.0
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
-            // Centre the label vertically on the edge mid-point so that labels on parallel
-            // vertical edges (same midY) share the same top Y regardless of text height.
             ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
     }
+
+    /** Waypoints for a vertical flow going downward (source in top pool, target in bottom pool). */
+    @Suppress("LongParameterList")
+    private fun verticalDownWaypoints(
+        srcShape: Rect,
+        tgtShape: Rect,
+        srcId: String?,
+        tgtId: String?,
+        srcCx: Double,
+        tgtCx: Double,
+        baseCx: Double,
+        srcIsParticipant: Boolean,
+        tgtIsParticipant: Boolean,
+        bidirectionalIds: Set<String>,
+        nodeToParticipant: Map<String, Rect>,
+    ): List<Point> {
+        val offset = if (!srcIsParticipant && !tgtIsParticipant && srcId in bidirectionalIds) {
+            BIDIRECTIONAL_OFFSET
+        } else {
+            0.0
+        }
+        val exitX = baseCx + offset
+        val srcExit = Point(exitX, srcShape.y + srcShape.h)
+        val tgtEntry = Point(exitX, tgtShape.y)
+        if (srcCx == tgtCx || srcIsParticipant || tgtIsParticipant) return listOf(srcExit, tgtEntry)
+        val gapMidY = interPoolGapMidY(
+            topPoolBottom = nodeToParticipant[srcId]?.let { it.y + it.h } ?: (srcShape.y + srcShape.h),
+            botPoolTop = nodeToParticipant[tgtId]?.y ?: tgtShape.y,
+        )
+        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgtShape.y))
+    }
+
+    /** Waypoints for a vertical flow going upward (source in bottom pool, target in top pool). */
+    @Suppress("LongParameterList")
+    private fun verticalUpWaypoints(
+        srcShape: Rect,
+        tgtShape: Rect,
+        srcId: String?,
+        tgtId: String?,
+        srcCx: Double,
+        tgtCx: Double,
+        baseCx: Double,
+        srcIsParticipant: Boolean,
+        tgtIsParticipant: Boolean,
+        bidirectionalIds: Set<String>,
+        nodeToParticipant: Map<String, Rect>,
+    ): List<Point> {
+        val offset = if (!srcIsParticipant && !tgtIsParticipant && tgtId in bidirectionalIds) {
+            -BIDIRECTIONAL_OFFSET
+        } else {
+            0.0
+        }
+        val exitX = baseCx + offset
+        val srcExit = Point(exitX, srcShape.y)
+        val tgtEntry = Point(exitX, tgtShape.y + tgtShape.h)
+        if (srcCx == tgtCx || srcIsParticipant || tgtIsParticipant) return listOf(srcExit, tgtEntry)
+        val gapMidY = interPoolGapMidY(
+            topPoolBottom = nodeToParticipant[tgtId]?.let { it.y + it.h } ?: (tgtShape.y + tgtShape.h),
+            botPoolTop = nodeToParticipant[srcId]?.y ?: srcShape.y,
+        )
+        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, srcShape.y))
+    }
+
+    /** Midpoint of the gap between two vertically-stacked pools. */
+    private fun interPoolGapMidY(topPoolBottom: Double, botPoolTop: Double) =
+        (topPoolBottom + botPoolTop) / 2.0
 
     /**
      * Resolves the shape [Rect] for a [org.camunda.bpm.model.bpmn.instance.InteractionNode].
@@ -100,6 +194,6 @@ internal object MessageFlowEdges : PlacementProcessor {
         ctx: PlacementContext,
     ): Rect? {
         if (node == null) return null
-        return ctx.shapes[(node as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id ?: return null]
+        return ctx.shapes[(node as? BaseElement)?.id ?: return null]
     }
 }

@@ -225,17 +225,19 @@
         <di:waypoint x="782.0" y="302.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
-        <di:waypoint x="208.0" y="262.0"/>
-        <di:waypoint x="208.0" y="112.0"/>
+        <di:waypoint x="200.5" y="262.0"/>
+        <di:waypoint x="200.5" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_1">
-          <dc:Bounds height="20.0" width="120.0" x="148.0" y="177.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="140.5" y="177.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_2" id="BPMNEdge_MsgFlow_2">
-        <di:waypoint x="258.0" y="72.0"/>
-        <di:waypoint x="890.0" y="302.0"/>
+        <di:waypoint x="215.5" y="112.0"/>
+        <di:waypoint x="215.5" y="162.0"/>
+        <di:waypoint x="940.0" y="162.0"/>
+        <di:waypoint x="940.0" y="262.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_2">
-          <dc:Bounds height="20.0" width="120.0" x="514.0" y="177.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="517.75" y="177.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
