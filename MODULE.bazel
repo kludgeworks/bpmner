@@ -24,6 +24,28 @@ bazel_dep(name = "rules_pkl", version = "0.15.0")
 bazel_dep(name = "rules_detekt", version = "0.8.1.13")
 bazel_dep(name = "rules_pmd", version = "0.4.0")
 bazel_dep(name = "toolchains_buildbuddy", version = "0.0.4")
+bazel_dep(name = "rules_graalvm", version = "0.11.1")
+
+gvm = use_extension("@rules_graalvm//:extensions.bzl", "graalvm")
+gvm.graalvm(
+    name = "graalvm",
+    distribution = "ce",
+    java_version = "21",
+    version = "21.0.2",
+)
+use_repo(gvm, "graalvm")
+
+http_file = use_repo_rule("@bazel_tools//tools/build_defs/repo:http.bzl", "http_file")
+
+http_file(
+    name = "pkl_config_java_all_jar",
+    sha256 = "939a2763fec23b60190b7d8e0f3be41bbccffb52561916e6808ba300283bb654",
+    url = "https://repo.maven.apache.org/maven2/org/pkl-lang/pkl-config-java-all/0.31.0/pkl-config-java-all-0.31.0.jar",
+)
+
+register_toolchains("@graalvm//:jvm")
+
+register_toolchains("@graalvm//:sdk")
 
 use_extension("@toolchains_buildbuddy//:extensions.bzl", "buildbuddy")
 
@@ -81,6 +103,10 @@ PKL_VERSION = "0.31.0"
 
 # --- Maven Dependencies ---
 maven = use_extension("@rules_jvm_external//:extensions.bzl", "maven")
+maven.override(
+    coordinates = "org.pkl-lang:pkl-config-java-all",
+    target = "//src:pkl_config_java_all_stripped",
+)
 maven.install(
     artifacts = [
         "org.springframework.boot:spring-boot-loader:" + SPRING_BOOT_VERSION,

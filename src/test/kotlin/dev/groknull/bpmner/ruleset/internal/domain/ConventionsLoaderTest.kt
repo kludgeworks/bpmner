@@ -17,11 +17,22 @@ internal class ConventionsLoaderTest {
     fun `default modulepath bpmner pkl loads convention defaults`() {
         val config = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
 
+        assertThat(config.severityOverrides).containsEntry("act-verb-object-name", "off")
+        assertThat(config.severityOverrides).containsEntry("act-activity-label-capitalization", "off")
+        assertThat(config.severityOverrides).containsEntry("name-no-element-type-words", "off")
+        assertThat(config.severityOverrides).containsEntry("name-uncommon-abbreviations", "off")
         assertThat(config.discouragedLeadingVerbs).containsExactly("handle", "manage", "process", "perform", "do")
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
         assertThat(config.allowedAcronyms).containsExactly("BPMN", "ACME", "SLA", "API", "IT")
         assertThat(config.technicalTokens).containsExactly("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
+    }
+
+    @Test
+    fun `native packaged conventions match default pkl conventions`() {
+        val defaultConfig = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
+
+        assertThat(ConventionsLoader.packagedNativeLintConfig()).isEqualTo(defaultConfig)
     }
 
     @Test
