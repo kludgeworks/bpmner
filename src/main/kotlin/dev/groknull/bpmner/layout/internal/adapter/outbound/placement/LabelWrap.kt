@@ -78,9 +78,8 @@ internal object LabelWrap {
     }
 
     /** Returns true when diagram-js's layoutNext fit condition is satisfied. */
-    private fun fitsInBox(line: String, width: Double, maxWidth: Double): Boolean {
-        return line == " " || line.isEmpty() || width < round(maxWidth) || line.length < 2
-    }
+    private fun fitsInBox(line: String, width: Double, maxWidth: Double): Boolean =
+        line == " " || line.isEmpty() || width < round(maxWidth) || line.length < 2
 
     /** Mirrors diagram-js `fit`: pushes any remainder back and returns (width, text). */
     private fun fit(
