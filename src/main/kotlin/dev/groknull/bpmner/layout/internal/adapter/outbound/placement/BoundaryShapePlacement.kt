@@ -18,6 +18,11 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
  * (centre on the edge), evenly distributed for multiple attachments.
  *
  * Minimum gap between adjacent boundary shapes on the same host edge: [BOUNDARY_MIN_GAP].
+ *
+ * Handler alignment: after boundaries are positioned left-to-right by handler y, the handler
+ * y-positions are re-sorted to match boundary x-order (leftmost boundary → topmost handler).
+ * This eliminates edge crossings that arise when ELK sequences handlers in declaration order
+ * rather than in the order dictated by boundary x-position.
  */
 internal object BoundaryShapePlacement : PlacementProcessor {
 
@@ -72,6 +77,17 @@ internal object BoundaryShapePlacement : PlacementProcessor {
                 shapes[be.id] = Rect(centreX - BOUNDARY_HALF, centreY - BOUNDARY_HALF, eventSize, eventSize)
                 centreX += pitch
             }
+        }
+
+        // Align handler y-positions to boundary x-order so edge drops never cross.
+        // The left-placed boundary's vertical drop passes behind the right-placed boundary's
+        // horizontal jog, so the left handler must be deeper (higher y) and the right handler
+        // shallower. `ordered` is left→right; assign y-values in descending order (deepest first).
+        val handlerIds = ordered.mapNotNull { handlerOf[it.id] }
+        val handlerYs = handlerIds.mapNotNull { shapes[it]?.y }.sortedDescending()
+        handlerIds.zip(handlerYs).forEach { (hid, targetY) ->
+            val s = shapes[hid] ?: return@forEach
+            if (s.y != targetY) shapes[hid] = s.copy(y = targetY)
         }
     }
 }
