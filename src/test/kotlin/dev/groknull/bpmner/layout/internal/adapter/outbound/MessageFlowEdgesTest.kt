@@ -211,6 +211,30 @@ class MessageFlowEdgesTest {
     }
 
     @Test
+    fun `upward vertical message flow enters target from its bottom edge`() {
+        // Mirrors collab-subprocess MsgFlow_2 after primary-on-top restacking:
+        // source is in the BOTTOM pool, target in the TOP pool — flow goes UP.
+        // Task_top is the flow's SOURCE placed low; Task_bot is the TARGET placed high.
+        val source = Rect(158.0, 292.0, 100.0, 80.0) // cx=208, top=292 (bottom pool)
+        val target = Rect(890.0, 82.0, 100.0, 80.0) // cx=940, bottom=162 (top pool)
+        // MF_cross: sourceRef=Task_top, targetRef=Task_bot — so map source→Task_top, target→Task_bot
+        val ctx = makeCtx(verticalOffsetPools, mapOf("Task_top" to source, "Task_bot" to target))
+
+        MessageFlowEdges.process(ctx)
+
+        val wps = ctx.edges["MF_cross"]
+        assertNotNull(wps, "MF_cross must have waypoints")
+        assertEquals(4, wps.size, "Cross-x vertical message flow must have 4 waypoints (L-shape)")
+
+        // wp0: source top-centre (exits upward)
+        assertEquals(208.0, wps[0].x, "wp0 x must be source centre-x")
+        assertEquals(292.0, wps[0].y, "wp0 y must be source top")
+        // wp3: target BOTTOM-centre — the flow must actually reach the target, not stop at source y
+        assertEquals(940.0, wps[3].x, "wp3 x must be target centre-x")
+        assertEquals(162.0, wps[3].y, "wp3 y must be target bottom (162), not source y")
+    }
+
+    @Test
     fun `vertical message flow with same x-centre stays 2-point straight`() {
         // Same x-centre: straight vertical, no L-shape needed.
         val taskTop = Rect(158.0, 32.0, 100.0, 80.0) // cx=208

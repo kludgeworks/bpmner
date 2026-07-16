@@ -173,7 +173,8 @@ internal object MessageFlowEdges : PlacementProcessor {
             topPoolBottom = nodeToParticipant[tgtId]?.let { it.y + it.h } ?: (tgtShape.y + tgtShape.h),
             botPoolTop = nodeToParticipant[srcId]?.y ?: srcShape.y,
         )
-        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, srcShape.y))
+        // Final waypoint enters the target (top pool) from its bottom edge.
+        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgtShape.y + tgtShape.h))
     }
 
     /** Midpoint of the gap between two vertically-stacked pools. */
