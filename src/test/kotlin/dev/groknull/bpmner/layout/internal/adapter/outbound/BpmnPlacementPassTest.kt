@@ -393,9 +393,11 @@ class BpmnPlacementPassTest {
         val labelIsOnNode = abs(labelRect.x - nodeShape.x) < 1.0 && abs(labelRect.y - nodeShape.y) < 1.0
         assertTrue(!labelIsOnNode, "Label must not be placed at node's own coordinates (BLOCK-557-3 defect)")
 
-        // Label size must be the canonical 90×20
-        assertEquals(LABEL_WIDTH, labelRect.w, "Label width must be $LABEL_WIDTH (bpmn-js default)")
-        assertEquals(LABEL_HEIGHT, labelRect.h, "Label height must be $LABEL_HEIGHT (bpmn-js default)")
+        // Label width must be within the box (≤ LABEL_WIDTH) and positive
+        assertTrue(labelRect.w > 0.0, "Label width must be positive")
+        assertTrue(labelRect.w <= LABEL_WIDTH, "Label width (${labelRect.w}) must not exceed LABEL_WIDTH ($LABEL_WIDTH)")
+        // Label height must be at least the minimum floor
+        assertTrue(labelRect.h >= LABEL_HEIGHT, "Label height (${labelRect.h}) must be >= LABEL_HEIGHT ($LABEL_HEIGHT)")
     }
 
     @Test

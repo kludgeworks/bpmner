@@ -12,7 +12,9 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.BoundarySh
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.HandlerComponentAlignment
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelMetrics
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelPlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelWrap
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LoopBackEdgeArcs
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.MessageFlowEdges
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.NodeShapeCopy
@@ -76,10 +78,6 @@ internal object BpmnPlacementPass {
 
     /** Sub-pixel threshold below which a position change is treated as no-op. */
     internal const val POSITION_EPSILON = 0.5
-
-    private const val CHAR_WIDTH = 6.5
-    private const val SPACE_WIDTH = 4.0
-    private const val LINE_HEIGHT = 14.0
 
     fun place(model: BpmnModelInstance, skeleton: ElkSkeleton): PlacedLayout {
         val laneMap = model.getModelElementsByType(Lane::class.java)
@@ -157,34 +155,18 @@ internal object BpmnPlacementPass {
     internal data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)
 
     /**
-     * Estimates label dimensions for [name] given [maxWidth]: wraps words at [maxWidth]
-     * using [CHAR_WIDTH] per character and returns (width, height).
+     * Estimates label dimensions for [name] given [maxWidth] using the frozen
+     * advance-width table ([LabelMetrics]) and the diagram-js semantic wrap
+     * algorithm ([LabelWrap]).
+     *
+     * Returns (width, height) where width is the widest fitted line (capped at
+     * [maxWidth]) and height is `lineCount × LINE_HEIGHT` floored at [LABEL_HEIGHT].
      */
     internal fun estimateLabelDimensions(name: String, maxWidth: Double): Pair<Double, Double> {
-        val words = name.split("\\s+".toRegex()).filter { it.isNotEmpty() }
-        if (words.isEmpty()) return Pair(0.0, 0.0)
-
-        val longestWordWidth = words.maxOf { it.length } * CHAR_WIDTH
-        val finalWidth = maxOf(maxWidth, longestWordWidth)
-
-        var lines = 1
-        var currentLineLength = 0.0
-
-        for (word in words) {
-            val wordWidth = word.length * CHAR_WIDTH
-            if (currentLineLength == 0.0) {
-                currentLineLength = wordWidth
-            } else {
-                if (currentLineLength + SPACE_WIDTH + wordWidth > finalWidth) {
-                    lines++
-                    currentLineLength = wordWidth
-                } else {
-                    currentLineLength += SPACE_WIDTH + wordWidth
-                }
-            }
-        }
-
-        val finalHeight = maxOf(LABEL_HEIGHT, lines * LINE_HEIGHT)
-        return Pair(finalWidth, finalHeight)
+        if (name.isBlank()) return 0.0 to 0.0
+        val result = LabelWrap.layout(name, maxWidth)
+        val width = minOf(result.maxLineWidth, maxWidth)
+        val height = maxOf(LABEL_HEIGHT, result.lineCount * LabelMetrics.LINE_HEIGHT)
+        return width to height
     }
 }

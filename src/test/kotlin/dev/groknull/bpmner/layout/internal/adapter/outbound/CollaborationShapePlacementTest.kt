@@ -258,6 +258,42 @@ class CollaborationShapePlacementTest {
     }
 
     @Test
+    fun `loop-back flow waypoints survive lane repositioning`() {
+        // A laned participant with a loop-back flow that has pre-set waypoints.
+        // CollaborationShapePlacement.refreshSequenceEdgeWaypoints must skip it.
+        val model = PlacementTestSkeletons.parse(collabLanesXml)
+        val root = ElkGraphUtil.createGraph()
+        val shapes = mutableMapOf<String, Rect>(
+            "NodeA1" to Rect(50.0, 20.0, 36.0, 36.0),
+            "NodeA2" to Rect(150.0, 20.0, 100.0, 80.0),
+            "NodeB1" to Rect(300.0, 150.0, 36.0, 36.0),
+        )
+        // FL1 is declared as a loop-back flow
+        val arcWaypoints = listOf(
+            BpmnPlacementPass.Point(86.0, 38.0),
+            BpmnPlacementPass.Point(86.0, 0.0),
+            BpmnPlacementPass.Point(150.0, 0.0),
+            BpmnPlacementPass.Point(150.0, 60.0),
+        )
+        val edges = mutableMapOf<String, List<BpmnPlacementPass.Point>>(
+            "FL1" to arcWaypoints,
+        )
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = PlacementTestSkeletons.skeleton(root, emptyMap(), loopBackFlowIds = setOf("FL1")),
+            shapes = shapes.toMutableMap(),
+            labels = mutableMapOf(),
+            edges = edges,
+            expanded = mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        // FL1 is a loop-back flow: its arc waypoints must not be overwritten
+        assertEquals(arcWaypoints, ctx.edges["FL1"], "Loop-back flow waypoints must survive lane repositioning")
+    }
+
+    @Test
     fun `non-collaboration model leaves shapes unchanged`() {
         val flatXml = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Flat1" targetNamespace="https://test">

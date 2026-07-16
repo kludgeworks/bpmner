@@ -63,25 +63,25 @@
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="518.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="20.0" width="90.0" x="491.0" y="72.0"/>
+          <dc:Bounds height="20.0" width="28.6875" x="521.65625" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="72.0"/>
+          <dc:Bounds height="20.0" width="25.341796875" x="17.3291015625" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_1" id="BPMNShape_Task_1">
         <dc:Bounds height="80.0" width="100.0" x="138.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_1">
-          <dc:Bounds height="28.0" width="90.0" x="143.0" y="94.0"/>
+          <dc:Bounds height="28.0" width="54.69140625" x="160.654296875" y="94.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_2" id="BPMNShape_Task_2">
         <dc:Bounds height="80.0" width="100.0" x="328.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_2">
-          <dc:Bounds height="28.0" width="90.0" x="333.0" y="94.0"/>
+          <dc:Bounds height="28.0" width="54.69140625" x="350.654296875" y="94.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Anno_1" id="BPMNShape_Anno_1">

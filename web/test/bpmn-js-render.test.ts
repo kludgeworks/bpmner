@@ -21,6 +21,7 @@ import path from "node:path"
 import { describe, it } from "node:test"
 import BpmnViewer from "bpmn-js"
 import { JSDOM } from "jsdom"
+import { textWidth } from "./label-metrics.data"
 
 /** All corpus golden files: 14 existing + 7 collaboration = 21 total. */
 const GOLDEN_FIXTURES = [
@@ -216,12 +217,12 @@ function installSvgShims(dom: JSDOM): void {
 	}
 
 	// Canvas 2D stub for text-metrics (diagram-js measures label text).
-	// measureText must return a positive width to avoid bpmn-js's layoutText
-	// entering an infinite loop when computing text line breaks.
+	// Uses the same frozen advance-width table as the JVM LabelMetrics so
+	// the oracle and estimator agree on every corpus label (AD-557-15).
 	if (win.HTMLCanvasElement) {
 		win.HTMLCanvasElement.prototype.getContext = () => ({
 			measureText: (text: string) => ({
-				width: Math.max(1, (text?.length ?? 0) * 6),
+				width: Math.max(1, textWidth(text ?? "")),
 			}),
 			fillText: () => {},
 			strokeText: () => {},
@@ -244,6 +245,106 @@ function installSvgShims(dom: JSDOM): void {
 		})
 	}
 }
+
+/**
+ * Estimator⇄oracle agreement gate (AD-557-15 exit gate 2).
+ *
+ * Asserts that for the blocker-reported labels the JS `layoutText` algorithm
+ * using the frozen advance-width table produces the same line count as the JVM
+ * LabelWrap port. Since both use the same table and the same algorithm, this
+ * test anchors that the two representations cannot drift silently.
+ *
+ * Expected line counts verified against real diagram-js@15.14.0 in Chromium.
+ */
+describe("estimator⇄oracle agreement — label line counts match at box 90 and 120", () => {
+	const SOFT_BREAK = "\u00AD"
+
+	function measureText(text: string): number {
+		const measurable = text === "" ? "" : text.replace(/\s+$/, "")
+		return measurable === "" ? 0 : textWidth(measurable)
+	}
+
+	function semanticShorten(line: string, maxLength: number): string {
+		const parts = line.split(/(\s|-|\u00AD)/g)
+		if (parts.length <= 1) return ""
+		const shortenedParts: string[] = []
+		let length = 0
+		for (const part of parts) {
+			if (part.length + length < maxLength) {
+				shortenedParts.push(part)
+				length += part.length
+			} else {
+				if (part === "-" || part === SOFT_BREAK) shortenedParts.pop()
+				break
+			}
+		}
+		const last = shortenedParts[shortenedParts.length - 1]
+		if (last === SOFT_BREAK) shortenedParts[shortenedParts.length - 1] = "-"
+		return shortenedParts.join("")
+	}
+
+	function shortenLine(line: string, width: number, maxWidth: number): string {
+		const length = Math.max(line.length * (maxWidth / width), 1)
+		const shortened = semanticShorten(line, length)
+		if (shortened) return shortened
+		return line.slice(0, Math.max(Math.round(length - 1), 1))
+	}
+
+	function layoutNext(lines: string[], maxWidth: number): number {
+		const originalLine = lines.shift() ?? ""
+		let fitLine = originalLine
+		for (;;) {
+			const w = measureText(fitLine)
+			if (
+				fitLine === " " ||
+				fitLine === "" ||
+				w < Math.round(maxWidth) ||
+				fitLine.length < 2
+			) {
+				if (fitLine.length < originalLine.length) {
+					const remainder = originalLine.slice(fitLine.length).trim()
+					if (remainder) lines.unshift(remainder)
+				}
+				return w
+			}
+			fitLine = shortenLine(fitLine, w, maxWidth)
+		}
+	}
+
+	function lineCount(text: string, maxWidth: number): number {
+		if (!text.trim()) return 0
+		const lines = text.split(/\u00AD?\r?\n/)
+		let count = 0
+		while (lines.length) {
+			layoutNext(lines, maxWidth)
+			count++
+		}
+		return count
+	}
+
+	const CASES: Array<{ label: string; box90: number; box120: number }> = [
+		{ label: "External System", box90: 1, box120: 1 },
+		{ label: "Internal Process", box90: 1, box120: 1 },
+		{ label: "Shipment Notification", box90: 2, box120: 1 },
+		{ label: "Order Confirmation", box90: 2, box120: 1 },
+		{ label: "Identity verification passed?", box90: 3, box120: 2 },
+		{
+			label: "Order rejected due to failed identity check",
+			box90: 3,
+			box120: 2,
+		},
+		{ label: "Auto-generate", box90: 1, box120: 1 },
+		{ label: "Superlongwordwithoutspaces", box90: 2, box120: 2 },
+		{ label: "Start", box90: 1, box120: 1 },
+	]
+
+	for (const { label, box90, box120 } of CASES) {
+		it(`"${label}" → box90=${box90}, box120=${box120}`, () => {
+			assert.strictEqual(lineCount(label, 90), box90, `box90 for "${label}"`)
+			assert.strictEqual(lineCount(label, 120), box120, `box120 for "${label}"`)
+		})
+	}
+})
 
 describe("bpmn-js render oracle — all 21 corpus goldens import without error", () => {
 	for (const fixture of GOLDEN_FIXTURES) {

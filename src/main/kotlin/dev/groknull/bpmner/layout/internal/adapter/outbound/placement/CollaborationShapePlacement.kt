@@ -242,6 +242,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     ) {
         ctx.model.getModelElementsByType(SequenceFlow::class.java)
             .filter { sf ->
+                if (sf.id in ctx.skeleton.loopBackFlowIds) return@filter false
                 val srcId = sf.source?.id
                 val tgtId = sf.target?.id
                 (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
