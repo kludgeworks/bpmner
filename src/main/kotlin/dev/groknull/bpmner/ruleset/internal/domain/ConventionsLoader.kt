@@ -62,7 +62,7 @@ internal class PklConfigEvaluator : Function<URI, BpmnerLintConfig> {
  * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
  * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
  * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
- * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
+ * (ADR-007 Decision 1.1; `config` module dissolved into `ruleset` module)
  */
 @Configuration
 internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
@@ -90,6 +90,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
 
         // Load PklConfigEvaluator via Class.forName to prevent GraalVM static analysis from
         // tracing into Pkl/Truffle classes, which are incompatible with SubstrateVM at build time.
+        // safe: PklConfigEvaluator implements Function<URI, BpmnerLintConfig>; generics are erased at runtime
         @Suppress("UNCHECKED_CAST")
         val evaluator = Class.forName("${ConventionsLoader::class.java.packageName}.PklConfigEvaluator")
             .getDeclaredConstructor()
