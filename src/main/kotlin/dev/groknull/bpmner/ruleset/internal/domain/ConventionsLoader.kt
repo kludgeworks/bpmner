@@ -72,7 +72,11 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
     @ConditionalOnMissingBean
     fun bpmnerLintConfig(): BpmnerLintConfig {
         val rawConfigUri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }
-        if (rawConfigUri == null && NativeDetector.inNativeImage()) {
+        if (NativeDetector.inNativeImage()) {
+            check(rawConfigUri == null) {
+                "Custom Pkl lint config is not supported in the native binary; " +
+                    "use the JVM distribution or the packaged defaults."
+            }
             return packagedNativeLintConfig().also {
                 logger.info(
                     "BPMN lint conventions loaded from native packaged defaults ({} element type word(s), {} allowed acronym(s))",
