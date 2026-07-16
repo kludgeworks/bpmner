@@ -178,14 +178,14 @@
         <di:waypoint x="398.0" y="212.0"/>
         <di:waypoint x="398.0" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_notify">
-          <dc:Bounds height="28.0" width="120.0" x="406.0" y="148.0"/>
+          <dc:Bounds height="28.0" width="120.0" x="338.0" y="148.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_order" id="BPMNEdge_MsgFlow_order">
         <di:waypoint x="208.0" y="212.0"/>
         <di:waypoint x="208.0" y="112.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_order">
-          <dc:Bounds height="20.0" width="120.0" x="216.0" y="152.0"/>
+          <dc:Bounds height="20.0" width="120.0" x="148.0" y="152.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

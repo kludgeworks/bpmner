@@ -34,9 +34,6 @@ import org.camunda.bpm.model.bpmn.instance.Participant
  */
 internal object MessageFlowEdges : PlacementProcessor {
 
-    private const val LABEL_SIDE_GAP = 8.0
-    private const val LABEL_ABOVE_GAP = 4.0
-
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
@@ -80,22 +77,12 @@ internal object MessageFlowEdges : PlacementProcessor {
         ctx.edges[mf.id] = listOf(srcPt, tgtPt)
 
         if (!mf.name.isNullOrBlank()) {
+            val midX = (srcPt.x + tgtPt.x) / 2.0
             val midY = (srcPt.y + tgtPt.y) / 2.0
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
-            // For vertical edges: place label to the right of the edge so it tracks its own
-            // arrow and does not overlap the edge line. Vertically centred on the mid-point
-            // so parallel edges at the same midY produce top-aligned labels.
-            // For horizontal edges: place label above the mid-point (conventional).
-            val labelX: Double
-            val labelY: Double
-            if (vertical) {
-                labelX = srcPt.x + LABEL_SIDE_GAP
-                labelY = midY - lh / 2.0
-            } else {
-                labelX = (srcPt.x + tgtPt.x) / 2.0 - lw / 2.0
-                labelY = midY - lh - LABEL_ABOVE_GAP
-            }
-            ctx.labels[mf.id] = Rect(labelX, labelY, lw, lh)
+            // Centre the label vertically on the edge mid-point so that labels on parallel
+            // vertical edges (same midY) share the same top Y regardless of text height.
+            ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
     }
 
