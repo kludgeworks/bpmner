@@ -193,36 +193,36 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_m1" id="BPMNEdge_Flow_m1">
-        <di:waypoint x="68.0" y="302.0"/>
-        <di:waypoint x="158.0" y="302.0"/>
+        <di:waypoint x="68.0" y="122.0"/>
+        <di:waypoint x="158.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_m2" id="BPMNEdge_Flow_m2">
-        <di:waypoint x="258.0" y="302.0"/>
-        <di:waypoint x="348.0" y="302.0"/>
+        <di:waypoint x="258.0" y="122.0"/>
+        <di:waypoint x="348.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_m3" id="BPMNEdge_Flow_m3">
-        <di:waypoint x="818.0" y="302.0"/>
-        <di:waypoint x="890.0" y="302.0"/>
+        <di:waypoint x="818.0" y="122.0"/>
+        <di:waypoint x="890.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_m4" id="BPMNEdge_Flow_m4">
-        <di:waypoint x="990.0" y="302.0"/>
-        <di:waypoint x="1080.0" y="302.0"/>
+        <di:waypoint x="990.0" y="122.0"/>
+        <di:waypoint x="1080.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_sp1" id="BPMNEdge_Flow_sp1">
-        <di:waypoint x="68.0" y="72.0"/>
-        <di:waypoint x="158.0" y="72.0"/>
+        <di:waypoint x="68.0" y="332.0"/>
+        <di:waypoint x="158.0" y="332.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_sp2" id="BPMNEdge_Flow_sp2">
-        <di:waypoint x="258.0" y="72.0"/>
-        <di:waypoint x="348.0" y="72.0"/>
+        <di:waypoint x="258.0" y="332.0"/>
+        <di:waypoint x="348.0" y="332.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_1" id="BPMNEdge_SubFlow_1">
-        <di:waypoint x="434.0" y="302.0"/>
-        <di:waypoint x="524.0" y="302.0"/>
+        <di:waypoint x="434.0" y="122.0"/>
+        <di:waypoint x="524.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_2" id="BPMNEdge_SubFlow_2">
-        <di:waypoint x="624.0" y="302.0"/>
-        <di:waypoint x="782.0" y="302.0"/>
+        <di:waypoint x="624.0" y="122.0"/>
+        <di:waypoint x="782.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
         <di:waypoint x="208.0" y="162.0"/>

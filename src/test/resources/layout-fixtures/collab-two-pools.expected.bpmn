@@ -163,16 +163,16 @@
         <di:waypoint x="538.0" y="72.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
-        <di:waypoint x="68.0" y="252.0"/>
-        <di:waypoint x="158.0" y="252.0"/>
+        <di:waypoint x="68.0" y="232.0"/>
+        <di:waypoint x="158.0" y="232.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s2" id="BPMNEdge_Flow_s2">
-        <di:waypoint x="258.0" y="252.0"/>
-        <di:waypoint x="348.0" y="252.0"/>
+        <di:waypoint x="258.0" y="232.0"/>
+        <di:waypoint x="348.0" y="232.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s3" id="BPMNEdge_Flow_s3">
-        <di:waypoint x="448.0" y="252.0"/>
-        <di:waypoint x="538.0" y="252.0"/>
+        <di:waypoint x="448.0" y="232.0"/>
+        <di:waypoint x="538.0" y="232.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
         <di:waypoint x="208.0" y="112.0"/>

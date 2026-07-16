@@ -214,6 +214,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         if (nodeShapes.isEmpty()) return Rect(0.0, startY, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
 
         // Shift nodes so the topmost node sits PARTICIPANT_PADDING below startY.
+        // Internal sequence-flow edges (already copied from ELK by SequenceEdgeElkCopy)
+        // must shift by the same delta, or they detach from their now-moved endpoints.
         val elkMinY = nodeShapes.minOf { it.y }
         val targetMinY = startY + PARTICIPANT_PADDING
         val dy = targetMinY - elkMinY
@@ -221,6 +223,13 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             for (id in nodeIds) {
                 val s = ctx.shapes[id] ?: continue
                 ctx.shapes[id] = s.copy(y = s.y + dy)
+            }
+            // Shift internal sequence-flow edges by the same delta so they stay attached.
+            val flowIds = mutableSetOf<String>()
+            collectFromElements(process.flowElements.toList(), flowIds, nodesOnly = false)
+            for (flowId in flowIds) {
+                val wps = ctx.edges[flowId] ?: continue
+                ctx.edges[flowId] = wps.map { it.copy(y = it.y + dy) }
             }
         }
 
@@ -288,21 +297,30 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     /** Recursively collects all flow-node IDs from a process, including subprocess children. */
     private fun collectAllFlowNodeIds(process: org.camunda.bpm.model.bpmn.instance.Process): Set<String> {
         val ids = mutableSetOf<String>()
-        collectFromElements(process.flowElements.toList(), ids)
+        collectFromElements(process.flowElements.toList(), ids, nodesOnly = true)
         return ids
     }
 
+    /**
+     * Recursively collects IDs from a process's flow elements, descending into subprocesses.
+     *
+     * [nodesOnly] = true collects flow-node IDs; false collects sequence-flow IDs.
+     */
     private fun collectFromElements(
         elements: List<org.camunda.bpm.model.bpmn.instance.FlowElement>,
         ids: MutableSet<String>,
+        nodesOnly: Boolean,
     ) {
         for (el in elements) {
             when (el) {
                 is org.camunda.bpm.model.bpmn.instance.FlowNode -> {
-                    ids.add(el.id)
+                    if (nodesOnly) ids.add(el.id)
                     if (el is org.camunda.bpm.model.bpmn.instance.SubProcess) {
-                        collectFromElements(el.flowElements.toList(), ids)
+                        collectFromElements(el.flowElements.toList(), ids, nodesOnly)
                     }
+                }
+                is org.camunda.bpm.model.bpmn.instance.SequenceFlow -> {
+                    if (!nodesOnly) ids.add(el.id)
                 }
                 else -> Unit
             }

@@ -123,15 +123,15 @@
 
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
-        <di:waypoint x="68.0" y="252.0"/>
-        <di:waypoint x="158.0" y="252.0"/>
+        <di:waypoint x="68.0" y="232.0"/>
+        <di:waypoint x="158.0" y="232.0"/>
 
 
 
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_4" id="BPMNEdge_Flow_4">
-        <di:waypoint x="258.0" y="252.0"/>
-        <di:waypoint x="348.0" y="252.0"/>
+        <di:waypoint x="258.0" y="232.0"/>
+        <di:waypoint x="348.0" y="232.0"/>
 
 
 
