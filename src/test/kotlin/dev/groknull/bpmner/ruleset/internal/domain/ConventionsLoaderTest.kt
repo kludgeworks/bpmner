@@ -10,6 +10,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.mockito.Mockito
+import org.springframework.core.NativeDetector
 import java.nio.file.Path
 
 internal class ConventionsLoaderTest {
@@ -17,11 +19,22 @@ internal class ConventionsLoaderTest {
     fun `default modulepath bpmner pkl loads convention defaults`() {
         val config = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
 
+        assertThat(config.severityOverrides).containsEntry("act-verb-object-name", "off")
+        assertThat(config.severityOverrides).containsEntry("act-activity-label-capitalization", "off")
+        assertThat(config.severityOverrides).containsEntry("name-no-element-type-words", "off")
+        assertThat(config.severityOverrides).containsEntry("name-uncommon-abbreviations", "off")
         assertThat(config.discouragedLeadingVerbs).containsExactly("handle", "manage", "process", "perform", "do")
         assertThat(config.elementTypeWords).containsExactly("activity", "process", "event")
         assertThat(config.allowedAcronyms).containsExactly("BPMN", "ACME", "SLA", "API", "IT")
         assertThat(config.technicalTokens).containsExactly("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
         assertThat(config.discouragedBpmnTypes).contains("bpmn:Transaction")
+    }
+
+    @Test
+    fun `native packaged conventions match default pkl conventions`() {
+        val defaultConfig = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
+
+        assertThat(ConventionsLoader.packagedNativeLintConfig()).isEqualTo(defaultConfig)
     }
 
     @Test
@@ -94,5 +107,37 @@ internal class ConventionsLoaderTest {
 
         assertThat(error.message).contains("Failed to evaluate BPMN lint config")
         assertThat(error.message).contains(pklFile.toUri().toString())
+    }
+
+    @Test
+    fun `custom configUri in native mode throws fail-fast exception`() {
+        Mockito.mockStatic(NativeDetector::class.java).use { mockedDetector ->
+            mockedDetector.`when`<Boolean> { NativeDetector.inNativeImage() }.thenReturn(true)
+
+            val error = assertThrows(IllegalStateException::class.java) {
+                ConventionsLoader(
+                    BpmnRulesUriConfig(configUri = "file:///some/path/to/rules.pkl"),
+                ).bpmnerLintConfig()
+            }
+
+            assertThat(error.message).contains(
+                "Custom Pkl lint config is not supported in the native binary; " +
+                    "use the JVM distribution or the packaged defaults.",
+            )
+        }
+    }
+
+    @Test
+    fun `default native mode loads packaged defaults without Pkl`() {
+        Mockito.mockStatic(NativeDetector::class.java).use { mockedDetector ->
+            mockedDetector.`when`<Boolean> { NativeDetector.inNativeImage() }.thenReturn(true)
+
+            val config = ConventionsLoader(BpmnRulesUriConfig()).bpmnerLintConfig()
+
+            assertThat(config.severityOverrides).containsEntry("act-verb-object-name", "off")
+            assertThat(config.severityOverrides).containsEntry("act-activity-label-capitalization", "off")
+            assertThat(config.severityOverrides).containsEntry("name-no-element-type-words", "off")
+            assertThat(config.severityOverrides).containsEntry("name-uncommon-abbreviations", "off")
+        }
     }
 }

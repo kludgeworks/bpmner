@@ -16,25 +16,20 @@ import org.slf4j.LoggerFactory
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.core.NativeDetector
 import java.net.URI
+import java.util.function.Function
 
 /**
- * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
+ * Evaluates a Pkl config URI and returns a [BpmnerLintConfig].
  *
- * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
- * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
- * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
- * (ADR-007 Decision 1.1, updated for S4 dissolution of `config` module)
+ * Defined at package scope and loaded via [Class.forName] in [ConventionsLoader] so that
+ * GraalVM's static analysis cannot trace into Pkl's Truffle AST nodes, which conflict with
+ * SubstrateVM at native-image build time. No interface is introduced; the standard
+ * [java.util.function.Function] is used as the cast target (ADR-555-001).
  */
-@Configuration
-internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
-    private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
-
-    @Bean
-    @ConditionalOnMissingBean
-    fun bpmnerLintConfig(): BpmnerLintConfig {
-        val uri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }?.let(::fileOverrideUri)
-            ?: URI.create(DEFAULT_CONFIG_URI)
+internal class PklConfigEvaluator : Function<URI, BpmnerLintConfig> {
+    override fun apply(uri: URI): BpmnerLintConfig {
         val pkl = try {
             ConfigEvaluator.preconfigured().forKotlin().use { evaluator ->
                 evaluator.evaluate(ModuleSource.uri(uri))
@@ -49,7 +44,7 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
             )
         }
 
-        val lintConfig = BpmnerLintConfig(
+        return BpmnerLintConfig(
             profile = pkl.get("profile").to(),
             severityOverrides = pkl.get("severityOverrides").to<Map<String, String?>>(),
             discouragedLeadingVerbs = pkl.get("discouragedLeadingVerbs").to(),
@@ -58,6 +53,50 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
             technicalTokens = pkl.get("technicalTokens").to(),
             discouragedBpmnTypes = pkl.get("discouragedBpmnTypes").to(),
         )
+    }
+}
+
+/**
+ * Loads modeller-owned lint conventions from `bpmner.pkl` once at startup.
+ *
+ * Constructor-injects [BpmnRulesUriConfig] to create a `USES_COMPONENT` edge recognised by
+ * Spring Modulith for the `ruleset` module's `DIRECT_DEPENDENCIES` bootstrap scan.
+ * [BpmnRulesUriConfig] is registered via `@ConfigurationPropertiesScan` in [BpmnerApplication].
+ * (ADR-007 Decision 1.1; `config` module dissolved into `ruleset` module)
+ */
+@Configuration
+internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
+    private val logger = LoggerFactory.getLogger(ConventionsLoader::class.java)
+
+    @Bean
+    @ConditionalOnMissingBean
+    fun bpmnerLintConfig(): BpmnerLintConfig {
+        val rawConfigUri = config.configUri?.trim()?.takeIf { it.isNotEmpty() }
+        if (NativeDetector.inNativeImage()) {
+            check(rawConfigUri == null) {
+                "Custom Pkl lint config is not supported in the native binary; " +
+                    "use the JVM distribution or the packaged defaults."
+            }
+            return packagedNativeLintConfig().also {
+                logger.info(
+                    "BPMN lint conventions loaded from native packaged defaults ({} element type word(s), {} allowed acronym(s))",
+                    it.elementTypeWords.size,
+                    it.allowedAcronyms.size,
+                )
+            }
+        }
+
+        val uri = rawConfigUri?.let(::fileOverrideUri) ?: URI.create(DEFAULT_CONFIG_URI)
+
+        // Load PklConfigEvaluator via Class.forName to prevent GraalVM static analysis from
+        // tracing into Pkl/Truffle classes, which are incompatible with SubstrateVM at build time.
+        // safe: PklConfigEvaluator implements Function<URI, BpmnerLintConfig>; generics are erased at runtime
+        @Suppress("UNCHECKED_CAST")
+        val evaluator = Class.forName("${ConventionsLoader::class.java.packageName}.PklConfigEvaluator")
+            .getDeclaredConstructor()
+            .newInstance() as Function<URI, BpmnerLintConfig>
+
+        val lintConfig = evaluator.apply(uri)
         logger.info(
             "BPMN lint conventions loaded from {} ({} element type word(s), {} allowed acronym(s))",
             uri.toString(),
@@ -69,6 +108,15 @@ internal class ConventionsLoader(private val config: BpmnRulesUriConfig) {
 
     companion object {
         const val DEFAULT_CONFIG_URI = "modulepath:/linter/pkl/bpmner.pkl"
+
+        internal fun packagedNativeLintConfig(): BpmnerLintConfig = BpmnerLintConfig(
+            severityOverrides = mapOf(
+                "act-verb-object-name" to "off",
+                "act-activity-label-capitalization" to "off",
+                "name-no-element-type-words" to "off",
+                "name-uncommon-abbreviations" to "off",
+            ),
+        )
 
         private fun fileOverrideUri(raw: String): URI {
             val uri = try {
