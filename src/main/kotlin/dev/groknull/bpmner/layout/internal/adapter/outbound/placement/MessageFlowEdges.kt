@@ -128,7 +128,7 @@ internal object MessageFlowEdges : PlacementProcessor {
 
         if (!mf.name.isNullOrBlank()) {
             val midX = (waypoints.first().x + waypoints.last().x) / 2.0
-            val midY = (waypoints.first().y + waypoints.last().y) / 2.0
+            val midY = labelMidY(vertical, srcShape, tgtShape, srcId, tgtId, waypoints, nodeToParticipant)
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
             ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
@@ -197,6 +197,36 @@ internal object MessageFlowEdges : PlacementProcessor {
         )
         // Final waypoint enters the target (top pool) from its bottom edge.
         return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgtShape.y + tgtShape.h))
+    }
+
+    /**
+     * Y-centre for a message-flow label.
+     *
+     * For vertical flows, uses the inter-pool gap midpoint so the label sits clear of both
+     * pool borders. For horizontal flows, uses the geometric midpoint of the waypoints.
+     */
+    @Suppress("LongParameterList") // all parameters are independent inputs from the call site; no grouping makes semantic sense
+    private fun labelMidY(
+        vertical: Boolean,
+        srcShape: Rect,
+        tgtShape: Rect,
+        srcId: String?,
+        tgtId: String?,
+        waypoints: List<Point>,
+        nodeToParticipant: Map<String, Rect>,
+    ): Double {
+        if (!vertical) return (waypoints.first().y + waypoints.last().y) / 2.0
+        val topParticipant = if (srcShape.y < tgtShape.y) {
+            nodeToParticipant[srcId] ?: srcShape
+        } else {
+            nodeToParticipant[tgtId] ?: tgtShape
+        }
+        val botParticipant = if (srcShape.y < tgtShape.y) {
+            nodeToParticipant[tgtId] ?: tgtShape
+        } else {
+            nodeToParticipant[srcId] ?: srcShape
+        }
+        return interPoolGapMidY(topParticipant.y + topParticipant.h, botParticipant.y)
     }
 
     /** Midpoint of the gap between two vertically-stacked pools. */

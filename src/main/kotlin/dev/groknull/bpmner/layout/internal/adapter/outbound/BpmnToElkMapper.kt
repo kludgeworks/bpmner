@@ -482,7 +482,7 @@ internal object BpmnToElkMapper {
     // Collaboration geometry constants
     internal const val PARTICIPANT_HEADER_WIDTH = 30.0
     internal const val LANE_HEADER_HEIGHT = 30.0
-    internal const val PARTICIPANT_GAP = 40.0
+    internal const val PARTICIPANT_GAP = 80.0
     internal const val BLACK_BOX_WIDTH = 100.0
     internal const val BLACK_BOX_HEIGHT = 60.0
     private const val PARTICIPANT_CONTENT_PADDING = 20.0
