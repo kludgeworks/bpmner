@@ -47,16 +47,17 @@ internal object BoundaryShapePlacement : PlacementProcessor {
                 val (hx, hy) = BpmnPlacementPass.absolutePosition(hostNode)
                 Rect(hx, hy, hostNode.width, hostNode.height)
             }
-            placeBoundariesOnHost(hostRect, boundaries, ctx.shapes, handlerOf)
+            placeBoundariesOnHost(hostRect, boundaries, ctx, handlerOf)
         }
     }
 
     private fun placeBoundariesOnHost(
         hostRect: Rect,
         boundaries: List<BoundaryEvent>,
-        shapes: MutableMap<String, Rect>,
+        ctx: PlacementContext,
         handlerOf: Map<String, String>,
     ) {
+        val shapes = ctx.shapes
         val eventSize = BpmnToElkMapper.EVENT_SIZE
         val ordered = boundaries.sortedWith(
             compareBy({ be -> shapes[handlerOf[be.id]]?.y ?: Double.MAX_VALUE }, { it.id }),
@@ -87,7 +88,14 @@ internal object BoundaryShapePlacement : PlacementProcessor {
         val handlerYs = handlerIds.mapNotNull { shapes[it]?.y }.sortedDescending()
         handlerIds.zip(handlerYs).forEach { (hid, targetY) ->
             val s = shapes[hid] ?: return@forEach
-            if (s.y != targetY) shapes[hid] = s.copy(y = targetY)
+            if (s.y != targetY) {
+                shapes[hid] = s.copy(y = targetY)
+                // Update the move ledger so the displacement recorded matches the final y.
+                val prior = ctx.moves[hid]
+                if (prior != null && prior.owner == "HandlerComponentAlignment") {
+                    ctx.moves[hid] = prior.copy(dy = prior.dy + (targetY - s.y))
+                }
+            }
         }
     }
 }
