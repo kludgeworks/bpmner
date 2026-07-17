@@ -59,6 +59,16 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 bazelisk build //src:bpmner_app
 ```
 
+### Native Metadata Generation
+
+When adding new reflective libraries, models, or configurations, update the AOT/Native configuration metadata:
+
+```bash
+mise run native-trace
+```
+
+This task compiles the app, executes a representative LLM workload under the GraalVM tracing agent (`native-image-agent`), and regenerates the configuration files in `src/native-config/`.
+
 ### Run
 
 `bpmner` runs in two modes: a browser-based web UI and the Embabel interactive shell. Both launch
