@@ -1847,24 +1847,19 @@
 				"pattern": "spring.properties"
 			},
 			{
-				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm",
-				"module": "java.base"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
 			},
 			{
-				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm",
-				"module": "java.base"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
 			},
 			{
-				"pattern": "jdk/internal/icu/impl/data/icudt76b/uprops.icu",
-				"module": "java.base"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
 			},
 			{
-				"pattern": "sun/net/idn/uidna.spp",
-				"module": "java.base"
+				"pattern": "sun/net/idn/uidna.spp"
 			},
 			{
-				"pattern": "jdk/jfr/internal/types/metadata.bin",
-				"module": "jdk.jfr"
+				"pattern": "jdk/jfr/internal/types/metadata.bin"
 			}
 		]
 	},

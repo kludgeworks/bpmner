@@ -7040,7 +7040,7 @@
 		"name": "org.hibernate.validator.internal.util.logging.Log_$logger_en_NL"
 	},
 	{
-		"name": "org.hibernate.validator.internal.util.logging.Log_51695logger",
+		"name": "org.hibernate.validator.internal.util.logging.Log_64674logger",
 		"allDeclaredConstructors": true
 	},
 	{
@@ -7058,7 +7058,7 @@
 		"name": "org.hibernate.validator.internal.util.logging.Messages_$bundle_en_NL"
 	},
 	{
-		"name": "org.hibernate.validator.internal.util.logging.Messages_51695bundle",
+		"name": "org.hibernate.validator.internal.util.logging.Messages_64674bundle",
 		"allDeclaredConstructors": true,
 		"allDeclaredFields": true
 	},

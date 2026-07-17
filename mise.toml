@@ -163,7 +163,7 @@ if (metadata.resources) {
         seenPatterns.add(patternStr);
         const entry = {};
         entry.pattern = patternStr;
-        if (item.module) entry.module = item.module;
+        // omitted module attribute for older GraalVM compatibility
         resourceIncludes.push(entry);
       }
     } else if (item.bundle) {
