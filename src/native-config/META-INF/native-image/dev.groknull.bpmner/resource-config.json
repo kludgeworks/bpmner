@@ -2,1865 +2,1884 @@
 	"resources": {
 		"includes": [
 			{
-				"glob": "META-INF/build-info.properties"
+				"pattern": "META-INF/build-info.properties"
 			},
 			{
-				"glob": "META-INF/dgminfo"
+				"pattern": "META-INF/dgminfo"
 			},
 			{
-				"glob": "META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule"
+				"pattern": "META-INF/groovy/org.codehaus.groovy.runtime.ExtensionModule"
 			},
 			{
-				"glob": "META-INF/maven/org.jline/jline-native/pom.properties"
+				"pattern": "META-INF/maven/org.jline/jline-native/pom.properties"
 			},
 			{
-				"glob": "META-INF/services/ch.qos.logback.classic.spi.Configurator"
+				"pattern": "META-INF/services/ch.qos.logback.classic.spi.Configurator"
 			},
 			{
-				"glob": "META-INF/services/com.fasterxml.jackson.databind.Module"
+				"pattern": "META-INF/services/com.fasterxml.jackson.databind.Module"
 			},
 			{
-				"glob": "META-INF/services/jakarta.el.ExpressionFactory"
+				"pattern": "META-INF/services/jakarta.el.ExpressionFactory"
 			},
 			{
-				"glob": "META-INF/services/jakarta.validation.ConstraintValidator"
+				"pattern": "META-INF/services/jakarta.validation.ConstraintValidator"
 			},
 			{
-				"glob": "META-INF/services/jakarta.validation.spi.ValidationProvider"
+				"pattern": "META-INF/services/jakarta.validation.spi.ValidationProvider"
 			},
 			{
-				"glob": "META-INF/services/jakarta.validation.valueextraction.ValueExtractor"
+				"pattern": "META-INF/services/jakarta.validation.valueextraction.ValueExtractor"
 			},
 			{
-				"glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
+				"pattern": "META-INF/services/java.net.spi.InetAddressResolverProvider"
 			},
 			{
-				"glob": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
+				"pattern": "META-INF/services/java.net.spi.URLStreamHandlerProvider"
 			},
 			{
-				"glob": "META-INF/services/java.nio.channels.spi.SelectorProvider"
+				"pattern": "META-INF/services/java.nio.channels.spi.SelectorProvider"
 			},
 			{
-				"glob": "META-INF/services/java.nio.charset.spi.CharsetProvider"
+				"pattern": "META-INF/services/java.nio.charset.spi.CharsetProvider"
 			},
 			{
-				"glob": "META-INF/services/java.nio.file.spi.FileSystemProvider"
+				"pattern": "META-INF/services/java.nio.file.spi.FileSystemProvider"
 			},
 			{
-				"glob": "META-INF/services/java.time.zone.ZoneRulesProvider"
+				"pattern": "META-INF/services/java.time.zone.ZoneRulesProvider"
 			},
 			{
-				"glob": "META-INF/services/java.util.spi.ResourceBundleControlProvider"
+				"pattern": "META-INF/services/java.util.spi.ResourceBundleControlProvider"
 			},
 			{
-				"glob": "META-INF/services/javax.xml.parsers.SAXParserFactory"
+				"pattern": "META-INF/services/javax.xml.parsers.SAXParserFactory"
 			},
 			{
-				"glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader"
+				"pattern": "META-INF/services/kotlin.reflect.jvm.internal.impl.builtins.BuiltInsLoader"
 			},
 			{
-				"glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition"
+				"pattern": "META-INF/services/kotlin.reflect.jvm.internal.impl.resolve.ExternalOverridabilityCondition"
 			},
 			{
-				"glob": "META-INF/services/kotlin.reflect.jvm.internal.impl.util.ModuleVisibilityHelper"
+				"pattern": "META-INF/services/kotlin.reflect.jvm.internal.impl.util.ModuleVisibilityHelper"
 			},
 			{
-				"glob": "META-INF/services/org.apache.juli.logging.Log"
+				"pattern": "META-INF/services/org.apache.juli.logging.Log"
 			},
 			{
-				"glob": "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule"
+				"pattern": "META-INF/services/org.codehaus.groovy.runtime.ExtensionModule"
 			},
 			{
-				"glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
+				"pattern": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
 			},
 			{
-				"glob": "META-INF/services/org/jline/terminal/provider/exec"
+				"pattern": "META-INF/services/org/jline/terminal/provider/exec"
 			},
 			{
-				"glob": "META-INF/services/org/jline/terminal/provider/ffm"
+				"pattern": "META-INF/services/org/jline/terminal/provider/ffm"
 			},
 			{
-				"glob": "META-INF/services/org/jline/terminal/provider/jansi"
+				"pattern": "META-INF/services/org/jline/terminal/provider/jansi"
 			},
 			{
-				"glob": "META-INF/services/org/jline/terminal/provider/jna"
+				"pattern": "META-INF/services/org/jline/terminal/provider/jna"
 			},
 			{
-				"glob": "META-INF/services/org/jline/terminal/provider/jni"
+				"pattern": "META-INF/services/org/jline/terminal/provider/jni"
 			},
 			{
-				"glob": "META-INF/spring-autoconfigure-metadata.properties"
+				"pattern": "META-INF/spring-autoconfigure-metadata.properties"
 			},
 			{
-				"glob": "META-INF/spring.components"
+				"pattern": "META-INF/spring.components"
 			},
 			{
-				"glob": "META-INF/spring.factories"
+				"pattern": "META-INF/spring.factories"
 			},
 			{
-				"glob": "META-INF/spring.integration.properties"
+				"pattern": "META-INF/spring.integration.properties"
 			},
 			{
-				"glob": "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
+				"pattern": "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports"
 			},
 			{
-				"glob": "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.replacements"
+				"pattern": "META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.replacements"
 			},
 			{
-				"glob": "META-INF/validation.xml"
+				"pattern": "META-INF/validation.xml"
 			},
 			{
-				"glob": "agent-application.properties"
+				"pattern": "agent-application.properties"
 			},
 			{
-				"glob": "agent-platform.properties"
+				"pattern": "agent-platform.properties"
 			},
 			{
-				"glob": "application-githubmodels.properties"
+				"pattern": "application-githubmodels.properties"
 			},
 			{
-				"glob": "application-githubmodels.xml"
+				"pattern": "application-githubmodels.xml"
 			},
 			{
-				"glob": "application-githubmodels.yaml"
+				"pattern": "application-githubmodels.yaml"
 			},
 			{
-				"glob": "application-githubmodels.yml"
+				"pattern": "application-githubmodels.yml"
 			},
 			{
-				"glob": "application.properties"
+				"pattern": "application.properties"
 			},
 			{
-				"glob": "application.xml"
+				"pattern": "application.xml"
 			},
 			{
-				"glob": "application.yaml"
+				"pattern": "application.yaml"
 			},
 			{
-				"glob": "application.yml"
+				"pattern": "application.yml"
 			},
 			{
-				"glob": "banner.txt"
+				"pattern": "banner.txt"
 			},
 			{
-				"glob": "ch/qos/logback/classic/logback-classic-version.properties"
+				"pattern": "ch/qos/logback/classic/logback-classic-version.properties"
 			},
 			{
-				"glob": "ch/qos/logback/core/logback-core-version.properties"
+				"pattern": "ch/qos/logback/core/logback-core-version.properties"
 			},
 			{
-				"glob": "com/embabel/agent"
+				"pattern": "com/embabel/agent"
 			},
 			{
-				"glob": "com/embabel/agent/api"
+				"pattern": "com/embabel/agent/api"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/Agent.class"
+				"pattern": "com/embabel/agent/api/annotation/Agent.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/ActionMethodManager.class"
+				"pattern": "com/embabel/agent/api/annotation/support/ActionMethodManager.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/ActionQosPropertyProvider.class"
+				"pattern": "com/embabel/agent/api/annotation/support/ActionQosPropertyProvider.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/ActionQosProvider.class"
+				"pattern": "com/embabel/agent/api/annotation/support/ActionQosProvider.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/AgentMetadataReader.class"
+				"pattern": "com/embabel/agent/api/annotation/support/AgentMetadataReader.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/ContextProvider.class"
+				"pattern": "com/embabel/agent/api/annotation/support/ContextProvider.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/DefaultActionMethodManager$Companion.class"
+				"pattern": "com/embabel/agent/api/annotation/support/DefaultActionMethodManager$Companion.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/DefaultActionMethodManager.class"
+				"pattern": "com/embabel/agent/api/annotation/support/DefaultActionMethodManager.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/DefaultActionQosProvider.class"
+				"pattern": "com/embabel/agent/api/annotation/support/DefaultActionQosProvider.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/FromClassAndMethodMethodDefinedOperationNameGenerator.class"
+				"pattern": "com/embabel/agent/api/annotation/support/FromClassAndMethodMethodDefinedOperationNameGenerator.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/annotation/support/MethodDefinedOperationNameGenerator.class"
+				"pattern": "com/embabel/agent/api/annotation/support/MethodDefinedOperationNameGenerator.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/Autonomy$GoalSeeker.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/Autonomy$GoalSeeker.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/Autonomy.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/Autonomy.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/AutonomyProperties.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/AutonomyProperties.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/DefaultPlanLister.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/DefaultPlanLister.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/GoalChoiceApprover.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/GoalChoiceApprover.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/autonomy/PlanLister.class"
+				"pattern": "com/embabel/agent/api/common/autonomy/PlanLister.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/scope/AgentScopeBuilder.class"
+				"pattern": "com/embabel/agent/api/common/scope/AgentScopeBuilder.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/support/SelfToolGroup.class"
+				"pattern": "com/embabel/agent/api/common/support/SelfToolGroup.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/common/support/SelfToolPublisher.class"
+				"pattern": "com/embabel/agent/api/common/support/SelfToolPublisher.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/event/AgenticEventListener.class"
+				"pattern": "com/embabel/agent/api/event/AgenticEventListener.class"
 			},
 			{
-				"glob": "com/embabel/agent/api/validation/AgentValidationManager.class"
+				"pattern": "com/embabel/agent/api/validation/AgentValidationManager.class"
 			},
 			{
-				"glob": "com/embabel/agent/autoconfigure/platform/AgentPlatformAutoConfiguration.class"
+				"pattern": "com/embabel/agent/autoconfigure/platform/AgentPlatformAutoConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/autoconfigure/platform/QuiteMcpClientAutoConfiguration.class"
+				"pattern": "com/embabel/agent/autoconfigure/platform/QuiteMcpClientAutoConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/autoconfigure/platform/ScanConfiguration.class"
+				"pattern": "com/embabel/agent/autoconfigure/platform/ScanConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/autoconfigure/shell/AgentShellAutoConfiguration.class"
+				"pattern": "com/embabel/agent/autoconfigure/shell/AgentShellAutoConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/core"
+				"pattern": "com/embabel/agent/core"
 			},
 			{
-				"glob": "com/embabel/agent/core/ActionSource.class"
+				"pattern": "com/embabel/agent/core/ActionSource.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/AgentPlatform.class"
+				"pattern": "com/embabel/agent/core/AgentPlatform.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/AgentScope.class"
+				"pattern": "com/embabel/agent/core/AgentScope.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/ConditionSource.class"
+				"pattern": "com/embabel/agent/core/ConditionSource.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/DataDictionary.class"
+				"pattern": "com/embabel/agent/core/DataDictionary.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/GoalSource.class"
+				"pattern": "com/embabel/agent/core/GoalSource.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/Retryable.class"
+				"pattern": "com/embabel/agent/core/Retryable.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/ToolGroup.class"
+				"pattern": "com/embabel/agent/core/ToolGroup.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/ToolPublisher.class"
+				"pattern": "com/embabel/agent/core/ToolPublisher.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/ToolSpec.class"
+				"pattern": "com/embabel/agent/core/ToolSpec.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/deployment/AgentDeployer.class"
+				"pattern": "com/embabel/agent/core/deployment/AgentDeployer.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/internal/LlmOperations.class"
+				"pattern": "com/embabel/agent/core/internal/LlmOperations.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/internal/streaming/StreamingLlmOperationsFactory.class"
+				"pattern": "com/embabel/agent/core/internal/streaming/StreamingLlmOperationsFactory.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/support/DefaultAgentPlatform$WhenMappings.class"
+				"pattern": "com/embabel/agent/core/support/DefaultAgentPlatform$WhenMappings.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/support/DefaultAgentPlatform.class"
+				"pattern": "com/embabel/agent/core/support/DefaultAgentPlatform.class"
 			},
 			{
-				"glob": "com/embabel/agent/core/support/JvmTypeCacheInvalidator.class"
+				"pattern": "com/embabel/agent/core/support/JvmTypeCacheInvalidator.class"
 			},
 			{
-				"glob": "com/embabel/agent/domain/library/HasContent.class"
+				"pattern": "com/embabel/agent/domain/library/HasContent.class"
 			},
 			{
-				"glob": "com/embabel/agent/experimental"
+				"pattern": "com/embabel/agent/experimental"
 			},
 			{
-				"glob": "com/embabel/agent/experimental/util/Injector.class"
+				"pattern": "com/embabel/agent/experimental/util/Injector.class"
 			},
 			{
-				"glob": "com/embabel/agent/openai/OpenAiCompatibleModelFactory$ByokSpec.class"
+				"pattern": "com/embabel/agent/openai/OpenAiCompatibleModelFactory$ByokSpec.class"
 			},
 			{
-				"glob": "com/embabel/agent/openai/OpenAiCompatibleModelFactory$Companion.class"
+				"pattern": "com/embabel/agent/openai/OpenAiCompatibleModelFactory$Companion.class"
 			},
 			{
-				"glob": "com/embabel/agent/openai/OpenAiCompatibleModelFactory.class"
+				"pattern": "com/embabel/agent/openai/OpenAiCompatibleModelFactory.class"
 			},
 			{
-				"glob": "com/embabel/agent/prompt"
+				"pattern": "com/embabel/agent/prompt"
 			},
 			{
-				"glob": "com/embabel/agent/shell"
+				"pattern": "com/embabel/agent/shell"
 			},
 			{
-				"glob": "com/embabel/agent/shell/ShellCommands.class"
+				"pattern": "com/embabel/agent/shell/ShellCommands.class"
 			},
 			{
-				"glob": "com/embabel/agent/shell/TerminalServices$TerminalOutputChannel.class"
+				"pattern": "com/embabel/agent/shell/TerminalServices$TerminalOutputChannel.class"
 			},
 			{
-				"glob": "com/embabel/agent/shell/TerminalServices.class"
+				"pattern": "com/embabel/agent/shell/TerminalServices.class"
 			},
 			{
-				"glob": "com/embabel/agent/shell/config/ShellConfiguration.class"
+				"pattern": "com/embabel/agent/shell/config/ShellConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi"
+				"pattern": "com/embabel/agent/spi"
 			},
 			{
-				"glob": "com/embabel/agent/spi/AgentProcessIdGenerator.class"
+				"pattern": "com/embabel/agent/spi/AgentProcessIdGenerator.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/AgentPlatformConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/AgentPlatformConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/AgentPlatformPropertiesLoader.class"
+				"pattern": "com/embabel/agent/spi/config/spring/AgentPlatformPropertiesLoader.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/AsyncConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/AsyncConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/EmbeddingTrackingConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/EmbeddingTrackingConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/InfrastructureInjectionConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/InfrastructureInjectionConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/SpringContextProvider.class"
+				"pattern": "com/embabel/agent/spi/config/spring/SpringContextProvider.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/ToolGroupsConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/ToolGroupsConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/ToolLoopFactoryConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/ToolLoopFactoryConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/config/spring/ValidationConfiguration.class"
+				"pattern": "com/embabel/agent/spi/config/spring/ValidationConfiguration.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/logging/LoggingAgenticEventListener$WhenMappings.class"
+				"pattern": "com/embabel/agent/spi/logging/LoggingAgenticEventListener$WhenMappings.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/logging/LoggingAgenticEventListener.class"
+				"pattern": "com/embabel/agent/spi/logging/LoggingAgenticEventListener.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/logging/LoggingPersonality.class"
+				"pattern": "com/embabel/agent/spi/logging/LoggingPersonality.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/AbstractLlmOperations.class"
+				"pattern": "com/embabel/agent/spi/support/AbstractLlmOperations.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/AgentScanningPostProcessorDelegate.class"
+				"pattern": "com/embabel/agent/spi/support/AgentScanningPostProcessorDelegate.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/DefaultAgentProcessIdGenerator.class"
+				"pattern": "com/embabel/agent/spi/support/DefaultAgentProcessIdGenerator.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/DefaultProcessIdGeneratorProperties.class"
+				"pattern": "com/embabel/agent/spi/support/DefaultProcessIdGeneratorProperties.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/DelegatingAgentScanningBeanPostProcessor$BeanProcessingInfo.class"
+				"pattern": "com/embabel/agent/spi/support/DelegatingAgentScanningBeanPostProcessor$BeanProcessingInfo.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/DelegatingAgentScanningBeanPostProcessor.class"
+				"pattern": "com/embabel/agent/spi/support/DelegatingAgentScanningBeanPostProcessor.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/ToolLoopLlmOperations.class"
+				"pattern": "com/embabel/agent/spi/support/ToolLoopLlmOperations.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/guardrails/GlobalGuardRailsRegistry$Companion.class"
+				"pattern": "com/embabel/agent/spi/support/guardrails/GlobalGuardRailsRegistry$Companion.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/guardrails/GlobalGuardRailsRegistry.class"
+				"pattern": "com/embabel/agent/spi/support/guardrails/GlobalGuardRailsRegistry.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/support/springai/ChatClientLlmOperations.class"
+				"pattern": "com/embabel/agent/spi/support/springai/ChatClientLlmOperations.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/validation/AgentStructureAgentValidator.class"
+				"pattern": "com/embabel/agent/spi/validation/AgentStructureAgentValidator.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/validation/AgentValidator.class"
+				"pattern": "com/embabel/agent/spi/validation/AgentValidator.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/validation/DefaultAgentStructureValidator.class"
+				"pattern": "com/embabel/agent/spi/validation/DefaultAgentStructureValidator.class"
 			},
 			{
-				"glob": "com/embabel/agent/spi/validation/DefaultAgentValidationManager.class"
+				"pattern": "com/embabel/agent/spi/validation/DefaultAgentValidationManager.class"
 			},
 			{
-				"glob": "com/embabel/agent/test"
+				"pattern": "com/embabel/agent/test"
 			},
 			{
-				"glob": "com/embabel/agent/tools"
+				"pattern": "com/embabel/agent/tools"
 			},
 			{
-				"glob": "com/embabel/agent/tools/osx/AppleScriptTools$Companion.class"
+				"pattern": "com/embabel/agent/tools/osx/AppleScriptTools$Companion.class"
 			},
 			{
-				"glob": "com/embabel/agent/tools/osx/AppleScriptTools.class"
+				"pattern": "com/embabel/agent/tools/osx/AppleScriptTools.class"
 			},
 			{
-				"glob": "com/embabel/agent/web"
+				"pattern": "com/embabel/agent/web"
 			},
 			{
-				"glob": "com/embabel/agent/web/rest/AgentProcessKillController.class"
+				"pattern": "com/embabel/agent/web/rest/AgentProcessKillController.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/rest/AgentProcessStatusController.class"
+				"pattern": "com/embabel/agent/web/rest/AgentProcessStatusController.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/rest/GlobalExceptionHandler.class"
+				"pattern": "com/embabel/agent/web/rest/GlobalExceptionHandler.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/rest/PlatformInfoController.class"
+				"pattern": "com/embabel/agent/web/rest/PlatformInfoController.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/sse/SSEController$Companion.class"
+				"pattern": "com/embabel/agent/web/sse/SSEController$Companion.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/sse/SSEController.class"
+				"pattern": "com/embabel/agent/web/sse/SSEController.class"
 			},
 			{
-				"glob": "com/embabel/agent/web/sse/SseProperties.class"
+				"pattern": "com/embabel/agent/web/sse/SseProperties.class"
 			},
 			{
-				"glob": "com/embabel/common/core/config/CommonPlatformPropertiesLoader.class"
+				"pattern": "com/embabel/common/core/config/CommonPlatformPropertiesLoader.class"
 			},
 			{
-				"glob": "com/embabel/common/core/types/AssetCoordinates.class"
+				"pattern": "com/embabel/common/core/types/AssetCoordinates.class"
 			},
 			{
-				"glob": "com/embabel/common/core/types/Described.class"
+				"pattern": "com/embabel/common/core/types/Described.class"
 			},
 			{
-				"glob": "com/embabel/common/core/types/HasInfoString.class"
+				"pattern": "com/embabel/common/core/types/HasInfoString.class"
 			},
 			{
-				"glob": "com/embabel/common/core/types/Named.class"
+				"pattern": "com/embabel/common/core/types/Named.class"
 			},
 			{
-				"glob": "config/application-githubmodels.properties"
+				"pattern": "config/application-githubmodels.properties"
 			},
 			{
-				"glob": "config/application-githubmodels.xml"
+				"pattern": "config/application-githubmodels.xml"
 			},
 			{
-				"glob": "config/application-githubmodels.yaml"
+				"pattern": "config/application-githubmodels.yaml"
 			},
 			{
-				"glob": "config/application-githubmodels.yml"
+				"pattern": "config/application-githubmodels.yml"
 			},
 			{
-				"glob": "config/application.properties"
+				"pattern": "config/application.properties"
 			},
 			{
-				"glob": "config/application.xml"
+				"pattern": "config/application.xml"
 			},
 			{
-				"glob": "config/application.yaml"
+				"pattern": "config/application.yaml"
 			},
 			{
-				"glob": "config/application.yml"
+				"pattern": "config/application.yml"
 			},
 			{
-				"glob": "dev/groknull/bpmner"
+				"pattern": "dev/groknull/bpmner"
 			},
 			{
-				"glob": "dev/groknull/bpmner/BpmnerApplicationShutdown.class"
+				"pattern": "dev/groknull/bpmner/BpmnerApplicationShutdown.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/SpringBpmnerApplicationShutdown.class"
+				"pattern": "dev/groknull/bpmner/SpringBpmnerApplicationShutdown.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment"
+				"pattern": "dev/groknull/bpmner/alignment"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment/BpmnAligner.class"
+				"pattern": "dev/groknull/bpmner/alignment/BpmnAligner.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment/internal/adapter/inbound/LlmBpmnAligner.class"
+				"pattern": "dev/groknull/bpmner/alignment/internal/adapter/inbound/LlmBpmnAligner.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment/internal/domain/BpmnAlignmentPostChecker.class"
+				"pattern": "dev/groknull/bpmner/alignment/internal/domain/BpmnAlignmentPostChecker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment/internal/domain/BpmnSummarizer$TraversalState.class"
+				"pattern": "dev/groknull/bpmner/alignment/internal/domain/BpmnSummarizer$TraversalState.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/alignment/internal/domain/BpmnSummarizer.class"
+				"pattern": "dev/groknull/bpmner/alignment/internal/domain/BpmnSummarizer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring"
+				"pattern": "dev/groknull/bpmner/authoring"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnAgentInvoker.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnAgentInvoker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnContractFidelityPort.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnContractFidelityPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnDefaultFlowPort.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnDefaultFlowPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnProcessGenerator.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnProcessGenerator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnRenderer.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnRenderer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnRequestDrafter.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnRequestDrafter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/BpmnRequestResolutionPort.class"
+				"pattern": "dev/groknull/bpmner/authoring/BpmnRequestResolutionPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/BpmnGeneratorMetrics.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/BpmnGeneratorMetrics.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/InputPathResolver$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/InputPathResolver$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/InputPathResolver.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/InputPathResolver.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnProcessGenerator$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnProcessGenerator$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnProcessGenerator.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnProcessGenerator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnRequestDrafter.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/inbound/LlmBpmnRequestDrafter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/AgentPlatformBpmnAgentInvoker$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/AgentPlatformBpmnAgentInvoker$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/AgentPlatformBpmnAgentInvoker.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/AgentPlatformBpmnAgentInvoker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnDefinitionToXmlConverter$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnDefinitionToXmlConverter$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnDefinitionToXmlConverter.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnDefinitionToXmlConverter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnXmlToDefinitionConverter$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnXmlToDefinitionConverter$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnXmlToDefinitionConverter.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/adapter/outbound/BpmnXmlToDefinitionConverter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/BpmnContractFidelityChecker$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/BpmnContractFidelityChecker$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/BpmnContractFidelityChecker.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/BpmnContractFidelityChecker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/BpmnRequestResolver$Companion.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/BpmnRequestResolver$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/BpmnRequestResolver.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/BpmnRequestResolver.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/BpmnXmlParser.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/BpmnXmlParser.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/authoring/internal/domain/DefaultFlowAssigner.class"
+				"pattern": "dev/groknull/bpmner/authoring/internal/domain/DefaultFlowAssigner.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn"
+				"pattern": "dev/groknull/bpmner/bpmn"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnEvent.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnEvent.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnEventDefinition.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnEventDefinition.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnGateway.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnGateway.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnNode.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnNode.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnRule.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/BpmnTask.class"
+				"pattern": "dev/groknull/bpmner/bpmn/BpmnTask.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/ClarificationExchange.class"
+				"pattern": "dev/groknull/bpmner/bpmn/ClarificationExchange.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/bpmn/SanctionedArchitectureException.class"
+				"pattern": "dev/groknull/bpmner/bpmn/SanctionedArchitectureException.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/browser/BrowserOpenPort.class"
+				"pattern": "dev/groknull/bpmner/browser/BrowserOpenPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/browser/internal/adapter/outbound/OsCommandBrowserOpener$Companion.class"
+				"pattern": "dev/groknull/bpmner/browser/internal/adapter/outbound/OsCommandBrowserOpener$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/browser/internal/adapter/outbound/OsCommandBrowserOpener.class"
+				"pattern": "dev/groknull/bpmner/browser/internal/adapter/outbound/OsCommandBrowserOpener.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance"
+				"pattern": "dev/groknull/bpmner/conformance"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnFingerprintService$Companion.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnFingerprintService$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnFingerprintService.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnFingerprintService.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnLintingPort.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnLintingPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnRuleGuidancePort.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnRuleGuidancePort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnValidator.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/BpmnXsdValidationPort.class"
+				"pattern": "dev/groknull/bpmner/conformance/BpmnXsdValidationPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/adapter/outbound/BpmnXsdValidator$Companion.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/adapter/outbound/BpmnXsdValidator$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/adapter/outbound/BpmnXsdValidator.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/adapter/outbound/BpmnXsdValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/application/RuleEngineLintingService$WhenMappings.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/application/RuleEngineLintingService$WhenMappings.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/application/RuleEngineLintingService.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/application/RuleEngineLintingService.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnDefinitionValidator$EventValidationContext.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnDefinitionValidator$EventValidationContext.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnDefinitionValidator.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnDefinitionValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer$Companion.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer$WhenMappings.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer$WhenMappings.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnDiagnosticNormalizer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/BpmnEvaluationPipeline.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/BpmnEvaluationPipeline.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/conformance/internal/domain/LlmValidator.class"
+				"pattern": "dev/groknull/bpmner/conformance/internal/domain/LlmValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract"
+				"pattern": "dev/groknull/bpmner/contract"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ContractActivity.class"
+				"pattern": "dev/groknull/bpmner/contract/ContractActivity.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ContractBranch.class"
+				"pattern": "dev/groknull/bpmner/contract/ContractBranch.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ContractEndState.class"
+				"pattern": "dev/groknull/bpmner/contract/ContractEndState.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ContractIntermediateThrow.class"
+				"pattern": "dev/groknull/bpmner/contract/ContractIntermediateThrow.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ContractTrigger.class"
+				"pattern": "dev/groknull/bpmner/contract/ContractTrigger.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ProcessContractExtractor.class"
+				"pattern": "dev/groknull/bpmner/contract/ProcessContractExtractor.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/ProcessContractMarkdownRenderer.class"
+				"pattern": "dev/groknull/bpmner/contract/ProcessContractMarkdownRenderer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/internal/adapter/inbound/LlmProcessContractExtractor.class"
+				"pattern": "dev/groknull/bpmner/contract/internal/adapter/inbound/LlmProcessContractExtractor.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator$Companion.class"
+				"pattern": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator$WhenMappings.class"
+				"pattern": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator$WhenMappings.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator.class"
+				"pattern": "dev/groknull/bpmner/contract/internal/domain/BpmnContractValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout"
+				"pattern": "dev/groknull/bpmner/layout"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout/BpmnLayoutPort.class"
+				"pattern": "dev/groknull/bpmner/layout/BpmnLayoutPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout/internal/adapter/inbound/BpmnLayoutAgent.class"
+				"pattern": "dev/groknull/bpmner/layout/internal/adapter/inbound/BpmnLayoutAgent.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout/internal/adapter/outbound/BpmnLayoutService$Companion.class"
+				"pattern": "dev/groknull/bpmner/layout/internal/adapter/outbound/BpmnLayoutService$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout/internal/adapter/outbound/BpmnLayoutService.class"
+				"pattern": "dev/groknull/bpmner/layout/internal/adapter/outbound/BpmnLayoutService.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/layout/internal/adapter/outbound/placement/PlacementProcessor.class"
+				"pattern": "dev/groknull/bpmner/layout/internal/adapter/outbound/placement/PlacementProcessor.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/llm/internal/GitHubModelsConfig.class"
+				"pattern": "dev/groknull/bpmner/llm/internal/GitHubModelsConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/AgentDeploymentValidator$Companion.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/AgentDeploymentValidator$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/AgentDeploymentValidator.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/AgentDeploymentValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnGenerationAgent.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnGenerationAgent.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnShellCommands$Companion.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnShellCommands$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnShellCommands.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/BpmnShellCommands.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/PreviewPrompt.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/PreviewPrompt.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ReadinessStage.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ReadinessStage.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ShellPreviewPrompt.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ShellPreviewPrompt.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ValidationStage.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/ValidationStage.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/WebGenerationStarter.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/adapter/inbound/WebGenerationStarter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/domain/BpmnPreviewOrchestrator$PreviewResult.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/domain/BpmnPreviewOrchestrator$PreviewResult.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/pipeline/internal/domain/BpmnPreviewOrchestrator.class"
+				"pattern": "dev/groknull/bpmner/pipeline/internal/domain/BpmnPreviewOrchestrator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/preview/BpmnPreviewWriter.class"
+				"pattern": "dev/groknull/bpmner/preview/BpmnPreviewWriter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/preview/internal/adapter/outbound/ClasspathBpmnPreviewWriter$Companion.class"
+				"pattern": "dev/groknull/bpmner/preview/internal/adapter/outbound/ClasspathBpmnPreviewWriter$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/preview/internal/adapter/outbound/ClasspathBpmnPreviewWriter.class"
+				"pattern": "dev/groknull/bpmner/preview/internal/adapter/outbound/ClasspathBpmnPreviewWriter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness"
+				"pattern": "dev/groknull/bpmner/readiness"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/BpmnReadinessInvoker.class"
+				"pattern": "dev/groknull/bpmner/readiness/BpmnReadinessInvoker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/ReadinessReportWriter.class"
+				"pattern": "dev/groknull/bpmner/readiness/ReadinessReportWriter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/inbound/BpmnReadinessAgent.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/inbound/BpmnReadinessAgent.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/outbound/AgentPlatformBpmnReadinessInvoker$Companion.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/outbound/AgentPlatformBpmnReadinessInvoker$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/outbound/AgentPlatformBpmnReadinessInvoker.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/outbound/AgentPlatformBpmnReadinessInvoker.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter$Companion.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter$WhenMappings.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter$WhenMappings.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter.class"
+				"pattern": "dev/groknull/bpmner/readiness/internal/adapter/outbound/MarkdownReadinessReportWriter.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/BpmnRepairer.class"
+				"pattern": "dev/groknull/bpmner/repair/BpmnRepairer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/adapter/inbound/BpmnRepairCapabilityStartupListener.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/adapter/inbound/BpmnRepairCapabilityStartupListener.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/adapter/inbound/BpmnRepairEventListener.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/adapter/inbound/BpmnRepairEventListener.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/adapter/inbound/DefaultBpmnRepairer.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/adapter/inbound/DefaultBpmnRepairer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/adapter/outbound/BpmnPatchApplier.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/adapter/outbound/BpmnPatchApplier.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/adapter/outbound/BpmnRepairPromptFactory.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/adapter/outbound/BpmnRepairPromptFactory.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnAttemptRecordFactory$Companion.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnAttemptRecordFactory$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnAttemptRecordFactory.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnAttemptRecordFactory.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnContractAwareValidator.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnContractAwareValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLlmRepairApplier.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLlmRepairApplier.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier$LocalFixApplied.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier$LocalFixApplied.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier$LocalFixCandidate.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier$LocalFixCandidate.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalFixApplier.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalModelFixHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalModelFixHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalModelFixHandlerRegistry.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalModelFixHandlerRegistry.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalRepairCapabilityValidator$WhenMappings.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalRepairCapabilityValidator$WhenMappings.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalRepairCapabilityValidator.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnLocalRepairCapabilityValidator.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnPatchApplicationPort.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnPatchApplicationPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairAdvancer.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairAdvancer.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairLoop$Companion.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairLoop$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairLoop.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairLoop.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairPromptPort.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/BpmnRepairPromptPort.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/BypassGatewayHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/BypassGatewayHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/ClearNameHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/ClearNameHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/ConvergingGatewayClearNameHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/ConvergingGatewayClearNameHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/DeleteIncomingFlowsHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/DeleteIncomingFlowsHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/ExpandAbbreviationsHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/ExpandAbbreviationsHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/FixSentenceCaseHandler$Companion.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/FixSentenceCaseHandler$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/FixSentenceCaseHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/FixSentenceCaseHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/InsertConvergingGatewayHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/InsertConvergingGatewayHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/SplitJoinForkGatewayHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/SplitJoinForkGatewayHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/StripTypeWordsHandler$Companion.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/StripTypeWordsHandler$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/repair/internal/domain/handlers/StripTypeWordsHandler.class"
+				"pattern": "dev/groknull/bpmner/repair/internal/domain/handlers/StripTypeWordsHandler.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/RuleEngine.class"
+				"pattern": "dev/groknull/bpmner/ruleset/RuleEngine.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/RuleRegistry.class"
+				"pattern": "dev/groknull/bpmner/ruleset/RuleRegistry.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/adapter/inbound/RuleProfileConfiguration.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/adapter/inbound/RuleProfileConfiguration.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/ConventionsLoader$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/ConventionsLoader$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/ConventionsLoader.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/ConventionsLoader.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/DefaultRuleEngine$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/DefaultRuleEngine$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/DefaultRuleEngine.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/DefaultRuleEngine.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/ActivityRuleConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/ActivityRuleConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/ActivityRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/ActivityRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/ArtifactRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/ArtifactRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/AssociationRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/AssociationRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/BeanRuleRegistry.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/BeanRuleRegistry.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/DataRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/DataRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/EventRuleConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/EventRuleConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/EventRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/EventRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/FlowRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/FlowRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/GatewayRuleConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/GatewayRuleConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/GatewayRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/GatewayRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/GeneralRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/GeneralRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/LaneRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/LaneRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/MessageRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/MessageRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/NameRuleConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/NameRuleConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/NameRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/NameRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/PoolRuleConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/PoolRuleConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/beans/PoolRuleConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/beans/PoolRuleConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DanglingEdgeRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DanglingEdgeRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DefaultFlowRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DefaultFlowRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DuplicateIdRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/DuplicateIdRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/EventDefinitionRule$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/EventDefinitionRule$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/EventDefinitionRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/EventDefinitionRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/RequiredEventsRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/RequiredEventsRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/RequiredNameRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/RequiredNameRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/compiled/TaskPayloadRule.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/compiled/TaskPayloadRule.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig$Companion.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig$ParsedDict.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig$ParsedDict.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig.class"
+				"pattern": "dev/groknull/bpmner/ruleset/internal/domain/nlp/BpmnNlpConfig.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnClarificationRequestEventPublisher$Companion.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnClarificationRequestEventPublisher$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnClarificationRequestEventPublisher.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnClarificationRequestEventPublisher.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnPipelineObserver.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnPipelineObserver.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver$Companion.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnProgressProjectionObserver.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnResultEventPublisher.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnResultEventPublisher.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnRunCostEventPublisher.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnRunCostEventPublisher.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerEventToAgenticBridge.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerEventToAgenticBridge.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerLoggingAgenticEventListener.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerLoggingAgenticEventListener.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerRunSummaryListener.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerRunSummaryListener.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector$Companion.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector$Companion.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector$TimedValidationEvents.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector$TimedValidationEvents.class"
 			},
 			{
-				"glob": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector.class"
+				"pattern": "dev/groknull/bpmner/telemetry/internal/adapter/inbound/BpmnerValidationEventCollector.class"
 			},
 			{
-				"glob": "embabel-application.properties"
+				"pattern": "embabel-application.properties"
 			},
 			{
-				"glob": "embabel-platform.properties"
+				"pattern": "embabel-platform.properties"
 			},
 			{
-				"glob": "git.properties"
+				"pattern": "git.properties"
 			},
 			{
-				"glob": "io/swagger/v3/oas/annotations/tags/Tag.class"
+				"pattern": "io/swagger/v3/oas/annotations/tags/Tag.class"
 			},
 			{
-				"glob": "jndi.properties"
+				"pattern": "jndi.properties"
 			},
 			{
-				"glob": "js/bpmn-layout-bundle.js"
+				"pattern": "js/bpmn-layout-bundle.js"
 			},
 			{
-				"glob": "kotlin/Deprecated.class"
+				"pattern": "kotlin/Deprecated.class"
 			},
 			{
-				"glob": "kotlin/Function.class"
+				"pattern": "kotlin/Function.class"
 			},
 			{
-				"glob": "kotlin/Metadata.class"
+				"pattern": "kotlin/Metadata.class"
 			},
 			{
-				"glob": "kotlin/annotation/MustBeDocumented.class"
+				"pattern": "kotlin/annotation/MustBeDocumented.class"
 			},
 			{
-				"glob": "kotlin/annotation/Retention.class"
+				"pattern": "kotlin/annotation/Retention.class"
 			},
 			{
-				"glob": "kotlin/annotation/Target.class"
+				"pattern": "kotlin/annotation/Target.class"
 			},
 			{
-				"glob": "kotlin/coroutines/Continuation.class"
+				"pattern": "kotlin/coroutines/Continuation.class"
 			},
 			{
-				"glob": "kotlin/coroutines/jvm/internal/BaseContinuationImpl.class"
+				"pattern": "kotlin/coroutines/jvm/internal/BaseContinuationImpl.class"
 			},
 			{
-				"glob": "kotlin/coroutines/jvm/internal/CoroutineStackFrame.class"
+				"pattern": "kotlin/coroutines/jvm/internal/CoroutineStackFrame.class"
 			},
 			{
-				"glob": "kotlin/coroutines/jvm/internal/RestrictedContinuationImpl.class"
+				"pattern": "kotlin/coroutines/jvm/internal/RestrictedContinuationImpl.class"
 			},
 			{
-				"glob": "kotlin/coroutines/jvm/internal/RestrictedSuspendLambda.class"
+				"pattern": "kotlin/coroutines/jvm/internal/RestrictedSuspendLambda.class"
 			},
 			{
-				"glob": "kotlin/coroutines/jvm/internal/SuspendFunction.class"
+				"pattern": "kotlin/coroutines/jvm/internal/SuspendFunction.class"
 			},
 			{
-				"glob": "kotlin/jvm/functions/Function0.class"
+				"pattern": "kotlin/jvm/functions/Function0.class"
 			},
 			{
-				"glob": "kotlin/jvm/functions/Function1.class"
+				"pattern": "kotlin/jvm/functions/Function1.class"
 			},
 			{
-				"glob": "kotlin/jvm/functions/Function2.class"
+				"pattern": "kotlin/jvm/functions/Function2.class"
 			},
 			{
-				"glob": "kotlin/jvm/internal/FunctionBase.class"
+				"pattern": "kotlin/jvm/internal/FunctionBase.class"
 			},
 			{
-				"glob": "kotlin/jvm/internal/Lambda.class"
+				"pattern": "kotlin/jvm/internal/Lambda.class"
 			},
 			{
-				"glob": "linter/pkl/BpmnerLintConfig.pkl"
+				"pattern": "linter/pkl/BpmnerLintConfig.pkl"
 			},
 			{
-				"glob": "linter/pkl/bpmner.pkl"
+				"pattern": "linter/pkl/bpmner.pkl"
 			},
 			{
-				"glob": "logback-spring.groovy"
+				"pattern": "logback-spring.groovy"
 			},
 			{
-				"glob": "logback-spring.xml"
+				"pattern": "logback-spring.xml"
 			},
 			{
-				"glob": "logback-test-spring.groovy"
+				"pattern": "logback-test-spring.groovy"
 			},
 			{
-				"glob": "logback-test-spring.xml"
+				"pattern": "logback-test-spring.xml"
 			},
 			{
-				"glob": "logback-test.groovy"
+				"pattern": "logback-test.groovy"
 			},
 			{
-				"glob": "logback-test.xml"
+				"pattern": "logback-test.xml"
 			},
 			{
-				"glob": "logback.groovy"
+				"pattern": "logback.groovy"
 			},
 			{
-				"glob": "logback.xml"
+				"pattern": "logback.xml"
 			},
 			{
-				"glob": "messages.properties"
+				"pattern": "messages.properties"
 			},
 			{
-				"glob": "nlp/en-bpmn-lemmas.dict"
+				"pattern": "nlp/en-bpmn-lemmas.dict"
 			},
 			{
-				"glob": "org/apache/catalina/authenticator/LocalStrings.properties"
+				"pattern": "org/apache/catalina/authenticator/LocalStrings.properties"
 			},
 			{
-				"glob": "org/apache/catalina/util/LocalStrings.properties"
+				"pattern": "org/apache/catalina/util/LocalStrings.properties"
 			},
 			{
-				"glob": "org/apache/catalina/valves/LocalStrings.properties"
+				"pattern": "org/apache/catalina/valves/LocalStrings.properties"
 			},
 			{
-				"glob": "org/apache/tomcat/util/http/LocalStrings.properties"
+				"pattern": "org/apache/tomcat/util/http/LocalStrings.properties"
 			},
 			{
-				"glob": "org/jline/nativ/Mac/arm64/libjlinenative.jnilib"
+				"pattern": "org/jline/nativ/Mac/arm64/libjlinenative.jnilib"
 			},
 			{
-				"glob": "org/jline/utils/capabilities.txt"
+				"pattern": "org/jline/utils/capabilities.txt"
 			},
 			{
-				"glob": "org/jline/utils/dumb.caps"
+				"pattern": "org/jline/utils/dumb.caps"
 			},
 			{
-				"glob": "org/jmolecules/architecture/onion/simplified/ApplicationRing.class"
+				"pattern": "org/jmolecules/architecture/onion/simplified/ApplicationRing.class"
 			},
 			{
-				"glob": "org/jmolecules/architecture/onion/simplified/InfrastructureRing.class"
+				"pattern": "org/jmolecules/architecture/onion/simplified/InfrastructureRing.class"
 			},
 			{
-				"glob": "org/jmolecules/ddd/annotation/Service.class"
+				"pattern": "org/jmolecules/ddd/annotation/Service.class"
 			},
 			{
-				"glob": "org/jmolecules/spring/config/JMoleculesSpringJacksonAutoConfiguration$AssociationResolvingJacksonModule.class"
+				"pattern": "org/jmolecules/spring/config/JMoleculesSpringJacksonAutoConfiguration$AssociationResolvingJacksonModule.class"
 			},
 			{
-				"glob": "org/jmolecules/spring/config/JMoleculesSpringJacksonAutoConfiguration.class"
+				"pattern": "org/jmolecules/spring/config/JMoleculesSpringJacksonAutoConfiguration.class"
 			},
 			{
-				"glob": "org/jmolecules/spring/config/JMoleculesWebAutoConfiguration.class"
+				"pattern": "org/jmolecules/spring/config/JMoleculesWebAutoConfiguration.class"
 			},
 			{
-				"glob": "org/jmolecules/stereotype/Stereotype.class"
+				"pattern": "org/jmolecules/stereotype/Stereotype.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration$CloseableMcpAsyncClients.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration$CloseableMcpAsyncClients.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration$CloseableMcpSyncClients.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration$CloseableMcpSyncClients.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpClientAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition$McpAutoConfigEnabled.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition$McpAutoConfigEnabled.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition$ToolCallbackProviderEnabled.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition$ToolCallbackProviderEnabled.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration$McpToolCallbackAutoConfigurationCondition.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/McpToolCallbackAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/StdioTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/StdioTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$AnnotationHints.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$AnnotationHints.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$ClientAnnotatedBeanFactoryInitializationAotProcessor.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$ClientAnnotatedBeanFactoryInitializationAotProcessor.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$ClientMcpAnnotatedBeans.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration$ClientMcpAnnotatedBeans.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/common/autoconfigure/annotations/McpClientAnnotationScannerAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/httpclient/autoconfigure/SseHttpClientTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/httpclient/autoconfigure/SseHttpClientTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/httpclient/autoconfigure/StreamableHttpHttpClientTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/httpclient/autoconfigure/StreamableHttpHttpClientTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/webflux/autoconfigure$SseWebFluxTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/webflux/autoconfigure$SseWebFluxTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/webflux/autoconfigure$StreamableHttpWebFluxTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/webflux/autoconfigure$StreamableHttpWebFluxTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/webflux/autoconfigure/SseWebFluxTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/webflux/autoconfigure/SseWebFluxTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/mcp/client/webflux/autoconfigure/StreamableHttpWebFluxTransportAutoConfiguration.class"
+				"pattern": "org/springframework/ai/mcp/client/webflux/autoconfigure/StreamableHttpWebFluxTransportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration$TracerNotPresentObservationConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration$TracerNotPresentObservationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration$TracerPresentObservationConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration$TracerPresentObservationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/client/autoconfigure/ChatClientAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration$TracerNotPresentObservationConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration$TracerNotPresentObservationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration$TracerPresentObservationConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration$TracerPresentObservationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration.class"
+				"pattern": "org/springframework/ai/model/chat/observation/autoconfigure/ChatObservationAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/aot/hint/annotation/Reflective.class"
+				"pattern": "org/springframework/aot/hint/annotation/Reflective.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/Aware.class"
+				"pattern": "org/springframework/beans/factory/Aware.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/BeanClassLoaderAware.class"
+				"pattern": "org/springframework/beans/factory/BeanClassLoaderAware.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/BeanFactoryAware.class"
+				"pattern": "org/springframework/beans/factory/BeanFactoryAware.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/InitializingBean.class"
+				"pattern": "org/springframework/beans/factory/InitializingBean.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/config/BeanFactoryPostProcessor.class"
+				"pattern": "org/springframework/beans/factory/config/BeanFactoryPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/beans/factory/config/BeanPostProcessor.class"
+				"pattern": "org/springframework/beans/factory/config/BeanPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/boot/actuate/autoconfigure/observation$ObservationAutoConfiguration.class"
+				"pattern": "org/springframework/boot/actuate/autoconfigure/observation$ObservationAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/actuate/autoconfigure/observation/ObservationAutoConfiguration.class"
+				"pattern": "org/springframework/boot/actuate/autoconfigure/observation/ObservationAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AbstractDependsOnBeanFactoryPostProcessor.class"
+				"pattern": "org/springframework/boot/autoconfigure/AbstractDependsOnBeanFactoryPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/AutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AutoConfigurationImportSelector.class"
+				"pattern": "org/springframework/boot/autoconfigure/AutoConfigurationImportSelector.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AutoConfigureAfter.class"
+				"pattern": "org/springframework/boot/autoconfigure/AutoConfigureAfter.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AutoConfigureBefore.class"
+				"pattern": "org/springframework/boot/autoconfigure/AutoConfigureBefore.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/AutoConfigureOrder.class"
+				"pattern": "org/springframework/boot/autoconfigure/AutoConfigureOrder.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/ImportAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/ImportAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/ImportAutoConfigurationImportSelector.class"
+				"pattern": "org/springframework/boot/autoconfigure/ImportAutoConfigurationImportSelector.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/admin/SpringApplicationAdminJmxAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/admin/SpringApplicationAdminJmxAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration$AspectJAutoProxyingConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration$AspectJAutoProxyingConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration$ClassProxyingConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration$ClassProxyingConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/aop/AopAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/availability/ApplicationAvailabilityAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/availability/ApplicationAvailabilityAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheConfigurationImportSelector.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheConfigurationImportSelector.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheManagerEntityManagerFactoryDependsOnPostProcessor.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheManagerEntityManagerFactoryDependsOnPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheManagerValidator.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration$CacheManagerValidator.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/CacheAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/GenericCacheConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/GenericCacheConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/NoOpCacheConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/NoOpCacheConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/cache/SimpleCacheConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/cache/SimpleCacheConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnBean.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnBean.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnBooleanProperty.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnBooleanProperty.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnClass.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnClass.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnMissingBean.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnMissingBean.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnMissingClass.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnMissingClass.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnProperty.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnProperty.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnResource.class"
+				"pattern": "org/springframework/boot/autoconfigure/condition/ConditionalOnResource.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/context/ConfigurationPropertiesAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/context/ConfigurationPropertiesAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/context/LifecycleAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/context/LifecycleAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/context/MessageSourceAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/context/MessageSourceAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/context/PropertyPlaceholderAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/context/PropertyPlaceholderAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/ConditionalOnPreferredJsonMapper.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/ConditionalOnPreferredJsonMapper.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/GsonHttpMessageConvertersConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/GsonHttpMessageConvertersConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$HttpMessageConvertersAutoConfigurationRuntimeHints.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$HttpMessageConvertersAutoConfigurationRuntimeHints.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$NotReactiveWebApplicationCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$NotReactiveWebApplicationCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$StringHttpMessageConverterConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration$StringHttpMessageConverterConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/HttpMessageConvertersAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration$MappingJackson2HttpMessageConverterConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration$MappingJackson2HttpMessageConverterConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration$MappingJackson2XmlHttpMessageConverterConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration$MappingJackson2XmlHttpMessageConverterConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/JacksonHttpMessageConvertersConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/JsonbHttpMessageConvertersConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/JsonbHttpMessageConvertersConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/client/HttpClientAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/client/HttpClientAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/client/NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/client/NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/client/NotReactiveWebApplicationCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/client/NotReactiveWebApplicationCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/client/reactive/ClientHttpConnectorAutoConfiguration$ReactorNetty.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/client/reactive/ClientHttpConnectorAutoConfiguration$ReactorNetty.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/client/reactive/ClientHttpConnectorAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/client/reactive/ClientHttpConnectorAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$DefaultCodecCustomizer.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration$DefaultCodecCustomizer.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$DefaultCodecsConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration$JacksonCodecConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/http/codec/CodecsAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/info/ProjectInfoAutoConfiguration$GitResourceAvailableCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/info/ProjectInfoAutoConfiguration$GitResourceAvailableCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/info/ProjectInfoAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/info/ProjectInfoAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$Jackson2ObjectMapperBuilderCustomizerConfiguration$StandardJackson2ObjectMapperBuilderCustomizer.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$Jackson2ObjectMapperBuilderCustomizerConfiguration$StandardJackson2ObjectMapperBuilderCustomizer.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$Jackson2ObjectMapperBuilderCustomizerConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$Jackson2ObjectMapperBuilderCustomizerConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonAutoConfigurationRuntimeHints.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonAutoConfigurationRuntimeHints.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonMixinConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonMixinConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonObjectMapperBuilderConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonObjectMapperBuilderConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonObjectMapperConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$JacksonObjectMapperConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$ParameterNamesModuleConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration$ParameterNamesModuleConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jackson/JacksonAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/jmx/JmxAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/jmx/JmxAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/mail/MailSenderValidatorAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/mail/MailSenderValidatorAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/orm/jpa/EntityManagerFactoryDependsOnPostProcessor.class"
+				"pattern": "org/springframework/boot/autoconfigure/orm/jpa/EntityManagerFactoryDependsOnPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/reactor/ReactorAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/reactor/ReactorAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/sql/init/DataSourceInitializationConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/sql/init/DataSourceInitializationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/sql/init/R2dbcInitializationConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/sql/init/R2dbcInitializationConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration$SqlInitializationModeCondition$ModeIsNever.class"
+				"pattern": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration$SqlInitializationModeCondition$ModeIsNever.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration$SqlInitializationModeCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration$SqlInitializationModeCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/sql/init/SqlInitializationAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/ssl/SslAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/ssl/SslAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutionAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutionAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$AsyncConfigurerConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$AsyncConfigurerConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$BootstrapExecutorConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$BootstrapExecutorConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition$ExecutorBeanCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition$ExecutorBeanCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition$ModelCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition$ModelCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$OnExecutorCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$SimpleAsyncTaskExecutorBuilderConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$SimpleAsyncTaskExecutorBuilderConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$TaskExecutorConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$TaskExecutorConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$ThreadPoolTaskExecutorBuilderConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskExecutorConfigurations$ThreadPoolTaskExecutorBuilderConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskSchedulingAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskSchedulingAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$SimpleAsyncTaskSchedulerBuilderConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$SimpleAsyncTaskSchedulerBuilderConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$TaskSchedulerConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$TaskSchedulerConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$ThreadPoolTaskSchedulerBuilderConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/task/TaskSchedulingConfigurations$ThreadPoolTaskSchedulerBuilderConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/validation/PrimaryDefaultValidatorPostProcessor.class"
+				"pattern": "org/springframework/boot/autoconfigure/validation/PrimaryDefaultValidatorPostProcessor.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/validation/ValidationAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/validation/ValidationAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationCondition$ReactiveWebApplication.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition$NotReactiveWebApplication.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition$NotReactiveWebApplication.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition$VirtualThreadsExecutorEnabled.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition$VirtualThreadsExecutorEnabled.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/NotReactiveWebApplicationOrVirtualThreadsExecutorEnabledCondition.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/RestClientAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/RestClientAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/client/RestTemplateAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/client/RestTemplateAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/embedded/EmbeddedWebServerFactoryCustomizerAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/embedded/EmbeddedWebServerFactoryCustomizerAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/HttpHandlerAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/HttpHandlerAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/ReactiveMultipartAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/ReactiveMultipartAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/ReactiveWebServerFactoryAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/ReactiveWebServerFactoryAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/WebFluxAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/WebFluxAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/WebSessionIdResolverAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/WebSessionIdResolverAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/error/ErrorWebFluxAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/error/ErrorWebFluxAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/function/client/ClientHttpConnectorAutoConfiguration$ReactorNetty.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/function/client/ClientHttpConnectorAutoConfiguration$ReactorNetty.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/function/client/ClientHttpConnectorAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/function/client/ClientHttpConnectorAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/function/client/WebClientAutoConfiguration$WebClientCodecsConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/function/client/WebClientAutoConfiguration$WebClientCodecsConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/reactive/function/client/WebClientAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/reactive/function/client/WebClientAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/DispatcherServletAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/DispatcherServletAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/HttpEncodingAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/HttpEncodingAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/MultipartAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/MultipartAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/ServletWebServerFactoryAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/ServletWebServerFactoryAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/WebMvcAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/WebMvcAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/web/servlet/error/ErrorMvcAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/web/servlet/error/ErrorMvcAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/websocket/reactive/WebSocketReactiveAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/websocket/reactive/WebSocketReactiveAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/autoconfigure/websocket/servlet/WebSocketServletAutoConfiguration.class"
+				"pattern": "org/springframework/boot/autoconfigure/websocket/servlet/WebSocketServletAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/boot/context/properties/ConfigurationPropertiesScan.class"
+				"pattern": "org/springframework/boot/context/properties/ConfigurationPropertiesScan.class"
 			},
 			{
-				"glob": "org/springframework/boot/context/properties/ConfigurationPropertiesScanRegistrar.class"
+				"pattern": "org/springframework/boot/context/properties/ConfigurationPropertiesScanRegistrar.class"
 			},
 			{
-				"glob": "org/springframework/boot/context/properties/EnableConfigurationProperties.class"
+				"pattern": "org/springframework/boot/context/properties/EnableConfigurationProperties.class"
 			},
 			{
-				"glob": "org/springframework/boot/context/properties/EnableConfigurationPropertiesRegistrar.class"
+				"pattern": "org/springframework/boot/context/properties/EnableConfigurationPropertiesRegistrar.class"
 			},
 			{
-				"glob": "org/springframework/boot/logging/logback/defaults.xml"
+				"pattern": "org/springframework/boot/logging/logback/defaults.xml"
 			},
 			{
-				"glob": "org/springframework/boot/sql/init/dependency/DatabaseInitializationDependencyConfigurer.class"
+				"pattern": "org/springframework/boot/sql/init/dependency/DatabaseInitializationDependencyConfigurer.class"
 			},
 			{
-				"glob": "org/springframework/context/ApplicationListener.class"
+				"pattern": "org/springframework/context/ApplicationListener.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/ComponentScan.class"
+				"pattern": "org/springframework/context/annotation/ComponentScan.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/Conditional.class"
+				"pattern": "org/springframework/context/annotation/Conditional.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/Configuration.class"
+				"pattern": "org/springframework/context/annotation/Configuration.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/DeferredImportSelector.class"
+				"pattern": "org/springframework/context/annotation/DeferredImportSelector.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/Import.class"
+				"pattern": "org/springframework/context/annotation/Import.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/ImportBeanDefinitionRegistrar.class"
+				"pattern": "org/springframework/context/annotation/ImportBeanDefinitionRegistrar.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/ImportRuntimeHints.class"
+				"pattern": "org/springframework/context/annotation/ImportRuntimeHints.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/Profile.class"
+				"pattern": "org/springframework/context/annotation/Profile.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/PropertySource.class"
+				"pattern": "org/springframework/context/annotation/PropertySource.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/PropertySources.class"
+				"pattern": "org/springframework/context/annotation/PropertySources.class"
 			},
 			{
-				"glob": "org/springframework/context/annotation/Role.class"
+				"pattern": "org/springframework/context/annotation/Role.class"
 			},
 			{
-				"glob": "org/springframework/core/Ordered.class"
+				"pattern": "org/springframework/core/Ordered.class"
 			},
 			{
-				"glob": "org/springframework/core/annotation/Order.class"
+				"pattern": "org/springframework/core/annotation/Order.class"
 			},
 			{
-				"glob": "org/springframework/http/codec/CodecConfigurer.properties"
+				"pattern": "org/springframework/http/codec/CodecConfigurer.properties"
 			},
 			{
-				"glob": "org/springframework/modulith/core/config/ApplicationModuleInitializerRuntimeVerification.class"
+				"pattern": "org/springframework/modulith/core/config/ApplicationModuleInitializerRuntimeVerification.class"
 			},
 			{
-				"glob": "org/springframework/modulith/moments/autoconfigure/MomentsAutoConfiguration.class"
+				"pattern": "org/springframework/modulith/moments/autoconfigure/MomentsAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/scheduling/annotation/EnableScheduling.class"
+				"pattern": "org/springframework/scheduling/annotation/EnableScheduling.class"
 			},
 			{
-				"glob": "org/springframework/scheduling/annotation/SchedulingConfiguration.class"
+				"pattern": "org/springframework/scheduling/annotation/SchedulingConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/Shell.class"
+				"pattern": "org/springframework/shell/Shell.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ApplicationRunnerAutoConfiguration$ApplicationReadyEventListener.class"
+				"pattern": "org/springframework/shell/boot/ApplicationRunnerAutoConfiguration$ApplicationReadyEventListener.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ApplicationRunnerAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ApplicationRunnerAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/CommandCatalogAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/CommandCatalogAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/CompleterAutoConfiguration$CompleterAdapter.class"
+				"pattern": "org/springframework/shell/boot/CompleterAutoConfiguration$CompleterAdapter.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/CompleterAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/CompleterAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ComponentFlowAutoConfiguration$CommonComponentFlowCustomizer.class"
+				"pattern": "org/springframework/shell/boot/ComponentFlowAutoConfiguration$CommonComponentFlowCustomizer.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ComponentFlowAutoConfiguration$ComponentFlowConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ComponentFlowAutoConfiguration$ComponentFlowConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ComponentFlowAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ComponentFlowAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeException.class"
+				"pattern": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeException.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeExceptionMapper.class"
+				"pattern": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeExceptionMapper.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeMappingsExceptionMapper.class"
+				"pattern": "org/springframework/shell/boot/ExitCodeAutoConfiguration$ShellExitCodeMappingsExceptionMapper.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ExitCodeAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ExitCodeAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/JLineAutoConfiguration$JLineHistoryConfiguration.class"
+				"pattern": "org/springframework/shell/boot/JLineAutoConfiguration$JLineHistoryConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/JLineAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/JLineAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/JLineShellAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/JLineShellAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/LineReaderAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/LineReaderAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ParameterResolverAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ParameterResolverAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ShellContextAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ShellContextAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ShellRunnerAutoConfiguration$NonePrimaryCommandConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ShellRunnerAutoConfiguration$NonePrimaryCommandConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ShellRunnerAutoConfiguration$PrimaryCommandConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ShellRunnerAutoConfiguration$PrimaryCommandConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ShellRunnerAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ShellRunnerAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/SpringShellAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/SpringShellAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/StandardAPIAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/StandardAPIAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/StandardCommandsAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/StandardCommandsAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/TerminalUIAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/TerminalUIAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/ThemingAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/ThemingAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/UserConfigAutoConfiguration$LocationResolver.class"
+				"pattern": "org/springframework/shell/boot/UserConfigAutoConfiguration$LocationResolver.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/UserConfigAutoConfiguration.class"
+				"pattern": "org/springframework/shell/boot/UserConfigAutoConfiguration.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnCompletionCommandCondition$EnabledCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnCompletionCommandCondition$EnabledCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnCompletionCommandCondition$RootNameCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnCompletionCommandCondition$RootNameCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnCompletionCommandCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnCompletionCommandCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnNotPrimaryCommandCondition$NotPrimaryCommandCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnNotPrimaryCommandCondition$NotPrimaryCommandCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnNotPrimaryCommandCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnNotPrimaryCommandCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnPrimaryCommandCondition$PrimaryCommandCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnPrimaryCommandCondition$PrimaryCommandCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/boot/condition/OnPrimaryCommandCondition.class"
+				"pattern": "org/springframework/shell/boot/condition/OnPrimaryCommandCondition.class"
 			},
 			{
-				"glob": "org/springframework/shell/result/ResultHandlerConfig.class"
+				"pattern": "org/springframework/shell/result/ResultHandlerConfig.class"
 			},
 			{
-				"glob": "org/springframework/shell/standard/ShellComponent.class"
+				"pattern": "org/springframework/shell/standard/ShellComponent.class"
 			},
 			{
-				"glob": "org/springframework/web/bind/annotation/ControllerAdvice.class"
+				"pattern": "org/springframework/web/bind/annotation/ControllerAdvice.class"
 			},
 			{
-				"glob": "org/springframework/web/bind/annotation/Mapping.class"
+				"pattern": "org/springframework/web/bind/annotation/Mapping.class"
 			},
 			{
-				"glob": "org/springframework/web/bind/annotation/RequestMapping.class"
+				"pattern": "org/springframework/web/bind/annotation/RequestMapping.class"
 			},
 			{
-				"glob": "org/springframework/web/bind/annotation/ResponseBody.class"
+				"pattern": "org/springframework/web/bind/annotation/ResponseBody.class"
 			},
 			{
-				"glob": "org/springframework/web/bind/annotation/RestController.class"
+				"pattern": "org/springframework/web/bind/annotation/RestController.class"
 			},
 			{
-				"glob": "org/w3c/dom/ls/LSInput.class"
+				"pattern": "org/w3c/dom/ls/LSInput.class"
 			},
 			{
-				"glob": "org/w3c/dom/ls/LSResourceResolver.class"
+				"pattern": "org/w3c/dom/ls/LSResourceResolver.class"
 			},
 			{
-				"glob": "spring.properties"
+				"pattern": "spring.properties"
 			},
 			{
-				"glob": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfc.nrm",
+				"module": "java.base"
 			},
 			{
-				"glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm",
+				"module": "java.base"
 			},
 			{
-				"glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
+				"pattern": "jdk/internal/icu/impl/data/icudt76b/uprops.icu",
+				"module": "java.base"
 			},
 			{
-				"glob": "sun/net/idn/uidna.spp"
+				"pattern": "sun/net/idn/uidna.spp",
+				"module": "java.base"
 			},
 			{
-				"glob": "jdk/jfr/internal/types/metadata.bin"
+				"pattern": "jdk/jfr/internal/types/metadata.bin",
+				"module": "jdk.jfr"
 			}
 		]
-	}
+	},
+	"bundles": [
+		{
+			"name": "org.apache.catalina.authenticator.LocalStrings"
+		},
+		{
+			"name": "org.apache.catalina.util.LocalStrings"
+		},
+		{
+			"name": "org.apache.catalina.valves.LocalStrings"
+		},
+		{
+			"name": "org.apache.tomcat.util.http.LocalStrings"
+		}
+	]
 }

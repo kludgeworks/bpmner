@@ -141,23 +141,37 @@ fs.writeFileSync(path.join(outDir, 'proxy-config.json'), JSON.stringify(proxies,
 fs.writeFileSync(path.join(outDir, 'serialization-config.json'), JSON.stringify(serializations, null, 2) + '\\n');
 
 const resourceIncludes = [];
+const bundles = [];
 if (metadata.resources) {
   const seenPatterns = new Set();
   for (const item of metadata.resources) {
-    const val = item.glob || item.pattern;
-    if (val && !seenPatterns.has(val)) {
+    if (item.glob || item.pattern) {
+      const val = item.glob || item.pattern;
       if (val.includes('org/pkl') || val.includes('truffle') || val.includes('graalvm') || val.includes('org.pkl')) {
         continue;
       }
-      seenPatterns.add(val);
-      const entry = {};
-      if (item.glob) entry.glob = item.glob;
-      if (item.pattern) entry.pattern = item.pattern;
-      resourceIncludes.push(entry);
+      let patternStr = item.pattern;
+      if (!patternStr && item.glob) {
+        // convert glob to Java regex
+        patternStr = item.glob
+          .replace(/[.+^$\\[\\]{}()|]/g, '\\\\$&')
+          .replace(/\\*\\*/g, '.*')
+          .replace(/\\*/g, '[^/]*')
+          .replace(/\\?/g, '.');
+      }
+      if (!seenPatterns.has(patternStr)) {
+        seenPatterns.add(patternStr);
+        const entry = {};
+        entry.pattern = patternStr;
+        if (item.module) entry.module = item.module;
+        resourceIncludes.push(entry);
+      }
+    } else if (item.bundle) {
+      bundles.push({ name: item.bundle });
     }
   }
 }
-fs.writeFileSync(path.join(outDir, 'resource-config.json'), JSON.stringify({ resources: { includes: resourceIncludes } }, null, 2) + '\\n');
+fs.writeFileSync(path.join(outDir, 'resource-config.json'), JSON.stringify({ resources: { includes: resourceIncludes }, bundles: bundles }, null, 2) + '\\n');
 console.log('Successfully formatted and merged metadata!');
 "
 """
