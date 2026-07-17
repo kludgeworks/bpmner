@@ -43,15 +43,14 @@ postinstall = 'hk install --mise && vale sync && { [[ -n "${CI}" ]] || cs launch
 description = "Run the application with the native-image-agent to generate metadata"
 run = """
 bazel build //src:bpmner_app
+rm -rf src/native-config
 mkdir -p src/native-config
 java -agentlib:native-image-agent=config-output-dir=src/native-config \
   -Dspring.profiles.active=githubmodels \
   -Dspring.main.web-application-type=none \
   -Dspring.shell.interactive.enabled=false \
   -jar bazel-bin/src/bpmner_app.jar \
-  generate "review process for code review" || {
-    echo "Warning: Java tracing agent exited with status $?. Checking if reachability-metadata.json was generated..."
-  }
+  generate "review process for code review"
 
 if [ ! -f src/native-config/reachability-metadata.json ]; then
   echo "Error: reachability-metadata.json was not generated!"
@@ -65,29 +64,11 @@ const metadataFile = 'src/native-config/reachability-metadata.json';
 if (!fs.existsSync(metadataFile)) { console.error('reachability-metadata.json not found'); process.exit(1); }
 const metadata = JSON.parse(fs.readFileSync(metadataFile, 'utf8'));
 const legacyEntries = [
+  // Kotlin reflection is loaded at native runtime but not exercised by the representative LLM request.
   { name: 'kotlin.reflect.jvm.internal.ReflectionFactoryImpl', allDeclaredConstructors: true },
-  { name: 'org.hibernate.validator.internal.util.logging.Log_$$logger', allDeclaredConstructors: true },
-  { name: 'org.hibernate.validator.internal.util.logging.Messages_$$bundle', allDeclaredConstructors: true, allDeclaredFields: true },
-  { name: 'com.embabel.agent.config.models.anthropic.AnthropicModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.anthropic.AnthropicModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.anthropic.ThinkingConfiguration', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.gemini.GeminiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.gemini.GeminiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.mistralai.MistralAiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.mistralai.MistralAiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.openai.OpenAiModelDefinitions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.openai.OpenAiModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.openai.OpenAiEmbeddingModelDefinition', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.openai.EmbeddingPricingModel', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.config.models.openai.SpecialHandlingConfiguration', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.common.ai.model.PerTokenPricingModel', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.common.ai.model.LlmOptions', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.common.ai.model.Thinking', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true },
-  { name: 'com.embabel.agent.spi.support.LlmDataBindingProperties', allDeclaredConstructors: true, allDeclaredFields: true, allDeclaredMethods: true }
 ];
 const reflectMap = new Map(legacyEntries.map(e => [e.name, e]));
 const proxies = [];
-const serializations = [];
 if (metadata.reflection) {
   for (const item of metadata.reflection) {
     const rawType = item.type;
@@ -96,11 +77,6 @@ if (metadata.reflection) {
       if (rawType.proxy) {
         if (!rawType.proxy.some(p => p.startsWith('org.pkl.') || p.startsWith('com.oracle.truffle.') || p.startsWith('org.graalvm.') || p.toLowerCase().includes('pkl'))) {
           proxies.push(rawType.proxy);
-        }
-      }
-      else if (rawType.lambda) {
-        if (!rawType.lambda.declaringClass.startsWith('org.pkl.') && !rawType.lambda.declaringClass.startsWith('com.oracle.truffle.') && !rawType.lambda.declaringClass.startsWith('org.graalvm.') && !rawType.lambda.declaringClass.toLowerCase().includes('pkl')) {
-          serializations.push({ name: rawType.lambda.declaringClass, lambda: rawType.lambda });
         }
       }
       continue;
@@ -138,7 +114,6 @@ fs.mkdirSync(outDir, { recursive: true });
 
 fs.writeFileSync(path.join(outDir, 'reflect-config.json'), JSON.stringify(sortedReflect, null, 2) + '\\n');
 fs.writeFileSync(path.join(outDir, 'proxy-config.json'), JSON.stringify(proxies, null, 2) + '\\n');
-fs.writeFileSync(path.join(outDir, 'serialization-config.json'), JSON.stringify(serializations, null, 2) + '\\n');
 
 const resourceIncludes = [];
 const bundles = [];
@@ -152,7 +127,6 @@ if (metadata.resources) {
       }
       let patternStr = item.pattern;
       if (!patternStr && item.glob) {
-        // convert glob to Java regex
         patternStr = item.glob
           .replace(/[.+^$\\[\\]{}()|]/g, '\\\\$&')
           .replace(/\\*\\*/g, '.*')
@@ -163,7 +137,6 @@ if (metadata.resources) {
         seenPatterns.add(patternStr);
         const entry = {};
         entry.pattern = patternStr;
-        // omitted module attribute for older GraalVM compatibility
         resourceIncludes.push(entry);
       }
     } else if (item.bundle) {
@@ -174,4 +147,17 @@ if (metadata.resources) {
 fs.writeFileSync(path.join(outDir, 'resource-config.json'), JSON.stringify({ resources: { includes: resourceIncludes }, bundles: bundles }, null, 2) + '\\n');
 console.log('Successfully formatted and merged metadata!');
 "
+mise run native-trace-check
+"""
+
+[tasks.native-trace-check]
+description = "Validate checked-in native image metadata"
+run = """
+config_dir=src/native-config/META-INF/native-image/dev.groknull.bpmner
+test -f "$config_dir/reflect-config.json"
+test -f "$config_dir/proxy-config.json"
+test -f "$config_dir/resource-config.json"
+output_dir=$(mktemp -d)
+trap 'rm -rf "$output_dir"' EXIT
+native-image-configure generate --input-dir="$config_dir" --output-dir="$output_dir"
 """

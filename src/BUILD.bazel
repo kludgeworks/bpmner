@@ -322,7 +322,6 @@ java_library(
     resources = [
         "native-config/META-INF/native-image/dev.groknull.bpmner/proxy-config.json",
         "native-config/META-INF/native-image/dev.groknull.bpmner/resource-config.json",
-        "native-config/META-INF/native-image/dev.groknull.bpmner/serialization-config.json",
     ],
 )
 
