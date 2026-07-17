@@ -8,6 +8,7 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
+import org.xmlunit.assertj.XmlAssert
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -213,8 +214,8 @@ class ElkGoldenLayoutTest {
     fun `DI-merge preserves bioc colour attributes on re-laid-out shapes`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
-        assertTrue(result.contains("bioc:stroke"), "[$fixture] bioc:stroke must be preserved after re-layout")
-        assertTrue(result.contains("bioc:fill"), "[$fixture] bioc:fill must be preserved after re-layout")
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:stroke]").exist()
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:fill]").exist()
     }
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
@@ -395,6 +396,17 @@ class ElkGoldenLayoutTest {
                 )
             }
     }
+
+    private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml)
+        .withNamespaceContext(
+            mapOf(
+                "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+                "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
+                "dc" to "http://www.omg.org/spec/DD/20100524/DC",
+                "di" to "http://www.omg.org/spec/DD/20100524/DI",
+                "bioc" to "http://bpmn.io/schema/bpmn/biocolor/1.0",
+            ),
+        )
 
     private fun load(resource: String): String = javaClass.classLoader.getResourceAsStream(resource)
         ?.use { it.readBytes().toString(Charsets.UTF_8) }

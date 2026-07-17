@@ -36,6 +36,7 @@ import org.camunda.bpm.model.bpmn.instance.di.Waypoint
  * The writer never copies an element's own coordinates onto a label — labels come
  * exclusively from [PlacedLayout.labels].
  */
+// one private writer per DI element type — the function count is structural, not accidental complexity
 @Suppress("TooManyFunctions")
 internal object ElkToBpmnDiWriter {
 
@@ -64,7 +65,7 @@ internal object ElkToBpmnDiWriter {
      * The captured elements are passed into [write] and re-attached to the new plane, preserving
      * all non-geometry attributes while only updating bounds.
      */
-    @Suppress("MaxLineLength")
+    @Suppress("MaxLineLength") // single-expression function; extracting a val for the type reference makes it longer, not shorter
     fun captureExistingShapes(model: BpmnModelInstance): Map<String, BpmnShape> = model.getModelElementsByType(BpmnShape::class.java)
         .mapNotNull { shape ->
             val id = (shape.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
@@ -76,7 +77,7 @@ internal object ElkToBpmnDiWriter {
      * Captures existing BPMNEdge elements indexed by their bpmnElement ID.
      * Must be called BEFORE [ElkBpmnLayouter.removeExistingDi] strips the diagram.
      */
-    @Suppress("MaxLineLength")
+    @Suppress("MaxLineLength") // single-expression function; extracting a val for the type reference makes it longer, not shorter
     fun captureExistingEdges(model: BpmnModelInstance): Map<String, BpmnEdge> = model.getModelElementsByType(BpmnEdge::class.java)
         .mapNotNull { edge ->
             val id = (edge.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
@@ -166,6 +167,13 @@ internal object ElkToBpmnDiWriter {
             existingEdges[mf.id]?.also { existing ->
                 existing.waypoints.clear()
                 model.fillWaypoints(existing, waypoints)
+                layout.labels[mf.id]?.let { labelRect ->
+                    val bpmnLabel = existing.bpmnLabel ?: model.newInstance(BpmnLabel::class.java).also {
+                        it.id = "BPMNLabel_${mf.id}"
+                        existing.bpmnLabel = it
+                    }
+                    bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
+                }
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnEdge::class.java).also { bpmnEdge ->
                 bpmnEdge.id = "BPMNEdge_${mf.id}"
@@ -196,6 +204,7 @@ internal object ElkToBpmnDiWriter {
             existingShapes[flowNode.id]?.also { existing ->
                 existing.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
                 if (flowNode is SubProcess) existing.isExpanded = flowNode.id in layout.expanded
+                writeLabelIfPresent(model, existing, flowNode.id, layout)
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnShape::class.java).also { shape ->
                 shape.id = "BPMNShape_${flowNode.id}"
@@ -256,8 +265,9 @@ internal object ElkToBpmnDiWriter {
 
     /**
      * Writes a [BpmnLabel] from [PlacedLayout.labels] if the element has a label.
-     * Never copies the element's own coordinates — labels come exclusively from
-     * [PlacedLayout.labels] (fixes the label-collision defect from BLOCK-557-3).
+     * Reuses an existing [BpmnLabel] on the shape when present (DI-merge path) so
+     * re-layout updates label geometry rather than accumulating stale coordinates.
+     * Never copies the element's own coordinates — labels come exclusively from [PlacedLayout.labels].
      */
     private fun writeLabelIfPresent(
         model: BpmnModelInstance,
@@ -266,10 +276,11 @@ internal object ElkToBpmnDiWriter {
         layout: PlacedLayout,
     ) {
         val labelRect = layout.labels[ownerId] ?: return
-        val bpmnLabel = model.newInstance(BpmnLabel::class.java)
-        bpmnLabel.id = "BPMNLabel_$ownerId"
+        val bpmnLabel = shape.bpmnLabel ?: model.newInstance(BpmnLabel::class.java).also {
+            it.id = "BPMNLabel_$ownerId"
+            shape.bpmnLabel = it
+        }
         bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
-        shape.bpmnLabel = bpmnLabel
     }
 
     private fun writeSequenceEdges(
@@ -289,6 +300,13 @@ internal object ElkToBpmnDiWriter {
             existingEdges[sf.id]?.also { existing ->
                 existing.waypoints.clear()
                 model.fillWaypoints(existing, waypoints)
+                layout.labels[sf.id]?.let { labelRect ->
+                    val bpmnLabel = existing.bpmnLabel ?: model.newInstance(BpmnLabel::class.java).also {
+                        it.id = "BPMNLabel_${sf.id}"
+                        existing.bpmnLabel = it
+                    }
+                    bpmnLabel.bounds = model.newBounds(labelRect.x, labelRect.y, labelRect.w, labelRect.h)
+                }
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnEdge::class.java).also { bpmnEdge ->
                 bpmnEdge.id = "BPMNEdge_${sf.id}"

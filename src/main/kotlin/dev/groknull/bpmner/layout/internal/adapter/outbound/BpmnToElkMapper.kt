@@ -44,6 +44,7 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
  * Maps the process, boundary events, and sequence flows, and tracks artifacts (TextAnnotation, Group)
  * in the node map for placement.
  */
+// one private helper per mapping concern — splitting objects would break the shared nodeMap/portMap/edgeMap state
 @Suppress("TooManyFunctions")
 internal object BpmnToElkMapper {
 
@@ -104,8 +105,9 @@ internal object BpmnToElkMapper {
      * containing its process's flow nodes. Black-box participants (no processRef) are tracked as
      * detached size-carrier nodes — their bounds are computed by [placement.CollaborationShapePlacement].
      *
-     * Message flows are NOT added to the ELK graph (per AD-557-12 / AD-557-04): they are
-     * collaboration-level, cross-participant connections owned by the placement pass.
+     * Message flows are NOT added to the ELK graph: they are collaboration-level,
+     * cross-participant connections that confuse the hierarchical router, so their
+     * routing is owned entirely by the placement pass.
      *
      * Lane membership is not expressed as ELK nodes; lanes are phase-2 placement geometry
      * derived from [org.camunda.bpm.model.bpmn.instance.Lane.flowNodeRefs].

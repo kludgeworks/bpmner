@@ -6,7 +6,7 @@
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import org.junit.jupiter.api.Test
-import kotlin.test.assertTrue
+import org.xmlunit.assertj.XmlAssert
 
 /**
  * Contract tests for the DI-merge gate (§557-4 architecture note).
@@ -19,6 +19,17 @@ import kotlin.test.assertTrue
 class DIMergeTest {
 
     private val layouter = ElkBpmnLayouter()
+
+    private val bpmnNs = mapOf(
+        "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+        "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
+        "dc" to "http://www.omg.org/spec/DD/20100524/DC",
+        "di" to "http://www.omg.org/spec/DD/20100524/DI",
+        "bioc" to "http://bpmn.io/schema/bpmn/biocolor/1.0",
+    )
+
+    private fun assertXml(xml: String): XmlAssert =
+        XmlAssert.assertThat(xml).withNamespaceContext(bpmnNs)
 
     @Test
     fun `bioc stroke and fill survive round-trip re-layout`() {
@@ -58,12 +69,18 @@ class DIMergeTest {
 
         val result = layouter.layout(inputWithBioc)
 
-        assertTrue(result.contains("bioc:stroke"), "bioc:stroke must be present in re-laid-out output")
-        assertTrue(result.contains("bioc:fill"), "bioc:fill must be present in re-laid-out output")
-        assertTrue(result.contains("#005b1d"), "Start green stroke colour must survive re-layout")
-        assertTrue(result.contains("#b5efcd"), "Start green fill colour must survive re-layout")
-        assertTrue(result.contains("#831311"), "End red stroke colour must survive re-layout")
-        assertTrue(result.contains("#ffcdd2"), "End red fill colour must survive re-layout")
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_bioc'][@bioc:stroke='#005b1d']")
+            .exist()
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='Start_bioc'][@bioc:fill='#b5efcd']")
+            .exist()
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='End_bioc'][@bioc:stroke='#831311']")
+            .exist()
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNShape[@bpmnElement='End_bioc'][@bioc:fill='#ffcdd2']")
+            .exist()
     }
 
     @Test
@@ -90,8 +107,8 @@ class DIMergeTest {
 
         val result = layouter.layout(inputWithDi)
 
-        // Count BPMNDiagram occurrences in output — must be exactly one.
-        val diagCount = "<bpmndi:BPMNDiagram".toRegex().findAll(result).count()
-        assertTrue(diagCount == 1, "Output must have exactly 1 BPMNDiagram, found $diagCount")
+        assertXml(result)
+            .nodesByXPath("//bpmndi:BPMNDiagram")
+            .hasSize(1)
     }
 }

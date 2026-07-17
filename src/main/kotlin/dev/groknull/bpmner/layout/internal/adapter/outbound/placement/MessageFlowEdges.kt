@@ -18,7 +18,7 @@ import org.camunda.bpm.model.bpmn.instance.Participant
 /**
  * Phase-2 processor: derives waypoints for every [MessageFlow] in the model.
  *
- * Routes message flows orthogonally (AD-557-11 / AD-557-04):
+ * Routes message flows orthogonally:
  *   - Vertically-stacked pools: exit/enter perpendicular to the pool boundary, with an
  *     L-shape through the inter-pool gap when source and target have different x-centres.
  *   - Horizontally-arranged pools: straight horizontal line, right-centre → left-centre.

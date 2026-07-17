@@ -12,6 +12,7 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLAC
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PARTICIPANT_GAP
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
+import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
@@ -54,8 +55,10 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         // correct absolute y from the start, avoiding a post-hoc shift that would need
         // to untangle which nodes belong to which participant.
         var stackY = DEFAULT_PARTICIPANT_Y
+        // Track the union left edge and width across all white-box participants so
+        // black-box participants align with the full white-box column, not just the last one.
         var whiteBoxLeft = 0.0
-        var whiteBoxWidth = BLACK_BOX_WIDTH
+        var whiteBoxRight = BLACK_BOX_WIDTH
 
         for (participant in whiteBox) {
             val bounds = computeWhiteBoxBounds(participant, ctx, startY = stackY)
@@ -64,9 +67,15 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
             }
             stackY += bounds.h + PARTICIPANT_GAP
-            whiteBoxLeft = bounds.x
-            whiteBoxWidth = bounds.w
+            if (whiteBox.first() === participant) {
+                whiteBoxLeft = bounds.x
+                whiteBoxRight = bounds.x + bounds.w
+            } else {
+                whiteBoxLeft = minOf(whiteBoxLeft, bounds.x)
+                whiteBoxRight = maxOf(whiteBoxRight, bounds.x + bounds.w)
+            }
         }
+        val whiteBoxWidth = whiteBoxRight - whiteBoxLeft
 
         var bbY = stackY
         for (participant in blackBox) {
@@ -267,6 +276,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         ctx.model.getModelElementsByType(SequenceFlow::class.java)
             .filter { sf ->
                 if (sf.id in ctx.skeleton.loopBackFlowIds) return@filter false
+                // Exception flows from BoundaryEvents are already arc-routed by ExceptionEdgeRoutes;
+                // refreshing their waypoints here would replace the arc with a straight line.
+                if (sf.source is BoundaryEvent) return@filter false
                 val srcId = sf.source?.id
                 val tgtId = sf.target?.id
                 (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
