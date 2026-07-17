@@ -133,43 +133,43 @@
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
         <dc:Bounds height="36.0" width="36.0" x="1065.0" y="294.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="20.0" width="90.0" x="1038.0" y="332.0"/>
+          <dc:Bounds height="20.0" width="78.046875" x="1043.9765625" y="332.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_split" id="BPMNShape_Gw_split">
         <dc:Bounds height="50.0" width="50.0" x="355.0" y="47.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_split">
-          <dc:Bounds height="20.0" width="90.0" x="335.0" y="99.0"/>
+          <dc:Bounds height="20.0" width="50.02734375" x="354.986328125" y="99.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="39.0" y="54.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="90.0" x="12.0" y="92.0"/>
+          <dc:Bounds height="20.0" width="84.03515625" x="14.982421875" y="92.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_pack" id="BPMNShape_Task_pack">
         <dc:Bounds height="80.0" width="100.0" x="685.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_pack">
-          <dc:Bounds height="20.0" width="90.0" x="690.0" y="234.0"/>
+          <dc:Bounds height="20.0" width="60.685546875" x="704.6572265625" y="234.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_pick" id="BPMNShape_Task_pick">
         <dc:Bounds height="80.0" width="100.0" x="495.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_pick">
-          <dc:Bounds height="20.0" width="90.0" x="500.0" y="234.0"/>
+          <dc:Bounds height="20.0" width="55.341796875" x="517.3291015625" y="234.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_receive" id="BPMNShape_Task_receive">
         <dc:Bounds height="80.0" width="100.0" x="165.0" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_receive">
-          <dc:Bounds height="20.0" width="90.0" x="170.0" y="114.0"/>
+          <dc:Bounds height="20.0" width="77.361328125" x="176.3193359375" y="114.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
         <dc:Bounds height="80.0" width="100.0" x="875.0" y="272.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_ship">
-          <dc:Bounds height="20.0" width="90.0" x="880.0" y="354.0"/>
+          <dc:Bounds height="20.0" width="58.025390625" x="895.9873046875" y="354.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

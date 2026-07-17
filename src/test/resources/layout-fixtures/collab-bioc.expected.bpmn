@@ -81,31 +81,49 @@
       <bpmndi:BPMNShape bioc:fill="#ffcdd2" bioc:stroke="#831311" bpmnElement="End_1" id="BPMNShape_End_1">
 
         <dc:Bounds height="36.0" width="36.0" x="348.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="28.6875" x="351.65625" y="92.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_2" id="BPMNShape_End_2">
 
         <dc:Bounds height="36.0" width="36.0" x="348.0" y="214.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_2">
+          <dc:Bounds height="20.0" width="28.6875" x="351.65625" y="252.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#b5efcd" bioc:stroke="#005b1d" bpmnElement="Start_1" id="BPMNShape_Start_1">
 
         <dc:Bounds height="36.0" width="36.0" x="32.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="25.341796875" x="37.3291015625" y="92.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_2" id="BPMNShape_Start_2">
 
         <dc:Bounds height="36.0" width="36.0" x="32.0" y="214.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_2">
+          <dc:Bounds height="20.0" width="25.341796875" x="37.3291015625" y="252.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#bbdefb" bioc:stroke="#0d4372" bpmnElement="Task_1" id="BPMNShape_Task_1">
 
         <dc:Bounds height="80.0" width="100.0" x="158.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_1">
+          <dc:Bounds height="20.0" width="56.70703125" x="179.646484375" y="114.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffe0b2" bioc:stroke="#6b3a0b" bpmnElement="Task_3" id="BPMNShape_Task_3">
 
         <dc:Bounds height="80.0" width="100.0" x="158.0" y="192.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_3">
+          <dc:Bounds height="20.0" width="72.03515625" x="171.982421875" y="274.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
