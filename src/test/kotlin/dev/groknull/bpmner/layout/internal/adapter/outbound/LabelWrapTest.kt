@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
 /**
- * Unit tests for [LabelWrap] — the diagram-js@15.14.0 semantic wrap port (AD-557-15).
+ * Unit tests for [LabelWrap] — the diagram-js@15.14.0 semantic wrap port.
  *
  * Each assertion uses a line count produced by the real diagram-js `layoutText`
  * function in actual Chromium (Playwright), so these tests pin the JVM port to the

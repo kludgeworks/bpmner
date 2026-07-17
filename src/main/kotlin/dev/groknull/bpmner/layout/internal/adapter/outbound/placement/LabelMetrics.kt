@@ -5,18 +5,24 @@
 
 package dev.groknull.bpmner.layout.internal.adapter.outbound.placement
 
+import com.fasterxml.jackson.databind.ObjectMapper
+
 /**
  * Frozen glyph advance-width table for the bpmn-js default label font.
+ *
+ * bpmn-js is the renderer; label wrapping in the JVM layout pipeline must match what
+ * bpmn-js measures, so the pipeline produces label boxes that fit the text it renders.
  *
  * **Font contract:** exact for `font = "12px Arial, sans-serif"` — the font and size
  * bpmn-js uses for external labels (via diagram-js Text). If the bpmn-js default label
  * font or size changes, regenerate the table by running the Playwright capture script
- * documented in `plans/557/ARCHITECTURE.md §AD-557-15`.
+ * and replacing `src/main/resources/label-metrics.json` (and its copy in
+ * `src/test/resources/`).
  *
  * **Provenance:** each entry is `canvas.getContext('2d').measureText(char).width`
- * at `font = "12px Arial, sans-serif"` captured in real Chromium (the same engine
- * goldens are blessed against) via Playwright. Shared data file:
- * `src/test/resources/label-metrics.json`.
+ * at `font = "12px Arial, sans-serif"` captured in real Chromium via Playwright.
+ * Single source of truth: `src/main/resources/label-metrics.json`.
+ * The TS module `web/test/label-metrics.data.ts` is a compiled copy of that JSON.
  *
  * **Non-ASCII fallback:** any character outside the ASCII printable range (32..126)
  * uses [DEFAULT_ADVANCE] — a mid-width conservative estimate that over-reserves
@@ -41,34 +47,27 @@ internal object LabelMetrics {
      */
     internal const val LINE_HEIGHT = 14.0
 
-    // Dense array indexed by codepoint 32..126 (ASCII printable range).
-    // Values are measureText(char).width at "12px Arial, sans-serif" in real Chromium.
-    // Ordered: space(32), '!'(33), '"'(34), ..., '~'(126).
-    @Suppress("MagicNumber")
-    private val ADVANCE = doubleArrayOf(
-        3.333984375, 3.333984375, 4.259765625, 6.673828125, 6.673828125,
-        10.669921875, 8.00390625, 2.291015625, 3.99609375, 3.99609375,
-        4.669921875, 7.0078125, 3.333984375, 3.99609375, 3.333984375,
-        3.333984375, 6.673828125, 6.673828125, 6.673828125, 6.673828125,
-        6.673828125, 6.673828125, 6.673828125, 6.673828125, 6.673828125,
-        6.673828125, 3.333984375, 3.333984375, 7.0078125, 7.0078125,
-        7.0078125, 6.673828125, 12.181640625, 8.00390625, 8.00390625,
-        8.666015625, 8.666015625, 8.00390625, 7.330078125, 9.333984375,
-        8.666015625, 3.333984375, 6.0, 8.00390625, 6.673828125,
-        9.99609375, 8.666015625, 9.333984375, 8.00390625, 9.333984375,
-        8.666015625, 8.00390625, 7.330078125, 8.666015625, 8.00390625,
-        11.326171875, 8.00390625, 8.00390625, 7.330078125, 3.333984375,
-        3.333984375, 3.333984375, 5.630859375, 6.673828125, 3.99609375,
-        6.673828125, 6.673828125, 6.0, 6.673828125, 6.673828125,
-        3.333984375, 6.673828125, 6.673828125, 2.666015625, 2.666015625,
-        6.0, 2.666015625, 9.99609375, 6.673828125, 6.673828125,
-        6.673828125, 6.673828125, 3.99609375, 6.0, 3.333984375,
-        6.673828125, 6.0, 8.666015625, 6.0, 6.0,
-        6.0, 4.0078125, 3.1171875, 4.0078125, 7.0078125,
-    )
+    private val ADVANCE: DoubleArray = loadAdvanceTable()
 
     private const val ADVANCE_BASE = 32
     private const val ADVANCE_MAX = 126
+
+    private fun loadAdvanceTable(): DoubleArray {
+        val stream = LabelMetrics::class.java.getResourceAsStream("/label-metrics.json")
+            ?: error("label-metrics.json not found on classpath")
+        val root = ObjectMapper().readTree(stream)
+        val advances = root.get("advances")
+        val table = DoubleArray(ADVANCE_MAX - ADVANCE_BASE + 1) { DEFAULT_ADVANCE }
+        val fieldNames = advances.fieldNames()
+        while (fieldNames.hasNext()) {
+            val key = fieldNames.next()
+            val cp = key.toIntOrNull() ?: continue
+            if (cp in ADVANCE_BASE..ADVANCE_MAX) {
+                table[cp - ADVANCE_BASE] = advances.get(key).doubleValue()
+            }
+        }
+        return table
+    }
 
     /** Advance width for a single character. */
     internal fun advance(ch: Char): Double {

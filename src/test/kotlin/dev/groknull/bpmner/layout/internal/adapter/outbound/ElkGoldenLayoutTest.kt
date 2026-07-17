@@ -13,13 +13,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Layer 4b: golden-file regression oracle over the full 21-fixture corpus.
+ * Regression oracle over the full 21-fixture corpus.
  *
- * For each approved expected layout under `layout-fixtures/`, asserts that the engine
- * produces byte-identical output. This is the regression gate: once a human approves
- * the output in bpmn-js and commits it, this test enforces that no subsequent engine
- * change silently shifts its coordinates. A coordinate change requires a new review
- * before the expected layout can be re-blessed.
+ * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
+ * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
  * labels below nodes) and determinism for all 21 fixtures.
@@ -129,16 +126,23 @@ class ElkGoldenLayoutTest {
     fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
-        val doc = LayoutDiInspector.parse(result)
-        val planes = doc.getElementsByTagNameNS(DI_NS, "BPMNPlane")
+
+        // Look up the actual Collaboration element ID from the input rather than testing by name convention.
+        val inputDoc = LayoutDiInspector.parse(input)
+        val collabElements = inputDoc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/MODEL", "collaboration")
+        assertEquals(1, collabElements.length, "[$fixture] input must have exactly one collaboration")
+        val expectedCollabId = (collabElements.item(0) as Element).getAttribute("id")
+        assertTrue(expectedCollabId.isNotBlank(), "[$fixture] input collaboration must have an id")
+
+        val outDoc = LayoutDiInspector.parse(result)
+        val planes = outDoc.getElementsByTagNameNS(DI_NS, "BPMNPlane")
         assertEquals(1, planes.length, "[$fixture] must have exactly one BPMNPlane")
         val plane = planes.item(0) as Element
         val bpmnElement = plane.getAttribute("bpmnElement")
-        // Plane must reference a Collaboration element, not a Process.
-        assertTrue(bpmnElement.isNotBlank(), "[$fixture] BPMNPlane bpmnElement must not be blank")
-        assertTrue(
-            bpmnElement.startsWith("Collab"),
-            "[$fixture] BPMNPlane bpmnElement '$bpmnElement' must reference Collaboration (starts with 'Collab')",
+        assertEquals(
+            expectedCollabId,
+            bpmnElement,
+            "[$fixture] BPMNPlane bpmnElement must reference the Collaboration ('$expectedCollabId')",
         )
     }
 

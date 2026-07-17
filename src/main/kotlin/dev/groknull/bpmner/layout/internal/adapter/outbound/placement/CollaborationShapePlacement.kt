@@ -50,13 +50,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val whiteBox = participants.filter { it.process != null }
         val blackBox = participants.filter { it.process == null }
 
-        // Stack white-box participants in declaration order top-to-bottom.
-        // Pass the target startY into computeWhiteBoxBounds so nodes are placed at the
-        // correct absolute y from the start, avoiding a post-hoc shift that would need
-        // to untangle which nodes belong to which participant.
         var stackY = DEFAULT_PARTICIPANT_Y
-        // Track the union left edge and width across all white-box participants so
-        // black-box participants align with the full white-box column, not just the last one.
         var whiteBoxLeft = 0.0
         var whiteBoxRight = BLACK_BOX_WIDTH
 
@@ -209,7 +203,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     /**
      * Computes bounds for a participant with no lanes.
      *
-     * Bounds are the union of all placed node shapes plus uniform padding and a left header band.
+     * Shifts nodes (and their internal sequence-flow edge waypoints) so the topmost node
+     * sits [PARTICIPANT_PADDING] below [startY], then returns the bounding box of all placed
+     * nodes with uniform padding and a left header band.
      */
     private fun computeUnlanedParticipantBounds(
         participant: Participant,
@@ -222,24 +218,10 @@ internal object CollaborationShapePlacement : PlacementProcessor {
 
         if (nodeShapes.isEmpty()) return Rect(0.0, startY, BLACK_BOX_WIDTH * 2, BLACK_BOX_HEIGHT * 2)
 
-        // Shift nodes so the topmost node sits PARTICIPANT_PADDING below startY.
-        // Internal sequence-flow edges (already copied from ELK by SequenceEdgeElkCopy)
-        // must shift by the same delta, or they detach from their now-moved endpoints.
         val elkMinY = nodeShapes.minOf { it.y }
-        val targetMinY = startY + PARTICIPANT_PADDING
-        val dy = targetMinY - elkMinY
+        val dy = (startY + PARTICIPANT_PADDING) - elkMinY
         if (dy != 0.0) {
-            for (id in nodeIds) {
-                val s = ctx.shapes[id] ?: continue
-                ctx.shapes[id] = s.copy(y = s.y + dy)
-            }
-            // Shift internal sequence-flow edges by the same delta so they stay attached.
-            val flowIds = mutableSetOf<String>()
-            collectFromElements(process.flowElements.toList(), flowIds, nodesOnly = false)
-            for (flowId in flowIds) {
-                val wps = ctx.edges[flowId] ?: continue
-                ctx.edges[flowId] = wps.map { it.copy(y = it.y + dy) }
-            }
+            shiftNodesY(nodeIds, collectAllFlowIds(process), dy, ctx)
         }
 
         val shifted = nodeIds.mapNotNull { ctx.shapes[it] }
@@ -254,6 +236,24 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val participantH = maxY + PARTICIPANT_PADDING - participantY
 
         return Rect(participantX, participantY, participantW, participantH)
+    }
+
+    /**
+     * Shifts all node shapes in [nodeIds] and all edge waypoints in [flowIds] by [dy] along
+     * the Y axis. Edge waypoints must move with their nodes so edges stay attached after the shift.
+     *
+     * Parallel to [shiftNodesX], which only moves shapes; Y-shifting must also move edges because
+     * ELK-produced waypoints are tied to the absolute node positions.
+     */
+    private fun shiftNodesY(nodeIds: Set<String>, flowIds: Set<String>, dy: Double, ctx: PlacementContext) {
+        for (id in nodeIds) {
+            val s = ctx.shapes[id] ?: continue
+            ctx.shapes[id] = s.copy(y = s.y + dy)
+        }
+        for (flowId in flowIds) {
+            val wps = ctx.edges[flowId] ?: continue
+            ctx.edges[flowId] = wps.map { it.copy(y = it.y + dy) }
+        }
     }
 
     /**
@@ -274,15 +274,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         repositionedIds: Set<String>,
     ) {
         ctx.model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { sf ->
-                if (sf.id in ctx.skeleton.loopBackFlowIds) return@filter false
-                // Exception flows from BoundaryEvents are already arc-routed by ExceptionEdgeRoutes;
-                // refreshing their waypoints here would replace the arc with a straight line.
-                if (sf.source is BoundaryEvent) return@filter false
-                val srcId = sf.source?.id
-                val tgtId = sf.target?.id
-                (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
-            }
+            .filter { sf -> isRefreshableSequenceFlow(sf, repositionedIds, ctx) }
             .forEach { sf ->
                 val srcShape = ctx.shapes[sf.source?.id ?: return@forEach] ?: return@forEach
                 val tgtShape = ctx.shapes[sf.target?.id ?: return@forEach] ?: return@forEach
@@ -306,36 +298,64 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             }
     }
 
-    /** Recursively collects all flow-node IDs from a process, including subprocess children. */
-    private fun collectAllFlowNodeIds(process: org.camunda.bpm.model.bpmn.instance.Process): Set<String> {
-        val ids = mutableSetOf<String>()
-        collectFromElements(process.flowElements.toList(), ids, nodesOnly = true)
-        return ids
-    }
-
     /**
-     * Recursively collects IDs from a process's flow elements, descending into subprocesses.
+     * Returns true when [sf]'s waypoints should be refreshed by lane repositioning.
      *
-     * [nodesOnly] = true collects flow-node IDs; false collects sequence-flow IDs.
+     * Excluded: loop-back flows (already arc-routed by [LoopBackEdgeArcs]) and flows
+     * whose source is a BoundaryEvent (already arc-routed by [ExceptionEdgeRoutes]).
+     * In both cases, refreshing would overwrite the arc with a straight line.
+     *
+     * Only flows with at least one endpoint in [repositionedIds] need refreshing.
      */
-    private fun collectFromElements(
-        elements: List<org.camunda.bpm.model.bpmn.instance.FlowElement>,
-        ids: MutableSet<String>,
-        nodesOnly: Boolean,
-    ) {
-        for (el in elements) {
-            when (el) {
-                is org.camunda.bpm.model.bpmn.instance.FlowNode -> {
-                    if (nodesOnly) ids.add(el.id)
-                    if (el is org.camunda.bpm.model.bpmn.instance.SubProcess) {
-                        collectFromElements(el.flowElements.toList(), ids, nodesOnly)
-                    }
+    private fun isRefreshableSequenceFlow(
+        sf: SequenceFlow,
+        repositionedIds: Set<String>,
+        ctx: PlacementContext,
+    ): Boolean {
+        if (sf.id in ctx.skeleton.loopBackFlowIds) return false
+        if (sf.source is BoundaryEvent) return false
+        val srcId = sf.source?.id
+        val tgtId = sf.target?.id
+        return (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
+    }
+}
+
+/** Recursively collects all flow-node IDs from a process, including subprocess children. */
+internal fun collectAllFlowNodeIds(process: org.camunda.bpm.model.bpmn.instance.Process): Set<String> {
+    val ids = mutableSetOf<String>()
+    collectFlowElementIds(process.flowElements.toList(), ids, nodesOnly = true)
+    return ids
+}
+
+/** Recursively collects sequence-flow IDs from a process, including subprocess children. */
+internal fun collectAllFlowIds(process: org.camunda.bpm.model.bpmn.instance.Process): Set<String> {
+    val ids = mutableSetOf<String>()
+    collectFlowElementIds(process.flowElements.toList(), ids, nodesOnly = false)
+    return ids
+}
+
+/**
+ * Recursively collects IDs from [elements], descending into subprocesses.
+ *
+ * [nodesOnly] = true collects flow-node IDs; false collects sequence-flow IDs.
+ */
+private fun collectFlowElementIds(
+    elements: List<org.camunda.bpm.model.bpmn.instance.FlowElement>,
+    ids: MutableSet<String>,
+    nodesOnly: Boolean,
+) {
+    for (el in elements) {
+        when (el) {
+            is org.camunda.bpm.model.bpmn.instance.FlowNode -> {
+                if (nodesOnly) ids.add(el.id)
+                if (el is org.camunda.bpm.model.bpmn.instance.SubProcess) {
+                    collectFlowElementIds(el.flowElements.toList(), ids, nodesOnly)
                 }
-                is org.camunda.bpm.model.bpmn.instance.SequenceFlow -> {
-                    if (!nodesOnly) ids.add(el.id)
-                }
-                else -> Unit
             }
+            is org.camunda.bpm.model.bpmn.instance.SequenceFlow -> {
+                if (!nodesOnly) ids.add(el.id)
+            }
+            else -> Unit
         }
     }
 }

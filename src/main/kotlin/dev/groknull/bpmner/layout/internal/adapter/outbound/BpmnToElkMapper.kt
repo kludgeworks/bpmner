@@ -44,7 +44,10 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
  * Maps the process, boundary events, and sequence flows, and tracks artifacts (TextAnnotation, Group)
  * in the node map for placement.
  */
-// one private helper per mapping concern — splitting objects would break the shared nodeMap/portMap/edgeMap state
+// map(), mapProcess/mapCollaboration, mapBoundaryEvents, mapSequenceFlows, trackAnnotations/trackGroups,
+// plus options helpers — all share nodeMap/portMap/edgeMap/loopBackFlowIds and cannot be split without
+// threading those mutable maps through every call or converting them to class fields (which would
+// introduce statefulness between calls). Suppression is structural, not incidental.
 @Suppress("TooManyFunctions")
 internal object BpmnToElkMapper {
 

@@ -35,6 +35,9 @@ internal object MessageFlowEdges : PlacementProcessor {
     /** Lateral offset applied to each side of a bidirectional vertical message flow pair. */
     private const val BIDIRECTIONAL_OFFSET = 7.5
 
+    /** The BPMN element ID and placed shape for one end of a message flow. */
+    private data class FlowEndpoint(val id: String?, val shape: Rect)
+
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
@@ -87,60 +90,60 @@ internal object MessageFlowEdges : PlacementProcessor {
         sharedCorridors: Set<Double>,
         nodeToParticipant: Map<String, Rect>,
     ) {
-        val srcShape = resolveShape(mf.source, ctx) ?: return
-        val tgtShape = resolveShape(mf.target, ctx) ?: return
-        val srcId = (mf.source as? BaseElement)?.id
-        val tgtId = (mf.target as? BaseElement)?.id
+        val src = FlowEndpoint((mf.source as? BaseElement)?.id, resolveShape(mf.source, ctx) ?: return)
+        val tgt = FlowEndpoint((mf.target as? BaseElement)?.id, resolveShape(mf.target, ctx) ?: return)
         val srcIsParticipant = mf.source is Participant
         val tgtIsParticipant = mf.target is Participant
 
-        val vertical = srcShape.y + srcShape.h <= tgtShape.y || tgtShape.y + tgtShape.h <= srcShape.y
+        val vertical = src.shape.y + src.shape.h <= tgt.shape.y || tgt.shape.y + tgt.shape.h <= src.shape.y
         val waypoints = if (vertical) {
-            val srcCx = srcShape.x + srcShape.w / 2.0
-            val tgtCx = tgtShape.x + tgtShape.w / 2.0
+            val srcCx = src.shape.x + src.shape.w / 2.0
+            val tgtCx = tgt.shape.x + tgt.shape.w / 2.0
             val baseCx = when {
                 srcIsParticipant -> tgtCx
                 tgtIsParticipant -> srcCx
                 else -> srcCx
             }
-            val srcCy = srcShape.y + srcShape.h / 2.0
-            val tgtCy = tgtShape.y + tgtShape.h / 2.0
+            val srcCy = src.shape.y + src.shape.h / 2.0
+            val tgtCy = tgt.shape.y + tgt.shape.h / 2.0
             if (tgtCy > srcCy) {
                 verticalDownWaypoints(
-                    srcShape, tgtShape, srcId, tgtId,
-                    srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
+                    src, tgt, srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
                     sharedCorridors, nodeToParticipant,
                 )
             } else {
                 verticalUpWaypoints(
-                    srcShape, tgtShape, srcId, tgtId,
-                    srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
+                    src, tgt, srcCx, tgtCx, baseCx, srcIsParticipant, tgtIsParticipant,
                     sharedCorridors, nodeToParticipant,
                 )
             }
         } else {
-            val srcCy = srcShape.y + srcShape.h / 2.0
-            val tgtCy = tgtShape.y + tgtShape.h / 2.0
-            listOf(Point(srcShape.x + srcShape.w, srcCy), Point(tgtShape.x, tgtCy))
+            val srcCy = src.shape.y + src.shape.h / 2.0
+            val tgtCy = tgt.shape.y + tgt.shape.h / 2.0
+            listOf(Point(src.shape.x + src.shape.w, srcCy), Point(tgt.shape.x, tgtCy))
         }
 
         ctx.edges[mf.id] = waypoints
 
         if (!mf.name.isNullOrBlank()) {
             val midX = (waypoints.first().x + waypoints.last().x) / 2.0
-            val midY = labelMidY(vertical, srcShape, tgtShape, srcId, tgtId, waypoints, nodeToParticipant)
+            val midY = labelMidY(vertical, src, tgt, waypoints, nodeToParticipant)
             val (lw, lh) = estimateLabelDimensions(mf.name!!, EDGE_LABEL_WIDTH)
             ctx.labels[mf.id] = Rect(midX - lw / 2.0, midY - lh / 2.0, lw, lh)
         }
     }
 
-    /** Waypoints for a vertical flow going downward (source in top pool, target in bottom pool). */
+    /**
+     * Waypoints for a vertical flow going downward (source in top pool, target in bottom pool).
+     *
+     * Endpoints are grouped in [FlowEndpoint]. The remaining parameters are routing context:
+     * pre-computed centre X values, participant flags, and the two per-call look-up maps.
+     * None of these form a semantically cohesive grouping beyond what [FlowEndpoint] already captures.
+     */
     @Suppress("LongParameterList")
     private fun verticalDownWaypoints(
-        srcShape: Rect,
-        tgtShape: Rect,
-        srcId: String?,
-        tgtId: String?,
+        src: FlowEndpoint,
+        tgt: FlowEndpoint,
         srcCx: Double,
         tgtCx: Double,
         baseCx: Double,
@@ -156,23 +159,27 @@ internal object MessageFlowEdges : PlacementProcessor {
             0.0
         }
         val exitX = baseCx + offset
-        val srcExit = Point(exitX, srcShape.y + srcShape.h)
-        val tgtEntry = Point(exitX, tgtShape.y)
+        val srcExit = Point(exitX, src.shape.y + src.shape.h)
+        val tgtEntry = Point(exitX, tgt.shape.y)
         if (srcCx == tgtCx || srcIsParticipant || tgtIsParticipant) return listOf(srcExit, tgtEntry)
         val gapMidY = interPoolGapMidY(
-            topPoolBottom = nodeToParticipant[srcId]?.let { it.y + it.h } ?: (srcShape.y + srcShape.h),
-            botPoolTop = nodeToParticipant[tgtId]?.y ?: tgtShape.y,
+            topPoolBottom = nodeToParticipant[src.id]?.let { it.y + it.h } ?: (src.shape.y + src.shape.h),
+            botPoolTop = nodeToParticipant[tgt.id]?.y ?: tgt.shape.y,
         )
-        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgtShape.y))
+        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgt.shape.y))
     }
 
-    /** Waypoints for a vertical flow going upward (source in bottom pool, target in top pool). */
+    /**
+     * Waypoints for a vertical flow going upward (source in bottom pool, target in top pool).
+     *
+     * Endpoints are grouped in [FlowEndpoint]. The remaining parameters are routing context:
+     * pre-computed centre X values, participant flags, and the two per-call look-up maps.
+     * None of these form a semantically cohesive grouping beyond what [FlowEndpoint] already captures.
+     */
     @Suppress("LongParameterList")
     private fun verticalUpWaypoints(
-        srcShape: Rect,
-        tgtShape: Rect,
-        srcId: String?,
-        tgtId: String?,
+        src: FlowEndpoint,
+        tgt: FlowEndpoint,
         srcCx: Double,
         tgtCx: Double,
         baseCx: Double,
@@ -188,15 +195,15 @@ internal object MessageFlowEdges : PlacementProcessor {
             0.0
         }
         val exitX = baseCx + offset
-        val srcExit = Point(exitX, srcShape.y)
-        val tgtEntry = Point(exitX, tgtShape.y + tgtShape.h)
+        val srcExit = Point(exitX, src.shape.y)
+        val tgtEntry = Point(exitX, tgt.shape.y + tgt.shape.h)
         if (srcCx == tgtCx || srcIsParticipant || tgtIsParticipant) return listOf(srcExit, tgtEntry)
         val gapMidY = interPoolGapMidY(
-            topPoolBottom = nodeToParticipant[tgtId]?.let { it.y + it.h } ?: (tgtShape.y + tgtShape.h),
-            botPoolTop = nodeToParticipant[srcId]?.y ?: srcShape.y,
+            topPoolBottom = nodeToParticipant[tgt.id]?.let { it.y + it.h } ?: (tgt.shape.y + tgt.shape.h),
+            botPoolTop = nodeToParticipant[src.id]?.y ?: src.shape.y,
         )
         // Final waypoint enters the target (top pool) from its bottom edge.
-        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgtShape.y + tgtShape.h))
+        return listOf(srcExit, Point(exitX, gapMidY), Point(tgtCx, gapMidY), Point(tgtCx, tgt.shape.y + tgt.shape.h))
     }
 
     /**
@@ -205,26 +212,23 @@ internal object MessageFlowEdges : PlacementProcessor {
      * For vertical flows, uses the inter-pool gap midpoint so the label sits clear of both
      * pool borders. For horizontal flows, uses the geometric midpoint of the waypoints.
      */
-    @Suppress("LongParameterList") // all parameters are independent inputs from the call site; no grouping makes semantic sense
     private fun labelMidY(
         vertical: Boolean,
-        srcShape: Rect,
-        tgtShape: Rect,
-        srcId: String?,
-        tgtId: String?,
+        src: FlowEndpoint,
+        tgt: FlowEndpoint,
         waypoints: List<Point>,
         nodeToParticipant: Map<String, Rect>,
     ): Double {
         if (!vertical) return (waypoints.first().y + waypoints.last().y) / 2.0
-        val topParticipant = if (srcShape.y < tgtShape.y) {
-            nodeToParticipant[srcId] ?: srcShape
+        val topParticipant = if (src.shape.y < tgt.shape.y) {
+            nodeToParticipant[src.id] ?: src.shape
         } else {
-            nodeToParticipant[tgtId] ?: tgtShape
+            nodeToParticipant[tgt.id] ?: tgt.shape
         }
-        val botParticipant = if (srcShape.y < tgtShape.y) {
-            nodeToParticipant[tgtId] ?: tgtShape
+        val botParticipant = if (src.shape.y < tgt.shape.y) {
+            nodeToParticipant[tgt.id] ?: tgt.shape
         } else {
-            nodeToParticipant[srcId] ?: srcShape
+            nodeToParticipant[src.id] ?: src.shape
         }
         return interPoolGapMidY(topParticipant.y + topParticipant.h, botParticipant.y)
     }
@@ -234,7 +238,7 @@ internal object MessageFlowEdges : PlacementProcessor {
         (topPoolBottom + botPoolTop) / 2.0
 
     /**
-     * Resolves the shape [Rect] for a [org.camunda.bpm.model.bpmn.instance.InteractionNode].
+     * Resolves the placed shape [Rect] for a [org.camunda.bpm.model.bpmn.instance.InteractionNode].
      *
      * An [InteractionNode] may be a [org.camunda.bpm.model.bpmn.instance.FlowNode],
      * a [org.camunda.bpm.model.bpmn.instance.Participant], or (rarely) an

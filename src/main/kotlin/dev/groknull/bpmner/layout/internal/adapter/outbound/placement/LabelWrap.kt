@@ -12,12 +12,9 @@ import kotlin.math.round
 /**
  * Line-break algorithm ported verbatim from diagram-js@15.14.0 `lib/util/Text.js`.
  *
- * Reproduces `layoutText`'s outer loop using [LabelMetrics.width] in place of
- * `measureText`, so the JVM estimator and the bpmn-js oracle produce identical
- * line counts for every corpus label (AD-557-15 estimator⇄oracle agreement gate).
- *
- * Only the width-measurement and line-count parts are ported — not SVG `<tspan>`
- * emission, alignment, or y-offset magic (those are render-time, owned by bpmn-js).
+ * Entry point: [layout] returns line count and max fitted-line width for a label string
+ * in a box of given width. Uses [LabelMetrics.width] in place of `measureText` so the
+ * JVM estimator and the bpmn-js oracle produce identical line counts for every corpus label.
  *
  * bpmner padding is 0, so `maxWidth = box.width` (90 for nodes, 120 for edges).
  */
@@ -26,12 +23,10 @@ internal object LabelWrap {
     private const val SOFT_BREAK = '\u00AD'
 
     /**
-     * Returns the number of rendered lines for [text] in a box of [maxWidth].
+     * Returns the line count and max fitted-line width for [text] in a box of [maxWidth].
      *
-     * Matches diagram-js `layoutText` (with padding=0): explicit-newline split,
-     * then `layoutNext` loop per line until all input is consumed.
-     *
-     * Also returns the maximum fitted-line width for use in `estimateLabelDimensions`.
+     * Splits on explicit newlines first, then applies the `layoutNext` fit loop to each
+     * segment until all input is consumed. Blank text returns zero lines.
      */
     internal fun layout(text: String, maxWidth: Double): LayoutResult {
         if (text.isBlank()) return LayoutResult(lineCount = 0, maxLineWidth = 0.0)
@@ -54,10 +49,11 @@ internal object LabelWrap {
     internal fun lineCount(text: String, maxWidth: Double): Int = layout(text, maxWidth).lineCount
 
     /**
-     * Lays out the next line: removes the first element from [lines], fits it to
-     * [maxWidth], pushes any remainder back, and returns (width, lineText).
+     * Removes the first entry from [lines], fits it to [maxWidth] (possibly shortening
+     * it and pushing the remainder back onto [lines]), and returns (width, fittedText).
      *
-     * Mirrors diagram-js `layoutNext`.
+     * The fit condition — `width < round(maxWidth)` or `line.length < 2` — is exact from
+     * diagram-js so single-character and exactly-fitting lines are handled identically.
      */
     private fun layoutNext(lines: MutableList<String>, maxWidth: Double): Pair<Double, String> {
         val originalLine = lines.removeAt(0)
@@ -68,7 +64,6 @@ internal object LabelWrap {
             val measurable = fitLine.trimEnd()
             val w = if (measurable.isEmpty()) 0.0 else LabelMetrics.width(measurable)
 
-            // diagram-js fit condition: fits if width < round(maxWidth) or line is too short to shorten
             if (fitsInBox(fitLine, w, maxWidth)) {
                 return fit(lines, fitLine, originalLine, w)
             }
@@ -77,11 +72,14 @@ internal object LabelWrap {
         }
     }
 
-    /** Returns true when diagram-js's layoutNext fit condition is satisfied. */
+    /** Returns true when [line] fits: empty, single-space, shorter than 2 chars, or narrower than [maxWidth]. */
     private fun fitsInBox(line: String, width: Double, maxWidth: Double): Boolean =
         line == " " || line.isEmpty() || width < round(maxWidth) || line.length < 2
 
-    /** Mirrors diagram-js `fit`: pushes any remainder back and returns (width, text). */
+    /**
+     * Pushes any [originalLine] remainder (the part after [fitLine]) back onto [lines] and
+     * returns (width, fitLine). The remainder is trimmed before re-insertion.
+     */
     private fun fit(
         lines: MutableList<String>,
         fitLine: String,
@@ -96,10 +94,11 @@ internal object LabelWrap {
     }
 
     /**
-     * Shortens [line] to fit within [maxWidth], first via semantic break points, then
-     * via force-cut if no semantic break is found.
+     * Shortens [line] to fit within [maxWidth]: tries semantic break points first,
+     * then force-cuts at the proportional length estimate if no break is found.
      *
-     * Mirrors diagram-js `shortenLine`.
+     * The length estimate `line.length × (maxWidth / width)` is exact from diagram-js
+     * `shortenLine`; force-cut takes `max(round(length - 1), 1)`.
      */
     private fun shortenLine(line: String, width: Double, maxWidth: Double): String {
         val length = max(line.length * (maxWidth / width), 1.0)
@@ -110,14 +109,14 @@ internal object LabelWrap {
     }
 
     /**
-     * Shortens [line] at semantic break points (spaces, hyphens, soft-breaks).
+     * Shortens [line] at the last semantic break point (space, hyphen, soft-break) that fits
+     * within [maxLength] character-count positions.
      *
-     * Mirrors diagram-js `semanticShorten`: splits on `/(\s|-|\u00AD)/g` (delimiters
-     * kept as tokens), accumulates parts while `part.length + length < maxLength`,
-     * pops the preceding part when the breaking token is `-` or soft-break, and
-     * translates a trailing soft-break to a literal hyphen.
+     * Splits on `/(\s|-|\u00AD)/g` keeping delimiters as tokens, accumulates parts while
+     * `part.length + accumulated < maxLength`, pops the preceding word when the break token
+     * is a hyphen or soft-break, and converts a trailing soft-break to a literal hyphen.
      *
-     * Returns an empty string when no break is possible (caller falls back to force-cut).
+     * Returns an empty string when no semantic break is possible; the caller force-cuts instead.
      */
     private fun semanticShorten(line: String, maxLength: Double): String {
         val tokens = splitKeepingDelimiters(line)
@@ -148,8 +147,8 @@ internal object LabelWrap {
     }
 
     /**
-     * Splits [text] on `(\s|-|\u00AD)` keeping the delimiters as tokens in the result,
-     * matching the JS `String.split(/(\s|-|\u00AD)/g)` capturing-group behaviour.
+     * Splits [text] on `(\s|-|\u00AD)` keeping the delimiters as tokens, matching the
+     * capturing-group behaviour of JS `String.split(/(\s|-|\u00AD)/g)`.
      */
     private fun splitKeepingDelimiters(text: String): List<String> {
         val result = mutableListOf<String>()

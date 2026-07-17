@@ -36,7 +36,10 @@ import org.camunda.bpm.model.bpmn.instance.di.Waypoint
  * The writer never copies an element's own coordinates onto a label — labels come
  * exclusively from [PlacedLayout.labels].
  */
-// one private writer per DI element type — the function count is structural, not accidental complexity
+// write(), captureExisting{Shapes,Edges}, plus one writer per DI element type (participant, lane, flowNode,
+// boundary, artifact, sequence, message, association edges). Each writer is a distinct serialisation
+// concern; splitting into multiple objects would require passing model, plane and layout into each, or
+// grouping them under a shared context that adds indirection without reducing the function count.
 @Suppress("TooManyFunctions")
 internal object ElkToBpmnDiWriter {
 
@@ -65,25 +68,25 @@ internal object ElkToBpmnDiWriter {
      * The captured elements are passed into [write] and re-attached to the new plane, preserving
      * all non-geometry attributes while only updating bounds.
      */
-    @Suppress("MaxLineLength") // single-expression function; extracting a val for the type reference makes it longer, not shorter
-    fun captureExistingShapes(model: BpmnModelInstance): Map<String, BpmnShape> = model.getModelElementsByType(BpmnShape::class.java)
-        .mapNotNull { shape ->
-            val id = (shape.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
-                ?: return@mapNotNull null
-            id to shape
-        }.toMap()
+    fun captureExistingShapes(model: BpmnModelInstance): Map<String, BpmnShape> =
+        model.getModelElementsByType(BpmnShape::class.java)
+            .mapNotNull { shape ->
+                val id = (shape.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
+                    ?: return@mapNotNull null
+                id to shape
+            }.toMap()
 
     /**
      * Captures existing BPMNEdge elements indexed by their bpmnElement ID.
      * Must be called BEFORE [ElkBpmnLayouter.removeExistingDi] strips the diagram.
      */
-    @Suppress("MaxLineLength") // single-expression function; extracting a val for the type reference makes it longer, not shorter
-    fun captureExistingEdges(model: BpmnModelInstance): Map<String, BpmnEdge> = model.getModelElementsByType(BpmnEdge::class.java)
-        .mapNotNull { edge ->
-            val id = (edge.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
-                ?: return@mapNotNull null
-            id to edge
-        }.toMap()
+    fun captureExistingEdges(model: BpmnModelInstance): Map<String, BpmnEdge> =
+        model.getModelElementsByType(BpmnEdge::class.java)
+            .mapNotNull { edge ->
+                val id = (edge.bpmnElement as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
+                    ?: return@mapNotNull null
+                id to edge
+            }.toMap()
 
     private fun createDiagramAndPlane(model: BpmnModelInstance): BpmnPlane {
         val diagram = model.newInstance(BpmnDiagram::class.java)
@@ -99,10 +102,7 @@ internal object ElkToBpmnDiWriter {
         return plane
     }
 
-    /**
-     * Writes BPMNShape for [Participant] elements with isHorizontal=true.
-     * Re-uses existing shape elements when available (DI-merge), updating bounds only.
-     */
+    /** BPMN DI requires isHorizontal=true on BPMNShape for Participant elements. */
     private fun writeParticipantShapes(
         model: BpmnModelInstance,
         plane: BpmnPlane,
@@ -228,6 +228,7 @@ internal object ElkToBpmnDiWriter {
             val rect = layout.shapes[be.id] ?: continue
             existingShapes[be.id]?.also { existing ->
                 existing.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
+                writeLabelIfPresent(model, existing, be.id, layout)
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnShape::class.java).also { shape ->
                 shape.id = "BPMNShape_${be.id}"

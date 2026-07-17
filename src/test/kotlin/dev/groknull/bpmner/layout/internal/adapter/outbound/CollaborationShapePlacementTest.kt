@@ -17,7 +17,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * Per-processor contract tests for [CollaborationShapePlacement] (AD-557-14).
+ * Per-processor contract tests for [CollaborationShapePlacement].
  *
  * Builds minimal [PlacementContext] instances with hand-crafted shapes and asserts the
  * processor's postconditions without running the full ELK pipeline.

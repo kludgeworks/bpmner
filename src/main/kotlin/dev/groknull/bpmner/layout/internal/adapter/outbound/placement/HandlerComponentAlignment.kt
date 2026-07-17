@@ -84,12 +84,10 @@ internal object HandlerComponentAlignment {
                         routeRejoinEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
                     tgtMove != null && srcMove == null ->
                         routeForwardToHandlerEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
-                    else -> {
-                        // Both handler nodes: re-route from actual placed positions rather than
-                        // translating stale ELK waypoints, since source and target may have
-                        // shifted by different deltas (e.g. after BoundaryShapePlacement y-swap).
+                    else ->
+                        // Both endpoints are shifted handler nodes; re-route from final positions
+                        // because source and target may have shifted by different deltas.
                         routeForwardToHandlerEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
-                    }
                 }
             }
     }

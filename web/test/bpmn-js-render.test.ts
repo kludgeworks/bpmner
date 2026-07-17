@@ -4,10 +4,10 @@
  */
 
 /**
- * Headless bpmn-js rendering oracle (AD-557-05, §557-4 Task 8).
+ * Headless bpmn-js render test.
  *
  * Instantiates a real BpmnViewer in a jsdom container and calls importXML on every
- * corpus golden fixture (.expected.bpmn). This exercises the actual bpmn-js import
+ * approved expected layout (.expected.bpmn). This exercises the actual bpmn-js import
  * pipeline — not just DI shape/edge counts — and catches "missing bpmnElement reference"
  * and collapse-at-origin failures that XML schema checks cannot detect.
  *
@@ -23,7 +23,7 @@ import BpmnViewer from "bpmn-js"
 import { JSDOM } from "jsdom"
 import { textWidth } from "./label-metrics.data"
 
-/** All corpus golden files: 14 existing + 7 collaboration = 21 total. */
+/** All approved expected layout files: 14 existing + 7 collaboration = 21 total. */
 const GOLDEN_FIXTURES = [
 	// Flat corpus (557-2)
 	"representative-process",
@@ -218,7 +218,7 @@ function installSvgShims(dom: JSDOM): void {
 
 	// Canvas 2D stub for text-metrics (diagram-js measures label text).
 	// Uses the same frozen advance-width table as the JVM LabelMetrics so
-	// the oracle and estimator agree on every corpus label (AD-557-15).
+	// label wrapping in the jsdom harness matches what the browser renderer measures.
 	if (win.HTMLCanvasElement) {
 		win.HTMLCanvasElement.prototype.getContext = () => ({
 			measureText: (text: string) => ({
@@ -247,7 +247,7 @@ function installSvgShims(dom: JSDOM): void {
 }
 
 /**
- * Estimator⇄oracle agreement gate (AD-557-15 exit gate 2).
+ * Render-agreement test: JVM estimator and bpmn-js oracle produce identical line counts.
  *
  * Asserts that for the blocker-reported labels the JS `layoutText` algorithm
  * using the frozen advance-width table produces the same line count as the JVM
@@ -256,7 +256,7 @@ function installSvgShims(dom: JSDOM): void {
  *
  * Expected line counts verified against real diagram-js@15.14.0 in Chromium.
  */
-describe("estimator⇄oracle agreement — label line counts match at box 90 and 120", () => {
+describe("render-agreement — label line counts match at box 90 and 120", () => {
 	const SOFT_BREAK = "\u00AD"
 
 	function measureText(text: string): number {
@@ -346,7 +346,7 @@ describe("estimator⇄oracle agreement — label line counts match at box 90 and
 	}
 })
 
-describe("bpmn-js render oracle — all 21 corpus goldens import without error", () => {
+describe("bpmn-js render — all 21 expected layouts import without error", () => {
 	for (const fixture of GOLDEN_FIXTURES) {
 		it(`importXML succeeds: ${fixture}`, async () => {
 			const goldenPath = resolveGoldenPath(fixture)
@@ -354,10 +354,9 @@ describe("bpmn-js render oracle — all 21 corpus goldens import without error",
 			try {
 				xml = fs.readFileSync(goldenPath, "utf-8")
 			} catch {
-				// Golden file not found — skip rather than fail (the file may not exist
-				// in the workspace before goldens are generated for the first time).
+				// Expected layout file not found — fail with actionable message.
 				assert.fail(
-					`Golden file not found: ${goldenPath}. Run generate_candidate_goldens first.`,
+					`Expected layout file not found: ${goldenPath}. Run generate_candidate_goldens first.`,
 				)
 			}
 
@@ -377,14 +376,10 @@ describe("bpmn-js render oracle — all 21 corpus goldens import without error",
 
 			const viewer = new BpmnViewer({ container })
 
-			// importXML must not throw. This is the core oracle: if bpmn-js rejects the
-			// JVM-produced BPMN (e.g. "missing bpmnElement reference", bad DI structure),
-			// it throws here. Any error propagates through the await and fails the test.
-			//
-			// We do NOT call getRootElement() or query the SVG layer: jsdom's SVG
-			// support is partial (getBBox, baseVal, etc. are not implemented), so DOM
-			// rendering assertions would always fail regardless of BPMN correctness.
-			// The importXML path is the stated requirement (AD-557-05 rung 5).
+			// importXML must not throw — if bpmn-js rejects the JVM-produced BPMN
+			// (e.g. "missing bpmnElement reference", bad DI structure), it throws here.
+			// Querying the SVG layer is not asserted: jsdom's SVG support is partial,
+			// so DOM rendering assertions would always fail regardless of BPMN correctness.
 			await viewer.importXML(xml)
 		})
 	}

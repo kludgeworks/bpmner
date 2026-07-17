@@ -27,7 +27,7 @@ def bpmner_node_test(
             node_modules at runtime). When non-empty, `deps` are added to the
             test's runfiles so the externalised packages resolve at run time.
         extra_data: Additional data files to add to the test runfiles (e.g.
-            corpus fixtures for oracle tests). Merged with the macro's internal
+            golden fixtures for render tests). Merged with the macro's internal
             data list before passing to js_test.
         **kwargs: Additional arguments for js_test.
     """

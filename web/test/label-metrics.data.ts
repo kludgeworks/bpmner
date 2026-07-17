@@ -6,11 +6,11 @@
  *
  * Font contract: exact for `font = "12px Arial, sans-serif"` — the font and size
  * bpmn-js uses for external labels. If the bpmn-js default label font or size
- * changes, regenerate from src/test/resources/label-metrics.json using the
- * Playwright capture script documented in plans/557/ARCHITECTURE.md §AD-557-15.
+ * changes, regenerate from src/main/resources/label-metrics.json using the
+ * Playwright capture script that measures each ASCII glyph in real Chromium.
  *
  * Provenance: each value is measureText(char).width at "12px Arial, sans-serif"
- * in real Chromium (Playwright). Single source of truth: src/test/resources/label-metrics.json.
+ * in real Chromium (Playwright). Single source of truth: src/main/resources/label-metrics.json.
  * This TS module is a compiled copy of that JSON for use in the jsdom harness.
  */
 

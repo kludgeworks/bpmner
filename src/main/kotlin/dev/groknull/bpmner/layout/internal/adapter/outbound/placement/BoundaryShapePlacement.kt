@@ -80,17 +80,32 @@ internal object BoundaryShapePlacement : PlacementProcessor {
             }
         }
 
-        // Align handler y-positions to boundary x-order so edge drops never cross.
-        // The left-placed boundary's vertical drop passes behind the right-placed boundary's
-        // horizontal jog, so the left handler must be deeper (higher y) and the right handler
-        // shallower. `ordered` is left→right; assign y-values in descending order (deepest first).
+        alignHandlerYsByBoundaryXOrder(ordered, handlerOf, ctx)
+    }
+
+    /**
+     * Re-sorts handler Y-positions to match the left-to-right boundary order.
+     *
+     * The leftmost boundary's vertical drop passes behind the rightmost boundary's
+     * horizontal jog, so the leftmost handler must sit deepest (highest Y) and the
+     * rightmost handler shallowest. Assigning Y values in descending order to
+     * boundaries in left-to-right order eliminates edge crossings.
+     *
+     * Also updates the move ledger so [HandlerComponentAlignment.Repair] uses the
+     * final post-swap Y when re-routing edges.
+     */
+    private fun alignHandlerYsByBoundaryXOrder(
+        ordered: List<BoundaryEvent>,
+        handlerOf: Map<String, String>,
+        ctx: PlacementContext,
+    ) {
+        val shapes = ctx.shapes
         val handlerIds = ordered.mapNotNull { handlerOf[it.id] }
         val handlerYs = handlerIds.mapNotNull { shapes[it]?.y }.sortedDescending()
         handlerIds.zip(handlerYs).forEach { (hid, targetY) ->
             val s = shapes[hid] ?: return@forEach
             if (s.y != targetY) {
                 shapes[hid] = s.copy(y = targetY)
-                // Update the move ledger so the displacement recorded matches the final y.
                 val prior = ctx.moves[hid]
                 if (prior != null && prior.owner == "HandlerComponentAlignment") {
                     ctx.moves[hid] = prior.copy(dy = prior.dy + (targetY - s.y))
