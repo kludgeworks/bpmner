@@ -58,7 +58,7 @@
         <dc:Bounds height="220.0" width="390.0" x="138.0" y="12.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_A" id="BPMNShape_Task_A">
-        <dc:Bounds height="80.0" width="100.0" x="188.0" y="102.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="188.0" y="82.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_B" id="BPMNShape_Task_B">
         <dc:Bounds height="80.0" width="100.0" x="378.0" y="82.0"/>
@@ -72,16 +72,14 @@
         <di:waypoint x="618.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_h1" id="BPMNEdge_Flow_h1">
-        <di:waypoint x="288.0" y="142.0"/>
-        <di:waypoint x="333.0" y="142.0"/>
-        <di:waypoint x="333.0" y="122.0"/>
+        <di:waypoint x="288.0" y="122.0"/>
         <di:waypoint x="378.0" y="122.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_h2" id="BPMNEdge_Flow_h2">
         <di:waypoint x="428.0" y="82.0"/>
         <di:waypoint x="428.0" y="57.0"/>
         <di:waypoint x="238.0" y="57.0"/>
-        <di:waypoint x="238.0" y="102.0"/>
+        <di:waypoint x="238.0" y="82.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

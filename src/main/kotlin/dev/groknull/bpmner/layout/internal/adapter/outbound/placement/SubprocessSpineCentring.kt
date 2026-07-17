@@ -138,6 +138,8 @@ internal object SubprocessSpineCentring {
         predOf: Map<String, String>,
     ): Boolean {
         if (node is StartEvent || node is EndEvent || node is Gateway) return true
+        // A node with no incoming non-loopback edges is a cycle entry point and belongs on the spine.
+        if ((inDegree[node.id] ?: 0) == 0) return true
         if ((inDegree[node.id] ?: 0) != 1) return false
         val predId = predOf[node.id] ?: return false
         return (outDegree[predId] ?: 0) == 1
