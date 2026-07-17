@@ -24,13 +24,13 @@ import { JSDOM } from "jsdom"
 import { textWidth } from "./label-metrics.data"
 
 /** All approved expected layout files: 14 existing + 7 collaboration = 21 total. */
-const GOLDEN_FIXTURES = [
-	// Flat corpus (557-2)
+const EXPECTED_LAYOUT_FIXTURES = [
+	// Flat fixtures
 	"representative-process",
 	"explicit-cycle",
 	"annotation-and-group",
 	"long-labels",
-	// Subprocess + boundary corpus (557-3)
+	// Subprocess + boundary fixtures
 	"subprocess-flat",
 	"subprocess-nested",
 	"subprocess-branch",
@@ -41,7 +41,7 @@ const GOLDEN_FIXTURES = [
 	"boundary-on-subprocess",
 	"subprocess-no-start-cycle",
 	"subprocess-sequential-sharing",
-	// Collaboration corpus (557-4)
+	// Collaboration fixtures
 	"collab-lanes",
 	"collab-two-pools",
 	"collab-blackbox",
@@ -52,12 +52,12 @@ const GOLDEN_FIXTURES = [
 ]
 
 /**
- * Resolves a golden fixture path via Bazel runfiles.
+ * Resolves an expected layout fixture path via Bazel runfiles.
  *
  * Bazel sets RUNFILES_DIR (or RUNFILES on older versions) when running tests.
  * Data files in the `data` attribute are placed under `<workspace>/<package>/<file>`.
  */
-function resolveGoldenPath(fixture: string): string {
+function resolveExpectedLayoutPath(fixture: string): string {
 	const runfilesDir =
 		process.env.RUNFILES_DIR ?? process.env.RUNFILES ?? process.env.TEST_SRCDIR
 
@@ -347,16 +347,16 @@ describe("render-agreement — label line counts match at box 90 and 120", () =>
 })
 
 describe("bpmn-js render — all 21 expected layouts import without error", () => {
-	for (const fixture of GOLDEN_FIXTURES) {
+	for (const fixture of EXPECTED_LAYOUT_FIXTURES) {
 		it(`importXML succeeds: ${fixture}`, async () => {
-			const goldenPath = resolveGoldenPath(fixture)
+			const expectedLayoutPath = resolveExpectedLayoutPath(fixture)
 			let xml: string
 			try {
-				xml = fs.readFileSync(goldenPath, "utf-8")
+				xml = fs.readFileSync(expectedLayoutPath, "utf-8")
 			} catch {
 				// Expected layout file not found — fail with actionable message.
 				assert.fail(
-					`Expected layout file not found: ${goldenPath}. Run generate_candidate_goldens first.`,
+					`Expected layout file not found: ${expectedLayoutPath}. Run generate_candidate_goldens first.`,
 				)
 			}
 

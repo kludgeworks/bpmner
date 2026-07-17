@@ -114,6 +114,7 @@ internal object ElkToBpmnDiWriter {
             existingShapes[participant.id]?.also { existing ->
                 existing.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
                 existing.isHorizontal = true
+                writeLabelIfPresent(model, existing, participant.id, layout)
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnShape::class.java).also { shape ->
                 shape.id = "BPMNShape_${participant.id}"
@@ -140,6 +141,7 @@ internal object ElkToBpmnDiWriter {
             existingShapes[lane.id]?.also { existing ->
                 existing.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
                 existing.isHorizontal = true
+                writeLabelIfPresent(model, existing, lane.id, layout)
                 plane.addChildElement(existing)
             } ?: model.newInstance(BpmnShape::class.java).also { shape ->
                 shape.id = "BPMNShape_${lane.id}"

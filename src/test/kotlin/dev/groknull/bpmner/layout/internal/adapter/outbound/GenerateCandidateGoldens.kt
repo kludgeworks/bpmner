@@ -35,7 +35,7 @@ fun main() {
         "boundary-on-subprocess",
         "subprocess-no-start-cycle",
         "subprocess-sequential-sharing",
-        // Collaboration corpus (557-4)
+        // Collaboration fixtures
         "collab-lanes",
         "collab-two-pools",
         "collab-blackbox",

@@ -33,8 +33,8 @@ internal class ElkBpmnLayouter {
 
     fun layout(xml: String): String {
         val model = parseXml(xml)
-        // DI-merge gate (§557-4): capture existing shapes/edges BEFORE stripping, so
-        // non-geometry attributes (bioc: colours, custom extensions) are preserved.
+        // Capture existing shapes/edges BEFORE stripping to preserve non-geometry attributes
+        // (bioc: colours, custom extensions).
         val existingShapes = ElkToBpmnDiWriter.captureExistingShapes(model)
         val existingEdges = ElkToBpmnDiWriter.captureExistingEdges(model)
         removeExistingDi(model)

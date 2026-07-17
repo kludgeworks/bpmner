@@ -71,11 +71,17 @@
       <bpmndi:BPMNShape bpmnElement="Participant_1" id="BPMNShape_Participant_1" isHorizontal="true">
 
         <dc:Bounds height="120.0" width="422.0" x="-18.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_1">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_2" id="BPMNShape_Participant_2" isHorizontal="true">
 
         <dc:Bounds height="120.0" width="422.0" x="-18.0" y="212.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_2">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="212.0"/>
+        </bpmndi:BPMNLabel>
 
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bioc:fill="#ffcdd2" bioc:stroke="#831311" bpmnElement="End_1" id="BPMNShape_End_1">

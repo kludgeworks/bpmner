@@ -11,7 +11,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Unit tests for [LabelMetrics] frozen advance-width table (AD-557-15).
+ * Unit tests for [LabelMetrics] frozen advance-width table.
  *
  * Anchors the table's correctness against known bpmn-js-measured label widths
  * and verifies the non-ASCII fallback contract.
