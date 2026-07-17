@@ -5653,15 +5653,6 @@
 			"type": "java.io.Flushable"
 		},
 		{
-			"type": "java.io.IOException",
-			"methods": [
-				{
-					"name": "<init>",
-					"parameterTypes": ["java.lang.String"]
-				}
-			]
-		},
-		{
 			"type": "java.io.InputStream"
 		},
 		{
@@ -6043,6 +6034,9 @@
 		},
 		{
 			"type": "java.math.BigInteger"
+		},
+		{
+			"type": "java.net.HttpRetryException"
 		},
 		{
 			"type": "java.net.ServerSocket"

@@ -316,13 +316,18 @@ java_library(
     deps = [":bpmner_core"],
 )
 
+java_library(
+    name = "bpmner_native_config_resources",
+    resource_strip_prefix = "src/native-config",
+    resources = [
+        "native-config/META-INF/native-image/dev.groknull.bpmner/proxy-config.json",
+        "native-config/META-INF/native-image/dev.groknull.bpmner/resource-config.json",
+        "native-config/META-INF/native-image/dev.groknull.bpmner/serialization-config.json",
+    ],
+)
+
 native_image(
     name = "bpmner_native",
-    data = [
-        "native-config/proxy-config.json",
-        "native-config/resource-config.json",
-        "native-config/serialization-config.json",
-    ],
     extra_args = [
         "--no-fallback",
         "-H:+UnlockExperimentalVMOptions",
@@ -330,18 +335,16 @@ native_image(
         "-H:Class=dev.groknull.bpmner.NativeBpmnerApplication",
         "--initialize-at-build-time=org.springframework.boot.loader.nio.file.NestedFileSystemProvider",
         "--enable-preview",
-        "-H:DynamicProxyConfigurationFiles=src/native-config/proxy-config.json",
-        "-H:ResourceConfigurationFiles=src/native-config/resource-config.json",
-        "-H:SerializationConfigurationFiles=src/native-config/serialization-config.json",
     ],
     include_resources = ".*\\.kotlin_builtins|.*\\.kotlin_metadata|logback.*\\.xml|models/.*\\.yml|embabel-.*\\.properties",
     main_class = "dev.groknull.bpmner.NativeBpmnerApplication",
-    reflection_configuration = "native-config/reflect-config.json",
+    reflection_configuration = "native-config/META-INF/native-image/dev.groknull.bpmner/reflect-config.json",
     tags = ["local"],
     deps = [
         ":bpmner_aot_lib",
         ":bpmner_aot_resources",
         ":bpmner_core",
+        ":bpmner_native_config_resources",
         ":native_launcher",
     ],
 )
