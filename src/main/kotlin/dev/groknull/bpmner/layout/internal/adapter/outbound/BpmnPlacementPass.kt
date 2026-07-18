@@ -23,7 +23,6 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SequenceEd
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessEndStraddle
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.SubprocessSpineCentring
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
-import org.camunda.bpm.model.bpmn.instance.Lane
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 
@@ -80,8 +79,6 @@ internal object BpmnPlacementPass {
     internal const val POSITION_EPSILON = 0.5
 
     fun place(model: BpmnModelInstance, skeleton: ElkSkeleton): PlacedLayout {
-        val laneMap = model.getModelElementsByType(Lane::class.java)
-            .associateBy { it.id }
         val ctx = PlacementContext(
             model = model,
             skeleton = skeleton,
@@ -89,7 +86,6 @@ internal object BpmnPlacementPass {
             labels = mutableMapOf(),
             edges = mutableMapOf(),
             expanded = mutableSetOf(),
-            laneMap = laneMap,
         )
         run(ctx)
         return PlacedLayout(ctx.shapes, ctx.labels, ctx.edges, ctx.expanded)

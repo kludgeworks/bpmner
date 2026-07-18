@@ -9,7 +9,6 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Po
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.ElkSkeleton
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
-import org.camunda.bpm.model.bpmn.instance.Lane
 
 /**
  * Single-responsibility processor in the ordered placement pipeline.
@@ -41,8 +40,6 @@ internal class PlacementContext(
     val expanded: MutableSet<String>,
     /** Move ledger: nodeId → MoveRecord for every declared move. */
     val moves: MutableMap<String, MoveRecord> = mutableMapOf(),
-    /** Lane map: lane ID → Lane, populated by BpmnPlacementPass.place from the model. */
-    val laneMap: Map<String, Lane> = emptyMap(),
 )
 
 /**
