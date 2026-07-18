@@ -361,8 +361,7 @@ fail the build.
 
 ## 6. Enforcement
 
-For the retained BPMN vocabulary and topology policy, see
-[`bpmn-profile.md`](bpmn-profile.md).
+For the retained BPMN vocabulary, see [`bpmn-profile.md`](bpmn-profile.md).
 
 The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) §6):
 
