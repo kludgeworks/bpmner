@@ -9,6 +9,7 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnPlacementPass.Re
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLACK_BOX_HEIGHT
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
 import org.eclipse.elk.graph.util.ElkGraphUtil
 import org.junit.jupiter.api.Test
@@ -86,6 +87,33 @@ class CollaborationShapePlacementTest {
     <bpmn:endEvent id="NodeB1"><bpmn:incoming>FL2</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="FL1" sourceRef="NodeA1" targetRef="NodeA2"/>
     <bpmn:sequenceFlow id="FL2" sourceRef="NodeA2" targetRef="NodeB1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+    private val collabLanesBoundaryXml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Def4" targetNamespace="https://test">
+  <bpmn:collaboration id="Collab_4">
+    <bpmn:participant id="P_be" name="With Boundary Event" processRef="Proc_be"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Proc_be" isExecutable="true">
+    <bpmn:laneSet id="LS2">
+      <bpmn:lane id="Lane_X" name="Lane X">
+        <bpmn:flowNodeRef>TaskA</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>BE1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Y" name="Lane Y">
+        <bpmn:flowNodeRef>HandlerTask</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:userTask id="TaskA"/>
+    <bpmn:boundaryEvent id="BE1" attachedToRef="TaskA">
+      <bpmn:outgoing>FEx</bpmn:outgoing>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="HandlerTask">
+      <bpmn:incoming>FEx</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="FEx" sourceRef="BE1" targetRef="HandlerTask"/>
   </bpmn:process>
 </bpmn:definitions>"""
 
@@ -291,6 +319,48 @@ class CollaborationShapePlacementTest {
 
         // FL1 is a loop-back flow: its arc waypoints must not be overwritten
         assertEquals(arcWaypoints, ctx.edges["FL1"], "Loop-back flow waypoints must survive lane repositioning")
+    }
+
+    @Test
+    fun `boundary-event exception-flow arc is re-routed after lane repositioning moves the boundary shape`() {
+        // BE1 (in Lane_X) sits well below its host TaskA, and HandlerTask (in Lane_Y) sits far
+        // below both — before lane stacking runs. ExceptionEdgeRoutes would have computed FEx's
+        // arc from these pre-lane positions.
+        val shapes = mutableMapOf<String, Rect>(
+            "TaskA" to Rect(50.0, 20.0, 100.0, 80.0),
+            "BE1" to Rect(82.0, 800.0, 36.0, 36.0),
+            "HandlerTask" to Rect(300.0, 900.0, 100.0, 80.0),
+        )
+        val staleWaypoints = ExceptionEdgeRoutes.routeExceptionEdge(
+            shapes.getValue("BE1"),
+            shapes.getValue("HandlerTask"),
+            shapes["TaskA"],
+        )
+        val model = PlacementTestSkeletons.parse(collabLanesBoundaryXml)
+        val root = ElkGraphUtil.createGraph()
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = PlacementTestSkeletons.skeleton(root, emptyMap()),
+            shapes = shapes.toMutableMap(),
+            labels = mutableMapOf(),
+            edges = mutableMapOf("FEx" to staleWaypoints),
+            expanded = mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        val finalBe1 = ctx.shapes.getValue("BE1")
+        val finalHandler = ctx.shapes.getValue("HandlerTask")
+        val finalHost = ctx.shapes["TaskA"]
+        // BE1 must have actually moved out of its pre-lane Y=800 by lane stacking/centring.
+        assertTrue(finalBe1.y != 800.0, "BE1 must be repositioned into Lane_X's band")
+        val expected = ExceptionEdgeRoutes.routeExceptionEdge(finalBe1, finalHandler, finalHost)
+        assertEquals(
+            expected,
+            ctx.edges["FEx"],
+            "Exception-flow arc must be re-routed from BE1's final position, not left stale",
+        )
+        assertTrue(ctx.edges["FEx"] != staleWaypoints, "Stale pre-lane-repositioning waypoints must not survive")
     }
 
     @Test

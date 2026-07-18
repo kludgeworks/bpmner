@@ -34,6 +34,12 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
  * For black-box participants the width matches the white-box participants and a fixed height
  * ([BLACK_BOX_HEIGHT]) is used. They are stacked below all white-box participants with [PARTICIPANT_GAP].
  */
+// process(), the white-box/lane/unlaned bounds computations, and the node-shift/edge-refresh
+// helpers all cooperate on one shared PlacementContext for a single participant/lane placement
+// pass; splitting into separate objects would require threading ctx and lane geometry through
+// each, or grouping them under a shared context that adds indirection without reducing the
+// function count. Suppression is structural, not incidental.
+@Suppress("TooManyFunctions")
 internal object CollaborationShapePlacement : PlacementProcessor {
 
     private const val LANE_PADDING = 20.0
@@ -141,6 +147,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
 
         stackLanes(lanes, laneHeights, LaneGeometry(laneX, laneW, participantX, participantY), ctx)
         refreshSequenceEdgeWaypoints(ctx, allNodeIds)
+        refreshExceptionEdgeRoutes(ctx, allNodeIds)
 
         return Rect(participantX, participantY, participantW, totalLaneHeight)
     }
@@ -317,6 +324,31 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val srcId = sf.source?.id
         val tgtId = sf.target?.id
         return (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
+    }
+
+    /**
+     * Re-routes boundary-event exception-flow arcs whose source shape was repositioned
+     * by lane stacking or the label-clearance shift.
+     *
+     * [ExceptionEdgeRoutes] computes these arcs before lane placement runs, so they go
+     * stale once [stackLanes]/[shiftNodesX] move the boundary event's shape.
+     * [isRefreshableSequenceFlow] deliberately excludes boundary-event flows from
+     * [refreshSequenceEdgeWaypoints] to avoid overwriting the arc with a straight line;
+     * this recomputes the arc itself from the final shape positions instead, using the
+     * same routing logic.
+     */
+    private fun refreshExceptionEdgeRoutes(ctx: PlacementContext, repositionedIds: Set<String>) {
+        val boundaryEvents = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
+            .associateBy { it.id }
+        ctx.model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { sf -> sf.source?.id in boundaryEvents && sf.source?.id in repositionedIds }
+            .forEach { sf ->
+                val be = boundaryEvents[sf.source?.id] ?: return@forEach
+                val bRect = ctx.shapes[be.id] ?: return@forEach
+                val tRect = ctx.shapes[sf.target?.id ?: return@forEach] ?: return@forEach
+                val hostRect = ctx.shapes[be.attachedTo?.id]
+                ctx.edges[sf.id] = ExceptionEdgeRoutes.routeExceptionEdge(bRect, tRect, hostRect)
+            }
     }
 }
 
