@@ -129,7 +129,7 @@ those ports in plain Spring components.
 | --- | --- | --- | --- | --- |
 | `BpmnGenerationAgent` | `pipeline/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Track A). |
-| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (JVM-native ELK auto-layout + XSD and AD-557-17 referential-integrity validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
+| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (JVM-native ELK auto-layout + XSD and referential-integrity validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -361,8 +361,8 @@ fail the build.
 
 ## 6. Enforcement
 
-For the retained BPMN vocabulary, topology policy, and layout-engine contract, see
-[`bpmn-profile.md`](bpmn-profile.md) and [ADR-011](./adr/adr-011-jvm-native-bpmn-layout.md).
+For the retained BPMN vocabulary and topology policy, see
+[`bpmn-profile.md`](bpmn-profile.md).
 
 The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) §6):
 
@@ -414,6 +414,5 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | [ADR-008](./adr/adr-008-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
 | [ADR-009](./adr/adr-009-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
 | [ADR-010](./adr/adr-010-sanctioned-architecture-exceptions.md) | Sanctioned architecture-test exceptions via opt-in marker | Accepted — current on `main` |
-| [ADR-011](./adr/adr-011-jvm-native-bpmn-layout.md) | JVM-native ELK BPMN layout replaces GraalJS/`yet-another-bpmn-auto-layout` | Accepted (epic #557) — current on `main` |
 
 <!-- markdownlint-enable MD013 -->

@@ -5,46 +5,36 @@
 `bpmner` supports a deliberately constrained BPMN 2.0 vocabulary and topology, chosen
 for high-value coverage over completeness (epic [#557](https://github.com/kludgeworks/bpmner/issues/557)).
 This document is the authoritative reference for what is retained, what is rejected,
-and where each rule is enforced in code. See [`architecture.md`](architecture.md) and
-[ADR-011](adr/adr-011-jvm-native-bpmn-layout.md) for the layout-engine design that
-motivated the contraction.
+and where each rule is enforced in code. The tables below are sourced from
+[`BpmnDomain.kt`](../src/main/kotlin/dev/groknull/bpmner/bpmn/BpmnDomain.kt)'s
+`BpmnNode`/`BpmnEventDefinition` sealed interfaces and container-level types — there is
+no separate vocabulary registry to keep in sync.
 
-## Retained profile
+## Vocabulary support matrix
 
-The supported vocabulary is defined structurally by two sealed interfaces in
-[`BpmnDomain.kt`](../src/main/kotlin/dev/groknull/bpmner/bpmn/BpmnDomain.kt) — there is
-no separate vocabulary registry to keep in sync; the sealed subtype list *is* the
-profile:
+| Category | Construct | Status | Type / enforcement |
+| --- | --- | --- | --- |
+| Events | Start, end, intermediate (catch/throw), boundary | Supported | `BpmnStartEvent`, `BpmnEndEvent`, `BpmnIntermediateEvent`, `BpmnBoundaryEvent` (`BpmnDomain.kt:217`) |
+| Events | Event subprocess | **Not supported** | No `BpmnEventSubprocess` type; parses to `BpmnUnrecognizedNode` |
+| Event definitions | None, timer, message, error, terminate | Supported | `BpmnDomain.kt:153` |
+| Event definitions | Signal, escalation, compensation | **Not supported** | No matching `BpmnEventDefinition` subtype; parses to `BpmnUnrecognizedEventDefinition` |
+| Boundary events | Interrupting timer, interrupting error | Supported | `BpmnBoundaryEvent` |
+| Boundary events | Non-interrupting variants | **Not supported** | Not modeled on `BpmnBoundaryEvent` |
+| Tasks | Task, user, service, script, business-rule, send, receive | Supported | `BpmnTask`, `BpmnUserTask`, `BpmnServiceTask`, `BpmnScriptTask`, `BpmnBusinessRuleTask`, `BpmnSendTask`, `BpmnReceiveTask` |
+| Activities | Call activity | Supported | `BpmnCallActivity` |
+| Activities | Embedded subprocess | Supported | `BpmnSubProcess` |
+| Activity characteristics | Standard-loop, multi-instance | Supported | `StandardLoopCharacteristics`, `MultiInstanceLoopCharacteristics` |
+| Gateways | Exclusive, parallel, inclusive, event-based | Supported | `BpmnExclusiveGateway`, `BpmnParallelGateway`, `BpmnInclusiveGateway`, `BpmnEventBasedGateway` |
+| Collaboration | Participants (pools), black-box participants | Supported | `BpmnParticipant` (container-level, `BpmnDomain.kt:688`) |
+| Collaboration | Cross-pool message flows | Supported | `BpmnMessageFlow` (container-level) |
+| Collaboration | Lanes | Supported | `BpmnLane` (container-level, `BpmnDomain.kt:699`, referenced via `lanes: List<BpmnLane>`, not a `BpmnNode` subtype) |
+| Artifacts | Text annotations, ordinary associations | Supported | `BpmnGroup`, `BpmnAssociation` (container-level) |
+| Data | Data objects/references, data stores/references | **Not supported** | No `BpmnDataObject*`/`BpmnDataStore*` type |
+| Data | Data input/output associations | **Not supported** | Not modeled |
 
-- **`BpmnNode`** (`BpmnDomain.kt:217`) — `BpmnStartEvent`, `BpmnEndEvent`,
-  `BpmnIntermediateEvent`, `BpmnBoundaryEvent`; task kinds `BpmnTask`, `BpmnUserTask`,
-  `BpmnServiceTask`, `BpmnScriptTask`, `BpmnBusinessRuleTask`, `BpmnSendTask`,
-  `BpmnReceiveTask`; `BpmnCallActivity`; `BpmnSubProcess` (embedded subprocess);
-  `BpmnParallelGateway`, `BpmnExclusiveGateway`, `BpmnInclusiveGateway`,
-  `BpmnEventBasedGateway`.
-- **`BpmnEventDefinition`** (`BpmnDomain.kt:153`) — `BpmnNoneEventDefinition`,
-  `BpmnTimerEventDefinition`, `BpmnMessageEventDefinition`, `BpmnErrorEventDefinition`,
-  `BpmnTerminateEventDefinition`.
-- Participants, pools, black-box participants, and ordinary cross-pool message flows
-  (collaboration-level, see `CollaborationShapePlacement`/`MessageFlowEdges`).
-- Lanes partitioning a white-box pool by business role/performer — `BpmnLane`
-  (`BpmnDomain.kt:699`), a container-level type referenced via the definition's
-  `lanes: List<BpmnLane>` field, not a `BpmnNode` subtype. There is no `BpmnLaneSet`
-  type.
-- Text annotations and ordinary associations.
-- Standard-loop and multi-instance activity characteristics.
-- Cyclic sequence flows and loop-back paths (see Topology policy below).
-
-## Removed BPMN capabilities
-
-Event subprocesses, compensation events/handlers/associations, escalation events,
-signal events, data objects/stores/references, data input/output associations, and
-non-interrupting boundary-event variants are **not** supported. There is no
-`BpmnEventSubprocess`, `BpmnCompensation*`, `BpmnDataObject*`, or `BpmnDataStore*`
-type, and no `Signal`/`Escalation`/`Compensation` `BpmnEventDefinition` subtype — the
-removal is structural, not a generator-prompt omission. These are deliberate scope
-decisions for the ELK migration, not judgments that the constructs lack value; see
-[Deferred capabilities](#deferred-capabilities) below.
+Removal is structural, not a generator-prompt omission — these are deliberate scope
+decisions for the ELK layout migration, not judgments that the constructs lack value;
+see [Deferred capabilities](#deferred-capabilities) below.
 
 ## Rejected-construct examples
 
@@ -85,26 +75,24 @@ No `BpmnEventSubprocess` type exists to represent this; the element parses to
 
 ## Topology policy
 
-The seven rules below (from issue [#557](https://github.com/kludgeworks/bpmner/issues/557)'s
-"Topology policy" section) are enforced by several independent, existing mechanisms —
-there is no single `TopologyPolicy` class; each rule is named and linked to its
-enforcing code here rather than summarized behind a new abstraction:
+There is no single `TopologyPolicy` class; each rule below is independently enforced
+and linked to its enforcing code rather than summarized behind a new abstraction:
 
-| Rule | Enforcement |
-| --- | --- |
-| Reject implicit splits — branching must use an explicit diverging gateway | Pkl rule **"No Implicit Split"** (`gwNoImplicitSplit`, ERROR, targets `bpmn:FlowNode`), backed by `TopologyCheck.NO_IMPLICIT_SPLIT` (`TopologyCheck.kt:61-71`) — flags a non-gateway node with more than one outgoing sequence flow |
-| Reject fake joins — convergence must use an explicit converging gateway | Pkl rule **"Fake Join"** (`gwFakeJoin`, ERROR, auto-repaired by `insertConvergingGateway`), backed by `TopologyCheck.NO_FAKE_JOIN` (`TopologyCheck.kt:43-59`) — flags a task with 2+ incoming flows where none originates from an explicit converging gateway |
-| Reject a gateway that is simultaneously join and fork | Pkl rule **"No Gateway Join Fork"** (`gwNoGatewayJoinFork`, ERROR), backed by `TopologyCheck.NO_JOIN_FORK` (incoming ≥ 2 and outgoing ≥ 2); auto-repaired by `SplitJoinForkGatewayHandler`, which splits the combined gateway into separate converging and diverging gateways (`SplitJoinForkGatewayHandler.kt:20-40`, paired with `InsertConvergingGatewayHandler` and `JoinGatewayKindSelector`) |
-| Reject disconnected ordinary flow-node components | `BpmnDefinitionValidator.kt:145-148` — `"$scope contains disconnected flow nodes: ..."` |
-| Permit semantically valid cycles and loop-backs | No cycle-rejection code exists; ELK's `BpmnToElkMapper.findLoopBackEdges` treats a cycle as a routing case (`LoopBackEdgeArcsTest`, `collab-lanes-loopback` fixture), not a validation error |
-| Do not require every diverging gateway to have a matching converging gateway | No such matching rule exists anywhere in `BpmnDefinitionValidator`, `TopologyCheck`, or the rest of the ruleset — absence is the policy |
-| No arbitrary message-flow density limit; no invented layout-driven validity restriction | No message-flow-count rule exists; ELK renders collaboration edges best-effort (AD-557-04, `plans/557/ARCHITECTURE.md`) rather than bpmner imposing a layout-driven cap |
+| Rule | Status | Enforcement |
+| --- | --- | --- |
+| Implicit split (branch without an explicit diverging gateway) | Rejected | Pkl rule **"No Implicit Split"** (`gwNoImplicitSplit`, ERROR), backed by `TopologyCheck.NO_IMPLICIT_SPLIT` (`TopologyCheck.kt:61-71`) — flags a non-gateway node with more than one outgoing sequence flow |
+| Fake join (convergence without an explicit converging gateway) | Rejected | Pkl rule **"Fake Join"** (`gwFakeJoin`, ERROR, auto-repaired by `insertConvergingGateway`), backed by `TopologyCheck.NO_FAKE_JOIN` (`TopologyCheck.kt:43-59`) |
+| Gateway simultaneously join and fork | Rejected (auto-repaired) | Pkl rule **"No Gateway Join Fork"** (`gwNoGatewayJoinFork`, ERROR), backed by `TopologyCheck.NO_JOIN_FORK`; `SplitJoinForkGatewayHandler` splits the combined gateway into separate converging and diverging gateways (`SplitJoinForkGatewayHandler.kt:20-40`, paired with `InsertConvergingGatewayHandler` and `JoinGatewayKindSelector`) |
+| Disconnected ordinary flow-node components | Rejected | `BpmnDefinitionValidator.kt:145-148` — `"$scope contains disconnected flow nodes: ..."` |
+| Cyclic sequence flows and loop-backs | Permitted | No cycle-rejection code exists; `BpmnToElkMapper.findLoopBackEdges` treats a cycle as a routing case (`LoopBackEdgeArcsTest`, `collab-lanes-loopback` fixture), not a validation error |
+| Diverging gateway without a matching converging gateway | Permitted | No matching rule exists anywhere in `BpmnDefinitionValidator`, `TopologyCheck`, or the rest of the ruleset — absence is the policy |
+| Message-flow density | No limit imposed | No message-flow-count rule exists; ELK renders collaboration edges best-effort rather than bpmner imposing a layout-driven cap |
 
-Two related Pkl rules exist beside the seven above but are not part of the #557 policy
-text: **"Superfluous Gateway"** (`gwSuperfluousGateway`, `TopologyCheck.NO_SUPERFLUOUS`)
-flags a pass-through gateway with exactly one incoming and one outgoing flow, and
-**"Converging Gateway Unnamed"**/**"Diverging Flow Names"** are naming conventions, not
-topology-validity rules.
+Two related Pkl rules exist beside the policy above: **"Superfluous Gateway"**
+(`gwSuperfluousGateway`, `TopologyCheck.NO_SUPERFLUOUS`) flags a pass-through gateway
+with exactly one incoming and one outgoing flow, and **"Converging Gateway
+Unnamed"**/**"Diverging Flow Names"** are naming conventions, not topology-validity
+rules.
 
 ## JVM dependency and runtime change
 
@@ -122,20 +110,19 @@ is an ordinary synchronous method call that either returns laid-out XML or throw
 Per invocation, the ELK graph and layout-engine state are created fresh: there is no
 shared context or mutable process-global layout state. A fixed non-zero random seed and
 stable element/port insertion order (document order) mean identical semantic input and
-configuration produce byte-stable BPMN-DI ordering and numerically stable coordinates
-(`plans/557/ARCHITECTURE.md` AD-557-03). `ElkGoldenLayoutTest` enforces this byte-exact
-against the 22-fixture corpus.
+configuration produce byte-stable BPMN-DI ordering and numerically stable coordinates.
+`ElkGoldenLayoutTest` enforces this byte-exact against the 22-fixture corpus.
 
 ## Single-authority snapshot behavior
 
 The JVM ELK engine is the sole producer of layout geometry for both the final result
 and live browser rendering — there is no second layout authority. `snapshot-import.ts`
-has no `layoutProcess`/client-side auto-layout call (AD-557-06,
-`plans/557/ARCHITECTURE.md`): a DI-bearing snapshot is imported as-is; a DI-less
-intermediate snapshot resolves `pending` immediately and the last authoritative diagram
-stays on screen. `LAYOUT_COMPLETE` remains the one authoritative drawing event.
+has no `layoutProcess`/client-side auto-layout call: a DI-bearing snapshot is imported
+as-is; a DI-less intermediate snapshot resolves `pending` immediately and the last
+authoritative diagram stays on screen. `LAYOUT_COMPLETE` remains the one authoritative
+drawing event.
 
-## Rendering validation: the JVM-native structural check
+## Rendering validation
 
 Rather than a JS-import-throw assertion or any jsdom/Playwright harness,
 `BpmnLayoutAgent.validateFinalBpmnXml` runs a permanent, JVM-native referential-
@@ -145,8 +132,8 @@ edge endpoint resolution, and boundary-host attachment
 This supersedes the "does it import into bpmn-js without throwing" check — verified
 against `bpmn-js` source, that importer demotes almost every referential-integrity
 failure to a non-throwing warning, so it was never the rigorous oracle it was assumed
-to be (AD-557-17, `plans/557/ARCHITECTURE.md`). No JS/Node/jsdom/Playwright harness is
-added for this or any other rendering-validation purpose.
+to be. No JS/Node/jsdom/Playwright harness is added for this or any other
+rendering-validation purpose.
 
 ## Extending the rendering corpus
 
@@ -177,4 +164,3 @@ gated on a specific layout-engine prerequisite:
 - [#560](https://github.com/kludgeworks/bpmner/issues/560) — data objects, stores,
   references, and data associations. Prerequisite: restore only after the JVM-native
   layout supports data-artifact and association geometry.
-</content>
