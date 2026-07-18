@@ -10,6 +10,7 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ArtifactPl
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.AssociationEdges
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.EdgeTerminalTailGuard
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LabelMetrics
@@ -110,6 +111,7 @@ internal object BpmnPlacementPass {
         SubprocessSpineCentring.Repair,
         CollaborationShapePlacement,
         MessageFlowEdges,
+        EdgeTerminalTailGuard,
         LabelPlacement,
         ArtifactPlacement,
         AssociationEdges,

@@ -116,8 +116,8 @@
         <di:waypoint x="328.0" y="148.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_rejoin" id="BPMNEdge_Flow_rejoin">
-        <di:waypoint x="318.0" y="258.0"/>
-        <di:waypoint x="318.0" y="161.0"/>
+        <di:waypoint x="308.0" y="258.0"/>
+        <di:waypoint x="308.0" y="161.0"/>
         <di:waypoint x="328.0" y="161.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
