@@ -49,6 +49,25 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     private const val DEFAULT_PARTICIPANT_Y = 12.0
     private const val SAME_LANE_Y_EPSILON = 1.0
 
+    /** Minimum gap between a lane/participant's left-side name label and a node's own label. */
+    private const val LABEL_CLEARANCE_MARGIN = 16.0
+
+    /** Minimum gap between a loop-back arc's peak and the top edge of its enclosing lane. */
+    private const val LANE_ARC_TOP_MARGIN = 8.0
+
+    /** Minimum straight length of a loop-back arc's final segment, before it enters its target. */
+    private const val MIN_ARC_TAIL = 16.0
+
+    /** Waypoint count of the 4-point arc [LoopBackEdgeArcs.routeLoopBackEdge] always produces. */
+    private const val LOOP_BACK_ARC_WAYPOINT_COUNT = 4
+
+    /**
+     * Extra headroom reserved above a lane's normally-centred content when the lane contains a
+     * loop-back flow's target, so [LANE_ARC_TOP_MARGIN] and [MIN_ARC_TAIL] both fit without
+     * competing for the same standard [LANE_PADDING] gap above the tallest member node.
+     */
+    private const val LOOP_BACK_LANE_TOP_RESERVE = 16.0
+
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull()
             ?: return
@@ -133,7 +152,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val maxX = if (nodeShapes.isEmpty()) BLACK_BOX_WIDTH else nodeShapes.maxOf { it.x + it.w }
 
         val laneHeights = laneCanonicalHeights(lanes, ctx)
-        val totalLaneHeight = laneHeights.sum()
+        val totalLaneHeight = laneHeights.sumOf { it.height }
 
         val contentLeft = minX - PARTICIPANT_PADDING
         val participantX = contentLeft - PARTICIPANT_HEADER_WIDTH
@@ -149,26 +168,49 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         stackLanes(lanes, laneHeights, LaneGeometry(laneX, laneW, participantX, participantY), ctx)
         refreshSequenceEdgeWaypoints(ctx, allNodeIds)
         refreshExceptionEdgeRoutes(ctx, allNodeIds)
+        refreshLoopBackEdgeRoutes(ctx, allNodeIds)
 
         return Rect(participantX, participantY, participantW, totalLaneHeight)
     }
 
-    /** Each lane's canonical height: tallest member node + 2×LANE_PADDING, minimum MIN_LANE_HEIGHT. */
-    private fun laneCanonicalHeights(lanes: List<Lane>, ctx: PlacementContext): List<Double> {
+    /** A lane's canonical height plus any extra headroom reserved at its top. */
+    private data class LaneHeightInfo(val height: Double, val topReserve: Double)
+
+    /**
+     * Each lane's canonical height: tallest member node + 2×LANE_PADDING, minimum MIN_LANE_HEIGHT,
+     * plus [LOOP_BACK_LANE_TOP_RESERVE] extra height when the lane contains a loop-back flow's
+     * target — see [routeLoopBackEdgeWithinLane].
+     */
+    private fun laneCanonicalHeights(lanes: List<Lane>, ctx: PlacementContext): List<LaneHeightInfo> {
+        val loopBackTargets = loopBackTargetIds(ctx)
         return lanes.map { lane ->
             val maxNodeH = lane.flowNodeRefs.mapNotNull { ctx.shapes[it.id] }.maxOfOrNull { it.h } ?: 0.0
-            maxOf(MIN_LANE_HEIGHT, maxNodeH + 2.0 * LANE_PADDING)
+            val topReserve = if (lane.flowNodeRefs.any { it.id in loopBackTargets }) {
+                LOOP_BACK_LANE_TOP_RESERVE
+            } else {
+                0.0
+            }
+            LaneHeightInfo(maxOf(MIN_LANE_HEIGHT, maxNodeH + 2.0 * LANE_PADDING) + topReserve, topReserve)
         }
+    }
+
+    /** The target-node IDs of every loop-back sequence flow in the model. */
+    private fun loopBackTargetIds(ctx: PlacementContext): Set<String> {
+        return ctx.model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { it.id in ctx.skeleton.loopBackFlowIds }
+            .mapNotNull { it.target?.id }
+            .toSet()
     }
 
     /**
      * Returns the X shift needed so the leftmost node's centred label (width [LABEL_WIDTH])
-     * does not intrude left of [laneX]. Zero if no nudge is needed.
+     * clears [laneX] by [LABEL_CLEARANCE_MARGIN], leaving a visible gap to the lane/participant
+     * name label instead of merely avoiding overlap. Zero if no nudge is needed.
      */
     private fun labelClearanceDx(nodeShapes: List<Rect>, laneX: Double): Double {
         val leftmost = nodeShapes.minByOrNull { it.x } ?: return 0.0
         val nodeCentreX = leftmost.x + leftmost.w / 2.0
-        return maxOf(0.0, laneX + LABEL_WIDTH / 2.0 - nodeCentreX)
+        return maxOf(0.0, laneX + LABEL_CLEARANCE_MARGIN + LABEL_WIDTH / 2.0 - nodeCentreX)
     }
 
     private fun shiftNodesX(ids: Set<String>, dx: Double, ctx: PlacementContext) {
@@ -189,6 +231,10 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     /**
      * Assigns lane shapes, lane labels, and centres member nodes vertically within each band.
      *
+     * When [LaneHeightInfo.topReserve] is nonzero, member nodes are centred within the band
+     * *below* the reserved strip, not the full lane height, leaving that headroom empty at the
+     * lane's top for [routeLoopBackEdgeWithinLane]'s arc.
+     *
      * When a lane member is an expanded [SubProcess], its internal child nodes (already placed
      * at absolute coordinates by earlier pipeline phases) are shifted by the same Y delta so
      * they stay attached to their container, mirroring the recursive descendant handling
@@ -196,20 +242,23 @@ internal object CollaborationShapePlacement : PlacementProcessor {
      */
     private fun stackLanes(
         lanes: List<Lane>,
-        laneHeights: List<Double>,
+        laneHeights: List<LaneHeightInfo>,
         geo: LaneGeometry,
         ctx: PlacementContext,
     ) {
         var laneY = geo.startY
         for ((i, lane) in lanes.withIndex()) {
-            val laneH = laneHeights[i]
+            val info = laneHeights[i]
+            val laneH = info.height
             ctx.shapes[lane.id] = Rect(geo.laneX, laneY, geo.laneW, laneH)
             if (!lane.name.isNullOrBlank()) {
                 ctx.labels[lane.id] = Rect(geo.participantX, laneY, PARTICIPANT_HEADER_WIDTH, laneH)
             }
+            val contentY = laneY + info.topReserve
+            val contentH = laneH - info.topReserve
             for (nodeRef in lane.flowNodeRefs) {
                 val nodeShape = ctx.shapes[nodeRef.id] ?: continue
-                val newY = laneY + (laneH - nodeShape.h) / 2.0
+                val newY = contentY + (contentH - nodeShape.h) / 2.0
                 val dy = newY - nodeShape.y
                 ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
                 if (dy != 0.0 && nodeRef is SubProcess) shiftSubProcessDescendants(nodeRef, dy, ctx)
@@ -344,6 +393,11 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     ): Boolean {
         if (sf.id in ctx.skeleton.loopBackFlowIds) return false
         if (sf.source is BoundaryEvent) return false
+        return hasRepositionedEndpoint(sf, repositionedIds)
+    }
+
+    /** True when either endpoint of [sf] is in [repositionedIds]. */
+    private fun hasRepositionedEndpoint(sf: SequenceFlow, repositionedIds: Set<String>): Boolean {
         val srcId = sf.source?.id
         val tgtId = sf.target?.id
         return (srcId != null && srcId in repositionedIds) || (tgtId != null && tgtId in repositionedIds)
@@ -372,6 +426,68 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 val hostRect = ctx.shapes[be.attachedTo?.id]
                 ctx.edges[sf.id] = ExceptionEdgeRoutes.routeExceptionEdge(bRect, tRect, hostRect)
             }
+    }
+
+    /**
+     * Re-routes loop-back arcs whose source or target shape was repositioned by lane stacking
+     * or the label-clearance shift.
+     *
+     * [LoopBackEdgeArcs] computes these arcs before lane placement runs, so they go stale once
+     * [stackLanes]/[shiftNodesX] move an endpoint's shape — the same staleness
+     * [refreshExceptionEdgeRoutes] fixes for boundary-event arcs. [isRefreshableSequenceFlow]
+     * deliberately excludes loop-back flows from [refreshSequenceEdgeWaypoints] to avoid
+     * overwriting the arc with a straight line; this recomputes the arc itself from the final
+     * shape positions instead, reusing [LoopBackEdgeArcs]'s routing logic.
+     */
+    private fun refreshLoopBackEdgeRoutes(ctx: PlacementContext, repositionedIds: Set<String>) {
+        ctx.model.getModelElementsByType(SequenceFlow::class.java)
+            .filter { sf -> sf.id in ctx.skeleton.loopBackFlowIds && hasRepositionedEndpoint(sf, repositionedIds) }
+            .forEach { sf -> routeLoopBackEdgeWithinLane(sf, ctx) }
+    }
+
+    /**
+     * Re-routes [sf] via [LoopBackEdgeArcs], then clamps the arc's peak (the shared Y of its two
+     * middle waypoints) to satisfy two constraints at once:
+     *
+     * - it must not cross above the top edge of the lane containing its endpoints
+     *   ([LANE_ARC_TOP_MARGIN] below the lane's top), and
+     * - its final segment into the target must have a visible straight length before the
+     *   arrowhead, not a 90° turn immediately at the target's edge ([MIN_ARC_TAIL]).
+     *
+     * [LoopBackEdgeArcs]'s fallback clearance (used when there is no enclosing SubProcess) only
+     * clears the topmost endpoint by a fixed distance — it has no notion of a lane boundary or a
+     * minimum tail, so for endpoints near a lane's top band it can push the arc's peak above the
+     * lane itself, or leave the arc's peak so close to the target that the turn and the
+     * arrowhead visually collide. [LOOP_BACK_LANE_TOP_RESERVE] guarantees these two constraints
+     * never conflict.
+     */
+    private fun routeLoopBackEdgeWithinLane(sf: SequenceFlow, ctx: PlacementContext) {
+        LoopBackEdgeArcs.routeAndStore(sf, ctx)
+        val inputs = loopBackClampInputs(sf, ctx) ?: return
+        val waypoints = inputs.waypoints
+        val minY = inputs.laneTop + LANE_ARC_TOP_MARGIN
+        val maxY = maxOf(minY, inputs.tgtTop - MIN_ARC_TAIL)
+        val peakY = waypoints[1].y.coerceIn(minY, maxY)
+        if (peakY == waypoints[1].y) return
+        ctx.edges[sf.id] = listOf(waypoints[0], waypoints[1].copy(y = peakY), waypoints[2].copy(y = peakY), waypoints.last())
+    }
+
+    /** The values [routeLoopBackEdgeWithinLane] needs to clamp a re-routed arc, or null if any is missing. */
+    private data class LoopBackClampInputs(val waypoints: List<Point>, val laneTop: Double, val tgtTop: Double)
+
+    private fun loopBackClampInputs(sf: SequenceFlow, ctx: PlacementContext): LoopBackClampInputs? {
+        val waypoints = ctx.edges[sf.id]?.takeIf { it.size == LOOP_BACK_ARC_WAYPOINT_COUNT } ?: return null
+        val laneTop = enclosingLaneTop(sf, ctx) ?: return null
+        val tgtTop = sf.target?.id?.let { ctx.shapes[it]?.y } ?: return null
+        return LoopBackClampInputs(waypoints, laneTop, tgtTop)
+    }
+
+    /** Returns the top Y of the [Lane] containing [sf]'s source node, if any. */
+    private fun enclosingLaneTop(sf: SequenceFlow, ctx: PlacementContext): Double? {
+        val sourceId = sf.source?.id ?: return null
+        val lane = ctx.model.getModelElementsByType(Lane::class.java)
+            .firstOrNull { lane -> lane.flowNodeRefs.any { it.id == sourceId } } ?: return null
+        return ctx.shapes[lane.id]?.y
     }
 }
 

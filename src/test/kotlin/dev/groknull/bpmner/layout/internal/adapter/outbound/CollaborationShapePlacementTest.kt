@@ -10,6 +10,7 @@ import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.BLAC
 import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.ExceptionEdgeRoutes
+import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.LoopBackEdgeArcs
 import dev.groknull.bpmner.layout.internal.adapter.outbound.placement.PlacementContext
 import org.eclipse.elk.graph.util.ElkGraphUtil
 import org.junit.jupiter.api.Test
@@ -286,9 +287,10 @@ class CollaborationShapePlacementTest {
     }
 
     @Test
-    fun `loop-back flow waypoints survive lane repositioning`() {
-        // A laned participant with a loop-back flow that has pre-set waypoints.
-        // CollaborationShapePlacement.refreshSequenceEdgeWaypoints must skip it.
+    fun `loop-back flow arc is re-routed after lane repositioning moves its endpoints, not overwritten with a straight line`() {
+        // NodeA1 (source of FL1) and NodeA2 (target) both sit in Lane_A, but not at the Y
+        // positions lane-centring will assign them; NodeB1's presence in Lane_B forces
+        // Lane_A's stacked band away from these pre-lane-stacking Y values.
         val model = PlacementTestSkeletons.parse(collabLanesXml)
         val root = ElkGraphUtil.createGraph()
         val shapes = mutableMapOf<String, Rect>(
@@ -296,29 +298,38 @@ class CollaborationShapePlacementTest {
             "NodeA2" to Rect(150.0, 20.0, 100.0, 80.0),
             "NodeB1" to Rect(300.0, 150.0, 36.0, 36.0),
         )
-        // FL1 is declared as a loop-back flow
-        val arcWaypoints = listOf(
+        val staleWaypoints = listOf(
             BpmnPlacementPass.Point(86.0, 38.0),
             BpmnPlacementPass.Point(86.0, 0.0),
             BpmnPlacementPass.Point(150.0, 0.0),
             BpmnPlacementPass.Point(150.0, 60.0),
-        )
-        val edges = mutableMapOf<String, List<BpmnPlacementPass.Point>>(
-            "FL1" to arcWaypoints,
         )
         val ctx = PlacementContext(
             model = model,
             skeleton = PlacementTestSkeletons.skeleton(root, emptyMap(), loopBackFlowIds = setOf("FL1")),
             shapes = shapes.toMutableMap(),
             labels = mutableMapOf(),
-            edges = edges,
+            edges = mutableMapOf("FL1" to staleWaypoints),
             expanded = mutableSetOf(),
         )
 
         CollaborationShapePlacement.process(ctx)
 
-        // FL1 is a loop-back flow: its arc waypoints must not be overwritten
-        assertEquals(arcWaypoints, ctx.edges["FL1"], "Loop-back flow waypoints must survive lane repositioning")
+        val finalA1 = ctx.shapes.getValue("NodeA1")
+        val finalA2 = ctx.shapes.getValue("NodeA2")
+        assertTrue(finalA1.y != 20.0, "NodeA1 must be repositioned into Lane_A's band")
+        // CollaborationShapePlacement clamps the raw arc's peak to stay LANE_ARC_TOP_MARGIN (8.0)
+        // below Lane_A's top edge, so it never crosses above the lane containing its endpoints.
+        val minArcY = ctx.shapes.getValue("Lane_A").y + 8.0
+        val expected = LoopBackEdgeArcs.routeLoopBackEdge(finalA1, finalA2, subRect = null)
+            .map { if (it.y < minArcY) it.copy(y = minArcY) else it }
+        assertEquals(
+            expected,
+            ctx.edges["FL1"],
+            "Loop-back arc must be re-routed from its endpoints' final positions, not left stale",
+        )
+        assertTrue(ctx.edges["FL1"] != staleWaypoints, "Stale pre-lane-repositioning waypoints must not survive")
+        assertEquals(4, ctx.edges["FL1"]!!.size, "Re-routed arc must not be overwritten with a straight 2-point line")
     }
 
     @Test

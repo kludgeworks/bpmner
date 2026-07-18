@@ -13,13 +13,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Regression test over the full 21-fixture set.
+ * Regression test over the full 22-fixture set.
  *
  * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
  * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 21 fixtures.
+ * labels below nodes) and determinism for all 22 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -56,6 +56,7 @@ class ElkGoldenLayoutTest {
             "collab-msg-label",
             "collab-subprocess",
             "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     fun `engine output matches committed expected`(fixture: String) {
@@ -95,10 +96,11 @@ class ElkGoldenLayoutTest {
             "collab-msg-label",
             "collab-subprocess",
             "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     @Suppress("CyclomaticComplexMethod")
-    fun `all 21 layout fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 22 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
@@ -121,6 +123,7 @@ class ElkGoldenLayoutTest {
             "collab-msg-label",
             "collab-subprocess",
             "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
@@ -156,6 +159,7 @@ class ElkGoldenLayoutTest {
             "collab-msg-label",
             "collab-subprocess",
             "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     fun `collaboration fixture has BPMNShape for each participant`(fixture: String) {
@@ -305,6 +309,7 @@ class ElkGoldenLayoutTest {
             "collab-msg-label",
             "collab-subprocess",
             "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {

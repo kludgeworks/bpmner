@@ -43,6 +43,7 @@ fun main() {
         "collab-msg-label",
         "collab-subprocess",
         "collab-bioc",
+        "collab-lanes-loopback",
     )
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")

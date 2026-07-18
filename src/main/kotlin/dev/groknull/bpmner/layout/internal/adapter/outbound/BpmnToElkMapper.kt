@@ -75,7 +75,7 @@ internal object BpmnToElkMapper {
         val loopBackFlowIds = mutableSetOf<String>()
         val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
-            val backEdges = findLoopBackEdges(sub)
+            val backEdges = findLoopBackEdges(sub.flowElements)
             if (backEdges.isNotEmpty()) {
                 loopBackFlowIds.addAll(backEdges)
                 loopingSubIds.add(sub.id)
@@ -83,6 +83,15 @@ internal object BpmnToElkMapper {
         }
 
         val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
+        // A cyclic sequence flow directly inside a Participant's process (not nested in a
+        // SubProcess) is a back-edge too: [placement.CollaborationShapePlacement] can reposition
+        // its endpoints (lane stacking), so it must be excluded from the ELK graph and routed by
+        // [placement.LoopBackEdgeArcs] the same way a SubProcess-internal cycle is. A bare
+        // top-level process with no Collaboration wrapper never reaches CollaborationShapePlacement,
+        // so its cycles are left for ELK's own cycle-breaking, unchanged.
+        collaboration?.participants?.mapNotNull { it.process }?.forEach { process ->
+            loopBackFlowIds.addAll(findLoopBackEdges(process.flowElements))
+        }
         if (collaboration != null) {
             mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
         } else {
@@ -350,16 +359,20 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Returns the IDs of sequence flows that are back-edges in the subprocess (i.e. create
-     * cycles). Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
+     * Returns the IDs of sequence flows that are back-edges among [flowElements] (i.e. create
+     * cycles). [flowElements] is a [SubProcess]'s or a [Participant]'s
+     * [org.camunda.bpm.model.bpmn.instance.Process]'s own direct flow elements — a nested
+     * SubProcess's flow elements are scanned separately by the caller, not recursively here.
+     *
+     * Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
      * (which would count against the TooManyFunctions detekt limit).
      *
      * Each stack frame is (nodeId, iteratorIndex): when the iterator is exhausted the node is
      * popped from the DFS ancestor-stack and marked fully visited.
      */
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
-    private fun findLoopBackEdges(sub: SubProcess): Set<String> {
-        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
+    private fun findLoopBackEdges(flowElements: Collection<FlowElement>): Set<String> {
+        val flows = flowElements.filterIsInstance<SequenceFlow>()
         val succFlows = mutableMapOf<String, MutableList<Pair<String, String>>>() // nodeId → [(targetId, flowId)]
         flows.forEach { sf ->
             val s = sf.source?.id ?: return@forEach
@@ -367,11 +380,11 @@ internal object BpmnToElkMapper {
             succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
         }
 
-        val startEvents = sub.flowElements.filterIsInstance<StartEvent>()
+        val startEvents = flowElements.filterIsInstance<StartEvent>()
         val seeds = if (startEvents.isNotEmpty()) {
             startEvents.map { it.id }
         } else {
-            sub.flowElements.filterIsInstance<FlowNode>().map { it.id }
+            flowElements.filterIsInstance<FlowNode>().map { it.id }
         }
 
         val backEdges = mutableSetOf<String>()

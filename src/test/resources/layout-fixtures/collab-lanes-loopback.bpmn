@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_lanes_loopback" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_lanes_loopback">
+    <bpmn:participant id="Participant_1" name="Order Fulfillment" processRef="Process_1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" name="Order Fulfillment" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_pickers" name="Pickers">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_check</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_packers" name="Packers">
+        <bpmn:flowNodeRef>Task_pack</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_pick" name="Pick Items">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_retry</bpmn:incoming>
+      <bpmn:outgoing>Flow_check</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="Gw_check" name="Item Found?">
+      <bpmn:incoming>Flow_check</bpmn:incoming>
+      <bpmn:outgoing>Flow_ok</bpmn:outgoing>
+      <bpmn:outgoing>Flow_retry</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_pack" name="Pack Order">
+      <bpmn:incoming>Flow_ok</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Shipped">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_pick"/>
+    <bpmn:sequenceFlow id="Flow_check" sourceRef="Task_pick" targetRef="Gw_check"/>
+    <bpmn:sequenceFlow id="Flow_ok" name="Yes" sourceRef="Gw_check" targetRef="Task_pack"/>
+    <bpmn:sequenceFlow id="Flow_retry" name="No, retry" sourceRef="Gw_check" targetRef="Task_pick"/>
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Task_pack" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>
