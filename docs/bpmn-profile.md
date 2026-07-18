@@ -21,12 +21,16 @@ profile:
   `BpmnServiceTask`, `BpmnScriptTask`, `BpmnBusinessRuleTask`, `BpmnSendTask`,
   `BpmnReceiveTask`; `BpmnCallActivity`; `BpmnSubProcess` (embedded subprocess);
   `BpmnParallelGateway`, `BpmnExclusiveGateway`, `BpmnInclusiveGateway`,
-  `BpmnEventBasedGateway`; `BpmnLane`/`BpmnLaneSet`.
+  `BpmnEventBasedGateway`.
 - **`BpmnEventDefinition`** (`BpmnDomain.kt:153`) — `BpmnNoneEventDefinition`,
   `BpmnTimerEventDefinition`, `BpmnMessageEventDefinition`, `BpmnErrorEventDefinition`,
   `BpmnTerminateEventDefinition`.
 - Participants, pools, black-box participants, and ordinary cross-pool message flows
   (collaboration-level, see `CollaborationShapePlacement`/`MessageFlowEdges`).
+- Lanes partitioning a white-box pool by business role/performer — `BpmnLane`
+  (`BpmnDomain.kt:699`), a container-level type referenced via the definition's
+  `lanes: List<BpmnLane>` field, not a `BpmnNode` subtype. There is no `BpmnLaneSet`
+  type.
 - Text annotations and ordinary associations.
 - Standard-loop and multi-instance activity characteristics.
 - Cyclic sequence flows and loop-back paths (see Topology policy below).

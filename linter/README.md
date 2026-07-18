@@ -3,9 +3,8 @@
 This directory holds the bpmner rule catalog — the source of truth for every BPMN
 validation rule the pipeline evaluates.
 
-Rules are authored in [Pkl](https://pkl-lang.org/) under [`pkl/`](pkl/). The Bazel
-build evaluates them at compile time and generates Java types that back Spring
-`@Bean BpmnRule` beans (`*RuleConfig.kt`), collected at startup by
+Rules are authored directly as hand-written Kotlin Spring `@Bean BpmnRule` factories
+(`*RuleConfig.kt`), collected at startup by
 [`BeanRuleRegistry`](../src/main/kotlin/dev/groknull/bpmner/ruleset/internal/domain/beans/BeanRuleRegistry.kt);
 the in-process [`RuleEngine`](../src/main/kotlin/dev/groknull/bpmner/ruleset/RuleEngine.kt)
 then evaluates each rule against the `BpmnDefinition` directly.
