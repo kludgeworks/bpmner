@@ -1,8 +1,0 @@
-{
-	"name": "@bpmner/layout",
-	"version": "0.1.0",
-	"private": true,
-	"dependencies": {
-		"yet-another-bpmn-auto-layout": "^2.0.0"
-	}
-}

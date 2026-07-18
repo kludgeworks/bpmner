@@ -8,7 +8,7 @@
 	"updateExistingSummaryComment": true,
 	"fixWithAI": true,
 	"excludeAuthors": ["dependabot[bot]", "renovate[bot]"],
-	"ignorePatterns": "node_modules/**\ndist/**\ncoverage/**\nMODULE.bazel.lock\nmise.lock\npnpm-lock.yaml\nlayout/src/layout-bundle.ts\n**/*.generated.*",
+	"ignorePatterns": "node_modules/**\ndist/**\ncoverage/**\nMODULE.bazel.lock\nmise.lock\npnpm-lock.yaml\n**/*.generated.*",
 	"rules": [
 		{
 			"id": "documentation-stays-current",

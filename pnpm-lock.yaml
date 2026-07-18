@@ -11,9 +11,6 @@ importers:
       bpmn-js:
         specifier: ^18.16.1
         version: 18.16.1
-      yet-another-bpmn-auto-layout:
-        specifier: ^2.0.0
-        version: 2.0.0
     devDependencies:
       '@types/jest':
         specifier: ^29.5.14
@@ -52,20 +49,11 @@ importers:
         specifier: ^5.8.3
         version: 5.9.3
 
-  layout:
-    dependencies:
-      yet-another-bpmn-auto-layout:
-        specifier: ^2.0.0
-        version: 2.0.0
-
   web:
     dependencies:
       bpmn-js:
         specifier: ^18.16.1
         version: 18.16.1
-      yet-another-bpmn-auto-layout:
-        specifier: ^2.0.0
-        version: 2.0.0
 
 packages:
 
@@ -1216,9 +1204,6 @@ packages:
   graceful-fs@4.2.11:
     resolution: {integrity: sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ==}
 
-  graph-by-ivan-tulaev@1.0.0-alpha.16:
-    resolution: {integrity: sha512-2+HnMrAHMYRWPWy/0lwO5C85FCu0yCbG10Zuf4fZ6lG1rewOvSeFPJatrIxL6kNGYorI4rQW7Nelkf/wFcDw7g==}
-
   handlebars@4.7.9:
     resolution: {integrity: sha512-4E71E0rpOaQuJR2A3xDZ+GM1HyWYv1clR58tC8emQNeQe3RH7MAzSbat+V0wG78LQBo6m6bzSG/L4pBuCsgnUQ==}
     engines: {node: '>=0.4.7'}
@@ -1560,9 +1545,6 @@ packages:
   mimic-fn@2.1.0:
     resolution: {integrity: sha512-OqbOk5oEQeAZ8WXWydlu9HJjz9WVdEIvamMCcXmuqUYjTknH/sqsWvhQ3vgwKFRR1HpjvNBKQ37nbJgYzGqGcg==}
     engines: {node: '>=6'}
-
-  min-dash@4.2.3:
-    resolution: {integrity: sha512-VLMYQI5+FcD9Ad24VcB08uA83B07OhueAlZ88jBK6PyupTvEJwllTMUqMy0wPGYs7pZUEtEEMWdHB63m3LtEcg==}
 
   min-dash@5.0.0:
     resolution: {integrity: sha512-EGuoBnVL7/Fnv2sqakpX5WGmZehZ3YMmLayT7sM8E9DRU74kkeyMg4Rik1lsOkR2GbFNeBca4/L+UfU6gF0Edw==}
@@ -2076,10 +2058,6 @@ packages:
   yargs@17.7.2:
     resolution: {integrity: sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w==}
     engines: {node: '>=12'}
-
-  yet-another-bpmn-auto-layout@2.0.0:
-    resolution: {integrity: sha512-XxTvqNh93XPoVYH2tEZfW8imbSujI5U452+QyQxkO2y5BtZdGWgwTu+0peZjalcK1TDE+Tzm5f88cb5HqC1ALw==}
-    engines: {node: '>= 18'}
 
   yocto-queue@0.1.0:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
@@ -3287,8 +3265,6 @@ snapshots:
 
   graceful-fs@4.2.11: {}
 
-  graph-by-ivan-tulaev@1.0.0-alpha.16: {}
-
   handlebars@4.7.9:
     dependencies:
       minimist: 1.2.8
@@ -3805,8 +3781,6 @@ snapshots:
 
   mimic-fn@2.1.0: {}
 
-  min-dash@4.2.3: {}
-
   min-dash@5.0.0: {}
 
   min-dom@5.3.0:
@@ -4260,11 +4234,5 @@ snapshots:
       string-width: 4.2.3
       y18n: 5.0.8
       yargs-parser: 21.1.1
-
-  yet-another-bpmn-auto-layout@2.0.0:
-    dependencies:
-      bpmn-moddle: 10.0.0
-      graph-by-ivan-tulaev: 1.0.0-alpha.16
-      min-dash: 4.2.3
 
   yocto-queue@0.1.0: {}

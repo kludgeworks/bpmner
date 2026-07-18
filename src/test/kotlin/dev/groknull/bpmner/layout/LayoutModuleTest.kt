@@ -19,7 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
  * Validates that the `layout` module context bootstraps and exposes its root-package ports.
  *
  * BootstrapMode.DIRECT_DEPENDENCIES (ADR-009 (bootstrap tiers) Tier 2): `layout` grants only `bpmn` and
- * `conformance`; `BpmnLayoutService` has no cross-module Spring-bean dependencies of its own.
+ * `conformance`; `ElkBpmnLayouter` has no cross-module Spring-bean dependencies of its own.
  * The `conformance` adapters constructor-inject two `ruleset` `@ApplicationRing` interfaces
  * (`RuleEngine`, `RuleRegistry`) that are outside the DIRECT closure — `ruleset` is
  * `conformance`'s dependency, not `layout`'s. Since `layout` never references either port

@@ -48,7 +48,6 @@ WEB_TS_DEPS = [
     "//:node_modules/axe-core",
     "//:node_modules/bpmn-js",
     "//:node_modules/jsdom",
-    "//:node_modules/yet-another-bpmn-auto-layout",
 ]
 
 bpmner_ts_configs()

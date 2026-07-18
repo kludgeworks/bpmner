@@ -45,14 +45,12 @@ class BpmnerArchitectureTest {
     }
 
     @Test
-    fun `GraalJS polyglot is restricted to the layout module`() {
-        // Phase 2G (#241) removed the GraalJS-hosted bpmnlint bridge. The remaining
-        // GraalJS consumer is the BPMN auto-layout JS bundle in `..layout..`. This pin
-        // prevents drift: nobody else may reach for `org.graalvm.polyglot` for a quick
+    fun `GraalJS polyglot is absent from the codebase`() {
+        // The BPMN auto-layout JS bundle (the last GraalJS consumer) was removed in
+        // #557-5 when ElkBpmnLayouter became the sole production layout adapter. This
+        // pin prevents drift: nobody may reintroduce `org.graalvm.polyglot` as a quick
         // JS escape hatch without first justifying the dep and updating this rule.
         noClasses()
-            .that()
-            .resideOutsideOfPackages("..layout..")
             .should()
             .dependOnClassesThat()
             .resideInAPackage("org.graalvm.polyglot..")

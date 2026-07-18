@@ -18,29 +18,29 @@ export type ImportOutcome =
 	| { status: "pending"; attemptNumber?: number }
 
 /**
- * Conditionally applies client-side auto-layout before importing XML into the viewer.
+ * Imports server-authored XML into the viewer, never inventing client-side geometry.
  *
  * - If the XML already carries a BPMNDiagram element it is imported as-is (server geometry).
- * - If the XML is DI-less (all intermediate snapshots), `deps.layout` is called first to
- *   generate presentation-only client-side geometry before import.
- * - On ANY throw — layouter failing on broken interim XML, or the viewer rejecting the
- *   result — the outcome is `"pending"` so the caller can keep the previous diagram and
- *   show a status message. The error is never swallowed into console.error (ARCH ADR-ss-007).
+ * - If the XML is DI-less (an intermediate snapshot), the outcome is `"pending"` immediately —
+ *   no client-side layout is attempted, and the caller keeps showing the previous diagram.
+ * - On any throw from `deps.importXML` — the viewer rejecting the result — the outcome is also
+ *   `"pending"`. The error is never swallowed into console.error (ARCH ADR-ss-007).
  *
- * The `deps` object is injected so the module stays pure (no bpmn-js or layout-lib imports)
- * and the runnable node test can drive it with fakes.
+ * The `deps` object is injected so the module stays pure (no bpmn-js import) and the runnable
+ * node test can drive it with fakes.
  */
 export async function importSnapshot(
 	deps: {
-		layout: (xml: string) => Promise<string>
 		importXML: (xml: string) => Promise<{ warnings: unknown[] }>
 	},
 	xml: string,
 	attemptNumber?: number,
 ): Promise<ImportOutcome> {
+	if (!hasDiagram(xml)) {
+		return { status: "pending", attemptNumber }
+	}
 	try {
-		const xmlToImport = hasDiagram(xml) ? xml : await deps.layout(xml)
-		await deps.importXML(xmlToImport)
+		await deps.importXML(xml)
 		return { status: "drawn" }
 	} catch {
 		return { status: "pending", attemptNumber }
