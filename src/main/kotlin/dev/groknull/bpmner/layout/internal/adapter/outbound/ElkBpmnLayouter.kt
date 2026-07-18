@@ -48,9 +48,7 @@ internal class ElkBpmnLayouter : BpmnLayoutPort {
         val placed = BpmnPlacementPass.place(model, skeleton)
         ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
         val output = serializeXml(model)
-        // AD-557-17: hard-fail on referential-integrity defects here, at the sole
-        // BpmnLayoutPort implementation, so every production layout call is guarded —
-        // not just the standalone finalizeLayout export's own validation step.
+        // Hard-fail here, at the sole BpmnLayoutPort implementation, so every layout call is guarded.
         val integrityErrors = referentialIntegrityErrors(output)
         if (integrityErrors.isNotEmpty()) {
             throw BpmnAutoLayoutException(
