@@ -374,6 +374,41 @@ class CollaborationShapePlacementTest {
         assertTrue(ctx.edges["FEx"] != staleWaypoints, "Stale pre-lane-repositioning waypoints must not survive")
     }
 
+    @Test
+    fun `boundary event lane member keeps its host-relative offset instead of being independently centred`() {
+        // BE1's pre-lane Y establishes the host-relative offset BoundaryShapePlacement always
+        // uses: task bottom edge minus half the event's own height (100 - 18 = 82). HandlerTask
+        // (in Lane_Y) sits far below, forcing Lane_X's band away from these pre-lane Y values so
+        // stackLanes actually repositions TaskA.
+        val shapes = mutableMapOf(
+            "TaskA" to Rect(50.0, 20.0, 100.0, 80.0),
+            "BE1" to Rect(82.0, 82.0, 36.0, 36.0),
+            "HandlerTask" to Rect(300.0, 300.0, 100.0, 80.0),
+        )
+        val hostRelativeOffset = shapes.getValue("BE1").y - shapes.getValue("TaskA").y
+        val model = PlacementTestSkeletons.parse(collabLanesBoundaryXml)
+        val root = ElkGraphUtil.createGraph()
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = PlacementTestSkeletons.skeleton(root, emptyMap()),
+            shapes = shapes.toMutableMap(),
+            labels = mutableMapOf(),
+            edges = mutableMapOf(),
+            expanded = mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        val finalTaskA = ctx.shapes.getValue("TaskA")
+        val finalBe1 = ctx.shapes.getValue("BE1")
+        assertTrue(finalTaskA.y != 20.0, "TaskA must be repositioned by lane stacking")
+        assertEquals(
+            hostRelativeOffset,
+            finalBe1.y - finalTaskA.y,
+            "BE1 must be shifted by its host's centring delta, not independently re-centred in the lane band",
+        )
+    }
+
     private val collabLanesSubprocessXml = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   id="Def5" targetNamespace="https://test">

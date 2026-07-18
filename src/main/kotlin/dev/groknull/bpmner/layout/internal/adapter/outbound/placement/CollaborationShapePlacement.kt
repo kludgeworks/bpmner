@@ -239,6 +239,12 @@ internal object CollaborationShapePlacement : PlacementProcessor {
      * at absolute coordinates by earlier pipeline phases) are shifted by the same Y delta so
      * they stay attached to their container, mirroring the recursive descendant handling
      * [shiftNodesX] applies on the X axis.
+     *
+     * A [BoundaryEvent] lane member is never independently centred: [BoundaryShapePlacement]
+     * already positioned it relative to its host task (bottom edge minus half the event's
+     * height), so it is instead shifted by its host task's own centring delta, preserving that
+     * relative offset. Deferred to a second pass so the host's delta is known regardless of
+     * flowNodeRefs order or which lane the host is in.
      */
     private fun stackLanes(
         lanes: List<Lane>,
@@ -247,6 +253,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         ctx: PlacementContext,
     ) {
         var laneY = geo.startY
+        val dyByNodeId = mutableMapOf<String, Double>()
+        val boundaryRefs = mutableListOf<BoundaryEvent>()
         for ((i, lane) in lanes.withIndex()) {
             val info = laneHeights[i]
             val laneH = info.height
@@ -254,16 +262,53 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             if (!lane.name.isNullOrBlank()) {
                 ctx.labels[lane.id] = Rect(geo.participantX, laneY, PARTICIPANT_HEADER_WIDTH, laneH)
             }
-            val contentY = laneY + info.topReserve
-            val contentH = laneH - info.topReserve
-            for (nodeRef in lane.flowNodeRefs) {
-                val nodeShape = ctx.shapes[nodeRef.id] ?: continue
-                val newY = contentY + (contentH - nodeShape.h) / 2.0
-                val dy = newY - nodeShape.y
-                ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
-                if (dy != 0.0 && nodeRef is SubProcess) shiftSubProcessDescendants(nodeRef, dy, ctx)
-            }
+            boundaryRefs.addAll(centerLaneMembers(lane, laneY, info, ctx, dyByNodeId))
             laneY += laneH
+        }
+        shiftBoundaryEventsWithHost(boundaryRefs, dyByNodeId, ctx)
+    }
+
+    /**
+     * Centres every non-[BoundaryEvent] member of [lane] within its Y-band, recording each
+     * member's centring delta in [dyByNodeId] and returning the lane's [BoundaryEvent] members
+     * unshifted, for [shiftBoundaryEventsWithHost] to reposition afterwards.
+     */
+    private fun centerLaneMembers(
+        lane: Lane,
+        laneY: Double,
+        info: LaneHeightInfo,
+        ctx: PlacementContext,
+        dyByNodeId: MutableMap<String, Double>,
+    ): List<BoundaryEvent> {
+        val contentY = laneY + info.topReserve
+        val contentH = info.height - info.topReserve
+        val members = lane.flowNodeRefs.toList()
+        members.filterNot { it is BoundaryEvent }.forEach { nodeRef ->
+            val nodeShape = ctx.shapes[nodeRef.id] ?: return@forEach
+            val newY = contentY + (contentH - nodeShape.h) / 2.0
+            val dy = newY - nodeShape.y
+            ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
+            dyByNodeId[nodeRef.id] = dy
+            if (dy != 0.0 && nodeRef is SubProcess) shiftSubProcessDescendants(nodeRef, dy, ctx)
+        }
+        return members.filterIsInstance<BoundaryEvent>()
+    }
+
+    /**
+     * Shifts each [BoundaryEvent] in [boundaryRefs] by its host task's centring delta (looked up
+     * in [dyByNodeId]), preserving the host-relative offset [BoundaryShapePlacement] established
+     * instead of independently re-centring the event in its lane band.
+     */
+    private fun shiftBoundaryEventsWithHost(
+        boundaryRefs: List<BoundaryEvent>,
+        dyByNodeId: Map<String, Double>,
+        ctx: PlacementContext,
+    ) {
+        boundaryRefs.forEach { be ->
+            val hostId = be.attachedTo?.id ?: return@forEach
+            val dy = dyByNodeId[hostId]?.takeIf { it != 0.0 } ?: return@forEach
+            val shape = ctx.shapes[be.id] ?: return@forEach
+            ctx.shapes[be.id] = shape.copy(y = shape.y + dy)
         }
     }
 
