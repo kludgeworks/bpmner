@@ -10,7 +10,6 @@ js_library(
 )
 
 exports_files([
-    "polyfills.ts",
     "ts.bzl",
     "test.bzl",
     "test_wrapper.mjs",
