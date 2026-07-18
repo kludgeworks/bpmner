@@ -363,6 +363,85 @@ class CollaborationShapePlacementTest {
         assertTrue(ctx.edges["FEx"] != staleWaypoints, "Stale pre-lane-repositioning waypoints must not survive")
     }
 
+    private val collabLanesSubprocessXml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Def5" targetNamespace="https://test">
+  <bpmn:collaboration id="Collab_5">
+    <bpmn:participant id="P_sub" name="With Laned Subprocess" processRef="Proc_sub"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Proc_sub" isExecutable="true">
+    <bpmn:laneSet id="LS3">
+      <bpmn:lane id="Lane_M" name="Lane M">
+        <bpmn:flowNodeRef>Sub1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_N" name="Lane N">
+        <bpmn:flowNodeRef>AfterSub</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:subProcess id="Sub1">
+      <bpmn:outgoing>FAfter</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart"><bpmn:outgoing>SubF1</bpmn:outgoing></bpmn:startEvent>
+      <bpmn:userTask id="SubTask">
+        <bpmn:incoming>SubF1</bpmn:incoming>
+        <bpmn:outgoing>SubF2</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:endEvent id="SubEnd"><bpmn:incoming>SubF2</bpmn:incoming></bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubF1" sourceRef="SubStart" targetRef="SubTask"/>
+      <bpmn:sequenceFlow id="SubF2" sourceRef="SubTask" targetRef="SubEnd"/>
+    </bpmn:subProcess>
+    <bpmn:userTask id="AfterSub">
+      <bpmn:incoming>FAfter</bpmn:incoming>
+    </bpmn:userTask>
+    <bpmn:sequenceFlow id="FAfter" sourceRef="Sub1" targetRef="AfterSub"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+    @Test
+    fun `lane repositioning shifts an expanded subprocess's internal children with it`() {
+        // Sub1 (in Lane_M) sits at y=20 pre-lane-stacking; its internal children (already
+        // placed at absolute ELK coordinates by earlier pipeline phases) sit inside it at
+        // y=40/60/80. AfterSub (in Lane_N) sits far below, forcing Lane_M's band away from y=20.
+        val shapes = mutableMapOf(
+            "Sub1" to Rect(50.0, 20.0, 200.0, 100.0),
+            "SubStart" to Rect(60.0, 40.0, 36.0, 36.0),
+            "SubTask" to Rect(120.0, 30.0, 100.0, 60.0),
+            "SubEnd" to Rect(240.0, 40.0, 36.0, 36.0),
+            "AfterSub" to Rect(300.0, 300.0, 100.0, 80.0),
+        )
+        val edges = mutableMapOf<String, List<BpmnPlacementPass.Point>>(
+            "SubF1" to listOf(BpmnPlacementPass.Point(96.0, 58.0), BpmnPlacementPass.Point(120.0, 58.0)),
+            "SubF2" to listOf(BpmnPlacementPass.Point(220.0, 58.0), BpmnPlacementPass.Point(240.0, 58.0)),
+        )
+        val model = PlacementTestSkeletons.parse(collabLanesSubprocessXml)
+        val root = ElkGraphUtil.createGraph()
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = PlacementTestSkeletons.skeleton(root, emptyMap()),
+            shapes = shapes.toMutableMap(),
+            labels = mutableMapOf(),
+            edges = edges,
+            expanded = mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        val finalSub1 = ctx.shapes.getValue("Sub1")
+        val dy = finalSub1.y - 20.0
+        assertTrue(dy != 0.0, "Sub1 must be repositioned by lane stacking (Lane_N pushes Lane_M's band)")
+
+        // Every internal child must have moved by the exact same delta as its container, not
+        // been left stale at its pre-lane-stacking Y.
+        assertEquals(40.0 + dy, ctx.shapes.getValue("SubStart").y, "SubStart must shift with its container")
+        assertEquals(30.0 + dy, ctx.shapes.getValue("SubTask").y, "SubTask must shift with its container")
+        assertEquals(40.0 + dy, ctx.shapes.getValue("SubEnd").y, "SubEnd must shift with its container")
+
+        // Internal edges must terminate at their (shifted) node's mid-Y, not the stale
+        // pre-lane-stacking position.
+        val subTaskMidY = ctx.shapes.getValue("SubTask").let { it.y + it.h / 2.0 }
+        assertEquals(subTaskMidY, ctx.edges.getValue("SubF1").last().y, "SubF1 must end at SubTask's shifted mid-Y")
+        assertEquals(subTaskMidY, ctx.edges.getValue("SubF2").first().y, "SubF2 must start at SubTask's shifted mid-Y")
+    }
+
     @Test
     fun `non-collaboration model leaves shapes unchanged`() {
         val flatXml = """<?xml version="1.0" encoding="UTF-8"?>

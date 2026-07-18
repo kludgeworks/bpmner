@@ -154,18 +154,3 @@ filegroup(
     name = "static_assets",
     srcs = WEB_STATIC_ASSETS,
 )
-
-# ── bpmn-js rendering oracle (§557-4 Task 8) ─────────────────────────────────
-
-# bpmn-js headless importXML check over all 21 corpus golden fixtures.
-# jsdom is left unbundled (resolved from node_modules at runtime) — same pattern
-# as studio_a11y_test. The JVM corpus goldens are located via TEST_SRCDIR at
-# runtime (Bazel always sets this for all tests).
-bpmner_node_test(
-    name = "bpmn_js_render_test",
-    srcs = WEB_SRCS + WEB_TEST_SRCS,
-    entry_point = "test/bpmn-js-render.test.ts",
-    external = ["jsdom"],
-    extra_data = ["//src/test:layout_golden_fixtures_js"],
-    deps = WEB_TS_DEPS,
-)

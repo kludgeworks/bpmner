@@ -15,22 +15,21 @@ import com.fasterxml.jackson.databind.ObjectMapper
  *
  * **Font contract:** exact for `font = "12px Arial, sans-serif"` — the font and size
  * bpmn-js uses for external labels (via diagram-js Text). If the bpmn-js default label
- * font or size changes, regenerate the table by running the Playwright capture script
- * and replacing `src/main/resources/label-metrics.json` (and its copy in
- * `src/test/resources/`).
+ * font or size changes, regenerate the table via a manual Playwright capture session
+ * (see `label-metrics.json`'s `provenance` field) and replace
+ * `src/main/resources/label-metrics.json` (and its copy in `src/test/resources/`).
  *
  * **Provenance:** each entry is `canvas.getContext('2d').measureText(char).width`
  * at `font = "12px Arial, sans-serif"` captured in real Chromium via Playwright.
  * Single source of truth: `src/main/resources/label-metrics.json`.
- * The TS module `web/test/label-metrics.data.ts` is a compiled copy of that JSON.
  *
  * **Non-ASCII fallback:** any character outside the ASCII printable range (32..126)
  * uses [DEFAULT_ADVANCE] — a mid-width conservative estimate that over-reserves
- * rather than clips. This is a known gap; the retained corpus is ASCII-only.
+ * rather than clips. This is a known gap; the retained fixture set is ASCII-only.
  *
  * **Canvas advance-sum model:** canvas `measureText` sums glyph advances linearly for
  * ASCII Arial with no kerning adjustments, so `width(str) = Σ advance(char)` matches
- * the oracle to sub-pixel accuracy.
+ * the renderer to sub-pixel accuracy.
  */
 internal object LabelMetrics {
 

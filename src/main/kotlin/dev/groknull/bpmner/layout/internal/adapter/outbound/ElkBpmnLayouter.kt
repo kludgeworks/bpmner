@@ -55,7 +55,7 @@ internal class ElkBpmnLayouter {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
         // Camunda's DOM serializer emits trailing spaces on blank indent lines; strip them
-        // so the output is byte-clean and the golden gate needs no normalization.
+        // so the output is byte-clean and the byte-exact comparison gate needs no normalization.
         out.toString(Charsets.UTF_8)
             .lines()
             .joinToString("\n") { it.trimEnd() }

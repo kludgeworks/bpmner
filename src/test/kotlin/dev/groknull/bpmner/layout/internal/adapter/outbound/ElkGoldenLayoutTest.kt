@@ -13,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Regression oracle over the full 21-fixture corpus.
+ * Regression test over the full 21-fixture set.
  *
  * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
  * Any coordinate change must be reviewed and re-committed before this test will pass again.
@@ -32,7 +32,7 @@ class ElkGoldenLayoutTest {
         private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
     }
 
-    @ParameterizedTest(name = "matches committed golden: {0}")
+    @ParameterizedTest(name = "matches committed expected: {0}")
     @ValueSource(
         strings = [
             "representative-process",
@@ -58,16 +58,16 @@ class ElkGoldenLayoutTest {
             "collab-bioc",
         ],
     )
-    fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
+    fun `engine output matches committed expected`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
-        val golden = load("layout-fixtures/$fixture.expected.bpmn")
+        val expected = load("layout-fixtures/$fixture.expected.bpmn")
         val actual = layouter.layout(input)
         assertEquals(
-            golden,
+            expected,
             actual,
-            "Engine output for '$fixture' does not match the committed golden. " +
+            "Engine output for '$fixture' does not match the committed expected output. " +
                 "If the layout changed intentionally, run generate_candidate_goldens, " +
-                "review in bpmn-js, and re-bless the golden before updating this test.",
+                "review in bpmn-js, and re-bless the expected output before updating this test.",
         )
     }
 
@@ -98,7 +98,7 @@ class ElkGoldenLayoutTest {
         ],
     )
     @Suppress("CyclomaticComplexMethod")
-    fun `all 21 corpus fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 21 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)

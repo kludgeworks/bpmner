@@ -14,7 +14,7 @@ import kotlin.math.round
  *
  * Entry point: [layout] returns line count and max fitted-line width for a label string
  * in a box of given width. Uses [LabelMetrics.width] in place of `measureText` so the
- * JVM estimator and the bpmn-js oracle produce identical line counts for every corpus label.
+ * JVM estimator and bpmn-js's renderer produce identical line counts for every fixture label.
  *
  * bpmner padding is 0, so `maxWidth = box.width` (90 for nodes, 120 for edges).
  */

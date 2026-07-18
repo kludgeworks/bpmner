@@ -17,6 +17,7 @@ import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
+import org.camunda.bpm.model.bpmn.instance.SubProcess
 
 /**
  * Phase-2 processor: derives [Rect] bounds for every [Participant] shape and every [Lane] shape,
@@ -185,7 +186,14 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val startY: Double,
     )
 
-    /** Assigns lane shapes, lane labels, and centres member nodes vertically within each band. */
+    /**
+     * Assigns lane shapes, lane labels, and centres member nodes vertically within each band.
+     *
+     * When a lane member is an expanded [SubProcess], its internal child nodes (already placed
+     * at absolute coordinates by earlier pipeline phases) are shifted by the same Y delta so
+     * they stay attached to their container, mirroring the recursive descendant handling
+     * [shiftNodesX] applies on the X axis.
+     */
     private fun stackLanes(
         lanes: List<Lane>,
         laneHeights: List<Double>,
@@ -201,10 +209,25 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             }
             for (nodeRef in lane.flowNodeRefs) {
                 val nodeShape = ctx.shapes[nodeRef.id] ?: continue
-                ctx.shapes[nodeRef.id] = nodeShape.copy(y = laneY + (laneH - nodeShape.h) / 2.0)
+                val newY = laneY + (laneH - nodeShape.h) / 2.0
+                val dy = newY - nodeShape.y
+                ctx.shapes[nodeRef.id] = nodeShape.copy(y = newY)
+                if (dy != 0.0 && nodeRef is SubProcess) shiftSubProcessDescendants(nodeRef, dy, ctx)
             }
             laneY += laneH
         }
+    }
+
+    /**
+     * Shifts a subprocess lane member's internal child nodes and their sequence-flow waypoints
+     * by [dy] so they stay attached to the container after [stackLanes] repositions it.
+     */
+    private fun shiftSubProcessDescendants(sub: SubProcess, dy: Double, ctx: PlacementContext) {
+        val nodeIds = mutableSetOf<String>()
+        val flowIds = mutableSetOf<String>()
+        collectFlowElementIds(sub.flowElements.toList(), nodeIds, nodesOnly = true)
+        collectFlowElementIds(sub.flowElements.toList(), flowIds, nodesOnly = false)
+        shiftNodesY(nodeIds, flowIds, dy, ctx)
     }
 
     /**

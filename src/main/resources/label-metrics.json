@@ -1,5 +1,5 @@
 {
-	"provenance": "measureText per-char at font='12px Arial, sans-serif' in real Chromium via Playwright. Regenerate with plans/557/ARCHITECTURE.md §AD-557-15 capture step if the bpmn-js default label font changes.",
+	"provenance": "measureText per-char at font='12px Arial, sans-serif' in real Chromium via Playwright. Regenerate via a manual, out-of-band Playwright capture session if the bpmn-js default label font changes.",
 	"lineHeight": 14,
 	"advances": {
 		"32": 3.333984375,

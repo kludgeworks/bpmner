@@ -14,7 +14,7 @@ import kotlin.test.assertEquals
  *
  * Each assertion uses a line count produced by the real diagram-js `layoutText`
  * function in actual Chromium (Playwright), so these tests pin the JVM port to the
- * oracle's exact behaviour for the blocker examples and edge cases.
+ * renderer's behaviour for the blocker examples and edge cases.
  *
  * Line counts verified against diagram-js@15.14.0 in real Chromium at
  * `font = "12px Arial, sans-serif"`, padding=0.
