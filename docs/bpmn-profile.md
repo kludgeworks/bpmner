@@ -35,17 +35,26 @@ tracked by [#558](https://github.com/kludgeworks/bpmner/issues/558),
 
 ## Topology policy
 
-| Rule | Status | Enforcement |
-| --- | --- | --- |
-| Implicit split (branch without an explicit diverging gateway) | 🔴 | Pkl rule **"No Implicit Split"** (`gwNoImplicitSplit`), backed by `TopologyCheck.NO_IMPLICIT_SPLIT` |
-| Fake join (convergence without an explicit converging gateway) | 🔴 | Pkl rule **"Fake Join"** (`gwFakeJoin`, auto-repaired), backed by `TopologyCheck.NO_FAKE_JOIN` |
-| Gateway simultaneously join and fork | 🔴 (auto-repaired) | Pkl rule **"No Gateway Join Fork"** (`gwNoGatewayJoinFork`); `SplitJoinForkGatewayHandler` splits it into separate converging and diverging gateways |
-| Disconnected ordinary flow-node components | 🔴 | `BpmnDefinitionValidator.kt:145-148` |
-| Cyclic sequence flows and loop-backs | 🟢 | No cycle-rejection code exists; `BpmnToElkMapper.findLoopBackEdges` treats a cycle as a routing case |
-| Diverging gateway without a matching converging gateway | 🟢 | No matching rule exists — absence is the policy |
-| Message-flow density | 🟢 (no limit) | No message-flow-count rule exists |
+Beyond vocabulary, bpmner also constrains how flow nodes are allowed to connect.
+These graph shapes are rejected:
 
-Two related Pkl rules exist beside the policy above: **"Superfluous Gateway"** flags a
-pass-through gateway with exactly one incoming and one outgoing flow, and
-**"Converging Gateway Unnamed"**/**"Diverging Flow Names"** are naming conventions,
-not topology-validity rules.
+| Rule | Enforcement |
+| --- | --- |
+| Implicit split (branch without an explicit diverging gateway) | Rule catalog: **"No Implicit Split"** (`gwNoImplicitSplit`, `GatewayRuleConfig.kt`), backed by `TopologyCheck.NO_IMPLICIT_SPLIT` |
+| Fake join (convergence without an explicit converging gateway) | Rule catalog: **"Fake Join"** (`gwFakeJoin`, auto-repaired), backed by `TopologyCheck.NO_FAKE_JOIN` |
+| Gateway simultaneously join and fork | Rule catalog: **"No Gateway Join Fork"** (`gwNoGatewayJoinFork`); auto-repaired by `SplitJoinForkGatewayHandler`, which splits it into separate converging and diverging gateways |
+| Disconnected ordinary flow-node components | `BpmnDefinitionValidator.kt:145-148` — not a rule-catalog member; a separate structural check in the `conformance` module |
+
+The first three are ordinary members of the same `RuleCategory.Gateway` rule catalog
+used for naming/grammar rules, evaluated by the same `RuleEngine` — there's no
+distinct "topology" enforcement mechanism for them. Only the disconnected-node check
+lives outside the catalog.
+
+Everything else is allowed, deliberately, with no restricting code: cyclic sequence
+flows and loop-backs; a diverging gateway with no matching converging gateway
+downstream; and any number of message flows in a collaboration (no density cap).
+
+Two related rule-catalog members exist beside the policy above: **"Superfluous
+Gateway"** flags a pass-through gateway with exactly one incoming and one outgoing
+flow, and **"Converging Gateway Unnamed"**/**"Diverging Flow Names"** are naming
+conventions, not topology-validity rules.
