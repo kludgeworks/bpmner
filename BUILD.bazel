@@ -111,7 +111,6 @@ VALE_SRCS = [
 build_test(
     name = "typescript_build_test",
     targets = [
-        "//layout:bundle",
         "//web:bundle",
         "//web:preview_bundle",
     ],

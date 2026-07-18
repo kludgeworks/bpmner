@@ -23,7 +23,7 @@ Traditional LLM generation often suffers from "hallucinations" or missing requir
 Every diagram is strictly validated against:
 - The official **BPMN 2.0 XSD**.
 - Kotlin graph-integrity checks that reject malformed topology such as dangling flows or orphaned non-terminal nodes before output is accepted.
-- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; GraalJS is used only for the diagram auto-layout pass.
+- A custom **Pkl-authored rule catalog** with specialized rules enforcing industry best practices (naming conventions and structural logic). Rules are evaluated in-process by a Kotlin `RuleEngine`; diagram auto-layout is a JVM-native ELK pass.
 
 ### 3. Deterministic Repair
 
@@ -58,16 +58,6 @@ Roles are also defined for `readiness-assessor` (balanced), `contract-extractor`
 ```bash
 bazelisk build //src:bpmner_app
 ```
-
-### Native Metadata Generation
-
-When adding new reflective libraries, models, or configurations, update the AOT/Native configuration metadata:
-
-```bash
-mise run native-trace
-```
-
-This task compiles the app, executes a representative LLM workload under the GraalVM tracing agent (`native-image-agent`), and regenerates the configuration files in `src/native-config/`.
 
 ### Run
 

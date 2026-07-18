@@ -6,6 +6,9 @@
 package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
+import dev.groknull.bpmner.layout.BpmnLayoutPort
+import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
+import jakarta.annotation.PostConstruct
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
@@ -13,25 +16,27 @@ import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.util.BasicProgressMonitor
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
+import org.springframework.stereotype.Service
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 
 /**
  * Stateless ELK layout path for retained BPMN processes including subprocesses
- * and boundary events.
- *
- * Not annotated with @Service; not wired into BpmnLayoutPort.
- * The GraalJS BpmnLayoutService is the sole production layout authority.
+ * and boundary events. The sole production layout authority behind [BpmnLayoutPort].
  */
-internal class ElkBpmnLayouter {
+@InfrastructureRing
+@Service
+internal class ElkBpmnLayouter : BpmnLayoutPort {
 
-    init {
+    @PostConstruct
+    fun registerElkLayoutAlgorithm() {
         // ELK requires algorithm registration outside OSGi. LayoutMetaDataService is a
         // singleton that ignores duplicate registrations, so construction-time registration is safe.
         LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
     }
 
-    fun layout(xml: String): String {
+    override fun layout(xml: String): String {
         val model = parseXml(xml)
         // Capture existing shapes/edges BEFORE stripping to preserve non-geometry attributes
         // (bioc: colours, custom extensions).
@@ -42,7 +47,15 @@ internal class ElkBpmnLayouter {
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
         ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
-        return serializeXml(model)
+        val output = serializeXml(model)
+        // Hard-fail here, at the sole BpmnLayoutPort implementation, so every layout call is guarded.
+        val integrityErrors = referentialIntegrityErrors(output)
+        if (integrityErrors.isNotEmpty()) {
+            throw BpmnAutoLayoutException(
+                "ELK layout produced referentially inconsistent BPMN DI: ${integrityErrors.joinToString("; ")}",
+            )
+        }
+        return output
     }
 
     private fun parseXml(xml: String): BpmnModelInstance = try {

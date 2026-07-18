@@ -4,7 +4,6 @@
  */
 
 import BpmnViewer from "bpmn-js"
-import { layoutProcess } from "yet-another-bpmn-auto-layout"
 import { type ClarifyState, renderClarifyForm } from "./clarify-form"
 import {
 	type Diagnostic,
@@ -136,13 +135,12 @@ let eventSource: EventSource | null = null
 let currentXml = ""
 let snapshotCount = 0
 /**
- * Serializes snapshot application. Each SSE message triggers an independent async handler, and
- * DI-less intermediate snapshots run a slow client-side auto-layout (`layoutProcess`) while the
- * final DI-bearing `LAYOUT_COMPLETE` snapshot imports as-is and fast. Without serialization a
- * slow earlier `importXML` can resolve AFTER the fast final one and clobber the authoritative
- * server geometry — leaving edges drawn but nodes stacked at the origin (worst on cyclic graphs
- * the auto-layouter mishandles). Chaining guarantees snapshots are applied in SSE arrival order,
- * so the last (server-laid-out) snapshot always wins.
+ * Serializes snapshot application. Each SSE message triggers an independent async handler.
+ * DI-less intermediate snapshots resolve immediately as `pending` (no client layout is ever
+ * attempted), while the final DI-bearing `LAYOUT_COMPLETE` snapshot imports as-is. Without
+ * serialization a slow earlier `importXML` can still resolve AFTER the fast final one and
+ * clobber the authoritative server geometry. Chaining guarantees snapshots are applied in SSE
+ * arrival order, so the last (server-laid-out) snapshot always wins.
  */
 let snapshotQueue: Promise<void> = Promise.resolve()
 let settle: SettleState = initialSettle()
@@ -424,7 +422,6 @@ async function handleSnapshot(event: BpmnSnapshotEvent) {
 
 	const outcome = await importSnapshot(
 		{
-			layout: layoutProcess,
 			importXML: (xml) => viewer.importXML(xml),
 		},
 		currentXml,

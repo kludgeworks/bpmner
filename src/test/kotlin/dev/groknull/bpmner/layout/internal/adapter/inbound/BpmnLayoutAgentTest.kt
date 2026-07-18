@@ -9,8 +9,8 @@ import dev.groknull.bpmner.TestBpmnFixtures.testBpmnDefinition
 import dev.groknull.bpmner.conformance.BpmnXsdValidationPort
 import dev.groknull.bpmner.conformance.ValidatedBpmnXml
 import dev.groknull.bpmner.conformance.XsdValidationIssue
+import dev.groknull.bpmner.layout.BpmnLayoutPort
 import dev.groknull.bpmner.layout.LayoutedBpmnXml
-import dev.groknull.bpmner.layout.internal.adapter.outbound.BpmnLayoutService
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -19,12 +19,8 @@ import kotlin.test.assertTrue
 class BpmnLayoutAgentTest {
     private fun buildLayoutAgent(
         xsdValidator: BpmnXsdValidationPort,
-        layoutService: BpmnLayoutService = RecordingLayoutService(),
+        layoutService: BpmnLayoutPort = RecordingLayoutService(),
     ): BpmnLayoutAgent = BpmnLayoutAgent(layoutService, xsdValidator)
-
-    // ---------------------------------------------------------------
-    // layoutBpmnXml
-    // ---------------------------------------------------------------
 
     @Test
     fun `layout invokes the layout service and threads the laid-out xml forward`() {
@@ -38,10 +34,6 @@ class BpmnLayoutAgentTest {
         assertEquals(listOf("<definitions />"), layoutService.xmls)
     }
 
-    // ---------------------------------------------------------------
-    // validateFinalBpmnXml
-    // ---------------------------------------------------------------
-
     @Test
     fun `final validation passes when XSD is clean and DI is present`() {
         val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
@@ -50,6 +42,11 @@ class BpmnLayoutAgentTest {
         val definition = testBpmnDefinition()
         val validXml = """<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+  <sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1"/>
   <bpmndi:BPMNDiagram id="diag">
     <bpmndi:BPMNPlane id="plane">
       <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
@@ -77,6 +74,11 @@ class BpmnLayoutAgentTest {
         // Missing EndEvent_1 shape
         val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
 <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+  <sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1"/>
   <bpmndi:BPMNDiagram id="diag">
     <bpmndi:BPMNPlane id="plane">
       <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
@@ -91,6 +93,133 @@ class BpmnLayoutAgentTest {
             agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
         }
         assertTrue(error.message!!.contains("Missing bpmndi:BPMNShape for flow nodes: [EndEvent_1]"))
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on DI referencing a nonexistent semantic element`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // shape_task references "Ghost_1", which does not exist as a semantic element.
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="Ghost_1" id="shape_task"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("DI elements reference nonexistent semantic elements"))
+        assertTrue(error.message!!.contains("Ghost_1"))
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on two DI elements referencing the same semantic element`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // shape_start and shape_dup both reference StartEvent_1.
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_dup"/>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="shape_task"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("Multiple DI elements reference the same semantic element"))
+        assertTrue(error.message!!.contains("StartEvent_1"))
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on a sequence flow endpoint without DI`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // Flow_3 is not part of the definition's own coverage requirement, so it exercises
+        // only the new endpoint-resolution rule: its targetRef ("Ghost_Task") resolves
+        // semantically but was never drawn (no bpmndi:BPMNShape).
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <task id="Ghost_Task"/>
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+  <sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1"/>
+  <sequenceFlow id="Flow_3" sourceRef="Task_1" targetRef="Ghost_Task"/>
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="shape_task"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("Edge endpoints reference elements without DI"))
+        assertTrue(error.message!!.contains("Ghost_Task"))
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on a boundary event attached to a host without DI`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // BoundaryEvent_1 attaches to Task_1, which resolves semantically but has no DI shape.
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <boundaryEvent id="BoundaryEvent_1" attachedToRef="Task_1"/>
+  <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+  <sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="EndEvent_1"/>
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNShape bpmnElement="BoundaryEvent_1" id="shape_boundary"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("Boundary events attach to hosts without DI"))
+        assertTrue(error.message!!.contains("Task_1"))
     }
 
     @Test
@@ -112,7 +241,7 @@ class BpmnLayoutAgentTest {
 
     private class RecordingLayoutService(
         private val responses: List<String> = emptyList(),
-    ) : BpmnLayoutService() {
+    ) : BpmnLayoutPort {
         val xmls = mutableListOf<String>()
         private var index = 0
 

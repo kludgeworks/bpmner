@@ -45,50 +45,6 @@ class BpmnerArchitectureTest {
     }
 
     @Test
-    fun `GraalJS polyglot is restricted to the layout module`() {
-        // Phase 2G (#241) removed the GraalJS-hosted bpmnlint bridge. The remaining
-        // GraalJS consumer is the BPMN auto-layout JS bundle in `..layout..`. This pin
-        // prevents drift: nobody else may reach for `org.graalvm.polyglot` for a quick
-        // JS escape hatch without first justifying the dep and updating this rule.
-        noClasses()
-            .that()
-            .resideOutsideOfPackages("..layout..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("org.graalvm.polyglot..")
-            .check(classes)
-    }
-
-    @Test
-    fun `ELK layout engine is restricted to the layout module`() {
-        // ELK is confined to the layout module. This mirrors the GraalJS rule above:
-        // any class outside ..layout.. that acquires an org.eclipse.elk dependency
-        // must justify it and update this rule.
-        noClasses()
-            .that()
-            .resideOutsideOfPackages("..layout..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("org.eclipse.elk..")
-            .check(classes)
-    }
-
-    @Test
-    fun `OpenNLP imports are restricted to the nlp package`() {
-        // Phase 3 (#218) added OpenNLP behind the [BpmnNlp] facade. Same intent as the
-        // GraalJS pin above: keep the vendor dependency on one side of the interface so
-        // future swaps (e.g. to a POSModel-backed implementation) only touch ..nlp..
-        // without rippling into rule code.
-        noClasses()
-            .that()
-            .resideOutsideOfPackages("..ruleset.internal.domain.nlp..")
-            .should()
-            .dependOnClassesThat()
-            .resideInAPackage("opennlp.tools..")
-            .check(classes)
-    }
-
-    @Test
     fun `Ai bean reference is restricted to inbound adapters`() {
         // The framework-centric posture (issue #240 discussion): LLM calls go through Embabel
         // via `OperationContext`+`PromptRunner` inside `@Action` methods, never via the

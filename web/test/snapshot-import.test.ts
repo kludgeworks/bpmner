@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+/**
+ * Tests `hasDiagram` and `importSnapshot` from `../src/snapshot-import`: whether a snapshot
+ * carries DI, and how DI-less vs. DI-bearing snapshots (and import failures) are handled.
+ */
+
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import { hasDiagram, importSnapshot } from "../src/snapshot-import"
@@ -12,12 +17,6 @@ const DI_LESS_XML =
 	'<?xml version="1.0"?><definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" />'
 const DI_BEARING_XML =
 	'<?xml version="1.0"?><definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"><bpmndi:BPMNDiagram /></definitions>'
-const LAID_OUT_XML =
-	'<?xml version="1.0"?><definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"><bpmndi:BPMNDiagram><bpmndi:BPMNPlane /></bpmndi:BPMNDiagram></definitions>'
-
-// -------------------------------------------------------------------------
-// hasDiagram
-// -------------------------------------------------------------------------
 
 describe("hasDiagram", () => {
 	it("returns false for DI-less XML", () => {
@@ -38,81 +37,10 @@ describe("hasDiagram", () => {
 	})
 })
 
-// -------------------------------------------------------------------------
-// importSnapshot — happy paths
-// -------------------------------------------------------------------------
-
-describe("importSnapshot — happy paths", () => {
-	it("calls layout then importXML for DI-less XML and returns drawn", async () => {
-		let layoutedXml: string | undefined
-		let importedXml: string | undefined
-		const deps = {
-			layout: async (xml: string) => {
-				layoutedXml = xml
-				return LAID_OUT_XML
-			},
-			importXML: async (xml: string) => {
-				importedXml = xml
-				return { warnings: [] }
-			},
-		}
-
-		const outcome = await importSnapshot(deps, DI_LESS_XML, 1)
-
-		assert.equal(outcome.status, "drawn")
-		assert.equal(
-			layoutedXml,
-			DI_LESS_XML,
-			"layout should receive the original DI-less XML",
-		)
-		assert.equal(
-			importedXml,
-			LAID_OUT_XML,
-			"importXML should receive the laid-out result",
-		)
-	})
-
-	it("skips layout and passes DI-bearing XML directly to importXML", async () => {
-		let layoutCalled = false
-		let importedXml: string | undefined
-		const deps = {
-			layout: async (_xml: string) => {
-				layoutCalled = true
-				return LAID_OUT_XML
-			},
-			importXML: async (xml: string) => {
-				importedXml = xml
-				return { warnings: [] }
-			},
-		}
-
-		const outcome = await importSnapshot(deps, DI_BEARING_XML)
-
-		assert.equal(outcome.status, "drawn")
-		assert.equal(
-			layoutCalled,
-			false,
-			"layout must NOT be called for DI-bearing XML",
-		)
-		assert.equal(
-			importedXml,
-			DI_BEARING_XML,
-			"importXML should receive the original DI-bearing XML",
-		)
-	})
-})
-
-// -------------------------------------------------------------------------
-// importSnapshot — fallback paths (ARCH ADR-ss-007 fallback rule)
-// -------------------------------------------------------------------------
-
-describe("importSnapshot — fallback paths", () => {
-	it("returns pending with attemptNumber when layout throws (broken interim XML)", async () => {
+describe("importSnapshot — DI-less snapshots", () => {
+	it("returns pending immediately without calling importXML, forwarding attemptNumber", async () => {
 		let importCalled = false
 		const deps = {
-			layout: async (_xml: string) => {
-				throw new Error("layouter: orphan node reference")
-			},
 			importXML: async (_xml: string) => {
 				importCalled = true
 				return { warnings: [] }
@@ -130,28 +58,12 @@ describe("importSnapshot — fallback paths", () => {
 		assert.equal(
 			importCalled,
 			false,
-			"importXML must NOT be called when layout throws",
+			"importXML must NOT be called for DI-less XML — no client-side layout is attempted",
 		)
-	})
-
-	it("returns pending when importXML throws (viewer rejects the XML)", async () => {
-		const deps = {
-			layout: async (_xml: string) => LAID_OUT_XML,
-			importXML: async (_xml: string) => {
-				throw new Error("no diagram to display")
-			},
-		}
-
-		const outcome = await importSnapshot(deps, DI_LESS_XML)
-
-		assert.equal(outcome.status, "pending")
 	})
 
 	it("returns pending without attemptNumber when no attempt is provided", async () => {
 		const deps = {
-			layout: async (_xml: string) => {
-				throw new Error("broken")
-			},
 			importXML: async (_xml: string) => ({ warnings: [] }),
 		}
 
@@ -162,5 +74,38 @@ describe("importSnapshot — fallback paths", () => {
 			(outcome as { status: "pending"; attemptNumber?: number }).attemptNumber,
 			undefined,
 		)
+	})
+})
+
+describe("importSnapshot — DI-bearing snapshots", () => {
+	it("passes DI-bearing XML directly to importXML and returns drawn", async () => {
+		let importedXml: string | undefined
+		const deps = {
+			importXML: async (xml: string) => {
+				importedXml = xml
+				return { warnings: [] }
+			},
+		}
+
+		const outcome = await importSnapshot(deps, DI_BEARING_XML)
+
+		assert.equal(outcome.status, "drawn")
+		assert.equal(
+			importedXml,
+			DI_BEARING_XML,
+			"importXML should receive the original DI-bearing XML unchanged",
+		)
+	})
+
+	it("returns pending when importXML throws, preserving the prior drawing", async () => {
+		const deps = {
+			importXML: async (_xml: string) => {
+				throw new Error("no diagram to display")
+			},
+		}
+
+		const outcome = await importSnapshot(deps, DI_BEARING_XML)
+
+		assert.equal(outcome.status, "pending")
 	})
 })
