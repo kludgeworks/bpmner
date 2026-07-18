@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_two_pools" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_two_pools">
+    <bpmn:participant id="Participant_buyer" name="Buyer" processRef="Process_buyer"/>
+    <bpmn:participant id="Participant_seller" name="Seller" processRef="Process_seller"/>
+    <bpmn:messageFlow id="MsgFlow_1" name="Purchase Order" sourceRef="Task_order" targetRef="Task_receive"/>
+    <bpmn:messageFlow id="MsgFlow_2" name="Invoice" sourceRef="Task_invoice" targetRef="Task_pay"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_buyer" isExecutable="true">
+    <bpmn:startEvent id="Start_buyer" name="Need Goods">
+      <bpmn:outgoing>Flow_b1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_order" name="Place Order">
+      <bpmn:incoming>Flow_b1</bpmn:incoming>
+      <bpmn:outgoing>Flow_b2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_pay" name="Pay Invoice">
+      <bpmn:incoming>Flow_b2</bpmn:incoming>
+      <bpmn:outgoing>Flow_b3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_buyer" name="Done">
+      <bpmn:incoming>Flow_b3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_b1" sourceRef="Start_buyer" targetRef="Task_order"/>
+    <bpmn:sequenceFlow id="Flow_b2" sourceRef="Task_order" targetRef="Task_pay"/>
+    <bpmn:sequenceFlow id="Flow_b3" sourceRef="Task_pay" targetRef="End_buyer"/>
+  </bpmn:process>
+  <bpmn:process id="Process_seller" isExecutable="true">
+    <bpmn:startEvent id="Start_seller" name="Ready">
+      <bpmn:outgoing>Flow_s1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_receive" name="Receive Order">
+      <bpmn:incoming>Flow_s1</bpmn:incoming>
+      <bpmn:outgoing>Flow_s2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_invoice" name="Send Invoice">
+      <bpmn:incoming>Flow_s2</bpmn:incoming>
+      <bpmn:outgoing>Flow_s3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_seller" name="Done">
+      <bpmn:incoming>Flow_s3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_s1" sourceRef="Start_seller" targetRef="Task_receive"/>
+    <bpmn:sequenceFlow id="Flow_s2" sourceRef="Task_receive" targetRef="Task_invoice"/>
+    <bpmn:sequenceFlow id="Flow_s3" sourceRef="Task_invoice" targetRef="End_seller"/>
+  </bpmn:process>
+</bpmn:definitions>

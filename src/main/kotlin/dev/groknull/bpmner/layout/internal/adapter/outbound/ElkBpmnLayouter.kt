@@ -33,11 +33,15 @@ internal class ElkBpmnLayouter {
 
     fun layout(xml: String): String {
         val model = parseXml(xml)
+        // Capture existing shapes/edges BEFORE stripping to preserve non-geometry attributes
+        // (bioc: colours, custom extensions).
+        val existingShapes = ElkToBpmnDiWriter.captureExistingShapes(model)
+        val existingEdges = ElkToBpmnDiWriter.captureExistingEdges(model)
         removeExistingDi(model)
         val skeleton = BpmnToElkMapper.map(model)
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
-        ElkToBpmnDiWriter.write(model, placed)
+        ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
         return serializeXml(model)
     }
 
@@ -51,7 +55,7 @@ internal class ElkBpmnLayouter {
         val out = ByteArrayOutputStream()
         Bpmn.writeModelToStream(out, model)
         // Camunda's DOM serializer emits trailing spaces on blank indent lines; strip them
-        // so the output is byte-clean and the golden gate needs no normalization.
+        // so the output is byte-clean and the byte-exact comparison gate needs no normalization.
         out.toString(Charsets.UTF_8)
             .lines()
             .joinToString("\n") { it.trimEnd() }

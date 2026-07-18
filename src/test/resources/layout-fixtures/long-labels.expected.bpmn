@@ -63,37 +63,37 @@
       <bpmndi:BPMNShape bpmnElement="End_fail" id="BPMNShape_End_fail">
         <dc:Bounds height="36.0" width="36.0" x="764.0" y="130.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_fail">
-          <dc:Bounds height="42.0" width="90.0" x="737.0" y="168.0"/>
+          <dc:Bounds height="42.0" width="76.69921875" x="743.650390625" y="168.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
         <dc:Bounds height="36.0" width="36.0" x="764.0" y="34.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_ok">
-          <dc:Bounds height="56.0" width="90.0" x="737.0" y="72.0"/>
+          <dc:Bounds height="42.0" width="86.6953125" x="738.65234375" y="72.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_1" id="BPMNShape_Gw_1">
         <dc:Bounds height="50.0" width="50.0" x="386.0" y="115.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_1">
-          <dc:Bounds height="42.0" width="90.0" x="366.0" y="167.0"/>
+          <dc:Bounds height="42.0" width="57.357421875" x="382.3212890625" y="167.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="122.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="70.0" width="90.0" x="-15.0" y="160.0"/>
+          <dc:Bounds height="56.0" width="82.69921875" x="-11.349609375" y="160.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_1" id="BPMNShape_Task_1">
         <dc:Bounds height="80.0" width="158.0" x="138.0" y="100.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_1">
-          <dc:Bounds height="84.0" width="90.0" x="172.0" y="182.0"/>
+          <dc:Bounds height="70.0" width="76.7109375" x="178.64453125" y="182.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_2" id="BPMNShape_Task_2">
         <dc:Bounds height="80.0" width="148.0" x="526.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_2">
-          <dc:Bounds height="70.0" width="90.0" x="555.0" y="94.0"/>
+          <dc:Bounds height="70.0" width="88.716796875" x="555.6416015625" y="94.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
@@ -112,7 +112,7 @@
         <di:waypoint x="436.0" y="148.0"/>
         <di:waypoint x="764.0" y="148.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_fail">
-          <dc:Bounds height="42.0" width="120.0" x="540.0" y="102.0"/>
+          <dc:Bounds height="28.0" width="105.38671875" x="547.306640625" y="116.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
@@ -121,7 +121,7 @@
         <di:waypoint x="461.0" y="52.0"/>
         <di:waypoint x="526.0" y="52.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="42.0" width="120.0" x="398.0" y="6.0"/>
+          <dc:Bounds height="42.0" width="104.0625" x="413.9375" y="6.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

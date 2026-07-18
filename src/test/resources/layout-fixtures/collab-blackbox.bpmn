@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_blackbox" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_blackbox">
+    <bpmn:participant id="Participant_internal" name="Internal Process" processRef="Process_internal"/>
+    <bpmn:participant id="Participant_external" name="External System"/>
+    <bpmn:messageFlow id="MsgFlow_out" name="Request" sourceRef="Task_send" targetRef="Participant_external"/>
+    <bpmn:messageFlow id="MsgFlow_in" name="Response" sourceRef="Participant_external" targetRef="Task_receive"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_internal" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_send" name="Send Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_receive" name="Receive Response">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_send"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_send" targetRef="Task_receive"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_receive" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

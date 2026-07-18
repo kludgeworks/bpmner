@@ -84,12 +84,10 @@ internal object HandlerComponentAlignment {
                         routeRejoinEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
                     tgtMove != null && srcMove == null ->
                         routeForwardToHandlerEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
-                    else -> {
-                        // Both handler nodes: apply the source shift uniformly.
-                        val move = srcMove ?: tgtMove!!
-                        ctx.edges[sf.id] = ctx.edges[sf.id]!!
-                            .map { it.copy(x = it.x + move.dx, y = it.y + move.dy) }
-                    }
+                    else ->
+                        // Both endpoints are shifted handler nodes; re-route from final positions
+                        // because source and target may have shifted by different deltas.
+                        routeForwardToHandlerEdge(srcId, tgtId, ctx.shapes, ctx.edges, sf.id)
                 }
             }
     }
@@ -143,7 +141,12 @@ internal object HandlerComponentAlignment {
         thisHandlers.forEach { id ->
             state.ctx.shapes[id]?.let { r ->
                 state.ctx.shapes[id] = r.copy(x = r.x + xShift, y = r.y + yShift)
-                state.ctx.moves[id] = MoveRecord("HandlerComponentAlignment", xShift, yShift)
+                val prior = state.ctx.moves[id]
+                state.ctx.moves[id] = if (prior != null && prior.owner == "HandlerComponentAlignment") {
+                    MoveRecord("HandlerComponentAlignment", prior.dx + xShift, prior.dy + yShift)
+                } else {
+                    MoveRecord("HandlerComponentAlignment", xShift, yShift)
+                }
             }
         }
 

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_subprocess" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_subprocess">
+    <bpmn:participant id="Participant_main" name="Main Process" processRef="Process_main"/>
+    <bpmn:participant id="Participant_support" name="Support" processRef="Process_support"/>
+    <bpmn:messageFlow id="MsgFlow_1" name="Task Data" sourceRef="Task_prepare" targetRef="Task_help"/>
+    <bpmn:messageFlow id="MsgFlow_2" name="Result" sourceRef="Task_help" targetRef="Task_finalize"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_main" isExecutable="true">
+    <bpmn:startEvent id="Start_main" name="Start">
+      <bpmn:outgoing>Flow_m1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_prepare" name="Prepare Data">
+      <bpmn:incoming>Flow_m1</bpmn:incoming>
+      <bpmn:outgoing>Flow_m2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:subProcess id="SubProcess_review" name="Review">
+      <bpmn:incoming>Flow_m2</bpmn:incoming>
+      <bpmn:outgoing>Flow_m3</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_1" name="Start">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:userTask id="SubTask_1" name="Review Item">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:endEvent id="SubEnd_1" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart_1" targetRef="SubTask_1"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask_1" targetRef="SubEnd_1"/>
+    </bpmn:subProcess>
+    <bpmn:serviceTask id="Task_finalize" name="Finalize">
+      <bpmn:incoming>Flow_m3</bpmn:incoming>
+      <bpmn:outgoing>Flow_m4</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_main" name="Done">
+      <bpmn:incoming>Flow_m4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_m1" sourceRef="Start_main" targetRef="Task_prepare"/>
+    <bpmn:sequenceFlow id="Flow_m2" sourceRef="Task_prepare" targetRef="SubProcess_review"/>
+    <bpmn:sequenceFlow id="Flow_m3" sourceRef="SubProcess_review" targetRef="Task_finalize"/>
+    <bpmn:sequenceFlow id="Flow_m4" sourceRef="Task_finalize" targetRef="End_main"/>
+  </bpmn:process>
+  <bpmn:process id="Process_support" isExecutable="true">
+    <bpmn:startEvent id="Start_support" name="Ready">
+      <bpmn:outgoing>Flow_sp1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_help" name="Provide Help">
+      <bpmn:incoming>Flow_sp1</bpmn:incoming>
+      <bpmn:outgoing>Flow_sp2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_support" name="Done">
+      <bpmn:incoming>Flow_sp2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_sp1" sourceRef="Start_support" targetRef="Task_help"/>
+    <bpmn:sequenceFlow id="Flow_sp2" sourceRef="Task_help" targetRef="End_support"/>
+  </bpmn:process>
+</bpmn:definitions>

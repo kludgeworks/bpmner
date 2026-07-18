@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_collab_msg_endpoint" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="Collab_msg_endpoint">
+    <bpmn:participant id="Participant_A" name="Service A" processRef="Process_A"/>
+    <bpmn:participant id="Participant_B" name="Service B" processRef="Process_B"/>
+    <bpmn:messageFlow id="MsgFlow_1" sourceRef="Task_A1" targetRef="Task_B1"/>
+    <bpmn:messageFlow id="MsgFlow_2" sourceRef="Task_B2" targetRef="Task_A2"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_A" isExecutable="true">
+    <bpmn:startEvent id="Start_A" name="Start">
+      <bpmn:outgoing>Flow_A1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_A1" name="Call Service B">
+      <bpmn:incoming>Flow_A1</bpmn:incoming>
+      <bpmn:outgoing>Flow_A2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_A2" name="Handle Response">
+      <bpmn:incoming>Flow_A2</bpmn:incoming>
+      <bpmn:outgoing>Flow_A3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_A" name="Done">
+      <bpmn:incoming>Flow_A3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_A1" sourceRef="Start_A" targetRef="Task_A1"/>
+    <bpmn:sequenceFlow id="Flow_A2" sourceRef="Task_A1" targetRef="Task_A2"/>
+    <bpmn:sequenceFlow id="Flow_A3" sourceRef="Task_A2" targetRef="End_A"/>
+  </bpmn:process>
+  <bpmn:process id="Process_B" isExecutable="true">
+    <bpmn:startEvent id="Start_B" name="Start">
+      <bpmn:outgoing>Flow_B1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_B1" name="Process Request">
+      <bpmn:incoming>Flow_B1</bpmn:incoming>
+      <bpmn:outgoing>Flow_B2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_B2" name="Send Result">
+      <bpmn:incoming>Flow_B2</bpmn:incoming>
+      <bpmn:outgoing>Flow_B3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_B" name="Done">
+      <bpmn:incoming>Flow_B3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_B1" sourceRef="Start_B" targetRef="Task_B1"/>
+    <bpmn:sequenceFlow id="Flow_B2" sourceRef="Task_B1" targetRef="Task_B2"/>
+    <bpmn:sequenceFlow id="Flow_B3" sourceRef="Task_B2" targetRef="End_B"/>
+  </bpmn:process>
+</bpmn:definitions>

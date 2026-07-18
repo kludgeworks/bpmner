@@ -52,6 +52,9 @@ rules_jvm_external++maven+maven_install.json
 # Serena MCP server local metadata
 .serena/
 
+# macOS
+.DS_Store
+
 # Coverage
 /jacoco.xml
 *.lcov

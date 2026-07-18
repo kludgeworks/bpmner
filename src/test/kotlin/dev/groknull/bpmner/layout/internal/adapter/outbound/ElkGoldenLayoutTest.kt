@@ -8,20 +8,18 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
+import org.xmlunit.assertj.XmlAssert
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Layer 4b: golden-file regression oracle over the full 12-fixture corpus.
+ * Regression test over the full 22-fixture set.
  *
- * For each approved expected layout under `layout-fixtures/`, asserts that the engine
- * produces byte-identical output. This is the regression gate: once a human approves
- * the output in bpmn-js and commits it, this test enforces that no subsequent engine
- * change silently shifts its coordinates. A coordinate change requires a new review
- * before the expected layout can be re-blessed.
+ * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
+ * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 12 fixtures.
+ * labels below nodes) and determinism for all 22 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -34,7 +32,7 @@ class ElkGoldenLayoutTest {
         private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
     }
 
-    @ParameterizedTest(name = "matches committed golden: {0}")
+    @ParameterizedTest(name = "matches committed expected: {0}")
     @ValueSource(
         strings = [
             "representative-process",
@@ -51,18 +49,26 @@ class ElkGoldenLayoutTest {
             "subprocess-nested",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
-    fun `engine output matches committed golden (HITL-approved)`(fixture: String) {
+    fun `engine output matches committed expected`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
-        val golden = load("layout-fixtures/$fixture.expected.bpmn")
+        val expected = load("layout-fixtures/$fixture.expected.bpmn")
         val actual = layouter.layout(input)
         assertEquals(
-            golden,
+            expected,
             actual,
-            "Engine output for '$fixture' does not match the committed golden. " +
+            "Engine output for '$fixture' does not match the committed expected output. " +
                 "If the layout changed intentionally, run generate_candidate_goldens, " +
-                "review in bpmn-js, and re-bless the golden before updating this test.",
+                "review in bpmn-js, and re-bless the expected output before updating this test.",
         )
     }
 
@@ -83,10 +89,18 @@ class ElkGoldenLayoutTest {
             "boundary-on-subprocess",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     @Suppress("CyclomaticComplexMethod")
-    fun `all 12 corpus fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 22 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
@@ -97,6 +111,119 @@ class ElkGoldenLayoutTest {
         assertLabelsBelow(doc, fixture)
         assertNoTopLevelShapeOverlap(doc, fixture, boundaryEventIds(result))
         assertLabelsDoNotOverlapOwnNode(doc, fixture)
+    }
+
+    @ParameterizedTest(name = "collaboration plane binds to Collaboration: {0}")
+    @ValueSource(
+        strings = [
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
+        ],
+    )
+    fun `collaboration fixture plane bpmnElement references the Collaboration`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+
+        // Look up the actual Collaboration element ID from the input rather than testing by name convention.
+        val inputDoc = LayoutDiInspector.parse(input)
+        val collabElements = inputDoc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/MODEL", "collaboration")
+        assertEquals(1, collabElements.length, "[$fixture] input must have exactly one collaboration")
+        val expectedCollabId = (collabElements.item(0) as Element).getAttribute("id")
+        assertTrue(expectedCollabId.isNotBlank(), "[$fixture] input collaboration must have an id")
+
+        val outDoc = LayoutDiInspector.parse(result)
+        val planes = outDoc.getElementsByTagNameNS(DI_NS, "BPMNPlane")
+        assertEquals(1, planes.length, "[$fixture] must have exactly one BPMNPlane")
+        val plane = planes.item(0) as Element
+        val bpmnElement = plane.getAttribute("bpmnElement")
+        assertEquals(
+            expectedCollabId,
+            bpmnElement,
+            "[$fixture] BPMNPlane bpmnElement must reference the Collaboration ('$expectedCollabId')",
+        )
+    }
+
+    @ParameterizedTest(name = "participant shapes present: {0}")
+    @ValueSource(
+        strings = [
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
+        ],
+    )
+    fun `collaboration fixture has BPMNShape for each participant`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val inputDoc = LayoutDiInspector.parse(input)
+        val resultDoc = LayoutDiInspector.parse(result)
+
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        val participants = inputDoc.getElementsByTagNameNS(bpmnNs, "participant")
+        val shapes = resultDoc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        val shapeElementIds = (0 until shapes.length).map {
+            (shapes.item(it) as Element).getAttribute("bpmnElement")
+        }.toSet()
+
+        for (i in 0 until participants.length) {
+            val participantId = (participants.item(i) as Element).getAttribute("id")
+            assertTrue(
+                participantId in shapeElementIds,
+                "[$fixture] must have BPMNShape for participant '$participantId'",
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "message flow edges present: {0}")
+    @ValueSource(
+        strings = [
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+        ],
+    )
+    fun `collaboration fixture has BPMNEdge for each message flow`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        val inputDoc = LayoutDiInspector.parse(input)
+        val resultDoc = LayoutDiInspector.parse(result)
+
+        val bpmnNs = "http://www.omg.org/spec/BPMN/20100524/MODEL"
+        val msgFlows = inputDoc.getElementsByTagNameNS(bpmnNs, "messageFlow")
+        val edges = resultDoc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
+        val edgeElementIds = (0 until edges.length).map {
+            (edges.item(it) as Element).getAttribute("bpmnElement")
+        }.toSet()
+
+        for (i in 0 until msgFlows.length) {
+            val mfId = (msgFlows.item(i) as Element).getAttribute("id")
+            assertTrue(
+                mfId in edgeElementIds,
+                "[$fixture] must have BPMNEdge for messageFlow '$mfId'",
+            )
+        }
+    }
+
+    @ParameterizedTest(name = "bioc colours survive DI-merge: collab-bioc.bpmn")
+    @ValueSource(strings = ["collab-bioc"])
+    fun `DI-merge preserves bioc colour attributes on re-laid-out shapes`(fixture: String) {
+        val input = load("layout-fixtures/$fixture.bpmn")
+        val result = layouter.layout(input)
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:stroke]").exist()
+        assertXml(result).nodesByXPath("//bpmndi:BPMNShape[@bioc:fill]").exist()
     }
 
     private fun assertOneDiagram(doc: org.w3c.dom.Document, fixture: String) {
@@ -138,8 +265,13 @@ class ElkGoldenLayoutTest {
             }
     }
 
+    @Suppress("ReturnCount")
     private fun assertShapeLabelBelow(shape: Element, fixture: String) {
         val id = shape.getAttribute("bpmnElement")
+        // Participants and lanes use a left-side header band label (isHorizontal=true), not a
+        // below-node label. Skip them so the "labels below nodes" invariant only applies to
+        // flow-node shapes where below-placement is the convention.
+        if (shape.getAttribute("isHorizontal") == "true") return
         val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
         val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return
         val lb = lbl.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return
@@ -170,6 +302,14 @@ class ElkGoldenLayoutTest {
             "boundary-on-subprocess",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {
@@ -196,6 +336,8 @@ class ElkGoldenLayoutTest {
             .mapNotNull { shape ->
                 val id = shape.getAttribute("bpmnElement")
                 if (id in boundaryEventIds) return@mapNotNull null
+                // Participants and lanes are horizontal pool containers — skip from overlap check.
+                if (shape.getAttribute("isHorizontal") == "true") return@mapNotNull null
                 val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@mapNotNull null
                 val x = bounds.getAttribute("x").toDoubleOrNull() ?: return@mapNotNull null
                 val y = bounds.getAttribute("y").toDoubleOrNull() ?: return@mapNotNull null
@@ -245,6 +387,9 @@ class ElkGoldenLayoutTest {
         (0 until shapes.length)
             .map { shapes.item(it) as Element }
             .forEach { shape ->
+                // Skip participants and lanes — their labels are in the left-side header band,
+                // not below the shape. This is correct BPMN-DI convention for horizontal pools.
+                if (shape.getAttribute("isHorizontal") == "true") return@forEach
                 val id = shape.getAttribute("bpmnElement")
                 val sb = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@forEach
                 val lbl = shape.getElementsByTagNameNS(DI_NS, "BPMNLabel").item(0) as? Element ?: return@forEach
@@ -260,6 +405,17 @@ class ElkGoldenLayoutTest {
                 )
             }
     }
+
+    private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml)
+        .withNamespaceContext(
+            mapOf(
+                "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",
+                "bpmndi" to "http://www.omg.org/spec/BPMN/20100524/DI",
+                "dc" to "http://www.omg.org/spec/DD/20100524/DC",
+                "di" to "http://www.omg.org/spec/DD/20100524/DI",
+                "bioc" to "http://bpmn.io/schema/bpmn/biocolor/1.0",
+            ),
+        )
 
     private fun load(resource: String): String = javaClass.classLoader.getResourceAsStream(resource)
         ?.use { it.readBytes().toString(Charsets.UTF_8) }

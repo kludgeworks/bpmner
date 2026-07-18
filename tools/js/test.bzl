@@ -13,6 +13,7 @@ def bpmner_node_test(
         deps,
         loaders = {},
         external = [],
+        extra_data = [],
         **kwargs):
     """Bundle a TS test file with esbuild and run it with node:test.
 
@@ -25,6 +26,9 @@ def bpmner_node_test(
         external: Extra module names to leave unbundled (resolved from
             node_modules at runtime). When non-empty, `deps` are added to the
             test's runfiles so the externalised packages resolve at run time.
+        extra_data: Additional data files to add to the test runfiles (e.g.
+            expected fixtures for render tests). Merged with the macro's internal
+            data list before passing to js_test.
         **kwargs: Additional arguments for js_test.
     """
     bundle_name = name + "_bundle"
@@ -54,7 +58,7 @@ def bpmner_node_test(
     data = [
         ":" + bundle_name,
         "//tools/js:test_wrapper",
-    ]
+    ] + extra_data
 
     # Externalised packages are not in the bundle, so they must be present in
     # the runfiles for Node to resolve them from node_modules at runtime.

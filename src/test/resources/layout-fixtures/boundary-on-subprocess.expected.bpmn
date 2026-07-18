@@ -93,61 +93,61 @@
       <bpmndi:BPMNShape bpmnElement="End_escalated" id="BPMNShape_End_escalated">
         <dc:Bounds height="36.0" width="36.0" x="810.0" y="394.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_escalated">
-          <dc:Bounds height="20.0" width="90.0" x="783.0" y="432.0"/>
+          <dc:Bounds height="20.0" width="52.69921875" x="801.650390625" y="432.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
         <dc:Bounds height="36.0" width="36.0" x="870.0" y="224.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_ok">
-          <dc:Bounds height="20.0" width="90.0" x="843.0" y="262.0"/>
+          <dc:Bounds height="20.0" width="21.3515625" x="877.32421875" y="262.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
         <dc:Bounds height="36.0" width="36.0" x="12.0" y="224.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="90.0" x="-15.0" y="262.0"/>
+          <dc:Bounds height="20.0" width="25.341796875" x="17.3291015625" y="262.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubEnd" id="BPMNShape_SubEnd">
         <dc:Bounds height="36.0" width="36.0" x="572.0" y="224.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubEnd">
-          <dc:Bounds height="20.0" width="90.0" x="545.0" y="262.0"/>
+          <dc:Bounds height="20.0" width="28.6875" x="575.65625" y="262.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubProcess_1" id="BPMNShape_SubProcess_1" isExpanded="true">
         <dc:Bounds height="180.0" width="452.0" x="138.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_1">
-          <dc:Bounds height="20.0" width="90.0" x="319.0" y="414.0"/>
+          <dc:Bounds height="20.0" width="43.359375" x="342.3203125" y="414.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubStart" id="BPMNShape_SubStart">
         <dc:Bounds height="36.0" width="36.0" x="188.0" y="224.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubStart">
-          <dc:Bounds height="20.0" width="90.0" x="161.0" y="262.0"/>
+          <dc:Bounds height="20.0" width="30.69140625" x="190.654296875" y="262.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubTask" id="BPMNShape_SubTask">
         <dc:Bounds height="80.0" width="100.0" x="314.0" y="202.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubTask">
-          <dc:Bounds height="20.0" width="90.0" x="319.0" y="284.0"/>
+          <dc:Bounds height="20.0" width="46.669921875" x="340.6650390625" y="284.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_escalate" id="BPMNShape_Task_escalate">
         <dc:Bounds height="80.0" width="100.0" x="620.0" y="372.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_escalate">
-          <dc:Bounds height="20.0" width="90.0" x="625.0" y="454.0"/>
+          <dc:Bounds height="20.0" width="46.025390625" x="646.9873046875" y="454.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_review" id="BPMNShape_Task_review">
         <dc:Bounds height="80.0" width="100.0" x="680.0" y="202.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_review">
-          <dc:Bounds height="20.0" width="90.0" x="685.0" y="284.0"/>
+          <dc:Bounds height="20.0" width="39.345703125" x="710.3271484375" y="284.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Boundary_timer" id="BPMNShape_Boundary_timer">
         <dc:Bounds height="36.0" width="36.0" x="346.0" y="314.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Boundary_timer">
-          <dc:Bounds height="20.0" width="90.0" x="319.0" y="414.0"/>
+          <dc:Bounds height="20.0" width="43.34765625" x="342.326171875" y="414.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">

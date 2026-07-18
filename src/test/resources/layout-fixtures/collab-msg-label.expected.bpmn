@@ -1,0 +1,194 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_collab_msg_label" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:collaboration id="Collab_msg_label" isClosed="false">
+
+    <bpmn:participant id="Participant_customer" name="Customer" processRef="Process_customer"/>
+
+    <bpmn:participant id="Participant_shop" name="Online Shop" processRef="Process_shop"/>
+
+    <bpmn:messageFlow id="MsgFlow_order" name="Order Confirmation" sourceRef="Task_confirm" targetRef="Task_track"/>
+
+    <bpmn:messageFlow id="MsgFlow_notify" name="Shipment Notification" sourceRef="Task_notify" targetRef="Task_receive_pkg"/>
+
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_customer" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_cust" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_c1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_track" implementation="##unspecified" isForCompensation="false" name="Track Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_c1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_c2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:userTask completionQuantity="1" id="Task_receive_pkg" implementation="##unspecified" isForCompensation="false" name="Receive Package" startQuantity="1">
+
+      <bpmn:incoming>Flow_c2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_c3</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_cust" name="Done">
+
+      <bpmn:incoming>Flow_c3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_c1" sourceRef="Start_cust" targetRef="Task_track"/>
+
+    <bpmn:sequenceFlow id="Flow_c2" sourceRef="Task_track" targetRef="Task_receive_pkg"/>
+
+    <bpmn:sequenceFlow id="Flow_c3" sourceRef="Task_receive_pkg" targetRef="End_cust"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_shop" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_shop" isInterrupting="true" name="Order Placed" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_s1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_confirm" implementation="##WebService" isForCompensation="false" name="Confirm Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_s1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_s2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_notify" implementation="##WebService" isForCompensation="false" name="Notify Shipment" startQuantity="1">
+
+      <bpmn:incoming>Flow_s2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_s3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_shop" name="Done">
+
+      <bpmn:incoming>Flow_s3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_s1" sourceRef="Start_shop" targetRef="Task_confirm"/>
+
+    <bpmn:sequenceFlow id="Flow_s2" sourceRef="Task_confirm" targetRef="Task_notify"/>
+
+    <bpmn:sequenceFlow id="Flow_s3" sourceRef="Task_notify" targetRef="End_shop"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Collab_msg_label" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="Participant_customer" id="BPMNShape_Participant_customer" isHorizontal="true">
+        <dc:Bounds height="120.0" width="612.0" x="-18.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_customer">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_shop" id="BPMNShape_Participant_shop" isHorizontal="true">
+        <dc:Bounds height="120.0" width="612.0" x="-18.0" y="212.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_shop">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="212.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_cust" id="BPMNShape_End_cust">
+        <dc:Bounds height="36.0" width="36.0" x="538.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_cust">
+          <dc:Bounds height="20.0" width="28.6875" x="541.65625" y="92.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_shop" id="BPMNShape_End_shop">
+        <dc:Bounds height="36.0" width="36.0" x="538.0" y="254.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_shop">
+          <dc:Bounds height="20.0" width="28.6875" x="541.65625" y="292.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_cust" id="BPMNShape_Start_cust">
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_cust">
+          <dc:Bounds height="20.0" width="25.341796875" x="37.3291015625" y="92.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_shop" id="BPMNShape_Start_shop">
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="254.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_shop">
+          <dc:Bounds height="20.0" width="70.69921875" x="14.650390625" y="292.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_confirm" id="BPMNShape_Task_confirm">
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="232.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_confirm">
+          <dc:Bounds height="20.0" width="76.013671875" x="169.9931640625" y="314.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_notify" id="BPMNShape_Task_notify">
+        <dc:Bounds height="80.0" width="100.0" x="348.0" y="232.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_notify">
+          <dc:Bounds height="20.0" width="84.703125" x="355.6484375" y="314.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_receive_pkg" id="BPMNShape_Task_receive_pkg">
+        <dc:Bounds height="80.0" width="100.0" x="348.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_receive_pkg">
+          <dc:Bounds height="28.0" width="46.69921875" x="374.650390625" y="114.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_track" id="BPMNShape_Task_track">
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_track">
+          <dc:Bounds height="20.0" width="64.0078125" x="175.99609375" y="114.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c1" id="BPMNEdge_Flow_c1">
+        <di:waypoint x="68.0" y="72.0"/>
+        <di:waypoint x="158.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c2" id="BPMNEdge_Flow_c2">
+        <di:waypoint x="258.0" y="72.0"/>
+        <di:waypoint x="348.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_c3" id="BPMNEdge_Flow_c3">
+        <di:waypoint x="448.0" y="72.0"/>
+        <di:waypoint x="538.0" y="72.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
+        <di:waypoint x="68.0" y="272.0"/>
+        <di:waypoint x="158.0" y="272.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_s2" id="BPMNEdge_Flow_s2">
+        <di:waypoint x="258.0" y="272.0"/>
+        <di:waypoint x="348.0" y="272.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_s3" id="BPMNEdge_Flow_s3">
+        <di:waypoint x="448.0" y="272.0"/>
+        <di:waypoint x="538.0" y="272.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_notify" id="BPMNEdge_MsgFlow_notify">
+        <di:waypoint x="398.0" y="232.0"/>
+        <di:waypoint x="398.0" y="112.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_notify">
+          <dc:Bounds height="20.0" width="113.390625" x="341.3046875" y="162.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_order" id="BPMNEdge_MsgFlow_order">
+        <di:waypoint x="208.0" y="232.0"/>
+        <di:waypoint x="208.0" y="112.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_order">
+          <dc:Bounds height="20.0" width="102.03515625" x="156.982421875" y="162.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

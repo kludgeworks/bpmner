@@ -8,10 +8,12 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
+import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.FlowElement
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
+import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
@@ -42,6 +44,11 @@ import org.eclipse.elk.graph.util.ElkGraphUtil
  * Maps the process, boundary events, and sequence flows, and tracks artifacts (TextAnnotation, Group)
  * in the node map for placement.
  */
+// map(), mapProcess/mapCollaboration, mapBoundaryEvents, mapSequenceFlows, trackAnnotations/trackGroups,
+// plus options helpers — all share nodeMap/portMap/edgeMap/loopBackFlowIds and cannot be split without
+// threading those mutable maps through every call or converting them to class fields (which would
+// introduce statefulness between calls). Suppression is structural, not incidental.
+@Suppress("TooManyFunctions")
 internal object BpmnToElkMapper {
 
     /**
@@ -68,16 +75,30 @@ internal object BpmnToElkMapper {
         val loopBackFlowIds = mutableSetOf<String>()
         val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
-            val backEdges = findLoopBackEdges(sub)
+            val backEdges = findLoopBackEdges(sub.flowElements)
             if (backEdges.isNotEmpty()) {
                 loopBackFlowIds.addAll(backEdges)
                 loopingSubIds.add(sub.id)
             }
         }
 
-        val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
-            .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
-        mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
+        val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
+        // A cyclic sequence flow directly inside a Participant's process (not nested in a
+        // SubProcess) is a back-edge too: [placement.CollaborationShapePlacement] can reposition
+        // its endpoints (lane stacking), so it must be excluded from the ELK graph and routed by
+        // [placement.LoopBackEdgeArcs] the same way a SubProcess-internal cycle is. A bare
+        // top-level process with no Collaboration wrapper never reaches CollaborationShapePlacement,
+        // so its cycles are left for ELK's own cycle-breaking, unchanged.
+        collaboration?.participants?.mapNotNull { it.process }?.forEach { process ->
+            loopBackFlowIds.addAll(findLoopBackEdges(process.flowElements))
+        }
+        if (collaboration != null) {
+            mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
+        } else {
+            val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
+                .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
+            mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
+        }
 
         trackAnnotations(model, nodeMap)
         trackGroups(model, nodeMap)
@@ -87,6 +108,62 @@ internal object BpmnToElkMapper {
         mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
+    }
+
+    /**
+     * Maps a collaboration to the ELK graph.
+     *
+     * Each white-box [Participant] becomes a compound ELK node ([HierarchyHandling.INCLUDE_CHILDREN])
+     * containing its process's flow nodes. Black-box participants (no processRef) are tracked as
+     * detached size-carrier nodes — their bounds are computed by [placement.CollaborationShapePlacement].
+     *
+     * Message flows are NOT added to the ELK graph: they are collaboration-level,
+     * cross-participant connections that confuse the hierarchical router, so their
+     * routing is owned entirely by the placement pass.
+     *
+     * Lane membership is not expressed as ELK nodes; lanes are phase-2 placement geometry
+     * derived from [org.camunda.bpm.model.bpmn.instance.Lane.flowNodeRefs].
+     */
+    private fun mapCollaboration(
+        root: ElkNode,
+        collaboration: Collaboration,
+        model: BpmnModelInstance,
+        nodeMap: MutableMap<String, ElkNode>,
+        loopingSubIds: Set<String>,
+    ) {
+        for (participant in collaboration.participants) {
+            val process = participant.process
+            if (process != null) {
+                // White-box participant: compound ELK node containing the process graph.
+                val compound = ElkGraphUtil.createNode(root)
+                compound.identifier = participant.id
+                compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+                // SEPARATE_CHILDREN = false: the process is one connected graph, not separate components.
+                // (Root SEPARATE_CHILDREN = true governs inter-participant separation.)
+                compound.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+                compound.setProperty(
+                    CoreOptions.PADDING,
+                    ElkPadding(
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                        PARTICIPANT_CONTENT_PADDING,
+                    ),
+                )
+                applyFlowSpacing(compound)
+                nodeMap[participant.id] = compound
+
+                val topLevelElements = process.flowElements.toList()
+                mapProcess(compound, topLevelElements, nodeMap, model, loopingSubIds)
+            } else {
+                // Black-box participant: detached size-carrier node; placement pass assigns bounds.
+                val bb = ElkGraphUtil.createGraph()
+                bb.identifier = participant.id
+                bb.width = BLACK_BOX_WIDTH
+                bb.height = BLACK_BOX_HEIGHT
+                nodeMap[participant.id] = bb
+            }
+        }
     }
 
     /**
@@ -282,16 +359,20 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Returns the IDs of sequence flows that are back-edges in the subprocess (i.e. create
-     * cycles). Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
+     * Returns the IDs of sequence flows that are back-edges among [flowElements] (i.e. create
+     * cycles). [flowElements] is a [SubProcess]'s or a [Participant]'s
+     * [org.camunda.bpm.model.bpmn.instance.Process]'s own direct flow elements — a nested
+     * SubProcess's flow elements are scanned separately by the caller, not recursively here.
+     *
+     * Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
      * (which would count against the TooManyFunctions detekt limit).
      *
      * Each stack frame is (nodeId, iteratorIndex): when the iterator is exhausted the node is
      * popped from the DFS ancestor-stack and marked fully visited.
      */
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod")
-    private fun findLoopBackEdges(sub: SubProcess): Set<String> {
-        val flows = sub.flowElements.filterIsInstance<SequenceFlow>()
+    private fun findLoopBackEdges(flowElements: Collection<FlowElement>): Set<String> {
+        val flows = flowElements.filterIsInstance<SequenceFlow>()
         val succFlows = mutableMapOf<String, MutableList<Pair<String, String>>>() // nodeId → [(targetId, flowId)]
         flows.forEach { sf ->
             val s = sf.source?.id ?: return@forEach
@@ -299,11 +380,11 @@ internal object BpmnToElkMapper {
             succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
         }
 
-        val startEvents = sub.flowElements.filterIsInstance<StartEvent>()
+        val startEvents = flowElements.filterIsInstance<StartEvent>()
         val seeds = if (startEvents.isNotEmpty()) {
             startEvents.map { it.id }
         } else {
-            sub.flowElements.filterIsInstance<FlowNode>().map { it.id }
+            flowElements.filterIsInstance<FlowNode>().map { it.id }
         }
 
         val backEdges = mutableSetOf<String>()
@@ -413,6 +494,14 @@ internal object BpmnToElkMapper {
     internal const val SUBPROCESS_TOP_PADDING = 90.0
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
+
+    // Collaboration geometry constants
+    internal const val PARTICIPANT_HEADER_WIDTH = 30.0
+    internal const val LANE_HEADER_HEIGHT = 30.0
+    internal const val PARTICIPANT_GAP = 80.0
+    internal const val BLACK_BOX_WIDTH = 100.0
+    internal const val BLACK_BOX_HEIGHT = 60.0
+    private const val PARTICIPANT_CONTENT_PADDING = 20.0
 
     // In-layer spacing (vertical for RIGHT direction). Must exceed LABEL_HEIGHT (20) +
     // LABEL_GAP_BELOW (2) so a node's external label clears the node in the row below.

@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bioc="http://bpmn.io/schema/bpmn/biocolor/1.0" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_collab_bioc" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:collaboration id="Collab_bioc" isClosed="false">
+
+    <bpmn:participant id="Participant_1" name="Process One" processRef="Process_1"/>
+
+    <bpmn:participant id="Participant_2" name="Process Two" processRef="Process_2"/>
+
+    <bpmn:messageFlow id="MsgFlow_1" sourceRef="Task_1" targetRef="Task_3"/>
+
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:userTask completionQuantity="1" id="Task_1" implementation="##unspecified" isForCompensation="false" name="Send Data" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:userTask>
+
+    <bpmn:endEvent id="End_1" name="Done">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="End_1"/>
+
+  </bpmn:process>
+
+  <bpmn:process id="Process_2" isClosed="false" isExecutable="true" processType="None">
+
+    <bpmn:startEvent id="Start_2" isInterrupting="true" name="Start" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_3" implementation="##WebService" isForCompensation="false" name="Receive Data" startQuantity="1">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_2" name="Done">
+
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Start_2" targetRef="Task_3"/>
+
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_3" targetRef="End_2"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Collab_bioc" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="Participant_1" id="BPMNShape_Participant_1" isHorizontal="true">
+
+        <dc:Bounds height="120.0" width="422.0" x="-18.0" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_1">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="12.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Participant_2" id="BPMNShape_Participant_2" isHorizontal="true">
+
+        <dc:Bounds height="120.0" width="422.0" x="-18.0" y="212.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Participant_2">
+          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="212.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffcdd2" bioc:stroke="#831311" bpmnElement="End_1" id="BPMNShape_End_1">
+
+        <dc:Bounds height="36.0" width="36.0" x="348.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="28.6875" x="351.65625" y="92.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_2" id="BPMNShape_End_2">
+
+        <dc:Bounds height="36.0" width="36.0" x="348.0" y="254.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_2">
+          <dc:Bounds height="20.0" width="28.6875" x="351.65625" y="292.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#b5efcd" bioc:stroke="#005b1d" bpmnElement="Start_1" id="BPMNShape_Start_1">
+
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="54.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="25.341796875" x="37.3291015625" y="92.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_2" id="BPMNShape_Start_2">
+
+        <dc:Bounds height="36.0" width="36.0" x="32.0" y="254.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_2">
+          <dc:Bounds height="20.0" width="25.341796875" x="37.3291015625" y="292.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#bbdefb" bioc:stroke="#0d4372" bpmnElement="Task_1" id="BPMNShape_Task_1">
+
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="32.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_1">
+          <dc:Bounds height="20.0" width="56.70703125" x="179.646484375" y="114.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bioc:fill="#ffe0b2" bioc:stroke="#6b3a0b" bpmnElement="Task_3" id="BPMNShape_Task_3">
+
+        <dc:Bounds height="80.0" width="100.0" x="158.0" y="232.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_3">
+          <dc:Bounds height="20.0" width="72.03515625" x="171.982421875" y="314.0"/>
+        </bpmndi:BPMNLabel>
+
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="68.0" y="72.0"/>
+        <di:waypoint x="158.0" y="72.0"/>
+
+
+
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="258.0" y="72.0"/>
+        <di:waypoint x="348.0" y="72.0"/>
+
+
+
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+        <di:waypoint x="68.0" y="272.0"/>
+        <di:waypoint x="158.0" y="272.0"/>
+
+
+
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_4" id="BPMNEdge_Flow_4">
+        <di:waypoint x="258.0" y="272.0"/>
+        <di:waypoint x="348.0" y="272.0"/>
+
+
+
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
+        <di:waypoint x="208.0" y="112.0"/>
+        <di:waypoint x="208.0" y="232.0"/>
+
+
+
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+
+</bpmn:definitions>

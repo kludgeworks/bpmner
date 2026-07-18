@@ -35,6 +35,15 @@ fun main() {
         "boundary-on-subprocess",
         "subprocess-no-start-cycle",
         "subprocess-sequential-sharing",
+        // Collaboration fixtures
+        "collab-lanes",
+        "collab-two-pools",
+        "collab-blackbox",
+        "collab-msg-endpoint",
+        "collab-msg-label",
+        "collab-subprocess",
+        "collab-bioc",
+        "collab-lanes-loopback",
     )
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
