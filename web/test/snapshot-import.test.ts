@@ -3,6 +3,11 @@
  * SPDX-License-Identifier: MIT
  */
 
+/**
+ * Tests `hasDiagram` and `importSnapshot` from `../src/snapshot-import`: whether a snapshot
+ * carries DI, and how DI-less vs. DI-bearing snapshots (and import failures) are handled.
+ */
+
 import assert from "node:assert/strict"
 import { describe, it } from "node:test"
 import { hasDiagram, importSnapshot } from "../src/snapshot-import"
@@ -12,10 +17,6 @@ const DI_LESS_XML =
 	'<?xml version="1.0"?><definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" />'
 const DI_BEARING_XML =
 	'<?xml version="1.0"?><definitions xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"><bpmndi:BPMNDiagram /></definitions>'
-
-// -------------------------------------------------------------------------
-// hasDiagram
-// -------------------------------------------------------------------------
 
 describe("hasDiagram", () => {
 	it("returns false for DI-less XML", () => {
@@ -35,10 +36,6 @@ describe("hasDiagram", () => {
 		assert.equal(hasDiagram(""), false)
 	})
 })
-
-// -------------------------------------------------------------------------
-// importSnapshot — DI-less snapshots (AD-557-06: browser never invents geometry)
-// -------------------------------------------------------------------------
 
 describe("importSnapshot — DI-less snapshots", () => {
 	it("returns pending immediately without calling importXML, forwarding attemptNumber", async () => {
@@ -80,10 +77,6 @@ describe("importSnapshot — DI-less snapshots", () => {
 	})
 })
 
-// -------------------------------------------------------------------------
-// importSnapshot — DI-bearing snapshots (server geometry, imported unchanged)
-// -------------------------------------------------------------------------
-
 describe("importSnapshot — DI-bearing snapshots", () => {
 	it("passes DI-bearing XML directly to importXML and returns drawn", async () => {
 		let importedXml: string | undefined
@@ -104,7 +97,7 @@ describe("importSnapshot — DI-bearing snapshots", () => {
 		)
 	})
 
-	it("returns pending when importXML throws, preserving the prior drawing (ARCH ADR-ss-007)", async () => {
+	it("returns pending when importXML throws, preserving the prior drawing", async () => {
 		const deps = {
 			importXML: async (_xml: string) => {
 				throw new Error("no diagram to display")

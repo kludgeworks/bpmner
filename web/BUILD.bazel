@@ -33,10 +33,13 @@ sonarqube(
 # Link the standalone web package's node_modules
 npm_link_all_packages(name = "node_modules")
 
-WEB_SRCS = glob([
-    "src/**/*.ts",
-    "types/**/*.d.ts",
-])
+WEB_SRCS = glob(
+    [
+        "src/**/*.ts",
+        "types/**/*.d.ts",
+    ],
+    allow_empty = True,
+)
 
 WEB_TEST_SRCS = glob(["test/**/*.ts"])
 

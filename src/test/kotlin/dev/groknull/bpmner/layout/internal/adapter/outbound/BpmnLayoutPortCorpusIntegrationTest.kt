@@ -20,22 +20,12 @@ import org.springframework.test.context.TestPropertySource
 import org.springframework.test.context.bean.override.mockito.MockitoBean
 
 /**
- * Proves the promoted `ElkBpmnLayouter` bean — resolved through the real `BpmnLayoutPort`/
- * `BpmnLayoutAgent` Spring wiring, not a hand-invoked layouter — produces output that satisfies
- * every retained-profile corpus fixture end to end, including the AD-557-17 referential-integrity
- * checks in `BpmnLayoutAgent.validateFinalBpmnXml`.
+ * Runs every retained-profile corpus `.bpmn` fixture through the real `BpmnLayoutPort`/
+ * `BpmnLayoutAgent` Spring wiring, asserting the layout-then-validate call chain never throws.
  *
- * The corpus fixtures are hand-authored raw BPMN, not LLM-contract-shaped output, so they are
- * fed a placeholder [BpmnDefinition] rather than [dev.groknull.bpmner.authoring.internal.adapter.outbound.BpmnXmlToDefinitionConverter]
- * (which rejects valid-but-contract-atypical constructs, e.g. a bare `timerEventDefinition`).
- * `validateFinalBpmnXml`'s node/sequence-coverage checks against `bpmn.definition` are exercised
- * with dedicated synthetic fixtures in `BpmnLayoutAgentTest`; this test's job is the DOM-only
- * AD-557-17 rules and the diagram/plane/shape/XSD checks, all of which run against the real
- * corpus XML regardless of `definition` contents.
- *
- * Mirrors [dev.groknull.bpmner.layout.LayoutModuleTest]'s bootstrap shape (ADR-009 Tier 2):
- * `layout` grants only `bpmn` and `conformance`; `ruleset` ports are mocked as transitive
- * non-collaborators the `conformance` adapters constructor-inject but `layout` never references.
+ * The corpus fixtures are hand-authored raw BPMN, so they are fed a placeholder [BpmnDefinition]
+ * rather than a converted one; node/sequence-coverage checks against `bpmn.definition` are
+ * exercised separately in `BpmnLayoutAgentTest`.
  */
 @ApplicationModuleTest(mode = BootstrapMode.DIRECT_DEPENDENCIES, verifyAutomatically = false)
 @TestPropertySource(

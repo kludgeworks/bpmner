@@ -40,6 +40,8 @@ internal class BpmnLayoutAgent(
         export = Export(name = "finalizeLayout", startingInputTypes = [LayoutedBpmnXml::class]),
     )
     @Action(description = "XSD-validate the final layouted BPMN XML")
+    // Suppressed because splitting the sequential accumulate-then-throw validation checks into
+    // smaller methods would scatter the single `errors` list they all append to.
     @Suppress("LongMethod")
     fun validateFinalBpmnXml(bpmn: LayoutedBpmnXml): FinalValidatedBpmnXml {
         val errors = mutableListOf<String>()
@@ -79,18 +81,14 @@ internal class BpmnLayoutAgent(
                 errors.add("Final XML must contain at least one bpmndi:BPMNShape")
             }
 
-            val shapeBpmnElements = mutableSetOf<String>()
-            for (i in 0 until shapes.length) {
-                val shape = shapes.item(i) as org.w3c.dom.Element
-                shapeBpmnElements.add(shape.getAttribute("bpmnElement"))
-            }
+            val shapeBpmnElementRefs = (0 until shapes.length)
+                .map { (shapes.item(it) as org.w3c.dom.Element).getAttribute("bpmnElement") }
+            val shapeBpmnElements = shapeBpmnElementRefs.toSet()
 
             val edges = doc.getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", "BPMNEdge")
-            val edgeBpmnElements = mutableSetOf<String>()
-            for (i in 0 until edges.length) {
-                val edge = edges.item(i) as org.w3c.dom.Element
-                edgeBpmnElements.add(edge.getAttribute("bpmnElement"))
-            }
+            val edgeBpmnElementRefs = (0 until edges.length)
+                .map { (edges.item(it) as org.w3c.dom.Element).getAttribute("bpmnElement") }
+            val edgeBpmnElements = edgeBpmnElementRefs.toSet()
 
             val missingNodeShapes = bpmn.definition.nodes.map { it.id }.filter { !shapeBpmnElements.contains(it) }
             if (missingNodeShapes.isNotEmpty()) {
@@ -102,7 +100,9 @@ internal class BpmnLayoutAgent(
                 errors.add("Missing bpmndi:BPMNEdge for sequence flows: $missingSequenceEdges")
             }
 
-            errors.addAll(referentialIntegrityErrors(doc, shapeBpmnElements, edgeBpmnElements))
+            errors.addAll(
+                referentialIntegrityErrors(doc, shapeBpmnElements, edgeBpmnElements, shapeBpmnElementRefs + edgeBpmnElementRefs),
+            )
         }
 
         if (errors.isNotEmpty()) {
@@ -119,25 +119,48 @@ private fun XsdValidationIssue.summary(): String = listOfNotNull(elementId, mess
 private const val BPMN_MODEL_NS = "http://www.omg.org/spec/BPMN/20100524/MODEL"
 
 /**
- * AD-557-17: permanent JVM-native structural checks encoding the referential-integrity rules
- * bpmn-js's importer enforces (`BpmnTreeWalker.registerDi`/`_getConnectedElement`/
- * `_attachBoundary`), replacing the retired JS import/render oracle.
+ * Runs the DI-to-semantic uniqueness, edge-endpoint, and boundary-host referential-integrity
+ * checks that bpmn-js's importer enforces (`BpmnTreeWalker.registerDi`/`_getConnectedElement`/
+ * `_attachBoundary`) but silently demotes to non-throwing warnings.
  */
+internal fun referentialIntegrityErrors(xml: String): List<String> {
+    val doc = javax.xml.parsers.DocumentBuilderFactory.newInstance().apply {
+        isNamespaceAware = true
+    }.newDocumentBuilder().parse(org.xml.sax.InputSource(java.io.StringReader(xml)))
+    val shapeBpmnElementRefs = doc.diBpmnElementRefs("BPMNShape")
+    val edgeBpmnElementRefs = doc.diBpmnElementRefs("BPMNEdge")
+    return referentialIntegrityErrors(
+        doc,
+        shapeBpmnElementRefs.toSet(),
+        edgeBpmnElementRefs.toSet(),
+        shapeBpmnElementRefs + edgeBpmnElementRefs,
+    )
+}
+
+private fun org.w3c.dom.Document.diBpmnElementRefs(diTag: String): List<String> {
+    val elements = getElementsByTagNameNS("http://www.omg.org/spec/BPMN/20100524/DI", diTag)
+    return (0 until elements.length).map { (elements.item(it) as org.w3c.dom.Element).getAttribute("bpmnElement") }
+}
+
 private fun referentialIntegrityErrors(
     doc: org.w3c.dom.Document,
     shapeBpmnElements: Set<String>,
     edgeBpmnElements: Set<String>,
+    drawnElementRefs: List<String>,
 ): List<String> {
     val drawnElements = shapeBpmnElements + edgeBpmnElements
     val errors = mutableListOf<String>()
-    errors.addAll(diResolutionErrors(doc, drawnElements))
+    errors.addAll(diResolutionErrors(doc, drawnElementRefs))
     errors.addAll(edgeEndpointErrors(doc, drawnElements))
     errors.addAll(boundaryHostErrors(doc, shapeBpmnElements))
     return errors
 }
 
-/** Rule 1: every DI element's bpmnElement resolves to a real semantic element, and no two DI elements share one. */
-private fun diResolutionErrors(doc: org.w3c.dom.Document, drawnElements: Set<String>): List<String> {
+/** Every DI element's bpmnElement resolves to a real semantic element, and no two DI elements share one. */
+private fun diResolutionErrors(
+    doc: org.w3c.dom.Document,
+    drawnElementRefs: List<String>,
+): List<String> {
     val semanticElementIds = mutableSetOf<String>()
     val semanticElements = doc.getElementsByTagNameNS(BPMN_MODEL_NS, "*")
     for (i in 0 until semanticElements.length) {
@@ -148,7 +171,7 @@ private fun diResolutionErrors(doc: org.w3c.dom.Document, drawnElements: Set<Str
     val seenBpmnElements = mutableSetOf<String>()
     val duplicateBpmnElements = mutableSetOf<String>()
     val unresolvedDiReferences = mutableSetOf<String>()
-    for (bpmnElement in drawnElements) {
+    for (bpmnElement in drawnElementRefs) {
         if (bpmnElement !in semanticElementIds) unresolvedDiReferences.add(bpmnElement)
         if (!seenBpmnElements.add(bpmnElement)) duplicateBpmnElements.add(bpmnElement)
     }
@@ -163,7 +186,7 @@ private fun diResolutionErrors(doc: org.w3c.dom.Document, drawnElements: Set<Str
     }
 }
 
-/** Rule 2: sourceRef/targetRef must resolve to a semantic element that itself has DI (a drawn shape or edge). */
+/** Every sequenceFlow/messageFlow/association's sourceRef/targetRef resolves to a semantic element that has DI. */
 private fun edgeEndpointErrors(doc: org.w3c.dom.Document, drawnElements: Set<String>): List<String> {
     val unresolvedEndpoints = mutableSetOf<String>()
     for (edgeTag in listOf("sequenceFlow", "messageFlow", "association")) {
@@ -183,7 +206,7 @@ private fun edgeEndpointErrors(doc: org.w3c.dom.Document, drawnElements: Set<Str
     }
 }
 
-/** Rule 3: every boundary event's attachedToRef must resolve to a semantic element that has DI. */
+/** Every boundary event's attachedToRef resolves to a semantic element that has DI. */
 private fun boundaryHostErrors(doc: org.w3c.dom.Document, shapeBpmnElements: Set<String>): List<String> {
     val unresolvedHosts = mutableSetOf<String>()
     val boundaryEvents = doc.getElementsByTagNameNS(BPMN_MODEL_NS, "boundaryEvent")

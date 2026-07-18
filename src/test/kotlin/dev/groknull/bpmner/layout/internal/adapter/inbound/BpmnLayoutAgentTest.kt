@@ -22,10 +22,6 @@ class BpmnLayoutAgentTest {
         layoutService: BpmnLayoutPort = RecordingLayoutService(),
     ): BpmnLayoutAgent = BpmnLayoutAgent(layoutService, xsdValidator)
 
-    // ---------------------------------------------------------------
-    // layoutBpmnXml
-    // ---------------------------------------------------------------
-
     @Test
     fun `layout invokes the layout service and threads the laid-out xml forward`() {
         val layoutService = RecordingLayoutService(listOf("<definitions laid-out=\"true\" />"))
@@ -37,10 +33,6 @@ class BpmnLayoutAgentTest {
         assertEquals("<definitions laid-out=\"true\" />", laidOut.xml)
         assertEquals(listOf("<definitions />"), layoutService.xmls)
     }
-
-    // ---------------------------------------------------------------
-    // validateFinalBpmnXml
-    // ---------------------------------------------------------------
 
     @Test
     fun `final validation passes when XSD is clean and DI is present`() {
@@ -128,6 +120,37 @@ class BpmnLayoutAgentTest {
         }
         assertTrue(error.message!!.contains("DI elements reference nonexistent semantic elements"))
         assertTrue(error.message!!.contains("Ghost_1"))
+    }
+
+    @Test
+    fun `final validation throws BpmnLayoutCorruptionException on two DI elements referencing the same semantic element`() {
+        val xsdValidator = RecordingXsdValidator(listOf(emptyList()))
+        val agent = buildLayoutAgent(xsdValidator)
+
+        val definition = testBpmnDefinition()
+        // shape_start and shape_dup both reference StartEvent_1.
+        val invalidXml = """<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="def_1">
+  <startEvent id="StartEvent_1"/>
+  <task id="Task_1"/>
+  <endEvent id="EndEvent_1"/>
+  <bpmndi:BPMNDiagram id="diag">
+    <bpmndi:BPMNPlane id="plane">
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_start"/>
+      <bpmndi:BPMNShape bpmnElement="StartEvent_1" id="shape_dup"/>
+      <bpmndi:BPMNShape bpmnElement="Task_1" id="shape_task"/>
+      <bpmndi:BPMNShape bpmnElement="EndEvent_1" id="shape_end"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="edge_1"/>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="edge_2"/>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>"""
+
+        val error = assertFailsWith<BpmnLayoutCorruptionException> {
+            agent.validateFinalBpmnXml(LayoutedBpmnXml(definition, invalidXml))
+        }
+        assertTrue(error.message!!.contains("Multiple DI elements reference the same semantic element"))
+        assertTrue(error.message!!.contains("StartEvent_1"))
     }
 
     @Test

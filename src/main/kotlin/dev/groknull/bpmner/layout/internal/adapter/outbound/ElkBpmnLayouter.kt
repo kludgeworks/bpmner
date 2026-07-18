@@ -7,6 +7,8 @@ package dev.groknull.bpmner.layout.internal.adapter.outbound
 
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import dev.groknull.bpmner.layout.BpmnLayoutPort
+import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
+import jakarta.annotation.PostConstruct
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
@@ -27,7 +29,8 @@ import java.io.ByteArrayOutputStream
 @Service
 internal class ElkBpmnLayouter : BpmnLayoutPort {
 
-    init {
+    @PostConstruct
+    fun registerElkLayoutAlgorithm() {
         // ELK requires algorithm registration outside OSGi. LayoutMetaDataService is a
         // singleton that ignores duplicate registrations, so construction-time registration is safe.
         LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
@@ -44,7 +47,17 @@ internal class ElkBpmnLayouter : BpmnLayoutPort {
         RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
         val placed = BpmnPlacementPass.place(model, skeleton)
         ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
-        return serializeXml(model)
+        val output = serializeXml(model)
+        // AD-557-17: hard-fail on referential-integrity defects here, at the sole
+        // BpmnLayoutPort implementation, so every production layout call is guarded —
+        // not just the standalone finalizeLayout export's own validation step.
+        val integrityErrors = referentialIntegrityErrors(output)
+        if (integrityErrors.isNotEmpty()) {
+            throw BpmnAutoLayoutException(
+                "ELK layout produced referentially inconsistent BPMN DI: ${integrityErrors.joinToString("; ")}",
+            )
+        }
+        return output
     }
 
     private fun parseXml(xml: String): BpmnModelInstance = try {

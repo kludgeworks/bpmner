@@ -24,7 +24,7 @@ export type ImportOutcome =
  * - If the XML is DI-less (an intermediate snapshot), the outcome is `"pending"` immediately —
  *   no client-side layout is attempted, and the caller keeps showing the previous diagram.
  * - On any throw from `deps.importXML` — the viewer rejecting the result — the outcome is also
- *   `"pending"`. The error is never swallowed into console.error (ARCH ADR-ss-007).
+ *   `"pending"`. The error is never swallowed into console.error.
  *
  * The `deps` object is injected so the module stays pure (no bpmn-js import) and the runnable
  * node test can drive it with fakes.
