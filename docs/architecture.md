@@ -129,7 +129,7 @@ those ports in plain Spring components.
 | --- | --- | --- | --- | --- |
 | `BpmnGenerationAgent` | `pipeline/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
 | `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Track A). |
-| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (GraalJS auto-layout + XSD validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
+| `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (JVM-native ELK auto-layout + XSD and referential-integrity validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -360,6 +360,8 @@ fail the build.
 ---
 
 ## 6. Enforcement
+
+For the retained BPMN vocabulary, see [`bpmn-profile.md`](bpmn-profile.md).
 
 The boundary enforcement stack (see [ADR-004](./adr/adr-004-module-placement-and-boundaries.md) §6):
 

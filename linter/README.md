@@ -3,14 +3,15 @@
 This directory holds the bpmner rule catalog — the source of truth for every BPMN
 validation rule the pipeline evaluates.
 
-Rules are authored in [Pkl](https://pkl-lang.org/) under [`pkl/`](pkl/). The Bazel
-build evaluates them at compile time and generates Java types that
-[`PklRuleCatalog`](../src/main/kotlin/dev/groknull/bpmner/rules/internal/domain/PklRuleCatalog.kt)
-loads at startup; the in-process [`RuleEngine`](../src/main/kotlin/dev/groknull/bpmner/rules/RuleEngine.kt)
+Rules are authored directly as hand-written Kotlin Spring `@Bean BpmnRule` factories
+(`*RuleConfig.kt`), collected at startup by
+[`BeanRuleRegistry`](../src/main/kotlin/dev/groknull/bpmner/ruleset/internal/domain/beans/BeanRuleRegistry.kt);
+the in-process [`RuleEngine`](../src/main/kotlin/dev/groknull/bpmner/ruleset/RuleEngine.kt)
 then evaluates each rule against the `BpmnDefinition` directly.
 
-GraalJS is used only by the [`layout`](../layout/) module's auto-layout JS bundle.
-Rule evaluation is entirely JVM-native.
+GraalJS is not used anywhere in the repository; rule evaluation and BPMN layout
+(the [`layout`](../src/main/kotlin/dev/groknull/bpmner/layout/) module) are both
+entirely JVM-native.
 
 ## Layout
 
@@ -20,5 +21,5 @@ Rule evaluation is entirely JVM-native.
 - [`docs/`](docs/) — Vale prose-style sources (templates, toolbox guides) used by
   the rule-docs generator.
 
-See [`pkl/README.md`](pkl/README.md) for the rule-authoring workflow and the Pkl
-test fixtures.
+See [`docs/rule-authoring-guide.md`](docs/rule-authoring-guide.md) for the
+rule-authoring workflow and the Pkl test fixtures.
