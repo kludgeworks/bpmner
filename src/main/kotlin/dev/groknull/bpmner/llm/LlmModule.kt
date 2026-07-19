@@ -9,7 +9,8 @@ import org.springframework.modulith.ApplicationModule
 
 /**
  * LLM provider-wiring infra module — registers @Profile-gated OpenAI-compatible model providers
- * (DeepSeek / OpenRouter). Cross-cutting infrastructure: depends on no kernel or capability module.
+ * (DeepSeek / GitHub Models / OpenRouter). Cross-cutting infrastructure: depends on no kernel or
+ * capability module.
  */
 @ApplicationModule
 internal object LlmModule

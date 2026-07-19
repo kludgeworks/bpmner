@@ -5,10 +5,9 @@
 
 package dev.groknull.bpmner.repair
 
-import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
-import com.embabel.common.ai.model.LlmOptions
+import dev.groknull.bpmner.llm.defaultRoleLlmOptions
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
@@ -40,7 +39,7 @@ data class BpmnRepairConfig(
                     "Fix naming and label capitalization rules by providing targeted node and edge patches",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = cachingLlm("repair-label"),
+                llm = defaultRoleLlmOptions("repair-label"),
             )
 
         val DEFAULT_PATCH_REPAIRER =
@@ -54,7 +53,7 @@ data class BpmnRepairConfig(
                         " specific elements without rewriting the whole definition",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = cachingLlm("repair-patch"),
+                llm = defaultRoleLlmOptions("repair-patch"),
             )
 
         val DEFAULT_REWRITE_REPAIRER =
@@ -67,7 +66,7 @@ data class BpmnRepairConfig(
                     "Fix complex, cascading validation errors by rewriting the complete BPMN definition",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = cachingLlm("repair-rewrite"),
+                llm = defaultRoleLlmOptions("repair-rewrite"),
             )
 
         val DEFAULT_REPAIRER =
@@ -81,11 +80,8 @@ data class BpmnRepairConfig(
                         " and return the complete corrected object",
                     voice = CONCISE_AND_EXACT,
                 ),
-                llm = cachingLlm("repairer"),
+                llm = defaultRoleLlmOptions("repairer"),
             )
-
-        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
-            .withAnthropicCaching(systemPrompt = true, tools = true)
     }
 }
 

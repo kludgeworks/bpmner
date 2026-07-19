@@ -5,10 +5,9 @@
 
 package dev.groknull.bpmner.readiness
 
-import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
-import com.embabel.common.ai.model.LlmOptions
+import dev.groknull.bpmner.llm.defaultRoleLlmOptions
 import jakarta.validation.constraints.Max
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -40,11 +39,8 @@ data class BpmnReadinessConfig(
                         " for BPMN generation without inventing missing facts",
                     voice = "specific and evidence-grounded",
                 ),
-                llm = cachingLlm("readiness-assessor"),
+                llm = defaultRoleLlmOptions("readiness-assessor"),
             )
-
-        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
-            .withAnthropicCaching(systemPrompt = true, tools = true)
     }
 }
 

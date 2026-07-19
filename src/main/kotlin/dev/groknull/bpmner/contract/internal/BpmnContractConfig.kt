@@ -5,10 +5,9 @@
 
 package dev.groknull.bpmner.contract.internal
 
-import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
-import com.embabel.common.ai.model.LlmOptions
+import dev.groknull.bpmner.llm.defaultRoleLlmOptions
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
@@ -40,11 +39,8 @@ internal data class BpmnContractConfig(
                         " assumption; never invent facts that are not grounded",
                     voice = "specific and evidence-grounded",
                 ),
-                llm = cachingLlm("contract-extractor"),
+                llm = defaultRoleLlmOptions("contract-extractor"),
             )
-
-        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
-            .withAnthropicCaching(systemPrompt = true, tools = true)
     }
 }
 

@@ -5,10 +5,9 @@
 
 package dev.groknull.bpmner.alignment.internal
 
-import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
-import com.embabel.common.ai.model.LlmOptions
+import dev.groknull.bpmner.llm.defaultRoleLlmOptions
 import jakarta.validation.constraints.Min
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
@@ -36,11 +35,8 @@ internal data class BpmnAlignmentConfig(
                         " flag any invented tasks, missing branches, or unsupported end states",
                     voice = "critical and precise",
                 ),
-                llm = cachingLlm("alignment-validator"),
+                llm = defaultRoleLlmOptions("alignment-validator"),
             )
-
-        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
-            .withAnthropicCaching(systemPrompt = true, tools = true)
     }
 }
 
