@@ -5,10 +5,9 @@
 
 package dev.groknull.bpmner.ruleset.internal
 
-import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
-import com.embabel.common.ai.model.LlmOptions
+import dev.groknull.bpmner.llm.defaultRoleLlmOptions
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.validation.annotation.Validated
 
@@ -38,11 +37,8 @@ internal data class BpmnRulesConfig(
                         " skip rules that apply",
                     voice = "specific and evidence-grounded",
                 ),
-                llm = cachingLlm("lint"),
+                llm = defaultRoleLlmOptions("lint"),
             )
-
-        private fun cachingLlm(role: String): LlmOptions = LlmOptions.withLlmForRole(role)
-            .withAnthropicCaching(systemPrompt = true, tools = true)
     }
 }
 
