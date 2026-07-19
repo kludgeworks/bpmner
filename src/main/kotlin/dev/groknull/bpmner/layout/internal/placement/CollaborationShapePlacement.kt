@@ -20,8 +20,6 @@ import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 
-private const val LANE_CONTINUATION_GAP = 90.0
-
 /** Projects ELK-owned participant bounds and BPMN's ordered lane bands into BPMN-DI shapes. */
 internal object CollaborationShapePlacement : PlacementProcessor {
 
@@ -54,14 +52,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         }
         if (laneBounds.isEmpty()) return
 
-        val memberIdsByLane = laneBounds.map { (lane) -> laneMembers(lane) }
-        val laneIndexByMemberId = memberIdsByLane.flatMapIndexed { index, memberIds ->
-            memberIds.map { it to index }
-        }.toMap()
-        val sequenceFlows = ctx.model.getModelElementsByType(SequenceFlow::class.java)
         var nextY = participantBounds.y
         val translations = mutableMapOf<String, Point>()
-        laneBounds.forEachIndexed { laneIndex, (lane, elkLaneBounds) ->
+        laneBounds.forEach { (lane, elkLaneBounds) ->
             val band = Rect(
                 participantBounds.x + PARTICIPANT_HEADER_WIDTH,
                 nextY,
@@ -79,15 +72,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 )
             }
             val baseX = participantBounds.x + PARTICIPANT_HEADER_WIDTH + LANE_LABEL_WIDTH - elkLaneBounds.x
-            val continuationX = continuationX(
-                laneIndex,
-                laneIndexByMemberId,
-                sequenceFlows,
-                translations,
-                ctx,
-            )
-            val translation = Point(maxOf(baseX, continuationX ?: baseX), band.y - elkLaneBounds.y)
-            memberIdsByLane[laneIndex].forEach { memberId -> translations[memberId] = translation }
+            val translation = Point(baseX, band.y - elkLaneBounds.y)
+            laneMembers(lane).forEach { memberId -> translations[memberId] = translation }
             nextY += band.h
         }
         val projectedParticipant = participantBounds.copy(h = nextY - participantBounds.y)
@@ -204,21 +190,3 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         return Rect(x, y, node.width, node.height)
     }
 }
-
-private fun continuationX(
-    laneIndex: Int,
-    laneIndexByMemberId: Map<String, Int>,
-    sequenceFlows: Collection<SequenceFlow>,
-    translations: Map<String, Point>,
-    ctx: PlacementContext,
-): Double? = sequenceFlows.mapNotNull { flow ->
-    val sourceId = flow.source?.id ?: return@mapNotNull null
-    val targetId = flow.target?.id ?: return@mapNotNull null
-    if (laneIndexByMemberId[targetId] != laneIndex || laneIndexByMemberId[sourceId] !in 0 until laneIndex) {
-        return@mapNotNull null
-    }
-    val source = ctx.shapes[sourceId] ?: return@mapNotNull null
-    val target = ctx.shapes[targetId] ?: return@mapNotNull null
-    val sourceTranslation = translations[sourceId] ?: return@mapNotNull null
-    source.x + sourceTranslation.x + source.w + LANE_CONTINUATION_GAP - target.x
-}.maxOrNull()
