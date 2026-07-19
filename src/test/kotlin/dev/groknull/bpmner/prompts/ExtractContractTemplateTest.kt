@@ -15,8 +15,8 @@ import dev.groknull.bpmner.contract.FlatContractTestFixtures
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationExchange
 import dev.groknull.bpmner.readiness.EvidenceSourceType
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessVerdict
 import dev.groknull.bpmner.readiness.SourceEvidence
 import java.util.function.Predicate
@@ -48,7 +48,7 @@ class ExtractContractTemplateTest {
 
         assertTrue(prompt.contains("When a customer submits an order, ship it."))
         assertTrue(prompt.contains("One actor responsibility is underspecified."))
-        assertTrue(prompt.contains(MissingProcessArea.ACTOR_RESPONSIBILITY.name))
+        assertTrue(prompt.contains(ReadinessDimension.ACTORS_ROLES.name))
         assertTrue(prompt.contains("ev1: Ship approved order"))
     }
 
@@ -173,7 +173,7 @@ class ExtractContractTemplateTest {
         verdict = ReadinessVerdict.NEEDS_CLARIFICATION,
         overallScore = 60,
         dimensions = emptyList(),
-        missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
+        missingAreas = listOf(ReadinessDimension.ACTORS_ROLES),
         evidence = listOf(
             SourceEvidence(
                 id = "ev1",

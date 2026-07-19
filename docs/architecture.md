@@ -127,7 +127,7 @@ those ports in plain Spring components.
 | Agent | File | Actions | Achieves goal | Notes |
 | --- | --- | --- | --- | --- |
 | `BpmnGenerationAgent` | `pipeline/internal/adapter/inbound/BpmnGenerationAgent.kt` | 15 typed shims: `draft`, `resolve`, `assessReadiness`, `startAssessing`, `extractContract`, `createOutline`, `composeGraph`, `render`, `validate`, `layout`, `align`, `finish`, `reassess`, `proceed`, `terminate` | `generateBpmn` (on `finish`, `terminate` or `Blocked.terminate`) | The single orchestrator. Each action delegates to a public port; `finish` writes the output file and returns `BpmnResult`. |
-| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`) | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Track A). |
+| `BpmnReadinessAgent` | `readiness/internal/adapter/inbound/BpmnReadinessAgent.kt` | 1: `assessReadiness` (`BpmnRequest → ProcessInputAssessment`). `FIRE_ONCE`. | `assessReadiness` | Invoked as a **scoped sub-process** by the orchestrator's `assessReadiness` action, not chained into the main plan. Style-guide prompt contribution is applied locally via `PromptContributor.fixed(request.styleGuideContribution())` (ADR-005 Track A). |
 | `BpmnLayoutAgent` | `layout/internal/adapter/inbound/BpmnLayoutAgent.kt` | 2: `layoutBpmnXml`, `validateFinalBpmnXml` | `finalizeLayout` | Standalone layout agent (JVM-native ELK auto-layout + XSD and referential-integrity validation). **Not** used by the orchestrator's `layout` action, which does layout inline. |
 
 <!-- markdownlint-enable MD013 -->
@@ -210,6 +210,14 @@ val process = agentPlatform.createAgentProcessFrom(agent, ProcessOptions(
 Binding to **only** `BpmnReadinessAgent` is load-bearing — a whole-platform plan for
 `ProcessInputAssessment` would also match the orchestrator's `assessReadiness` action and
 could recurse. Scoping removes that collision.
+
+`BpmnReadinessAgent`'s own `assessReadiness` `@Action` (the one that actually calls
+`promptRunner.creating(...)`, inside this scoped sub-process) carries
+`actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`: it catches
+`InvalidLlmReturnFormatException`/`InvalidLlmReturnTypeException` via
+`llm/StructuredOutputReliability.kt`'s `publishOnInvalidLlmReturn` and translates to
+`BpmnReadinessAssessmentException` rather than exhausting the framework's default retry budget
+(#611).
 
 ### Validate + repair loop
 

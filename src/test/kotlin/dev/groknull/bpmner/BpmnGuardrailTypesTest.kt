@@ -23,7 +23,6 @@ import dev.groknull.bpmner.contract.ContractEndState
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.readiness.ClarificationQuestion
 import dev.groknull.bpmner.readiness.EvidenceSourceType
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -137,16 +136,16 @@ class BpmnGuardrailTypesTest {
                 dimension = ReadinessDimension.ACTORS_ROLES,
                 score = 50,
                 rationale = "Approver is unclear.",
-                missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
+                missingAreas = listOf(ReadinessDimension.ACTORS_ROLES),
             ),
         ),
-        missingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
+        missingAreas = listOf(ReadinessDimension.ACTORS_ROLES),
         clarificationQuestions =
         listOf(
             ClarificationQuestion(
                 id = "q1",
                 questionText = "Who approves the order?",
-                relatedMissingAreas = listOf(MissingProcessArea.ACTOR_RESPONSIBILITY),
+                relatedMissingAreas = listOf(ReadinessDimension.ACTORS_ROLES),
                 relatedDimensions = listOf(ReadinessDimension.ACTORS_ROLES),
             ),
         ),

@@ -6,7 +6,6 @@
 package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
 import dev.groknull.bpmner.readiness.ClarificationQuestion
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessDimensionScore
@@ -39,19 +38,19 @@ class MarkdownReadinessReportWriterTest {
                         rationale = "Dimension rationale for ${dim.name}.",
                         missingAreas =
                         if (dim == ReadinessDimension.START_TRIGGER) {
-                            listOf(MissingProcessArea.START_TRIGGER)
+                            listOf(ReadinessDimension.START_TRIGGER)
                         } else {
                             emptyList()
                         },
                     )
                 },
-                missingAreas = listOf(MissingProcessArea.START_TRIGGER, MissingProcessArea.ACTIVITY_SEQUENCE),
+                missingAreas = listOf(ReadinessDimension.START_TRIGGER, ReadinessDimension.SEQUENCE_ORDER),
                 clarificationQuestions =
                 listOf(
                     ClarificationQuestion(
                         id = "q1",
                         questionText = "What event starts the process?",
-                        relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                        relatedMissingAreas = listOf(ReadinessDimension.START_TRIGGER),
                         relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
                     ),
                 ),
@@ -76,7 +75,7 @@ class MarkdownReadinessReportWriterTest {
         assertTrue(content.contains("START_TRIGGER (score 30)"))
         assertTrue(content.contains("## Assumptions that would be required to proceed"))
         assertTrue(content.contains("START_TRIGGER"))
-        assertTrue(content.contains("ACTIVITY_SEQUENCE"))
+        assertTrue(content.contains("SEQUENCE_ORDER"))
         assertTrue(content.contains("## Clarification questions"))
         assertTrue(content.contains("[q1] What event starts the process?"))
         assertTrue(content.contains("## Rationale"))
@@ -100,6 +99,22 @@ class MarkdownReadinessReportWriterTest {
 
         val content = Files.readString(Path.of(reportPath), StandardCharsets.UTF_8)
         assertTrue(content.contains("…"), "Long inputs should be truncated with an ellipsis marker")
+    }
+
+    @Test
+    fun `renders an assumption phrase for the SCOPE_CLARITY gap`() {
+        val writer = MarkdownReadinessReportWriter()
+        val outputFile = tempDir.resolve("scope.bpmn").toString()
+        val assessment = minimalAssessment().copy(missingAreas = listOf(ReadinessDimension.SCOPE_CLARITY))
+
+        val reportPath = writer.writeReport(
+            originalInput = "Do the thing.",
+            assessment = assessment,
+            outputFile = outputFile,
+        )
+
+        val content = Files.readString(Path.of(reportPath), StandardCharsets.UTF_8)
+        assertTrue(content.contains("SCOPE_CLARITY — the process's scope boundaries would be assumed"))
     }
 
     private fun minimalAssessment(): ProcessInputAssessment = ProcessInputAssessment(

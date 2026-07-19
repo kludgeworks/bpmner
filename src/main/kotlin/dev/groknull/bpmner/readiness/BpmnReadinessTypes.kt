@@ -7,7 +7,6 @@ package dev.groknull.bpmner.readiness
 
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.SourceEvidence
 import jakarta.validation.Valid
@@ -33,7 +32,7 @@ data class ProcessInputAssessment(
     @get:JsonPropertyDescription("Dimension-level readiness scores supporting the verdict")
     val dimensions: List<ReadinessDimensionScore>,
     @get:JsonPropertyDescription("Process areas that are missing or underspecified")
-    val missingAreas: List<MissingProcessArea> = emptyList(),
+    val missingAreas: List<ReadinessDimension> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription("Clarification questions proposed for unresolved missing areas")
     val clarificationQuestions: List<ClarificationQuestion> = emptyList(),
@@ -56,7 +55,7 @@ data class ReadinessDimensionScore(
     @get:JsonPropertyDescription("Explanation of the score")
     val rationale: String,
     @get:JsonPropertyDescription("Missing process areas related to this dimension")
-    val missingAreas: List<MissingProcessArea> = emptyList(),
+    val missingAreas: List<ReadinessDimension> = emptyList(),
 )
 
 @JsonClassDescription("Clarification question proposed by the readiness model")
@@ -68,7 +67,7 @@ data class ClarificationQuestion(
     @get:JsonPropertyDescription("Question text to ask the user")
     val questionText: String,
     @get:JsonPropertyDescription("Missing process areas this question is intended to resolve")
-    val relatedMissingAreas: List<MissingProcessArea> = emptyList(),
+    val relatedMissingAreas: List<ReadinessDimension> = emptyList(),
     @get:JsonPropertyDescription("Readiness dimensions this question is intended to improve")
     val relatedDimensions: List<ReadinessDimension> = emptyList(),
     @field:Size(max = 8)
@@ -78,3 +77,10 @@ data class ClarificationQuestion(
     @get:JsonPropertyDescription("Evidence motivating the question")
     val evidence: List<SourceEvidence> = emptyList(),
 )
+
+/**
+ * Signals that the readiness assessor's structured-output call failed on Embabel's stable
+ * `InvalidLlmReturn*` surface — malformed or invalid model output, not a legitimate
+ * `NEEDS_CLARIFICATION` verdict.
+ */
+class BpmnReadinessAssessmentException(message: String, cause: Throwable? = null) : RuntimeException(message, cause)

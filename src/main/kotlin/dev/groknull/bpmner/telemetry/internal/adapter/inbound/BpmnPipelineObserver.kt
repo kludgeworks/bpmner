@@ -14,6 +14,7 @@ import dev.groknull.bpmner.conformance.BpmnValidationFailedEvent
 import dev.groknull.bpmner.conformance.BpmnValidationPassedEvent
 import dev.groknull.bpmner.conformance.GlobalDiagnostics
 import dev.groknull.bpmner.layout.BpmnLayoutCompletedEvent
+import dev.groknull.bpmner.llm.StructuredOutputFailureEvent
 import dev.groknull.bpmner.readiness.BpmnReadinessAssessedEvent
 import dev.groknull.bpmner.telemetry.BpmnSnapshotEvent
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
@@ -76,6 +77,16 @@ class BpmnPipelineObserver(
             unsupportedCount,
             missingCount,
             assumptionCount,
+        )
+    }
+
+    @EventListener
+    fun onStructuredOutputFailure(event: StructuredOutputFailureEvent) {
+        logger.warn(
+            "Structured-output failure: role={}, category={}, message={}",
+            event.role,
+            event.category,
+            event.message,
         )
     }
 

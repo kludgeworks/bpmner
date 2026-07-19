@@ -5,8 +5,12 @@
 
 package dev.groknull.bpmner.readiness.internal.adapter.inbound
 
+import com.embabel.agent.api.annotation.Action
+import com.embabel.agent.core.ActionRetryPolicy
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
 import com.embabel.agent.test.unit.FakeOperationContext
 import dev.groknull.bpmner.bpmn.BpmnRequest
+import dev.groknull.bpmner.readiness.BpmnReadinessAssessmentException
 import dev.groknull.bpmner.readiness.BpmnReadinessConfig
 import dev.groknull.bpmner.readiness.BpmnReadinessThresholdsConfig
 import dev.groknull.bpmner.readiness.ClarificationQuestion
@@ -20,6 +24,8 @@ import org.mockito.Mockito.mock
 import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 class BpmnReadinessAgentTest {
     @Test
@@ -111,6 +117,37 @@ class BpmnReadinessAgentTest {
 
         assertEquals(2, normalized.clarificationQuestions.size)
         assertEquals(listOf("q1", "q2"), normalized.clarificationQuestions.map { it.id })
+    }
+
+    @Test
+    fun `assessReadiness Action is configured with FIRE_ONCE so invalid structured output fails fast`() {
+        val method = BpmnReadinessAgent::class.java.getDeclaredMethod(
+            "assessReadiness",
+            BpmnRequest::class.java,
+            com.embabel.agent.api.common.OperationContext::class.java,
+        )
+        val action = method.getAnnotation(Action::class.java)
+        assertEquals(ActionRetryPolicy.FIRE_ONCE, action.actionRetryPolicy)
+    }
+
+    @Test
+    fun `BpmnReadinessAssessmentException preserves the InvalidLlmReturn cause and is distinct from a verdict`() {
+        // Mirrors BpmnAlignmentFailureIntegrationTest's "structurally distinct" shape: a parse
+        // failure (exception) must never be conflated with the legitimate NEEDS_CLARIFICATION
+        // verdict, which is a normal ProcessInputAssessment value, not an exception.
+        val formatFailure = InvalidLlmReturnFormatException(
+            llmReturn = "not json",
+            expectedType = ProcessInputAssessment::class.java,
+            cause = RuntimeException("malformed"),
+        )
+
+        val translated = BpmnReadinessAssessmentException(
+            "Readiness model failed to produce a structured assessment: ${formatFailure.message}",
+            formatFailure,
+        )
+
+        assertIs<InvalidLlmReturnFormatException>(translated.cause)
+        assertTrue(translated.message!!.contains("structured assessment"))
     }
 
     private fun assessment(
