@@ -150,7 +150,7 @@ maven.install(
         # org.springframework.ai:* artifact resolves to one version rather than resolving
         # invisibly under version_conflict_policy = "pinned" below.
         "org.springframework.ai:spring-ai-bom:" + SPRING_AI_VERSION,
-        # Governs only the new #601 observability artifacts above (micrometer-tracing-bridge-otel,
+        # Governs only the new observability artifacts above (micrometer-tracing-bridge-otel,
         # opentelemetry-exporter-otlp, micrometer-registry-prometheus) — reuses Spring Boot's own
         # dependency management instead of hand-picking three more version numbers with no BOM to
         # keep them coherent. Existing individually-pinned Spring Boot coordinates are untouched.
