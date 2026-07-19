@@ -42,6 +42,7 @@ private val GITHUB_MODELS_PRICING: Map<String, PricingModel> =
 internal class GitHubModelsProperties : RetryProperties {
     var apiKey: String? = null
     var models: List<String> = listOf("openai/gpt-4o", "openai/gpt-4o-mini")
+    override val propertyPrefix: String = "embabel.agent.platform.models.githubmodels"
     override var maxAttempts: Int = DEFAULT_MAX_ATTEMPTS
     override var backoffMillis: Long = DEFAULT_BACKOFF_MILLIS
     override var backoffMultiplier: Double = DEFAULT_BACKOFF_MULTIPLIER

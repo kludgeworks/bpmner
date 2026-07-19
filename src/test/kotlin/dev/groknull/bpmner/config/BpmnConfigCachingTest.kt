@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.config
 
-import com.embabel.agent.config.models.anthropic.getAnthropicCaching
+import com.embabel.agent.anthropic.getAnthropicCaching
 import com.embabel.common.ai.model.LlmOptions
 import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig

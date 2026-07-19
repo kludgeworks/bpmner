@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.readiness
 
+import com.embabel.agent.anthropic.withAnthropicCaching
 import com.embabel.agent.api.common.Actor
-import com.embabel.agent.config.models.anthropic.withAnthropicCaching
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.LlmOptions
 import jakarta.validation.constraints.Max
