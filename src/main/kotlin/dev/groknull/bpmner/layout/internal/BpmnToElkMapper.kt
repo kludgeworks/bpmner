@@ -159,7 +159,6 @@ internal object BpmnToElkMapper {
         }
     }
 
-    /** Maps direct lane members beneath a compound lane node. */
     private fun mapLane(
         participant: ElkNode,
         lane: Lane,
@@ -171,7 +170,7 @@ internal object BpmnToElkMapper {
         compound.identifier = lane.id
         applyLaneProfile(compound)
         nodeMap[lane.id] = compound
-        mapProcess(compound, lane.flowNodeRefs.filterIsInstance<FlowElement>(), nodeMap, model, loopingSubIds)
+        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model, loopingSubIds)
     }
 
     /**

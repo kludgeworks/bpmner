@@ -74,8 +74,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 projectedParticipant.h,
             )
         }
-        translateMembers(translations, ctx)
-        repairTranslatedRoutes(translations.keys, ctx)
+        repairTranslatedRoutes(translateMembers(translations, ctx), ctx)
     }
 
     private fun laneMembers(lane: Lane): Set<String> {
@@ -90,15 +89,17 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         return members
     }
 
-    private fun translateMembers(translations: Map<String, Point>, ctx: PlacementContext) {
+    private fun translateMembers(translations: Map<String, Point>, ctx: PlacementContext): Map<String, Point> {
         val boundaryTranslations = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
             .mapNotNull { event -> translations[event.attachedTo?.id]?.let { event.id to it } }
             .toMap()
-        (translations + boundaryTranslations).forEach { (id, translation) ->
+        val allTranslations = translations + boundaryTranslations
+        allTranslations.forEach { (id, translation) ->
             val rect = ctx.shapes[id] ?: return@forEach
             ctx.shapes[id] = rect.copy(x = rect.x + translation.x, y = rect.y + translation.y)
-            if (id in translations) recordTranslation(id, ctx)
+            recordTranslation(id, ctx)
         }
+        return allTranslations
     }
 
     private fun recordTranslation(id: String, ctx: PlacementContext) {
@@ -108,15 +109,21 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         ctx.moves[id] = MoveRecord(OWNER, placed.x - x, placed.y - y)
     }
 
-    private fun repairTranslatedRoutes(translatedIds: Set<String>, ctx: PlacementContext) {
+    private fun repairTranslatedRoutes(translations: Map<String, Point>, ctx: PlacementContext) {
         ctx.model.getModelElementsByType(SequenceFlow::class.java)
             .filter {
-                it.source?.id in translatedIds ||
-                    it.target?.id in translatedIds ||
-                    (it.source as? BoundaryEvent)?.attachedTo?.id in translatedIds
+                it.source?.id in translations || it.target?.id in translations
             }
             .sortedBy { it.id }
             .forEach { flow ->
+                val sourceTranslation = translations[flow.source?.id]
+                val targetTranslation = translations[flow.target?.id]
+                if (sourceTranslation != null && sourceTranslation == targetTranslation) {
+                    ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
+                        Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)
+                    } ?: return@forEach
+                    return@forEach
+                }
                 when {
                     flow.id in ctx.skeleton.loopBackFlowIds -> LoopBackEdgeArcs.routeAndStore(flow, ctx)
                     flow.source is BoundaryEvent -> routeException(flow, ctx)

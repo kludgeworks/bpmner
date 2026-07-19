@@ -52,6 +52,52 @@ class CollaborationShapePlacementTest {
         assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Start_1"])
     }
 
+    @Test
+    fun `translates lane subprocess descendants boundary attachments and their route`() {
+        val model = PlacementTestSkeletons.parse(LANED_SUBPROCESS_WITH_BOUNDARY_XML)
+        val root = ElkGraphUtil.createGraph()
+        val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
+        val lane = node(participant, "Lane_1", Rect(30.0, 10.0, 400.0, 80.0))
+        val subprocess = node(lane, "SubProcess_1", Rect(20.0, 20.0, 200.0, 100.0))
+        val child = node(subprocess, "Task_child", Rect(10.0, 10.0, 100.0, 80.0))
+        val handler = node(lane, "Task_handler", Rect(250.0, 20.0, 100.0, 80.0))
+        val boundary = node(root, "Boundary_1", Rect(80.0, 100.0, 36.0, 36.0))
+        val ctx = PlacementContext(
+            model,
+            PlacementTestSkeletons.skeleton(
+                root,
+                mapOf(
+                    "Participant_1" to participant,
+                    "Lane_1" to lane,
+                    "SubProcess_1" to subprocess,
+                    "Task_child" to child,
+                    "Task_handler" to handler,
+                    "Boundary_1" to boundary,
+                ),
+            ),
+            mutableMapOf(
+                "SubProcess_1" to Rect(60.0, 50.0, 200.0, 100.0),
+                "Task_child" to Rect(70.0, 60.0, 100.0, 80.0),
+                "Task_handler" to Rect(290.0, 50.0, 100.0, 80.0),
+                "Boundary_1" to Rect(80.0, 100.0, 36.0, 36.0),
+            ),
+            mutableMapOf(),
+            mutableMapOf("Flow_exception" to listOf(BpmnPlacementPass.Point(98.0, 118.0), BpmnPlacementPass.Point(290.0, 90.0))),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        assertEquals(Rect(70.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
+        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Task_child"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Boundary_1"])
+        assertEquals(
+            listOf(BpmnPlacementPass.Point(98.0, 108.0), BpmnPlacementPass.Point(290.0, 80.0)),
+            ctx.edges["Flow_exception"],
+        )
+    }
+
     private fun node(
         parent: org.eclipse.elk.graph.ElkNode,
         id: String,
@@ -62,5 +108,16 @@ class CollaborationShapePlacementTest {
         y = bounds.y
         width = bounds.w
         height = bounds.h
+    }
+
+    private companion object {
+        const val LANED_SUBPROCESS_WITH_BOUNDARY_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_handler</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:subProcess id="SubProcess_1"><bpmn:serviceTask id="Task_child"/></bpmn:subProcess>
+    <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
+  </bpmn:process>
+</bpmn:definitions>"""
     }
 }
