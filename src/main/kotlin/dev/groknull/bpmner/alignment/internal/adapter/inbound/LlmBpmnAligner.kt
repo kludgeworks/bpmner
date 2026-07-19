@@ -64,6 +64,16 @@ internal class LlmBpmnAligner(
      * [BpmnAlignmentException] with `report = null` means "the alignment model failed," not
      * "the model examined the BPMN and found problems." Extracted from [align] so detekt's
      * `ThrowsCount` discipline holds at the action method.
+     *
+     * **The catchable structured-output error contract (Embabel 1.0):** every LLM role in bpmner
+     * (alignment, repair, authoring) catches
+     * `com.embabel.agent.core.support.InvalidLlmReturnFormatException` — the model's raw output
+     * could not be parsed into the expected type — and
+     * `com.embabel.agent.core.support.InvalidLlmReturnTypeException` — the parsed object failed
+     * validation constraints. Both stay in that package on the 1.0 line (no relocation) and both
+     * extend `RuntimeException`, so callers may catch either independently or `RuntimeException`
+     * broadly; both are fail-fast on malformed/invalid model output, distinct from transient
+     * failures such as network errors or rate limits.
      */
     private fun requestAlignmentFindings(
         promptRunner: PromptRunner,

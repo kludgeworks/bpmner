@@ -39,9 +39,20 @@ use_repo(pmd, "net_sourceforge_pmd")
 register_toolchains("//tools/kotlin:kotlin_toolchain")
 
 # --- Maven Dependency Versions ---
-SPRING_BOOT_VERSION = "3.5.9"
+# The Embabel BOM (embabel-agent-dependencies, below) manages com.embabel.agent:* module
+# versions but carries no Spring version management, so Spring Boot / Spring AI are
+# pinned here instead, with provenance from the Embabel RC1 artifact POMs (e.g.
+# embabel-agent-api-1.0.0-RC1.pom), which hard-pin these versions internally — not chosen
+# independently. Re-derive both from the new Embabel POMs on every future Embabel bump.
+SPRING_BOOT_VERSION = "3.5.14"
 
-EMBABEL_VERSION = "0.4.0"
+SPRING_AI_VERSION = "1.1.7"
+
+# Target: the latest Embabel 1.0-line release published to Maven Central, preferring
+# 1.0.0 GA over any release candidate once GA is available. The Embabel BOM
+# (embabel-agent-dependencies) below is the source of truth for all com.embabel.agent:*
+# module versions; EMBABEL_VERSION only seeds the BOM coordinate itself.
+EMBABEL_VERSION = "1.0.0-RC1"
 
 KOTLIN_VERSION = "2.1.10"
 
@@ -85,13 +96,14 @@ maven.install(
         "org.springframework.boot:spring-boot-autoconfigure:" + SPRING_BOOT_VERSION,
         "org.springframework.boot:spring-boot-starter:" + SPRING_BOOT_VERSION,
         "org.springframework.boot:spring-boot-starter-test:" + SPRING_BOOT_VERSION,
-        "com.embabel.agent:embabel-agent-starter-openai:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-starter-anthropic:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-starter-gemini:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-starter-mistral-ai:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-starter-shell:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-starter-webmvc:" + EMBABEL_VERSION,
-        "com.embabel.agent:embabel-agent-test:" + EMBABEL_VERSION,
+        # Versions inherited from the Embabel BOM above.
+        "com.embabel.agent:embabel-agent-starter-openai",
+        "com.embabel.agent:embabel-agent-starter-anthropic",
+        "com.embabel.agent:embabel-agent-starter-gemini",
+        "com.embabel.agent:embabel-agent-starter-mistral-ai",
+        "com.embabel.agent:embabel-agent-starter-shell",
+        "com.embabel.agent:embabel-agent-starter-webmvc",
+        "com.embabel.agent:embabel-agent-test",
         "org.jetbrains.kotlin:kotlin-reflect:" + KOTLIN_VERSION,
         "org.jetbrains.kotlin:kotlin-test-junit5:" + KOTLIN_VERSION,
         "org.junit.platform:junit-platform-launcher:" + JUNIT_PLATFORM_VERSION,
@@ -124,6 +136,14 @@ maven.install(
         # currently morphological (no pretrained POSModel) — keeps the build hermetic. A
         # POSModel-backed tagger can swap in behind the BpmnNlp interface later.
         "org.apache.opennlp:opennlp-tools:2.5.9",
+    ],
+    boms = [
+        # Source of truth for all com.embabel.agent:* module versions (starters + core).
+        "com.embabel.agent:embabel-agent-dependencies:" + EMBABEL_VERSION,
+        # Spring AI is transitive via the Embabel starters; import explicitly so every
+        # org.springframework.ai:* artifact resolves to one version rather than resolving
+        # invisibly under version_conflict_policy = "pinned" below.
+        "org.springframework.ai:spring-ai-bom:" + SPRING_AI_VERSION,
     ],
     repositories = [
         "https://repo.maven.apache.org/maven2",

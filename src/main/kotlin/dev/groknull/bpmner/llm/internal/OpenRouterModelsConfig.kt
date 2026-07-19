@@ -58,6 +58,7 @@ private val OPENROUTER_HEADERS =
 internal class OpenRouterProperties : RetryProperties {
     var apiKey: String? = null
     var models: List<String> = listOf("meta-llama/llama-3.3-70b-instruct")
+    override val propertyPrefix: String = "embabel.agent.platform.models.openrouter"
     override var maxAttempts: Int = DEFAULT_MAX_ATTEMPTS
     override var backoffMillis: Long = DEFAULT_BACKOFF_MILLIS
     override var backoffMultiplier: Double = DEFAULT_BACKOFF_MULTIPLIER
