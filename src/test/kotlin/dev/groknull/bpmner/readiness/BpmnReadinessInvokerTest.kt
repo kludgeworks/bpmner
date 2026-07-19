@@ -66,12 +66,10 @@ class BpmnReadinessInvokerTest : EmbabelMockitoIntegrationTest() {
     }
 
     /**
-     * Exercises the real reliability-seam catch-and-translate branch in
-     * `BpmnReadinessAgent.requestAssessment` (not a manual construction or annotation check): the
-     * mocked LLM operation throws Embabel's real `InvalidLlmReturnFormatException`, and the assertion
-     * is on what `readinessInvoker.assess()` — the actual caller-facing entry point — throws. Because
-     * `assessReadiness`'s `@Action` is `FIRE_ONCE`, this surfaces synchronously on the first attempt
-     * rather than the framework retrying and only failing after exhausting a retry budget.
+     * Exercises the real catch-and-translate branch in `BpmnReadinessAgent.requestAssessment`
+     * (not a manual construction or annotation check): the mocked LLM operation throws Embabel's
+     * real `InvalidLlmReturnFormatException`, and the assertion is on what
+     * `readinessInvoker.assess()` — the actual caller-facing entry point — throws.
      */
     @Test
     fun `InvalidLlmReturnFormatException from the readiness model surfaces as BpmnReadinessAssessmentException`() {

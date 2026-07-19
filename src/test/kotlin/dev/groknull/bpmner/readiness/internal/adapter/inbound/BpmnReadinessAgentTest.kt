@@ -121,10 +121,6 @@ class BpmnReadinessAgentTest {
 
     @Test
     fun `assessReadiness Action is configured with FIRE_ONCE so invalid structured output fails fast`() {
-        // Task 3 / reliability seam: the readiness prompt call's own @Action is the actual retry
-        // boundary (BpmnGenerationAgent.assessReadiness only delegates to the isolated sub-process
-        // that runs this action). FIRE_ONCE means one InvalidLlmReturn* failure fails the
-        // assessment rather than burning the framework's default retry budget.
         val method = BpmnReadinessAgent::class.java.getDeclaredMethod(
             "assessReadiness",
             BpmnRequest::class.java,

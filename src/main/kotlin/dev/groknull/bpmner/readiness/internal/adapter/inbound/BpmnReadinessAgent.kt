@@ -36,14 +36,17 @@ internal class BpmnReadinessAgent(
     private val eventPublisher: ApplicationEventPublisher,
 ) {
 
+    /**
+     * Advertises every gate condition it can establish (`assessmentReady`,
+     * `clarificationAvailable`, `clarificationBlocked`), so the shell path can plan from a bare
+     * [BpmnRequest] to approval, clarification, or a blocked result.
+     */
     @AchievesGoal(
         description = "Assess raw BPMN generation input for process readiness",
         export = Export(name = "assessReadiness", startingInputTypes = [BpmnRequest::class]),
     )
     @Action(
         description = "Assess raw BPMN generation input for process readiness",
-        // The single readiness producer must advertise every gate condition it can establish, so the
-        // shell path can plan from a bare BpmnRequest to approval, clarification, or a blocked result.
         post = ["assessmentReady", "clarificationAvailable", "clarificationBlocked"],
         actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE,
     )
@@ -58,11 +61,10 @@ internal class BpmnReadinessAgent(
     }
 
     /**
-     * Translates the framework's typed exceptions at this seam so the failure type stays legible —
+     * Translates the framework's typed exceptions so the failure type stays legible —
      * [BpmnReadinessAssessmentException] means "the readiness model failed to produce a structured
      * response," not "the model assessed the input and found it lacking" (that is the legitimate
-     * `NEEDS_CLARIFICATION` verdict, which is not an exception). Extracted from [assessReadiness] so
-     * detekt's `ThrowsCount` discipline holds at the action method.
+     * `NEEDS_CLARIFICATION` verdict, which is not an exception).
      */
     private fun requestAssessment(request: BpmnRequest, context: OperationContext): ProcessInputAssessment {
         val promptRunner = config.readinessAssessor

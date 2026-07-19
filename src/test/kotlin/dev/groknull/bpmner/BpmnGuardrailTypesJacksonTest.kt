@@ -70,19 +70,11 @@ class BpmnGuardrailTypesJacksonTest {
 
     @Test
     fun `aliases never collide within the enum`() {
-        // Sanity: no alias accidentally maps to two values. If this ever failed Jackson would
-        // have surfaced it at registration time — but this makes the invariant load-bearing in
-        // case the alias table grows.
         assertEquals(ReadinessDimension.entries.size, ReadinessDimension.entries.toSet().size)
     }
 
     @Test
     fun `ClarificationQuestion deserialises the exact observed failure-signature synonyms`() {
-        // Reproduces the failing payload (log line 996): relatedDimensions contained
-        // "START_STATES" and "ACTORS_RESPONSIBILITY", both observed synonyms for canonical
-        // ReadinessDimension names. Provider-agnostic: Jackson parses the raw JSON text
-        // regardless of which provider/model produced it, so this covers the LLM-synonym
-        // failure mode across providers without a live/mocked multi-provider integration test.
         val json =
             """
             {
@@ -107,8 +99,6 @@ class BpmnGuardrailTypesJacksonTest {
 
     @Test
     fun `SourceEvidence deserialises cleanly when sourceType is omitted entirely`() {
-        // The other half of the triggering failure signature: a missing required field
-        // (sourceType had no default) rather than an unmapped synonym.
         val json =
             """
             {

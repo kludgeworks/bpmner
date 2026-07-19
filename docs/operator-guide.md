@@ -308,17 +308,6 @@ Two flavours, distinguished by `report` nullability:
 - **`report != null`** — alignment model examined the BPMN and found problems. Read `report.issues` for the breakdown.
 - **`report == null`** — alignment model itself failed (LLM call threw `InvalidLlmReturnFormatException` or `InvalidLlmReturnTypeException`). The exception message has the framework detail; the BPMN was never actually checked. Retry usually fixes this.
 
-### `BpmnReadinessAssessmentException`
-
-Surface: thrown by `BpmnReadinessAgent.assessReadiness()`'s scoped sub-process (see
-[architecture §3, "Scoped readiness sub-process"](./architecture.md#scoped-readiness-sub-process))
-when the LLM call threw `InvalidLlmReturnFormatException` or `InvalidLlmReturnTypeException`. Unlike
-`BpmnAlignmentException`, there is no "valid-but-negative" payload to distinguish: readiness has no
-report field, because `NEEDS_CLARIFICATION` is already a legitimate normal verdict distinct from this
-exception. Seeing this exception always means the model call itself failed to parse, not that the
-input was assessed as unready. `actionRetryPolicy = FIRE_ONCE` — it surfaces on the first failure
-rather than exhausting the framework's default retry budget. Retry usually fixes this.
-
 ### Stuck repair fingerprint
 
 Phrase to grep for in logs: `Repair attempt N` (the per-attempt summary). If you see the same diagnostic counts attempt after attempt, the fingerprint guards should have already fired a `ReplanRequestedException` — but if they're not, that's a bug worth reporting. The expected behaviour is: same-fingerprint → replan signal → planner blacklists the action → planner picks a different action.

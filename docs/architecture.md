@@ -215,9 +215,9 @@ could recurse. Scoping removes that collision.
 `promptRunner.creating(...)`, inside this scoped sub-process) carries
 `actionRetryPolicy = ActionRetryPolicy.FIRE_ONCE`: it catches
 `InvalidLlmReturnFormatException`/`InvalidLlmReturnTypeException` via
-`llm/StructuredOutputReliability.kt`'s `publishOnInvalidLlmReturn` seam and translates to
+`llm/StructuredOutputReliability.kt`'s `publishOnInvalidLlmReturn` and translates to
 `BpmnReadinessAssessmentException` rather than exhausting the framework's default retry budget
-(ADR-011, #611).
+(#611).
 
 ### Validate + repair loop
 
@@ -418,6 +418,5 @@ A type's home is decided by what language it speaks and which slice owns its lif
 | [ADR-008](./adr/adr-008-rule-docs-golden-source.md) | Rule-docs golden source is the live bean catalog | Accepted — current on `main` |
 | [ADR-009](./adr/adr-009-module-config-and-isolation.md) | Capability-owned config & module isolation | Accepted — current on `main` |
 | [ADR-010](./adr/adr-010-sanctioned-architecture-exceptions.md) | Sanctioned architecture-test exceptions via opt-in marker | Accepted — current on `main` |
-| [ADR-011](./adr/adr-011-llm-structured-output-discipline.md) | LLM structured-output discipline | Accepted (epic #592, #611) |
 
 <!-- markdownlint-enable MD013 -->

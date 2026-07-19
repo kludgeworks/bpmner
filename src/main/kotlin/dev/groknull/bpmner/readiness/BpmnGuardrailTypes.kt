@@ -79,9 +79,11 @@ data class SourceEvidence(
     @field:NotBlank
     @get:JsonPropertyDescription("Relevant source text excerpt or concise paraphrase")
     val text: String,
-    // Not @NotBlank/non-null-with-no-default: nothing in production code reads .sourceType today
-    // (it exists for future traceability); the empty default must survive bean validation rather
-    // than re-triggering the LLM retry loop for a value nothing downstream requires.
+    /**
+     * Not `@NotBlank`/non-null-with-no-default: nothing in production code reads [sourceType]
+     * today (it exists for future traceability); the empty default must survive bean validation
+     * rather than re-triggering the LLM retry loop for a value nothing downstream requires.
+     */
     @get:JsonPropertyDescription("Type of source the evidence came from")
     val sourceType: EvidenceSourceType? = null,
     @get:JsonPropertyDescription("Optional source reference, such as a filename or clarification question id")
