@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.pipeline.internal.domain
 
-import dev.groknull.bpmner.browser.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser.BrowserOpenOutcome
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertInstanceOf

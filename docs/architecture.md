@@ -20,8 +20,7 @@ infrastructure. See §2 for the authoritative module map and [ADR-004](./adr/adr
 | **Intake / Readiness** | Supporting domain | Request readiness + clarification subdomain | `readiness` |
 | **Generation Orchestration** | Application layer — not a domain context | Single `BpmnGenerationAgent`, GOAP wiring, `@Action` shims; HTTP + shell inbound adapters | `pipeline` |
 | **Delivery adapters** | Inbound/primary adapters — not contexts | HTTP + shell dissolved into `pipeline` in epic #451 S5 | *(see `pipeline` above)* |
-| **Preview** | Output artifact generator — not a domain context | BPMN → transient temp-dir HTML preview artifact; bundled local viewer assets | `preview` |
-| **Cross-cutting** | Infrastructure / sink — not contexts | LLM provider registration; event sink; preview | `llm`, `telemetry`, `browser`, `preview` |
+| **Cross-cutting** | Infrastructure / sink — not contexts | LLM provider registration; event sink; post-generation preview | `llm`, `telemetry`, `pipeline` |
 
 <!-- markdownlint-enable MD013 -->
 
@@ -265,12 +264,10 @@ any `LOCAL_MODEL_FIX` rule names an unregistered handler. `AgentDeploymentValida
 | `readiness/` | Guardrail 1: LLM input assessment, ready-state handoff, scoped sub-process. | `BpmnReadinessInvoker` (port), `AgentPlatformBpmnReadinessInvoker`, `ProcessInputAssessment`, `ReadyBpmnContext`. |
 | `alignment/` | Guardrail 3: semantic comparison vs process contract. | `BpmnAligner` (port), `LlmBpmnAligner`, `BpmnAlignmentReport`. |
 | `repair/` | Validation + iterative repair loop. | `BpmnRepairer` (port), `DefaultBpmnRepairer`, `BpmnRepairLoop`, `BpmnRepairAdvancer`. |
-| `layout/` | Deterministic auto-layout + final XSD validation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
-| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`. |
+| `layout/` | Deterministic auto-layout + final XSD validation. `BpmnLayoutAgent` remains its inbound adapter; layouter and placement helpers are flattened private implementation. | `BpmnLayoutAgent`, `BpmnLayoutPort` (port), `LayoutedBpmnXml`. |
+| `pipeline/` | Single `generateBpmn` orchestrator: thin `@Action` shims, `AgentDeploymentValidator`, HTTP and shell inbound adapters, and private preview/browser outbound adapters. | `BpmnGenerationAgent`, `AgentDeploymentValidator`, `BpmnWebController`, `BpmnShellCommands`. |
 | `telemetry/` | Event sink: process-finished summary, validation event logging, SSE progress projection. | `BpmnerRunSummaryListener`, `BpmnPipelineObserver`, `BpmnProgressProjectionObserver`. |
 | `llm/` | LLM provider registration (DeepSeek, OpenRouter). Platform-level; `allowedDependencies = []`. | Provider `@Configuration` classes. |
-| `browser/` | OS-level browser launch for post-generation preview. | `BrowserOpenPort` (port). |
-| `preview/` | BPMN → transient temp-dir `.preview.html` artifact. | `BpmnPreviewWriter` (`@ApplicationRing`), `ClasspathBpmnPreviewWriter` (`@InfrastructureRing`). |
 
 <!-- markdownlint-enable MD013 -->
 
