@@ -13,6 +13,7 @@ import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.FlowElement
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
+import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
@@ -83,16 +84,12 @@ internal object BpmnToElkMapper {
         }
 
         val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
-        // A cyclic sequence flow directly inside a Participant's process (not nested in a
-        // SubProcess) is a back-edge too: [placement.CollaborationShapePlacement] can reposition
-        // its endpoints (lane stacking), so it must be excluded from the ELK graph and routed by
-        // [placement.LoopBackEdgeArcs] the same way a SubProcess-internal cycle is. A bare
-        // top-level process with no Collaboration wrapper never reaches CollaborationShapePlacement,
-        // so its cycles are left for ELK's own cycle-breaking, unchanged.
+        // A cyclic sequence flow directly inside a Participant's process is a back-edge too.
         collaboration?.participants?.mapNotNull { it.process }?.forEach { process ->
             loopBackFlowIds.addAll(findLoopBackEdges(process.flowElements))
         }
         if (collaboration != null) {
+            root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
             mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
         } else {
             val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
@@ -113,16 +110,14 @@ internal object BpmnToElkMapper {
     /**
      * Maps a collaboration to the ELK graph.
      *
-     * Each white-box [Participant] becomes a compound ELK node ([HierarchyHandling.INCLUDE_CHILDREN])
-     * containing its process's flow nodes. Black-box participants (no processRef) are tracked as
-     * detached size-carrier nodes — their bounds are computed by [placement.CollaborationShapePlacement].
+     * Each white-box [Participant] becomes a compound ELK node containing lane compounds and
+     * unassigned process members. Black-box participants (no processRef) are tracked as detached
+     * size-carrier nodes.
      *
      * Message flows are NOT added to the ELK graph: they are collaboration-level,
      * cross-participant connections that confuse the hierarchical router, so their
      * routing is owned entirely by the placement pass.
      *
-     * Lane membership is not expressed as ELK nodes; lanes are phase-2 placement geometry
-     * derived from [org.camunda.bpm.model.bpmn.instance.Lane.flowNodeRefs].
      */
     private fun mapCollaboration(
         root: ElkNode,
@@ -137,24 +132,22 @@ internal object BpmnToElkMapper {
                 // White-box participant: compound ELK node containing the process graph.
                 val compound = ElkGraphUtil.createNode(root)
                 compound.identifier = participant.id
-                compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-                // SEPARATE_CHILDREN = false: the process is one connected graph, not separate components.
-                // (Root SEPARATE_CHILDREN = true governs inter-participant separation.)
-                compound.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
-                compound.setProperty(
-                    CoreOptions.PADDING,
-                    ElkPadding(
-                        PARTICIPANT_CONTENT_PADDING,
-                        PARTICIPANT_CONTENT_PADDING,
-                        PARTICIPANT_CONTENT_PADDING,
-                        PARTICIPANT_CONTENT_PADDING,
-                    ),
-                )
-                applyFlowSpacing(compound)
+                applyParticipantProfile(compound)
                 nodeMap[participant.id] = compound
 
                 val topLevelElements = process.flowElements.toList()
-                mapProcess(compound, topLevelElements, nodeMap, model, loopingSubIds)
+                val laneMemberIds = mutableSetOf<String>()
+                process.laneSets.flatMap { it.lanes.toList() }.forEach { lane ->
+                    laneMemberIds.addAll(lane.flowNodeRefs.map { it.id })
+                    mapLane(compound, lane, nodeMap, model, loopingSubIds)
+                }
+                mapProcess(
+                    compound,
+                    topLevelElements.filter { it !is FlowNode || it.id !in laneMemberIds },
+                    nodeMap,
+                    model,
+                    loopingSubIds,
+                )
             } else {
                 // Black-box participant: detached size-carrier node; placement pass assigns bounds.
                 val bb = ElkGraphUtil.createGraph()
@@ -164,6 +157,20 @@ internal object BpmnToElkMapper {
                 nodeMap[participant.id] = bb
             }
         }
+    }
+
+    private fun mapLane(
+        participant: ElkNode,
+        lane: Lane,
+        nodeMap: MutableMap<String, ElkNode>,
+        model: BpmnModelInstance,
+        loopingSubIds: Set<String>,
+    ) {
+        val compound = ElkGraphUtil.createNode(participant)
+        compound.identifier = lane.id
+        applyLaneProfile(compound)
+        nodeMap[lane.id] = compound
+        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model, loopingSubIds)
     }
 
     /**
@@ -203,7 +210,7 @@ internal object BpmnToElkMapper {
                     )
                     // Spacing options do not propagate from the root to child graphs, so the same
                     // label-clearing spacing must be set on each compound node too.
-                    applyFlowSpacing(compound)
+                    applyCompoundProfile(compound)
                     // No ElkLabel on the compound — labels are managed during placement.
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children in document order.
@@ -423,6 +430,7 @@ internal object BpmnToElkMapper {
         return backEdges
     }
 
+    /** Applies the fixed, executable ELK layout profile. */
     private fun applyRootLayoutOptions(root: ElkNode) {
         root.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
@@ -440,6 +448,35 @@ internal object BpmnToElkMapper {
         root.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
         // Ensure adequate spacing between connected components.
         root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, NODE_NODE_SPACING)
+    }
+
+    private fun applyParticipantProfile(node: ElkNode) {
+        node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+        node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+        node.setProperty(
+            CoreOptions.PADDING,
+            ElkPadding(
+                PARTICIPANT_CONTENT_PADDING,
+                PARTICIPANT_CONTENT_PADDING,
+                PARTICIPANT_CONTENT_PADDING,
+                PARTICIPANT_HEADER_WIDTH + PARTICIPANT_CONTENT_PADDING,
+            ),
+        )
+        applyCompoundProfile(node)
+    }
+
+    private fun applyLaneProfile(node: ElkNode) {
+        node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+        node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+        node.setProperty(
+            CoreOptions.PADDING,
+            ElkPadding(LANE_PADDING, LANE_PADDING, LANE_PADDING, LANE_PADDING),
+        )
+        applyCompoundProfile(node)
+    }
+
+    private fun applyCompoundProfile(node: ElkNode) {
+        applyFlowSpacing(node)
     }
 
     /**
@@ -501,6 +538,7 @@ internal object BpmnToElkMapper {
     internal const val BLACK_BOX_WIDTH = 100.0
     internal const val BLACK_BOX_HEIGHT = 60.0
     private const val PARTICIPANT_CONTENT_PADDING = 20.0
+    private const val LANE_PADDING = 20.0
 
     // In-layer spacing (vertical for RIGHT direction). Must exceed LABEL_HEIGHT (20) +
     // LABEL_GAP_BELOW (2) so a node's external label clears the node in the row below.

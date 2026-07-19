@@ -18,11 +18,11 @@ import kotlin.test.assertTrue
 /**
  * No-undeclared-relocation guard test.
  *
- * For all 14 corpus fixtures:
+ * For the process and collaboration corpus fixtures:
  *   1. Run mapper → ELK → snapshot ELK absolute bounds.
  *   2. Run the placement pipeline.
- *   3. Assert that every flow-node shape (excluding BoundaryEvent shapes — their placement is
- *      sanctioned decoration) whose bounds differ from its ELK bounds by more
+ *   3. Assert that every flow-node shape (excluding boundary shapes not attached to lane members
+ *      and placement artifacts) whose bounds differ from its ELK bounds by more
  *      than POSITION_EPSILON has a ledger entry.
  *   4. Assert every ledger owner is one of the three declared moving conventions.
  *
@@ -41,6 +41,7 @@ class PlacementGuardTest {
             "HandlerComponentAlignment",
             "SubprocessEndStraddle",
             "SubprocessSpineCentring",
+            "CollaborationShapePlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
@@ -63,6 +64,9 @@ class PlacementGuardTest {
             "subprocess-nested",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-lanes-loopback",
+            "collab-subprocess",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {
@@ -93,18 +97,17 @@ class PlacementGuardTest {
         )
         BpmnPlacementPass.run(ctx)
 
-        // Collect IDs that are NOT subject to the guard:
-        // - BoundaryEvent shapes: sanctioned decoration (not ledgered)
-        // - TextAnnotation and Group: artifacts placed by ArtifactPlacement (not flow-nodes)
+        // Boundary decorations outside lane bands remain unledgered; lane-band translations do not.
         val boundaryIds = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
+        val laneBoundaryIds = laneBoundaryIds(model)
         val artifactIds = (
             model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.TextAnnotation::class.java)
                 .map { it.id } +
                 model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Group::class.java)
                     .map { it.id }
             ).toSet()
-        val excluded = boundaryIds + artifactIds
+        val excluded = (boundaryIds - laneBoundaryIds) + artifactIds
 
         // Guard: every flow-node shape that moved must have a ledger entry with a declared owner.
         // Filtered to only the IDs that are subject to the guard (non-excluded, present, and moved).
@@ -153,6 +156,23 @@ class PlacementGuardTest {
             "[$fixture] Ledger entry for '$id' records (${record.dx},${record.dy}) but final displacement is " +
                 "(${placed.x - elkRect.x},${placed.y - elkRect.y})",
         )
+    }
+
+    private fun laneBoundaryIds(model: org.camunda.bpm.model.bpmn.BpmnModelInstance): Set<String> {
+        val laneMemberIds = mutableSetOf<String>()
+        fun collectLaneMembers(node: org.camunda.bpm.model.bpmn.instance.FlowNode) {
+            laneMemberIds.add(node.id)
+            if (node is org.camunda.bpm.model.bpmn.instance.SubProcess) {
+                node.flowElements.filterIsInstance<org.camunda.bpm.model.bpmn.instance.FlowNode>()
+                    .forEach(::collectLaneMembers)
+            }
+        }
+        model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Lane::class.java)
+            .flatMap { it.flowNodeRefs }
+            .forEach(::collectLaneMembers)
+        return model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.BoundaryEvent::class.java)
+            .filter { it.attachedTo?.id in laneMemberIds }
+            .mapTo(mutableSetOf()) { it.id }
     }
 
     /**

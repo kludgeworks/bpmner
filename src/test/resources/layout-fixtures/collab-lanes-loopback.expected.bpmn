@@ -85,81 +85,81 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_lanes_loopback" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_1" id="BPMNShape_Participant_1" isHorizontal="true">
-        <dc:Bounds height="256.0" width="775.0" x="-18.0" y="12.0"/>
+        <dc:Bounds height="240.0" width="842.0" x="12.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_1">
-          <dc:Bounds height="256.0" width="30.0" x="-18.0" y="12.0"/>
+          <dc:Bounds height="240.0" width="30.0" x="12.0" y="12.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Lane_packers" id="BPMNShape_Lane_packers" isHorizontal="true">
-        <dc:Bounds height="120.0" width="745.0" x="12.0" y="148.0"/>
+        <dc:Bounds height="120.0" width="812.0" x="42.0" y="132.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Lane_packers">
-          <dc:Bounds height="120.0" width="30.0" x="-18.0" y="148.0"/>
+          <dc:Bounds height="120.0" width="30.0" x="42.0" y="132.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Lane_pickers" id="BPMNShape_Lane_pickers" isHorizontal="true">
-        <dc:Bounds height="136.0" width="745.0" x="12.0" y="12.0"/>
+        <dc:Bounds height="120.0" width="812.0" x="42.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Lane_pickers">
-          <dc:Bounds height="136.0" width="30.0" x="-18.0" y="12.0"/>
+          <dc:Bounds height="120.0" width="30.0" x="42.0" y="12.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
-        <dc:Bounds height="36.0" width="36.0" x="701.0" y="190.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="282.0" y="174.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
-          <dc:Bounds height="20.0" width="78.046875" x="679.9765625" y="228.0"/>
+          <dc:Bounds height="20.0" width="78.046875" x="260.9765625" y="212.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_check" id="BPMNShape_Gw_check">
-        <dc:Bounds height="50.0" width="50.0" x="371.0" y="63.0"/>
+        <dc:Bounds height="50.0" width="50.0" x="408.0" y="47.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_check">
-          <dc:Bounds height="20.0" width="67.37109375" x="362.314453125" y="115.0"/>
+          <dc:Bounds height="20.0" width="67.37109375" x="399.314453125" y="99.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
-        <dc:Bounds height="36.0" width="36.0" x="55.0" y="70.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="92.0" y="54.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
-          <dc:Bounds height="20.0" width="84.03515625" x="30.982421875" y="108.0"/>
+          <dc:Bounds height="20.0" width="84.03515625" x="67.982421875" y="92.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_pack" id="BPMNShape_Task_pack">
-        <dc:Bounds height="80.0" width="100.0" x="511.0" y="168.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="92.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_pack">
-          <dc:Bounds height="20.0" width="60.685546875" x="530.6572265625" y="250.0"/>
+          <dc:Bounds height="20.0" width="60.685546875" x="111.6572265625" y="234.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_pick" id="BPMNShape_Task_pick">
-        <dc:Bounds height="80.0" width="100.0" x="181.0" y="48.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="218.0" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_pick">
-          <dc:Bounds height="20.0" width="55.341796875" x="203.3291015625" y="130.0"/>
+          <dc:Bounds height="20.0" width="55.341796875" x="240.3291015625" y="114.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
-        <di:waypoint x="91.0" y="88.0"/>
-        <di:waypoint x="181.0" y="88.0"/>
+        <di:waypoint x="128.0" y="72.0"/>
+        <di:waypoint x="218.0" y="72.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_check" id="BPMNEdge_Flow_check">
-        <di:waypoint x="281.0" y="88.0"/>
-        <di:waypoint x="371.0" y="88.0"/>
+        <di:waypoint x="318.0" y="72.0"/>
+        <di:waypoint x="408.0" y="72.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_end" id="BPMNEdge_Flow_end">
-        <di:waypoint x="611.0" y="208.0"/>
-        <di:waypoint x="701.0" y="208.0"/>
+        <di:waypoint x="192.0" y="192.0"/>
+        <di:waypoint x="282.0" y="192.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
-        <di:waypoint x="421.0" y="88.0"/>
-        <di:waypoint x="466.0" y="88.0"/>
-        <di:waypoint x="466.0" y="208.0"/>
-        <di:waypoint x="511.0" y="208.0"/>
+        <di:waypoint x="433.0" y="97.0"/>
+        <di:waypoint x="433.0" y="124.5"/>
+        <di:waypoint x="142.0" y="124.5"/>
+        <di:waypoint x="142.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="20.0" width="20.677734375" x="433.1611328125" y="64.0"/>
+          <dc:Bounds height="20.0" width="20.677734375" x="277.1611328125" y="128.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
-        <di:waypoint x="396.0" y="63.0"/>
-        <di:waypoint x="396.0" y="20.0"/>
-        <di:waypoint x="231.0" y="20.0"/>
-        <di:waypoint x="231.0" y="48.0"/>
+        <di:waypoint x="433.0" y="47.0"/>
+        <di:waypoint x="433.0" y="22.0"/>
+        <di:waypoint x="268.0" y="22.0"/>
+        <di:waypoint x="268.0" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="46.0078125" x="290.49609375" y="24.0"/>
+          <dc:Bounds height="20.0" width="46.0078125" x="327.49609375" y="26.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
