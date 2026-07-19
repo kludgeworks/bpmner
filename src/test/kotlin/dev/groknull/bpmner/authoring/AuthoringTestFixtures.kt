@@ -14,8 +14,6 @@ import dev.groknull.bpmner.authoring.internal.adapter.outbound.FlatBpmnDefinitio
  * boundary), and is legitimately accessed here because this fixture is in the `authoring`
  * module's test scope (same-module reach). Cross-module test callers import only this
  * object from the `authoring` root, never reaching into the internal package directly.
- *
- * (S5 — ARCHITECTURE §5 S5, §1.5; cross-module test fixture published at module root)
  */
 object AuthoringTestFixtures {
     /**

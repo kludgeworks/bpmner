@@ -20,18 +20,10 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Pins the schema-shape precondition contract item 1 ("native structured output if
- * provider-capability-supported and schema-compatible, else fallback") relies on: Embabel's
- * `NativeStructuredOutputMode.DEFAULT` negotiation (the implicit default every bpmner role
- * gets — see `RoleLlmOptions.kt`) requires, among other things, an object-only root schema
- * with no `oneOf`/`anyOf`/`allOf` (`nativeStructuredOutputSupport.kt`,
- * `isConservativelyCompatibleWithNativeOutput()`). bpmner cannot call Embabel's private
- * compatibility check directly, so this test asserts that same root-level structural fact
- * — the one that actually discriminates bpmner's flat DTOs from `BpmnNode`'s real
- * polymorphism — against the real schema Embabel's own `FilteringJacksonOutputConverter`
- * generates: the same converter type `promptRunner.creating(...)` uses internally (confirmed
- * by `PromptSite.kt`, which mirrors the exact production call:
- * `FilteringJacksonOutputConverter(outputType, objectMapper, Predicate { true })`).
+ * Asserts each typed-output DTO's real schema — generated via the same
+ * `FilteringJacksonOutputConverter` Embabel's `promptRunner.creating(...)` uses
+ * internally — has no root-level `oneOf`/`anyOf`/`allOf`, the structural fact that
+ * discriminates bpmner's flat DTOs from `BpmnNode`'s polymorphism.
  */
 internal class NativeStructuredOutputSchemaShapeTest {
     private val objectMapper = jacksonObjectMapper()
