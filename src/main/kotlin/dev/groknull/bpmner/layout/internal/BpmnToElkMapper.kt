@@ -24,16 +24,21 @@ import org.eclipse.elk.alg.layered.options.LayeredOptions
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
 import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.eclipse.elk.core.math.ElkPadding
+import org.eclipse.elk.core.math.KVector
 import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.core.options.Direction
+import org.eclipse.elk.core.options.EdgeLabelPlacement
 import org.eclipse.elk.core.options.EdgeRouting
 import org.eclipse.elk.core.options.HierarchyHandling
+import org.eclipse.elk.core.options.NodeLabelPlacement
 import org.eclipse.elk.core.options.PortConstraints
 import org.eclipse.elk.core.options.PortSide
+import org.eclipse.elk.core.options.SizeConstraint
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.ElkPort
 import org.eclipse.elk.graph.util.ElkGraphUtil
+import java.util.EnumSet
 
 /**
  * Maps a Camunda [BpmnModelInstance] to a lean ELK skeleton graph.
@@ -103,6 +108,7 @@ internal object BpmnToElkMapper {
         mapBoundaryEvents(model, nodeMap, portMap)
 
         mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
+        collaboration?.let { mapMessageFlows(it, nodeMap, edgeMap) }
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
     }
@@ -111,12 +117,12 @@ internal object BpmnToElkMapper {
      * Maps a collaboration to the ELK graph.
      *
      * Each white-box [Participant] becomes a compound ELK node containing lane compounds and
-     * unassigned process members. Black-box participants (no processRef) are tracked as detached
-     * size-carrier nodes.
+     * unassigned process members. Black-box participants (no processRef) are root children sized
+     * for their message-flow endpoints.
      *
-     * Message flows are NOT added to the ELK graph: they are collaboration-level,
-     * cross-participant connections that confuse the hierarchical router, so their
-     * routing is owned entirely by the placement pass.
+     * Message flows are added after all participant contents have been mapped. Their
+     * endpoints may have different compound parents; ELK places the edge at their
+     * lowest common ancestor and emits the hierarchy-aware routing sections.
      *
      */
     private fun mapCollaboration(
@@ -149,8 +155,8 @@ internal object BpmnToElkMapper {
                     loopingSubIds,
                 )
             } else {
-                // Black-box participant: detached size-carrier node; placement pass assigns bounds.
-                val bb = ElkGraphUtil.createGraph()
+                // Black-box participants participate in collaboration-level message edges.
+                val bb = ElkGraphUtil.createNode(root)
                 bb.identifier = participant.id
                 bb.width = BLACK_BOX_WIDTH
                 bb.height = BLACK_BOX_HEIGHT
@@ -177,8 +183,6 @@ internal object BpmnToElkMapper {
      * Recursively maps flow elements into the given [container].
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
-     * No labels are added to the ELK graph — labels are phase-2 responsibility.
-     *
      * [loopingSubIds] is the set of subprocess IDs that have back-edges (pre-computed in [map]).
      * Cyclic subprocesses get extra top padding so the phase-2 loop-back arc has clear headroom.
      */
@@ -208,10 +212,9 @@ internal object BpmnToElkMapper {
                             SUBPROCESS_PADDING,
                         ),
                     )
-                    // Spacing options do not propagate from the root to child graphs, so the same
-                    // label-clearing spacing must be set on each compound node too.
+                    // Spacing options do not propagate from the root to child graphs.
                     applyCompoundProfile(compound)
-                    // No ElkLabel on the compound — labels are managed during placement.
+                    addNodeLabel(compound, element.name)
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children in document order.
                     mapProcess(compound, element.flowElements.toList(), nodeMap, model, loopingSubIds)
@@ -235,7 +238,7 @@ internal object BpmnToElkMapper {
                         )
                         else -> Unit
                     }
-                    // No ElkLabel — labels are managed during placement.
+                    addNodeLabel(elkNode, element.name)
                     nodeMap[element.id] = elkNode
                 }
 
@@ -325,7 +328,7 @@ internal object BpmnToElkMapper {
             beNode.identifier = be.id
             beNode.width = EVENT_SIZE
             beNode.height = EVENT_SIZE
-            // No ElkLabel — labels are managed during placement.
+            addNodeLabel(beNode, be.name)
             nodeMap[be.id] = beNode
         }
     }
@@ -361,8 +364,57 @@ internal object BpmnToElkMapper {
                 if (source.parent == null || target.parent == null) return@forEach
                 val elkEdge = ElkGraphUtil.createSimpleEdge(source, target)
                 elkEdge.identifier = sf.id
+                addEdgeLabel(elkEdge, sf.name)
                 edgeMap[sf.id] = elkEdge
             }
+    }
+
+    /** Maps collaboration-level edges after their node endpoints have been added to the hierarchy. */
+    private fun mapMessageFlows(
+        collaboration: Collaboration,
+        nodeMap: Map<String, ElkNode>,
+        edgeMap: MutableMap<String, ElkEdge>,
+    ) {
+        collaboration.messageFlows.forEach { flow ->
+            val sourceId = (flow.source as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
+            val targetId = (flow.target as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
+            val source = nodeMap[sourceId] ?: return@forEach
+            val target = nodeMap[targetId] ?: return@forEach
+            if (source.parent == null || target.parent == null) return@forEach
+            val elkEdge = ElkGraphUtil.createSimpleEdge(source, target)
+            elkEdge.identifier = flow.id
+            addEdgeLabel(elkEdge, flow.name)
+            edgeMap[flow.id] = elkEdge
+        }
+    }
+
+    private fun addNodeLabel(node: ElkNode, name: String?) {
+        if (name.isNullOrBlank()) return
+        if (node.width > 0.0 && node.height > 0.0) {
+            node.setProperty(CoreOptions.NODE_SIZE_MINIMUM, KVector(node.width, node.height))
+        }
+        val (width, height) = BpmnPlacementPass.estimateLabelDimensions(name, BpmnPlacementPass.LABEL_WIDTH)
+        ElkGraphUtil.createLabel(node).also { label ->
+            label.text = name
+            label.width = width
+            label.height = height
+        }
+        node.setProperty(CoreOptions.NODE_LABELS_PLACEMENT, NodeLabelPlacement.outsideBottomCenter())
+        node.setProperty(
+            CoreOptions.NODE_SIZE_CONSTRAINTS,
+            EnumSet.of(SizeConstraint.NODE_LABELS, SizeConstraint.MINIMUM_SIZE),
+        )
+    }
+
+    private fun addEdgeLabel(edge: ElkEdge, name: String?) {
+        if (name.isNullOrBlank()) return
+        val (width, height) = BpmnPlacementPass.estimateLabelDimensions(name, BpmnPlacementPass.EDGE_LABEL_WIDTH)
+        ElkGraphUtil.createLabel(edge).also { label ->
+            label.text = name
+            label.width = width
+            label.height = height
+        }
+        edge.setProperty(CoreOptions.EDGE_LABELS_PLACEMENT, EdgeLabelPlacement.CENTER)
     }
 
     /**
@@ -438,8 +490,6 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
         applyFlowSpacing(root)
-        // Prevent ELK from placing node-internal labels/ports, as custom sizes are used.
-        root.setProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT, true)
         // Handler nodes (no incoming ELK edge) become disconnected components placed below.
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
         // NETWORK_SIMPLEX keeps the primary flow on a single Y baseline.
@@ -479,17 +529,7 @@ internal object BpmnToElkMapper {
         applyFlowSpacing(node)
     }
 
-    /**
-     * Applies node/edge spacing that leaves room for the external labels the placement pass adds
-     * below each node (90x20). ELK does not see those labels (they are phase-2), so its spacing is
-     * widened to reserve the space itself:
-     *  - in-layer (vertical for RIGHT): a node's below-label must clear the node beneath it.
-     *  - between-layer (horizontal): a node's 90px-wide centred label must not reach the next
-     *    layer's node, and edges must be long enough to be visible.
-     *
-     * Must be applied to the root AND to every subprocess compound node, because ELK spacing does
-     * not propagate from a parent graph to its child graphs.
-     */
+    /** Applies the fixed spacing profile to each graph because ELK does not inherit it. */
     private fun applyFlowSpacing(node: ElkNode) {
         node.setProperty(CoreOptions.SPACING_NODE_NODE, NODE_NODE_SPACING)
         node.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
@@ -540,13 +580,10 @@ internal object BpmnToElkMapper {
     private const val PARTICIPANT_CONTENT_PADDING = 20.0
     private const val LANE_PADDING = 20.0
 
-    // In-layer spacing (vertical for RIGHT direction). Must exceed LABEL_HEIGHT (20) +
-    // LABEL_GAP_BELOW (2) so a node's external label clears the node in the row below.
+    // In-layer spacing (vertical for RIGHT direction).
     private const val NODE_NODE_SPACING = 60.0
 
-    // Between-layer spacing (horizontal for RIGHT direction). A node's centred 90px label
-    // overhangs ~25px past a 100px task / ~27px past a 36px event on each side; the next
-    // layer must start beyond that, and the connecting edge must be long enough to be visible.
+    // Between-layer spacing (horizontal for RIGHT direction).
     private const val NODE_NODE_BETWEEN_LAYERS = 90.0
 
     private const val EDGE_NODE_SPACING = 25.0

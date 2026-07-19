@@ -15,6 +15,7 @@ import org.eclipse.elk.core.options.CoreOptions
 import org.eclipse.elk.core.options.Direction
 import org.eclipse.elk.core.options.EdgeRouting
 import org.eclipse.elk.core.options.HierarchyHandling
+import org.eclipse.elk.core.options.SizeConstraint
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import kotlin.test.assertEquals
@@ -26,9 +27,9 @@ import kotlin.test.assertTrue
  * Layer 1: asserts ELK graph structure produced by [BpmnToElkMapper].
  * Does NOT run the layout engine — inspects the graph object model directly.
  *
- * Post AD-557-10/AD-557-11/AD-557-12 assertions: the lean skeleton has NO ElkLabels anywhere,
- * all boundary ports are SOUTH, SubProcesses are compound nodes, exception edges are NOT in the
- * ELK skeleton (AD-557-12), and AD-557-11 options are applied (NETWORK_SIMPLEX, model order,
+ * Post AD-557-10/AD-557-11/AD-557-12 assertions: all boundary ports are SOUTH, SubProcesses are
+ * compound nodes, exception edges are NOT in the ELK skeleton (AD-557-12), and AD-557-11 options
+ * are applied (NETWORK_SIMPLEX, model order,
  * LAYER_CONSTRAINT on start/end events, SPACING_COMPONENT_COMPONENT).
  */
 class BpmnToElkMapperTest {
@@ -267,23 +268,31 @@ class BpmnToElkMapperTest {
         )
     }
 
-    // ── AD-557-10 lean-skeleton assertions ────────────────────────────────────
+    // ── ELK label and collaboration assertions ─────────────────────────────────
 
     @Test
-    fun `lean skeleton has NO ElkLabels on any node (labels are phase-2 responsibility)`() {
-        val xml = BOUNDARY_TIMER_XML
-        val model = parseXml(xml)
-        val result = BpmnToElkMapper.map(model)
+    fun `named nodes and edges carry measured ELK labels and message flow is in hierarchy`() {
+        val result = BpmnToElkMapper.map(parseXml(COLLABORATION_MESSAGE_XML))
 
-        // Walk every node in the ELK graph and assert no labels
-        fun assertNoLabels(node: org.eclipse.elk.graph.ElkNode, path: String) {
-            assertTrue(
-                node.labels.isEmpty(),
-                "ELK node '$path' must have no labels — labels are owned by BpmnPlacementPass",
-            )
-            for (child in node.children) assertNoLabels(child, "$path/${child.identifier}")
-        }
-        assertNoLabels(result.root, "root")
+        val taskLabel = result.nodeMap.getValue("Task_A").labels.single()
+        assertEquals(
+            BpmnPlacementPass.estimateLabelDimensions("Receive request", BpmnPlacementPass.LABEL_WIDTH).first,
+            taskLabel.width,
+        )
+        assertEquals(
+            BpmnPlacementPass.estimateLabelDimensions("Receive request", BpmnPlacementPass.LABEL_WIDTH).second,
+            taskLabel.height,
+        )
+        assertTrue(
+            result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS)
+                .containsAll(setOf(SizeConstraint.NODE_LABELS, SizeConstraint.MINIMUM_SIZE)),
+        )
+        val messageEdge = result.edgeMap.getValue("Message_1")
+        assertEquals(result.root, messageEdge.containingNode)
+        assertEquals(
+            BpmnPlacementPass.estimateLabelDimensions("Send request", BpmnPlacementPass.EDGE_LABEL_WIDTH).first,
+            messageEdge.labels.single().width,
+        )
     }
 
     @Test
@@ -337,9 +346,8 @@ class BpmnToElkMapperTest {
         assertEquals(1, result.root.getProperty(CoreOptions.RANDOM_SEED))
         assertEquals(OrderingStrategy.NODES_AND_EDGES, result.root.getProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY))
         assertEquals(NodePlacementStrategy.NETWORK_SIMPLEX, result.root.getProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY))
-        assertEquals(true, result.root.getProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT))
+        assertEquals(false, result.root.getProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT))
         assertEquals(60.0, result.root.getProperty(CoreOptions.SPACING_NODE_NODE))
-        assertTrue(result.root.labels.isEmpty(), "Labels remain placement-pass owned")
     }
 
     @Test
@@ -402,6 +410,17 @@ class BpmnToElkMapperTest {
     <bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_cancel"/>
     <bpmn:sequenceFlow id="Flow_cancel"    sourceRef="Task_cancel" targetRef="End_cancel"/>
   </bpmn:process>
+</bpmn:definitions>"""
+
+        const val COLLABORATION_MESSAGE_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D3" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C1">
+    <bpmn:participant id="Participant_A" processRef="Process_A"/>
+    <bpmn:participant id="Participant_B" processRef="Process_B"/>
+    <bpmn:messageFlow id="Message_1" name="Send request" sourceRef="Task_A" targetRef="Task_B"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_A" isExecutable="true"><bpmn:serviceTask id="Task_A" name="Receive request"/></bpmn:process>
+  <bpmn:process id="Process_B" isExecutable="true"><bpmn:serviceTask id="Task_B"/></bpmn:process>
 </bpmn:definitions>"""
     }
 }

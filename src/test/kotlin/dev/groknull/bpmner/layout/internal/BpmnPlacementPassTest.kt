@@ -357,6 +357,12 @@ class BpmnPlacementPassTest {
         taskNode.y = 50.0
         taskNode.width = 100.0
         taskNode.height = 80.0
+        ElkGraphUtil.createLabel(taskNode).also { label ->
+            label.x = 25.0
+            label.y = 82.0
+            label.width = 50.0
+            label.height = LABEL_HEIGHT
+        }
 
         val sk = skeleton(root, mapOf("Task_1" to taskNode))
         val layout = BpmnPlacementPass.place(model, sk)
@@ -435,6 +441,12 @@ class BpmnPlacementPassTest {
         section.startY = 58.0
         section.endX = 200.0
         section.endY = 58.0
+        ElkGraphUtil.createLabel(elkEdge).also { label ->
+            label.x = 78.0
+            label.y = 34.0
+            label.width = 80.0
+            label.height = LABEL_HEIGHT
+        }
 
         val sk = skeleton(root, mapOf("S1" to s1, "E1" to e1), edgeMap = mapOf("Flow_1" to elkEdge))
         val layout = BpmnPlacementPass.place(model, sk)
