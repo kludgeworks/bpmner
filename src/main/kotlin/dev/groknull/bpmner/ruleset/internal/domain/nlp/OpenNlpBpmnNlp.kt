@@ -38,9 +38,15 @@ import opennlp.tools.tokenize.SimpleTokenizer
  */
 internal class OpenNlpBpmnNlp(
     private val lemmatizer: DictionaryLemmatizer,
-    /** Lowercased verb forms with their Penn tag (e.g. `sent` → `VBN`). See [BpmnNlpConfig.ParsedDict]. */
+    /**
+     * Lowercased verb forms with their Penn tag (e.g. `sent` → `VBN`).
+     * See [dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig.ParsedDict].
+     */
     private val verbForms: Map<String, String>,
-    /** Lowercased noun forms with their Penn tag (e.g. `orders` → `NNS`). See [BpmnNlpConfig.ParsedDict]. */
+    /**
+     * Lowercased noun forms with their Penn tag (e.g. `orders` → `NNS`).
+     * See [dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig.ParsedDict].
+     */
     private val nounForms: Map<String, String>,
 ) : BpmnNlp {
     override fun tokens(text: String): List<String> = if (text.isBlank()) {

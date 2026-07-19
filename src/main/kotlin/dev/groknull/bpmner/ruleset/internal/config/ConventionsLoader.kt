@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.ruleset.internal.domain
+package dev.groknull.bpmner.ruleset.internal.config
 
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
 import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig

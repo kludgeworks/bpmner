@@ -7,7 +7,7 @@ package dev.groknull.bpmner.ruleset
 
 /**
  * Modelling-team lint configuration loaded from the packaged `bpmner.pkl` template at startup
- * by [dev.groknull.bpmner.ruleset.internal.domain.ConventionsLoader].
+ * by [dev.groknull.bpmner.ruleset.internal.config.ConventionsLoader].
  *
  * [profile] selects the built-in rule profile (`recommended` or `strict`); [severityOverrides]
  * provides per-rule severity adjustments on top of the profile. Both are consumed by

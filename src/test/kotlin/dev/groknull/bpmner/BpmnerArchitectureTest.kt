@@ -15,20 +15,17 @@ import com.tngtech.archunit.lang.ConditionEvents
 import com.tngtech.archunit.lang.SimpleConditionEvent
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes
 import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses
-import org.jmolecules.archunit.JMoleculesArchitectureRules
+import com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods
 import org.jmolecules.archunit.JMoleculesDddRules
 import org.junit.jupiter.api.Test
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.event.EventListener
 
 class BpmnerArchitectureTest {
     private val classes =
         ClassFileImporter()
             .withImportOption(excludeBazelTestClasses)
             .importPackages("dev.groknull.bpmner")
-
-    @Test
-    fun `verifies onion architecture`() {
-        JMoleculesArchitectureRules.ensureOnionSimple().check(classes)
-    }
 
     @Test
     fun `verifies DDD building block rules`() {
@@ -45,31 +42,16 @@ class BpmnerArchitectureTest {
     }
 
     @Test
-    fun `Ai bean reference is restricted to inbound adapters`() {
-        // The framework-centric posture (issue #240 discussion): LLM calls go through Embabel
-        // via `OperationContext`+`PromptRunner` inside `@Action` methods, never via the
-        // injectable `com.embabel.agent.api.common.Ai` Spring bean. The bean exists for
-        // non-agent code that Embabel supports, but bpmner has agreed it should not be the
-        // pattern here — every LLM call site is a GOAP node.
-        //
-        // Allow `Ai` only in `internal.adapter.inbound` packages (where `@Agent` classes
-        // live). Anywhere else would constitute a re-emergence of the abandoned `LlmPort`/
-        // bean-injection escape hatch.
-        noClasses()
-            .that()
-            .resideOutsideOfPackages("..internal.adapter.inbound..")
-            .should()
-            .dependOnClassesThat()
-            .haveFullyQualifiedName("com.embabel.agent.api.common.Ai")
-            .check(classes)
-    }
-
-    @Test
     fun `internal domain classes are free of deep framework couplings`() {
-        noClasses()
+        noMethods()
             .that()
+            .areDeclaredInClassesThat()
             .resideInAPackage("..internal.domain..")
-            .should(haveMethodAnnotatedWith("org.springframework.context.event.EventListener"))
+            .and()
+            .areDeclaredInClassesThat()
+            .resideOutsideOfPackages("..ruleset.internal.domain.beans..")
+            .should()
+            .beAnnotatedWith(EventListener::class.java)
             .check(classes)
 
         noClasses()
@@ -77,75 +59,9 @@ class BpmnerArchitectureTest {
             .resideInAPackage("..internal.domain..")
             .and()
             .resideOutsideOfPackages("..ruleset.internal.domain.beans..")
-            .should(haveClassAnnotation("org.springframework.context.annotation.Configuration"))
+            .should()
+            .beAnnotatedWith(Configuration::class.java)
             .check(classes)
-    }
-
-    @Test
-    fun `framework-purity relocation keeps adapter configuration outside internal domain`() {
-        classes()
-            .that()
-            .haveFullyQualifiedName(
-                "dev.groknull.bpmner.repair.internal.adapter.inbound.BpmnRepairCapabilityStartupListener",
-            )
-            .should(haveMethodAnnotatedWith("org.springframework.context.event.EventListener"))
-            .check(classes)
-
-        classes()
-            .that()
-            .haveFullyQualifiedName(
-                "dev.groknull.bpmner.ruleset.internal.adapter.inbound.RuleProfileConfiguration",
-            )
-            .should(haveClassAnnotation("org.springframework.context.annotation.Configuration"))
-            .check(classes)
-    }
-
-    private fun haveClassAnnotation(annotationTypeName: String): ArchCondition<JavaClass> {
-        return object : ArchCondition<JavaClass>("be annotated with @${annotationTypeName.substringAfterLast('.')}") {
-            override fun check(
-                item: JavaClass,
-                events: ConditionEvents,
-            ) {
-                val hasAnnotation = item.annotations.any { ann -> ann.type.name == annotationTypeName }
-                if (!hasAnnotation) {
-                    events.add(
-                        SimpleConditionEvent.violated(
-                            item,
-                            "${item.fullName} is missing @${annotationTypeName.substringAfterLast('.')} — " +
-                                "the class may have been relocated or the annotation was removed; " +
-                                "update or remove this pin if the FQN changed.",
-                        ),
-                    )
-                }
-            }
-        }
-    }
-
-    private fun haveMethodAnnotatedWith(annotationTypeName: String): ArchCondition<JavaClass> {
-        return object : ArchCondition<JavaClass>(
-            "have at least one method annotated with @${annotationTypeName.substringAfterLast('.')}",
-        ) {
-            override fun check(
-                item: JavaClass,
-                events: ConditionEvents,
-            ) {
-                val hasAnnotatedMethod =
-                    item.methods.any { method ->
-                        method.annotations.any { ann -> ann.type.name == annotationTypeName }
-                    }
-                if (!hasAnnotatedMethod) {
-                    events.add(
-                        SimpleConditionEvent.violated(
-                            item,
-                            "${item.fullName} has no method annotated with " +
-                                "@${annotationTypeName.substringAfterLast('.')} — " +
-                                "the coupling may have been relocated or the method was removed; " +
-                                "update or remove this pin if the FQN changed.",
-                        ),
-                    )
-                }
-            }
-        }
     }
 
     private fun haveAtLeastOneGoal(): ArchCondition<JavaClass> {

@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.nlp
 
+import dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig
+
 /**
  * Builds a real [OpenNlpBpmnNlp] backed by the bundled lemma dictionary, for use as a
  * shared test fixture. Loaded once at class init so the OpenNLP construction cost is paid

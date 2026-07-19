@@ -3,8 +3,10 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.ruleset.internal.domain.nlp
+package dev.groknull.bpmner.ruleset.internal.config
 
+import dev.groknull.bpmner.ruleset.internal.domain.nlp.BpmnNlp
+import dev.groknull.bpmner.ruleset.internal.domain.nlp.OpenNlpBpmnNlp
 import opennlp.tools.lemmatizer.DictionaryLemmatizer
 import org.slf4j.LoggerFactory
 import org.springframework.context.annotation.Bean
