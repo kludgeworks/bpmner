@@ -25,6 +25,7 @@ import dev.groknull.bpmner.conformance.FinalValidatedBpmnXml
 import dev.groknull.bpmner.contract.ProcessContract
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
+import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.context.ApplicationEventPublisher
@@ -81,10 +82,11 @@ internal class LlmBpmnAligner(
         contract: ProcessContract,
         summary: BpmnDefinitionSummary,
     ): AlignmentFindings = try {
-        val result = promptRunner
-            .creating(AlignmentFindings::class.java)
-            .fromTemplate("bpmner/check_alignment", templateModel(request, contract, summary))
-        result
+        eventPublisher.publishOnInvalidLlmReturn("alignment") {
+            promptRunner
+                .creating(AlignmentFindings::class.java)
+                .fromTemplate("bpmner/check_alignment", templateModel(request, contract, summary))
+        }
     } catch (e: InvalidLlmReturnFormatException) {
         throw BpmnAlignmentException(
             message = "Alignment model failed to produce a structured report: ${e.message}",
