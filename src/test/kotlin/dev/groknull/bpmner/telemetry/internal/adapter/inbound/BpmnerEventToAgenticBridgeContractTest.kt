@@ -33,10 +33,7 @@ import org.springframework.beans.factory.ObjectProvider
  * Drives the real production chain — a `Bpmn*Event` through [BpmnerEventToAgenticBridge] into a
  * directly-constructed [SSEController] (Embabel's own tested, Spring-context-free construction
  * path; no bpmner Spring context, no MockMvc/HTTP) — and asserts exactly-once, ordered delivery
- * with wire-contract fields intact (docs/architecture.md §wire-contract). This is the delivery-seam
- * contract test #524 item 1 calls for; the "exactly once" assertion is a regression guard against
- * #524's originally-shipped fan-out bug, where a since-removed `List<AgenticEventListener>` fan-out
- * also reached Embabel's aggregate listener bean and delivered every event twice.
+ * with wire-contract fields intact (docs/architecture.md §wire-contract).
  *
  * [SSEController.onProcessEvent] is spied on rather than observed via [SSEController]'s emitter/
  * buffer internals: the sink's own delivery mechanics (`SseEmitter`/`ResponseBodyEmitter`) require
