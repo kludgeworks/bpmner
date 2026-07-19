@@ -41,6 +41,7 @@ class PlacementGuardTest {
             "HandlerComponentAlignment",
             "SubprocessEndStraddle",
             "SubprocessSpineCentring",
+            "CollaborationShapePlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
