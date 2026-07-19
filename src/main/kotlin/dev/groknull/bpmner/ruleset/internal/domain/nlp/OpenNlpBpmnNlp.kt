@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.nlp
 
+import dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig
 import opennlp.tools.lemmatizer.DictionaryLemmatizer
 import opennlp.tools.tokenize.SimpleTokenizer
 

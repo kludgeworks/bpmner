@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.ruleset.internal.domain.beans
 
 import dev.groknull.bpmner.ruleset.BpmnerLintConfig
+import dev.groknull.bpmner.ruleset.internal.config.BpmnNlpConfig
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DanglingEdgeRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DefaultFlowRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.DuplicateIdRule
@@ -13,7 +14,6 @@ import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.RequiredEventsRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.RequiredNameRule
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.TaskPayloadRule
-import dev.groknull.bpmner.ruleset.internal.domain.nlp.BpmnNlpConfig
 import org.springframework.context.annotation.AnnotationConfigApplicationContext
 
 /**
