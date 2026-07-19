@@ -18,7 +18,7 @@ import kotlin.test.assertTrue
 /**
  * No-undeclared-relocation guard test.
  *
- * For all 14 corpus fixtures:
+ * For the process and collaboration corpus fixtures:
  *   1. Run mapper → ELK → snapshot ELK absolute bounds.
  *   2. Run the placement pipeline.
  *   3. Assert that every flow-node shape (excluding BoundaryEvent shapes — their placement is
@@ -63,6 +63,8 @@ class PlacementGuardTest {
             "subprocess-nested",
             "subprocess-no-start-cycle",
             "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-lanes-loopback",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {

@@ -11,6 +11,10 @@ import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
 import org.eclipse.elk.alg.layered.options.OrderingStrategy
+import org.eclipse.elk.core.options.CoreOptions
+import org.eclipse.elk.core.options.Direction
+import org.eclipse.elk.core.options.EdgeRouting
+import org.eclipse.elk.core.options.HierarchyHandling
 import org.junit.jupiter.api.Test
 import java.io.ByteArrayInputStream
 import kotlin.test.assertEquals
@@ -323,12 +327,57 @@ class BpmnToElkMapperTest {
         }
     }
 
+    @Test
+    fun `fixed profile preserves hierarchy routing ordering ports labels spacing and determinism`() {
+        val result = BpmnToElkMapper.map(parseXml(COLLABORATION_LANES_XML))
+
+        assertEquals(HierarchyHandling.INCLUDE_CHILDREN, result.root.getProperty(CoreOptions.HIERARCHY_HANDLING))
+        assertEquals(Direction.RIGHT, result.root.getProperty(CoreOptions.DIRECTION))
+        assertEquals(EdgeRouting.ORTHOGONAL, result.root.getProperty(CoreOptions.EDGE_ROUTING))
+        assertEquals(1, result.root.getProperty(CoreOptions.RANDOM_SEED))
+        assertEquals(OrderingStrategy.NODES_AND_EDGES, result.root.getProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY))
+        assertEquals(NodePlacementStrategy.NETWORK_SIMPLEX, result.root.getProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY))
+        assertEquals(true, result.root.getProperty(CoreOptions.OMIT_NODE_MICRO_LAYOUT))
+        assertEquals(60.0, result.root.getProperty(CoreOptions.SPACING_NODE_NODE))
+        assertTrue(result.root.labels.isEmpty(), "Labels remain placement-pass owned")
+    }
+
+    @Test
+    fun `collaboration maps participant lanes members and crossing edge containment`() {
+        val result = BpmnToElkMapper.map(parseXml(COLLABORATION_LANES_XML))
+
+        val participant = result.nodeMap.getValue("Participant_1")
+        val sales = result.nodeMap.getValue("Lane_sales")
+        val warehouse = result.nodeMap.getValue("Lane_warehouse")
+        val delivery = result.nodeMap.getValue("Lane_delivery")
+        assertEquals(result.root, participant.parent)
+        assertEquals(participant, sales.parent)
+        assertEquals(participant, warehouse.parent)
+        assertEquals(participant, delivery.parent)
+        assertEquals(sales, result.nodeMap.getValue("Start_1").parent)
+        assertEquals(warehouse, result.nodeMap.getValue("Task_pick").parent)
+        assertEquals(delivery, result.nodeMap.getValue("End_1").parent)
+        assertEquals(participant, result.edgeMap.getValue("Flow_3").containingNode)
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     @Suppress("MaxLineLength")
     private fun parseXml(xml: String): BpmnModelInstance = Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
 
     companion object {
+        const val COLLABORATION_LANES_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D2" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" processRef="P1"/></bpmn:collaboration>
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:laneSet id="LS"><bpmn:lane id="Lane_sales"><bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_warehouse"><bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_delivery"><bpmn:flowNodeRef>End_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="Task_pick"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:serviceTask>
+    <bpmn:endEvent id="End_1"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_pick"/><bpmn:sequenceFlow id="Flow_3" sourceRef="Task_pick" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
         const val BOUNDARY_TIMER_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   id="D1" targetNamespace="https://groknull.dev/bpmner">
