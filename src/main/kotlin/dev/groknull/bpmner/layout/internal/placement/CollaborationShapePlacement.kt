@@ -132,14 +132,13 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             .forEach { flow ->
                 val sourceTranslation = translations[flow.source?.id]
                 val targetTranslation = translations[flow.target?.id]
-                if (sourceTranslation != null && sourceTranslation == targetTranslation) {
-                    ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
-                        Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)
-                    } ?: return@forEach
-                    return@forEach
-                }
                 when {
                     flow.id in ctx.skeleton.loopBackFlowIds -> LoopBackEdgeArcs.routeAndStore(flow, ctx)
+                    sourceTranslation != null && sourceTranslation == targetTranslation -> {
+                        ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
+                            Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)
+                        } ?: return@forEach
+                    }
                     flow.source is BoundaryEvent -> routeException(flow, ctx)
                     else -> routeSequence(flow, ctx)
                 }
@@ -156,9 +155,21 @@ internal object CollaborationShapePlacement : PlacementProcessor {
     private fun routeSequence(flow: SequenceFlow, ctx: PlacementContext) {
         val source = ctx.shapes[flow.source?.id] ?: return
         val target = ctx.shapes[flow.target?.id] ?: return
-        val start = Point(source.x + source.w, source.y + source.h / 2.0)
-        val end = Point(target.x, target.y + target.h / 2.0)
-        ctx.edges[flow.id] = if (start.y == end.y) listOf(start, end) else listOf(start, Point(end.x, start.y), end)
+        val sourceMiddleY = source.y + source.h / 2.0
+        val targetMiddleY = target.y + target.h / 2.0
+        if (sourceMiddleY == targetMiddleY) {
+            ctx.edges[flow.id] = listOf(
+                Point(source.x + source.w, sourceMiddleY),
+                Point(target.x, targetMiddleY),
+            )
+            return
+        }
+
+        val sourceAboveTarget = sourceMiddleY < targetMiddleY
+        val start = Point(source.x + source.w / 2.0, if (sourceAboveTarget) source.y + source.h else source.y)
+        val end = Point(target.x + target.w / 2.0, if (sourceAboveTarget) target.y else target.y + target.h)
+        val bendY = (start.y + end.y) / 2.0
+        ctx.edges[flow.id] = listOf(start, Point(start.x, bendY), Point(end.x, bendY), end)
     }
 
     private fun copyBlackBoxBounds(blackBox: List<Participant>, whiteBox: List<Participant>, ctx: PlacementContext) {

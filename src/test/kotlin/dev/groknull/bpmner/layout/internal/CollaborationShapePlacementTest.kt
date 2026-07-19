@@ -24,6 +24,7 @@ class CollaborationShapePlacementTest {
         val warehouse = node(participant, "Lane_warehouse", Rect(30.0, 100.0, 400.0, 80.0))
         val delivery = node(participant, "Lane_delivery", Rect(30.0, 190.0, 400.0, 80.0))
         val start = node(sales, "Start_1", Rect(20.0, 20.0, 36.0, 36.0))
+        val pick = node(warehouse, "Task_pick", Rect(20.0, 20.0, 100.0, 80.0))
         val ctx = PlacementContext(
             model,
             PlacementTestSkeletons.skeleton(
@@ -34,9 +35,13 @@ class CollaborationShapePlacementTest {
                     "Lane_warehouse" to warehouse,
                     "Lane_delivery" to delivery,
                     "Start_1" to start,
+                    "Task_pick" to pick,
                 ),
             ),
-            mutableMapOf("Start_1" to Rect(60.0, 50.0, 36.0, 36.0)),
+            mutableMapOf(
+                "Start_1" to Rect(60.0, 50.0, 36.0, 36.0),
+                "Task_pick" to Rect(60.0, 140.0, 100.0, 80.0),
+            ),
             mutableMapOf(),
             mutableMapOf(),
             mutableSetOf(),
@@ -52,6 +57,15 @@ class CollaborationShapePlacementTest {
         assertEquals(Rect(40.0, 20.0, 30.0, 80.0), ctx.labels["Lane_sales"])
         assertEquals(Rect(90.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
         assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Start_1"])
+        assertEquals(
+            listOf(
+                BpmnPlacementPass.Point(108.0, 76.0),
+                BpmnPlacementPass.Point(108.0, 98.0),
+                BpmnPlacementPass.Point(140.0, 98.0),
+                BpmnPlacementPass.Point(140.0, 120.0),
+            ),
+            ctx.edges["Flow_1"],
+        )
     }
 
     @Test

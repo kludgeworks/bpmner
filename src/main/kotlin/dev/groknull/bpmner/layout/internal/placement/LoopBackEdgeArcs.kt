@@ -8,6 +8,7 @@ package dev.groknull.bpmner.layout.internal.placement
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper
+import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 
@@ -24,6 +25,7 @@ internal object LoopBackEdgeArcs : PlacementProcessor {
 
     /** Clearance above the topmost node when no subprocess rect is available. */
     internal const val LOOP_ARC_CLEARANCE = 30.0
+    private const val LANE_ARC_INSET = 10.0
 
     override fun process(ctx: PlacementContext) {
         if (ctx.skeleton.loopBackFlowIds.isEmpty()) return
@@ -48,7 +50,13 @@ internal object LoopBackEdgeArcs : PlacementProcessor {
                 sub.flowElements.filterIsInstance<SequenceFlow>().any { it.id == sf.id }
             }
         val subRect = sub?.let { ctx.shapes[it.id] }
-        ctx.edges[sf.id] = routeLoopBackEdge(srcRect, tgtRect, subRect)
+        val laneRect = ctx.model.getModelElementsByType(Lane::class.java)
+            .firstOrNull { lane ->
+                lane.flowNodeRefs.any { it.id == sf.source?.id } &&
+                    lane.flowNodeRefs.any { it.id == sf.target?.id }
+            }
+            ?.let { ctx.shapes[it.id] }
+        ctx.edges[sf.id] = routeLoopBackEdge(srcRect, tgtRect, subRect, laneRect)
     }
 
     /**
@@ -57,11 +65,16 @@ internal object LoopBackEdgeArcs : PlacementProcessor {
      * Uses [subRect]'s top-padding band as the arc lane when the flow is inside an enclosing
      * subprocess, otherwise [LOOP_ARC_CLEARANCE] above the topmost of the two endpoints.
      */
-    internal fun routeLoopBackEdge(srcRect: Rect, tgtRect: Rect, subRect: Rect?): List<Point> {
-        val arcLaneY = if (subRect != null) {
-            subRect.y + BpmnToElkMapper.SUBPROCESS_TOP_PADDING / 2.0
-        } else {
-            minOf(srcRect.y, tgtRect.y) - LOOP_ARC_CLEARANCE
+    internal fun routeLoopBackEdge(
+        srcRect: Rect,
+        tgtRect: Rect,
+        subRect: Rect?,
+        laneRect: Rect? = null,
+    ): List<Point> {
+        val arcLaneY = when {
+            subRect != null -> subRect.y + BpmnToElkMapper.SUBPROCESS_TOP_PADDING / 2.0
+            laneRect != null -> laneRect.y + LANE_ARC_INSET
+            else -> minOf(srcRect.y, tgtRect.y) - LOOP_ARC_CLEARANCE
         }
         val srcCx = srcRect.x + srcRect.w / 2.0
         val tgtCx = tgtRect.x + tgtRect.w / 2.0

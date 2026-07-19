@@ -145,20 +145,21 @@
         <di:waypoint x="282.0" y="192.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
-        <di:waypoint x="458.0" y="72.0"/>
-        <di:waypoint x="92.0" y="72.0"/>
-        <di:waypoint x="92.0" y="192.0"/>
+        <di:waypoint x="433.0" y="97.0"/>
+        <di:waypoint x="433.0" y="124.5"/>
+        <di:waypoint x="142.0" y="124.5"/>
+        <di:waypoint x="142.0" y="152.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
-          <dc:Bounds height="20.0" width="20.677734375" x="264.6611328125" y="76.0"/>
+          <dc:Bounds height="20.0" width="20.677734375" x="277.1611328125" y="128.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
         <di:waypoint x="433.0" y="47.0"/>
-        <di:waypoint x="433.0" y="2.0"/>
-        <di:waypoint x="268.0" y="2.0"/>
+        <di:waypoint x="433.0" y="22.0"/>
+        <di:waypoint x="268.0" y="22.0"/>
         <di:waypoint x="268.0" y="32.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="46.0078125" x="327.49609375" y="6.0"/>
+          <dc:Bounds height="20.0" width="46.0078125" x="327.49609375" y="26.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
