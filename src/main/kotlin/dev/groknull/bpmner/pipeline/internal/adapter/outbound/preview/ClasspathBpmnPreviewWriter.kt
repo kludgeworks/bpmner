@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.pipeline.internal.adapter.outbound.preview
 
-import dev.groknull.bpmner.pipeline.internal.adapter.outbound.preview.BpmnPreviewWriter
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

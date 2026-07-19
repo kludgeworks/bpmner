@@ -26,22 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Named-rule unit tests for [BpmnPlacementPass].
- *
- * Each test builds a minimal model + hand-crafted [ElkSkeleton] with known coordinates
- * and asserts one specific BPMN placement convention. These are the convention tests that
- * were MISSING in the first 557-3 attempt — they are the direct gate for BLOCK-557-3.
- *
- * Test list:
- * - Boundary shape on host BOTTOM edge (named rule 2)
- * - Multiple boundaries evenly distributed on host bottom (named rule 2)
- * - Label 90×20 BELOW its node (named rule 5)
- * - Label not at element's own coordinates (direct fix for BLOCK-557-3 symptom 1)
- * - Edge label at waypoint midpoint (named rule 5)
- * - Artifact placed off the skeleton (named rule 6)
- * - Exception edge start waypoint reconciled to placed boundary centre (named rule 3)
- */
+/** Verifies [BpmnPlacementPass] placement conventions using minimal BPMN models and known coordinates. */
 class BpmnPlacementPassTest {
 
     companion object {
