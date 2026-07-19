@@ -10,7 +10,6 @@ import dev.groknull.bpmner.authoring.generationPrompt
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.readiness.ClarificationExchange
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ReadinessDimension
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -23,7 +22,7 @@ class BpmnRequestTest {
                 questionId = "q-trigger",
                 questionText = "What starts the process?",
                 answerText = "The customer submits an order.",
-                relatedMissingAreas = listOf(MissingProcessArea.START_TRIGGER),
+                relatedMissingAreas = listOf(ReadinessDimension.START_TRIGGER),
                 relatedDimensions = listOf(ReadinessDimension.START_TRIGGER),
                 evidence = emptyList(),
             ),

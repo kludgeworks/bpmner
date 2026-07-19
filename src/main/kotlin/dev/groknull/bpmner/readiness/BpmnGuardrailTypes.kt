@@ -14,21 +14,23 @@ import jakarta.validation.constraints.PositiveOrZero
 import dev.groknull.bpmner.bpmn.ClarificationExchange as ApiClarificationExchange
 
 /**
- * Readiness dimensions used by the readiness LLM to score the input prose.
+ * Readiness dimensions used by the readiness LLM to score the input prose, and to name
+ * missing/underspecified process areas (`ProcessInputAssessment.missingAreas` and related
+ * fields reuse this same enum — the dimension-vs-gap distinction is carried by which field
+ * holds the value, not by a second, parallel enum type).
  *
- * The `@JsonAlias` entries below absorb the parallel naming used by [MissingProcessArea]:
- * the readiness LLM regularly emits a [MissingProcessArea]-style name (e.g.
- * `"ACTIVITY_SEQUENCE"`) where a [ReadinessDimension] is expected (typically inside
- * `ClarificationQuestion.relatedDimensions`). Without these aliases Jackson rejects the
- * response with `InvalidFormatException`, the LLM call retries, and a more conservative
- * verdict often comes back — silently downgrading READY responses. The canonical
- * cross-mapping is documented in
- * `dev.groknull.bpmner.readiness.internal.adapter.inbound.normalize`.
+ * The `@JsonAlias` entries below absorb the readiness LLM's observed synonym drift: models
+ * regularly emit a plausible alternate name (e.g. `"START_STATES"`, `"ACTORS_RESPONSIBILITY"`)
+ * for a value here. Without these aliases Jackson rejects the response with
+ * `InvalidFormatException`, the LLM call retries, and a more conservative verdict often
+ * comes back — silently downgrading READY responses.
  *
  * Aliases are read-only — canonical names still serialise out.
  */
 enum class ReadinessDimension {
     PROCESS_BOUNDARY,
+
+    @JsonAlias("START_STATES")
     START_TRIGGER,
 
     @JsonAlias("END_STATE")
@@ -38,7 +40,7 @@ enum class ReadinessDimension {
     @JsonAlias("ACTIVITY_SEQUENCE")
     SEQUENCE_ORDER,
 
-    @JsonAlias("ACTOR_RESPONSIBILITY")
+    @JsonAlias("ACTOR_RESPONSIBILITY", "ACTORS_RESPONSIBILITY")
     ACTORS_ROLES,
 
     @JsonAlias("DECISION_CRITERIA")
@@ -56,51 +58,6 @@ enum class ReadinessDimension {
 
     @JsonAlias("SOURCE_TRACE")
     TRACEABILITY_TO_SOURCE,
-}
-
-/**
- * Missing process areas surfaced by the readiness assessor. Mirror of [ReadinessDimension]
- * with finer-grained gap categories. The `@JsonAlias` entries below absorb the parallel
- * naming used by [ReadinessDimension] so an LLM that emits a [ReadinessDimension] name
- * where a [MissingProcessArea] is expected still deserialises cleanly. Aliases are
- * read-only — canonical names still serialise out. See [ReadinessDimension] for the
- * full rationale.
- */
-enum class MissingProcessArea {
-    PROCESS_BOUNDARY,
-    START_TRIGGER,
-
-    @JsonAlias("END_STATES")
-    END_STATE,
-
-    // ACTIVITIES (a ReadinessDimension) maps onto ACTIVITY_SEQUENCE
-    // (activities map to sequence order dimension).
-    // SEQUENCE_ORDER is the dimension that pairs with this area, so it's the natural alias.
-    @JsonAlias("SEQUENCE_ORDER", "ACTIVITIES")
-    ACTIVITY_SEQUENCE,
-
-    @JsonAlias("ACTORS_ROLES")
-    ACTOR_RESPONSIBILITY,
-
-    @JsonAlias("DECISIONS_BRANCHES")
-    DECISION_CRITERIA,
-
-    @JsonAlias("EXCEPTIONS_REWORK")
-    EXCEPTION_HANDLING,
-
-    // No alias on INPUT_ARTIFACT: INPUTS_OUTPUTS_ARTIFACTS could legitimately mean either
-    // input or output, so we attach it to OUTPUT_ARTIFACT (the more common gap in practice).
-    @JsonAlias("INPUTS_ARTIFACTS")
-    INPUT_ARTIFACT,
-
-    @JsonAlias("INPUTS_OUTPUTS_ARTIFACTS", "OUTPUTS_ARTIFACTS")
-    OUTPUT_ARTIFACT,
-
-    @JsonAlias("BPMN_SUITABILITY")
-    BPMN_PROCESS_SUITABILITY,
-
-    @JsonAlias("TRACEABILITY_TO_SOURCE")
-    SOURCE_TRACE,
 }
 
 enum class EvidenceSourceType {
@@ -122,8 +79,11 @@ data class SourceEvidence(
     @field:NotBlank
     @get:JsonPropertyDescription("Relevant source text excerpt or concise paraphrase")
     val text: String,
+    // Not @NotBlank/non-null-with-no-default: nothing in production code reads .sourceType today
+    // (it exists for future traceability); the empty default must survive bean validation rather
+    // than re-triggering the LLM retry loop for a value nothing downstream requires.
     @get:JsonPropertyDescription("Type of source the evidence came from")
-    val sourceType: EvidenceSourceType,
+    val sourceType: EvidenceSourceType? = null,
     @get:JsonPropertyDescription("Optional source reference, such as a filename or clarification question id")
     val sourceRef: String? = null,
     @field:PositiveOrZero
@@ -146,7 +106,7 @@ data class ClarificationExchange(
     @get:JsonPropertyDescription("Answer text supplied by the user")
     override val answerText: String,
     @get:JsonPropertyDescription("Missing process areas resolved or affected by this exchange")
-    val relatedMissingAreas: List<MissingProcessArea> = emptyList(),
+    val relatedMissingAreas: List<ReadinessDimension> = emptyList(),
     @get:JsonPropertyDescription("Readiness dimensions resolved or affected by this exchange")
     val relatedDimensions: List<ReadinessDimension> = emptyList(),
     @field:Valid

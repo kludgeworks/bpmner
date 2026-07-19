@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.readiness.internal.adapter.outbound
 
-import dev.groknull.bpmner.readiness.MissingProcessArea
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
+import dev.groknull.bpmner.readiness.ReadinessDimension
 import dev.groknull.bpmner.readiness.ReadinessReportWriter
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.springframework.stereotype.Component
@@ -86,48 +86,52 @@ internal class MarkdownReadinessReportWriter : ReadinessReportWriter {
         }
     }
 
-    private fun assumptionPhrase(area: MissingProcessArea): String = when (area) {
-        MissingProcessArea.PROCESS_BOUNDARY -> {
+    private fun assumptionPhrase(area: ReadinessDimension): String = when (area) {
+        ReadinessDimension.PROCESS_BOUNDARY -> {
             "process boundary would be assumed"
         }
 
-        MissingProcessArea.START_TRIGGER -> {
+        ReadinessDimension.START_TRIGGER -> {
             "a start trigger would be invented"
         }
 
-        MissingProcessArea.END_STATE -> {
+        ReadinessDimension.END_STATES -> {
             "an end state would be invented"
         }
 
-        MissingProcessArea.ACTIVITY_SEQUENCE -> {
-            "activities and their order would be invented"
+        ReadinessDimension.ACTIVITIES -> {
+            "activities would be invented"
         }
 
-        MissingProcessArea.ACTOR_RESPONSIBILITY -> {
+        ReadinessDimension.SEQUENCE_ORDER -> {
+            "activity order would be invented"
+        }
+
+        ReadinessDimension.ACTORS_ROLES -> {
             "actor responsibilities would be assigned without grounding"
         }
 
-        MissingProcessArea.DECISION_CRITERIA -> {
+        ReadinessDimension.DECISIONS_BRANCHES -> {
             "decision criteria would be invented"
         }
 
-        MissingProcessArea.EXCEPTION_HANDLING -> {
+        ReadinessDimension.EXCEPTIONS_REWORK -> {
             "exception paths would be invented"
         }
 
-        MissingProcessArea.INPUT_ARTIFACT -> {
-            "input artifacts would be invented"
+        ReadinessDimension.INPUTS_OUTPUTS_ARTIFACTS -> {
+            "input/output artifacts would be invented"
         }
 
-        MissingProcessArea.OUTPUT_ARTIFACT -> {
-            "output artifacts would be invented"
+        ReadinessDimension.SCOPE_CLARITY -> {
+            "the process's scope boundaries would be assumed — where it starts/ends and what's in/out of scope"
         }
 
-        MissingProcessArea.BPMN_PROCESS_SUITABILITY -> {
+        ReadinessDimension.BPMN_SUITABILITY -> {
             "the source text would be treated as a process despite weak suitability"
         }
 
-        MissingProcessArea.SOURCE_TRACE -> {
+        ReadinessDimension.TRACEABILITY_TO_SOURCE -> {
             "process details would be added without traceability to the source"
         }
     }
