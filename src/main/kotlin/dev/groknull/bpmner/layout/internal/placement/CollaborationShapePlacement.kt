@@ -25,6 +25,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
 
     private const val DEFAULT_PARTICIPANT_Y = 12.0
     private const val OWNER = "CollaborationShapePlacement"
+    private const val LANE_LABEL_WIDTH = PARTICIPANT_HEADER_WIDTH
 
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull() ?: return
@@ -54,13 +55,26 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         var nextY = participantBounds.y
         val translations = mutableMapOf<String, Point>()
         laneBounds.forEach { (lane, elkLaneBounds) ->
-            val band = Rect(participantBounds.x, nextY, participantBounds.w, elkLaneBounds.h)
+            val band = Rect(
+                participantBounds.x + PARTICIPANT_HEADER_WIDTH,
+                nextY,
+                participantBounds.w - PARTICIPANT_HEADER_WIDTH,
+                elkLaneBounds.h,
+            )
             ctx.shapes[lane.id] = band
             recordTranslation(lane.id, ctx)
             if (!lane.name.isNullOrBlank()) {
-                ctx.labels[lane.id] = Rect(participantBounds.x, band.y, PARTICIPANT_HEADER_WIDTH, band.h)
+                ctx.labels[lane.id] = Rect(
+                    band.x,
+                    band.y,
+                    LANE_LABEL_WIDTH,
+                    band.h,
+                )
             }
-            val translation = Point(participantBounds.x + PARTICIPANT_HEADER_WIDTH - elkLaneBounds.x, band.y - elkLaneBounds.y)
+            val translation = Point(
+                participantBounds.x + PARTICIPANT_HEADER_WIDTH + LANE_LABEL_WIDTH - elkLaneBounds.x,
+                band.y - elkLaneBounds.y,
+            )
             laneMembers(lane).forEach { memberId -> translations[memberId] = translation }
             nextY += band.h
         }

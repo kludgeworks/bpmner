@@ -45,11 +45,13 @@ class CollaborationShapePlacementTest {
         CollaborationShapePlacement.process(ctx)
 
         assertEquals(Rect(10.0, 20.0, 500.0, 240.0), ctx.shapes["Participant_1"])
-        assertEquals(Rect(10.0, 20.0, 500.0, 80.0), ctx.shapes["Lane_sales"])
-        assertEquals(Rect(10.0, 100.0, 500.0, 80.0), ctx.shapes["Lane_warehouse"])
-        assertEquals(Rect(10.0, 180.0, 500.0, 80.0), ctx.shapes["Lane_delivery"])
-        assertEquals(Rect(60.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Start_1"])
+        assertEquals(Rect(40.0, 20.0, 470.0, 80.0), ctx.shapes["Lane_sales"])
+        assertEquals(Rect(40.0, 100.0, 470.0, 80.0), ctx.shapes["Lane_warehouse"])
+        assertEquals(Rect(40.0, 180.0, 470.0, 80.0), ctx.shapes["Lane_delivery"])
+        assertEquals(Rect(10.0, 20.0, 30.0, 240.0), ctx.labels["Participant_1"])
+        assertEquals(Rect(40.0, 20.0, 30.0, 80.0), ctx.labels["Lane_sales"])
+        assertEquals(Rect(90.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Start_1"])
     }
 
     @Test
@@ -88,12 +90,12 @@ class CollaborationShapePlacementTest {
 
         CollaborationShapePlacement.process(ctx)
 
-        assertEquals(Rect(70.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
-        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Task_child"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Boundary_1"])
+        assertEquals(Rect(100.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
+        assertEquals(Rect(110.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Task_child"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Boundary_1"])
         assertEquals(
-            listOf(BpmnPlacementPass.Point(98.0, 108.0), BpmnPlacementPass.Point(290.0, 80.0)),
+            listOf(BpmnPlacementPass.Point(128.0, 108.0), BpmnPlacementPass.Point(320.0, 80.0)),
             ctx.edges["Flow_exception"],
         )
     }
@@ -113,8 +115,8 @@ class CollaborationShapePlacementTest {
     private companion object {
         const val LANED_SUBPROCESS_WITH_BOUNDARY_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
-  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" processRef="P"/></bpmn:collaboration>
-  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_handler</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1" name="Lane"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_handler</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
     <bpmn:subProcess id="SubProcess_1"><bpmn:serviceTask id="Task_child"/></bpmn:subProcess>
     <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
   </bpmn:process>

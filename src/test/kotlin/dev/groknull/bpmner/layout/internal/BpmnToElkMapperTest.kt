@@ -368,9 +368,9 @@ class BpmnToElkMapperTest {
     companion object {
         const val COLLABORATION_LANES_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D2" targetNamespace="https://groknull.dev/bpmner">
-  <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" processRef="P1"/></bpmn:collaboration>
+  <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" name="Participant" processRef="P1"/></bpmn:collaboration>
   <bpmn:process id="P1" isExecutable="true">
-    <bpmn:laneSet id="LS"><bpmn:lane id="Lane_sales"><bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_warehouse"><bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_delivery"><bpmn:flowNodeRef>End_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:laneSet id="LS"><bpmn:lane id="Lane_sales" name="Sales"><bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_warehouse" name="Warehouse"><bpmn:flowNodeRef>Task_pick</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_delivery" name="Delivery"><bpmn:flowNodeRef>End_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
     <bpmn:startEvent id="Start_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
     <bpmn:serviceTask id="Task_pick"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="End_1"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
