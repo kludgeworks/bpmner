@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.telemetry.internal
 
+import com.embabel.agent.autoconfigure.observability.ObservabilityAutoConfiguration
 import com.embabel.agent.observability.ObservabilityProperties
 import com.embabel.agent.observability.tracing.ChatModelObservationFilter
 import org.junit.jupiter.api.Test
@@ -15,7 +16,7 @@ import org.springframework.ai.chat.model.Generation
 import org.springframework.ai.chat.observation.ChatModelObservationContext
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.context.properties.EnableConfigurationProperties
+import org.springframework.boot.autoconfigure.ImportAutoConfiguration
 import org.springframework.boot.test.context.SpringBootTest
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -23,11 +24,13 @@ import kotlin.test.assertTrue
 /**
  * Verifies #601's observability enablement: `application.yaml`'s
  * `embabel.agent.platform.observability` block binds to Embabel's real
- * [ObservabilityProperties] with the safe redaction default, and Embabel's own
- * [ChatModelObservationFilter] — the class `application.yaml`'s
- * `capture-message-content: false` actually governs — strips prompt/response content
- * from an LLM observation context when that default is in effect. This is the "smallest
- * thing that fails if the toggle regresses to `true` or stops applying."
+ * [ObservabilityProperties], and the actual [ChatModelObservationFilter] bean Embabel's
+ * own [ObservabilityAutoConfiguration] — the production autoconfiguration
+ * `embabel-agent-starter-observability` ships — registers strips prompt/response
+ * content from an LLM observation context when `capture-message-content: false` is in
+ * effect. Autowiring the real bean (rather than constructing the filter class directly)
+ * is the "smallest thing that fails" if either the toggle regresses to `true` or the
+ * autoconfiguration stops wiring the filter into the application context at all.
  *
  * Live model/token/finish-reason attribute capture on `embabel.llm` spans is Spring AI's
  * and Embabel's own upstream-tested observation-convention machinery
@@ -39,11 +42,14 @@ import kotlin.test.assertTrue
 @SpringBootTest(classes = [ObservabilityRedactionTest.Config::class])
 class ObservabilityRedactionTest {
 
-    @EnableConfigurationProperties(ObservabilityProperties::class)
+    @ImportAutoConfiguration(ObservabilityAutoConfiguration::class)
     class Config
 
     @Autowired
     private lateinit var observabilityProperties: ObservabilityProperties
+
+    @Autowired
+    private lateinit var chatModelObservationFilter: ChatModelObservationFilter
 
     @Test
     fun `observability is enabled with content capture off by default`() {
@@ -55,10 +61,8 @@ class ObservabilityRedactionTest {
     }
 
     @Test
-    fun `the redaction default strips prompt and response content from LLM observation contexts`() {
-        val filter = ChatModelObservationFilter(MAX_CONTENT_LENGTH, observabilityProperties.isCaptureMessageContent)
-
-        val filtered = filter.map(observationContext())
+    fun `the real Spring-wired filter strips prompt and response content by default`() {
+        val filtered = chatModelObservationFilter.map(observationContext())
 
         assertTrue(
             filtered.allKeyValues.none { it.key in CONTENT_KEYS },

@@ -107,6 +107,12 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 | `management.tracing.sampling.probability` | `0.1` | Fraction of traces sampled. Conservative default; raise per deployment (env or a profile) for higher-fidelity tracing. |
 | `management.otlp.tracing.endpoint` | unset | No collector is assumed reachable by default. Override via env: `MANAGEMENT_OTLP_TRACING_ENDPOINT=<url>`, following the `${BPMNER_LOG_DIR:...}` env-override convention used elsewhere in this file. |
 
+Metrics are only scrapeable in the `web` profile (`--web`, `application-web.yaml`), which
+exposes `/actuator/prometheus` via `management.endpoints.web.exposure.include`. The
+default CLI mode (`web-application-type: none`) has no HTTP listener, so there is
+nothing to scrape; treat the endpoint as unauthenticated on the deployment network and
+restrict access at the network/ingress layer, same as any other Actuator endpoint.
+
 ## Reading diagnostics
 
 A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on. Every field matters:
