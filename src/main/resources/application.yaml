@@ -21,6 +21,25 @@ embabel:
       interactive:
         enabled: true
         history-enabled: true
+    platform:
+      observability:
+        enabled: true
+        # Redaction default: strips prompt/response content (gen_ai.input.messages /
+        # gen_ai.output.messages, tool args/results, RAG query, planning/replan reason,
+        # @Tracked args/return) from every span. Attempt/model/provider/token-usage/
+        # finish-reason attributes are unaffected — they carry no message content.
+        capture-message-content: false
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      # Conservative default; override per deployment (env or a profile) for
+      # higher-fidelity tracing where needed.
+      probability: 0.1
+  # Left unset by default: no collector is assumed reachable. Operators supply
+  # MANAGEMENT_OTLP_TRACING_ENDPOINT per deployment, following the ${BPMNER_LOG_DIR:...}
+  # env-override convention used elsewhere in this file.
 
 bpmner:
   logging:

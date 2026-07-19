@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.repair
 
 import dev.groknull.bpmner.repair.internal.adapter.outbound.RepairFixtures
+import dev.groknull.bpmner.repair.internal.domain.BpmnRepairPatch
 
 /**
  * Published test fixture for the `repair` module.
@@ -30,4 +31,12 @@ object RepairTestFixtures {
      */
     @JvmStatic
     fun renderFullFeedback(): String = RepairFixtures.renderFullFeedback()
+
+    /**
+     * The runtime class of [BpmnRepairPatch], exposed for schema-shape inspection without
+     * requiring callers to import the internal (and Kotlin-`internal`-visibility) type.
+     */
+    @JvmField
+    @Suppress("UNCHECKED_CAST")
+    val BPMN_REPAIR_PATCH_CLASS: Class<Any> = BpmnRepairPatch::class.java as Class<Any>
 }
