@@ -6,9 +6,9 @@
 package dev.groknull.bpmner.pipeline.internal.adapter.inbound
 
 import com.embabel.agent.shell.ShellCommands
-import dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser.BrowserOpenOutcome
-import dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser.BrowserOpenPort
-import dev.groknull.bpmner.pipeline.internal.adapter.outbound.preview.BpmnPreviewWriter
+import dev.groknull.bpmner.pipeline.BpmnPreviewWriter
+import dev.groknull.bpmner.pipeline.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.BrowserOpenPort
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator
 import dev.groknull.bpmner.pipeline.internal.domain.BpmnPreviewOrchestrator.PreviewResult
 import org.junit.jupiter.api.Assertions.assertEquals

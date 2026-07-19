@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser
+package dev.groknull.bpmner.pipeline
 
 /**
  * Outcome of attempting to open a file/URI in the default browser:

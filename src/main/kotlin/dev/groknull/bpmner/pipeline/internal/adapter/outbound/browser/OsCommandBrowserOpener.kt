@@ -5,6 +5,8 @@
 
 package dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser
 
+import dev.groknull.bpmner.pipeline.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.BrowserOpenPort
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service

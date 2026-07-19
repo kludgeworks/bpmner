@@ -5,7 +5,7 @@
 
 package dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser
 
-import dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.BrowserOpenOutcome
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.nio.file.Path

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: MIT
  */
 
-package dev.groknull.bpmner.pipeline.internal.adapter.outbound.browser
+package dev.groknull.bpmner.pipeline
 
 import org.jmolecules.architecture.onion.simplified.ApplicationRing
 import java.nio.file.Path
