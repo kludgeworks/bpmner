@@ -5,14 +5,19 @@
 
 package dev.groknull.bpmner.readiness
 
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.agent.test.integration.EmbabelMockitoIntegrationTest
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.TestPropertySource
+import kotlin.test.assertIs
+import kotlin.test.assertTrue
 
 /**
  * Regression guard for the readiness sub-process recursion.
@@ -58,5 +63,41 @@ class BpmnReadinessInvokerTest : EmbabelMockitoIntegrationTest() {
         val result = readinessInvoker.assess(BpmnRequest(processDescription = prose))
 
         assertEquals(ReadinessVerdict.READY, result.verdict)
+    }
+
+    /**
+     * Exercises the real reliability-seam catch-and-translate branch in
+     * `BpmnReadinessAgent.requestAssessment` (not a manual construction or annotation check): the
+     * mocked LLM operation throws Embabel's real `InvalidLlmReturnFormatException`, and the assertion
+     * is on what `readinessInvoker.assess()` — the actual caller-facing entry point — throws. Because
+     * `assessReadiness`'s `@Action` is `FIRE_ONCE`, this surfaces synchronously on the first attempt
+     * rather than the framework retrying and only failing after exhausting a retry budget.
+     */
+    @Test
+    fun `InvalidLlmReturnFormatException from the readiness model surfaces as BpmnReadinessAssessmentException`() {
+        whenCreateObject({ true }, ProcessInputAssessment::class.java).thenThrow(
+            InvalidLlmReturnFormatException("not json", ProcessInputAssessment::class.java, RuntimeException("malformed")),
+        )
+
+        val thrown = assertThrows<BpmnReadinessAssessmentException> {
+            readinessInvoker.assess(BpmnRequest(processDescription = "When an order is submitted, it is done."))
+        }
+
+        assertIs<InvalidLlmReturnFormatException>(thrown.cause)
+        assertTrue(thrown.message!!.contains("structured assessment"))
+    }
+
+    @Test
+    fun `InvalidLlmReturnTypeException from the readiness model surfaces as BpmnReadinessAssessmentException`() {
+        whenCreateObject({ true }, ProcessInputAssessment::class.java).thenThrow(
+            InvalidLlmReturnTypeException(returnedObject = "not-an-assessment", constraintViolations = emptySet()),
+        )
+
+        val thrown = assertThrows<BpmnReadinessAssessmentException> {
+            readinessInvoker.assess(BpmnRequest(processDescription = "When an order is submitted, it is done."))
+        }
+
+        assertIs<InvalidLlmReturnTypeException>(thrown.cause)
+        assertTrue(thrown.message!!.contains("invalid ProcessInputAssessment"))
     }
 }
