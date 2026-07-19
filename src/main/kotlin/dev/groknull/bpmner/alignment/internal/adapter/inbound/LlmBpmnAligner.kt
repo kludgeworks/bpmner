@@ -72,8 +72,8 @@ internal class LlmBpmnAligner(
      * `com.embabel.agent.core.support.InvalidLlmReturnTypeException` — the parsed object failed
      * validation constraints. Both stay in that package on the 1.0 line (no relocation) and both
      * extend `RuntimeException`, so callers may catch either independently or `RuntimeException`
-     * broadly; this is the pair #592 classifies as fail-fast (format/type) vs. transient (network,
-     * rate-limit) failures.
+     * broadly; both are fail-fast on malformed/invalid model output, distinct from transient
+     * failures such as network errors or rate limits.
      */
     private fun requestAlignmentFindings(
         promptRunner: PromptRunner,
