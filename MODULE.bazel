@@ -48,8 +48,8 @@ SPRING_BOOT_VERSION = "3.5.14"
 
 SPRING_AI_VERSION = "1.1.7"
 
-# Target: the latest Embabel 1.0-line release published to Maven Central at bump time
-# (1.0.0-RC1 as of this pin; adopt 1.0.0 GA once it supersedes it). The Embabel BOM
+# Target: the latest Embabel 1.0-line release published to Maven Central, preferring
+# 1.0.0 GA over any release candidate once GA is available. The Embabel BOM
 # (embabel-agent-dependencies) below is the source of truth for all com.embabel.agent:*
 # module versions; EMBABEL_VERSION only seeds the BOM coordinate itself.
 EMBABEL_VERSION = "1.0.0-RC1"
