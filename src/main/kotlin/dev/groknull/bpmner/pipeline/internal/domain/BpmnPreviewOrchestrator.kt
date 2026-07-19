@@ -5,10 +5,10 @@
 
 package dev.groknull.bpmner.pipeline.internal.domain
 
-import dev.groknull.bpmner.browser.BrowserOpenOutcome
-import dev.groknull.bpmner.browser.BrowserOpenPort
+import dev.groknull.bpmner.pipeline.BpmnPreviewWriter
+import dev.groknull.bpmner.pipeline.BrowserOpenOutcome
+import dev.groknull.bpmner.pipeline.BrowserOpenPort
 import dev.groknull.bpmner.pipeline.internal.adapter.inbound.PreviewPrompt
-import dev.groknull.bpmner.preview.BpmnPreviewWriter
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
 import java.nio.file.Files

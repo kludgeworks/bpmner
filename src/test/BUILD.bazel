@@ -68,7 +68,7 @@ java_binary(
 
 java_binary(
     name = "generate_candidate_goldens",
-    main_class = "dev.groknull.bpmner.layout.internal.adapter.outbound.GenerateCandidateGoldensKt",
+    main_class = "dev.groknull.bpmner.layout.internal.GenerateCandidateGoldensKt",
     visibility = ["//visibility:public"],
     runtime_deps = [":bpmner_tests_lib"],
 )

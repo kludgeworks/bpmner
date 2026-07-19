@@ -1,0 +1,84 @@
+/*
+ * Copyright 2026 The Project Contributors
+ * SPDX-License-Identifier: MIT
+ */
+
+package dev.groknull.bpmner.layout.internal
+
+import dev.groknull.bpmner.layout.BpmnAutoLayoutException
+import dev.groknull.bpmner.layout.BpmnLayoutPort
+import dev.groknull.bpmner.layout.internal.adapter.inbound.referentialIntegrityErrors
+import jakarta.annotation.PostConstruct
+import org.camunda.bpm.model.bpmn.Bpmn
+import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.bpmndi.BpmnDiagram
+import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
+import org.eclipse.elk.core.RecursiveGraphLayoutEngine
+import org.eclipse.elk.core.data.LayoutMetaDataService
+import org.eclipse.elk.core.util.BasicProgressMonitor
+import org.jmolecules.architecture.onion.simplified.InfrastructureRing
+import org.springframework.stereotype.Service
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+
+/**
+ * Stateless ELK layout path for retained BPMN processes including subprocesses
+ * and boundary events. The sole production layout authority behind [BpmnLayoutPort].
+ */
+@InfrastructureRing
+@Service
+internal class ElkBpmnLayouter : BpmnLayoutPort {
+
+    @PostConstruct
+    fun registerElkLayoutAlgorithm() {
+        // ELK requires algorithm registration outside OSGi. LayoutMetaDataService is a
+        // singleton that ignores duplicate registrations, so construction-time registration is safe.
+        LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
+    }
+
+    override fun layout(xml: String): String {
+        val model = parseXml(xml)
+        // Capture existing shapes/edges BEFORE stripping to preserve non-geometry attributes
+        // (bioc: colours, custom extensions).
+        val existingShapes = ElkToBpmnDiWriter.captureExistingShapes(model)
+        val existingEdges = ElkToBpmnDiWriter.captureExistingEdges(model)
+        removeExistingDi(model)
+        val skeleton = BpmnToElkMapper.map(model)
+        RecursiveGraphLayoutEngine().layout(skeleton.root, BasicProgressMonitor())
+        val placed = BpmnPlacementPass.place(model, skeleton)
+        ElkToBpmnDiWriter.write(model, placed, existingShapes, existingEdges)
+        val output = serializeXml(model)
+        // Hard-fail here, at the sole BpmnLayoutPort implementation, so every layout call is guarded.
+        val integrityErrors = referentialIntegrityErrors(output)
+        if (integrityErrors.isNotEmpty()) {
+            throw BpmnAutoLayoutException(
+                "ELK layout produced referentially inconsistent BPMN DI: ${integrityErrors.joinToString("; ")}",
+            )
+        }
+        return output
+    }
+
+    private fun parseXml(xml: String): BpmnModelInstance = try {
+        Bpmn.readModelFromStream(ByteArrayInputStream(xml.toByteArray(Charsets.UTF_8)))
+    } catch (e: org.camunda.bpm.model.xml.ModelParseException) {
+        throw BpmnAutoLayoutException("ELK layout failed: could not parse BPMN XML: ${e.message}", e)
+    }
+
+    private fun serializeXml(model: BpmnModelInstance): String = try {
+        val out = ByteArrayOutputStream()
+        Bpmn.writeModelToStream(out, model)
+        // Camunda's DOM serializer emits trailing spaces on blank indent lines; strip them
+        // so the output is byte-clean and the byte-exact comparison gate needs no normalization.
+        out.toString(Charsets.UTF_8)
+            .lines()
+            .joinToString("\n") { it.trimEnd() }
+    } catch (e: java.io.IOException) {
+        throw BpmnAutoLayoutException("ELK layout failed: could not serialize BPMN XML: ${e.message}", e)
+    }
+
+    private fun removeExistingDi(model: BpmnModelInstance) {
+        model.getModelElementsByType(BpmnDiagram::class.java)
+            .toList()
+            .forEach { model.definitions.removeChildElement(it) }
+    }
+}
