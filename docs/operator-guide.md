@@ -98,6 +98,21 @@ The `Persona` slot for each agent (`bpmner.generator`, `bpmner.repairer`, `bpmne
 | `bpmner.logging.dump-artifacts` | `false` | When `true`, every intermediate artifact (outline JSON, rendered XML, repair attempts) is logged at DEBUG with a length cap. Off for production. Override via env: `BPMNER_LOGGING_DUMP_ARTIFACTS=true`. |
 | `bpmner.logging.artifact-preview-length` | `8000` | Truncation cap for dumped artifacts (characters). |
 
+### Observability
+
+| Key | Default | Effect |
+| --- | --- | --- |
+| `embabel.agent.platform.observability.enabled` | `true` | Turns on Embabel's OTel/Micrometer instrumentation of lifecycle/planning/action/LLM/tool spans. |
+| `embabel.agent.platform.observability.capture-message-content` | `false` | Redaction default: when `false`, prompt/response content (`gen_ai.input.messages`/`gen_ai.output.messages`, tool args/results, RAG query, planning/replan reason, `@Tracked` args/return) is stripped from every span. Attempt/model/provider/token-usage/finish-reason attributes are unaffected. Set `true` only in a trusted, non-production environment where content capture is explicitly wanted. |
+| `management.tracing.sampling.probability` | `0.1` | Fraction of traces sampled. Conservative default; raise per deployment (env or a profile) for higher-fidelity tracing. |
+| `management.otlp.tracing.endpoint` | unset | No collector is assumed reachable by default. Override via env: `MANAGEMENT_OTLP_TRACING_ENDPOINT=<url>`, following the `${BPMNER_LOG_DIR:...}` env-override convention used elsewhere in this file. |
+
+Metrics are only scrapeable in the `web` profile (`--web`, `application-web.yaml`), which
+exposes `/actuator/prometheus` via `management.endpoints.web.exposure.include`. The
+default CLI mode (`web-application-type: none`) has no HTTP listener, so there is
+nothing to scrape; treat the endpoint as unauthenticated on the deployment network and
+restrict access at the network/ingress layer, same as any other Actuator endpoint.
+
 ## Reading diagnostics
 
 A `BpmnDiagnostic` is what the validator emits and the repair loop dispatches on. Every field matters:

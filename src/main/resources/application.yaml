@@ -21,6 +21,16 @@ embabel:
       interactive:
         enabled: true
         history-enabled: true
+    platform:
+      observability:
+        enabled: true
+        capture-message-content: false
+
+management:
+  tracing:
+    enabled: true
+    sampling:
+      probability: 0.1
 
 bpmner:
   logging:

@@ -103,7 +103,13 @@ maven.install(
         "com.embabel.agent:embabel-agent-starter-mistral-ai",
         "com.embabel.agent:embabel-agent-starter-shell",
         "com.embabel.agent:embabel-agent-starter-webmvc",
+        "com.embabel.agent:embabel-agent-starter-observability",
         "com.embabel.agent:embabel-agent-test",
+        "org.springframework.boot:spring-boot-starter-actuator:" + SPRING_BOOT_VERSION,
+        # Versions inherited from the spring-boot-dependencies BOM below.
+        "io.micrometer:micrometer-tracing-bridge-otel",
+        "io.opentelemetry:opentelemetry-exporter-otlp",
+        "io.micrometer:micrometer-registry-prometheus",
         "org.jetbrains.kotlin:kotlin-reflect:" + KOTLIN_VERSION,
         "org.jetbrains.kotlin:kotlin-test-junit5:" + KOTLIN_VERSION,
         "org.junit.platform:junit-platform-launcher:" + JUNIT_PLATFORM_VERSION,
@@ -144,6 +150,11 @@ maven.install(
         # org.springframework.ai:* artifact resolves to one version rather than resolving
         # invisibly under version_conflict_policy = "pinned" below.
         "org.springframework.ai:spring-ai-bom:" + SPRING_AI_VERSION,
+        # Governs only the new observability artifacts above (micrometer-tracing-bridge-otel,
+        # opentelemetry-exporter-otlp, micrometer-registry-prometheus) — reuses Spring Boot's own
+        # dependency management instead of hand-picking three more version numbers with no BOM to
+        # keep them coherent. Existing individually-pinned Spring Boot coordinates are untouched.
+        "org.springframework.boot:spring-boot-dependencies:" + SPRING_BOOT_VERSION,
     ],
     repositories = [
         "https://repo.maven.apache.org/maven2",
