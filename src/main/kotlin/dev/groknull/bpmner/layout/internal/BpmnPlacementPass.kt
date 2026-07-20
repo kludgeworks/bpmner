@@ -13,8 +13,8 @@ import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.EdgeTerminalTailGuard
 import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
-import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
 import dev.groknull.bpmner.layout.internal.placement.ExceptionEdgeRoutes
+import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
 import dev.groknull.bpmner.layout.internal.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
 import dev.groknull.bpmner.layout.internal.placement.LabelWrap
