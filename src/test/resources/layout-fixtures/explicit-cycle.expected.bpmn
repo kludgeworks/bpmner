@@ -47,13 +47,13 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_cycle" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
-        <dc:Bounds height="36.0" width="51.357421875" x="729.40234375" y="29.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="737.0810546875" y="29.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_1">
           <dc:Bounds height="28.0" width="51.357421875" x="729.40234375" y="70.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_result" id="BPMNShape_Gw_result">
-        <dc:Bounds height="50.0" width="64.716796875" x="464.0078125" y="22.0"/>
+        <dc:Bounds height="50.0" width="50.0" x="471.3662109375" y="22.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_result">
           <dc:Bounds height="28.0" width="64.716796875" x="464.0078125" y="77.0"/>
         </bpmndi:BPMNLabel>
@@ -76,17 +76,17 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_check" id="BPMNEdge_Flow_check">
         <di:waypoint x="238.0" y="39.0"/>
-        <di:waypoint x="464.0078125" y="39.0"/>
+        <di:waypoint x="471.3662109375" y="39.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
-        <di:waypoint x="528.724609375" y="47.0"/>
-        <di:waypoint x="729.40234375" y="47.0"/>
+        <di:waypoint x="521.3662109375" y="47.0"/>
+        <di:waypoint x="737.0810546875" y="47.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
           <dc:Bounds height="20.0" width="20.677734375" x="618.724609375" y="50.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_retry" id="BPMNEdge_Flow_retry">
-        <di:waypoint x="464.0078125" y="55.0"/>
+        <di:waypoint x="471.3662109375" y="55.0"/>
         <di:waypoint x="399.0078125" y="55.0"/>
         <di:waypoint x="399.0078125" y="65.0"/>
         <di:waypoint x="238.0" y="65.0"/>

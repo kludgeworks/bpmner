@@ -91,7 +91,7 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="End_escalated" id="BPMNShape_End_escalated">
-        <dc:Bounds height="36.0" width="52.69921875" x="810.0" y="444.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="818.349609375" y="444.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_escalated">
           <dc:Bounds height="20.0" width="52.69921875" x="810.0" y="485.0"/>
         </bpmndi:BPMNLabel>
@@ -160,7 +160,7 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
         <di:waypoint x="720.0" y="462.0"/>
-        <di:waypoint x="810.0" y="462.0"/>
+        <di:waypoint x="818.349609375" y="462.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_normal" id="BPMNEdge_Flow_normal">
         <di:waypoint x="608.0" y="279.5"/>

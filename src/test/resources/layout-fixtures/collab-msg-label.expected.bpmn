@@ -121,7 +121,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_shop" id="BPMNShape_Start_shop">
-        <dc:Bounds height="36.0" width="70.69921875" x="62.0" y="54.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="79.349609375" y="54.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_shop">
           <dc:Bounds height="20.0" width="70.69921875" x="62.0" y="95.0"/>
         </bpmndi:BPMNLabel>
@@ -163,7 +163,7 @@
         <di:waypoint x="1518.08984375" y="102.33333333333333"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
-        <di:waypoint x="132.69921875" y="72.0"/>
+        <di:waypoint x="115.349609375" y="72.0"/>
         <di:waypoint x="222.69921875" y="72.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s2" id="BPMNEdge_Flow_s2">

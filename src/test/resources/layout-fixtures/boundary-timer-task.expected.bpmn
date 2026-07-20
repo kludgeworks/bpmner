@@ -67,19 +67,19 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
-        <dc:Bounds height="36.0" width="78.046875" x="566.03515625" y="199.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="587.05859375" y="199.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_ok">
           <dc:Bounds height="20.0" width="78.046875" x="566.03515625" y="240.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_timeout" id="BPMNShape_End_timeout">
-        <dc:Bounds height="36.0" width="87.375" x="506.03515625" y="319.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="531.72265625" y="319.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_timeout">
           <dc:Bounds height="20.0" width="87.375" x="506.03515625" y="360.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
-        <dc:Bounds height="36.0" width="84.03515625" x="12.0" y="199.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="36.017578125" y="199.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
           <dc:Bounds height="20.0" width="84.03515625" x="12.0" y="240.0"/>
         </bpmndi:BPMNLabel>
@@ -109,16 +109,16 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
-        <di:waypoint x="96.03515625" y="217.0"/>
+        <di:waypoint x="72.017578125" y="217.0"/>
         <di:waypoint x="186.03515625" y="217.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
         <di:waypoint x="476.03515625" y="217.0"/>
-        <di:waypoint x="566.03515625" y="217.0"/>
+        <di:waypoint x="587.05859375" y="217.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
         <di:waypoint x="416.03515625" y="337.0"/>
-        <di:waypoint x="506.03515625" y="337.0"/>
+        <di:waypoint x="531.72265625" y="337.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_normal" id="BPMNEdge_Flow_normal">
         <di:waypoint x="286.03515625" y="217.0"/>

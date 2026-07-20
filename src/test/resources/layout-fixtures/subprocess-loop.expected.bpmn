@@ -77,7 +77,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_check" id="BPMNShape_Gw_check">
-        <dc:Bounds height="50.0" width="52.025390625" x="504.0" y="109.5"/>
+        <dc:Bounds height="50.0" width="50.0" x="505.0126953125" y="109.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_check">
           <dc:Bounds height="20.0" width="52.025390625" x="504.0" y="164.5"/>
         </bpmndi:BPMNLabel>
@@ -114,14 +114,14 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_check" id="BPMNEdge_Flow_check">
         <di:waypoint x="414.0" y="134.5"/>
-        <di:waypoint x="504.0" y="134.5"/>
+        <di:waypoint x="505.0126953125" y="134.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_from_sub" id="BPMNEdge_Flow_from_sub">
         <di:waypoint x="858.69921875" y="134.5"/>
         <di:waypoint x="930.69921875" y="135.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_ok" id="BPMNEdge_Flow_ok">
-        <di:waypoint x="556.025390625" y="134.5"/>
+        <di:waypoint x="555.0126953125" y="134.5"/>
         <di:waypoint x="822.69921875" y="134.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_ok">
           <dc:Bounds height="20.0" width="18.673828125" x="646.025390625" y="145.0"/>

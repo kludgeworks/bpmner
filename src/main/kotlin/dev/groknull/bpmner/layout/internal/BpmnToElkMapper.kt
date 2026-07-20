@@ -400,10 +400,7 @@ internal object BpmnToElkMapper {
             label.height = height
         }
         node.setProperty(CoreOptions.NODE_LABELS_PLACEMENT, NodeLabelPlacement.outsideBottomCenter())
-        node.setProperty(
-            CoreOptions.NODE_SIZE_CONSTRAINTS,
-            EnumSet.of(SizeConstraint.NODE_LABELS, SizeConstraint.MINIMUM_SIZE),
-        )
+        node.setProperty(CoreOptions.NODE_SIZE_CONSTRAINTS, EnumSet.of(SizeConstraint.MINIMUM_SIZE))
     }
 
     private fun addEdgeLabel(edge: ElkEdge, name: String?) {

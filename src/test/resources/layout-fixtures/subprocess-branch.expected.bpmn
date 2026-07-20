@@ -120,7 +120,7 @@
         <dc:Bounds height="50.0" width="50.0" x="850.703125" y="172.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Gw_split" id="BPMNShape_Gw_split">
-        <dc:Bounds height="50.0" width="66.703125" x="504.0" y="172.0"/>
+        <dc:Bounds height="50.0" width="50.0" x="512.3515625" y="172.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Gw_split">
           <dc:Bounds height="20.0" width="66.703125" x="504.0" y="227.0"/>
         </bpmndi:BPMNLabel>
@@ -191,16 +191,16 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_1" id="BPMNEdge_SubFlow_1">
         <di:waypoint x="414.0" y="197.0"/>
-        <di:waypoint x="504.0" y="197.0"/>
+        <di:waypoint x="512.3515625" y="197.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_end" id="BPMNEdge_SubFlow_end">
         <di:waypoint x="900.703125" y="197.0"/>
         <di:waypoint x="1058.703125" y="197.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_lower" id="BPMNEdge_SubFlow_lower">
-        <di:waypoint x="570.703125" y="197.0"/>
-        <di:waypoint x="615.703125" y="197.0"/>
-        <di:waypoint x="615.703125" y="102.0"/>
+        <di:waypoint x="562.3515625" y="197.0"/>
+        <di:waypoint x="611.52734375" y="197.0"/>
+        <di:waypoint x="611.52734375" y="102.0"/>
         <di:waypoint x="660.703125" y="102.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_lower_join" id="BPMNEdge_SubFlow_lower_join">
@@ -210,9 +210,9 @@
         <di:waypoint x="850.703125" y="197.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper" id="BPMNEdge_SubFlow_upper">
-        <di:waypoint x="570.703125" y="197.0"/>
-        <di:waypoint x="615.703125" y="197.0"/>
-        <di:waypoint x="615.703125" y="267.0"/>
+        <di:waypoint x="562.3515625" y="197.0"/>
+        <di:waypoint x="611.52734375" y="197.0"/>
+        <di:waypoint x="611.52734375" y="267.0"/>
         <di:waypoint x="660.703125" y="267.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="SubFlow_upper_join" id="BPMNEdge_SubFlow_upper_join">

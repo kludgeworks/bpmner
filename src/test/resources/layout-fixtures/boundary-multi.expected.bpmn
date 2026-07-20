@@ -99,13 +99,13 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
-        <dc:Bounds height="36.0" width="44.0390625" x="518.0" y="364.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="522.01953125" y="364.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_ok">
           <dc:Bounds height="20.0" width="44.0390625" x="518.0" y="405.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_timeout" id="BPMNShape_End_timeout">
-        <dc:Bounds height="36.0" width="53.3671875" x="458.0" y="484.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="466.68359375" y="484.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_timeout">
           <dc:Bounds height="20.0" width="53.3671875" x="458.0" y="525.0"/>
         </bpmndi:BPMNLabel>
@@ -158,11 +158,11 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
         <di:waypoint x="428.0" y="382.0"/>
-        <di:waypoint x="518.0" y="382.0"/>
+        <di:waypoint x="522.01953125" y="382.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
         <di:waypoint x="368.0" y="502.0"/>
-        <di:waypoint x="458.0" y="502.0"/>
+        <di:waypoint x="466.68359375" y="502.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_4" id="BPMNEdge_Flow_4">
         <di:waypoint x="368.0" y="622.0"/>
