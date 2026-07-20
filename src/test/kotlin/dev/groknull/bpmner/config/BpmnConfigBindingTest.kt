@@ -8,6 +8,7 @@ package dev.groknull.bpmner.config
 import com.embabel.agent.api.common.Actor
 import com.embabel.agent.prompt.persona.Persona
 import com.embabel.common.ai.model.ByRoleModelSelectionCriteria
+import com.google.devtools.build.runfiles.Runfiles
 import dev.groknull.bpmner.alignment.internal.BpmnAlignmentConfig
 import dev.groknull.bpmner.authoring.internal.BpmnAuthoringConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
@@ -17,10 +18,12 @@ import dev.groknull.bpmner.ruleset.internal.BpmnRulesConfig
 import dev.groknull.bpmner.ruleset.internal.BpmnRulesUriConfig
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.test.context.SpringBootTest
+import java.io.File
 import kotlin.test.assertIs
 
 /**
@@ -113,6 +116,47 @@ class BpmnConfigBindingTest {
     @Test
     fun `rules config-uri binds for team bpmner pkl override`() {
         assertEquals("file:/tmp/team-bpmner.pkl", rulesUriConfig.configUri)
+    }
+
+    /**
+     * Static regression guard for the epic #592 native-enforcement assessment
+     * ([dev.groknull.bpmner.llm.defaultRoleLlmOptions]'s KDoc): all five roles stay on
+     * Embabel's implicit `NativeStructuredOutputMode.DEFAULT` (native output where supported,
+     * verified fallback otherwise). 1.0.0-RC1's `LlmOptions` exposes no inspectable
+     * native-structured-output field to assert against directly (verified via its public API),
+     * so this asserts the compile-time-visible equivalent: no `src/main` call site explicitly
+     * opts a role into `NATIVE`/`DISABLED` via `.withNativeStructuredOutput(...)`, which would
+     * silently regress a role off the fallback-safe default this assessment relies on.
+     */
+    @Test
+    fun `no role opts into an explicit native structured output mode`() {
+        val runfiles = Runfiles.preload().withSourceRepository("")
+        val anchor = runfiles.rlocation("bpmner/src/main/kotlin/dev/groknull/bpmner/llm/RoleLlmOptions.kt")
+            ?: runfiles.rlocation("_main/src/main/kotlin/dev/groknull/bpmner/llm/RoleLlmOptions.kt")
+            ?: runfiles.rlocation("src/main/kotlin/dev/groknull/bpmner/llm/RoleLlmOptions.kt")
+        assertTrue(anchor != null, "Could not resolve RoleLlmOptions.kt via runfiles")
+
+        var mainKotlinRoot = File(anchor).parentFile
+        while (mainKotlinRoot.name != "kotlin") {
+            mainKotlinRoot = mainKotlinRoot.parentFile
+                ?: error("Could not find 'kotlin' root above $anchor")
+        }
+
+        val offendingFiles = mainKotlinRoot.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" }
+            .filter { file ->
+                file.readLines().any { line ->
+                    val code = line.trim()
+                    !code.startsWith("*") && !code.startsWith("//") && code.contains(".withNativeStructuredOutput(")
+                }
+            }
+            .map { it.name }
+            .toList()
+
+        assertTrue(
+            offendingFiles.isEmpty(),
+            "Found src/main call site(s) opting into an explicit native structured output mode: $offendingFiles",
+        )
     }
 
     private fun assertActorRole(
