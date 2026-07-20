@@ -115,6 +115,25 @@ class CollaborationShapePlacementTest {
         )
     }
 
+    @Test
+    fun `keeps ELK black-box bounds for message-flow endpoints`() {
+        val root = ElkGraphUtil.createGraph()
+        val external = node(root, "Participant_external", Rect(440.0, 260.0, 100.0, 60.0))
+        val ctx = PlacementContext(
+            PlacementTestSkeletons.parse(BLACK_BOX_COLLABORATION_XML),
+            PlacementTestSkeletons.skeleton(root, mapOf("Participant_external" to external)),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        assertEquals(Rect(440.0, 260.0, 100.0, 60.0), ctx.shapes["Participant_external"])
+        assertEquals(Rect(440.0, 260.0, 30.0, 60.0), ctx.labels["Participant_external"])
+    }
+
     private fun node(
         parent: org.eclipse.elk.graph.ElkNode,
         id: String,
@@ -128,6 +147,12 @@ class CollaborationShapePlacementTest {
     }
 
     private companion object {
+        const val BLACK_BOX_COLLABORATION_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_internal" processRef="P"/><bpmn:participant id="Participant_external" name="External System"/></bpmn:collaboration>
+  <bpmn:process id="P"/>
+</bpmn:definitions>"""
+
         const val LANED_SUBPROCESS_WITH_BOUNDARY_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
   <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>

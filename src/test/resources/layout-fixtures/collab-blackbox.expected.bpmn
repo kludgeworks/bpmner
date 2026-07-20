@@ -53,9 +53,9 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_blackbox" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_external" id="BPMNShape_Participant_external" isHorizontal="true">
-        <dc:Bounds height="60.0" width="612.0" x="351.03515625" y="369.66666666666663"/>
+        <dc:Bounds height="60.0" width="100.0" x="12.0" y="15.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_external">
-          <dc:Bounds height="60.0" width="30.0" x="351.03515625" y="369.66666666666663"/>
+          <dc:Bounds height="60.0" width="30.0" x="12.0" y="15.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_internal" id="BPMNShape_Participant_internal" isHorizontal="true">
