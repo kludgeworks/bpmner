@@ -71,8 +71,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                     band.h,
                 )
             }
-            val baseX = participantBounds.x + PARTICIPANT_HEADER_WIDTH + LANE_LABEL_WIDTH - elkLaneBounds.x
-            val translation = Point(baseX, band.y - elkLaneBounds.y)
+            val translation = Point(PARTICIPANT_HEADER_WIDTH + LANE_LABEL_WIDTH, band.y - elkLaneBounds.y)
             laneMembers(lane).forEach { memberId -> translations[memberId] = translation }
             nextY += band.h
         }

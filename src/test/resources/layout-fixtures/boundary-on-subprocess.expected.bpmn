@@ -117,7 +117,7 @@
       <bpmndi:BPMNShape bpmnElement="SubProcess_1" id="BPMNShape_SubProcess_1" isExpanded="true">
         <dc:Bounds height="205.0" width="452.0" x="138.0" y="177.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_SubProcess_1">
-          <dc:Bounds height="20.0" width="43.359375" x="342.3203125" y="422.0"/>
+          <dc:Bounds height="20.0" width="43.359375" x="342.3203125" y="484.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="SubStart" id="BPMNShape_SubStart">

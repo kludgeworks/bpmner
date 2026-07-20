@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.layout.internal.placement
 
+import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.POSITION_EPSILON
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
@@ -63,6 +64,7 @@ internal object HandlerComponentAlignment {
     }
 
     val Repair: PlacementProcessor = PlacementProcessor { ctx ->
+        alignHandlerTerminalEnds(ctx)
         val shiftedIds = ctx.moves
             .filter { it.value.owner == "HandlerComponentAlignment" }
             .keys
@@ -149,9 +151,31 @@ internal object HandlerComponentAlignment {
                 }
             }
         }
-
         val chainBottom = thisHandlers.mapNotNull { state.ctx.shapes[it] }.maxOfOrNull { it.y + it.h } ?: floor
         return chainBottom + HANDLER_COMPONENT_Y_GAP
+    }
+
+    private fun alignHandlerTerminalEnds(ctx: PlacementContext) {
+        val flows = ctx.model.getModelElementsByType(SequenceFlow::class.java)
+        ctx.model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.EndEvent::class.java)
+            .forEach { end ->
+                val predecessorId = flows.filter { it.target?.id == end.id }
+                    .mapNotNull { it.source?.id }
+                    .singleOrNull() ?: return@forEach
+                if (ctx.moves[predecessorId]?.owner != "HandlerComponentAlignment") return@forEach
+                val predecessor = ctx.shapes[predecessorId] ?: return@forEach
+                val endRect = ctx.shapes[end.id] ?: return@forEach
+                val newY = predecessor.y + (predecessor.h - endRect.h) / 2.0
+                val dy = newY - endRect.y
+                if (kotlin.math.abs(dy) <= POSITION_EPSILON) return@forEach
+                ctx.shapes[end.id] = endRect.copy(y = newY)
+                val prior = ctx.moves[end.id]
+                ctx.moves[end.id] = MoveRecord(
+                    "HandlerComponentAlignment",
+                    prior?.dx ?: 0.0,
+                    (prior?.dy ?: 0.0) + dy,
+                )
+            }
     }
 
     private fun routeRejoinEdge(
@@ -163,11 +187,11 @@ internal object HandlerComponentAlignment {
     ) {
         val srcRect = shapes[srcId] ?: return
         val tgtRect = shapes[tgtId] ?: return
-        val srcCx = srcRect.x + srcRect.w / 2.0
-        val srcTop = srcRect.y
-        val tgtCy = tgtRect.y + tgtRect.h / 2.0
-        val enterX = if (srcCx <= tgtRect.x) tgtRect.x else tgtRect.x + tgtRect.w
-        edges[edgeId] = listOf(Point(srcCx, srcTop), Point(srcCx, tgtCy), Point(enterX, tgtCy))
+        val srcRight = srcRect.x + srcRect.w
+        val srcCy = srcRect.y + srcRect.h / 2.0
+        val tgtCx = tgtRect.x + tgtRect.w / 2.0
+        val tgtBottom = tgtRect.y + tgtRect.h
+        edges[edgeId] = listOf(Point(srcRight, srcCy), Point(tgtCx, srcCy), Point(tgtCx, tgtBottom))
     }
 
     private fun routeForwardToHandlerEdge(

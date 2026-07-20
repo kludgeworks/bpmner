@@ -93,9 +93,9 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="End_error" id="BPMNShape_End_error">
-        <dc:Bounds height="36.0" width="36.0" x="458.0" y="484.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="458.0" y="604.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_error">
-          <dc:Bounds height="20.0" width="32.68359375" x="459.658203125" y="525.0"/>
+          <dc:Bounds height="20.0" width="32.68359375" x="459.658203125" y="645.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_ok" id="BPMNShape_End_ok">
@@ -105,9 +105,9 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_timeout" id="BPMNShape_End_timeout">
-        <dc:Bounds height="36.0" width="53.3671875" x="458.0" y="604.0"/>
+        <dc:Bounds height="36.0" width="53.3671875" x="458.0" y="484.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_timeout">
-          <dc:Bounds height="20.0" width="53.3671875" x="458.0" y="645.0"/>
+          <dc:Bounds height="20.0" width="53.3671875" x="458.0" y="525.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
@@ -131,7 +131,7 @@
       <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
         <dc:Bounds height="80.0" width="100.0" x="138.0" y="342.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
-          <dc:Bounds height="20.0" width="77.35546875" x="149.322265625" y="462.0"/>
+          <dc:Bounds height="20.0" width="77.35546875" x="149.322265625" y="644.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
@@ -162,11 +162,11 @@
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
         <di:waypoint x="368.0" y="502.0"/>
-        <di:waypoint x="458.0" y="622.0"/>
+        <di:waypoint x="458.0" y="502.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_4" id="BPMNEdge_Flow_4">
         <di:waypoint x="368.0" y="622.0"/>
-        <di:waypoint x="458.0" y="502.0"/>
+        <di:waypoint x="458.0" y="622.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_error" id="BPMNEdge_Flow_error">
         <di:waypoint x="166.0" y="440.0"/>

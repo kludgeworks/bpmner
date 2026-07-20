@@ -93,7 +93,7 @@
       <bpmndi:BPMNShape bpmnElement="Task_process" id="BPMNShape_Task_process">
         <dc:Bounds height="80.0" width="100.0" x="186.03515625" y="177.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_process">
-          <dc:Bounds height="20.0" width="77.35546875" x="197.357421875" y="297.0"/>
+          <dc:Bounds height="20.0" width="77.35546875" x="197.357421875" y="359.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
