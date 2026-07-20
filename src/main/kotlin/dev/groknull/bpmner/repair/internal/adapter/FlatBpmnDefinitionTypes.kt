@@ -206,6 +206,20 @@ public data class FlatBpmnEventDefinition(
     val errorRef: String? = null,
 )
 
+/**
+ * Typed BPMN process definition describing the semantic topology of a workflow.
+ *
+ * **Schema-size audit (epic #592 stage 2, goal 4):** near-identical to
+ * `authoring.internal.adapter.outbound.FlatBpmnDefinition` (this file's `CPD-OFF`/`CPD-ON`
+ * suppression already documents the duplication as a deliberate, prior choice — de-duplicating
+ * the two copies was considered and rejected here, not deferred: they are separate LLM-facing
+ * types across the `authoring`/`repair` jMolecules Onion module boundary, and sharing one would
+ * require promoting it to a new shared location, which is exactly the cross-module leakage the
+ * architecture's exit gate forbids). The minimal-schema treatment (#171's alignment playbook)
+ * does not transfer either: repair's full-rewrite job produces the complete BPMN artifact, not a
+ * deviation report, so there is no smaller-than-the-whole-thing answer. Deferred with rationale,
+ * not applied: revisit only if an observed truncation/complexity failure on this schema surfaces.
+ */
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 public data class FlatBpmnDefinition(
     @field:NotBlank

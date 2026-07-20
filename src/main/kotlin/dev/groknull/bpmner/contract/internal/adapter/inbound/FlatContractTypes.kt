@@ -379,6 +379,15 @@ public data class FlatContractSubProcess(
     val sourceIds: List<String> = emptyList(),
 )
 
+/**
+ * Schema-size audit (epic #592 stage 2, goal 4): contract extraction's job is producing the
+ * complete process contract, not a deviation report, so the minimal/violations-only treatment
+ * `alignment` applies (#171) does not transfer here — there is no smaller-than-the-whole-thing
+ * answer to "here is the process contract." Every field already carries
+ * `@JsonClassDescription`/`@JsonPropertyDescription` worked instructions and
+ * `@NotBlank`/`@NotEmpty`/`@Valid`/`@Size` bounds. Deferred with rationale, not applied: revisit
+ * only if an observed truncation/complexity failure on this schema surfaces.
+ */
 @JsonClassDescription(
     "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
         "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +

@@ -204,6 +204,19 @@ public data class FlatBpmnEventDefinition(
     val errorRef: String? = null,
 )
 
+/**
+ * Typed BPMN process definition describing the semantic topology of a workflow.
+ *
+ * **Schema-size audit (epic #592 stage 2, goal 4):** this is one of the two largest
+ * LLM-facing schemas in bpmner (100+ field types across 3 levels, alongside its near-identical
+ * `repair.internal.adapter.FlatBpmnDefinition` copy). Unlike `alignment`'s violations-only
+ * schema (#171), generation's job is producing the complete BPMN artifact — there is no
+ * smaller-than-the-whole-thing answer, so the minimal-schema treatment does not transfer; every
+ * field here already carries `@JsonClassDescription`/`@JsonPropertyDescription` worked
+ * instructions and `@NotBlank`/`@NotEmpty`/`@Valid`/`@Size` bounds. Deferred with rationale, not
+ * applied: revisit only if an observed truncation/complexity failure on this schema surfaces
+ * (none exists today, unlike readiness's triggering failure).
+ */
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 public data class FlatBpmnDefinition(
     @field:NotBlank
