@@ -18,10 +18,12 @@ import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.styleGuideContribution
 import dev.groknull.bpmner.conformance.BpmnDiagnostic
+import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.repair.BpmnRepairConfig
 import dev.groknull.bpmner.repair.internal.adapter.FlatBpmnDefinition
 import dev.groknull.bpmner.repair.internal.adapter.toSealed
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @Component
@@ -30,6 +32,7 @@ internal class BpmnLlmRepairApplier(
     private val patchApplier: BpmnPatchApplicationPort,
     private val advancer: BpmnRepairAdvancer,
     private val config: BpmnRepairConfig,
+    private val eventPublisher: ApplicationEventPublisher,
 ) {
     private val logger = LoggerFactory.getLogger(BpmnLlmRepairApplier::class.java)
 
@@ -46,6 +49,7 @@ internal class BpmnLlmRepairApplier(
             feedback = feedback,
             patchTypeName = "LLM label patch",
             labelOnly = true,
+            role = "repair-label",
         )
     }
 
@@ -62,6 +66,7 @@ internal class BpmnLlmRepairApplier(
             feedback = feedback,
             patchTypeName = "LLM structural patch",
             labelOnly = false,
+            role = "repair-patch",
         )
     }
 
@@ -91,6 +96,7 @@ internal class BpmnLlmRepairApplier(
         feedback: String,
         patchTypeName: String,
         labelOnly: Boolean,
+        role: String,
     ): BpmnRepairEvaluation {
         val runner = promptRunner(repairEval, operationContext, actor)
         // See applyFullLlmRewrite for why this uses `createObject` rather than
@@ -100,6 +106,7 @@ internal class BpmnLlmRepairApplier(
             messages = repairEval.messages + UserMessage(feedback),
             patchTypeName = patchTypeName,
             labelOnly = labelOnly,
+            role = role,
         )
         val application = patchApplier.apply(repairEval.definition, patch)
         val success = patchSuccessOrReplan(application, patchTypeName)
@@ -126,7 +133,9 @@ internal class BpmnLlmRepairApplier(
         runner: PromptRunner,
         messages: List<com.embabel.chat.Message>,
     ): BpmnDefinition = try {
-        runner.createObject(messages, FlatBpmnDefinition::class.java).toSealed()
+        eventPublisher.publishOnInvalidLlmReturn("repair-rewrite") {
+            runner.createObject(messages, FlatBpmnDefinition::class.java)
+        }.toSealed()
     } catch (e: InvalidLlmReturnFormatException) {
         throw RepairReplans.signal("LLM rewrite failed to produce a structured definition: ${e.message}", e)
     } catch (e: InvalidLlmReturnTypeException) {
@@ -143,14 +152,17 @@ internal class BpmnLlmRepairApplier(
         messages: List<com.embabel.chat.Message>,
         patchTypeName: String,
         labelOnly: Boolean,
+        role: String,
     ): BpmnRepairPatch = try {
-        if (labelOnly) {
-            runner
-                .creating(BpmnRepairPatch::class.java)
-                .withoutProperties("node", "edge")
-                .fromMessages(messages)
-        } else {
-            runner.createObject(messages, BpmnRepairPatch::class.java)
+        eventPublisher.publishOnInvalidLlmReturn(role) {
+            if (labelOnly) {
+                runner
+                    .creating(BpmnRepairPatch::class.java)
+                    .withoutProperties("node", "edge")
+                    .fromMessages(messages)
+            } else {
+                runner.createObject(messages, BpmnRepairPatch::class.java)
+            }
         }
     } catch (e: InvalidLlmReturnFormatException) {
         throw RepairReplans.signal("$patchTypeName failed to produce a structured patch: ${e.message}", e)
