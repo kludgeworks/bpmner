@@ -194,7 +194,7 @@ These tests are gated via Bazel's `manual` tag to prevent accidental LLM invocat
 
 Merges to `main` feed [release-please](https://github.com/googleapis/release-please) through Conventional Commits. Release Please opens or updates a release PR that prepares `CHANGELOG.md` and repository release metadata; merging that PR creates the GitHub release.
 
-Publishing packages or artifacts is intentionally not configured. The release workflow uses the repository-provided `GITHUB_TOKEN`; maintainers only need to switch to a dedicated token secret if release-please-created PRs must trigger additional workflows.
+When a release is created, the workflow builds `//src:bpmner_app` and attaches the versioned jar plus a `SHA256SUMS` checksum file to the GitHub release. The workflow authenticates as the `kludgebot` GitHub App rather than the repository-provided `GITHUB_TOKEN`, since GitHub does not let `GITHUB_TOKEN`-authored events trigger other workflows — a real actor identity is required so status checks actually run against the release pull request.
 
 ## Contributing
 
