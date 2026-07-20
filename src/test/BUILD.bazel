@@ -119,6 +119,7 @@ _TIMEOUTS = {
     "ConformanceModuleTest": "moderate",
     "ContractModuleTest": "moderate",
     "LayoutModuleTest": "moderate",
+    "LlmBpmnProcessGeneratorReliabilityTest": "long",
     "ObservabilityRedactionTest": "moderate",
     "PipelineModuleTest": "moderate",
     "PklRuleCatalogTest": "moderate",
@@ -168,6 +169,7 @@ _TAGS = {
 }
 
 _DATA = {
+    "BpmnConfigBindingTest": ["//src:analysis_srcs"],
     "HandlerSourceSanityTest": ["//src:analysis_srcs"],
 }
 

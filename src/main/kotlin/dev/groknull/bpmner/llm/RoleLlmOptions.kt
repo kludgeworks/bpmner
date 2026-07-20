@@ -20,6 +20,15 @@ import com.embabel.common.ai.model.LlmOptions
  * `.withNativeStructuredOutput(NativeStructuredOutputMode.DISABLED)` remains available
  * on a specific role's [LlmOptions] as an escape hatch if a future schema change needs
  * to force the fallback path explicitly.
+ *
+ * Every role bound to this seam — readiness, alignment, contract-extractor, generator, and
+ * repair's role-routing strings (repair-label, repair-patch, repair-rewrite, repairer) —
+ * stays on `DEFAULT` for every provider (OpenAI, Anthropic, Gemini, Mistral, and the
+ * OpenAI-compatible registrations); none forces `NATIVE`. No role's schema or observed
+ * failure history argues for forcing `NATIVE` (which would remove the fallback safety net
+ * `DEFAULT` gives for free) or `DISABLED` (which defeats the point of the opt-in).
+ * `BpmnConfigBindingTest` statically guards that no role's `LlmOptions` has diverged from
+ * this.
  */
 fun defaultRoleLlmOptions(role: String): LlmOptions =
     LlmOptions.withLlmForRole(role).withAnthropicCaching(systemPrompt = true, tools = true)

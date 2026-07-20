@@ -204,6 +204,16 @@ public data class FlatBpmnEventDefinition(
     val errorRef: String? = null,
 )
 
+/**
+ * Typed BPMN process definition describing the semantic topology of a workflow.
+ *
+ * One of the largest LLM-facing schemas in bpmner (100+ field types across 3 levels,
+ * alongside its near-identical `repair.internal.adapter.FlatBpmnDefinition` copy).
+ * Generation's job is producing the complete BPMN artifact, not a deviation report, so
+ * a minimal, violations-only schema does not fit here; every field already carries
+ * `@JsonClassDescription`/`@JsonPropertyDescription` worked instructions and
+ * `@NotBlank`/`@NotEmpty`/`@Valid`/`@Size` bounds.
+ */
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 public data class FlatBpmnDefinition(
     @field:NotBlank

@@ -206,6 +206,17 @@ public data class FlatBpmnEventDefinition(
     val errorRef: String? = null,
 )
 
+/**
+ * Typed BPMN process definition describing the semantic topology of a workflow.
+ *
+ * Near-identical to `authoring.internal.adapter.outbound.FlatBpmnDefinition` (this file's
+ * `CPD-OFF`/`CPD-ON` suppression documents the duplication as deliberate): the two are
+ * separate LLM-facing types across the `authoring`/`repair` jMolecules Onion module
+ * boundary, and sharing one would require promoting it to a new shared location, which
+ * is exactly the cross-module leakage the architecture's exit gate forbids. Repair's
+ * full-rewrite job also produces the complete BPMN artifact, not a deviation report, so
+ * a minimal, violations-only schema does not fit here either.
+ */
 @JsonClassDescription("Typed BPMN process definition describing the semantic topology of a workflow")
 public data class FlatBpmnDefinition(
     @field:NotBlank

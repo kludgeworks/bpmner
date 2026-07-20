@@ -379,6 +379,13 @@ public data class FlatContractSubProcess(
     val sourceIds: List<String> = emptyList(),
 )
 
+/**
+ * Contract extraction's job is producing the complete process contract, not a deviation
+ * report, so a minimal, violations-only schema does not fit here — there is no
+ * smaller-than-the-whole-thing answer to "here is the process contract." Every field
+ * already carries `@JsonClassDescription`/`@JsonPropertyDescription` worked instructions
+ * and `@NotBlank`/`@NotEmpty`/`@Valid`/`@Size` bounds.
+ */
 @JsonClassDescription(
     "Source-grounded process contract extracted before BPMN generation. Flat wire shape: each " +
         "sealed hierarchy is collapsed to a single object with a `kind` discriminator and optional " +
