@@ -119,9 +119,9 @@ class BpmnConfigBindingTest {
     }
 
     /**
-     * Static regression guard for the epic #592 native-enforcement assessment
-     * ([dev.groknull.bpmner.llm.defaultRoleLlmOptions]'s KDoc): all five roles stay on
-     * Embabel's implicit `NativeStructuredOutputMode.DEFAULT` (native output where supported,
+     * Static regression guard for [dev.groknull.bpmner.llm.defaultRoleLlmOptions]'s
+     * native-enforcement contract: every role stays on Embabel's implicit
+     * `NativeStructuredOutputMode.DEFAULT` (native output where supported,
      * verified fallback otherwise). 1.0.0-RC1's `LlmOptions` exposes no inspectable
      * native-structured-output field to assert against directly (verified via its public API),
      * so this asserts the compile-time-visible equivalent: no `src/main` call site explicitly

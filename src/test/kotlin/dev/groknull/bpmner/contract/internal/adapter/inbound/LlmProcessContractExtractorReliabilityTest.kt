@@ -29,9 +29,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * Regression guard for the contract-extraction structured-output reliability fix (epic #592
- * stage 2): the framework's own `InvalidLlmReturn*` failures — raised directly from the LLM call,
- * before `flat.toSealed()` runs — must translate to a [BpmnContractExtractionException] marked
+ * Regression guard for contract extraction's structured-output reliability: the framework's
+ * own `InvalidLlmReturn*` failures — raised directly from the LLM call, before
+ * `flat.toSealed()` runs — must translate to a [BpmnContractExtractionException] marked
  * [NonRetryable], not ride the action's default retry policy alongside the legitimate
  * `RetryableBpmnGenerationException` structural-incompleteness path. Exercises the real
  * `ProcessContractExtractor.extract(...)` call path via [AgentPlatformBpmnAgentInvoker.generate],

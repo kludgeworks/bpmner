@@ -37,8 +37,8 @@ import org.springframework.context.ApplicationEventPublisher
 import kotlin.test.assertIs
 
 /**
- * Regression guard for repair's observability-only fix (epic #592 stage 2): each of the three
- * used LLM call sites (`applyLlmLabelPatch`, `applyLlmStructuralPatch`, `applyFullLlmRewrite`)
+ * Regression guard for repair's structured-output observability: each of the three used
+ * LLM call sites (`applyLlmLabelPatch`, `applyLlmStructuralPatch`, `applyFullLlmRewrite`)
  * must publish a [StructuredOutputFailureEvent] with the matching role string
  * (`repair-label`/`repair-patch`/`repair-rewrite`) when the underlying prompt runner throws one
  * of Embabel's `InvalidLlmReturn*` exceptions, while the existing `ReplanRequestedException`

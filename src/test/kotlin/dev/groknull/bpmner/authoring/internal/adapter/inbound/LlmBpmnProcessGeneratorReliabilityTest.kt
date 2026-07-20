@@ -31,9 +31,9 @@ import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
- * Regression guard for the outline-generation structured-output reliability fix (epic #592
- * stage 2): the framework's own `InvalidLlmReturn*` failures — raised directly from the LLM call
- * that produces the raw [FlatBpmnDefinition], before `flat.toSealed()` runs — must translate to a
+ * Regression guard for outline generation's structured-output reliability: the framework's
+ * own `InvalidLlmReturn*` failures — raised directly from the LLM call that produces the raw
+ * [FlatBpmnDefinition], before `flat.toSealed()` runs — must translate to a
  * [BpmnOutlineGenerationException] marked [NonRetryable]. The existing, untouched
  * `toSealed()`-incompleteness path (a manufactured
  * `InvalidLlmReturnFormatException`, re-thrown to keep the planner's outline-retry engaged) must
