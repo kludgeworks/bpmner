@@ -55,15 +55,15 @@ class CollaborationShapePlacementTest {
         assertEquals(Rect(40.0, 180.0, 470.0, 80.0), ctx.shapes["Lane_delivery"])
         assertEquals(Rect(10.0, 20.0, 30.0, 240.0), ctx.labels["Participant_1"])
         assertEquals(Rect(40.0, 20.0, 30.0, 80.0), ctx.labels["Lane_sales"])
-        assertEquals(Rect(90.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Start_1"])
-        assertEquals(Rect(90.0, 120.0, 100.0, 80.0), ctx.shapes["Task_pick"])
+        assertEquals(Rect(60.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Start_1"])
+        assertEquals(Rect(60.0, 120.0, 100.0, 80.0), ctx.shapes["Task_pick"])
         assertEquals(
             listOf(
-                BpmnPlacementPass.Point(108.0, 76.0),
-                BpmnPlacementPass.Point(108.0, 98.0),
-                BpmnPlacementPass.Point(140.0, 98.0),
-                BpmnPlacementPass.Point(140.0, 120.0),
+                BpmnPlacementPass.Point(78.0, 76.0),
+                BpmnPlacementPass.Point(78.0, 98.0),
+                BpmnPlacementPass.Point(110.0, 98.0),
+                BpmnPlacementPass.Point(110.0, 120.0),
             ),
             ctx.edges["Flow_1"],
         )
@@ -105,12 +105,12 @@ class CollaborationShapePlacementTest {
 
         CollaborationShapePlacement.process(ctx)
 
-        assertEquals(Rect(100.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
-        assertEquals(Rect(110.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Task_child"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Boundary_1"])
+        assertEquals(Rect(70.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
+        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Task_child"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Boundary_1"])
         assertEquals(
-            listOf(BpmnPlacementPass.Point(128.0, 108.0), BpmnPlacementPass.Point(320.0, 80.0)),
+            listOf(BpmnPlacementPass.Point(98.0, 108.0), BpmnPlacementPass.Point(290.0, 80.0)),
             ctx.edges["Flow_exception"],
         )
     }

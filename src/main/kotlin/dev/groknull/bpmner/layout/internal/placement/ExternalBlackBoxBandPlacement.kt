@@ -30,7 +30,7 @@ internal object ExternalBlackBoxBandPlacement : PlacementProcessor {
             ctx.shapes[participant.id] = band
             ctx.labels[participant.id] = Rect(band.x, band.y, PARTICIPANT_HEADER_WIDTH, band.h)
             recordMove(participant, band, ctx)
-            reattachTerminals(participant, band, collaboration.messageFlows, ctx)
+            regenerateRoutes(participant, band, collaboration.messageFlows, ctx)
             nextY += band.h + PARTICIPANT_GAP
         }
     }
@@ -41,37 +41,36 @@ internal object ExternalBlackBoxBandPlacement : PlacementProcessor {
         ctx.moves[participant.id] = MoveRecord(OWNER, band.x - x, band.y - y)
     }
 
-    private fun reattachTerminals(
+    /**
+     * Builds each incident message flow as a direct route to the relocated band. These flows are
+     * never modelled as ELK graph edges ([BpmnToElkMapper.mapMessageFlows] excludes them, since
+     * ELK cannot know this BPMN presentation exception's final position), so this is the sole
+     * owner of their route and label, not a repair of an ELK-produced one. The band is always
+     * below the white-box participant, so the fixed endpoint's bottom edge always faces the
+     * band's top edge: the route is a single vertical run between them, with the label centred
+     * on its midpoint.
+     */
+    private fun regenerateRoutes(
         participant: Participant,
         band: Rect,
         flows: Collection<MessageFlow>,
         ctx: PlacementContext,
     ) {
         flows.filter { it.source?.id == participant.id || it.target?.id == participant.id }.forEach { flow ->
-            val points = ctx.edges[flow.id] ?: return@forEach
-            if (points.size < 2) return@forEach
-            ctx.edges[flow.id] = if (flow.source?.id == participant.id) {
-                listOf(intersection(points[1], band)) + points.drop(1)
-            } else {
-                points.dropLast(1) + intersection(points[points.lastIndex - 1], band)
+            val fromBlackBox = flow.source?.id == participant.id
+            val fixedId = if (fromBlackBox) flow.target?.id else flow.source?.id
+            val fixed = ctx.shapes[fixedId] ?: return@forEach
+            val cx = (fixed.x + fixed.w / 2.0).coerceIn(band.x, band.x + band.w)
+            val fixedPoint = Point(cx, fixed.y + fixed.h)
+            val bandPoint = Point(cx, band.y)
+            val route = if (fromBlackBox) listOf(bandPoint, fixedPoint) else listOf(fixedPoint, bandPoint)
+            ctx.edges[flow.id] = route
+            if (!flow.name.isNullOrBlank()) {
+                val (width, height) = BpmnPlacementPass.estimateLabelDimensions(flow.name, BpmnPlacementPass.EDGE_LABEL_WIDTH)
+                val midX = (route.first().x + route.last().x) / 2.0
+                val midY = (route.first().y + route.last().y) / 2.0
+                ctx.labels[flow.id] = Rect(midX - width / 2.0, midY - height / 2.0, width, height)
             }
         }
-    }
-
-    private fun intersection(adjacent: Point, rect: Rect): Point {
-        val center = Point(rect.x + rect.w / 2.0, rect.y + rect.h / 2.0)
-        val dx = center.x - adjacent.x
-        val dy = center.y - adjacent.y
-        val candidates = listOf(rect.x, rect.x + rect.w)
-            .mapNotNull { x -> if (dx == 0.0) null else (x - adjacent.x) / dx }
-            .plus(listOf(rect.y, rect.y + rect.h).mapNotNull { y -> if (dy == 0.0) null else (y - adjacent.y) / dy })
-            .filter { it in 0.0..1.0 }
-            .filter { t ->
-                val x = adjacent.x + dx * t
-                val y = adjacent.y + dy * t
-                x in rect.x..rect.x + rect.w && y in rect.y..rect.y + rect.h
-            }
-        val t = candidates.minOrNull() ?: return center
-        return Point(adjacent.x + dx * t, adjacent.y + dy * t)
     }
 }

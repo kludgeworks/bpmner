@@ -369,15 +369,29 @@ internal object BpmnToElkMapper {
             }
     }
 
-    /** Maps collaboration-level edges after their node endpoints have been added to the hierarchy. */
+    /**
+     * Maps collaboration-level edges after their node endpoints have been added to the hierarchy.
+     *
+     * Flows incident to a black-box participant (no [Participant.getProcess]) are excluded: that
+     * participant's rendered position is always decided afterward by the bounded
+     * `ExternalBlackBoxBandPlacement` BPMN exception, which fully regenerates the flow's route
+     * rather than projecting ELK's section. Modelling them as real graph edges anyway buys nothing
+     * and actively harms the primary flow: ELK inserts hierarchical port dummies for the
+     * cross-hierarchy edge into the white-box participant's own layered graph, so its crossing
+     * minimisation and network-simplex node placement shift the flow's in-process endpoint
+     * (`Task_send`/`Task_receive`-style nodes) off the primary flow's baseline to accommodate a
+     * routing decision that is discarded anyway.
+     */
     private fun mapMessageFlows(
         collaboration: Collaboration,
         nodeMap: Map<String, ElkNode>,
         edgeMap: MutableMap<String, ElkEdge>,
     ) {
+        val blackBoxIds = collaboration.participants.filter { it.process == null }.mapTo(mutableSetOf()) { it.id }
         collaboration.messageFlows.forEach { flow ->
             val sourceId = (flow.source as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
             val targetId = (flow.target as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
+            if (sourceId in blackBoxIds || targetId in blackBoxIds) return@forEach
             val source = nodeMap[sourceId] ?: return@forEach
             val target = nodeMap[targetId] ?: return@forEach
             if (source.parent == null || target.parent == null) return@forEach
