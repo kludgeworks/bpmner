@@ -90,7 +90,7 @@ class LlmBpmnProcessGeneratorReliabilityTest : EmbabelMockitoIntegrationTest() {
      * structurally incomplete node (BUSINESS_RULE_TASK with no `decisionRef`) that parses fine as
      * JSON but fails `toSealed()` must still surface as the framework's own
      * `InvalidLlmReturnFormatException` — not [BpmnOutlineGenerationException] — so the planner's
-     * outline-retry path keeps engaging exactly as before this issue.
+     * outline-retry path keeps engaging unchanged.
      */
     @Test
     fun `a structurally incomplete node still surfaces the framework's InvalidLlmReturnFormatException unchanged`() {
