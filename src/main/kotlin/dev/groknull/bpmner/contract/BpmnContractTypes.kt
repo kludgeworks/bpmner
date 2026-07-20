@@ -5,6 +5,7 @@
 
 package dev.groknull.bpmner.contract
 
+import com.embabel.agent.core.NonRetryable
 import com.fasterxml.jackson.annotation.JsonClassDescription
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonPropertyDescription
@@ -17,6 +18,20 @@ import jakarta.validation.Valid
 import jakarta.validation.constraints.NotBlank
 import jakarta.validation.constraints.NotEmpty
 import jakarta.validation.constraints.Size
+
+/**
+ * Signals that the contract extractor's structured-output call failed on Embabel's stable
+ * `InvalidLlmReturn*` surface — malformed or invalid model output, not the legitimate
+ * structurally-incomplete-contract retry path (`RetryableBpmnGenerationException`, thrown from
+ * `toSealed()` after this call already succeeded). Marked [NonRetryable] because the framework's
+ * default retry policy would otherwise keep retrying a doomed raw-format failure alongside the
+ * legitimate retry the same action already performs for structural incompleteness.
+ */
+class BpmnContractExtractionException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause),
+    NonRetryable
 
 @JsonClassDescription("Source-grounded process start declaration")
 data class ContractStart(

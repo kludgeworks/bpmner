@@ -6,10 +6,14 @@
 package dev.groknull.bpmner.contract.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.api.common.PromptRunner
+import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import com.embabel.common.ai.prompt.PromptContributor
 import dev.groknull.bpmner.bpmn.BpmnRequest
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import dev.groknull.bpmner.bpmn.styleGuideContribution
+import dev.groknull.bpmner.contract.BpmnContractExtractionException
 import dev.groknull.bpmner.contract.ContractIssueSeverity
 import dev.groknull.bpmner.contract.ProcessContractExtractor
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
@@ -18,10 +22,12 @@ import dev.groknull.bpmner.contract.format
 import dev.groknull.bpmner.contract.internal.BpmnContractConfig
 import dev.groknull.bpmner.contract.internal.BpmnContractThresholdsConfig
 import dev.groknull.bpmner.contract.internal.domain.BpmnContractValidator
+import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ProcessInputAssessment
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.stereotype.Component
 
 @InfrastructureRing
@@ -31,6 +37,7 @@ internal class LlmProcessContractExtractor(
     private val thresholds: BpmnContractThresholdsConfig,
     private val validator: BpmnContractValidator,
     private val markdownRenderer: ProcessContractMarkdownRenderer,
+    private val eventPublisher: ApplicationEventPublisher,
 ) : ProcessContractExtractor {
     private val logger = LoggerFactory.getLogger(LlmProcessContractExtractor::class.java)
 
@@ -45,18 +52,7 @@ internal class LlmProcessContractExtractor(
                 .promptRunner(context)
                 .withPromptContributor(PromptContributor.fixed(request.styleGuideContribution()))
 
-        val flat = promptRunner
-            .creating(FlatProcessContract::class.java)
-            // Typed few-shot examples for the retained discrimination boundaries GPT-4.1
-            // does not reliably reproduce from keyword descriptions alone (see ContractExtractionExamples).
-            .withExample(ContractExtractionExamples.MESSAGE_END_LABEL, ContractExtractionExamples.messageEndExample)
-            .withExample(ContractExtractionExamples.SEND_TASK_LABEL, ContractExtractionExamples.sendTaskExample)
-            .withExample(ContractExtractionExamples.INTERMEDIATE_THROW_LABEL, ContractExtractionExamples.intermediateThrowExample)
-            .withExample(ContractExtractionExamples.SEND_THEN_NORMAL_LABEL, ContractExtractionExamples.sendThenNormalExample)
-            .withExample(ContractExtractionExamples.INCLUSIVE_GATEWAY_LABEL, ContractExtractionExamples.inclusiveGatewayExample)
-            .withExample(ContractExtractionExamples.BUSINESS_RULE_TASK_LABEL, ContractExtractionExamples.businessRuleTaskExample)
-            .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
-            .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
+        val flat = requestFlatContract(promptRunner, request, assessment)
         val contract = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {
@@ -77,6 +73,53 @@ internal class LlmProcessContractExtractor(
             )
         }
         return ValidatedProcessContract(contract = contract, report = report)
+    }
+
+    /**
+     * Requests the raw [FlatProcessContract] and translates only the framework's own
+     * `InvalidLlmReturn*` (malformed/invalid model output) into [BpmnContractExtractionException],
+     * a [com.embabel.agent.core.NonRetryable] signal. The caller's `flat.toSealed()` catch block
+     * — the legitimate structural-incompleteness retry — sits outside this method and is
+     * untouched: only the genuine framework parse/validation failure is capped here.
+     */
+    private fun requestFlatContract(
+        promptRunner: PromptRunner,
+        request: BpmnRequest,
+        assessment: ProcessInputAssessment,
+    ): FlatProcessContract = try {
+        eventPublisher.publishOnInvalidLlmReturn("contract") {
+            promptRunner
+                .creating(FlatProcessContract::class.java)
+                // Typed few-shot examples for the retained discrimination boundaries GPT-4.1
+                // does not reliably reproduce from keyword descriptions alone (see ContractExtractionExamples).
+                .withExample(ContractExtractionExamples.MESSAGE_END_LABEL, ContractExtractionExamples.messageEndExample)
+                .withExample(ContractExtractionExamples.SEND_TASK_LABEL, ContractExtractionExamples.sendTaskExample)
+                .withExample(
+                    ContractExtractionExamples.INTERMEDIATE_THROW_LABEL,
+                    ContractExtractionExamples.intermediateThrowExample,
+                )
+                .withExample(ContractExtractionExamples.SEND_THEN_NORMAL_LABEL, ContractExtractionExamples.sendThenNormalExample)
+                .withExample(
+                    ContractExtractionExamples.INCLUSIVE_GATEWAY_LABEL,
+                    ContractExtractionExamples.inclusiveGatewayExample,
+                )
+                .withExample(
+                    ContractExtractionExamples.BUSINESS_RULE_TASK_LABEL,
+                    ContractExtractionExamples.businessRuleTaskExample,
+                )
+                .withExample(ContractExtractionExamples.SUB_PROCESS_LABEL, ContractExtractionExamples.subProcessExample)
+                .fromTemplate("bpmner/extract_contract", templateModel(request, assessment))
+        }
+    } catch (e: InvalidLlmReturnFormatException) {
+        throw BpmnContractExtractionException(
+            "Contract extraction model failed to produce a structured ProcessContract: ${e.message}",
+            e,
+        )
+    } catch (e: InvalidLlmReturnTypeException) {
+        throw BpmnContractExtractionException(
+            "Contract extraction model returned an invalid ProcessContract: ${e.message}",
+            e,
+        )
     }
 
     private fun templateModel(
