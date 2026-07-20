@@ -26,13 +26,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
         with:
-          install: true
-          cache: true
-        env:
-          MISE_LOCKED: 0
+          setup-bazel: "false"
 
       - name: Run hk lint checks
         run: hk check all
@@ -47,20 +44,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
-        with:
-          install: true
-          cache: true
-        env:
-          MISE_LOCKED: 0
-
-      - name: Setup Bazel
-        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: false
-          repository-cache: true
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
 
       - name: Build and run all tests
         # Unit tests exclude the live-llm/integration tags (see .bazelrc default
@@ -100,21 +85,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Setup mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
         with:
-          install: true
-          cache: true
-        env:
-          MISE_LOCKED: 0
-
-      - name: Setup Bazel
-        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: false
-          repository-cache: true
-          cache-save: false
+          bazel-cache-save: "false"
 
       - name: Compute shard index for this run
         id: shard
@@ -215,21 +189,10 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup mise
-        uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 #v4.0.1
+      - name: Setup build environment
+        uses: ./.github/actions/setup-build-env
         with:
-          install: true
-          cache: true
-        env:
-          MISE_LOCKED: 0
-
-      - name: Setup Bazel
-        uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
-        with:
-          bazelisk-cache: true
-          disk-cache: false
-          repository-cache: true
-          cache-save: false
+          bazel-cache-save: "false"
 
       - name: Run Bazel coverage
         id: coverage

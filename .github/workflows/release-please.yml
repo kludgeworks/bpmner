@@ -17,9 +17,53 @@ jobs:
   release-please:
     runs-on: ubuntu-latest
     steps:
+      # release-please's created PR/tag must not be authored by GITHUB_TOKEN: GitHub's
+      # anti-recursion guard means GITHUB_TOKEN-authored events never trigger other
+      # workflows, so the release PR's required checks (lint, pr-title, test-unit) would
+      # never run and it could never merge. Minting from the kludgebot app gives it a
+      # real actor identity instead.
+      - name: Mint bpmner automation token (GitHub App)
+        id: app-token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.SMOKE_HISTORY_APP_ID }}
+          private-key: ${{ secrets.SMOKE_HISTORY_APP_PRIVATE_KEY }}
+          owner: kludgeworks
+          repositories: bpmner
+          permission-contents: write
+          permission-pull-requests: write
+          permission-issues: write
+
       - name: Create or update release PR
+        id: release
         uses: googleapis/release-please-action@45996ed1f6d02564a971a2fa1b5860e934307cf7 # v5.0.0
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Checkout repository
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: actions/checkout@v6
+
+      - name: Setup build environment
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        uses: ./.github/actions/setup-build-env
+
+      - name: Build bpmner jar
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: bazel build //src:bpmner_app
+
+      - name: Stage versioned release artifact
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        run: |
+          cp bazel-bin/src/bpmner_app.jar "bpmner-${{ steps.release.outputs.version }}.jar"
+          sha256sum "bpmner-${{ steps.release.outputs.version }}.jar" > SHA256SUMS
+
+      - name: Upload release artifact
+        if: ${{ steps.release.outputs.release_created == 'true' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release.outputs.tag_name }} \
+            "bpmner-${{ steps.release.outputs.version }}.jar" SHA256SUMS

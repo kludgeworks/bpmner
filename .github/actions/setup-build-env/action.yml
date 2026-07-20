@@ -1,0 +1,36 @@
+# Copyright 2026 The Project Contributors
+# SPDX-License-Identifier: MIT
+
+name: Setup build environment
+description: >
+  Install mise-managed tools and (optionally) prime Bazel's GitHub Actions
+  caches. Callers must checkout the repository themselves first — a local
+  composite action can't check out the repo it's defined in before it runs.
+
+inputs:
+  setup-bazel:
+    description: Whether to run bazel-contrib/setup-bazel (skip for jobs that don't invoke bazel, e.g. lint)
+    default: "true"
+  bazel-cache-save:
+    description: Passed through to setup-bazel's cache-save input
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Setup mise
+      uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4.0.1
+      with:
+        install: true
+        cache: true
+      env:
+        MISE_LOCKED: 0
+
+    - name: Setup Bazel
+      if: inputs.setup-bazel == 'true'
+      uses: bazel-contrib/setup-bazel@c5acdfb288317d0b5c0bbd7a396a3dc868bb0f86 # 0.19.0
+      with:
+        bazelisk-cache: true
+        disk-cache: false
+        repository-cache: true
+        cache-save: ${{ inputs.bazel-cache-save }}

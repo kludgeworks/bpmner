@@ -1,9 +1,16 @@
 {
 	"packages": {
 		".": {
-			"release-type": "simple",
+			"release-type": "bazel",
 			"package-name": "bpmner",
-			"changelog-path": "CHANGELOG.md"
+			"changelog-path": "CHANGELOG.md",
+			"extra-files": [
+				{
+					"type": "json",
+					"path": "web/package.json",
+					"jsonpath": "$.version"
+				}
+			]
 		}
 	}
 }
