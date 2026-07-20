@@ -6,11 +6,14 @@
 package dev.groknull.bpmner.authoring.internal.adapter.inbound
 
 import com.embabel.agent.api.common.OperationContext
+import com.embabel.agent.api.common.PromptRunner
 import com.embabel.agent.core.support.InvalidLlmReturnFormatException
+import com.embabel.agent.core.support.InvalidLlmReturnTypeException
 import dev.groknull.bpmner.authoring.BpmnAgentInvoker
 import dev.groknull.bpmner.authoring.BpmnContractFidelityPort
 import dev.groknull.bpmner.authoring.BpmnDefaultFlowPort
 import dev.groknull.bpmner.authoring.BpmnGeneratedEvent
+import dev.groknull.bpmner.authoring.BpmnOutlineGenerationException
 import dev.groknull.bpmner.authoring.BpmnProcessGenerator
 import dev.groknull.bpmner.authoring.BpmnRenderer
 import dev.groknull.bpmner.authoring.ValidatedOutline
@@ -30,6 +33,7 @@ import dev.groknull.bpmner.conformance.BpmnRepairScope
 import dev.groknull.bpmner.contract.ProcessContractMarkdownRenderer
 import dev.groknull.bpmner.contract.ValidatedProcessContract
 import dev.groknull.bpmner.contract.format
+import dev.groknull.bpmner.llm.publishOnInvalidLlmReturn
 import dev.groknull.bpmner.readiness.ReadyBpmnContext
 import dev.groknull.bpmner.ruleset.BpmnNamingShapeAdvice
 import org.jmolecules.architecture.onion.simplified.InfrastructureRing
@@ -78,12 +82,7 @@ internal class LlmBpmnProcessGenerator(
             error("Cannot generate BPMN from an invalid process contract:${System.lineSeparator()}$issues")
         }
         val promptRunner = config.generator.promptRunner(context)
-        // Typed few-shot examples for the non-obvious topologies (fork/join, data, subprocesses, pools).
-        val creating = GenerationExamples.all
-            .fold(promptRunner.creating(FlatBpmnDefinition::class.java)) { acc, (label, example) ->
-                acc.withExample(label, example)
-            }
-        val flat = creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
+        val flat = requestFlatDefinition(promptRunner, request, validatedContract)
         val rawDefinition = try {
             flat.toSealed()
         } catch (e: IllegalArgumentException) {
@@ -138,6 +137,39 @@ internal class LlmBpmnProcessGenerator(
         }
 
         return ValidatedOutline(outline = outline, diagnostics = diagnostics, fidelityReport = fidelityReport)
+    }
+
+    /**
+     * Requests the raw [FlatBpmnDefinition] and translates only the framework's own
+     * `InvalidLlmReturn*` (malformed/invalid model output) into [BpmnOutlineGenerationException],
+     * a [com.embabel.agent.core.NonRetryable] signal. The caller's `flat.toSealed()` catch block —
+     * which re-throws the framework's own `InvalidLlmReturnFormatException` for a structurally
+     * incomplete node — sits outside this method and is untouched: only the genuine framework
+     * parse/validation failure on the raw call is capped here.
+     */
+    private fun requestFlatDefinition(
+        promptRunner: PromptRunner,
+        request: BpmnRequest,
+        validatedContract: ValidatedProcessContract,
+    ): FlatBpmnDefinition = try {
+        eventPublisher.publishOnInvalidLlmReturn("authoring") {
+            // Typed few-shot examples for the non-obvious topologies (fork/join, data, subprocesses, pools).
+            val creating = GenerationExamples.all
+                .fold(promptRunner.creating(FlatBpmnDefinition::class.java)) { acc, (label, example) ->
+                    acc.withExample(label, example)
+                }
+            creating.fromTemplate("bpmner/generate_bpmn", templateModel(request, validatedContract))
+        }
+    } catch (e: InvalidLlmReturnFormatException) {
+        throw BpmnOutlineGenerationException(
+            "Outline generation model failed to produce a structured FlatBpmnDefinition: ${e.message}",
+            e,
+        )
+    } catch (e: InvalidLlmReturnTypeException) {
+        throw BpmnOutlineGenerationException(
+            "Outline generation model returned an invalid FlatBpmnDefinition: ${e.message}",
+            e,
+        )
     }
 
     override fun composeGraph(outline: ValidatedOutline): LaidOutProcessGraph {
