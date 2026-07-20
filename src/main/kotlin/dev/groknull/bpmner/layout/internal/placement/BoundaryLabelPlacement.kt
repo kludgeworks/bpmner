@@ -35,8 +35,9 @@ internal object BoundaryLabelPlacement : PlacementProcessor {
         boundaries.mapNotNull { it.attachedTo?.id }.distinct().forEach { hostId ->
             val hostLabel = ctx.labels[hostId] ?: return@forEach
             val bottom = boundaries.filter { it.attachedTo?.id == hostId }.maxOfOrNull { boundary ->
-                val shape = ctx.shapes[boundary.id] ?: return@maxOfOrNull Double.NEGATIVE_INFINITY
-                shape.y + shape.h + LABEL_GAP_BELOW + (ctx.labels[boundary.id]?.h ?: 0.0)
+                ctx.labels[boundary.id]?.let { it.y + it.h }
+                    ?: ctx.shapes[boundary.id]?.let { it.y + it.h + LABEL_GAP_BELOW }
+                    ?: Double.NEGATIVE_INFINITY
             } ?: return@forEach
             if (hostLabel.y < bottom) ctx.labels[hostId] = hostLabel.copy(y = bottom)
         }
