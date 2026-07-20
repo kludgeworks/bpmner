@@ -25,8 +25,6 @@ internal object ElkLayoutResultCopy : PlacementProcessor {
 
     private fun copyNodeLabels(ctx: PlacementContext) {
         ctx.model.getModelElementsByType(FlowNode::class.java)
-            // Boundary attachment moves the shape after ELK. Its retained placement rule owns
-            // that label until attachment and exception routes are migrated too.
             .filter { it !is BoundaryEvent && !it.name.isNullOrBlank() }
             .sortedBy { it.id }
             .forEach { node ->
@@ -53,12 +51,13 @@ internal object ElkLayoutResultCopy : PlacementProcessor {
     }
 
     private fun waypoints(edge: ElkEdge): List<Point> {
-        val section = edge.sections.first()
         val (x, y) = BpmnPlacementPass.edgeContainerOffset(edge)
-        return buildList {
-            add(Point(section.startX + x, section.startY + y))
-            section.bendPoints.forEach { add(Point(it.x + x, it.y + y)) }
-            add(Point(section.endX + x, section.endY + y))
+        return edge.sections.flatMap { section ->
+            buildList {
+                add(Point(section.startX + x, section.startY + y))
+                section.bendPoints.forEach { add(Point(it.x + x, it.y + y)) }
+                add(Point(section.endX + x, section.endY + y))
+            }
         }
     }
 }

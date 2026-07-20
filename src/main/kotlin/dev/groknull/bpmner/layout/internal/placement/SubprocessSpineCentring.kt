@@ -102,7 +102,12 @@ internal object SubprocessSpineCentring {
         val newY = targetCy - r.h / 2.0
         if (kotlin.math.abs(newY - r.y) > POSITION_EPSILON) {
             ctx.shapes[id] = r.copy(y = newY)
-            ctx.moves[id] = MoveRecord("SubprocessSpineCentring", 0.0, newY - r.y)
+            val previousMove = ctx.moves[id]
+            ctx.moves[id] = MoveRecord(
+                "SubprocessSpineCentring",
+                previousMove?.dx ?: 0.0,
+                (previousMove?.dy ?: 0.0) + newY - r.y,
+            )
         }
     }
 
