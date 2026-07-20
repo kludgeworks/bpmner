@@ -283,9 +283,9 @@ class BpmnToElkMapperTest {
             BpmnPlacementPass.estimateLabelDimensions("Receive request", BpmnPlacementPass.LABEL_WIDTH).second,
             taskLabel.height,
         )
-        assertTrue(
-            result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS)
-                .containsAll(setOf(SizeConstraint.NODE_LABELS, SizeConstraint.MINIMUM_SIZE)),
+        assertEquals(
+            setOf(SizeConstraint.MINIMUM_SIZE),
+            result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS),
         )
         val messageEdge = result.edgeMap.getValue("Message_1")
         assertEquals(result.root, messageEdge.containingNode)
