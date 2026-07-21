@@ -24,6 +24,7 @@ import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy
 import dev.groknull.bpmner.layout.internal.placement.SubprocessEndStraddle
 import dev.groknull.bpmner.layout.internal.placement.SubprocessSpineCentring
+import dev.groknull.bpmner.layout.internal.placement.WhiteBoxPoolBandPlacement
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
@@ -108,6 +109,7 @@ internal object BpmnPlacementPass {
         SubprocessEndStraddle.Repair,
         SubprocessSpineCentring.Repair,
         CollaborationShapePlacement,
+        WhiteBoxPoolBandPlacement,
         EdgeTerminalTailGuard,
         ElkLayoutResultCopy,
         ExternalBlackBoxBandPlacement,

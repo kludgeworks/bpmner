@@ -60,7 +60,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 elkLaneBounds.h,
             )
             ctx.shapes[lane.id] = band
-            recordTranslation(lane.id, ctx)
+            PlacementTranslations.ledgerMove(lane.id, OWNER, ctx)
             if (!lane.name.isNullOrBlank()) {
                 ctx.labels[lane.id] = Rect(
                     band.x,
@@ -102,20 +102,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val boundaryTranslations = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
             .mapNotNull { event -> translations[event.attachedTo?.id]?.let { event.id to it } }
             .toMap()
-        val allTranslations = translations + boundaryTranslations
-        allTranslations.forEach { (id, translation) ->
-            val rect = ctx.shapes[id] ?: return@forEach
-            ctx.shapes[id] = rect.copy(x = rect.x + translation.x, y = rect.y + translation.y)
-            recordTranslation(id, ctx)
-        }
-        return allTranslations
-    }
-
-    private fun recordTranslation(id: String, ctx: PlacementContext) {
-        val elkNode = ctx.skeleton.nodeMap[id] ?: return
-        val placed = ctx.shapes[id] ?: return
-        val (x, y) = BpmnPlacementPass.absolutePosition(elkNode)
-        ctx.moves[id] = MoveRecord(OWNER, placed.x - x, placed.y - y)
+        return PlacementTranslations.translateAndLedger(translations + boundaryTranslations, OWNER, ctx)
     }
 
     private fun repairTranslatedRoutes(translations: Map<String, Point>, ctx: PlacementContext) {

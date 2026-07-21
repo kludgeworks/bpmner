@@ -40,7 +40,7 @@ internal object ElkLayoutResultCopy : PlacementProcessor {
             ctx.model.getModelElementsByType(MessageFlow::class.java).map { it.id }
         edgeIds.sorted().forEach { id ->
             val edge = ctx.skeleton.edgeMap[id] ?: return@forEach
-            edge.labels.firstOrNull()?.let { label -> ctx.labels[id] = labelBounds(edge, label) }
+            if (id !in ctx.labels) edge.labels.firstOrNull()?.let { label -> ctx.labels[id] = labelBounds(edge, label) }
             if (id !in ctx.edges && edge.sections.isNotEmpty()) ctx.edges[id] = waypoints(edge)
         }
     }

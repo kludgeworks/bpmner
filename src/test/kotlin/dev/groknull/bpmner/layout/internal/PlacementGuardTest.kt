@@ -42,6 +42,7 @@ class PlacementGuardTest {
             "SubprocessEndStraddle",
             "SubprocessSpineCentring",
             "CollaborationShapePlacement",
+            "WhiteBoxPoolBandPlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
@@ -67,6 +68,10 @@ class PlacementGuardTest {
             "collab-lanes",
             "collab-lanes-loopback",
             "collab-subprocess",
+            "collab-bioc",
+            "collab-two-pools",
+            "collab-msg-endpoint",
+            "collab-msg-label",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {
