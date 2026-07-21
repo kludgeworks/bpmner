@@ -91,13 +91,13 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_msg_label" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_customer" id="BPMNShape_Participant_customer" isHorizontal="true">
-        <dc:Bounds height="171.0" width="1562.08984375" x="12.0" y="29.0"/>
+        <dc:Bounds height="171.0" width="646.69921875" x="12.0" y="29.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_customer">
           <dc:Bounds height="171.0" width="30.0" x="12.0" y="29.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_shop" id="BPMNShape_Participant_shop" isHorizontal="true">
-        <dc:Bounds height="197.66666666666669" width="1562.08984375" x="12.0" y="280.0"/>
+        <dc:Bounds height="197.66666666666669" width="646.69921875" x="12.0" y="280.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_shop">
           <dc:Bounds height="197.66666666666669" width="30.0" x="12.0" y="280.0"/>
         </bpmndi:BPMNLabel>

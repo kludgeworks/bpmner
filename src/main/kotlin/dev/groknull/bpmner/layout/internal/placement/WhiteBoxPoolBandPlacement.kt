@@ -38,7 +38,11 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
 
         val originalBounds = whiteBox.associateWith { ctx.shapes[it.id] ?: return }
         val bandX = originalBounds.values.minOf { it.x }
-        val bandW = originalBounds.values.maxOf { it.x + it.w } - bandX
+        // Each pool's own natural width, not the union of pre-stacking x-ranges: ELK's root
+        // Direction.RIGHT layout spreads participants far apart horizontally before this pass
+        // translates them into a column, so unioning their x-ranges would inflate every band to
+        // the combined side-by-side span instead of the widest pool's actual content width.
+        val bandW = originalBounds.values.maxOf { it.w }
 
         var nextY = originalBounds.getValue(whiteBox.first()).y
         val translations = mutableMapOf<String, Point>()

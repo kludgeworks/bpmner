@@ -91,13 +91,13 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_two_pools" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_buyer" id="BPMNShape_Participant_buyer" isHorizontal="true">
-        <dc:Bounds height="221.66666666666666" width="1530.080078125" x="42.0" y="80.0"/>
+        <dc:Bounds height="221.66666666666666" width="643.376953125" x="42.0" y="80.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_buyer">
           <dc:Bounds height="221.66666666666666" width="30.0" x="42.0" y="80.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_seller" id="BPMNShape_Participant_seller" isHorizontal="true">
-        <dc:Bounds height="145.0" width="1530.080078125" x="42.0" y="381.66666666666663"/>
+        <dc:Bounds height="145.0" width="643.376953125" x="42.0" y="381.66666666666663"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_seller">
           <dc:Bounds height="145.0" width="30.0" x="42.0" y="381.66666666666663"/>
         </bpmndi:BPMNLabel>

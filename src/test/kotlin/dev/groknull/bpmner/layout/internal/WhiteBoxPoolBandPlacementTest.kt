@@ -22,8 +22,8 @@ class WhiteBoxPoolBandPlacementTest {
 
         WhiteBoxPoolBandPlacement.process(ctx)
 
-        assertEquals(Rect(10.0, 20.0, 840.0, 200.0), ctx.shapes["A"])
-        assertEquals(Rect(10.0, 300.0, 840.0, 180.0), ctx.shapes["B"])
+        assertEquals(Rect(10.0, 20.0, 400.0, 200.0), ctx.shapes["A"])
+        assertEquals(Rect(10.0, 300.0, 400.0, 180.0), ctx.shapes["B"])
         assertEquals(MoveRecord("WhiteBoxPoolBandPlacement", -490.0, 280.0), ctx.moves["B"])
         assertEquals(MoveRecord("WhiteBoxPoolBandPlacement", -490.0, 280.0), ctx.moves["Task_b"])
     }

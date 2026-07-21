@@ -115,13 +115,13 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_subprocess" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_main" id="BPMNShape_Participant_main" isHorizontal="true">
-        <dc:Bounds height="348.6666666666667" width="1820.685546875" x="42.0" y="80.0"/>
+        <dc:Bounds height="348.6666666666667" width="1154.0" x="42.0" y="80.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_main">
           <dc:Bounds height="348.6666666666667" width="30.0" x="42.0" y="80.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_support" id="BPMNShape_Participant_support" isHorizontal="true">
-        <dc:Bounds height="145.0" width="1820.685546875" x="42.0" y="508.6666666666667"/>
+        <dc:Bounds height="145.0" width="1154.0" x="42.0" y="508.6666666666667"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_support">
           <dc:Bounds height="145.0" width="30.0" x="42.0" y="508.6666666666667"/>
         </bpmndi:BPMNLabel>
