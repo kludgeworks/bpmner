@@ -96,6 +96,31 @@ of `#608`'s declared scope (`#608` does not reassess collaboration presentation)
 draft fixture was discarded rather than committed with known-broken output; see the
 epic's closing PR discussion for the full investigation record.
 
+## Epic #591 acceptance-criteria traceability
+
+Every checkbox in epic [#591](https://github.com/kludgeworks/bpmner/issues/591)'s acceptance
+criteria, mapped to the test/fixture/ADR that satisfies it. No criterion is unresolved.
+
+| # | Acceptance criterion (abridged) | Satisfying evidence |
+| --- | --- | --- |
+| 1 | Explicit, tested ELK layout profile grouped by topology/geometry/labels/connections/routing/ordering/artifacts/validation | `ElkOptionBehaviourTest.kt`, `BpmnToElkMapper.applyRootLayoutOptions` |
+| 2 | Pools/lanes/expanded subprocesses as ELK compound nodes with hierarchy-aware layout | `BpmnToElkMapperTest.kt`, `CollaborationShapePlacementTest.kt` (#606) |
+| 3 | Flow elements/sequence flows use ELK nodes/ports/edges; ELK edge sections are the DI waypoint source | `ElkToBpmnDiWriterTest.kt`, `ElkLayoutResultCopy` (#607) |
+| 4 | Boundary-event attachment via ELK port geometry; shapes projected from that geometry | `HandlerComponentAlignmentTest.kt`, placement exception ledger above |
+| 5 | Node/edge labels sized to the bpmn-js rendering contract | `LabelMetricsTest.kt`, `LabelWrapTest.kt` |
+| 6 | ELK-native routing/crossing-minimisation/ordering; tighter constraints justified by fixture+HITL evidence | "`representative-process`'s `Flow_default` bend count is accepted, not fixed" above; `plans/591/PLAN-608.md` gap-3 addendum |
+| 7 | Model order used only as a tie-breaker unless a documented BPMN rule requires enforcement | `plans/591/PLAN-608.md` gap-3 addendum (`CONSIDER_MODEL_ORDER_STRATEGY` sweep) |
+| 8 | Groups/annotations/associations do not distort primary control-flow layout | `ArtifactPlacement.kt`/`AssociationEdges.kt` rationale KDoc (this stage), `BpmnPlacementPassTest.kt` |
+| 9 | All currently supported constructs remain valid/renderable, covered by deterministic golden regression | `ElkGoldenLayoutTest.kt` (24-fixture corpus) |
+| 10 | Human-approved expected-output updates remain deterministic | `ElkGoldenLayoutTest.kt`'s `layout is deterministic across two runs`; ADRs in `plans/591/ARCHITECTURE.md` |
+| 11 | Corpus covers long labels, multiple boundary events, cross-lane flows, nested subprocess exits, cycles, collaboration/message-flow | `long-labels`, `boundary-multi`, `collab-lanes`, `subprocess-nested`, `explicit-cycle`, `collab-*` fixtures |
+| 12 | Output is structurally valid BPMN-DI and HITL-reviewed as readable in bpmn-js/demo.bpmn.io | `LayoutDiInspector`-based structural assertions in `ElkGoldenLayoutTest.kt`; HITL review record in `plans/591/ARCHITECTURE.md` |
+| 13 | Every remaining non-ELK layout exception is documented with rationale, fixtures, and limited to projection | "Placement exception ledger" above (this stage) |
+| 14 | Generated output satisfies BPMN semantic/DI interoperability for the retained profile | `BpmnLayoutPortCorpusIntegrationTest.kt` (real port + validation pipeline over the full corpus) |
+| 15 | Validation corpus includes relevant BPMN MIWG interchange examples | `miwg-a2-1`, `miwg-a3-0` fixtures (this stage) |
+| 16 | Layout profile encodes/tests the documented readability priority order | Geometry-invariant tests in `ElkGoldenLayoutTest.kt` (no-overlap, label-below-shape, minimal-bend assertions) |
+| 17 | BPMN readability conventions are measurable objectives and HITL criteria, not arbitrary rejection rules | #606's "Rejected ELK-only lane-row experiment" ADR (`plans/591/ARCHITECTURE.md:78-80`); gap-3 addendum |
+
 ### Recommendation: a follow-up epic for complex MIWG interchange coverage
 
 Cross-referencing the [BPMN MIWG test suite](https://github.com/bpmn-miwg/bpmn-miwg-test-suite)'s

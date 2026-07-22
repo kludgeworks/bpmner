@@ -75,6 +75,7 @@ class PlacementGuardTest {
             "collab-msg-label",
             "collab-blackbox",
             "miwg-a2-1",
+            "miwg-a3-0",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {
