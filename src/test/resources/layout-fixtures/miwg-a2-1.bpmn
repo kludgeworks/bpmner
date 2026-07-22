@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_miwg_a2_1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_miwg_a2_1" name="MIWG A.2.1 - Gateway Divergence and Convergence" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_validate" name="Validate Request">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gw_split" name="Route by Outcome" default="Flow_default">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_default</bpmn:outgoing>
+      <bpmn:outgoing>Flow_review</bpmn:outgoing>
+      <bpmn:outgoing>Flow_escalate</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_standard" name="Standard Handling">
+      <bpmn:incoming>Flow_default</bpmn:incoming>
+      <bpmn:outgoing>Flow_join1</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_review" name="Manual Review">
+      <bpmn:incoming>Flow_review</bpmn:incoming>
+      <bpmn:outgoing>Flow_join2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_escalate" name="Escalate">
+      <bpmn:incoming>Flow_escalate</bpmn:incoming>
+      <bpmn:outgoing>Flow_join3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gw_join" name="Merge Flows">
+      <bpmn:incoming>Flow_join1</bpmn:incoming>
+      <bpmn:incoming>Flow_join2</bpmn:incoming>
+      <bpmn:incoming>Flow_join3</bpmn:incoming>
+      <bpmn:outgoing>Flow_end</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Done">
+      <bpmn:incoming>Flow_end</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_validate"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_validate" targetRef="Gw_split"/>
+    <bpmn:sequenceFlow id="Flow_default" sourceRef="Gw_split" targetRef="Task_standard"/>
+    <bpmn:sequenceFlow id="Flow_review" name="Needs Review" sourceRef="Gw_split" targetRef="Task_review">
+      <bpmn:conditionExpression>${needsReview}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_escalate" name="Critical" sourceRef="Gw_split" targetRef="Task_escalate">
+      <bpmn:conditionExpression>${critical}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_join1" sourceRef="Task_standard" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_join2" sourceRef="Task_review" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_join3" sourceRef="Task_escalate" targetRef="Gw_join"/>
+    <bpmn:sequenceFlow id="Flow_end" sourceRef="Gw_join" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>

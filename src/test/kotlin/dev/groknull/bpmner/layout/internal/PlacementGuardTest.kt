@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
  *   3. Assert that every flow-node shape (excluding boundary shapes not attached to lane members
  *      and placement artifacts) whose bounds differ from its ELK bounds by more
  *      than POSITION_EPSILON has a ledger entry.
- *   4. Assert every ledger owner is one of the three declared moving conventions.
+ *   4. Assert every ledger owner is one of the declared moving conventions.
  *
  * Enforces that any new post-ELK node move that isn't declared + paired + ledgered will be caught.
  */
@@ -43,6 +43,7 @@ class PlacementGuardTest {
             "SubprocessSpineCentring",
             "CollaborationShapePlacement",
             "WhiteBoxPoolBandPlacement",
+            "ExternalBlackBoxBandPlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
@@ -72,6 +73,8 @@ class PlacementGuardTest {
             "collab-two-pools",
             "collab-msg-endpoint",
             "collab-msg-label",
+            "collab-blackbox",
+            "miwg-a2-1",
         ],
     )
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {

@@ -12,6 +12,9 @@ import org.camunda.bpm.model.bpmn.instance.Association
 /**
  * Straight border-to-border connectors for associations.
  *
+ * Associations are never mapped into the ELK graph, so they cannot perturb primary control-flow
+ * layout: this processor routes them only after every shape has its final position.
+ *
  * Every [Association] has a two-waypoint route in [PlacementContext.edges]
  * connecting the nearest border points of its source and target shapes.
  */

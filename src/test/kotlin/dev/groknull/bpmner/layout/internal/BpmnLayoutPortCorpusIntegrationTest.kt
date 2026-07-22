@@ -74,6 +74,7 @@ class BpmnLayoutPortCorpusIntegrationTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "miwg-a2-1",
         ],
     )
     fun `real BpmnLayoutPort bean lays out and validates every corpus fixture`(fixture: String) {
