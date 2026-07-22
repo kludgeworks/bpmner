@@ -7,6 +7,7 @@ package dev.groknull.bpmner.layout.internal
 
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
 import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
@@ -229,6 +230,21 @@ class BpmnToElkMapperTest {
             OrderingStrategy.NODES_AND_EDGES,
             modelOrder,
             "CONSIDER_MODEL_ORDER_STRATEGY must be NODES_AND_EDGES (AD-557-11)",
+        )
+    }
+
+    @Test
+    fun `root option pins the center-label-bearing layer for a named edge spanning 2+ layers`() {
+        val model = parseXml(BOUNDARY_TIMER_XML)
+        val result = BpmnToElkMapper.map(model)
+
+        assertEquals(
+            CenterEdgeLabelPlacementStrategy.HEAD_LAYER,
+            result.root.getProperty(LayeredOptions.EDGE_LABELS_CENTER_LABEL_PLACEMENT_STRATEGY),
+            "EDGE_LABELS_CENTER_LABEL_PLACEMENT_STRATEGY must be HEAD_LAYER: for a named edge " +
+                "spanning 2+ layers (e.g. a gateway branch straight to an end event, skipping an " +
+                "in-between task's layer), the default (MEDIAN_LAYER) can force an unrelated extra " +
+                "bend depending on which skipped layer falls in the middle",
         )
     }
 

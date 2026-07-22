@@ -19,6 +19,7 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
+import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
 import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
@@ -518,6 +519,16 @@ internal object BpmnToElkMapper {
         root.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
         // Ensure adequate spacing between connected components.
         root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, NODE_NODE_SPACING)
+        // A named edge spanning 2+ layers (e.g. a gateway branch straight to a later end event,
+        // skipping an in-between task's layer) gets a virtual label-dummy node in one of the
+        // skipped layers. The default (MEDIAN_LAYER) routes the edge through that dummy at the
+        // layer nearest the middle, which can force an unrelated extra bend depending on which
+        // layer happens to fall in the middle. HEAD_LAYER keeps the dummy in the layer nearest the
+        // edge's source, closest to the branching decision, and produces the minimal-bend route.
+        root.setProperty(
+            LayeredOptions.EDGE_LABELS_CENTER_LABEL_PLACEMENT_STRATEGY,
+            CenterEdgeLabelPlacementStrategy.HEAD_LAYER,
+        )
     }
 
     private fun applyParticipantProfile(node: ElkNode) {
