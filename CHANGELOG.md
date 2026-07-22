@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.2.0...bpmner-v0.3.0) (2026-07-22)
+
+
+### Features
+
+* **layout:** bound remaining exceptions, close [#591](https://github.com/kludgeworks/bpmner/issues/591) evidence gap ([#621](https://github.com/kludgeworks/bpmner/issues/621)) ([4cb3314](https://github.com/kludgeworks/bpmner/commit/4cb3314ec852485178eb760b83dabfc0d05c15e5))
+* **layout:** move labels and message flows into ELK ([#614](https://github.com/kludgeworks/bpmner/issues/614)) ([955055c](https://github.com/kludgeworks/bpmner/commit/955055c40244bebe5dc6adb095f8150d2b84e1a2))
+
 ## [0.2.0](https://github.com/kludgeworks/bpmner/compare/bpmner-v0.1.0...bpmner-v0.2.0) (2026-07-20)
 
 
