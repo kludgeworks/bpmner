@@ -12,7 +12,6 @@ import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_HEADER_WI
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.FlowNode
-import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
@@ -38,7 +37,31 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         if (!participant.name.isNullOrBlank()) {
             ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
         }
-        projectLaneBands(participant, bounds, ctx)
+        if (participant.process?.laneSets.orEmpty().flatMap { it.lanes.toList() }.isEmpty()) {
+            val members = flowNodeMembers(participant.process?.flowElements?.filterIsInstance<FlowNode>().orEmpty())
+            centerContentInBand(members, bounds, ctx)
+        } else {
+            projectLaneBands(participant, bounds, ctx)
+        }
+    }
+
+    /**
+     * Vertically re-centres [memberIds]' content within [band].
+     *
+     * ELK reserves the tallest node's label height below the node row (`NODE_LABELS_PLACEMENT
+     * .outsideBottomCenter`), so the participant/lane band it computes is padded symmetrically
+     * around that node-plus-label footprint rather than the node row itself — leaving the row
+     * visibly offset toward the top of the rendered band. This shifts every member by the same
+     * vector so the node row's own midpoint lands on the band's midpoint, the BPMN convention.
+     */
+    private fun centerContentInBand(memberIds: Set<String>, band: Rect, ctx: PlacementContext) {
+        val rects = memberIds.mapNotNull { ctx.shapes[it] }
+        if (rects.isEmpty()) return
+        val contentTop = rects.minOf { it.y }
+        val contentBottom = rects.maxOf { it.y + it.h }
+        val dy = (band.y + band.h / 2.0) - (contentTop + contentBottom) / 2.0
+        if (kotlin.math.abs(dy) < BpmnPlacementPass.POSITION_EPSILON) return
+        repairTranslatedRoutes(translateMembers(memberIds.associateWith { Point(0.0, dy) }, ctx), ctx)
     }
 
     private fun projectLaneBands(participant: Participant, participantBounds: Rect, ctx: PlacementContext) {
@@ -70,7 +93,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 )
             }
             val translation = Point(0.0, band.y - elkLaneBounds.y)
-            laneMembers(lane).forEach { memberId -> translations[memberId] = translation }
+            flowNodeMembers(lane.flowNodeRefs).forEach { memberId -> translations[memberId] = translation }
             nextY += band.h
         }
         val projectedParticipant = participantBounds.copy(h = nextY - participantBounds.y)
@@ -86,7 +109,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         repairTranslatedRoutes(translateMembers(translations, ctx), ctx)
     }
 
-    private fun laneMembers(lane: Lane): Set<String> {
+    /** Every flow-node in [seeds], recursing into subprocess descendants (lane refs or a whole process). */
+    private fun flowNodeMembers(seeds: Collection<FlowNode>): Set<String> {
         val members = mutableSetOf<String>()
         fun add(node: FlowNode) {
             members.add(node.id)
@@ -94,7 +118,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 node.flowElements.filterIsInstance<FlowNode>().forEach(::add)
             }
         }
-        lane.flowNodeRefs.forEach(::add)
+        seeds.forEach(::add)
         return members
     }
 

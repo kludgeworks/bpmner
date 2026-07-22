@@ -271,7 +271,7 @@ class BpmnToElkMapperTest {
     // ── ELK label and collaboration assertions ─────────────────────────────────
 
     @Test
-    fun `named nodes and edges carry measured ELK labels and message flow is in hierarchy`() {
+    fun `named nodes carry measured ELK labels and a cross-participant message flow is excluded`() {
         val result = BpmnToElkMapper.map(parseXml(COLLABORATION_MESSAGE_XML))
 
         val taskLabel = result.nodeMap.getValue("Task_A").labels.single()
@@ -287,12 +287,10 @@ class BpmnToElkMapperTest {
             setOf(SizeConstraint.MINIMUM_SIZE),
             result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS),
         )
-        val messageEdge = result.edgeMap.getValue("Message_1")
-        assertEquals(result.root, messageEdge.containingNode)
-        assertEquals(
-            BpmnPlacementPass.estimateLabelDimensions("Send request", BpmnPlacementPass.EDGE_LABEL_WIDTH).first,
-            messageEdge.labels.single().width,
-        )
+        // Task_A (Participant_A) and Task_B (Participant_B) sit in different participants, so
+        // WhiteBoxPoolBandPlacement fully owns this route post-stacking; modelling it as a real
+        // ELK edge would let it perturb each participant's own internal layered layout.
+        assertNull(result.edgeMap["Message_1"], "cross-participant message flow must NOT be in edgeMap")
     }
 
     @Test

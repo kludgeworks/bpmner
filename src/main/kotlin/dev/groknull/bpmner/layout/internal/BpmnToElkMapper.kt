@@ -108,7 +108,7 @@ internal object BpmnToElkMapper {
         mapBoundaryEvents(model, nodeMap, portMap)
 
         mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
-        collaboration?.let { mapMessageFlows(it, nodeMap, edgeMap) }
+        collaboration?.let { mapMessageFlows(root, it, nodeMap, edgeMap) }
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
     }
@@ -372,34 +372,43 @@ internal object BpmnToElkMapper {
     /**
      * Maps collaboration-level edges after their node endpoints have been added to the hierarchy.
      *
-     * Flows incident to a black-box participant (no [Participant.getProcess]) are excluded: that
-     * participant's rendered position is always decided afterward by the bounded
-     * `ExternalBlackBoxBandPlacement` BPMN exception, which fully regenerates the flow's route
-     * rather than projecting ELK's section. Modelling them as real graph edges anyway buys nothing
-     * and actively harms the primary flow: ELK inserts hierarchical port dummies for the
-     * cross-hierarchy edge into the white-box participant's own layered graph, so its crossing
-     * minimisation and network-simplex node placement shift the flow's in-process endpoint
-     * (`Task_send`/`Task_receive`-style nodes) off the primary flow's baseline to accommodate a
-     * routing decision that is discarded anyway.
+     * Any flow whose endpoints sit in different participants is excluded: that participant pair's
+     * relative position is always decided afterward by a bounded BPMN exception
+     * (`ExternalBlackBoxBandPlacement` for a black box, `WhiteBoxPoolBandPlacement` for stacked
+     * white-box pools), which fully regenerates the flow's route rather than projecting ELK's
+     * section. Modelling it as a real graph edge anyway buys nothing and actively harms the
+     * primary flow: because collaborations use `HIERARCHY_HANDLING.INCLUDE_CHILDREN`, ELK solves
+     * the whole collaboration as one joint layered graph, so a cross-participant edge's hierarchical
+     * port dummies let its crossing minimisation and network-simplex node placement perturb each
+     * participant's own internal layout for a routing decision that is discarded anyway.
      */
     private fun mapMessageFlows(
+        root: ElkNode,
         collaboration: Collaboration,
         nodeMap: Map<String, ElkNode>,
         edgeMap: MutableMap<String, ElkEdge>,
     ) {
-        val blackBoxIds = collaboration.participants.filter { it.process == null }.mapTo(mutableSetOf()) { it.id }
         collaboration.messageFlows.forEach { flow ->
             val sourceId = (flow.source as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
             val targetId = (flow.target as? org.camunda.bpm.model.bpmn.instance.BaseElement)?.id
-            if (sourceId in blackBoxIds || targetId in blackBoxIds) return@forEach
             val source = nodeMap[sourceId] ?: return@forEach
             val target = nodeMap[targetId] ?: return@forEach
             if (source.parent == null || target.parent == null) return@forEach
+            if (participantIdOf(source, root) != participantIdOf(target, root)) return@forEach
             val elkEdge = ElkGraphUtil.createSimpleEdge(source, target)
             elkEdge.identifier = flow.id
             addEdgeLabel(elkEdge, flow.name)
             edgeMap[flow.id] = elkEdge
         }
+    }
+
+    /** Walks [node]'s ELK ancestor chain up to its top-level container (participant or black box). */
+    private fun participantIdOf(node: ElkNode, root: ElkNode): String? {
+        var current = node
+        while (current.parent != null && current.parent != root) {
+            current = current.parent
+        }
+        return current.identifier
     }
 
     private fun addNodeLabel(node: ElkNode, name: String?) {

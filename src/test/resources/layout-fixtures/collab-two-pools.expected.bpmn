@@ -91,107 +91,105 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="Collab_two_pools" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="Participant_buyer" id="BPMNShape_Participant_buyer" isHorizontal="true">
-        <dc:Bounds height="221.66666666666666" width="643.376953125" x="42.0" y="80.0"/>
+        <dc:Bounds height="145.0" width="643.376953125" x="12.0" y="12.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_buyer">
-          <dc:Bounds height="221.66666666666666" width="30.0" x="42.0" y="80.0"/>
+          <dc:Bounds height="145.0" width="30.0" x="12.0" y="12.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Participant_seller" id="BPMNShape_Participant_seller" isHorizontal="true">
-        <dc:Bounds height="145.0" width="643.376953125" x="42.0" y="381.66666666666663"/>
+        <dc:Bounds height="145.0" width="643.376953125" x="12.0" y="237.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Participant_seller">
-          <dc:Bounds height="145.0" width="30.0" x="42.0" y="381.66666666666663"/>
+          <dc:Bounds height="145.0" width="30.0" x="12.0" y="237.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_buyer" id="BPMNShape_End_buyer">
-        <dc:Bounds height="36.0" width="36.0" x="629.376953125" y="122.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="599.376953125" y="66.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_buyer">
-          <dc:Bounds height="20.0" width="28.6875" x="633.033203125" y="163.0"/>
+          <dc:Bounds height="20.0" width="28.6875" x="603.033203125" y="107.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="End_seller" id="BPMNShape_End_seller">
-        <dc:Bounds height="36.0" width="36.0" x="598.0" y="410.3333333333333"/>
+        <dc:Bounds height="36.0" width="36.0" x="568.0" y="291.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_End_seller">
-          <dc:Bounds height="20.0" width="28.6875" x="601.65625" y="451.3333333333333"/>
+          <dc:Bounds height="20.0" width="28.6875" x="571.65625" y="332.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_buyer" id="BPMNShape_Start_buyer">
-        <dc:Bounds height="36.0" width="36.0" x="107.6884765625" y="198.66666666666666"/>
+        <dc:Bounds height="36.0" width="36.0" x="77.6884765625" y="66.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_buyer">
-          <dc:Bounds height="20.0" width="67.376953125" x="92.0" y="239.66666666666666"/>
+          <dc:Bounds height="20.0" width="67.376953125" x="62.0" y="107.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_seller" id="BPMNShape_Start_seller">
-        <dc:Bounds height="36.0" width="36.0" x="92.0" y="410.3333333333333"/>
+        <dc:Bounds height="36.0" width="36.0" x="62.0" y="291.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Start_seller">
-          <dc:Bounds height="20.0" width="34.6875" x="92.65625" y="451.3333333333333"/>
+          <dc:Bounds height="20.0" width="34.6875" x="62.65625" y="332.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_invoice" id="BPMNShape_Task_invoice">
-        <dc:Bounds height="80.0" width="100.0" x="408.0" y="401.66666666666663"/>
+        <dc:Bounds height="80.0" width="100.0" x="378.0" y="269.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_invoice">
-          <dc:Bounds height="20.0" width="69.380859375" x="423.3095703125" y="486.66666666666663"/>
+          <dc:Bounds height="20.0" width="69.380859375" x="393.3095703125" y="354.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_order" id="BPMNShape_Task_order">
-        <dc:Bounds height="80.0" width="100.0" x="249.376953125" y="176.66666666666666"/>
+        <dc:Bounds height="80.0" width="100.0" x="219.376953125" y="44.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_order">
-          <dc:Bounds height="20.0" width="64.025390625" x="267.3642578125" y="261.66666666666663"/>
+          <dc:Bounds height="20.0" width="64.025390625" x="237.3642578125" y="129.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_pay" id="BPMNShape_Task_pay">
-        <dc:Bounds height="80.0" width="100.0" x="439.376953125" y="100.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="409.376953125" y="44.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_pay">
-          <dc:Bounds height="20.0" width="62.033203125" x="458.3603515625" y="185.0"/>
+          <dc:Bounds height="20.0" width="62.033203125" x="428.3603515625" y="129.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_receive" id="BPMNShape_Task_receive">
-        <dc:Bounds height="80.0" width="100.0" x="218.0" y="401.66666666666663"/>
+        <dc:Bounds height="80.0" width="100.0" x="188.0" y="269.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Task_receive">
-          <dc:Bounds height="20.0" width="77.361328125" x="229.3193359375" y="486.66666666666663"/>
+          <dc:Bounds height="20.0" width="77.361328125" x="199.3193359375" y="354.5"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="Flow_b1" id="BPMNEdge_Flow_b1">
-        <di:waypoint x="143.6884765625" y="216.66666666666666"/>
-        <di:waypoint x="249.376953125" y="216.66666666666666"/>
+        <di:waypoint x="113.6884765625" y="84.5"/>
+        <di:waypoint x="219.376953125" y="84.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_b2" id="BPMNEdge_Flow_b2">
-        <di:waypoint x="349.376953125" y="203.33333333333331"/>
-        <di:waypoint x="374.376953125" y="203.33333333333331"/>
-        <di:waypoint x="374.376953125" y="153.33333333333334"/>
-        <di:waypoint x="439.376953125" y="153.33333333333334"/>
+        <di:waypoint x="319.376953125" y="84.5"/>
+        <di:waypoint x="409.376953125" y="84.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_b3" id="BPMNEdge_Flow_b3">
-        <di:waypoint x="539.376953125" y="140.0"/>
-        <di:waypoint x="629.376953125" y="140.0"/>
+        <di:waypoint x="509.376953125" y="84.5"/>
+        <di:waypoint x="599.376953125" y="84.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
-        <di:waypoint x="128.0" y="428.3333333333333"/>
-        <di:waypoint x="218.0" y="428.3333333333333"/>
+        <di:waypoint x="98.0" y="309.5"/>
+        <di:waypoint x="188.0" y="309.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s2" id="BPMNEdge_Flow_s2">
-        <di:waypoint x="318.0" y="441.66666666666663"/>
-        <di:waypoint x="408.0" y="441.66666666666663"/>
+        <di:waypoint x="288.0" y="309.5"/>
+        <di:waypoint x="378.0" y="309.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s3" id="BPMNEdge_Flow_s3">
-        <di:waypoint x="508.0" y="428.3333333333333"/>
-        <di:waypoint x="598.0" y="428.3333333333333"/>
+        <di:waypoint x="478.0" y="309.5"/>
+        <di:waypoint x="568.0" y="309.5"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_1" id="BPMNEdge_MsgFlow_1">
-        <di:waypoint x="299.376953125" y="256.66666666666663"/>
-        <di:waypoint x="299.376953125" y="329.16666666666663"/>
-        <di:waypoint x="268.0" y="329.16666666666663"/>
-        <di:waypoint x="268.0" y="401.66666666666663"/>
+        <di:waypoint x="269.376953125" y="124.5"/>
+        <di:waypoint x="269.376953125" y="197.0"/>
+        <di:waypoint x="238.0" y="197.0"/>
+        <di:waypoint x="238.0" y="269.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_1">
-          <dc:Bounds height="20.0" width="84.703125" x="241.3369140625" y="319.16666666666663"/>
+          <dc:Bounds height="20.0" width="84.703125" x="211.3369140625" y="187.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="MsgFlow_2" id="BPMNEdge_MsgFlow_2">
-        <di:waypoint x="458.0" y="401.66666666666663"/>
-        <di:waypoint x="458.0" y="290.8333333333333"/>
-        <di:waypoint x="489.376953125" y="290.8333333333333"/>
-        <di:waypoint x="489.376953125" y="180.0"/>
+        <di:waypoint x="428.0" y="269.5"/>
+        <di:waypoint x="428.0" y="197.0"/>
+        <di:waypoint x="459.376953125" y="197.0"/>
+        <di:waypoint x="459.376953125" y="124.5"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_2">
-          <dc:Bounds height="20.0" width="38.021484375" x="454.677734375" y="280.8333333333333"/>
+          <dc:Bounds height="20.0" width="38.021484375" x="424.677734375" y="187.0"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

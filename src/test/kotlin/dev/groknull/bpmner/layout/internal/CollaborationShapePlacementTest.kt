@@ -116,6 +116,31 @@ class CollaborationShapePlacementTest {
     }
 
     @Test
+    fun `re-centres a lane-less participant's content within its band`() {
+        val model = PlacementTestSkeletons.parse(NO_LANE_PARTICIPANT_XML)
+        val root = ElkGraphUtil.createGraph()
+        val participant = node(root, "Participant_1", Rect(10.0, 20.0, 200.0, 100.0))
+        // Relative to participant (10,20): absolute (10+10, 20+10) = (20,30), matching the
+        // ctx.shapes seed below — the ELK baseline this test's "no move yet" case starts from.
+        val task = node(participant, "Task_1", Rect(10.0, 10.0, 100.0, 40.0))
+        val ctx = PlacementContext(
+            model,
+            PlacementTestSkeletons.skeleton(root, mapOf("Participant_1" to participant, "Task_1" to task)),
+            mutableMapOf("Task_1" to Rect(20.0, 30.0, 100.0, 40.0)),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        // Content (y=30..70, midpoint 50) shifts by +20 so its midpoint (70) lands on the
+        // participant band's midpoint (20 + 100/2 = 70), rather than staying top-heavy.
+        assertEquals(Rect(20.0, 50.0, 100.0, 40.0), ctx.shapes["Task_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, 20.0), ctx.moves["Task_1"])
+    }
+
+    @Test
     fun `keeps ELK black-box bounds for message-flow endpoints`() {
         val root = ElkGraphUtil.createGraph()
         val external = node(root, "Participant_external", Rect(440.0, 260.0, 100.0, 60.0))
@@ -151,6 +176,12 @@ class CollaborationShapePlacementTest {
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
   <bpmn:collaboration id="C"><bpmn:participant id="Participant_internal" processRef="P"/><bpmn:participant id="Participant_external" name="External System"/></bpmn:collaboration>
   <bpmn:process id="P"/>
+</bpmn:definitions>"""
+
+        const val NO_LANE_PARTICIPANT_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:serviceTask id="Task_1"/></bpmn:process>
 </bpmn:definitions>"""
 
         const val LANED_SUBPROCESS_WITH_BOUNDARY_XML = """<?xml version="1.0" encoding="UTF-8"?>

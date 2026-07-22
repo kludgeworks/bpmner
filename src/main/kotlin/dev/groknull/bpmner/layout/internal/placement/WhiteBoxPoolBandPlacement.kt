@@ -111,13 +111,21 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
         memberOfParticipant: Map<String, String>,
         ctx: PlacementContext,
     ) {
-        flows.filter { flow ->
+        val crossPool = flows.filter { flow ->
             val sourceParticipant = memberOfParticipant[flow.source?.id]
             val targetParticipant = memberOfParticipant[flow.target?.id]
             sourceParticipant != null && targetParticipant != null && sourceParticipant != targetParticipant
+        }.sortedBy { it.id }
+
+        // Multiple cross-pool flows may share one task endpoint; fan their exit/entry points
+        // across its width instead of stacking them all on the same centre-x corridor.
+        val incidentFlowIds = mutableMapOf<String, MutableList<String>>()
+        crossPool.forEach { flow ->
+            flow.source?.id?.let { incidentFlowIds.getOrPut(it) { mutableListOf() }.add(flow.id) }
+            flow.target?.id?.let { incidentFlowIds.getOrPut(it) { mutableListOf() }.add(flow.id) }
         }
-            .sortedBy { it.id }
-            .forEach { flow -> routeCrossPoolMessage(flow, ctx) }
+
+        crossPool.forEach { flow -> routeCrossPoolMessage(flow, incidentFlowIds, ctx) }
     }
 
     /**
@@ -125,11 +133,13 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
      * exiting the source's boundary facing the target pool and entering the target's boundary
      * facing the source pool — at most one lateral bend when the endpoints' centres don't align.
      */
-    private fun routeCrossPoolMessage(flow: MessageFlow, ctx: PlacementContext) {
-        val source = ctx.shapes[flow.source?.id] ?: return
-        val target = ctx.shapes[flow.target?.id] ?: return
-        val sourceCx = source.x + source.w / 2.0
-        val targetCx = target.x + target.w / 2.0
+    private fun routeCrossPoolMessage(flow: MessageFlow, incidentFlowIds: Map<String, List<String>>, ctx: PlacementContext) {
+        val sourceId = flow.source?.id ?: return
+        val targetId = flow.target?.id ?: return
+        val source = ctx.shapes[sourceId] ?: return
+        val target = ctx.shapes[targetId] ?: return
+        val sourceCx = fanCx(source, sourceId, flow.id, incidentFlowIds)
+        val targetCx = fanCx(target, targetId, flow.id, incidentFlowIds)
         val sourceAboveTarget = source.y < target.y
         val start = Point(sourceCx, if (sourceAboveTarget) source.y + source.h else source.y)
         val end = Point(targetCx, if (sourceAboveTarget) target.y else target.y + target.h)
@@ -146,5 +156,17 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
             val midY = (start.y + end.y) / 2.0
             ctx.labels[flow.id] = Rect(midX - width / 2.0, midY - height / 2.0, width, height)
         }
+    }
+
+    /**
+     * Exit/entry x for [flowId] at [nodeId]: the node's centre if it's the sole incident
+     * cross-pool flow, otherwise fanned evenly across the node's width so sibling flows sharing
+     * the same endpoint don't draw on top of each other.
+     */
+    private fun fanCx(shape: Rect, nodeId: String, flowId: String, incidentFlowIds: Map<String, List<String>>): Double {
+        val siblings = incidentFlowIds[nodeId].orEmpty()
+        if (siblings.size <= 1) return shape.x + shape.w / 2.0
+        val index = siblings.indexOf(flowId)
+        return shape.x + shape.w * (index + 1) / (siblings.size + 1)
     }
 }
