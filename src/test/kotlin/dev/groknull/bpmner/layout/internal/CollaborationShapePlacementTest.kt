@@ -55,15 +55,15 @@ class CollaborationShapePlacementTest {
         assertEquals(Rect(40.0, 180.0, 470.0, 80.0), ctx.shapes["Lane_delivery"])
         assertEquals(Rect(10.0, 20.0, 30.0, 240.0), ctx.labels["Participant_1"])
         assertEquals(Rect(40.0, 20.0, 30.0, 80.0), ctx.labels["Lane_sales"])
-        assertEquals(Rect(90.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Start_1"])
-        assertEquals(Rect(90.0, 120.0, 100.0, 80.0), ctx.shapes["Task_pick"])
+        assertEquals(Rect(60.0, 40.0, 36.0, 36.0), ctx.shapes["Start_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Start_1"])
+        assertEquals(Rect(60.0, 120.0, 100.0, 80.0), ctx.shapes["Task_pick"])
         assertEquals(
             listOf(
-                BpmnPlacementPass.Point(108.0, 76.0),
-                BpmnPlacementPass.Point(108.0, 98.0),
-                BpmnPlacementPass.Point(140.0, 98.0),
-                BpmnPlacementPass.Point(140.0, 120.0),
+                BpmnPlacementPass.Point(78.0, 76.0),
+                BpmnPlacementPass.Point(78.0, 98.0),
+                BpmnPlacementPass.Point(110.0, 98.0),
+                BpmnPlacementPass.Point(110.0, 120.0),
             ),
             ctx.edges["Flow_1"],
         )
@@ -105,14 +105,58 @@ class CollaborationShapePlacementTest {
 
         CollaborationShapePlacement.process(ctx)
 
-        assertEquals(Rect(100.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
-        assertEquals(Rect(110.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Task_child"])
-        assertEquals(MoveRecord("CollaborationShapePlacement", 30.0, -10.0), ctx.moves["Boundary_1"])
+        assertEquals(Rect(70.0, 50.0, 100.0, 80.0), ctx.shapes["Task_child"])
+        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Task_child"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, -10.0), ctx.moves["Boundary_1"])
         assertEquals(
-            listOf(BpmnPlacementPass.Point(128.0, 108.0), BpmnPlacementPass.Point(320.0, 80.0)),
+            listOf(BpmnPlacementPass.Point(98.0, 108.0), BpmnPlacementPass.Point(290.0, 80.0)),
             ctx.edges["Flow_exception"],
         )
+    }
+
+    @Test
+    fun `re-centres a lane-less participant's content within its band`() {
+        val model = PlacementTestSkeletons.parse(NO_LANE_PARTICIPANT_XML)
+        val root = ElkGraphUtil.createGraph()
+        val participant = node(root, "Participant_1", Rect(10.0, 20.0, 200.0, 100.0))
+        // Relative to participant (10,20): absolute (10+10, 20+10) = (20,30), matching the
+        // ctx.shapes seed below — the ELK baseline this test's "no move yet" case starts from.
+        val task = node(participant, "Task_1", Rect(10.0, 10.0, 100.0, 40.0))
+        val ctx = PlacementContext(
+            model,
+            PlacementTestSkeletons.skeleton(root, mapOf("Participant_1" to participant, "Task_1" to task)),
+            mutableMapOf("Task_1" to Rect(20.0, 30.0, 100.0, 40.0)),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        // Content (y=30..70, midpoint 50) shifts by +20 so its midpoint (70) lands on the
+        // participant band's midpoint (20 + 100/2 = 70), rather than staying top-heavy.
+        assertEquals(Rect(20.0, 50.0, 100.0, 40.0), ctx.shapes["Task_1"])
+        assertEquals(MoveRecord("CollaborationShapePlacement", 0.0, 20.0), ctx.moves["Task_1"])
+    }
+
+    @Test
+    fun `keeps ELK black-box bounds for message-flow endpoints`() {
+        val root = ElkGraphUtil.createGraph()
+        val external = node(root, "Participant_external", Rect(440.0, 260.0, 100.0, 60.0))
+        val ctx = PlacementContext(
+            PlacementTestSkeletons.parse(BLACK_BOX_COLLABORATION_XML),
+            PlacementTestSkeletons.skeleton(root, mapOf("Participant_external" to external)),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        assertEquals(Rect(440.0, 260.0, 100.0, 60.0), ctx.shapes["Participant_external"])
+        assertEquals(Rect(440.0, 260.0, 30.0, 60.0), ctx.labels["Participant_external"])
     }
 
     private fun node(
@@ -128,6 +172,18 @@ class CollaborationShapePlacementTest {
     }
 
     private companion object {
+        const val BLACK_BOX_COLLABORATION_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_internal" processRef="P"/><bpmn:participant id="Participant_external" name="External System"/></bpmn:collaboration>
+  <bpmn:process id="P"/>
+</bpmn:definitions>"""
+
+        const val NO_LANE_PARTICIPANT_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:serviceTask id="Task_1"/></bpmn:process>
+</bpmn:definitions>"""
+
         const val LANED_SUBPROCESS_WITH_BOUNDARY_XML = """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
   <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>

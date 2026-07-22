@@ -8,14 +8,10 @@ package dev.groknull.bpmner.layout.internal.placement
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
-import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.BLACK_BOX_HEIGHT
-import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.BLACK_BOX_WIDTH
-import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_GAP
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_HEADER_WIDTH
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.FlowNode
-import org.camunda.bpm.model.bpmn.instance.Lane
 import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
@@ -23,7 +19,6 @@ import org.camunda.bpm.model.bpmn.instance.SubProcess
 /** Projects ELK-owned participant bounds and BPMN's ordered lane bands into BPMN-DI shapes. */
 internal object CollaborationShapePlacement : PlacementProcessor {
 
-    private const val DEFAULT_PARTICIPANT_Y = 12.0
     private const val OWNER = "CollaborationShapePlacement"
     private const val LANE_LABEL_WIDTH = PARTICIPANT_HEADER_WIDTH
 
@@ -31,7 +26,9 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull() ?: return
         val whiteBox = collaboration.participants.filter { it.process != null }
         whiteBox.forEach { participant -> copyWhiteBoxBounds(participant, ctx) }
-        copyBlackBoxBounds(collaboration.participants.filter { it.process == null }, whiteBox, ctx)
+        collaboration.participants.filter { it.process == null }.forEach { participant ->
+            copyBlackBoxBounds(participant, ctx)
+        }
     }
 
     private fun copyWhiteBoxBounds(participant: Participant, ctx: PlacementContext) {
@@ -40,7 +37,31 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         if (!participant.name.isNullOrBlank()) {
             ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
         }
-        projectLaneBands(participant, bounds, ctx)
+        if (participant.process?.laneSets.orEmpty().flatMap { it.lanes.toList() }.isEmpty()) {
+            val members = flowNodeMembers(participant.process?.flowElements?.filterIsInstance<FlowNode>().orEmpty())
+            centerContentInBand(members, bounds, ctx)
+        } else {
+            projectLaneBands(participant, bounds, ctx)
+        }
+    }
+
+    /**
+     * Vertically re-centres [memberIds]' content within [band].
+     *
+     * ELK reserves the tallest node's label height below the node row (`NODE_LABELS_PLACEMENT
+     * .outsideBottomCenter`), so the participant/lane band it computes is padded symmetrically
+     * around that node-plus-label footprint rather than the node row itself — leaving the row
+     * visibly offset toward the top of the rendered band. This shifts every member by the same
+     * vector so the node row's own midpoint lands on the band's midpoint, the BPMN convention.
+     */
+    private fun centerContentInBand(memberIds: Set<String>, band: Rect, ctx: PlacementContext) {
+        val rects = memberIds.mapNotNull { ctx.shapes[it] }
+        if (rects.isEmpty()) return
+        val contentTop = rects.minOf { it.y }
+        val contentBottom = rects.maxOf { it.y + it.h }
+        val dy = (band.y + band.h / 2.0) - (contentTop + contentBottom) / 2.0
+        if (kotlin.math.abs(dy) < BpmnPlacementPass.POSITION_EPSILON) return
+        repairTranslatedRoutes(translateMembers(memberIds.associateWith { Point(0.0, dy) }, ctx), ctx)
     }
 
     private fun projectLaneBands(participant: Participant, participantBounds: Rect, ctx: PlacementContext) {
@@ -62,7 +83,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 elkLaneBounds.h,
             )
             ctx.shapes[lane.id] = band
-            recordTranslation(lane.id, ctx)
+            PlacementTranslations.ledgerMove(lane.id, OWNER, ctx)
             if (!lane.name.isNullOrBlank()) {
                 ctx.labels[lane.id] = Rect(
                     band.x,
@@ -71,9 +92,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                     band.h,
                 )
             }
-            val baseX = participantBounds.x + PARTICIPANT_HEADER_WIDTH + LANE_LABEL_WIDTH - elkLaneBounds.x
-            val translation = Point(baseX, band.y - elkLaneBounds.y)
-            laneMembers(lane).forEach { memberId -> translations[memberId] = translation }
+            val translation = Point(0.0, band.y - elkLaneBounds.y)
+            flowNodeMembers(lane.flowNodeRefs).forEach { memberId -> translations[memberId] = translation }
             nextY += band.h
         }
         val projectedParticipant = participantBounds.copy(h = nextY - participantBounds.y)
@@ -89,7 +109,8 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         repairTranslatedRoutes(translateMembers(translations, ctx), ctx)
     }
 
-    private fun laneMembers(lane: Lane): Set<String> {
+    /** Every flow-node in [seeds], recursing into subprocess descendants (lane refs or a whole process). */
+    private fun flowNodeMembers(seeds: Collection<FlowNode>): Set<String> {
         val members = mutableSetOf<String>()
         fun add(node: FlowNode) {
             members.add(node.id)
@@ -97,7 +118,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 node.flowElements.filterIsInstance<FlowNode>().forEach(::add)
             }
         }
-        lane.flowNodeRefs.forEach(::add)
+        seeds.forEach(::add)
         return members
     }
 
@@ -105,20 +126,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val boundaryTranslations = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
             .mapNotNull { event -> translations[event.attachedTo?.id]?.let { event.id to it } }
             .toMap()
-        val allTranslations = translations + boundaryTranslations
-        allTranslations.forEach { (id, translation) ->
-            val rect = ctx.shapes[id] ?: return@forEach
-            ctx.shapes[id] = rect.copy(x = rect.x + translation.x, y = rect.y + translation.y)
-            recordTranslation(id, ctx)
-        }
-        return allTranslations
-    }
-
-    private fun recordTranslation(id: String, ctx: PlacementContext) {
-        val elkNode = ctx.skeleton.nodeMap[id] ?: return
-        val placed = ctx.shapes[id] ?: return
-        val (x, y) = BpmnPlacementPass.absolutePosition(elkNode)
-        ctx.moves[id] = MoveRecord(OWNER, placed.x - x, placed.y - y)
+        return PlacementTranslations.translateAndLedger(translations + boundaryTranslations, OWNER, ctx)
     }
 
     private fun repairTranslatedRoutes(translations: Map<String, Point>, ctx: PlacementContext) {
@@ -136,6 +144,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                         ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
                             Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)
                         } ?: return@forEach
+                        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
                     }
                     flow.source is BoundaryEvent -> routeException(flow, ctx)
                     else -> routeSequence(flow, ctx)
@@ -148,6 +157,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val source = ctx.shapes[boundary.id] ?: return
         val target = ctx.shapes[flow.target?.id] ?: return
         ctx.edges[flow.id] = ExceptionEdgeRoutes.routeExceptionEdge(source, target, ctx.shapes[boundary.attachedTo?.id])
+        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 
     private fun routeSequence(flow: SequenceFlow, ctx: PlacementContext) {
@@ -160,6 +170,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 Point(source.x + source.w, sourceMiddleY),
                 Point(target.x, targetMiddleY),
             )
+            EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
             return
         }
 
@@ -168,20 +179,14 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val end = Point(target.x + target.w / 2.0, if (sourceAboveTarget) target.y else target.y + target.h)
         val bendY = (start.y + end.y) / 2.0
         ctx.edges[flow.id] = listOf(start, Point(start.x, bendY), Point(end.x, bendY), end)
+        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 
-    private fun copyBlackBoxBounds(blackBox: List<Participant>, whiteBox: List<Participant>, ctx: PlacementContext) {
-        val whiteBounds = whiteBox.mapNotNull { ctx.shapes[it.id] }
-        val left = whiteBounds.minOfOrNull { it.x } ?: 0.0
-        val width = whiteBounds.maxOfOrNull { it.x + it.w }?.minus(left) ?: BLACK_BOX_WIDTH
-        var y = whiteBounds.maxOfOrNull { it.y + it.h }?.plus(PARTICIPANT_GAP) ?: DEFAULT_PARTICIPANT_Y
-        blackBox.forEach { participant ->
-            val bounds = Rect(left, y, width, BLACK_BOX_HEIGHT)
-            ctx.shapes[participant.id] = bounds
-            if (!participant.name.isNullOrBlank()) {
-                ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
-            }
-            y += BLACK_BOX_HEIGHT + PARTICIPANT_GAP
+    private fun copyBlackBoxBounds(participant: Participant, ctx: PlacementContext) {
+        val bounds = ctx.skeleton.nodeMap[participant.id]?.let(::elkBounds) ?: return
+        ctx.shapes[participant.id] = bounds
+        if (!participant.name.isNullOrBlank()) {
+            ctx.labels[participant.id] = Rect(bounds.x, bounds.y, PARTICIPANT_HEADER_WIDTH, bounds.h)
         }
     }
 

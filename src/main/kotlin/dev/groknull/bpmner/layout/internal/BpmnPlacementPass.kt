@@ -8,21 +8,23 @@ package dev.groknull.bpmner.layout.internal
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.ElkSkeleton
 import dev.groknull.bpmner.layout.internal.placement.ArtifactPlacement
 import dev.groknull.bpmner.layout.internal.placement.AssociationEdges
+import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.EdgeTerminalTailGuard
+import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
 import dev.groknull.bpmner.layout.internal.placement.ExceptionEdgeRoutes
+import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
 import dev.groknull.bpmner.layout.internal.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
-import dev.groknull.bpmner.layout.internal.placement.LabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.LabelWrap
 import dev.groknull.bpmner.layout.internal.placement.LoopBackEdgeArcs
-import dev.groknull.bpmner.layout.internal.placement.MessageFlowEdges
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy
 import dev.groknull.bpmner.layout.internal.placement.SubprocessEndStraddle
 import dev.groknull.bpmner.layout.internal.placement.SubprocessSpineCentring
+import dev.groknull.bpmner.layout.internal.placement.WhiteBoxPoolBandPlacement
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
@@ -73,9 +75,6 @@ internal object BpmnPlacementPass {
     /** Vertical gap between a node's bottom edge and the top of its external label. */
     internal const val LABEL_GAP_BELOW = 2.0
 
-    /** Vertical gap between an edge label's bottom and the edge it sits above. */
-    internal const val EDGE_LABEL_GAP_ABOVE = 4.0
-
     /** Sub-pixel threshold below which a position change is treated as no-op. */
     internal const val POSITION_EPSILON = 0.5
 
@@ -110,9 +109,11 @@ internal object BpmnPlacementPass {
         SubprocessEndStraddle.Repair,
         SubprocessSpineCentring.Repair,
         CollaborationShapePlacement,
-        MessageFlowEdges,
+        WhiteBoxPoolBandPlacement,
         EdgeTerminalTailGuard,
-        LabelPlacement,
+        ElkLayoutResultCopy,
+        ExternalBlackBoxBandPlacement,
+        BoundaryLabelPlacement,
         ArtifactPlacement,
         AssociationEdges,
     )
@@ -148,9 +149,6 @@ internal object BpmnPlacementPass {
         if (container.identifier == null) return 0.0 to 0.0 // root graph
         return absolutePosition(container)
     }
-
-    /** Segment record used by LabelPlacement when finding the longest horizontal segment. */
-    internal data class HorizontalSegment(val mid: Point, val startX: Double, val endX: Double)
 
     /**
      * Estimates label dimensions for [name] given [maxWidth] using the frozen

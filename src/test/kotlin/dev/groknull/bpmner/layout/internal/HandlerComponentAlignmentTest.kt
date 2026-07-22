@@ -263,7 +263,7 @@ class HandlerComponentAlignmentTest {
         val expectedFlowH = listOf(Point(250.0, 240.0), Point(300.0, 240.0))
         kotlin.test.assertEquals(expectedFlowH, edges["Flow_h"], "Flow_h waypoints must be shifted uniformly")
 
-        val expectedRejoin = listOf(Point(350.0, 200.0), Point(350.0, 65.0), Point(400.0, 65.0))
+        val expectedRejoin = listOf(Point(400.0, 240.0), Point(415.0, 240.0), Point(415.0, 80.0))
         kotlin.test.assertEquals(expectedRejoin, edges["Flow_rejoin"], "Flow_rejoin must be correctly routed by routeRejoinEdge")
 
         val expectedForward = listOf(Point(40.0, 65.0), Point(150.0, 240.0))

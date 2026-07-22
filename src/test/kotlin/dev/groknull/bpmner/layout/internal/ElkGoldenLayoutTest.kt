@@ -113,6 +113,13 @@ class ElkGoldenLayoutTest {
         assertLabelsDoNotOverlapOwnNode(doc, fixture)
     }
 
+    @ParameterizedTest(name = "labels clear labels and shapes: {0}")
+    @ValueSource(strings = ["long-labels", "collab-msg-label"])
+    fun `named labels do not overlap other labels or shapes`(fixture: String) {
+        val result = layouter.layout(load("layout-fixtures/$fixture.bpmn"))
+        assertLabelsClearOtherDiGeometry(LayoutDiInspector.parse(result), fixture)
+    }
+
     @ParameterizedTest(name = "collaboration plane binds to Collaboration: {0}")
     @ValueSource(
         strings = [
@@ -404,6 +411,56 @@ class ElkGoldenLayoutTest {
                     "[$fixture] Shape '$id' label (top=$labelY) overlaps its own node (bottom=$shapeBottom)",
                 )
             }
+    }
+
+    /** Checks labels against all non-header labels and shapes, except the label owner's own shape. */
+    private fun assertLabelsClearOtherDiGeometry(doc: org.w3c.dom.Document, fixture: String) {
+        data class Rect(val ownerId: String, val x: Double, val y: Double, val w: Double, val h: Double)
+
+        fun rect(ownerId: String, bounds: Element?): Rect? {
+            val x = bounds?.getAttribute("x")?.toDoubleOrNull() ?: return null
+            val y = bounds.getAttribute("y").toDoubleOrNull() ?: return null
+            val w = bounds.getAttribute("width").toDoubleOrNull() ?: return null
+            val h = bounds.getAttribute("height").toDoubleOrNull() ?: return null
+            return Rect(ownerId, x, y, w, h)
+        }
+
+        fun overlaps(first: Rect, second: Rect): Boolean {
+            val overlapX = minOf(first.x + first.w, second.x + second.w) - maxOf(first.x, second.x)
+            val overlapY = minOf(first.y + first.h, second.y + second.h) - maxOf(first.y, second.y)
+            return overlapX >= 1.0 && overlapY >= 1.0
+        }
+
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        val headerOwners = (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .filter { it.getAttribute("isHorizontal") == "true" }
+            .mapTo(mutableSetOf()) { it.getAttribute("bpmnElement") }
+        val shapeRects = (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .filter { it.getAttribute("bpmnElement") !in headerOwners }
+            .mapNotNull { shape ->
+                rect(shape.getAttribute("bpmnElement"), shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
+            }
+        val labels = doc.getElementsByTagNameNS(DI_NS, "BPMNLabel")
+        val labelRects = (0 until labels.length)
+            .map { labels.item(it) as Element }
+            .mapNotNull { label ->
+                val owner = label.parentNode as? Element ?: return@mapNotNull null
+                val ownerId = owner.getAttribute("bpmnElement")
+                if (ownerId in headerOwners) return@mapNotNull null
+                rect(ownerId, label.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
+            }
+
+        for (i in labelRects.indices) {
+            val label = labelRects[i]
+            labelRects.drop(i + 1).forEach { other ->
+                assertTrue(!overlaps(label, other), "[$fixture] labels '${label.ownerId}' and '${other.ownerId}' overlap")
+            }
+            shapeRects.filter { it.ownerId != label.ownerId }.forEach { shape ->
+                assertTrue(!overlaps(label, shape), "[$fixture] label '${label.ownerId}' overlaps shape '${shape.ownerId}'")
+            }
+        }
     }
 
     private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml)

@@ -8,6 +8,8 @@ package dev.groknull.bpmner.layout.internal
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.LABEL_HEIGHT
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.LABEL_WIDTH
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.ElkSkeleton
+import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
+import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import org.camunda.bpm.model.bpmn.Bpmn
@@ -231,6 +233,105 @@ class BpmnPlacementPassTest {
     }
 
     @Test
+    fun `host label clears its boundary label and exception route`() {
+        val model = boundaryModel().also {
+            it.getModelElementById<org.camunda.bpm.model.bpmn.instance.ServiceTask>("Task_1").name = "Host"
+            it.getModelElementById<org.camunda.bpm.model.bpmn.instance.BoundaryEvent>("Boundary_1").name = "Timeout"
+        }
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton(ElkGraphUtil.createGraph(), emptyMap()),
+            shapes = mutableMapOf(
+                "Task_1" to BpmnPlacementPass.Rect(0.0, 0.0, 100.0, 80.0),
+                "Boundary_1" to BpmnPlacementPass.Rect(40.0, 62.0, 36.0, 36.0),
+            ),
+            labels = mutableMapOf("Task_1" to BpmnPlacementPass.Rect(10.0, 0.0, 80.0, 20.0)),
+            edges = mutableMapOf("Flow_ex" to listOf(BpmnPlacementPass.Point(58.0, 80.0), BpmnPlacementPass.Point(58.0, 140.0))),
+            expanded = mutableSetOf(),
+        )
+
+        BoundaryLabelPlacement.process(ctx)
+
+        val boundaryLabel = ctx.labels.getValue("Boundary_1")
+        val hostLabel = ctx.labels.getValue("Task_1")
+        assertTrue(hostLabel.y >= boundaryLabel.y + boundaryLabel.h)
+    }
+
+    @Test
+    fun `host label clears an unnamed boundary's own exception route, not just its shape`() {
+        val model = boundaryModel().also {
+            it.getModelElementById<org.camunda.bpm.model.bpmn.instance.ServiceTask>("Task_1").name = "Host"
+            // Boundary_1 stays unnamed: it must fall back to the shape+route path, not the labelled one.
+        }
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton(ElkGraphUtil.createGraph(), emptyMap()),
+            shapes = mutableMapOf(
+                "Task_1" to BpmnPlacementPass.Rect(0.0, 0.0, 100.0, 80.0),
+                "Boundary_1" to BpmnPlacementPass.Rect(40.0, 62.0, 36.0, 36.0),
+            ),
+            labels = mutableMapOf("Task_1" to BpmnPlacementPass.Rect(10.0, 0.0, 80.0, 20.0)),
+            // The exception route descends well below the boundary shape's own bottom edge.
+            edges = mutableMapOf("Flow_ex" to listOf(BpmnPlacementPass.Point(58.0, 98.0), BpmnPlacementPass.Point(58.0, 220.0))),
+            expanded = mutableSetOf(),
+        )
+
+        BoundaryLabelPlacement.process(ctx)
+
+        val hostLabel = ctx.labels.getValue("Task_1")
+        assertTrue(
+            hostLabel.y >= 220.0,
+            "host label ($hostLabel) must clear the unnamed boundary's exception route bottom (220.0)",
+        )
+    }
+
+    @Test
+    fun `ELK result copy retains every message-flow section`() {
+        val model = parse(
+            """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C1"><bpmn:messageFlow id="Message_1" sourceRef="Task_A" targetRef="Task_B"/></bpmn:collaboration>
+  <bpmn:process id="P1"><bpmn:serviceTask id="Task_A"/></bpmn:process>
+  <bpmn:process id="P2"><bpmn:serviceTask id="Task_B"/></bpmn:process>
+</bpmn:definitions>""",
+        )
+        val root = ElkGraphUtil.createGraph()
+        val edge = ElkGraphUtil.createEdge(root).also { it.identifier = "Message_1" }
+        ElkGraphUtil.createEdgeSection(edge).apply {
+            startX = 10.0
+            startY = 20.0
+            endX = 30.0
+            endY = 40.0
+        }
+        ElkGraphUtil.createEdgeSection(edge).apply {
+            startX = 30.0
+            startY = 40.0
+            endX = 50.0
+            endY = 60.0
+        }
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton(root, emptyMap(), edgeMap = mapOf("Message_1" to edge)),
+            shapes = mutableMapOf(),
+            labels = mutableMapOf(),
+            edges = mutableMapOf(),
+            expanded = mutableSetOf(),
+        )
+
+        ElkLayoutResultCopy.process(ctx)
+
+        assertEquals(
+            listOf(
+                BpmnPlacementPass.Point(10.0, 20.0),
+                BpmnPlacementPass.Point(30.0, 40.0),
+                BpmnPlacementPass.Point(30.0, 40.0),
+                BpmnPlacementPass.Point(50.0, 60.0),
+            ),
+            ctx.edges.getValue("Message_1"),
+        )
+    }
+
+    @Test
     fun `two boundaries on same host are both on host bottom edge and at different X positions`() {
         val model = twoBoundaryModel()
         val sk = twoBoundarySkeleton()
@@ -357,6 +458,12 @@ class BpmnPlacementPassTest {
         taskNode.y = 50.0
         taskNode.width = 100.0
         taskNode.height = 80.0
+        ElkGraphUtil.createLabel(taskNode).also { label ->
+            label.x = 25.0
+            label.y = 82.0
+            label.width = 50.0
+            label.height = LABEL_HEIGHT
+        }
 
         val sk = skeleton(root, mapOf("Task_1" to taskNode))
         val layout = BpmnPlacementPass.place(model, sk)
@@ -435,6 +542,12 @@ class BpmnPlacementPassTest {
         section.startY = 58.0
         section.endX = 200.0
         section.endY = 58.0
+        ElkGraphUtil.createLabel(elkEdge).also { label ->
+            label.x = 78.0
+            label.y = 34.0
+            label.width = 80.0
+            label.height = LABEL_HEIGHT
+        }
 
         val sk = skeleton(root, mapOf("S1" to s1, "E1" to e1), edgeMap = mapOf("Flow_1" to elkEdge))
         val layout = BpmnPlacementPass.place(model, sk)

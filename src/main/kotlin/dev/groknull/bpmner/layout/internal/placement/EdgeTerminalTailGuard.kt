@@ -33,7 +33,7 @@ import kotlin.math.abs
  * `ctx.shapes` lacks the node, or the node is pathologically small).
  *
  * Runs last among edge-producing steps (after [SequenceEdgeElkCopy], [CollaborationShapePlacement],
- * and [MessageFlowEdges], before [LabelPlacement] computes label positions from final waypoints),
+ * before ELK label coordinates are projected into [PlacementContext.labels]),
  * so it sees every edge's final geometry regardless of which processor produced it. Only a plain
  * 3-waypoint orthogonal "L" on a [SequenceFlow] is touched — bespoke multi-bend arcs
  * ([LoopBackEdgeArcs], [ExceptionEdgeRoutes]) already carry their own minimum-tail guarantees and

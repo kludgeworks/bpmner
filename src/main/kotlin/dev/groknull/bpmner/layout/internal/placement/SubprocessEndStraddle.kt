@@ -44,9 +44,24 @@ internal object SubprocessEndStraddle {
     }
 
     val Repair: PlacementProcessor = PlacementProcessor { ctx ->
-        val straddledEnds = ctx.moves
+        val ledgeredEnds = ctx.moves
             .filter { it.value.owner == "SubprocessEndStraddle" }
             .keys
+        // Spine centring may subsequently record the same end node. Its final geometry still
+        // identifies the straddle, so retain the edge-repair invariant when that happens.
+        val geometricEnds = ctx.model.getModelElementsByType(SubProcess::class.java)
+            .flatMap { sub ->
+                val rightBorder = ctx.shapes[sub.id]?.let { it.x + it.w } ?: return@flatMap emptyList()
+                sub.flowElements.filterIsInstance<EndEvent>()
+                    .filter { end ->
+                        ctx.shapes[end.id]?.let { shape ->
+                            kotlin.math.abs(shape.x + shape.w / 2.0 - rightBorder) <= POSITION_EPSILON
+                        } == true
+                    }
+                    .map { it.id }
+            }
+            .toSet()
+        val straddledEnds = ledgeredEnds + geometricEnds
         if (straddledEnds.isEmpty()) return@PlacementProcessor
 
         ctx.model.getModelElementsByType(SequenceFlow::class.java).forEach { sf ->
