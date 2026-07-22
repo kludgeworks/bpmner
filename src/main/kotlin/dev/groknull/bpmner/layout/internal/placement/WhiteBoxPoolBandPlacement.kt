@@ -5,7 +5,6 @@
 
 package dev.groknull.bpmner.layout.internal.placement
 
-import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.PARTICIPANT_GAP
@@ -102,6 +101,7 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
                     ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
                         Point(point.x + vector.x, point.y + vector.y)
                     } ?: return@forEach
+                    EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
                 }
             }
     }
@@ -150,12 +150,7 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
             listOf(start, Point(start.x, bendY), Point(end.x, bendY), end)
         }
         ctx.edges[flow.id] = route
-        if (!flow.name.isNullOrBlank()) {
-            val (width, height) = BpmnPlacementPass.estimateLabelDimensions(flow.name, BpmnPlacementPass.EDGE_LABEL_WIDTH)
-            val midX = (start.x + end.x) / 2.0
-            val midY = (start.y + end.y) / 2.0
-            ctx.labels[flow.id] = Rect(midX - width / 2.0, midY - height / 2.0, width, height)
-        }
+        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 
     /**

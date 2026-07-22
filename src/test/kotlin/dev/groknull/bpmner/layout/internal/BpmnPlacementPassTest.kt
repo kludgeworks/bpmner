@@ -258,6 +258,34 @@ class BpmnPlacementPassTest {
     }
 
     @Test
+    fun `host label clears an unnamed boundary's own exception route, not just its shape`() {
+        val model = boundaryModel().also {
+            it.getModelElementById<org.camunda.bpm.model.bpmn.instance.ServiceTask>("Task_1").name = "Host"
+            // Boundary_1 stays unnamed: it must fall back to the shape+route path, not the labelled one.
+        }
+        val ctx = PlacementContext(
+            model = model,
+            skeleton = skeleton(ElkGraphUtil.createGraph(), emptyMap()),
+            shapes = mutableMapOf(
+                "Task_1" to BpmnPlacementPass.Rect(0.0, 0.0, 100.0, 80.0),
+                "Boundary_1" to BpmnPlacementPass.Rect(40.0, 62.0, 36.0, 36.0),
+            ),
+            labels = mutableMapOf("Task_1" to BpmnPlacementPass.Rect(10.0, 0.0, 80.0, 20.0)),
+            // The exception route descends well below the boundary shape's own bottom edge.
+            edges = mutableMapOf("Flow_ex" to listOf(BpmnPlacementPass.Point(58.0, 98.0), BpmnPlacementPass.Point(58.0, 220.0))),
+            expanded = mutableSetOf(),
+        )
+
+        BoundaryLabelPlacement.process(ctx)
+
+        val hostLabel = ctx.labels.getValue("Task_1")
+        assertTrue(
+            hostLabel.y >= 220.0,
+            "host label ($hostLabel) must clear the unnamed boundary's exception route bottom (220.0)",
+        )
+    }
+
+    @Test
     fun `ELK result copy retains every message-flow section`() {
         val model = parse(
             """<?xml version="1.0" encoding="UTF-8"?>

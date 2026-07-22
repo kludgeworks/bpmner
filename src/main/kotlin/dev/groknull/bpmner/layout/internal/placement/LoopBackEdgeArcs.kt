@@ -37,10 +37,15 @@ internal object LoopBackEdgeArcs : PlacementProcessor {
 
     /**
      * Recomputes [sf]'s loop-back arc from its endpoints' current placed shapes and stores it
-     * in [PlacementContext.edges]. No-op if either endpoint is unplaced.
+     * in [PlacementContext.edges], centring [sf]'s label (if named) on the new arc. No-op on the
+     * route if either endpoint is unplaced.
+     *
+     * Loop-back flows are excluded from the ELK graph entirely ([BpmnToElkMapper.mapSequenceFlows]),
+     * so this is the sole owner of both their route and their label — there is no ELK-produced
+     * label to fall back to.
      *
      * Exposed so [CollaborationShapePlacement] can re-run this after lane placement moves an
-     * endpoint's shape, keeping the arc attached instead of going stale.
+     * endpoint's shape, keeping the arc (and label) attached instead of going stale.
      */
     internal fun routeAndStore(sf: SequenceFlow, ctx: PlacementContext) {
         val srcRect = ctx.shapes[sf.source?.id ?: return] ?: return
@@ -57,6 +62,7 @@ internal object LoopBackEdgeArcs : PlacementProcessor {
             }
             ?.let { ctx.shapes[it.id] }
         ctx.edges[sf.id] = routeLoopBackEdge(srcRect, tgtRect, subRect, laneRect)
+        EdgeLabelReposition.reposition(sf.id, sf.name, ctx)
     }
 
     /**

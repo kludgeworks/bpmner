@@ -144,6 +144,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                         ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
                             Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)
                         } ?: return@forEach
+                        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
                     }
                     flow.source is BoundaryEvent -> routeException(flow, ctx)
                     else -> routeSequence(flow, ctx)
@@ -156,6 +157,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val source = ctx.shapes[boundary.id] ?: return
         val target = ctx.shapes[flow.target?.id] ?: return
         ctx.edges[flow.id] = ExceptionEdgeRoutes.routeExceptionEdge(source, target, ctx.shapes[boundary.attachedTo?.id])
+        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 
     private fun routeSequence(flow: SequenceFlow, ctx: PlacementContext) {
@@ -168,6 +170,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 Point(source.x + source.w, sourceMiddleY),
                 Point(target.x, targetMiddleY),
             )
+            EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
             return
         }
 
@@ -176,6 +179,7 @@ internal object CollaborationShapePlacement : PlacementProcessor {
         val end = Point(target.x + target.w / 2.0, if (sourceAboveTarget) target.y else target.y + target.h)
         val bendY = (start.y + end.y) / 2.0
         ctx.edges[flow.id] = listOf(start, Point(start.x, bendY), Point(end.x, bendY), end)
+        EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 
     private fun copyBlackBoxBounds(participant: Participant, ctx: PlacementContext) {

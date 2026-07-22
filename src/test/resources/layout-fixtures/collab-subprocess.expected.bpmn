@@ -239,7 +239,7 @@
         <di:waypoint x="970.0" y="290.75"/>
         <di:waypoint x="970.0" y="187.0"/>
         <bpmndi:BPMNLabel id="BPMNLabel_MsgFlow_2">
-          <dc:Bounds height="20.0" width="34.013671875" x="595.3264973958334" y="280.75"/>
+          <dc:Bounds height="20.0" width="34.013671875" x="595.3264973958333" y="280.75"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

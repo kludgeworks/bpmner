@@ -132,6 +132,9 @@
         <di:waypoint x="530.0126953125" y="57.0"/>
         <di:waypoint x="364.0" y="57.0"/>
         <di:waypoint x="364.0" y="94.5"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
+          <dc:Bounds height="20.0" width="24.0" x="442.50634765625" y="47.0"/>
+        </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_s1" id="BPMNEdge_Flow_s1">
         <di:waypoint x="224.0" y="134.5"/>

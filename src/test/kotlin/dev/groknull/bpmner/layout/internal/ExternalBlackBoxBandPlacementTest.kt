@@ -12,6 +12,7 @@ import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import org.eclipse.elk.graph.util.ElkGraphUtil
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class ExternalBlackBoxBandPlacementTest {
 
@@ -49,6 +50,45 @@ class ExternalBlackBoxBandPlacementTest {
         assertEquals(otherRoute, ctx.edges["Other"])
         assertEquals(otherLabel, ctx.labels["Other"])
     }
+
+    @Test
+    fun `bands the external participant below two stacked modeled pools, not just the first`() {
+        val root = ElkGraphUtil.createGraph()
+        val external = PlacementTestSkeletons.makeNode(root, "External", 10.0, 20.0, 100.0, 60.0)
+        val ctx = PlacementContext(
+            PlacementTestSkeletons.parse(twoPoolXml),
+            PlacementTestSkeletons.skeleton(root, mapOf("External" to external)),
+            mutableMapOf(
+                // Two modeled pools already stacked by WhiteBoxPoolBandPlacement, sharing a band.
+                "Internal" to Rect(200.0, 40.0, 500.0, 180.0),
+                "Internal2" to Rect(200.0, 240.0, 500.0, 100.0),
+                "External" to Rect(10.0, 20.0, 100.0, 60.0),
+                "Task" to Rect(400.0, 300.0, 100.0, 80.0),
+            ),
+            mutableMapOf("Message" to Rect(0.0, 0.0, 90.0, 20.0)),
+            mutableMapOf("Message" to listOf(Point(0.0, 0.0), Point(1.0, 1.0), Point(2.0, 2.0))),
+            mutableSetOf(),
+        )
+
+        ExternalBlackBoxBandPlacement.process(ctx)
+
+        val band = ctx.shapes.getValue("External")
+        // Below BOTH modeled pools, spanning their shared left/width.
+        assertEquals(200.0, band.x)
+        assertEquals(500.0, band.w)
+        assertTrue(band.y >= 340.0, "band ($band) must sit below the second modeled pool's bottom (340.0)")
+        assertEquals(listOf(Point(450.0, 380.0), Point(450.0, band.y)), ctx.edges["Message"])
+    }
+
+    private val twoPoolXml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="Internal" processRef="P"/><bpmn:participant id="Internal2" processRef="P2"/><bpmn:participant id="External"/>
+    <bpmn:messageFlow id="Message" name="Request" sourceRef="Task" targetRef="External"/>
+  </bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:serviceTask id="Task"/></bpmn:process>
+  <bpmn:process id="P2"><bpmn:serviceTask id="Task2"/></bpmn:process>
+</bpmn:definitions>"""
 
     private fun collaborationContext(source: String = "Task", target: String = "External"): PlacementContext {
         val root = ElkGraphUtil.createGraph()

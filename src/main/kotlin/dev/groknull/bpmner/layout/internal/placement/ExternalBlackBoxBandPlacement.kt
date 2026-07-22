@@ -14,19 +14,25 @@ import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.MessageFlow
 import org.camunda.bpm.model.bpmn.instance.Participant
 
-/** Projects external black-box participants below one in-scope white-box participant. */
+/** Projects external black-box participants below the in-scope white-box participant(s). */
 internal object ExternalBlackBoxBandPlacement : PlacementProcessor {
 
     private const val OWNER = "ExternalBlackBoxBandPlacement"
 
     override fun process(ctx: PlacementContext) {
         val collaboration = ctx.model.getModelElementsByType(Collaboration::class.java).firstOrNull() ?: return
-        val whiteBox = collaboration.participants.filter { it.process != null }.singleOrNull() ?: return
-        val whiteBounds = ctx.shapes[whiteBox.id] ?: return
-        var nextY = whiteBounds.y + whiteBounds.h + PARTICIPANT_GAP
+        val whiteBoxes = collaboration.participants.filter { it.process != null }
+        val whiteBounds = whiteBoxes.mapNotNull { ctx.shapes[it.id] }
+        if (whiteBounds.isEmpty()) return
+        // One or more modeled pools may already be stacked into a shared band by
+        // WhiteBoxPoolBandPlacement (which runs earlier in the pipeline); span their union so a
+        // black-box band always sits below every modeled pool, not just the first one found.
+        val left = whiteBounds.minOf { it.x }
+        val width = whiteBounds.maxOf { it.x + it.w } - left
+        var nextY = whiteBounds.maxOf { it.y + it.h } + PARTICIPANT_GAP
         collaboration.participants.filter { it.process == null }.forEach { participant ->
             val previous = ctx.shapes[participant.id] ?: return@forEach
-            val band = Rect(whiteBounds.x, nextY, whiteBounds.w, previous.h)
+            val band = Rect(left, nextY, width, previous.h)
             ctx.shapes[participant.id] = band
             ctx.labels[participant.id] = Rect(band.x, band.y, PARTICIPANT_HEADER_WIDTH, band.h)
             recordMove(participant, band, ctx)
@@ -46,7 +52,7 @@ internal object ExternalBlackBoxBandPlacement : PlacementProcessor {
      * never modelled as ELK graph edges ([BpmnToElkMapper.mapMessageFlows] excludes them, since
      * ELK cannot know this BPMN presentation exception's final position), so this is the sole
      * owner of their route and label, not a repair of an ELK-produced one. The band is always
-     * below the white-box participant, so the fixed endpoint's bottom edge always faces the
+     * below the white-box participant(s), so the fixed endpoint's bottom edge always faces the
      * band's top edge: the route is a single vertical run between them, with the label centred
      * on its midpoint.
      */
@@ -65,12 +71,7 @@ internal object ExternalBlackBoxBandPlacement : PlacementProcessor {
             val bandPoint = Point(cx, band.y)
             val route = if (fromBlackBox) listOf(bandPoint, fixedPoint) else listOf(fixedPoint, bandPoint)
             ctx.edges[flow.id] = route
-            if (!flow.name.isNullOrBlank()) {
-                val (width, height) = BpmnPlacementPass.estimateLabelDimensions(flow.name, BpmnPlacementPass.EDGE_LABEL_WIDTH)
-                val midX = (route.first().x + route.last().x) / 2.0
-                val midY = (route.first().y + route.last().y) / 2.0
-                ctx.labels[flow.id] = Rect(midX - width / 2.0, midY - height / 2.0, width, height)
-            }
+            EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
         }
     }
 }
