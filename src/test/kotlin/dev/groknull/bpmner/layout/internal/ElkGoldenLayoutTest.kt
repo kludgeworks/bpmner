@@ -13,13 +13,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Regression test over the full 22-fixture set.
+ * Regression test over the full 24-fixture set.
  *
  * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
  * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 22 fixtures.
+ * labels below nodes) and determinism for all 24 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -57,6 +57,8 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "miwg-a2-1",
+            "miwg-a3-0",
         ],
     )
     fun `engine output matches committed expected`(fixture: String) {
@@ -97,10 +99,12 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "miwg-a2-1",
+            "miwg-a3-0",
         ],
     )
     @Suppress("CyclomaticComplexMethod")
-    fun `all 22 layout fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 24 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
@@ -317,6 +321,8 @@ class ElkGoldenLayoutTest {
             "collab-subprocess",
             "collab-bioc",
             "collab-lanes-loopback",
+            "miwg-a2-1",
+            "miwg-a3-0",
         ],
     )
     fun `layout is deterministic across two runs`(fixture: String) {

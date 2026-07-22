@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_miwg_a3_0" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_miwg_a3_0" name="MIWG A.3.0 - Exception Flows on a Subprocess" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_1" name="Task 1">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:subProcess id="SubProcess_1" name="Collapsed Sub-Process">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart" name="Begin">
+        <bpmn:outgoing>SubFlow_1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:task id="SubTask" name="Do Work">
+        <bpmn:incoming>SubFlow_1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_2</bpmn:outgoing>
+      </bpmn:task>
+      <bpmn:endEvent id="SubEnd" name="Done">
+        <bpmn:incoming>SubFlow_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_1" sourceRef="SubStart" targetRef="SubTask"/>
+      <bpmn:sequenceFlow id="SubFlow_2" sourceRef="SubTask" targetRef="SubEnd"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_timer" name="Boundary Timer" attachedToRef="SubProcess_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_error" name="Boundary Error" attachedToRef="SubProcess_1" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:task id="Task_2" name="Task 2">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_3" name="Task 3">
+      <bpmn:incoming>Flow_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_4" name="Task 4">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_1" name="End Event 1">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_2" name="End Event 2">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_1" targetRef="SubProcess_1"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="SubProcess_1" targetRef="Task_2"/>
+    <bpmn:sequenceFlow id="Flow_timer" sourceRef="Boundary_timer" targetRef="Task_3"/>
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_error" targetRef="Task_4"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_2" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_3" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_4" targetRef="End_2"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -14,6 +14,9 @@ import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 /**
  * Text annotation and group sidecar geometry.
  *
+ * Artifacts are never mapped into the ELK graph, so they cannot perturb primary control-flow
+ * layout: this processor derives their position entirely from the already-final flow-node shapes.
+ *
  * Every [TextAnnotation] is placed below-and-right of its associated element
  * (if any association exists) or stacked below the skeleton at [ARTIFACT_MARGIN] intervals.
  * Every [Group] is placed as a padded bounding box around the flow-node shapes.

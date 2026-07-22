@@ -44,6 +44,9 @@ fun main() {
         "collab-subprocess",
         "collab-bioc",
         "collab-lanes-loopback",
+        // BPMN MIWG interchange corpus
+        "miwg-a2-1",
+        "miwg-a3-0",
     )
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
