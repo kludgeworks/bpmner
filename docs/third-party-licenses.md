@@ -2,16 +2,16 @@
 
 <!-- markdownlint-disable MD013 -->
 
-## ELK 0.11.0
+## ELK 0.12.0
 
-Direct dependency: `org.eclipse.elk:org.eclipse.elk.alg.layered:0.11.0`
+Direct dependency: `org.eclipse.elk:org.eclipse.elk.alg.layered:0.12.0`
 
 | Artifact | Version | License |
 | --- | --- | --- |
-| `org.eclipse.elk:org.eclipse.elk.alg.layered` | 0.11.0 | EPL-2.0 |
-| `org.eclipse.elk:org.eclipse.elk.alg.common` | 0.11.0 | EPL-2.0 |
-| `org.eclipse.elk:org.eclipse.elk.core` | 0.11.0 | EPL-2.0 |
-| `org.eclipse.elk:org.eclipse.elk.graph` | 0.11.0 | EPL-2.0 |
+| `org.eclipse.elk:org.eclipse.elk.alg.layered` | 0.12.0 | EPL-2.0 |
+| `org.eclipse.elk:org.eclipse.elk.alg.common` | 0.12.0 | EPL-2.0 |
+| `org.eclipse.elk:org.eclipse.elk.core` | 0.12.0 | EPL-2.0 |
+| `org.eclipse.elk:org.eclipse.elk.graph` | 0.12.0 | EPL-2.0 |
 | `org.eclipse.emf:org.eclipse.emf.ecore` | 2.12.0 | EPL-1.0 |
 | `org.eclipse.emf:org.eclipse.emf.common` | 2.12.0 | EPL-1.0 |
 | `org.eclipse.emf:org.eclipse.emf.ecore.xmi` | 2.12.0 | EPL-1.0 |

@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
+import dev.groknull.bpmner.layout.internal.elk.BPMNER_LAYERED_ALGORITHM_ID
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
@@ -505,7 +506,7 @@ internal object BpmnToElkMapper {
 
     /** Applies the fixed, executable ELK layout profile. */
     private fun applyRootLayoutOptions(root: ElkNode) {
-        root.setProperty(CoreOptions.ALGORITHM, LayeredOptions.ALGORITHM_ID)
+        root.setProperty(CoreOptions.ALGORITHM, BPMNER_LAYERED_ALGORITHM_ID)
         root.setProperty(CoreOptions.DIRECTION, Direction.RIGHT)
         root.setProperty(CoreOptions.EDGE_ROUTING, EdgeRouting.ORTHOGONAL)
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)

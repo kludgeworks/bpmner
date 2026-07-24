@@ -24,7 +24,7 @@ import kotlin.test.assertTrue
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
 
-    private val layouter = ElkBpmnLayouter()
+    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
 
     companion object {
         private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
@@ -342,41 +342,22 @@ class ElkGoldenLayoutTest {
      */
     private fun assertNoTopLevelShapeOverlap(doc: org.w3c.dom.Document, fixture: String, boundaryEventIds: Set<String>) {
         val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
-        data class ShapeRect(val id: String, val x: Double, val y: Double, val w: Double, val h: Double)
-
-        val rects = (0 until shapes.length)
+        val headerOwners = (0 until shapes.length)
             .map { shapes.item(it) as Element }
-            .mapNotNull { shape ->
-                val id = shape.getAttribute("bpmnElement")
-                if (id in boundaryEventIds) return@mapNotNull null
-                // Participants and lanes are horizontal pool containers — skip from overlap check.
-                if (shape.getAttribute("isHorizontal") == "true") return@mapNotNull null
-                val bounds = shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element ?: return@mapNotNull null
-                val x = bounds.getAttribute("x").toDoubleOrNull() ?: return@mapNotNull null
-                val y = bounds.getAttribute("y").toDoubleOrNull() ?: return@mapNotNull null
-                val w = bounds.getAttribute("width").toDoubleOrNull() ?: return@mapNotNull null
-                val h = bounds.getAttribute("height").toDoubleOrNull() ?: return@mapNotNull null
-                if (w <= 0 || h <= 0) return@mapNotNull null
-                ShapeRect(id, x, y, w, h)
-            }
+            .filter { it.getAttribute("isHorizontal") == "true" }
+            .mapTo(mutableSetOf()) { it.getAttribute("bpmnElement") }
 
         // Non-container: area < 40000 (200×200). Subprocesses (e.g. 300×200 = 60000) contain
-        // their children by design. Boundary events (area = 36×36 ≈ 1296) are small but excluded above.
-        val nonContainer = rects.filter { it.w * it.h < 40_000 }
+        // their children by design. Boundary events (area = 36×36 ≈ 1296) straddle their host by
+        // design — both are excluded. Participants/lanes are horizontal pool containers — excluded too.
+        val nonContainer = extractShapeRects(doc)
+            .filter { it.id !in boundaryEventIds && it.id !in headerOwners && it.w * it.h < 40_000 }
 
-        for (i in 0 until nonContainer.size) {
-            for (j in i + 1 until nonContainer.size) {
-                val a = nonContainer[i]
-                val b = nonContainer[j]
-                val overlapX = minOf(a.x + a.w, b.x + b.w) - maxOf(a.x, b.x)
-                val overlapY = minOf(a.y + a.h, b.y + b.h) - maxOf(a.y, b.y)
-                assertTrue(
-                    overlapX < 1.0 || overlapY < 1.0,
-                    "[$fixture] Non-container shapes '${a.id}' and '${b.id}' overlap by " +
-                        "dx=$overlapX dy=$overlapY",
-                )
-            }
-        }
+        val overlaps = overlappingPairs(nonContainer)
+        assertTrue(
+            overlaps.isEmpty(),
+            overlaps.joinToString("; ") { (a, b) -> "[$fixture] Non-container shapes '${a.id}' and '${b.id}' overlap" },
+        )
     }
 
     private fun boundaryEventIds(xml: String): Set<String> {
