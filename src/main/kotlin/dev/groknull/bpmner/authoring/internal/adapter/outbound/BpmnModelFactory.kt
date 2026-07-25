@@ -83,7 +83,10 @@ internal object BpmnModelFactory {
 
                 is BpmnIntermediateThrowEvent -> modelInstance.newInstance(IntermediateThrowEvent::class.java)
 
-                is BpmnBoundaryEvent -> modelInstance.newInstance(BoundaryEvent::class.java)
+                is BpmnBoundaryEvent ->
+                    modelInstance.newInstance(BoundaryEvent::class.java).apply {
+                        setAttributeValue("attachedToRef", node.attachedToRef)
+                    }
 
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
 
