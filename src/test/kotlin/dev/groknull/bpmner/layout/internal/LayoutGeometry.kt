@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: MIT
  */
 
+@file:Suppress("TooManyFunctions")
+
 package dev.groknull.bpmner.layout.internal
 
 import org.w3c.dom.Document
@@ -164,6 +166,21 @@ internal fun isAxisAligned(a: DiPoint, b: DiPoint): Boolean =
 /** Straight-line length of an axis-aligned segment `a`-`b`. */
 internal fun axisSegmentLength(a: DiPoint, b: DiPoint): Double =
     if (a.x == b.x) kotlin.math.abs(b.y - a.y) else kotlin.math.abs(b.x - a.x)
+
+/** Whether segment `a`-`b` passes through the interior of, or terminates inside, rect [r]. */
+internal fun segmentIntersectsRect(a: DiPoint, b: DiPoint, r: DiRect): Boolean {
+    fun inside(p: DiPoint) = p.x > r.x && p.x < r.right && p.y > r.y && p.y < r.bottom
+    if (inside(a) || inside(b)) return true
+    val corners = listOf(
+        DiPoint(r.x, r.y),
+        DiPoint(r.right, r.y),
+        DiPoint(r.right, r.bottom),
+        DiPoint(r.x, r.bottom),
+    )
+    return corners.indices.any { i ->
+        segmentsCross(a, b, corners[i], corners[(i + 1) % corners.size])
+    }
+}
 
 /** Whether [p] lies on (or within [BOUNDARY_TOLERANCE] of) one of [r]'s four sides. */
 internal fun isOnRectBoundary(p: DiPoint, r: DiRect): Boolean {

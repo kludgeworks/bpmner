@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_miwg_b2_dense" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_dense" name="MIWG B.2.0 Dense Routing Probe" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Start">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_intake" name="Intake">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_intake_timer" name="Intake Timeout" attachedToRef="Task_intake" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_intake_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_intake"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_intake_timeout" name="Handle Intake Timeout">
+      <bpmn:incoming>Flow_b_intake_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_intake_timer_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_intake_timeout" name="Intake Timed Out">
+      <bpmn:incoming>Flow_b_intake_timer_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:subProcess id="SubProcess_A" name="Validate Order">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_A" name="Begin Validation">
+        <bpmn:outgoing>SFlow_A1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:userTask id="Task_A1" name="Review Details">
+        <bpmn:incoming>SFlow_A1</bpmn:incoming>
+        <bpmn:outgoing>SFlow_A2</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="Gw_A_split" name="Valid?" default="SFlow_A3">
+        <bpmn:incoming>SFlow_A2</bpmn:incoming>
+        <bpmn:outgoing>SFlow_A3</bpmn:outgoing>
+        <bpmn:outgoing>SFlow_A4</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:scriptTask id="Task_A2" name="Accept">
+        <bpmn:incoming>SFlow_A3</bpmn:incoming>
+        <bpmn:outgoing>SFlow_A5</bpmn:outgoing>
+      </bpmn:scriptTask>
+      <bpmn:businessRuleTask id="Task_A3" name="Assess Exception">
+        <bpmn:incoming>SFlow_A4</bpmn:incoming>
+        <bpmn:outgoing>SFlow_A6</bpmn:outgoing>
+      </bpmn:businessRuleTask>
+      <bpmn:exclusiveGateway id="Gw_A_join">
+        <bpmn:incoming>SFlow_A5</bpmn:incoming>
+        <bpmn:incoming>SFlow_A6</bpmn:incoming>
+        <bpmn:outgoing>SFlow_A7</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:endEvent id="SubEnd_A" name="Validated">
+        <bpmn:incoming>SFlow_A7</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SFlow_A1" sourceRef="SubStart_A" targetRef="Task_A1"/>
+      <bpmn:sequenceFlow id="SFlow_A2" sourceRef="Task_A1" targetRef="Gw_A_split"/>
+      <bpmn:sequenceFlow id="SFlow_A3" sourceRef="Gw_A_split" targetRef="Task_A2"/>
+      <bpmn:sequenceFlow id="SFlow_A4" sourceRef="Gw_A_split" targetRef="Task_A3"/>
+      <bpmn:sequenceFlow id="SFlow_A5" sourceRef="Task_A2" targetRef="Gw_A_join"/>
+      <bpmn:sequenceFlow id="SFlow_A6" sourceRef="Task_A3" targetRef="Gw_A_join"/>
+      <bpmn:sequenceFlow id="SFlow_A7" sourceRef="Gw_A_join" targetRef="SubEnd_A"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_between2_timer" name="Pricing Timeout" attachedToRef="Task_between2" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_between2_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_between2"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_between2_timeout" name="Handle Pricing Timeout">
+      <bpmn:incoming>Flow_b_between2_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_between2_timer_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_between2_timeout" name="Pricing Timed Out">
+      <bpmn:incoming>Flow_b_between2_timer_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_between1" name="Confirm Validation">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_between1_error" name="Confirmation Error" attachedToRef="Task_between1" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_between1_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_between1"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_between1_error" name="Handle Confirmation Error">
+      <bpmn:incoming>Flow_b_between1_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_between1_error_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_between1_error" name="Confirmation Failed">
+      <bpmn:incoming>Flow_b_between1_error_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:subProcess id="SubProcess_B" name="Reserve Stock">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_B" name="Begin Reservation">
+        <bpmn:outgoing>SFlow_B1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_B1" name="Check Stock">
+        <bpmn:incoming>SFlow_B1</bpmn:incoming>
+        <bpmn:outgoing>SFlow_B2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:exclusiveGateway id="Gw_B_split" name="In Stock?" default="SFlow_B3">
+        <bpmn:incoming>SFlow_B2</bpmn:incoming>
+        <bpmn:outgoing>SFlow_B3</bpmn:outgoing>
+        <bpmn:outgoing>SFlow_B4</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:userTask id="Task_B2" name="Reserve">
+        <bpmn:incoming>SFlow_B3</bpmn:incoming>
+        <bpmn:outgoing>SFlow_B5</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:userTask id="Task_B3" name="Backorder">
+        <bpmn:incoming>SFlow_B4</bpmn:incoming>
+        <bpmn:outgoing>SFlow_B6</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:exclusiveGateway id="Gw_B_join">
+        <bpmn:incoming>SFlow_B5</bpmn:incoming>
+        <bpmn:incoming>SFlow_B6</bpmn:incoming>
+        <bpmn:outgoing>SFlow_B7</bpmn:outgoing>
+      </bpmn:exclusiveGateway>
+      <bpmn:endEvent id="SubEnd_B" name="Reserved">
+        <bpmn:incoming>SFlow_B7</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SFlow_B1" sourceRef="SubStart_B" targetRef="Task_B1"/>
+      <bpmn:sequenceFlow id="SFlow_B2" sourceRef="Task_B1" targetRef="Gw_B_split"/>
+      <bpmn:sequenceFlow id="SFlow_B3" sourceRef="Gw_B_split" targetRef="Task_B2"/>
+      <bpmn:sequenceFlow id="SFlow_B4" sourceRef="Gw_B_split" targetRef="Task_B3"/>
+      <bpmn:sequenceFlow id="SFlow_B5" sourceRef="Task_B2" targetRef="Gw_B_join"/>
+      <bpmn:sequenceFlow id="SFlow_B6" sourceRef="Task_B3" targetRef="Gw_B_join"/>
+      <bpmn:sequenceFlow id="SFlow_B7" sourceRef="Gw_B_join" targetRef="SubEnd_B"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_ex_a_error" name="Dispatch Error" attachedToRef="Task_ex_a" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_ex_a_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_ex_a"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_ex_a_error" name="Handle Dispatch Error">
+      <bpmn:incoming>Flow_b_ex_a_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_ex_a_error_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_ex_a_error" name="Dispatch Failed">
+      <bpmn:incoming>Flow_b_ex_a_error_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:businessRuleTask id="Task_between2" name="Price Order">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+
+    <bpmn:subProcess id="SubProcess_C" name="Notify Customer">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_C" name="Begin Notification">
+        <bpmn:outgoing>SFlow_C1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:sendTask id="Task_C1" name="Send Confirmation">
+        <bpmn:incoming>SFlow_C1</bpmn:incoming>
+        <bpmn:outgoing>SFlow_C2</bpmn:outgoing>
+        <bpmn:standardLoopCharacteristics testBefore="false"/>
+      </bpmn:sendTask>
+      <bpmn:receiveTask id="Task_C2" name="Await Acknowledgement">
+        <bpmn:incoming>SFlow_C2</bpmn:incoming>
+        <bpmn:outgoing>SFlow_C3</bpmn:outgoing>
+      </bpmn:receiveTask>
+      <bpmn:endEvent id="SubEnd_C" name="Notified">
+        <bpmn:incoming>SFlow_C3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SFlow_C1" sourceRef="SubStart_C" targetRef="Task_C1"/>
+      <bpmn:sequenceFlow id="SFlow_C2" sourceRef="Task_C1" targetRef="Task_C2"/>
+      <bpmn:sequenceFlow id="SFlow_C3" sourceRef="Task_C2" targetRef="SubEnd_C"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_C_timer" name="Notification Timeout" attachedToRef="SubProcess_C" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_c_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_c"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_C_timeout" name="Handle Notification Timeout">
+      <bpmn:incoming>Flow_b_c_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_c_timer_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_C_timeout" name="Notification Terminated">
+      <bpmn:incoming>Flow_b_c_timer_end</bpmn:incoming>
+      <bpmn:terminateEventDefinition id="TerminateDef_c"/>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Boundary_C_error" name="Notification Error" attachedToRef="SubProcess_C" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_c_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_c"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_C_error" name="Handle Notification Error">
+      <bpmn:incoming>Flow_b_c_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_c_error_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_C_error" name="Notification Failed">
+      <bpmn:incoming>Flow_b_c_error_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:scriptTask id="Task_between3" name="Log Order">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:boundaryEvent id="Boundary_between3_timer" name="Logging Timeout" attachedToRef="Task_between3" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_between3_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_between3"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_between3_timeout" name="Handle Logging Timeout">
+      <bpmn:incoming>Flow_b_between3_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_between3_timer_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_between3_timeout" name="Logging Timed Out">
+      <bpmn:incoming>Flow_b_between3_timer_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:subProcess id="SubProcess_D" name="Fulfil Order">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_D" name="Begin Fulfilment">
+        <bpmn:outgoing>SFlow_D1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:userTask id="Task_D1" name="Pick Items">
+        <bpmn:incoming>SFlow_D1</bpmn:incoming>
+        <bpmn:outgoing>SFlow_D2</bpmn:outgoing>
+        <bpmn:multiInstanceLoopCharacteristics isSequential="false"/>
+      </bpmn:userTask>
+      <bpmn:inclusiveGateway id="Gw_D_split" name="Extras?" default="SFlow_D3">
+        <bpmn:incoming>SFlow_D2</bpmn:incoming>
+        <bpmn:outgoing>SFlow_D3</bpmn:outgoing>
+        <bpmn:outgoing>SFlow_D4</bpmn:outgoing>
+      </bpmn:inclusiveGateway>
+      <bpmn:serviceTask id="Task_D2" name="Pack">
+        <bpmn:incoming>SFlow_D3</bpmn:incoming>
+        <bpmn:outgoing>SFlow_D5</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="Task_D3" name="Gift Wrap">
+        <bpmn:incoming>SFlow_D4</bpmn:incoming>
+        <bpmn:outgoing>SFlow_D6</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:inclusiveGateway id="Gw_D_join">
+        <bpmn:incoming>SFlow_D5</bpmn:incoming>
+        <bpmn:incoming>SFlow_D6</bpmn:incoming>
+        <bpmn:outgoing>SFlow_D7</bpmn:outgoing>
+      </bpmn:inclusiveGateway>
+      <bpmn:endEvent id="SubEnd_D" name="Fulfilled">
+        <bpmn:incoming>SFlow_D7</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SFlow_D1" sourceRef="SubStart_D" targetRef="Task_D1"/>
+      <bpmn:sequenceFlow id="SFlow_D2" sourceRef="Task_D1" targetRef="Gw_D_split"/>
+      <bpmn:sequenceFlow id="SFlow_D3" sourceRef="Gw_D_split" targetRef="Task_D2"/>
+      <bpmn:sequenceFlow id="SFlow_D4" sourceRef="Gw_D_split" targetRef="Task_D3"/>
+      <bpmn:sequenceFlow id="SFlow_D5" sourceRef="Task_D2" targetRef="Gw_D_join"/>
+      <bpmn:sequenceFlow id="SFlow_D6" sourceRef="Task_D3" targetRef="Gw_D_join"/>
+      <bpmn:sequenceFlow id="SFlow_D7" sourceRef="Gw_D_join" targetRef="SubEnd_D"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_par_a_error" name="Inventory Update Error" attachedToRef="Task_par_a" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_par_a_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_par_a"/>
+    </bpmn:boundaryEvent>
+    <bpmn:serviceTask id="Task_par_a_error" name="Handle Inventory Update Error">
+      <bpmn:incoming>Flow_b_par_a_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_par_a_error_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_par_a_error" name="Inventory Update Failed">
+      <bpmn:incoming>Flow_b_par_a_error_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:userTask id="Task_after_subs" name="Review Fulfilment">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+
+    <bpmn:exclusiveGateway id="Gw_ex_split" name="Express?" default="Flow_ex_a">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_ex_a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_ex_b</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_ex_a" name="Standard Dispatch">
+      <bpmn:incoming>Flow_ex_a</bpmn:incoming>
+      <bpmn:outgoing>Flow_ex_a_join</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_ex_b" name="Express Dispatch">
+      <bpmn:incoming>Flow_ex_b</bpmn:incoming>
+      <bpmn:outgoing>Flow_ex_b_join</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_ex_join">
+      <bpmn:incoming>Flow_ex_a_join</bpmn:incoming>
+      <bpmn:incoming>Flow_ex_b_join</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:parallelGateway id="Gw_par_split" name="Dispatch Tasks">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_par_a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_par_b</bpmn:outgoing>
+      <bpmn:outgoing>Flow_par_c</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:serviceTask id="Task_par_a" name="Update Inventory">
+      <bpmn:incoming>Flow_par_a</bpmn:incoming>
+      <bpmn:outgoing>Flow_par_a_join</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_par_b" name="Update Billing">
+      <bpmn:incoming>Flow_par_b</bpmn:incoming>
+      <bpmn:outgoing>Flow_par_b_join</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:scriptTask id="Task_par_c" name="Update Analytics">
+      <bpmn:incoming>Flow_par_c</bpmn:incoming>
+      <bpmn:outgoing>Flow_par_c_join</bpmn:outgoing>
+    </bpmn:scriptTask>
+    <bpmn:parallelGateway id="Gw_par_join">
+      <bpmn:incoming>Flow_par_a_join</bpmn:incoming>
+      <bpmn:incoming>Flow_par_b_join</bpmn:incoming>
+      <bpmn:incoming>Flow_par_c_join</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:inclusiveGateway id="Gw_inc_split" name="Follow-up?" default="Flow_inc_a">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_inc_a</bpmn:outgoing>
+      <bpmn:outgoing>Flow_inc_b</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+    <bpmn:businessRuleTask id="Task_inc_a" name="Schedule Survey">
+      <bpmn:incoming>Flow_inc_a</bpmn:incoming>
+      <bpmn:outgoing>Flow_inc_a_join</bpmn:outgoing>
+    </bpmn:businessRuleTask>
+    <bpmn:sendTask id="Task_inc_b" name="Send Upsell Offer">
+      <bpmn:incoming>Flow_inc_b</bpmn:incoming>
+      <bpmn:outgoing>Flow_inc_b_join</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:inclusiveGateway id="Gw_inc_join">
+      <bpmn:incoming>Flow_inc_a_join</bpmn:incoming>
+      <bpmn:incoming>Flow_inc_b_join</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:inclusiveGateway>
+
+    <bpmn:eventBasedGateway id="Gw_evt" name="Await Response">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_evt_timer</bpmn:outgoing>
+      <bpmn:outgoing>Flow_evt_msg</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Catch_evt_timer" name="No Response">
+      <bpmn:incoming>Flow_evt_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_evt_timer_next</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_evt"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_evt_msg" name="Customer Response">
+      <bpmn:incoming>Flow_evt_msg</bpmn:incoming>
+      <bpmn:outgoing>Flow_evt_msg_next</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MsgDef_evt"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:serviceTask id="Task_evt_timer" name="Close Out Silently">
+      <bpmn:incoming>Flow_evt_timer_next</bpmn:incoming>
+      <bpmn:outgoing>Flow_evt_timer_end</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:receiveTask id="Task_evt_msg" name="Process Response">
+      <bpmn:incoming>Flow_evt_msg_next</bpmn:incoming>
+      <bpmn:outgoing>Flow_evt_msg_end</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="End_final" name="Order Complete">
+      <bpmn:incoming>Flow_evt_timer_end</bpmn:incoming>
+      <bpmn:incoming>Flow_evt_msg_end</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_intake"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_intake" targetRef="SubProcess_A"/>
+    <bpmn:sequenceFlow id="Flow_b_intake_timer" sourceRef="Boundary_intake_timer" targetRef="Task_intake_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_intake_timer_end" sourceRef="Task_intake_timeout" targetRef="End_intake_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_between2_timer" sourceRef="Boundary_between2_timer" targetRef="Task_between2_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_between2_timer_end" sourceRef="Task_between2_timeout" targetRef="End_between2_timeout"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="SubProcess_A" targetRef="Task_between1"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_between1" targetRef="SubProcess_B"/>
+    <bpmn:sequenceFlow id="Flow_b_between1_error" sourceRef="Boundary_between1_error" targetRef="Task_between1_error"/>
+    <bpmn:sequenceFlow id="Flow_b_between1_error_end" sourceRef="Task_between1_error" targetRef="End_between1_error"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="SubProcess_B" targetRef="Task_between2"/>
+    <bpmn:sequenceFlow id="Flow_b_ex_a_error" sourceRef="Boundary_ex_a_error" targetRef="Task_ex_a_error"/>
+    <bpmn:sequenceFlow id="Flow_b_ex_a_error_end" sourceRef="Task_ex_a_error" targetRef="End_ex_a_error"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_between2" targetRef="SubProcess_C"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="SubProcess_C" targetRef="Task_between3"/>
+    <bpmn:sequenceFlow id="Flow_b_c_timer" sourceRef="Boundary_C_timer" targetRef="Task_C_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_c_timer_end" sourceRef="Task_C_timeout" targetRef="End_C_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_c_error" sourceRef="Boundary_C_error" targetRef="Task_C_error"/>
+    <bpmn:sequenceFlow id="Flow_b_c_error_end" sourceRef="Task_C_error" targetRef="End_C_error"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_between3" targetRef="SubProcess_D"/>
+    <bpmn:sequenceFlow id="Flow_b_between3_timer" sourceRef="Boundary_between3_timer" targetRef="Task_between3_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_between3_timer_end" sourceRef="Task_between3_timeout" targetRef="End_between3_timeout"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="SubProcess_D" targetRef="Task_after_subs"/>
+    <bpmn:sequenceFlow id="Flow_b_par_a_error" sourceRef="Boundary_par_a_error" targetRef="Task_par_a_error"/>
+    <bpmn:sequenceFlow id="Flow_b_par_a_error_end" sourceRef="Task_par_a_error" targetRef="End_par_a_error"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_after_subs" targetRef="Gw_ex_split"/>
+    <bpmn:sequenceFlow id="Flow_ex_a" sourceRef="Gw_ex_split" targetRef="Task_ex_a"/>
+    <bpmn:sequenceFlow id="Flow_ex_b" sourceRef="Gw_ex_split" targetRef="Task_ex_b"/>
+    <bpmn:sequenceFlow id="Flow_ex_a_join" sourceRef="Task_ex_a" targetRef="Gw_ex_join"/>
+    <bpmn:sequenceFlow id="Flow_ex_b_join" sourceRef="Task_ex_b" targetRef="Gw_ex_join"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gw_ex_join" targetRef="Gw_par_split"/>
+    <bpmn:sequenceFlow id="Flow_par_a" sourceRef="Gw_par_split" targetRef="Task_par_a"/>
+    <bpmn:sequenceFlow id="Flow_par_b" sourceRef="Gw_par_split" targetRef="Task_par_b"/>
+    <bpmn:sequenceFlow id="Flow_par_c" sourceRef="Gw_par_split" targetRef="Task_par_c"/>
+    <bpmn:sequenceFlow id="Flow_par_a_join" sourceRef="Task_par_a" targetRef="Gw_par_join"/>
+    <bpmn:sequenceFlow id="Flow_par_b_join" sourceRef="Task_par_b" targetRef="Gw_par_join"/>
+    <bpmn:sequenceFlow id="Flow_par_c_join" sourceRef="Task_par_c" targetRef="Gw_par_join"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gw_par_join" targetRef="Gw_inc_split"/>
+    <bpmn:sequenceFlow id="Flow_inc_a" sourceRef="Gw_inc_split" targetRef="Task_inc_a"/>
+    <bpmn:sequenceFlow id="Flow_inc_b" sourceRef="Gw_inc_split" targetRef="Task_inc_b"/>
+    <bpmn:sequenceFlow id="Flow_inc_a_join" sourceRef="Task_inc_a" targetRef="Gw_inc_join"/>
+    <bpmn:sequenceFlow id="Flow_inc_b_join" sourceRef="Task_inc_b" targetRef="Gw_inc_join"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Gw_inc_join" targetRef="Gw_evt"/>
+    <bpmn:sequenceFlow id="Flow_evt_timer" sourceRef="Gw_evt" targetRef="Catch_evt_timer"/>
+    <bpmn:sequenceFlow id="Flow_evt_msg" sourceRef="Gw_evt" targetRef="Catch_evt_msg"/>
+    <bpmn:sequenceFlow id="Flow_evt_timer_next" sourceRef="Catch_evt_timer" targetRef="Task_evt_timer"/>
+    <bpmn:sequenceFlow id="Flow_evt_msg_next" sourceRef="Catch_evt_msg" targetRef="Task_evt_msg"/>
+    <bpmn:sequenceFlow id="Flow_evt_timer_end" sourceRef="Task_evt_timer" targetRef="End_final"/>
+    <bpmn:sequenceFlow id="Flow_evt_msg_end" sourceRef="Task_evt_msg" targetRef="End_final"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -33,6 +33,33 @@ class ElkGoldenLayoutTest {
 
         /** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
         private const val CONTAINER_AREA = 40_000.0
+
+        /**
+         * Known label/edge-waypoint overlaps (fixture, label owner id, edge id). Each pair traces
+         * to one of two causes: a hand-routed message flow exits its sole-incident source task at
+         * the same x/y `NodeLabelPlacement.outsideBottomCenter()` centres that task's own label
+         * under, or an ELK-routed sequence flow's south-port exit threads through its own
+         * gateway's placed label before turning. [assertLabelsClearEdgeGeometry] asserts this set
+         * is *exact* against every fixture in the corpus — a new collision fails immediately, and
+         * a declared pair that stops reproducing must be removed.
+         */
+        private val LABEL_EDGE_OVERLAP_EXCEPTIONS = setOf(
+            Triple("collab-two-pools", "Task_order", "MsgFlow_1"),
+            Triple("collab-two-pools", "Task_pay", "MsgFlow_2"),
+            Triple("collab-blackbox", "Task_receive", "MsgFlow_in"),
+            Triple("collab-blackbox", "Task_send", "MsgFlow_out"),
+            Triple("collab-msg-endpoint", "Task_A1", "MsgFlow_1"),
+            Triple("collab-msg-endpoint", "Task_A2", "MsgFlow_2"),
+            Triple("collab-msg-label", "Task_receive_pkg", "MsgFlow_notify"),
+            Triple("collab-msg-label", "Task_track", "MsgFlow_order"),
+            Triple("collab-subprocess", "Task_finalize", "MsgFlow_2"),
+            Triple("collab-subprocess", "Task_prepare", "MsgFlow_1"),
+            Triple("collab-subprocess", "MsgFlow_1", "MsgFlow_2"),
+            Triple("collab-bioc", "Task_1", "MsgFlow_1"),
+            Triple("collab-lanes", "Gw_split", "Flow_3"),
+            Triple("collab-lanes", "Task_pack", "Flow_5"),
+            Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
+        )
     }
 
     @ParameterizedTest(name = "matches committed expected: {0}")
@@ -150,8 +177,9 @@ class ElkGoldenLayoutTest {
         ],
     )
     fun `named labels do not overlap other labels or shapes`(fixture: String) {
-        val result = layouter.layout(load("layout-fixtures/$fixture.bpmn"))
-        assertLabelsClearOtherDiGeometry(LayoutDiInspector.parse(result), fixture)
+        val doc = LayoutDiInspector.parse(layouter.layout(load("layout-fixtures/$fixture.bpmn")))
+        assertLabelsClearOtherDiGeometry(doc, fixture)
+        assertLabelsClearEdgeGeometry(doc, fixture)
     }
 
     @ParameterizedTest(name = "collaboration plane binds to Collaboration: {0}")
@@ -430,58 +458,98 @@ class ElkGoldenLayoutTest {
             }
     }
 
-    /** Checks labels against all non-header labels and shapes, except the label owner's own shape. */
-    private fun assertLabelsClearOtherDiGeometry(doc: org.w3c.dom.Document, fixture: String) {
-        data class Rect(val ownerId: String, val x: Double, val y: Double, val w: Double, val h: Double)
-
-        fun rect(ownerId: String, bounds: Element?): Rect? {
-            val x = bounds?.getAttribute("x")?.toDoubleOrNull() ?: return null
-            val y = bounds.getAttribute("y").toDoubleOrNull() ?: return null
-            val w = bounds.getAttribute("width").toDoubleOrNull() ?: return null
-            val h = bounds.getAttribute("height").toDoubleOrNull() ?: return null
-            return Rect(ownerId, x, y, w, h)
-        }
-
-        fun overlaps(first: Rect, second: Rect): Boolean {
-            val overlapX = minOf(first.x + first.w, second.x + second.w) - maxOf(first.x, second.x)
-            val overlapY = minOf(first.y + first.h, second.y + second.h) - maxOf(first.y, second.y)
-            return overlapX >= 1.0 && overlapY >= 1.0
-        }
-
+    /** `isHorizontal` shapes (participants/lanes) use a header-band label, not a below-node one. */
+    private fun headerOwnerIds(doc: org.w3c.dom.Document): Set<String> {
         val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
-        val headerOwners = (0 until shapes.length)
+        return (0 until shapes.length)
             .map { shapes.item(it) as Element }
             .filter { it.getAttribute("isHorizontal") == "true" }
             .mapTo(mutableSetOf()) { it.getAttribute("bpmnElement") }
-        val shapeRects = (0 until shapes.length)
-            .map { shapes.item(it) as Element }
-            .filter { it.getAttribute("bpmnElement") !in headerOwners }
-            .mapNotNull { shape ->
-                rect(shape.getAttribute("bpmnElement"), shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
-            }
-            // Containers (subprocesses) are excluded: a member's label sitting inside its own
-            // subprocess's bounds is the normal nesting relationship, not an overlap defect —
-            // the same convention assertNoTopLevelShapeOverlap already applies to shapes.
-            .filter { it.w * it.h < CONTAINER_AREA }
+    }
+
+    private fun boundsRect(ownerId: String, bounds: Element?): DiRect? {
+        val x = bounds?.getAttribute("x")?.toDoubleOrNull() ?: return null
+        val y = bounds.getAttribute("y").toDoubleOrNull() ?: return null
+        val w = bounds.getAttribute("width").toDoubleOrNull() ?: return null
+        val h = bounds.getAttribute("height").toDoubleOrNull() ?: return null
+        return DiRect(ownerId, x, y, w, h)
+    }
+
+    /** Every non-header `BPMNLabel`'s bounds, keyed by its owning shape's `bpmnElement` id. */
+    private fun extractLabelRects(doc: org.w3c.dom.Document, headerOwners: Set<String>): List<DiRect> {
         val labels = doc.getElementsByTagNameNS(DI_NS, "BPMNLabel")
-        val labelRects = (0 until labels.length)
+        return (0 until labels.length)
             .map { labels.item(it) as Element }
             .mapNotNull { label ->
                 val owner = label.parentNode as? Element ?: return@mapNotNull null
                 val ownerId = owner.getAttribute("bpmnElement")
                 if (ownerId in headerOwners) return@mapNotNull null
-                rect(ownerId, label.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
+                boundsRect(ownerId, label.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
             }
+    }
+
+    /** Checks labels against all non-header labels and shapes, except the label owner's own shape. */
+    private fun assertLabelsClearOtherDiGeometry(doc: org.w3c.dom.Document, fixture: String) {
+        fun overlaps(first: DiRect, second: DiRect): Boolean {
+            val overlapX = minOf(first.right, second.right) - maxOf(first.x, second.x)
+            val overlapY = minOf(first.bottom, second.bottom) - maxOf(first.y, second.y)
+            return overlapX >= 1.0 && overlapY >= 1.0
+        }
+
+        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        val headerOwners = headerOwnerIds(doc)
+        val shapeRects = (0 until shapes.length)
+            .map { shapes.item(it) as Element }
+            .filter { it.getAttribute("bpmnElement") !in headerOwners }
+            .mapNotNull { shape ->
+                boundsRect(shape.getAttribute("bpmnElement"), shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
+            }
+            // Containers (subprocesses) are excluded: a member's label sitting inside its own
+            // subprocess's bounds is the normal nesting relationship, not an overlap defect —
+            // the same convention assertNoTopLevelShapeOverlap already applies to shapes.
+            .filter { it.w * it.h < CONTAINER_AREA }
+        val labelRects = extractLabelRects(doc, headerOwners)
 
         for (i in labelRects.indices) {
             val label = labelRects[i]
             labelRects.drop(i + 1).forEach { other ->
-                assertTrue(!overlaps(label, other), "[$fixture] labels '${label.ownerId}' and '${other.ownerId}' overlap")
+                assertTrue(!overlaps(label, other), "[$fixture] labels '${label.id}' and '${other.id}' overlap")
             }
-            shapeRects.filter { it.ownerId != label.ownerId }.forEach { shape ->
-                assertTrue(!overlaps(label, shape), "[$fixture] label '${label.ownerId}' overlaps shape '${shape.ownerId}'")
+            shapeRects.filter { it.id != label.id }.forEach { shape ->
+                assertTrue(!overlaps(label, shape), "[$fixture] label '${label.id}' overlaps shape '${shape.id}'")
             }
         }
+    }
+
+    /**
+     * Checks each named label's rect against every `BPMNEdge`'s waypoint polyline, corpus-wide.
+     * The observed overlap set must exactly equal [LABEL_EDGE_OVERLAP_EXCEPTIONS] for this
+     * fixture — a new collision fails the build, and so does a declared one that disappears
+     * (forcing the exception set to shrink deliberately rather than rot).
+     */
+    private fun assertLabelsClearEdgeGeometry(doc: org.w3c.dom.Document, fixture: String) {
+        val labelRects = extractLabelRects(doc, headerOwnerIds(doc))
+        val edges = extractEdges(doc)
+
+        val observed = labelRects.flatMap { label ->
+            // Exclude an edge's own label against its own waypoints: an edge label sits on its
+            // own path by design (the same convention that excludes a shape's own label above).
+            edges.filter { edge ->
+                edge.id != label.id &&
+                    (0 until edge.waypoints.size - 1).any { i ->
+                        segmentIntersectsRect(edge.waypoints[i], edge.waypoints[i + 1], label)
+                    }
+            }.map { edge -> Triple(fixture, label.id, edge.id) }
+        }.toSet()
+        val expected = LABEL_EDGE_OVERLAP_EXCEPTIONS.filterTo(mutableSetOf()) { it.first == fixture }
+
+        assertEquals(
+            expected,
+            observed,
+            "[$fixture] label/edge-waypoint overlaps do not match the declared exception set. " +
+                "A new collision must be fixed, not declared; a declared collision that no longer " +
+                "reproduces must be removed from LABEL_EDGE_OVERLAP_EXCEPTIONS.",
+        )
     }
 
     private fun assertXml(xml: String): XmlAssert = XmlAssert.assertThat(xml)
