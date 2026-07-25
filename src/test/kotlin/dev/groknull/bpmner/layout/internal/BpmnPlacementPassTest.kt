@@ -233,6 +233,32 @@ class BpmnPlacementPassTest {
     }
 
     @Test
+    fun `boundary shape falls back to port geometry when its event has no outgoing flow`() {
+        // Invalid BPMN (a boundary event must have an outgoing flow), but the mapper still
+        // creates the port — BoundaryShapePlacement must not throw or leave the shape unplaced.
+        val model = boundaryModel()
+        val root = ElkGraphUtil.createGraph()
+        val host = makeNode(root, "Task_1", 100.0, 50.0, 100.0, 80.0)
+        val beNode = makeNode(root, "Boundary_1", 0.0, 0.0, EVENT_SIZE, EVENT_SIZE)
+        val port = makePort(host, "port_Boundary_1", 45.0, host.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE)
+        val sk = skeleton(
+            root = root,
+            nodeMap = mapOf("Task_1" to host, "Boundary_1" to beNode),
+            portMap = mapOf("Boundary_1" to port),
+            edgeMap = emptyMap(),
+        )
+        val ctx = PlacementContext(model, sk, mutableMapOf(), mutableMapOf(), mutableMapOf(), mutableSetOf())
+
+        dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement.process(ctx)
+
+        val bRect = ctx.shapes["Boundary_1"]
+        assertNotNull(bRect, "Boundary_1 must still get a shape via the port-geometry fallback")
+        // Falls back to host-bottom straddle at the port's own centre-X (45 + half port width).
+        assertEquals(host.x + 45.0 + BpmnToElkMapper.BOUNDARY_PORT_SIZE / 2.0, bRect.x + bRect.w / 2.0, 0.5)
+        assertEquals(host.y + host.height, bRect.y + bRect.h / 2.0, 0.5)
+    }
+
+    @Test
     fun `host label clears its boundary label and exception route`() {
         val model = boundaryModel().also {
             it.getModelElementById<org.camunda.bpm.model.bpmn.instance.ServiceTask>("Task_1").name = "Host"
