@@ -18,6 +18,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -500,6 +501,35 @@ class FlatBpmnDefinitionMapperTest {
             sealed.nodes.associate { it.id to it.parentRef },
         )
         assertEquals("sp", sealed.sequences.single().parentRef)
+    }
+
+    @Test
+    fun `EVENT_SUB_PROCESS maps to BpmnEventSubProcess, floating with no outer sequence flow`() {
+        val flat = FlatBpmnDefinition(
+            processId = "P",
+            processName = "P",
+            nodes =
+            listOf(
+                FlatBpmnNode(id = "esp", type = FlatBpmnNodeKind.EVENT_SUB_PROCESS, name = "Handle error"),
+                FlatBpmnNode(
+                    id = "s",
+                    type = FlatBpmnNodeKind.START_EVENT,
+                    name = "On error",
+                    parentRef = "esp",
+                ),
+                FlatBpmnNode(id = "e", type = FlatBpmnNodeKind.END_EVENT, name = "Handled", parentRef = "esp"),
+            ),
+            sequences = listOf(BpmnEdge("f", "s", "e", parentRef = "esp")),
+        )
+
+        val sealed = flat.toSealed()
+
+        val esp = sealed.nodes.single { it.id == "esp" }
+        assertIs<BpmnEventSubProcess>(esp)
+        assertEquals(
+            mapOf("esp" to null, "s" to "esp", "e" to "esp"),
+            sealed.nodes.associate { it.id to it.parentRef },
+        )
     }
 
     // --- Convert-site tests (sites 1-3): defensive else branches in dispatch helpers ---

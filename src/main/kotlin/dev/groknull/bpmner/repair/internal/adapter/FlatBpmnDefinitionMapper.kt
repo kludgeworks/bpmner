@@ -17,6 +17,7 @@ import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -73,6 +74,7 @@ public fun FlatBpmnNode.toSealed(): BpmnNode = when (type) {
     in TASK_KINDS -> toTaskNode()
     in GATEWAY_KINDS -> toGatewayNode()
     FlatBpmnNodeKind.SUB_PROCESS -> toSubProcessNode()
+    FlatBpmnNodeKind.EVENT_SUB_PROCESS -> BpmnEventSubProcess(id = id, name = name, parentRef = parentRef)
     FlatBpmnNodeKind.CALL_ACTIVITY -> BpmnCallActivity(
         id = id,
         name = name,

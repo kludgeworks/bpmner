@@ -60,6 +60,7 @@ public enum class FlatBpmnNodeKind {
     INTERMEDIATE_CATCH_EVENT,
     INTERMEDIATE_THROW_EVENT,
     SUB_PROCESS,
+    EVENT_SUB_PROCESS,
     CALL_ACTIVITY,
 }
 
@@ -82,6 +83,8 @@ public enum class FlatBpmnEventDefinitionKind {
         "BOUNDARY_EVENT → attachedToRef + eventDefinition, optionally cancelActivity; " +
         "START_EVENT additionally accepts isInterrupting (defaults true); " +
         "SUB_PROCESS → inner nodes carrying parentRef; " +
+        "EVENT_SUB_PROCESS → same as SUB_PROCESS but floating: no incoming/outgoing sequence flow, " +
+        "started by its own inner START_EVENT's trigger (e.g. an error or message event); " +
         "CALL_ACTIVITY → required calledElement (id of the separately-defined process it invokes).",
 )
 public data class FlatBpmnNode(
