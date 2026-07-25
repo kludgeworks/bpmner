@@ -154,8 +154,12 @@ internal const val MIN_TERMINAL_TAIL = 20.0
 /** Tolerance for "on the rectangle's boundary" checks, absorbing floating-point rounding. */
 private const val BOUNDARY_TOLERANCE = 1.0
 
+/** Floating-point epsilon for axis-alignment: absorbs sub-pixel ELK routing round-off. */
+private const val AXIS_EPSILON = 1e-6
+
 /** Whether `a`-`b` runs purely horizontally or purely vertically. */
-internal fun isAxisAligned(a: DiPoint, b: DiPoint): Boolean = a.x == b.x || a.y == b.y
+internal fun isAxisAligned(a: DiPoint, b: DiPoint): Boolean =
+    kotlin.math.abs(a.x - b.x) < AXIS_EPSILON || kotlin.math.abs(a.y - b.y) < AXIS_EPSILON
 
 /** Straight-line length of an axis-aligned segment `a`-`b`. */
 internal fun axisSegmentLength(a: DiPoint, b: DiPoint): Double =

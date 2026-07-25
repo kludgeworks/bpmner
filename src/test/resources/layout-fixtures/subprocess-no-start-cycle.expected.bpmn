@@ -49,35 +49,35 @@
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane bpmnElement="P1" id="BPMNPlane_1">
       <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
-        <dc:Bounds height="36.0" width="36.0" x="618.0" y="104.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="618.0" y="84.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
-        <dc:Bounds height="36.0" width="36.0" x="12.0" y="104.0"/>
+        <dc:Bounds height="36.0" width="36.0" x="12.0" y="84.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Sub_1" id="BPMNShape_Sub_1" isExpanded="true">
-        <dc:Bounds height="220.0" width="390.0" x="138.0" y="12.0"/>
+        <dc:Bounds height="180.0" width="390.0" x="138.0" y="12.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_A" id="BPMNShape_Task_A">
-        <dc:Bounds height="80.0" width="100.0" x="188.0" y="102.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="188.0" y="62.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Task_B" id="BPMNShape_Task_B">
-        <dc:Bounds height="80.0" width="100.0" x="378.0" y="102.0"/>
+        <dc:Bounds height="80.0" width="100.0" x="378.0" y="62.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNEdge bpmnElement="F1" id="BPMNEdge_F1">
-        <di:waypoint x="48.0" y="122.0"/>
-        <di:waypoint x="138.0" y="122.0"/>
+        <di:waypoint x="48.0" y="102.0"/>
+        <di:waypoint x="138.0" y="102.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="F2" id="BPMNEdge_F2">
-        <di:waypoint x="528.0" y="122.0"/>
-        <di:waypoint x="618.0" y="122.0"/>
+        <di:waypoint x="528.0" y="102.0"/>
+        <di:waypoint x="618.0" y="102.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_h1" id="BPMNEdge_Flow_h1">
-        <di:waypoint x="288.0" y="155.33333333333334"/>
-        <di:waypoint x="378.0" y="155.33333333333334"/>
+        <di:waypoint x="288.0" y="115.33333333333334"/>
+        <di:waypoint x="378.0" y="115.33333333333334"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Flow_h2" id="BPMNEdge_Flow_h2">
-        <di:waypoint x="378.0" y="128.66666666666669"/>
-        <di:waypoint x="288.0" y="128.66666666666669"/>
+        <di:waypoint x="378.0" y="88.66666666666667"/>
+        <di:waypoint x="288.0" y="88.66666666666667"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

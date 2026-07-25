@@ -28,9 +28,9 @@ import kotlin.test.assertTrue
  * Layer 1: asserts ELK graph structure produced by [BpmnToElkMapper].
  * Does NOT run the layout engine — inspects the graph object model directly.
  *
- * Post AD-557-10/AD-557-11/AD-557-12 assertions: all boundary ports are SOUTH, SubProcesses are
- * compound nodes, exception edges are NOT in the ELK skeleton (AD-557-12), and AD-557-11 options
- * are applied (NETWORK_SIMPLEX, model order,
+ * Post AD-557-10/AD-557-11/AD-622-08 assertions: all boundary ports are SOUTH, SubProcesses are
+ * compound nodes, exception edges ARE real ELK edges sourced at the boundary port (AD-622-08),
+ * and AD-557-11 options are applied (NETWORK_SIMPLEX, model order,
  * LAYER_CONSTRAINT on start/end events, SPACING_COMPONENT_COMPONENT).
  */
 class BpmnToElkMapperTest {
@@ -175,16 +175,25 @@ class BpmnToElkMapperTest {
     }
 
     @Test
-    fun `exception flow from boundary event is NOT in edgeMap (AD-557-12 - phase-2 edge only)`() {
+    fun `exception flow from boundary event is a real ELK edge sourced at the port (AD-622-08)`() {
         val xml = BOUNDARY_TIMER_XML
         val model = parseXml(xml)
         val result = BpmnToElkMapper.map(model)
 
-        // AD-557-12: boundary exception edges are routed by phase 2, not by ELK.
-        // The exception flow must NOT appear in the ELK skeleton's edgeMap.
-        assertNull(result.edgeMap["Flow_exception"], "Flow_exception must NOT be in edgeMap (AD-557-12)")
-        // The SOUTH port still exists on the host (attachment geometry)
-        assertNotNull(result.portMap["Boundary_1"], "SOUTH port for Boundary_1 must still be in portMap")
+        // AD-622-08: the exception edge is a real ELK edge from the boundary's SOUTH port to
+        // its handler, so ELK's own layout machinery places and routes the handler chain.
+        val exceptionEdge = result.edgeMap["Flow_exception"]
+        assertNotNull(exceptionEdge, "Flow_exception must be in edgeMap (AD-622-08)")
+        assertEquals(
+            result.portMap["Boundary_1"],
+            exceptionEdge.sources.single(),
+            "Flow_exception must be sourced at the boundary's SOUTH port",
+        )
+        assertEquals(
+            result.nodeMap["Task_cancel"],
+            exceptionEdge.targets.single(),
+            "Flow_exception must target the handler node",
+        )
     }
 
     @Test
@@ -199,7 +208,7 @@ class BpmnToElkMapperTest {
     }
 
     @Test
-    fun `normal sequence flow is in edgeMap and boundary exception flow is absent (AD-557-12)`() {
+    fun `normal sequence flow and boundary exception flow are both ELK edges (AD-622-08)`() {
         val xml = BOUNDARY_TIMER_XML
         val model = parseXml(xml)
         val result = BpmnToElkMapper.map(model)
@@ -208,8 +217,8 @@ class BpmnToElkMapperTest {
         assertNotNull(result.edgeMap["Flow_normal"], "Flow_normal must be in edgeMap")
         assertNotNull(result.edgeMap["Flow_start"], "Flow_start must be in edgeMap")
         assertNotNull(result.edgeMap["Flow_cancel"], "Flow_cancel must be in edgeMap")
-        // Boundary-source exception flow must NOT be an ELK edge (AD-557-12).
-        assertNull(result.edgeMap["Flow_exception"], "Flow_exception (boundary source) must NOT be in edgeMap")
+        // Boundary-source exception flow is also a real ELK edge (AD-622-08).
+        assertNotNull(result.edgeMap["Flow_exception"], "Flow_exception (boundary source) must be in edgeMap")
     }
 
     // ── Loop-back reversal (AD-622-15) ─────────────────────────────────────────

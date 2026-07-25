@@ -36,6 +36,7 @@ import org.eclipse.elk.core.options.NodeLabelPlacement
 import org.eclipse.elk.core.options.PortConstraints
 import org.eclipse.elk.core.options.PortSide
 import org.eclipse.elk.core.options.SizeConstraint
+import org.eclipse.elk.graph.ElkConnectableShape
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import org.eclipse.elk.graph.ElkPort
@@ -84,13 +85,8 @@ internal object BpmnToElkMapper {
         // Back-edges are found up front so mapSequenceFlows can emit them reversed (AD-622-15):
         // the graph handed to ELK is acyclic by construction, so cycle-breaking never runs.
         val reversedFlowIds = mutableSetOf<String>()
-        val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
-            val backEdges = findLoopBackEdges(sub.flowElements)
-            if (backEdges.isNotEmpty()) {
-                reversedFlowIds.addAll(backEdges)
-                loopingSubIds.add(sub.id)
-            }
+            reversedFlowIds.addAll(findLoopBackEdges(sub.flowElements))
         }
 
         val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
@@ -101,13 +97,13 @@ internal object BpmnToElkMapper {
                 reversedFlowIds.addAll(findLoopBackEdges(process.flowElements))
             }
             root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-            mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
+            mapCollaboration(root, collaboration, model, nodeMap)
         } else if (topProcess != null) {
             // A cyclic sequence flow directly in the top-level process (no collaboration, no
             // enclosing SubProcess) is a back-edge too — the graph is acyclic by construction at
             // every level, root included, not just inside compound nodes.
             reversedFlowIds.addAll(findLoopBackEdges(topProcess.flowElements))
-            mapProcess(root, topProcess.flowElements.toList(), nodeMap, model, loopingSubIds)
+            mapProcess(root, topProcess.flowElements.toList(), nodeMap, model)
         }
 
         trackAnnotations(model, nodeMap)
@@ -115,7 +111,7 @@ internal object BpmnToElkMapper {
 
         mapBoundaryEvents(model, nodeMap, portMap)
 
-        mapSequenceFlows(model, nodeMap, edgeMap, reversedFlowIds)
+        mapSequenceFlows(model, nodeMap, portMap, edgeMap, reversedFlowIds)
         collaboration?.let { mapMessageFlows(root, it, nodeMap, edgeMap) }
 
         return ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds)
@@ -138,7 +134,6 @@ internal object BpmnToElkMapper {
         collaboration: Collaboration,
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
-        loopingSubIds: Set<String>,
     ) {
         for (participant in collaboration.participants) {
             val process = participant.process
@@ -153,14 +148,13 @@ internal object BpmnToElkMapper {
                 val laneMemberIds = mutableSetOf<String>()
                 process.laneSets.flatMap { it.lanes.toList() }.forEach { lane ->
                     laneMemberIds.addAll(lane.flowNodeRefs.map { it.id })
-                    mapLane(compound, lane, nodeMap, model, loopingSubIds)
+                    mapLane(compound, lane, nodeMap, model)
                 }
                 mapProcess(
                     compound,
                     topLevelElements.filter { it !is FlowNode || it.id !in laneMemberIds },
                     nodeMap,
                     model,
-                    loopingSubIds,
                 )
             } else {
                 // Black-box participants participate in collaboration-level message edges.
@@ -178,28 +172,24 @@ internal object BpmnToElkMapper {
         lane: Lane,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
-        loopingSubIds: Set<String>,
     ) {
         val compound = ElkGraphUtil.createNode(participant)
         compound.identifier = lane.id
         applyLaneProfile(compound)
         nodeMap[lane.id] = compound
-        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model, loopingSubIds)
+        mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model)
     }
 
     /**
      * Recursively maps flow elements into the given [container].
      * SubProcesses become compound ELK nodes and recurse; BoundaryEvents are skipped
      * (handled in pass 2); other FlowNodes become flat leaf nodes.
-     * [loopingSubIds] is the set of subprocess IDs that have back-edges (pre-computed in [map]).
-     * Cyclic subprocesses get extra top padding so the phase-2 loop-back arc has clear headroom.
      */
     private fun mapProcess(
         container: ElkNode,
         elements: List<FlowElement>,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
-        loopingSubIds: Set<String> = emptySet(),
     ) {
         // Iterate in document order (elements list preserves Camunda's XML parse order).
         for (element in elements) {
@@ -210,11 +200,10 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
-                    val topPadding = if (element.id in loopingSubIds) SUBPROCESS_TOP_PADDING else SUBPROCESS_PADDING
                     compound.setProperty(
                         CoreOptions.PADDING,
                         ElkPadding(
-                            topPadding,
+                            SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
@@ -225,7 +214,7 @@ internal object BpmnToElkMapper {
                     addNodeLabel(compound, element.name)
                     nodeMap[element.id] = compound
                     // Recurse into subprocess children in document order.
-                    mapProcess(compound, element.flowElements.toList(), nodeMap, model, loopingSubIds)
+                    mapProcess(compound, element.flowElements.toList(), nodeMap, model)
                 }
 
                 is FlowNode -> {
@@ -290,16 +279,17 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * For each [BoundaryEvent], create a SOUTH port on the host node (attachment
-     * geometry only — no ELK edge from this port) and a sibling node for the
-     * handler in the host's container.
+     * For each [BoundaryEvent], create a SOUTH port on the host node and a sibling node in the
+     * host's container. The port is the real routing endpoint: [mapSequenceFlows] draws the
+     * exception edge from this port to the handler, so ELK lays out the handler chain itself
+     * (layout unit, barycenter association, in-layer successor constraint) the same way it does
+     * for any other north/south port with an edge — no injected processor needed.
      *
-     * All boundary ports are SOUTH. The port communicates the attachment side to ELK
-     * but carries no exception edge. The sibling handler node has no incoming ELK
-     * edge, making it a disconnected component placed below the main flow.
+     * All boundary ports are SOUTH. Multiple attachments share SOUTH; ELK's own crossing
+     * minimization and port distribution place them along the host's bottom edge.
      *
-     * The sibling node serves as a size carrier for shape placement and as a target
-     * anchor for the exception edge route.
+     * The sibling node is a size carrier only, for the boundary event's own shape dimensions —
+     * it carries no ELK edge and is not part of the routing graph.
      */
     private fun mapBoundaryEvents(
         model: BpmnModelInstance,
@@ -342,9 +332,11 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Maps sequence flows to ELK edges for process-flow nodes only.
+     * Maps sequence flows to ELK edges.
      *
-     * Flows whose source is a [BoundaryEvent] are not added to the ELK skeleton. Loop-back edges
+     * A flow whose source is a [BoundaryEvent] is sourced at that event's SOUTH port
+     * ([portMap]) rather than at a node — the exception edge exits the host's port directly, so
+     * ELK routes and places the handler chain as a real graph consumer. Loop-back edges
      * (back-edges that create cycles in subprocess/participant flows) are emitted with source and
      * target swapped (AD-622-15), so ELK always lays out an acyclic graph; the inverse transform
      * happens at read time in [dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy].
@@ -354,6 +346,7 @@ internal object BpmnToElkMapper {
     private fun mapSequenceFlows(
         model: BpmnModelInstance,
         nodeMap: Map<String, ElkNode>,
+        portMap: Map<String, ElkPort>,
         edgeMap: MutableMap<String, ElkEdge>,
         reversedFlowIds: Set<String>,
     ) {
@@ -361,15 +354,12 @@ internal object BpmnToElkMapper {
             .mapTo(mutableSetOf()) { it.id }
 
         model.getModelElementsByType(SequenceFlow::class.java)
-            .filterNot { it.source?.id in boundaryIds }
             .forEach { sf ->
-                val sourceId = sf.source?.id
                 val targetId = sf.target?.id
-                val source = nodeMap[sourceId]
-                    ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' source '$sourceId' not found")
+                val source = sequenceFlowSource(sf, boundaryIds, nodeMap, portMap)
                 val target = nodeMap[targetId]
                     ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' target '$targetId' not found")
-                if (source.parent == null || target.parent == null) return@forEach
+                if (target.parent == null || (source is ElkNode && source.parent == null)) return@forEach
                 val elkEdge = if (sf.id in reversedFlowIds) {
                     ElkGraphUtil.createSimpleEdge(target, source)
                 } else {
@@ -379,6 +369,23 @@ internal object BpmnToElkMapper {
                 addEdgeLabel(elkEdge, sf.name)
                 edgeMap[sf.id] = elkEdge
             }
+    }
+
+    /** Resolves [sf]'s ELK source: its SOUTH port if it starts at a [BoundaryEvent], else its node. */
+    private fun sequenceFlowSource(
+        sf: SequenceFlow,
+        boundaryIds: Set<String>,
+        nodeMap: Map<String, ElkNode>,
+        portMap: Map<String, ElkPort>,
+    ): ElkConnectableShape {
+        val sourceId = sf.source?.id
+        return if (sourceId in boundaryIds) {
+            portMap[sourceId]
+                ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' source port '$sourceId' not found")
+        } else {
+            nodeMap[sourceId]
+                ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' source '$sourceId' not found")
+        }
     }
 
     /**
@@ -617,7 +624,6 @@ internal object BpmnToElkMapper {
     private const val ANNOTATION_HEIGHT = 60.0
     private const val GROUP_WIDTH = 300.0
     private const val GROUP_HEIGHT = 200.0
-    internal const val SUBPROCESS_TOP_PADDING = 90.0
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
 

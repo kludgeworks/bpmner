@@ -12,9 +12,7 @@ import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.CollaborationShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
-import dev.groknull.bpmner.layout.internal.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
-import dev.groknull.bpmner.layout.internal.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
 import dev.groknull.bpmner.layout.internal.placement.LabelWrap
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
@@ -94,11 +92,8 @@ internal object BpmnPlacementPass {
 
     private val pipeline = listOf(
         NodeShapeCopy,
-        HandlerComponentAlignment.Move,
-        BoundaryShapePlacement,
-        ExceptionEdgeRoutes,
         SequenceEdgeElkCopy,
-        HandlerComponentAlignment.Repair,
+        BoundaryShapePlacement,
         CollaborationShapePlacement,
         WhiteBoxPoolBandPlacement,
         ElkLayoutResultCopy,
