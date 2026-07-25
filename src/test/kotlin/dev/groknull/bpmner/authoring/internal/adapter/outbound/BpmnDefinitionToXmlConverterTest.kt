@@ -8,6 +8,7 @@
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
@@ -46,6 +47,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@Suppress("LargeClass")
 class BpmnDefinitionToXmlConverterTest {
     private val converter = BpmnDefinitionToXmlConverter()
 
@@ -543,11 +545,40 @@ class BpmnDefinitionToXmlConverterTest {
         assertFalse(compensateAllXml.contains("activityRef"))
     }
 
-    // Boundary-event round-trip coverage lives in BpmnNodePayloadXmlWriterTest instead of here:
-    // BpmnModelFactory never sets the structurally-required `attachedToRef` on the raw skeleton
-    // element, so a full BpmnDefinitionToXmlConverter render of any BpmnBoundaryEvent fails Camunda's
-    // XSD validation before BpmnNodePayloadXmlWriter's post-processing pass ever runs — a
-    // pre-existing gap in the authoring pipeline unrelated to cancelActivity, out of scope here.
+    @Test
+    fun `converter renders boundary event with attachedToRef`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_Boundary",
+                processName = "Boundary event",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnServiceTask("Task_1", "Process order"),
+                    BpmnBoundaryEvent(
+                        id = "BoundaryEvent_1",
+                        name = "Timeout",
+                        attachedToRef = "Task_1",
+                        eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT5M"),
+                    ),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_1"),
+                    BpmnEdge("Flow_2", "BoundaryEvent_1", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.toXml(definition)
+
+        assertXml(xml).nodesByXPath(
+            "//bpmn:boundaryEvent[@id='BoundaryEvent_1' and @attachedToRef='Task_1']",
+        ).exist()
+        assertXml(xml).nodesByXPath(
+            "//bpmn:boundaryEvent[@id='BoundaryEvent_1']/bpmn:timerEventDefinition",
+        ).exist()
+    }
 
     @Test
     fun `converter writes gateway default attribute when edge isDefault is true`() {
