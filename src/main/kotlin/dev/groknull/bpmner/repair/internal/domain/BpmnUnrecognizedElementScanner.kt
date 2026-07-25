@@ -55,7 +55,7 @@ internal object BpmnUnrecognizedElementScanner {
  * One unrecognized element detected by [BpmnUnrecognizedElementScanner.scan].
  *
  * [Node] is a fallback process element (e.g. `bpmn:Choreography`). [EventDefinition] is an
- * unsupported event-definition typename (e.g. `bpmn:CompensateEventDefinition`) attached to
+ * unsupported event-definition typename (e.g. `bpmn:LinkEventDefinition`) attached to
  * an otherwise typed event node.
  */
 internal sealed interface UnrecognizedFinding {

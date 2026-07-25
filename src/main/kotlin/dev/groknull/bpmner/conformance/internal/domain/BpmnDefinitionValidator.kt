@@ -7,10 +7,12 @@ package dev.groknull.bpmner.conformance.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -22,6 +24,7 @@ import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -388,6 +391,24 @@ internal class BpmnDefinitionValidator {
 
             is BpmnTerminateEventDefinition -> {
                 Unit
+            }
+
+            is BpmnSignalEventDefinition -> {
+                if (eventDefinition.signalRef.isBlank()) {
+                    errors.add("event $nodeId signalEventDefinition is missing the required signalRef attribute")
+                }
+            }
+
+            is BpmnEscalationEventDefinition -> {
+                if (eventDefinition.escalationRef.isBlank()) {
+                    errors.add("event $nodeId escalationEventDefinition is missing the required escalationRef attribute")
+                }
+            }
+
+            is BpmnCompensateEventDefinition -> {
+                if (eventDefinition.activityRef?.isBlank() == true) {
+                    errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
+                }
             }
 
             // Unrecognized event definitions have no fields this structural validator can

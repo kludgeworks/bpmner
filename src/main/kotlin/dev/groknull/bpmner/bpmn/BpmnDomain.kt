@@ -149,6 +149,9 @@ data class BpmnGroup(
     JsonSubTypes.Type(value = BpmnMessageEventDefinition::class, name = "MESSAGE"),
     JsonSubTypes.Type(value = BpmnErrorEventDefinition::class, name = "ERROR"),
     JsonSubTypes.Type(value = BpmnTerminateEventDefinition::class, name = "TERMINATE"),
+    JsonSubTypes.Type(value = BpmnSignalEventDefinition::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = BpmnEscalationEventDefinition::class, name = "ESCALATION"),
+    JsonSubTypes.Type(value = BpmnCompensateEventDefinition::class, name = "COMPENSATE"),
 )
 sealed interface BpmnEventDefinition
 
@@ -172,12 +175,27 @@ data class BpmnErrorEventDefinition(
 
 data object BpmnTerminateEventDefinition : BpmnEventDefinition
 
+data class BpmnSignalEventDefinition(
+    @field:NotBlank
+    val signalRef: String,
+) : BpmnEventDefinition
+
+data class BpmnEscalationEventDefinition(
+    @field:NotBlank
+    val escalationRef: String,
+) : BpmnEventDefinition
+
+/** `activityRef` is null for a compensate-all event definition (BPMN permits omitting it). */
+data class BpmnCompensateEventDefinition(
+    val activityRef: String? = null,
+) : BpmnEventDefinition
+
 /**
  * Fallback for any event-definition typename the parser sees but doesn't have a typed class
- * for (today: only `bpmn:CompensateEventDefinition`). Absent from the `@JsonSubTypes`
- * registration above: Jackson serialization fails on an instance, so the LLM round-trip
- * cannot accidentally see one. Callers that need to serialize a definition must filter these
- * out first.
+ * for (today: only `bpmn:LinkEventDefinition` and `bpmn:ConditionalEventDefinition`, both
+ * epic non-goals). Absent from the `@JsonSubTypes` registration above: Jackson serialization
+ * fails on an instance, so the LLM round-trip cannot accidentally see one. Callers that need
+ * to serialize a definition must filter these out first.
  */
 data class BpmnUnrecognizedEventDefinition(
     val typeName: String,

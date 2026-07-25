@@ -65,6 +65,9 @@ public enum class FlatBpmnEventDefinitionKind {
     MESSAGE,
     ERROR,
     TERMINATE,
+    SIGNAL,
+    ESCALATION,
+    COMPENSATE,
 }
 
 @JsonClassDescription(
@@ -184,13 +187,16 @@ public data class FlatStandardLoopCharacteristics(
 @JsonClassDescription(
     "Reusable BPMN event definition carried by an event-position node. Set `type` and populate " +
         "the matching kind-specific fields: TIMER → timerKind + expression; MESSAGE → messageRef; " +
-        "ERROR → errorRef. NONE and TERMINATE " +
+        "ERROR → errorRef; SIGNAL → signalRef; ESCALATION → escalationRef; " +
+        "COMPENSATE → optional activityRef (omit for compensate-all). NONE and TERMINATE " +
         "carry no payload.",
 )
 public data class FlatBpmnEventDefinition(
     @get:JsonPropertyDescription(
         "Event-definition kind. NONE = plain (no payload); TERMINATE = end-only terminate; " +
-            "TIMER = populate timerKind + expression; MESSAGE = populate messageRef; ERROR = populate errorRef.",
+            "TIMER = populate timerKind + expression; MESSAGE = populate messageRef; ERROR = populate errorRef; " +
+            "SIGNAL = populate signalRef; ESCALATION = populate escalationRef; " +
+            "COMPENSATE = optionally populate activityRef.",
     )
     val type: FlatBpmnEventDefinitionKind,
     @get:JsonPropertyDescription("Required when type=TIMER. DATE / DURATION / CYCLE.")
@@ -207,6 +213,15 @@ public data class FlatBpmnEventDefinition(
         "Required when type=ERROR. Id of the BpmnErrorRef in the process-level error catalogue.",
     )
     val errorRef: String? = null,
+    @get:JsonPropertyDescription("Required when type=SIGNAL. Free-form signal identifier.")
+    val signalRef: String? = null,
+    @get:JsonPropertyDescription("Required when type=ESCALATION. Free-form escalation identifier.")
+    val escalationRef: String? = null,
+    @get:JsonPropertyDescription(
+        "Optional when type=COMPENSATE. Id of the isForCompensation activity this compensates; " +
+            "omit for compensate-all.",
+    )
+    val activityRef: String? = null,
 )
 
 /**

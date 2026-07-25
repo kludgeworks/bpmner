@@ -8,10 +8,12 @@ package dev.groknull.bpmner.ruleset.internal.domain.primitives
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
@@ -30,6 +32,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTask
@@ -200,8 +203,10 @@ private fun BpmnEventDefinition.bpmnTypeName(): String? = when (this) {
     is BpmnMessageEventDefinition -> "bpmn:MessageEventDefinition"
     is BpmnErrorEventDefinition -> "bpmn:ErrorEventDefinition"
     is BpmnTerminateEventDefinition -> "bpmn:TerminateEventDefinition"
+    is BpmnSignalEventDefinition -> "bpmn:SignalEventDefinition"
+    is BpmnEscalationEventDefinition -> "bpmn:EscalationEventDefinition"
+    is BpmnCompensateEventDefinition -> "bpmn:CompensateEventDefinition"
     is BpmnUnrecognizedEventDefinition -> typeName
-    else -> null
 }
 
 internal fun BpmnNode.toPrimitiveElement(
@@ -320,12 +325,16 @@ private fun eventDefinitionProperties(
 
             is BpmnTerminateEventDefinition -> "TERMINATE"
 
+            is BpmnSignalEventDefinition -> "SIGNAL"
+
+            is BpmnEscalationEventDefinition -> "ESCALATION"
+
+            is BpmnCompensateEventDefinition -> "COMPENSATE"
+
             // Surface unrecognized event-definition typenames as a descriptive token so
             // LLM-prompt and logging consumers get a useful string. The rule engine flags
             // these independently via `BpmnSubset`.
             is BpmnUnrecognizedEventDefinition -> "UNRECOGNIZED:${eventDefinition.typeName}"
-
-            else -> "UNKNOWN"
         },
     )
     when (eventDefinition) {
@@ -338,6 +347,12 @@ private fun eventDefinitionProperties(
         is BpmnMessageEventDefinition -> put("messageRef", eventDefinition.messageRef)
 
         is BpmnErrorEventDefinition -> put("errorRef", eventDefinition.errorRef)
+
+        is BpmnSignalEventDefinition -> put("signalRef", eventDefinition.signalRef)
+
+        is BpmnEscalationEventDefinition -> put("escalationRef", eventDefinition.escalationRef)
+
+        is BpmnCompensateEventDefinition -> put("activityRef", eventDefinition.activityRef)
 
         is BpmnNoneEventDefinition -> Unit
         is BpmnTerminateEventDefinition -> Unit

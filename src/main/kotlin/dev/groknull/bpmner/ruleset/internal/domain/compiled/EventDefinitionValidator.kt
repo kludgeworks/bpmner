@@ -5,18 +5,24 @@
 
 package dev.groknull.bpmner.ruleset.internal.domain.compiled
 
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.RuleDiagnostic
 import dev.groknull.bpmner.bpmn.RuleSeverity
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ACTIVITY_REF
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ERROR_REF
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_ESCALATION_REF
 import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_MESSAGE_REF
+import dev.groknull.bpmner.ruleset.internal.domain.compiled.EventDefinitionRule.Companion.DEF_INVALID_SIGNAL_REF
 
 internal class EventDefinitionValidator(
     private val ruleId: String,
@@ -33,11 +39,15 @@ internal class EventDefinitionValidator(
 
         is BpmnErrorEventDefinition -> validateErrorEventDefinition(nodeId, eventDefinition)
 
+        is BpmnSignalEventDefinition -> validateSignalEventDefinition(nodeId, eventDefinition)
+
+        is BpmnEscalationEventDefinition -> validateEscalationEventDefinition(nodeId, eventDefinition)
+
+        is BpmnCompensateEventDefinition -> validateCompensateEventDefinition(nodeId, eventDefinition)
+
         // Unrecognized event definitions have no fields this validator can check; the
         // `BpmnSubset` rule flags them.
         is BpmnUnrecognizedEventDefinition -> emptyList()
-
-        else -> emptyList()
     }
 
     private fun validateTimerEventDefinition(
@@ -100,6 +110,57 @@ internal class EventDefinitionValidator(
                     diagnosticCode = DEF_INVALID_ERROR_REF,
                     nodeId = nodeId,
                     message = "event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id",
+                ),
+            )
+        } else {
+            emptyList()
+        }
+    }
+
+    private fun validateSignalEventDefinition(
+        nodeId: String,
+        eventDefinition: BpmnSignalEventDefinition,
+    ): List<RuleDiagnostic> {
+        return if (eventDefinition.signalRef.isBlank()) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_SIGNAL_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId signalEventDefinition is missing the required signalRef attribute",
+                ),
+            )
+        } else {
+            emptyList()
+        }
+    }
+
+    private fun validateEscalationEventDefinition(
+        nodeId: String,
+        eventDefinition: BpmnEscalationEventDefinition,
+    ): List<RuleDiagnostic> {
+        return if (eventDefinition.escalationRef.isBlank()) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_ESCALATION_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
+                ),
+            )
+        } else {
+            emptyList()
+        }
+    }
+
+    private fun validateCompensateEventDefinition(
+        nodeId: String,
+        eventDefinition: BpmnCompensateEventDefinition,
+    ): List<RuleDiagnostic> {
+        return if (eventDefinition.activityRef?.isBlank() == true) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_ACTIVITY_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId compensateEventDefinition activityRef must not be blank when present",
                 ),
             )
         } else {

@@ -7,10 +7,12 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.authoring.internal.domain.BpmnXmlParser
 import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnLane
@@ -20,6 +22,7 @@ import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
@@ -291,9 +294,17 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
 
             "terminateEventDefinition" -> BpmnTerminateEventDefinition
 
-            // Event-definition typenames without a typed Kotlin class (e.g. compensate,
-            // cancel) surface as `BpmnUnrecognizedEventDefinition`. The `BpmnSubset` rule
-            // matches on the carried typename via `targetElements`.
+            "signalEventDefinition" -> BpmnSignalEventDefinition(child.getAttribute("signalRef"))
+
+            "escalationEventDefinition" -> BpmnEscalationEventDefinition(child.getAttribute("escalationRef"))
+
+            "compensateEventDefinition" -> BpmnCompensateEventDefinition(
+                child.getAttribute("activityRef").takeIf(String::isNotBlank),
+            )
+
+            // Event-definition typenames without a typed Kotlin class (e.g. link,
+            // conditional) surface as `BpmnUnrecognizedEventDefinition`. The `BpmnSubset`
+            // rule matches on the carried typename via `targetElements`.
             else -> BpmnUnrecognizedEventDefinition(
                 typeName = "bpmn:${child.localName.replaceFirstChar { it.uppercase() }}",
             )
