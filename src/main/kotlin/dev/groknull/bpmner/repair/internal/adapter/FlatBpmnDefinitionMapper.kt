@@ -180,6 +180,7 @@ private fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         name = name,
         attachedToRef = requireField(attachedToRef, type, "attachedToRef", id),
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
+        cancelActivity = cancelActivity ?: true,
         parentRef = parentRef,
     )
     FlatBpmnNodeKind.INTERMEDIATE_CATCH_EVENT -> BpmnIntermediateCatchEvent(

@@ -372,6 +372,45 @@ class DeterministicPrimitivesTest {
     }
 
     @Test
+    fun `boundary error interrupting flags a non-interrupting error boundary event`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnUserTask("t", "Task"),
+                BpmnBoundaryEvent("b", attachedToRef = "t", eventDefinition = BpmnErrorEventDefinition("err"), cancelActivity = false),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        assertEquals(
+            listOf("b"),
+            ElementConstraintCheck().evaluate(
+                ctx,
+                metadata("error-interrupting", "bpmn:BoundaryEvent"),
+                ElementConstraintCheckConfig("bpmn:BoundaryEvent", ElementConstraintMode.BOUNDARY_ERROR_INTERRUPTING),
+            ).map { it.elementId },
+            "a non-interrupting (cancelActivity=false) error boundary event violates BPMN 2.0 §10.5.4",
+        )
+    }
+
+    @Test
+    fun `boundary error interrupting accepts the default interrupting error boundary event`() {
+        val ctx = context(
+            nodes = listOf(
+                BpmnUserTask("t", "Task"),
+                BpmnBoundaryEvent("b", attachedToRef = "t", eventDefinition = BpmnErrorEventDefinition("err")),
+                BpmnEndEvent("e", "End"),
+            ),
+        )
+        assertTrue(
+            ElementConstraintCheck().evaluate(
+                ctx,
+                metadata("error-interrupting", "bpmn:BoundaryEvent"),
+                ElementConstraintCheckConfig("bpmn:BoundaryEvent", ElementConstraintMode.BOUNDARY_ERROR_INTERRUPTING),
+            ).isEmpty(),
+            "an interrupting (default) error boundary event is valid",
+        )
+    }
+
+    @Test
     fun `event-based gateway flags non-event non-receive-task targets`() {
         // EventBasedGateway pointing at a plain task — invalid per BPMN 2.0 §10.5.4.6.
         val model = PrimitiveModelContext(

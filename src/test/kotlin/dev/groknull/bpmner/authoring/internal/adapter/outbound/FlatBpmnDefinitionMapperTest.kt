@@ -320,6 +320,32 @@ class FlatBpmnDefinitionMapperTest {
     }
 
     @Test
+    fun `BOUNDARY_EVENT preserves explicit cancelActivity=false`() {
+        val flat = FlatBpmnNode(
+            id = "b2",
+            type = FlatBpmnNodeKind.BOUNDARY_EVENT,
+            name = "Non-interrupting timeout",
+            attachedToRef = "task-1",
+            eventDefinition = FlatBpmnEventDefinition(
+                type = FlatBpmnEventDefinitionKind.TIMER,
+                timerKind = BpmnTimerKind.DURATION,
+                expression = "PT5M",
+            ),
+            cancelActivity = false,
+        )
+        assertEquals(
+            BpmnBoundaryEvent(
+                id = "b2",
+                name = "Non-interrupting timeout",
+                attachedToRef = "task-1",
+                eventDefinition = BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = "PT5M"),
+                cancelActivity = false,
+            ),
+            flat.toSealed(),
+        )
+    }
+
+    @Test
     fun `every FlatBpmnEventDefinitionKind round-trips to the matching sealed subtype`() {
         assertEquals(
             BpmnNoneEventDefinition,

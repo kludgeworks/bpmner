@@ -554,6 +554,8 @@ data class BpmnBoundaryEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
+    @get:JsonPropertyDescription("Whether triggering this boundary event cancels the attached activity; false = non-interrupting")
+    val cancelActivity: Boolean = true,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,

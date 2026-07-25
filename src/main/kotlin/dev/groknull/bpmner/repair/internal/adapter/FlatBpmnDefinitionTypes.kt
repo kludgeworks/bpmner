@@ -74,7 +74,7 @@ public enum class FlatBpmnEventDefinitionKind {
         "BUSINESS_RULE_TASK → decisionRef; SEND_TASK / RECEIVE_TASK → messageRef; " +
         "START_EVENT / END_EVENT → optional eventDefinition (defaults to NONE); " +
         "INTERMEDIATE_CATCH_EVENT / INTERMEDIATE_THROW_EVENT → required eventDefinition; " +
-        "BOUNDARY_EVENT → attachedToRef + eventDefinition; " +
+        "BOUNDARY_EVENT → attachedToRef + eventDefinition, optionally cancelActivity; " +
         "START_EVENT additionally accepts isInterrupting (defaults true); " +
         "SUB_PROCESS → inner nodes carrying parentRef; " +
         "CALL_ACTIVITY → required calledElement (id of the separately-defined process it invokes).",
@@ -116,6 +116,11 @@ public data class FlatBpmnNode(
         "BOUNDARY_EVENT only. BPMN id of the activity this boundary event is attached to.",
     )
     val attachedToRef: String? = null,
+    @get:JsonPropertyDescription(
+        "BOUNDARY_EVENT only. Whether triggering this boundary event cancels the attached activity; " +
+            "false = non-interrupting. Defaults to true if omitted.",
+    )
+    val cancelActivity: Boolean? = null,
     @field:Valid
     @get:JsonPropertyDescription(
         "Task kinds only. Set when the activity runs once per item in a collection (a 'for each …' " +

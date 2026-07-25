@@ -103,6 +103,7 @@ internal fun FlowNode.toBpmnEventOrNull(normalisedName: String?, parentRef: Stri
                 name = normalisedName,
                 attachedToRef = eventMetadata.attachedToRefs[id].orEmpty(),
                 eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                cancelActivity = eventMetadata.cancelActivity[id] ?: true,
                 parentRef = parentRef,
             )
         }

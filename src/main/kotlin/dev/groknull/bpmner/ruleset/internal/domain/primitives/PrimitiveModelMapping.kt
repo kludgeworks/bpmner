@@ -217,6 +217,7 @@ internal fun BpmnNode.toPrimitiveElement(
         if (this@toPrimitiveElement is BpmnReceiveTask) put("messageRef", messageRef)
         if (this@toPrimitiveElement is BpmnBoundaryEvent) {
             put("attachedToRef", attachedToRef)
+            put("cancelActivity", cancelActivity.toString())
         }
         // Presence flag the loop/MI rules narrow on via `appliesWhenProperty`. Only set on tasks
         // that actually carry a multi-instance marker, so ordinary tasks stay out of scope.

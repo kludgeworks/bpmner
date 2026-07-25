@@ -268,6 +268,11 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .bpmnElements("boundaryEvent")
                 .associate { it.getAttribute("id") to it.getAttribute("attachedToRef") }
                 .filterValues { it.isNotBlank() },
+            cancelActivity =
+            document
+                .bpmnElements("boundaryEvent")
+                .filter { it.hasAttribute("cancelActivity") }
+                .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
             messages = document.parseMessages(),
             errors = document.parseErrors(),
         )
@@ -437,6 +442,7 @@ internal data class EventMetadata(
     val eventDefinitions: Map<String, BpmnEventDefinition>,
     val isInterrupting: Map<String, Boolean>,
     val attachedToRefs: Map<String, String>,
+    val cancelActivity: Map<String, Boolean>,
     val messages: List<BpmnMessageRef>,
     val errors: List<BpmnErrorRef>,
 )
