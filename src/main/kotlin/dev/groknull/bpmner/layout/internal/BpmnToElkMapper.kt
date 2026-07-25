@@ -63,7 +63,7 @@ internal object BpmnToElkMapper {
      * The raw ELK skeleton graph after layout.
      *
      * [loopBackFlowIds] carries the set of sequence-flow IDs that were excluded from the ELK
-     * skeleton (back-edges in cyclic subprocesses).
+     * skeleton (back-edges in cyclic subprocesses/participant processes).
      */
     internal data class ElkSkeleton(
         val root: ElkNode,
@@ -80,6 +80,11 @@ internal object BpmnToElkMapper {
         val portMap = mutableMapOf<String, ElkPort>()
         val edgeMap = mutableMapOf<String, ElkEdge>()
 
+        // Loop-backs stay excluded and hand-routed (LoopBackEdgeArcs) rather than engine-routed via
+        // CYCLE_BREAKING_STRATEGY=MODEL_ORDER: confirmed (isolated raw-ELK repro, see
+        // plans/622/BLOCKER-622-2.md) that ElkLayered.doCompoundLayout's model-order cycle breaker
+        // reverses the wrong edge for a cycle nested inside an INCLUDE_CHILDREN compound node —
+        // exactly the shape every SubProcess/Participant cycle in this corpus takes.
         val loopBackFlowIds = mutableSetOf<String>()
         val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
@@ -339,8 +344,8 @@ internal object BpmnToElkMapper {
      * Maps sequence flows to ELK edges for process-flow nodes only.
      *
      * Flows whose source is a [BoundaryEvent] are not added to the ELK skeleton.
-     * Loop-back edges (back-edges that create cycles in subprocess flows) are also excluded
-     * so that the acyclic forward path is layouted by ELK.
+     * Loop-back edges (back-edges that create cycles in subprocess/participant flows) are also
+     * excluded so that the acyclic forward path is layouted by ELK.
      *
      * The [loopBackFlowIds] set is pre-computed by [map] and passed in to avoid recomputation.
      */

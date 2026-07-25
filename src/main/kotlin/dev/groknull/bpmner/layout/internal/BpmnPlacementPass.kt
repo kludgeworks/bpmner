@@ -22,8 +22,6 @@ import dev.groknull.bpmner.layout.internal.placement.LoopBackEdgeArcs
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy
-import dev.groknull.bpmner.layout.internal.placement.SubprocessEndStraddle
-import dev.groknull.bpmner.layout.internal.placement.SubprocessSpineCentring
 import dev.groknull.bpmner.layout.internal.placement.WhiteBoxPoolBandPlacement
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.eclipse.elk.graph.ElkEdge
@@ -99,15 +97,11 @@ internal object BpmnPlacementPass {
     private val pipeline = listOf(
         NodeShapeCopy,
         HandlerComponentAlignment.Move,
-        SubprocessEndStraddle.Move,
-        SubprocessSpineCentring.Move,
         BoundaryShapePlacement,
         LoopBackEdgeArcs,
         ExceptionEdgeRoutes,
         SequenceEdgeElkCopy,
         HandlerComponentAlignment.Repair,
-        SubprocessEndStraddle.Repair,
-        SubprocessSpineCentring.Repair,
         CollaborationShapePlacement,
         WhiteBoxPoolBandPlacement,
         EdgeTerminalTailGuard,

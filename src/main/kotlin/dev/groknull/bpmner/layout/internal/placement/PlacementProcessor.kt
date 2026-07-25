@@ -25,9 +25,9 @@ internal fun interface PlacementProcessor {
  * The mutable shared state that the ordered processor pipeline threads through.
  *
  * Every coordinate mutation of a flow-node shape that is a declared move (i.e. one of the
- * three moving conventions: [HandlerComponentAlignment], [SubprocessEndStraddle],
- * [SubprocessSpineCentring]) must record a [MoveRecord] in [moves] so the
- * no-undeclared-relocation guard can verify it.
+ * declared moving conventions: [HandlerComponentAlignment], [CollaborationShapePlacement],
+ * [WhiteBoxPoolBandPlacement], [ExternalBlackBoxBandPlacement]) must record a [MoveRecord] in
+ * [moves] so the no-undeclared-relocation guard can verify it.
  *
  * [BoundaryShapePlacement] is a sanctioned decoration and is NOT ledgered.
  */

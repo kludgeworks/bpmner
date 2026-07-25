@@ -18,8 +18,8 @@ import java.io.ByteArrayInputStream
  * Shared skeleton builders for per-processor contract tests.
  *
  * Extracted from [BpmnPlacementPassTest] per rung 2 (reuse, don't duplicate) so
- * [HandlerComponentAlignmentTest], [SubprocessEndStraddleTest], [SubprocessSpineCentringTest],
- * [ExceptionEdgeRoutesTest], and [LoopBackEdgeArcsTest] can all use these helpers.
+ * [HandlerComponentAlignmentTest], [ExceptionEdgeRoutesTest], and [LoopBackEdgeArcsTest] can all
+ * use these helpers.
  */
 internal object PlacementTestSkeletons {
 

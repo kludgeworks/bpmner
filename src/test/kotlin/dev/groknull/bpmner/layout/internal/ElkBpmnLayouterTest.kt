@@ -96,35 +96,12 @@ class ElkBpmnLayouterTest {
     // ── Spatial invariants: subprocess containment ────────────────────────────
 
     @Test
-    fun `subprocess child shapes are contained within their parent subprocess shape bounds`() {
+    fun `subprocess children including the terminating end event are contained within the subprocess bounds`() {
+        // AD-622-14 622-2: the straddle convention (end event centred on the subprocess border,
+        // half outside) is dropped — ELK's own compound sizing already places it fully inside,
+        // matching bpmn-io/Camunda Modeler convention, at zero extra code.
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
-        // Non-terminating children are fully contained; the terminating end event straddles
-        // the right border (asserted separately below).
-        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubStart_1", "SubTask_1"))
-    }
-
-    @Test
-    fun `subprocess-terminating end event straddles the container right border`() {
-        // straddleSubprocessEnds (phase-2 named rule): end events in a subprocess are placed
-        // so their centre sits on the subprocess right border (half inside, half outside).
-        val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
-        assertStraddlesRightBorder(result, "SubEnd_1", "SubProcess_1")
-    }
-
-    private fun assertStraddlesRightBorder(xml: String, endId: String, containerId: String) {
-        val doc = parseXmlDoc(xml)
-        val end = shapeBounds(doc, endId)
-        val container = shapeBounds(doc, containerId)
-        val endCx = end["x"]!! + end["width"]!! / 2.0
-        val rightBorder = container["x"]!! + container["width"]!!
-        val endRight = end["x"]!! + end["width"]!!
-        // Centre must be on the right border, and the shape must overlap (straddle) it.
-        assertTrue(
-            kotlin.math.abs(endCx - rightBorder) <= 1.0,
-            "End '$endId' centre ($endCx) must be on container '$containerId' right border ($rightBorder)",
-        )
-        // Right half must be outside (endRight > rightBorder)
-        assertTrue(endRight > rightBorder - 1.0, "End '$endId' right ($endRight) must be at or past the border ($rightBorder)")
+        assertChildrenContainedInParent(result, "SubProcess_1", listOf("SubStart_1", "SubTask_1", "SubEnd_1"))
     }
 
     @Test
@@ -143,14 +120,11 @@ class ElkBpmnLayouterTest {
     @Test
     fun `subprocess with internal branch children contained in subprocess`() {
         val result = layouter.layout(loadCorpus("subprocess-branch.bpmn"))
-        // SubEnd straddles the right border (asserted separately); the rest are fully contained.
-        // SubEnd straddles the right border; the other children are fully inside.
         assertChildrenContainedInParent(
             result,
             "SubProcess_1",
-            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join"),
+            listOf("SubStart", "Gw_split", "Task_upper", "Task_lower", "Gw_join", "SubEnd"),
         )
-        assertStraddlesRightBorder(result, "SubEnd", "SubProcess_1")
     }
 
     // ── Edge connectivity: waypoints actually touch their source/target shapes ─
@@ -256,16 +230,18 @@ class ElkBpmnLayouterTest {
     }
 
     @Test
-    fun `subprocess exit flow starts from the straddling end event's right edge`() {
+    fun `subprocess exit flow starts from the subprocess container's right border`() {
+        // With the end event fully inside (AD-622-14 622-2, straddle dropped), the exit flow
+        // starts at the subprocess's own boundary, not the end event's edge — the standard
+        // compound-node exit convention ELK produces natively.
         val result = layouter.layout(loadCorpus("subprocess-flat.bpmn"))
         val doc = parseXmlDoc(result)
-        val done = shapeBounds(doc, "SubEnd_1")
+        val container = shapeBounds(doc, "SubProcess_1")
         val start = edgeWaypoints(doc, "Flow_from_sub").first()
-        val doneRight = done["x"]!! + done["width"]!!
-        val doneCy = done["y"]!! + done["height"]!! / 2.0
+        val containerRight = container["x"]!! + container["width"]!!
         assertTrue(
-            kotlin.math.abs(start.first - doneRight) < 5.0 && kotlin.math.abs(start.second - doneCy) < 5.0,
-            "Flow_from_sub must start at Done's right edge ($doneRight,$doneCy), was $start",
+            kotlin.math.abs(start.first - containerRight) < 1.0,
+            "Flow_from_sub must start at SubProcess_1's right border ($containerRight), was $start",
         )
     }
 
