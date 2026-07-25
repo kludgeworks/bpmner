@@ -20,5 +20,5 @@ subprocess-branch 0 4 6
 subprocess-flat 0 0 3
 subprocess-loop 0 2 4
 subprocess-nested 0 0 9
-subprocess-no-start-cycle 0 2 2
+subprocess-no-start-cycle 0 0 2
 subprocess-sequential-sharing 0 0 4

@@ -95,14 +95,10 @@ internal object WhiteBoxPoolBandPlacement : PlacementProcessor {
             .forEach { flow ->
                 val participantId = memberOfParticipant[flow.source?.id] ?: return@forEach
                 val vector = translations.getValue(participantId)
-                if (flow.id in ctx.skeleton.loopBackFlowIds) {
-                    LoopBackEdgeArcs.routeAndStore(flow, ctx)
-                } else {
-                    ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
-                        Point(point.x + vector.x, point.y + vector.y)
-                    } ?: return@forEach
-                    EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
-                }
+                ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
+                    Point(point.x + vector.x, point.y + vector.y)
+                } ?: return@forEach
+                EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
             }
     }
 

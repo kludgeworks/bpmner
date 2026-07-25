@@ -15,7 +15,11 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
  *
  * Every ordinary (non-boundary-source, not already in [PlacementContext.edges])
  * sequence flow has its ELK-computed waypoints recorded in absolute canvas coordinates.
- * Flows already placed by loopback or exception routing are not overwritten.
+ * Flows already placed by exception routing are not overwritten. Loop-back flows
+ * ([PlacementContext.skeleton]'s `reversedFlowIds`) were mapped to ELK with source and target
+ * swapped (AD-622-15); their waypoint list is reversed here, immediately before storing, so the
+ * BPMN-DI direction matches the flow's real source/target — every point is byte-identical, only
+ * the sequence order flips, mirroring ELK's own `ReversedEdgeRestorer`.
  */
 internal object SequenceEdgeElkCopy : PlacementProcessor {
 
@@ -33,7 +37,7 @@ internal object SequenceEdgeElkCopy : PlacementProcessor {
                 val waypoints = mutableListOf(Point(section.startX + ox, section.startY + oy))
                 section.bendPoints.mapTo(waypoints) { Point(it.x + ox, it.y + oy) }
                 waypoints.add(Point(section.endX + ox, section.endY + oy))
-                ctx.edges[sf.id] = waypoints
+                ctx.edges[sf.id] = if (sf.id in ctx.skeleton.reversedFlowIds) waypoints.asReversed() else waypoints
             }
     }
 }

@@ -139,7 +139,6 @@ internal object CollaborationShapePlacement : PlacementProcessor {
                 val sourceTranslation = translations[flow.source?.id]
                 val targetTranslation = translations[flow.target?.id]
                 when {
-                    flow.id in ctx.skeleton.loopBackFlowIds -> LoopBackEdgeArcs.routeAndStore(flow, ctx)
                     sourceTranslation != null && sourceTranslation == targetTranslation -> {
                         ctx.edges[flow.id] = ctx.edges[flow.id]?.map { point ->
                             Point(point.x + sourceTranslation.x, point.y + sourceTranslation.y)

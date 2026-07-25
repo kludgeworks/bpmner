@@ -11,14 +11,12 @@ import dev.groknull.bpmner.layout.internal.placement.AssociationEdges
 import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.CollaborationShapePlacement
-import dev.groknull.bpmner.layout.internal.placement.EdgeTerminalTailGuard
 import dev.groknull.bpmner.layout.internal.placement.ElkLayoutResultCopy
 import dev.groknull.bpmner.layout.internal.placement.ExceptionEdgeRoutes
 import dev.groknull.bpmner.layout.internal.placement.ExternalBlackBoxBandPlacement
 import dev.groknull.bpmner.layout.internal.placement.HandlerComponentAlignment
 import dev.groknull.bpmner.layout.internal.placement.LabelMetrics
 import dev.groknull.bpmner.layout.internal.placement.LabelWrap
-import dev.groknull.bpmner.layout.internal.placement.LoopBackEdgeArcs
 import dev.groknull.bpmner.layout.internal.placement.NodeShapeCopy
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
 import dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy
@@ -98,13 +96,11 @@ internal object BpmnPlacementPass {
         NodeShapeCopy,
         HandlerComponentAlignment.Move,
         BoundaryShapePlacement,
-        LoopBackEdgeArcs,
         ExceptionEdgeRoutes,
         SequenceEdgeElkCopy,
         HandlerComponentAlignment.Repair,
         CollaborationShapePlacement,
         WhiteBoxPoolBandPlacement,
-        EdgeTerminalTailGuard,
         ElkLayoutResultCopy,
         ExternalBlackBoxBandPlacement,
         BoundaryLabelPlacement,

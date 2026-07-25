@@ -18,8 +18,7 @@ import java.io.ByteArrayInputStream
  * Shared skeleton builders for per-processor contract tests.
  *
  * Extracted from [BpmnPlacementPassTest] per rung 2 (reuse, don't duplicate) so
- * [HandlerComponentAlignmentTest], [ExceptionEdgeRoutesTest], and [LoopBackEdgeArcsTest] can all
- * use these helpers.
+ * [HandlerComponentAlignmentTest] and [ExceptionEdgeRoutesTest] can both use these helpers.
  */
 internal object PlacementTestSkeletons {
 
@@ -32,8 +31,8 @@ internal object PlacementTestSkeletons {
         nodeMap: Map<String, ElkNode>,
         portMap: Map<String, ElkPort> = emptyMap(),
         edgeMap: Map<String, ElkEdge> = emptyMap(),
-        loopBackFlowIds: Set<String> = emptySet(),
-    ): ElkSkeleton = ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
+        reversedFlowIds: Set<String> = emptySet(),
+    ): ElkSkeleton = ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds)
 
     @Suppress("LongParameterList")
     fun makeNode(parent: ElkNode, id: String, x: Double, y: Double, w: Double, h: Double): ElkNode {
