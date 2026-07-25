@@ -14,10 +14,11 @@ on:
 jobs:
   find-run:
     runs-on: ubuntu-latest
-    # actual merges only; same-repo only (fork PR runs have no smoke artifacts — org secrets aren't exposed)
+    # actual merges only; same-repo only (fork PR runs have no smoke artifacts — org secrets aren't exposed); skip release PRs
     if: >-
       github.event.pull_request.merged == true &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !startsWith(github.event.pull_request.head.ref, 'release-please--')
     permissions:
       actions: read
     outputs:
