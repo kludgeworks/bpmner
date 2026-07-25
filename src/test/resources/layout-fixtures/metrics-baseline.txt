@@ -16,9 +16,9 @@ long-labels 0 2 0
 miwg-a2-1 0 10 0
 miwg-a3-0 0 3 5
 representative-process 0 6 0
-subprocess-branch 0 8 6
+subprocess-branch 0 4 6
 subprocess-flat 0 0 3
 subprocess-loop 0 2 4
 subprocess-nested 0 0 9
-subprocess-no-start-cycle 0 2 2
+subprocess-no-start-cycle 0 0 2
 subprocess-sequential-sharing 0 0 4

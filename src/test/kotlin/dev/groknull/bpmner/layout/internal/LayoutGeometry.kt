@@ -147,3 +147,28 @@ internal fun countCrossings(edges: List<DiEdge>): Int {
 
 /** Sum, over all edges, of interior waypoints (a straight 2-waypoint edge contributes 0 bends). */
 internal fun countBends(edges: List<DiEdge>): Int = edges.sumOf { maxOf(0, it.waypoints.size - 2) }
+
+/** Minimum straight length of an edge's terminal (first or last) segment, per AD-622-10. */
+internal const val MIN_TERMINAL_TAIL = 20.0
+
+/** Tolerance for "on the rectangle's boundary" checks, absorbing floating-point rounding. */
+private const val BOUNDARY_TOLERANCE = 1.0
+
+/** Whether `a`-`b` runs purely horizontally or purely vertically. */
+internal fun isAxisAligned(a: DiPoint, b: DiPoint): Boolean = a.x == b.x || a.y == b.y
+
+/** Straight-line length of an axis-aligned segment `a`-`b`. */
+internal fun axisSegmentLength(a: DiPoint, b: DiPoint): Double =
+    if (a.x == b.x) kotlin.math.abs(b.y - a.y) else kotlin.math.abs(b.x - a.x)
+
+/** Whether [p] lies on (or within [BOUNDARY_TOLERANCE] of) one of [r]'s four sides. */
+internal fun isOnRectBoundary(p: DiPoint, r: DiRect): Boolean {
+    val withinX = p.x in (r.x - BOUNDARY_TOLERANCE)..(r.right + BOUNDARY_TOLERANCE)
+    val withinY = p.y in (r.y - BOUNDARY_TOLERANCE)..(r.bottom + BOUNDARY_TOLERANCE)
+    if (!withinX || !withinY) return false
+    val onVerticalEdge = kotlin.math.abs(p.x - r.x) <= BOUNDARY_TOLERANCE ||
+        kotlin.math.abs(p.x - r.right) <= BOUNDARY_TOLERANCE
+    val onHorizontalEdge = kotlin.math.abs(p.y - r.y) <= BOUNDARY_TOLERANCE ||
+        kotlin.math.abs(p.y - r.bottom) <= BOUNDARY_TOLERANCE
+    return onVerticalEdge || onHorizontalEdge
+}

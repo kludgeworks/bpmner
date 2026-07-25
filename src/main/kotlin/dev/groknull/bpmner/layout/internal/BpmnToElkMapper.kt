@@ -53,7 +53,7 @@ import java.util.EnumSet
  * in the node map for placement.
  */
 // map(), mapProcess/mapCollaboration, mapBoundaryEvents, mapSequenceFlows, trackAnnotations/trackGroups,
-// plus options helpers — all share nodeMap/portMap/edgeMap/loopBackFlowIds and cannot be split without
+// plus options helpers — all share nodeMap/portMap/edgeMap/reversedFlowIds and cannot be split without
 // threading those mutable maps through every call or converting them to class fields (which would
 // introduce statefulness between calls). Suppression is structural, not incidental.
 @Suppress("TooManyFunctions")
@@ -62,15 +62,16 @@ internal object BpmnToElkMapper {
     /**
      * The raw ELK skeleton graph after layout.
      *
-     * [loopBackFlowIds] carries the set of sequence-flow IDs that were excluded from the ELK
-     * skeleton (back-edges in cyclic subprocesses).
+     * [reversedFlowIds] carries the set of sequence-flow IDs that are back-edges (in cyclic
+     * subprocesses/participant processes) and were emitted into the ELK graph with source and
+     * target swapped, per AD-622-15, so the graph handed to ELK is acyclic by construction.
      */
     internal data class ElkSkeleton(
         val root: ElkNode,
         val nodeMap: Map<String, ElkNode>,
         val portMap: Map<String, ElkPort>,
         val edgeMap: Map<String, ElkEdge>,
-        val loopBackFlowIds: Set<String> = emptySet(),
+        val reversedFlowIds: Set<String> = emptySet(),
     )
 
     fun map(model: BpmnModelInstance): ElkSkeleton {
@@ -80,28 +81,33 @@ internal object BpmnToElkMapper {
         val portMap = mutableMapOf<String, ElkPort>()
         val edgeMap = mutableMapOf<String, ElkEdge>()
 
-        val loopBackFlowIds = mutableSetOf<String>()
+        // Back-edges are found up front so mapSequenceFlows can emit them reversed (AD-622-15):
+        // the graph handed to ELK is acyclic by construction, so cycle-breaking never runs.
+        val reversedFlowIds = mutableSetOf<String>()
         val loopingSubIds = mutableSetOf<String>()
         model.getModelElementsByType(SubProcess::class.java).forEach { sub ->
             val backEdges = findLoopBackEdges(sub.flowElements)
             if (backEdges.isNotEmpty()) {
-                loopBackFlowIds.addAll(backEdges)
+                reversedFlowIds.addAll(backEdges)
                 loopingSubIds.add(sub.id)
             }
         }
 
         val collaboration = model.getModelElementsByType(Collaboration::class.java).firstOrNull()
-        // A cyclic sequence flow directly inside a Participant's process is a back-edge too.
-        collaboration?.participants?.mapNotNull { it.process }?.forEach { process ->
-            loopBackFlowIds.addAll(findLoopBackEdges(process.flowElements))
-        }
+        val topProcess = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Process::class.java).firstOrNull()
         if (collaboration != null) {
+            // A cyclic sequence flow directly inside a Participant's process is a back-edge too.
+            collaboration.participants.mapNotNull { it.process }.forEach { process ->
+                reversedFlowIds.addAll(findLoopBackEdges(process.flowElements))
+            }
             root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
             mapCollaboration(root, collaboration, model, nodeMap, loopingSubIds)
-        } else {
-            val topLevelElements = model.getModelElementsByType(FlowElement::class.java)
-                .filter { it.parentElement is org.camunda.bpm.model.bpmn.instance.Process }
-            mapProcess(root, topLevelElements, nodeMap, model, loopingSubIds)
+        } else if (topProcess != null) {
+            // A cyclic sequence flow directly in the top-level process (no collaboration, no
+            // enclosing SubProcess) is a back-edge too — the graph is acyclic by construction at
+            // every level, root included, not just inside compound nodes.
+            reversedFlowIds.addAll(findLoopBackEdges(topProcess.flowElements))
+            mapProcess(root, topProcess.flowElements.toList(), nodeMap, model, loopingSubIds)
         }
 
         trackAnnotations(model, nodeMap)
@@ -109,10 +115,10 @@ internal object BpmnToElkMapper {
 
         mapBoundaryEvents(model, nodeMap, portMap)
 
-        mapSequenceFlows(model, nodeMap, edgeMap, loopBackFlowIds)
+        mapSequenceFlows(model, nodeMap, edgeMap, reversedFlowIds)
         collaboration?.let { mapMessageFlows(root, it, nodeMap, edgeMap) }
 
-        return ElkSkeleton(root, nodeMap, portMap, edgeMap, loopBackFlowIds)
+        return ElkSkeleton(root, nodeMap, portMap, edgeMap, reversedFlowIds)
     }
 
     /**
@@ -338,24 +344,24 @@ internal object BpmnToElkMapper {
     /**
      * Maps sequence flows to ELK edges for process-flow nodes only.
      *
-     * Flows whose source is a [BoundaryEvent] are not added to the ELK skeleton.
-     * Loop-back edges (back-edges that create cycles in subprocess flows) are also excluded
-     * so that the acyclic forward path is layouted by ELK.
+     * Flows whose source is a [BoundaryEvent] are not added to the ELK skeleton. Loop-back edges
+     * (back-edges that create cycles in subprocess/participant flows) are emitted with source and
+     * target swapped (AD-622-15), so ELK always lays out an acyclic graph; the inverse transform
+     * happens at read time in [dev.groknull.bpmner.layout.internal.placement.SequenceEdgeElkCopy].
      *
-     * The [loopBackFlowIds] set is pre-computed by [map] and passed in to avoid recomputation.
+     * The [reversedFlowIds] set is pre-computed by [map] and passed in to avoid recomputation.
      */
     private fun mapSequenceFlows(
         model: BpmnModelInstance,
         nodeMap: Map<String, ElkNode>,
         edgeMap: MutableMap<String, ElkEdge>,
-        loopBackFlowIds: Set<String>,
+        reversedFlowIds: Set<String>,
     ) {
         val boundaryIds = model.getModelElementsByType(BoundaryEvent::class.java)
             .mapTo(mutableSetOf()) { it.id }
 
         model.getModelElementsByType(SequenceFlow::class.java)
             .filterNot { it.source?.id in boundaryIds }
-            .filterNot { it.id in loopBackFlowIds }
             .forEach { sf ->
                 val sourceId = sf.source?.id
                 val targetId = sf.target?.id
@@ -364,7 +370,11 @@ internal object BpmnToElkMapper {
                 val target = nodeMap[targetId]
                     ?: throw BpmnAutoLayoutException("ELK layout: flow '${sf.id}' target '$targetId' not found")
                 if (source.parent == null || target.parent == null) return@forEach
-                val elkEdge = ElkGraphUtil.createSimpleEdge(source, target)
+                val elkEdge = if (sf.id in reversedFlowIds) {
+                    ElkGraphUtil.createSimpleEdge(target, source)
+                } else {
+                    ElkGraphUtil.createSimpleEdge(source, target)
+                }
                 elkEdge.identifier = sf.id
                 addEdgeLabel(elkEdge, sf.name)
                 edgeMap[sf.id] = elkEdge
@@ -445,6 +455,12 @@ internal object BpmnToElkMapper {
      * [org.camunda.bpm.model.bpmn.instance.Process]'s own direct flow elements — a nested
      * SubProcess's flow elements are scanned separately by the caller, not recursively here.
      *
+     * A self-referencing flow (source and target the same node) is never included: it is ELK's
+     * own self-loop primitive, pulled out of the graph and handled by dedicated processors
+     * ([org.eclipse.elk.alg.layered.intermediate.loops]) entirely independently of cycle-breaking
+     * — swapping its identical endpoints would be a no-op that leaves a real cycle in the graph
+     * AD-622-15 requires to be acyclic by construction.
+     *
      * Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
      * (which would count against the TooManyFunctions detekt limit).
      *
@@ -458,6 +474,7 @@ internal object BpmnToElkMapper {
         flows.forEach { sf ->
             val s = sf.source?.id ?: return@forEach
             val t = sf.target?.id ?: return@forEach
+            if (s == t) return@forEach
             succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
         }
 

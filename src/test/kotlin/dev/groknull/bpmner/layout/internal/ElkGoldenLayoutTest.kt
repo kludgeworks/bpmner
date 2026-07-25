@@ -30,6 +30,9 @@ class ElkGoldenLayoutTest {
         private const val DI_NS = "http://www.omg.org/spec/BPMN/20100524/DI"
         private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
         private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
+
+        /** Shapes at or above this area (200×200) are containers (subprocess/lane/participant). */
+        private const val CONTAINER_AREA = 40_000.0
     }
 
     @ParameterizedTest(name = "matches committed expected: {0}")
@@ -118,7 +121,34 @@ class ElkGoldenLayoutTest {
     }
 
     @ParameterizedTest(name = "labels clear labels and shapes: {0}")
-    @ValueSource(strings = ["long-labels", "collab-msg-label"])
+    @ValueSource(
+        strings = [
+            "representative-process",
+            "explicit-cycle",
+            "long-labels",
+            "annotation-and-group",
+            "boundary-timer-task",
+            "boundary-on-subprocess",
+            "boundary-error-task",
+            "boundary-multi",
+            "subprocess-flat",
+            "subprocess-loop",
+            "subprocess-branch",
+            "subprocess-nested",
+            "subprocess-no-start-cycle",
+            "subprocess-sequential-sharing",
+            "collab-lanes",
+            "collab-two-pools",
+            "collab-blackbox",
+            "collab-msg-endpoint",
+            "collab-msg-label",
+            "collab-subprocess",
+            "collab-bioc",
+            "collab-lanes-loopback",
+            "miwg-a2-1",
+            "miwg-a3-0",
+        ],
+    )
     fun `named labels do not overlap other labels or shapes`(fixture: String) {
         val result = layouter.layout(load("layout-fixtures/$fixture.bpmn"))
         assertLabelsClearOtherDiGeometry(LayoutDiInspector.parse(result), fixture)
@@ -351,7 +381,7 @@ class ElkGoldenLayoutTest {
         // their children by design. Boundary events (area = 36×36 ≈ 1296) straddle their host by
         // design — both are excluded. Participants/lanes are horizontal pool containers — excluded too.
         val nonContainer = extractShapeRects(doc)
-            .filter { it.id !in boundaryEventIds && it.id !in headerOwners && it.w * it.h < 40_000 }
+            .filter { it.id !in boundaryEventIds && it.id !in headerOwners && it.w * it.h < CONTAINER_AREA }
 
         val overlaps = overlappingPairs(nonContainer)
         assertTrue(
@@ -429,6 +459,10 @@ class ElkGoldenLayoutTest {
             .mapNotNull { shape ->
                 rect(shape.getAttribute("bpmnElement"), shape.getElementsByTagNameNS(DC_NS, "Bounds").item(0) as? Element)
             }
+            // Containers (subprocesses) are excluded: a member's label sitting inside its own
+            // subprocess's bounds is the normal nesting relationship, not an overlap defect —
+            // the same convention assertNoTopLevelShapeOverlap already applies to shapes.
+            .filter { it.w * it.h < CONTAINER_AREA }
         val labels = doc.getElementsByTagNameNS(DI_NS, "BPMNLabel")
         val labelRects = (0 until labels.length)
             .map { labels.item(it) as Element }

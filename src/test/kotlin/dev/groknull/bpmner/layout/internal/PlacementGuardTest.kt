@@ -37,8 +37,6 @@ class PlacementGuardTest {
 
         private val DECLARED_OWNERS = setOf(
             "HandlerComponentAlignment",
-            "SubprocessEndStraddle",
-            "SubprocessSpineCentring",
             "CollaborationShapePlacement",
             "WhiteBoxPoolBandPlacement",
             "ExternalBlackBoxBandPlacement",
