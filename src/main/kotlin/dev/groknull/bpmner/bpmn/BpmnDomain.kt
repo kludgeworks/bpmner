@@ -286,6 +286,11 @@ private const val STANDARD_LOOP_DESCRIPTION: String =
         "(a while/until/retry loop); leave null for an ordinary single-run task. Distinct from " +
         "multiInstance, which runs once per item in a collection."
 
+private const val IS_FOR_COMPENSATION_DESCRIPTION: String =
+    "Whether this task is a compensation handler, invoked only via a compensation event and " +
+        "never through normal sequence flow. Defaults to false for an ordinary task on the " +
+        "happy path or exception flow."
+
 private const val PARENT_REF_DESCRIPTION: String =
     "Id of the enclosing subprocess when this node is nested inside one; leave null for a top-level node. " +
         "Nodes stay in the flat list and carry this back-reference rather than being nested."
@@ -361,6 +366,8 @@ data class BpmnUserTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -380,6 +387,8 @@ data class BpmnServiceTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -399,6 +408,8 @@ data class BpmnScriptTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -424,6 +435,8 @@ data class BpmnBusinessRuleTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -448,6 +461,8 @@ data class BpmnSendTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -472,6 +487,8 @@ data class BpmnReceiveTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,
@@ -491,6 +508,8 @@ data class BpmnManualTask(
     @field:Valid
     @get:JsonPropertyDescription(STANDARD_LOOP_DESCRIPTION)
     override val standardLoop: StandardLoopCharacteristics? = null,
+    @get:JsonPropertyDescription(IS_FOR_COMPENSATION_DESCRIPTION)
+    override val isForCompensation: Boolean = false,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,

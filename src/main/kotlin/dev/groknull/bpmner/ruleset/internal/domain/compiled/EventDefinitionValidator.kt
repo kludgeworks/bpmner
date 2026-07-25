@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
@@ -172,12 +173,33 @@ internal class EventDefinitionValidator(
         nodeId: String,
         eventDefinition: BpmnCompensateEventDefinition,
     ): List<RuleDiagnostic> {
-        return if (eventDefinition.activityRef?.isBlank() == true) {
-            listOf(
+        val activityRef = eventDefinition.activityRef ?: return emptyList()
+        if (activityRef.isBlank()) {
+            return listOf(
                 eventDiagnostic(
                     diagnosticCode = DEF_INVALID_ACTIVITY_REF,
                     nodeId = nodeId,
                     message = "event $nodeId compensateEventDefinition activityRef must not be blank when present",
+                ),
+            )
+        }
+        val target = ctx.nodesById[activityRef]
+        return if (target == null) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_ACTIVITY_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId compensateEventDefinition activityRef '$activityRef' " +
+                        "does not match any node id",
+                ),
+            )
+        } else if (target !is BpmnTask || !target.isForCompensation) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_ACTIVITY_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId compensateEventDefinition activityRef '$activityRef' must reference " +
+                        "a task with isForCompensation=true",
                 ),
             )
         } else {

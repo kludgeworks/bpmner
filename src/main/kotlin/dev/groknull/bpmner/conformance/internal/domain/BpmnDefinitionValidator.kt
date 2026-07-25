@@ -28,6 +28,7 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
@@ -102,9 +103,10 @@ internal class BpmnDefinitionValidator {
         val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
         definition.nodes
             // An event subprocess has no sequence-flow connection to its scope's other nodes by
-            // BPMN definition — it is triggered by its own start event, not by flow — so, like a
-            // boundary event, it is excluded from the weak-connectivity requirement.
-            .filterNot { it is BpmnBoundaryEvent || it is BpmnEventSubProcess }
+            // BPMN definition — it is triggered by its own start event, not by flow. Same for a
+            // compensation-handler task: it is invoked by a compensation event, not sequence flow.
+            // Both are excluded from the weak-connectivity requirement, like boundary events.
+            .filterNot { it is BpmnBoundaryEvent || it is BpmnEventSubProcess || it.isCompensationHandler() }
             .groupBy { it.parentRef }
             .forEach { (parentRef, nodes) ->
                 validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
@@ -161,25 +163,33 @@ internal class BpmnDefinitionValidator {
             nodes.any { it is BpmnEndEvent && it.parentRef == null }
     }
 
-    private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
-        is BpmnStartEvent, is BpmnBoundaryEvent -> false
+    // A compensation-handler task is floating, like an event subprocess: it is invoked by a
+    // compensation event, never reached through normal sequence flow.
+    private fun BpmnNode.isCompensationHandler(): Boolean = this is BpmnTask && isForCompensation
+
+    private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when {
+        this is BpmnStartEvent || this is BpmnBoundaryEvent -> false
 
         // An event subprocess is floating: it starts on its own trigger, never on an incoming
         // sequence flow from its enclosing scope.
-        is BpmnEventSubProcess -> false
+        this is BpmnEventSubProcess -> false
 
-        is BpmnSubProcess -> true
+        isCompensationHandler() -> false
+
+        this is BpmnSubProcess -> true
         else -> true
     }
 
-    private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
-        is BpmnEndEvent, is BpmnBoundaryEvent -> false
+    private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when {
+        this is BpmnEndEvent || this is BpmnBoundaryEvent -> false
 
         // An event subprocess is floating: its handling ends inside its own scope, never on an
         // outgoing sequence flow into its enclosing scope.
-        is BpmnEventSubProcess -> false
+        this is BpmnEventSubProcess -> false
 
-        is BpmnSubProcess -> true
+        isCompensationHandler() -> false
+
+        this is BpmnSubProcess -> true
         else -> true
     }
 
@@ -405,17 +415,41 @@ internal class BpmnDefinitionValidator {
             is BpmnEscalationEventDefinition ->
                 errors.addRefCatalogError(nodeId, "escalationRef", eventDefinition.escalationRef, context.escalationIds)
 
-            is BpmnCompensateEventDefinition -> {
-                if (eventDefinition.activityRef?.isBlank() == true) {
-                    errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
-                }
-            }
+            is BpmnCompensateEventDefinition ->
+                validateCompensateActivityRef(nodeId, eventDefinition.activityRef, context, errors)
 
             // Unrecognized event definitions have no fields this structural validator can
             // check; the `BpmnSubset` rule flags them.
             is BpmnUnrecognizedEventDefinition -> {
                 Unit
             }
+        }
+    }
+
+    // A blank activityRef reports the missing attribute; omitted (null) is valid (compensate-all).
+    // A non-blank activityRef must resolve to a real node that is a compensation handler
+    // (isForCompensation=true) — otherwise the engine has nothing to invoke.
+    private fun validateCompensateActivityRef(
+        nodeId: String,
+        activityRef: String?,
+        context: EventValidationContext,
+        errors: MutableList<String>,
+    ) {
+        if (activityRef == null) return
+        if (activityRef.isBlank()) {
+            errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
+            return
+        }
+        val target = context.nodesById[activityRef]
+        if (target == null) {
+            errors.add(
+                "event $nodeId compensateEventDefinition activityRef '$activityRef' does not match any node id",
+            )
+        } else if (target !is BpmnTask || !target.isForCompensation) {
+            errors.add(
+                "event $nodeId compensateEventDefinition activityRef '$activityRef' must reference " +
+                    "a task with isForCompensation=true",
+            )
         }
     }
 

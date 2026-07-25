@@ -25,6 +25,7 @@ import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
+import dev.groknull.bpmner.bpmn.BpmnTask
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
@@ -116,6 +117,9 @@ internal object BpmnModelFactory {
             }
         flowNode.id = node.id
         BpmnNodeNamingPolicy.normalize(node.name)?.let { flowNode.name = it }
+        // isForCompensation is cross-cutting across every task kind (all are Camunda Activity
+        // subtypes); one check here covers all seven rather than an arm per task type above.
+        if (node is BpmnTask) (flowNode as Activity).setForCompensation(node.isForCompensation)
         return flowNode
     }
 }

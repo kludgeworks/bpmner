@@ -33,6 +33,14 @@ sealed interface BpmnTask : BpmnNode {
      * (which runs once per item in a collection rather than repeating until a condition holds).
      */
     val standardLoop: StandardLoopCharacteristics?
+
+    /**
+     * Whether this task is a compensation handler — invoked only via a compensation event,
+     * never through normal sequence flow. Cross-cutting across all task kinds, declared here
+     * for polymorphic reads (e.g. resolving [BpmnCompensateEventDefinition.activityRef]
+     * against a real handler).
+     */
+    val isForCompensation: Boolean
 }
 
 /** Grouping marker for gateway nodes. */

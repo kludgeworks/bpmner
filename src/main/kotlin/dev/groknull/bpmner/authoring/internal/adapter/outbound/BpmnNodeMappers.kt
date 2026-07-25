@@ -59,13 +59,13 @@ internal fun FlowNode.toBpmnTaskOrNull(normalisedName: String?, parentRef: Strin
     val mRef = taskMetadata.messageRefs[id].orEmpty()
 
     return when (this) {
-        is UserTask -> BpmnUserTask(id, normalisedName, mi, sl, parentRef)
-        is ServiceTask -> BpmnServiceTask(id, normalisedName, mi, sl, parentRef)
-        is ScriptTask -> BpmnScriptTask(id, normalisedName, mi, sl, parentRef)
-        is BusinessRuleTask -> BpmnBusinessRuleTask(id, normalisedName, dRef, mi, sl, parentRef)
-        is SendTask -> BpmnSendTask(id, normalisedName, mRef, mi, sl, parentRef)
-        is ReceiveTask -> BpmnReceiveTask(id, normalisedName, mRef, mi, sl, parentRef)
-        is ManualTask -> BpmnManualTask(id, normalisedName, mi, sl, parentRef)
+        is UserTask -> BpmnUserTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is ServiceTask -> BpmnServiceTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is ScriptTask -> BpmnScriptTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
+        is BusinessRuleTask -> BpmnBusinessRuleTask(id, normalisedName, dRef, mi, sl, isForCompensation, parentRef)
+        is SendTask -> BpmnSendTask(id, normalisedName, mRef, mi, sl, isForCompensation, parentRef)
+        is ReceiveTask -> BpmnReceiveTask(id, normalisedName, mRef, mi, sl, isForCompensation, parentRef)
+        is ManualTask -> BpmnManualTask(id, normalisedName, mi, sl, isForCompensation, parentRef)
         else -> null
     }
 }

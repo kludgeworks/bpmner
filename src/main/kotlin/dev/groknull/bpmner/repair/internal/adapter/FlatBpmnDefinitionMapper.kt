@@ -101,24 +101,53 @@ private val GATEWAY_KINDS: Set<FlatBpmnNodeKind> = setOf(
     FlatBpmnNodeKind.EVENT_BASED_GATEWAY,
 )
 
+// One arm per task kind, each threading the same five cross-cutting fields — splitting this
+// would scatter the per-kind required-field rules without reducing the actual complexity.
+@Suppress("LongMethod")
 private fun FlatBpmnNode.toTaskNode(): BpmnNode {
     val mi = multiInstance?.toSealed()
     val sl = standardLoop?.toSealed()
+    val comp = isForCompensation ?: false
     return when (type) {
-        FlatBpmnNodeKind.USER_TASK ->
-            BpmnUserTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.SERVICE_TASK ->
-            BpmnServiceTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.SCRIPT_TASK ->
-            BpmnScriptTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
-        FlatBpmnNodeKind.MANUAL_TASK ->
-            BpmnManualTask(id = id, name = name, multiInstance = mi, standardLoop = sl, parentRef = parentRef)
+        FlatBpmnNodeKind.USER_TASK -> BpmnUserTask(
+            id = id,
+            name = name,
+            multiInstance = mi,
+            standardLoop = sl,
+            isForCompensation = comp,
+            parentRef = parentRef,
+        )
+        FlatBpmnNodeKind.SERVICE_TASK -> BpmnServiceTask(
+            id = id,
+            name = name,
+            multiInstance = mi,
+            standardLoop = sl,
+            isForCompensation = comp,
+            parentRef = parentRef,
+        )
+        FlatBpmnNodeKind.SCRIPT_TASK -> BpmnScriptTask(
+            id = id,
+            name = name,
+            multiInstance = mi,
+            standardLoop = sl,
+            isForCompensation = comp,
+            parentRef = parentRef,
+        )
+        FlatBpmnNodeKind.MANUAL_TASK -> BpmnManualTask(
+            id = id,
+            name = name,
+            multiInstance = mi,
+            standardLoop = sl,
+            isForCompensation = comp,
+            parentRef = parentRef,
+        )
         FlatBpmnNodeKind.BUSINESS_RULE_TASK -> BpmnBusinessRuleTask(
             id = id,
             name = name,
             decisionRef = requireField(decisionRef, type, "decisionRef", id),
             multiInstance = mi,
             standardLoop = sl,
+            isForCompensation = comp,
             parentRef = parentRef,
         )
         FlatBpmnNodeKind.SEND_TASK -> BpmnSendTask(
@@ -127,6 +156,7 @@ private fun FlatBpmnNode.toTaskNode(): BpmnNode {
             messageRef = requireField(messageRef, type, "messageRef", id),
             multiInstance = mi,
             standardLoop = sl,
+            isForCompensation = comp,
             parentRef = parentRef,
         )
         FlatBpmnNodeKind.RECEIVE_TASK -> BpmnReceiveTask(
@@ -135,6 +165,7 @@ private fun FlatBpmnNode.toTaskNode(): BpmnNode {
             messageRef = requireField(messageRef, type, "messageRef", id),
             multiInstance = mi,
             standardLoop = sl,
+            isForCompensation = comp,
             parentRef = parentRef,
         )
         else -> error("toTaskNode called with non-task kind $type")

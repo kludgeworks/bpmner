@@ -46,6 +46,7 @@ import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Suppress("LargeClass")
 class BpmnDefinitionToXmlConverterTest {
@@ -543,6 +544,38 @@ class BpmnDefinitionToXmlConverterTest {
             "//bpmn:startEvent[@id='StartEvent_1']/bpmn:compensateEventDefinition",
         ).exist()
         assertFalse(compensateAllXml.contains("activityRef"))
+    }
+
+    @Test
+    fun `converter renders isForCompensation on a task and defaults it false otherwise`() {
+        val definition =
+            BpmnDefinition(
+                processId = "Process_compensation",
+                processName = "Refund on cancellation",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Start"),
+                    BpmnUserTask("Task_ship", "Ship order"),
+                    BpmnEndEvent("EndEvent_1", "Done"),
+                    BpmnUserTask("Task_refund", "Refund payment", isForCompensation = true),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_ship"),
+                    BpmnEdge("Flow_2", "Task_ship", "EndEvent_1"),
+                ),
+            )
+
+        val xml = converter.toXml(definition)
+
+        assertXml(xml).nodesByXPath("//bpmn:userTask[@id='Task_refund' and @isForCompensation='true']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:userTask[@id='Task_ship' and @isForCompensation='false']").exist()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(xml)
+        val refund = parsed.nodes.single { it.id == "Task_refund" } as BpmnUserTask
+        val ship = parsed.nodes.single { it.id == "Task_ship" } as BpmnUserTask
+        assertTrue(refund.isForCompensation)
+        assertFalse(ship.isForCompensation)
     }
 
     @Test
