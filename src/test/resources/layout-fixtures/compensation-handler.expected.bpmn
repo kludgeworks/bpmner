@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_compensation_handler" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Compensation Handler" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Order Received" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_ship" implementation="##WebService" isForCompensation="false" name="Ship Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_1" name="Order Complete">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:boundaryEvent attachedToRef="Task_ship" cancelActivity="true" id="Boundary_compensate" name="Undo Shipment" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_undo</bpmn:outgoing>
+
+      <bpmn:compensateEventDefinition activityRef="Task_refund" id="CompDef_1"/>
+
+    </bpmn:boundaryEvent>
+
+    <bpmn:endEvent id="End_undo" name="Shipment Reversed">
+
+      <bpmn:incoming>Flow_undo</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_refund" implementation="##WebService" isForCompensation="true" name="Reverse Shipment" startQuantity="1"/>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_ship"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ship" targetRef="End_1"/>
+
+    <bpmn:sequenceFlow id="Flow_undo" sourceRef="Boundary_compensate" targetRef="End_undo"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="400.7177734375" y="207.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="85.365234375" x="376.03515625" y="248.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_undo" id="BPMNShape_End_undo">
+        <dc:Bounds height="36.0" width="36.0" x="400.7177734375" y="328.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_undo">
+          <dc:Bounds height="28.0" width="51.357421875" x="393.0390625" y="369.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="36.017578125" y="207.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="84.03515625" x="12.0" y="248.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_refund" id="BPMNShape_Task_refund">
+        <dc:Bounds height="80.0" width="100.0" x="154.716796875" y="12.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_refund">
+          <dc:Bounds height="28.0" width="50.6953125" x="179.369140625" y="97.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
+        <dc:Bounds height="80.0" width="100.0" x="186.03515625" y="185.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_ship">
+          <dc:Bounds height="20.0" width="58.025390625" x="207.0224609375" y="368.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Boundary_compensate" id="BPMNShape_Boundary_compensate">
+        <dc:Bounds height="36.0" width="36.0" x="218.03515625" y="239.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Boundary_compensate">
+          <dc:Bounds height="20.0" width="82.716796875" x="194.6767578125" y="348.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="72.017578125" y="225.0"/>
+        <di:waypoint x="186.03515625" y="225.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="286.03515625" y="225.0"/>
+        <di:waypoint x="400.7177734375" y="225.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_undo" id="BPMNEdge_Flow_undo">
+        <di:waypoint x="236.03515625" y="275.0"/>
+        <di:waypoint x="236.03515625" y="346.0"/>
+        <di:waypoint x="400.7177734375" y="346.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

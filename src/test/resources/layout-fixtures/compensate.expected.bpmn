@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" expressionLanguage="http://www.w3.org/1999/XPath" id="Definitions_compensate" targetNamespace="https://groknull.dev/bpmner" typeLanguage="http://www.w3.org/2001/XMLSchema">
+
+  <bpmn:error errorCode="SHIP_FAILED" id="Error_1" name="Shipment Failed"/>
+
+  <bpmn:process id="Process_1" isClosed="false" isExecutable="true" name="Compensate" processType="None">
+
+    <bpmn:startEvent id="Start_1" isInterrupting="true" name="Order Placed" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+
+    </bpmn:startEvent>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_charge" implementation="##WebService" isForCompensation="false" name="Charge Card" startQuantity="1">
+
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:serviceTask completionQuantity="1" id="Task_ship" implementation="##WebService" isForCompensation="false" name="Ship Order" startQuantity="1">
+
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+
+    </bpmn:serviceTask>
+
+    <bpmn:endEvent id="End_1" name="Order Complete">
+
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+
+    </bpmn:endEvent>
+
+    <bpmn:boundaryEvent attachedToRef="Task_ship" cancelActivity="true" id="Boundary_error" name="Shipment Failed" parallelMultiple="false">
+
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+
+      <bpmn:errorEventDefinition errorRef="Error_1" id="ErrorDef_1"/>
+
+    </bpmn:boundaryEvent>
+
+    <bpmn:endEvent id="End_compensate" name="Order Reversed">
+
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+
+      <bpmn:compensateEventDefinition id="CompDef_1"/>
+
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_charge"/>
+
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_charge" targetRef="Task_ship"/>
+
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_ship" targetRef="End_1"/>
+
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_error" targetRef="End_compensate"/>
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane bpmnElement="Process_1" id="BPMNPlane_1">
+      <bpmndi:BPMNShape bpmnElement="End_1" id="BPMNShape_End_1">
+        <dc:Bounds height="36.0" width="36.0" x="577.3818359375" y="155.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_1">
+          <dc:Bounds height="20.0" width="85.365234375" x="552.69921875" y="196.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="End_compensate" id="BPMNShape_End_compensate">
+        <dc:Bounds height="36.0" width="36.0" x="577.3818359375" y="276.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_End_compensate">
+          <dc:Bounds height="20.0" width="85.365234375" x="552.69921875" y="317.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Start_1" id="BPMNShape_Start_1">
+        <dc:Bounds height="36.0" width="36.0" x="29.349609375" y="155.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Start_1">
+          <dc:Bounds height="20.0" width="70.69921875" x="12.0" y="196.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_charge" id="BPMNShape_Task_charge">
+        <dc:Bounds height="80.0" width="100.0" x="172.69921875" y="133.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_charge">
+          <dc:Bounds height="20.0" width="68.701171875" x="188.3486328125" y="218.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Task_ship" id="BPMNShape_Task_ship">
+        <dc:Bounds height="80.0" width="100.0" x="362.69921875" y="133.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Task_ship">
+          <dc:Bounds height="20.0" width="58.025390625" x="383.6865234375" y="316.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape bpmnElement="Boundary_error" id="BPMNShape_Boundary_error">
+        <dc:Bounds height="36.0" width="36.0" x="394.69921875" y="187.0"/>
+        <bpmndi:BPMNLabel id="BPMNLabel_Boundary_error">
+          <dc:Bounds height="20.0" width="86.712890625" x="369.3427734375" y="296.0"/>
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge bpmnElement="Flow_1" id="BPMNEdge_Flow_1">
+        <di:waypoint x="65.349609375" y="173.0"/>
+        <di:waypoint x="172.69921875" y="173.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_2" id="BPMNEdge_Flow_2">
+        <di:waypoint x="272.69921875" y="173.0"/>
+        <di:waypoint x="362.69921875" y="173.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_3" id="BPMNEdge_Flow_3">
+        <di:waypoint x="462.69921875" y="173.0"/>
+        <di:waypoint x="577.3818359375" y="173.0"/>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge bpmnElement="Flow_error" id="BPMNEdge_Flow_error">
+        <di:waypoint x="412.69921875" y="223.0"/>
+        <di:waypoint x="412.69921875" y="294.0"/>
+        <di:waypoint x="577.3818359375" y="294.0"/>
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+
+</bpmn:definitions>

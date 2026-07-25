@@ -9,11 +9,11 @@
 | Category | Construct | Status |
 | --- | --- | --- |
 | Events | Start, end, intermediate (catch/throw), boundary | 🟢 |
-| Events | Event subprocess | 🔴 |
+| Events | Event subprocess | 🟢 |
 | Event definitions | None, timer, message, error, terminate | 🟢 |
-| Event definitions | Signal, escalation, compensation | 🔴 |
+| Event definitions | Signal, escalation, compensation | 🟢 |
 | Boundary events | Interrupting timer, interrupting error | 🟢 |
-| Boundary events | Non-interrupting variants | 🔴 |
+| Boundary events | Non-interrupting variants | 🟢 |
 | Tasks | Task, user, service, script, business-rule, send, receive | 🟢 |
 | Activities | Call activity, embedded subprocess | 🟢 |
 | Activity characteristics | Standard-loop, multi-instance | 🟢 |

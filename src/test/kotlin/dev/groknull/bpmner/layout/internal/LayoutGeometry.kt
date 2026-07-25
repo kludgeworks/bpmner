@@ -45,6 +45,11 @@ internal val LAYOUT_CORPUS_FIXTURES = listOf(
     "collab-lanes-loopback",
     "miwg-a2-1",
     "miwg-a3-0",
+    "event-subprocess",
+    "compensation-handler",
+    "boundary-non-interrupting",
+    "signal-escalation",
+    "compensate",
 )
 
 /** A BPMN DI shape's absolute bounds, keyed by the `bpmnElement` id it renders. */

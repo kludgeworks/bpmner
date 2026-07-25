@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_compensation_handler" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="Process_1" name="Compensation Handler" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_ship" name="Ship Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Complete">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:boundaryEvent id="Boundary_compensate" name="Undo Shipment" attachedToRef="Task_ship">
+      <bpmn:outgoing>Flow_undo</bpmn:outgoing>
+      <bpmn:compensateEventDefinition id="CompDef_1" activityRef="Task_refund"/>
+    </bpmn:boundaryEvent>
+    <bpmn:endEvent id="End_undo" name="Shipment Reversed">
+      <bpmn:incoming>Flow_undo</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:serviceTask id="Task_refund" name="Reverse Shipment" isForCompensation="true"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_ship"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ship" targetRef="End_1"/>
+    <bpmn:sequenceFlow id="Flow_undo" sourceRef="Boundary_compensate" targetRef="End_undo"/>
+  </bpmn:process>
+</bpmn:definitions>

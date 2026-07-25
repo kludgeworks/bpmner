@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_event_subprocess" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:error id="Error_1" errorCode="ORDER_FAILED" name="Order Failed"/>
+  <bpmn:process id="Process_1" name="Event Subprocess" isExecutable="true">
+    <bpmn:startEvent id="Start_1" name="Order Received">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_process" name="Process Order">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_1" name="Order Shipped">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_process"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_process" targetRef="End_1"/>
+    <bpmn:subProcess id="SubProcess_handler" name="Handle Order Failure" triggeredByEvent="true">
+      <bpmn:startEvent id="Start_handler" name="On Failure">
+        <bpmn:outgoing>Flow_handler_1</bpmn:outgoing>
+        <bpmn:errorEventDefinition id="ErrorDef_1" errorRef="Error_1"/>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_notify" name="Notify Customer">
+        <bpmn:incoming>Flow_handler_1</bpmn:incoming>
+        <bpmn:outgoing>Flow_handler_2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:endEvent id="End_handler" name="Failure Handled">
+        <bpmn:incoming>Flow_handler_2</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="Flow_handler_1" sourceRef="Start_handler" targetRef="Task_notify"/>
+      <bpmn:sequenceFlow id="Flow_handler_2" sourceRef="Task_notify" targetRef="End_handler"/>
+    </bpmn:subProcess>
+  </bpmn:process>
+</bpmn:definitions>
