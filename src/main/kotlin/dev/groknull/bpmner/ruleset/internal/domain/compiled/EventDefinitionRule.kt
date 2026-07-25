@@ -44,6 +44,7 @@ internal class EventDefinitionRule : BpmnRule {
         internal const val DEF_INVALID_SIGNAL_REF = "def-invalid-signal-ref"
         internal const val DEF_INVALID_ERROR_REF = "def-invalid-error-ref"
         internal const val DEF_INVALID_ESCALATION_REF = "def-invalid-escalation-ref"
+        internal const val DEF_INVALID_ACTIVITY_REF = "def-invalid-activity-ref"
     }
     override val id: String = "def-event-definitions"
     override val metadata: RuleMetadata = RuleMetadata(
@@ -73,6 +74,7 @@ internal class EventDefinitionRule : BpmnRule {
             DEF_INVALID_SIGNAL_REF to "Signal event definitions must reference an existing signal.",
             DEF_INVALID_ERROR_REF to "Error event definitions must reference an existing error.",
             DEF_INVALID_ESCALATION_REF to "Escalation event definitions must reference an existing escalation.",
+            DEF_INVALID_ACTIVITY_REF to "Compensate event definition activityRef must not be blank when present.",
         ),
         severity = RuleSeverity.ERROR,
         repair = RepairMetadata(kind = RepairKind.LLM_MODEL_PATCH, safety = RepairSafety.LLM_ONLY),

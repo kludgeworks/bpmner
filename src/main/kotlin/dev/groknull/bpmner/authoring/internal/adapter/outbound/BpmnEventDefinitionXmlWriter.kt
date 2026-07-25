@@ -5,10 +5,13 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -35,6 +38,12 @@ internal class BpmnEventDefinitionXmlWriter {
         is BpmnMessageEventDefinition -> refElement(document, "messageEventDefinition", "messageRef", definition.messageRef)
         is BpmnErrorEventDefinition -> refElement(document, "errorEventDefinition", "errorRef", definition.errorRef)
         is BpmnTerminateEventDefinition -> document.bpmnElement("terminateEventDefinition")
+        is BpmnSignalEventDefinition -> refElement(document, "signalEventDefinition", "signalRef", definition.signalRef)
+        is BpmnEscalationEventDefinition ->
+            refElement(document, "escalationEventDefinition", "escalationRef", definition.escalationRef)
+        is BpmnCompensateEventDefinition -> document.bpmnElement("compensateEventDefinition").also { event ->
+            definition.activityRef?.let { event.setAttribute("activityRef", it) }
+        }
         is BpmnNoneEventDefinition -> error("none event definition must not render XML")
         is BpmnUnrecognizedEventDefinition ->
             throw RetryableBpmnGenerationException(

@@ -72,7 +72,9 @@ internal class BpmnNodePayloadXmlWriter(
         is BpmnBoundaryEvent -> {
             val element = eventElementsById.eventElement(node.id)
             element.setAttribute("attachedToRef", node.attachedToRef)
-            element.setAttribute("cancelActivity", "true")
+            if (!node.cancelActivity) {
+                element.setAttribute("cancelActivity", node.cancelActivity.toString())
+            }
             eventDefinitionWriter.appendTo(element, document, node.eventDefinition)
             false
         }

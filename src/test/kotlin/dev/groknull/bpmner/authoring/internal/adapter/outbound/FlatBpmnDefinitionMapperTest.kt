@@ -11,11 +11,13 @@ import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -33,6 +35,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -320,6 +323,32 @@ class FlatBpmnDefinitionMapperTest {
     }
 
     @Test
+    fun `BOUNDARY_EVENT preserves explicit cancelActivity=false`() {
+        val flat = FlatBpmnNode(
+            id = "b2",
+            type = FlatBpmnNodeKind.BOUNDARY_EVENT,
+            name = "Non-interrupting timeout",
+            attachedToRef = "task-1",
+            eventDefinition = FlatBpmnEventDefinition(
+                type = FlatBpmnEventDefinitionKind.TIMER,
+                timerKind = BpmnTimerKind.DURATION,
+                expression = "PT5M",
+            ),
+            cancelActivity = false,
+        )
+        assertEquals(
+            BpmnBoundaryEvent(
+                id = "b2",
+                name = "Non-interrupting timeout",
+                attachedToRef = "task-1",
+                eventDefinition = BpmnTimerEventDefinition(timerKind = BpmnTimerKind.DURATION, expression = "PT5M"),
+                cancelActivity = false,
+            ),
+            flat.toSealed(),
+        )
+    }
+
+    @Test
     fun `every FlatBpmnEventDefinitionKind round-trips to the matching sealed subtype`() {
         assertEquals(
             BpmnNoneEventDefinition,
@@ -350,6 +379,31 @@ class FlatBpmnDefinitionMapperTest {
                 type = FlatBpmnEventDefinitionKind.ERROR,
                 errorRef = "err-x",
             ).toSealed(),
+        )
+        assertEquals(
+            BpmnSignalEventDefinition(signalRef = "signal-x"),
+            FlatBpmnEventDefinition(
+                type = FlatBpmnEventDefinitionKind.SIGNAL,
+                signalRef = "signal-x",
+            ).toSealed(),
+        )
+        assertEquals(
+            BpmnEscalationEventDefinition(escalationRef = "escalation-x"),
+            FlatBpmnEventDefinition(
+                type = FlatBpmnEventDefinitionKind.ESCALATION,
+                escalationRef = "escalation-x",
+            ).toSealed(),
+        )
+        assertEquals(
+            BpmnCompensateEventDefinition(activityRef = "activity-x"),
+            FlatBpmnEventDefinition(
+                type = FlatBpmnEventDefinitionKind.COMPENSATE,
+                activityRef = "activity-x",
+            ).toSealed(),
+        )
+        assertEquals(
+            BpmnCompensateEventDefinition(activityRef = null),
+            FlatBpmnEventDefinition(type = FlatBpmnEventDefinitionKind.COMPENSATE).toSealed(),
         )
     }
 

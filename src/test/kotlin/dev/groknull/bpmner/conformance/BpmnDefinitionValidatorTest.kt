@@ -7,10 +7,13 @@ package dev.groknull.bpmner.conformance
 
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
@@ -23,6 +26,8 @@ import dev.groknull.bpmner.bpmn.BpmnParticipant
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -583,6 +588,133 @@ class BpmnDefinitionValidatorTest {
             validator.validate(definition).joinToString("\n"),
             "event EndEvent_1 errorEventDefinition is missing the required errorRef attribute",
         )
+    }
+
+    @Test
+    fun `validator flags missing signalRef attribute on signalEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Signal received",
+                    eventDefinition = BpmnSignalEventDefinition(""),
+                ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event StartEvent_1 signalEventDefinition is missing the required signalRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags unresolved signalRef on signalEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Signal received",
+                    eventDefinition = BpmnSignalEventDefinition("Signal_Missing"),
+                ),
+            ).copy(signals = listOf(BpmnSignalRef("Signal_Known", "Known")))
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "signalRef 'Signal_Missing' does not match any signal catalog id",
+        )
+    }
+
+    @Test
+    fun `validator accepts a resolved signalRef on signalEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Signal received",
+                    eventDefinition = BpmnSignalEventDefinition("Signal_Known"),
+                ),
+            ).copy(signals = listOf(BpmnSignalRef("Signal_Known", "Known")))
+        assertTrue(validator.validate(definition).isEmpty())
+    }
+
+    @Test
+    fun `validator flags missing escalationRef attribute on escalationEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Escalated",
+                    eventDefinition = BpmnEscalationEventDefinition(""),
+                ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "event EndEvent_1 escalationEventDefinition is missing the required escalationRef attribute",
+        )
+    }
+
+    @Test
+    fun `validator flags unresolved escalationRef on escalationEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Escalated",
+                    eventDefinition = BpmnEscalationEventDefinition("Escalation_Missing"),
+                ),
+            ).copy(escalations = listOf(BpmnEscalationRef("Escalation_Known", "KNOWN")))
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "escalationRef 'Escalation_Missing' does not match any escalation catalog id",
+        )
+    }
+
+    @Test
+    fun `validator accepts a resolved escalationRef on escalationEventDefinition`() {
+        val definition =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Escalated",
+                    eventDefinition = BpmnEscalationEventDefinition("Escalation_Known"),
+                ),
+            ).copy(escalations = listOf(BpmnEscalationRef("Escalation_Known", "KNOWN")))
+        assertTrue(validator.validate(definition).isEmpty())
+    }
+
+    @Test
+    fun `validator flags blank activityRef on compensateEventDefinition when present`() {
+        val definition =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Compensate",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = " "),
+                ),
+            )
+        assertContains(
+            validator.validate(definition).joinToString("\n"),
+            "compensateEventDefinition activityRef must not be blank when present",
+        )
+    }
+
+    @Test
+    fun `validator accepts a compensate event definition with no activityRef`() {
+        val definition =
+            minimalDefinition(
+                end =
+                BpmnEndEvent(
+                    "EndEvent_1",
+                    "Compensate all",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = null),
+                ),
+            )
+        assertTrue(validator.validate(definition).isEmpty())
     }
 
     @Test

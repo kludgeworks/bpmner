@@ -8,9 +8,11 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
@@ -26,6 +28,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -55,6 +58,8 @@ public fun FlatBpmnDefinition.toSealed(): BpmnDefinition = BpmnDefinition(
     sequences = sequences,
     messages = messages,
     errors = errors,
+    signals = signals,
+    escalations = escalations,
     annotations = annotations,
     groups = groups,
     associations = associations,
@@ -181,6 +186,7 @@ internal fun FlatBpmnNode.toEventPositionNode(): BpmnNode = when (type) {
         name = name,
         attachedToRef = requireField(attachedToRef, type, "attachedToRef", id),
         eventDefinition = requireNotNull(eventDefinition) { "$type ($id) requires eventDefinition" }.toSealed(),
+        cancelActivity = cancelActivity ?: true,
         parentRef = parentRef,
     )
     FlatBpmnNodeKind.INTERMEDIATE_CATCH_EVENT -> BpmnIntermediateCatchEvent(
@@ -214,6 +220,18 @@ public fun FlatBpmnEventDefinition.toSealed(): BpmnEventDefinition = when (type)
 
     FlatBpmnEventDefinitionKind.ERROR -> BpmnErrorEventDefinition(
         errorRef = requireField(errorRef, type, "errorRef", EVENT_CONTEXT),
+    )
+
+    FlatBpmnEventDefinitionKind.SIGNAL -> BpmnSignalEventDefinition(
+        signalRef = requireField(signalRef, type, "signalRef", EVENT_CONTEXT),
+    )
+
+    FlatBpmnEventDefinitionKind.ESCALATION -> BpmnEscalationEventDefinition(
+        escalationRef = requireField(escalationRef, type, "escalationRef", EVENT_CONTEXT),
+    )
+
+    FlatBpmnEventDefinitionKind.COMPENSATE -> BpmnCompensateEventDefinition(
+        activityRef = activityRef,
     )
 }
 

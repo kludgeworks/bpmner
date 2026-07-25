@@ -7,10 +7,12 @@ package dev.groknull.bpmner.conformance.internal.domain
 
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -22,6 +24,7 @@ import dev.groknull.bpmner.bpmn.BpmnNodeNamingPolicy
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
@@ -264,6 +267,8 @@ internal class BpmnDefinitionValidator {
         val nodesById: Map<String, BpmnNode>,
         val messageIds: Set<String>,
         val errorIds: Set<String>,
+        val signalIds: Set<String>,
+        val escalationIds: Set<String>,
     )
 
     private fun validateEventDefinitions(
@@ -274,6 +279,8 @@ internal class BpmnDefinitionValidator {
             nodesById = definition.nodes.associateBy { it.id },
             messageIds = definition.messages.map { it.id }.toSet(),
             errorIds = definition.errors.map { it.id }.toSet(),
+            signalIds = definition.signals.map { it.id }.toSet(),
+            escalationIds = definition.escalations.map { it.id }.toSet(),
         )
 
         definition.nodes.forEach { node ->
@@ -363,31 +370,26 @@ internal class BpmnDefinitionValidator {
                 }
             }
 
-            is BpmnMessageEventDefinition -> {
-                if (eventDefinition.messageRef.isBlank()) {
-                    errors.add(
-                        "event $nodeId messageEventDefinition is missing the required messageRef attribute",
-                    )
-                } else if (eventDefinition.messageRef !in context.messageIds) {
-                    errors.add(
-                        "event $nodeId messageRef '${eventDefinition.messageRef}' " +
-                            "does not match any message catalog id",
-                    )
-                }
-            }
+            is BpmnMessageEventDefinition ->
+                errors.addRefCatalogError(nodeId, "messageRef", eventDefinition.messageRef, context.messageIds)
 
-            is BpmnErrorEventDefinition -> {
-                if (eventDefinition.errorRef.isBlank()) {
-                    errors.add(
-                        "event $nodeId errorEventDefinition is missing the required errorRef attribute",
-                    )
-                } else if (eventDefinition.errorRef !in context.errorIds) {
-                    errors.add("event $nodeId errorRef '${eventDefinition.errorRef}' does not match any error catalog id")
-                }
-            }
+            is BpmnErrorEventDefinition ->
+                errors.addRefCatalogError(nodeId, "errorRef", eventDefinition.errorRef, context.errorIds)
 
             is BpmnTerminateEventDefinition -> {
                 Unit
+            }
+
+            is BpmnSignalEventDefinition ->
+                errors.addRefCatalogError(nodeId, "signalRef", eventDefinition.signalRef, context.signalIds)
+
+            is BpmnEscalationEventDefinition ->
+                errors.addRefCatalogError(nodeId, "escalationRef", eventDefinition.escalationRef, context.escalationIds)
+
+            is BpmnCompensateEventDefinition -> {
+                if (eventDefinition.activityRef?.isBlank() == true) {
+                    errors.add("event $nodeId compensateEventDefinition activityRef must not be blank when present")
+                }
             }
 
             // Unrecognized event definitions have no fields this structural validator can
@@ -395,6 +397,27 @@ internal class BpmnDefinitionValidator {
             is BpmnUnrecognizedEventDefinition -> {
                 Unit
             }
+        }
+    }
+
+    /**
+     * Shared blank/catalog-resolution check for message/error/signal/escalation event
+     * definitions: a blank ref reports the missing attribute; a non-blank ref absent from
+     * [catalog] reports the referential-integrity mismatch instead. [attrName] (e.g.
+     * `"messageRef"`) also names the catalog and the `*EventDefinition` element by the
+     * naming convention all four ref kinds share.
+     */
+    private fun MutableList<String>.addRefCatalogError(
+        nodeId: String,
+        attrName: String,
+        ref: String,
+        catalog: Set<String>,
+    ) {
+        val catalogName = attrName.removeSuffix("Ref")
+        if (ref.isBlank()) {
+            add("event $nodeId ${catalogName}EventDefinition is missing the required $attrName attribute")
+        } else if (ref !in catalog) {
+            add("event $nodeId $attrName '$ref' does not match any $catalogName catalog id")
         }
     }
 

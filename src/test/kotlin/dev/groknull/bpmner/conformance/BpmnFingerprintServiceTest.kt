@@ -35,6 +35,8 @@ class BpmnFingerprintServiceTest {
                 "sequences",
                 "messages",
                 "errors",
+                "signals",
+                "escalations",
                 "annotations",
                 "groups",
                 "associations",

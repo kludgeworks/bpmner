@@ -635,6 +635,13 @@ data class ContractActor(
  *    [dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition] + matching `BpmnErrorRef`
  *  - [Message] — point-to-point send on completion →
  *    [dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition] + matching `BpmnMessageRef`
+ *
+ * Signal- and escalation-throwing end events (mapping to
+ * [dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition] /
+ * [dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition]) are a supported BPMN generation
+ * construct but have no dedicated [ContractEndState] kind — the contract-extraction vocabulary
+ * stays at these four end states until a source description needs the distinction.
+ *
  * Field naming follows the convention from [ContractTrigger]: Message carries a human-readable
  * name (extracted from prose; mapped to a catalogue id at generation time), and Error carries
  * the BPMN-spec matching code.

@@ -50,6 +50,12 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Reusable BPMN error declarations referenced by error event definitions")
     val errors: List<BpmnErrorRef> = emptyList(),
     @field:Valid
+    @get:JsonPropertyDescription("Reusable BPMN signal declarations referenced by signal event definitions")
+    val signals: List<BpmnSignalRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
+    val escalations: List<BpmnEscalationRef> = emptyList(),
+    @field:Valid
     @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
     val annotations: List<BpmnTextAnnotation> = emptyList(),
     @field:Valid
@@ -135,6 +141,21 @@ data class BpmnErrorRef(
     val name: String? = null,
 )
 
+data class BpmnSignalRef(
+    @field:NotBlank
+    val id: String,
+    @field:NotBlank
+    val name: String,
+)
+
+data class BpmnEscalationRef(
+    @field:NotBlank
+    val id: String,
+    @field:NotBlank
+    val escalationCode: String,
+    val name: String? = null,
+)
+
 data class BpmnGroup(
     @field:NotBlank
     val id: String,
@@ -149,6 +170,9 @@ data class BpmnGroup(
     JsonSubTypes.Type(value = BpmnMessageEventDefinition::class, name = "MESSAGE"),
     JsonSubTypes.Type(value = BpmnErrorEventDefinition::class, name = "ERROR"),
     JsonSubTypes.Type(value = BpmnTerminateEventDefinition::class, name = "TERMINATE"),
+    JsonSubTypes.Type(value = BpmnSignalEventDefinition::class, name = "SIGNAL"),
+    JsonSubTypes.Type(value = BpmnEscalationEventDefinition::class, name = "ESCALATION"),
+    JsonSubTypes.Type(value = BpmnCompensateEventDefinition::class, name = "COMPENSATE"),
 )
 sealed interface BpmnEventDefinition
 
@@ -172,12 +196,27 @@ data class BpmnErrorEventDefinition(
 
 data object BpmnTerminateEventDefinition : BpmnEventDefinition
 
+data class BpmnSignalEventDefinition(
+    @field:NotBlank
+    val signalRef: String,
+) : BpmnEventDefinition
+
+data class BpmnEscalationEventDefinition(
+    @field:NotBlank
+    val escalationRef: String,
+) : BpmnEventDefinition
+
+/** `activityRef` is null for a compensate-all event definition (BPMN permits omitting it). */
+data class BpmnCompensateEventDefinition(
+    val activityRef: String? = null,
+) : BpmnEventDefinition
+
 /**
  * Fallback for any event-definition typename the parser sees but doesn't have a typed class
- * for (today: only `bpmn:CompensateEventDefinition`). Absent from the `@JsonSubTypes`
- * registration above: Jackson serialization fails on an instance, so the LLM round-trip
- * cannot accidentally see one. Callers that need to serialize a definition must filter these
- * out first.
+ * for (today: only `bpmn:LinkEventDefinition` and `bpmn:ConditionalEventDefinition`, both
+ * epic non-goals). Absent from the `@JsonSubTypes` registration above: Jackson serialization
+ * fails on an instance, so the LLM round-trip cannot accidentally see one. Callers that need
+ * to serialize a definition must filter these out first.
  */
 data class BpmnUnrecognizedEventDefinition(
     val typeName: String,
@@ -554,6 +593,8 @@ data class BpmnBoundaryEvent(
     @field:Valid
     @get:JsonPropertyDescription("Nested BPMN event definition")
     override val eventDefinition: BpmnEventDefinition,
+    @get:JsonPropertyDescription("Whether triggering this boundary event cancels the attached activity; false = non-interrupting")
+    val cancelActivity: Boolean = true,
     @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
     override val parentRef: String? = null,
 ) : BpmnNode,

@@ -6,17 +6,22 @@
 package dev.groknull.bpmner.ruleset.internal.domain.compiled
 
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinitionContext
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
 import dev.groknull.bpmner.bpmn.BpmnIntermediateThrowEvent
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
@@ -287,6 +292,220 @@ class EventDefinitionRuleTest {
         val diag = rule.evaluate(ctx).single()
         assertEquals("def-invalid-error-ref", diag.diagnosticCode)
         assertEquals("event ic errorRef 'err-missing' does not match any error catalog id", diag.message)
+    }
+
+    @Test
+    fun `signal event with blank signalRef emits def-invalid-signal-ref`() {
+        val blankSignal = BpmnSignalEventDefinition(signalRef = " ")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = blankSignal),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
+                ),
+            )
+
+        val diag = rule.evaluate(ctx).single()
+        assertEquals("def-invalid-signal-ref", diag.diagnosticCode)
+        assertEquals("event ic signalEventDefinition is missing the required signalRef attribute", diag.message)
+    }
+
+    @Test
+    fun `signal event with unresolved signalRef emits def-invalid-signal-ref`() {
+        val signal = BpmnSignalEventDefinition(signalRef = "signal-missing")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = signal),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
+                    signals = listOf(BpmnSignalRef(id = "signal-known", name = "Known")),
+                ),
+            )
+
+        val diag = rule.evaluate(ctx).single()
+        assertEquals("def-invalid-signal-ref", diag.diagnosticCode)
+        assertEquals("event ic signalRef 'signal-missing' does not match any signal catalog id", diag.message)
+    }
+
+    @Test
+    fun `signal event with resolved signalRef emits no diagnostic`() {
+        val signal = BpmnSignalEventDefinition(signalRef = "signal-known")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateCatchEvent(id = "ic", name = "Wait", eventDefinition = signal),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "ic"),
+                        BpmnEdge(id = "f2", sourceRef = "ic", targetRef = "e"),
+                    ),
+                    signals = listOf(BpmnSignalRef(id = "signal-known", name = "Known")),
+                ),
+            )
+
+        assertTrue(rule.evaluate(ctx).isEmpty())
+    }
+
+    @Test
+    fun `escalation event with blank escalationRef emits def-invalid-escalation-ref`() {
+        val blankEscalation = BpmnEscalationEventDefinition(escalationRef = " ")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Escalate", eventDefinition = blankEscalation),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
+                ),
+            )
+
+        val diag = rule.evaluate(ctx).single()
+        assertEquals("def-invalid-escalation-ref", diag.diagnosticCode)
+        assertEquals("event it escalationEventDefinition is missing the required escalationRef attribute", diag.message)
+    }
+
+    @Test
+    fun `escalation event with unresolved escalationRef emits def-invalid-escalation-ref`() {
+        val escalation = BpmnEscalationEventDefinition(escalationRef = "escalation-missing")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Escalate", eventDefinition = escalation),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
+                    escalations = listOf(BpmnEscalationRef(id = "escalation-known", escalationCode = "KNOWN")),
+                ),
+            )
+
+        val diag = rule.evaluate(ctx).single()
+        assertEquals("def-invalid-escalation-ref", diag.diagnosticCode)
+        assertEquals("event it escalationRef 'escalation-missing' does not match any escalation catalog id", diag.message)
+    }
+
+    @Test
+    fun `escalation event with resolved escalationRef emits no diagnostic`() {
+        val escalation = BpmnEscalationEventDefinition(escalationRef = "escalation-known")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Escalate", eventDefinition = escalation),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
+                    escalations = listOf(BpmnEscalationRef(id = "escalation-known", escalationCode = "KNOWN")),
+                ),
+            )
+
+        assertTrue(rule.evaluate(ctx).isEmpty())
+    }
+
+    @Test
+    fun `compensate event definition with blank activityRef emits def-invalid-activity-ref`() {
+        val blankActivityRef = BpmnCompensateEventDefinition(activityRef = " ")
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Compensate", eventDefinition = blankActivityRef),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
+                ),
+            )
+
+        val diag = rule.evaluate(ctx).single()
+        assertEquals("def-invalid-activity-ref", diag.diagnosticCode)
+        assertEquals("event it compensateEventDefinition activityRef must not be blank when present", diag.message)
+    }
+
+    @Test
+    fun `compensate event definition with no activityRef emits no diagnostic`() {
+        val compensateAll = BpmnCompensateEventDefinition(activityRef = null)
+        val ctx =
+            BpmnDefinitionContext(
+                BpmnDefinition(
+                    processId = "P",
+                    processName = "P",
+                    nodes =
+                    listOf(
+                        BpmnStartEvent(id = "s", name = "Started"),
+                        BpmnIntermediateThrowEvent(id = "it", name = "Compensate", eventDefinition = compensateAll),
+                        BpmnEndEvent(id = "e", name = "Done"),
+                    ),
+                    sequences =
+                    listOf(
+                        BpmnEdge(id = "f1", sourceRef = "s", targetRef = "it"),
+                        BpmnEdge(id = "f2", sourceRef = "it", targetRef = "e"),
+                    ),
+                ),
+            )
+
+        assertTrue(rule.evaluate(ctx).isEmpty())
     }
 
     @Test

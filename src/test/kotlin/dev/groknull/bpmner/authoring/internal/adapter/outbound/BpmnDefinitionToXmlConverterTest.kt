@@ -8,9 +8,12 @@
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
 import dev.groknull.bpmner.bpmn.BpmnAssociation
+import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -21,6 +24,8 @@ import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParallelGateway
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
@@ -466,6 +471,85 @@ class BpmnDefinitionToXmlConverterTest {
     }
 
     @Test
+    fun `converter renders signal and escalation start event definitions with resolvable catalog entries`() {
+        val signalDefinition =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_signal",
+                    "Order cancelled",
+                    eventDefinition = BpmnSignalEventDefinition("Signal_OrderCancelled"),
+                ),
+                signals = listOf(BpmnSignalRef("Signal_OrderCancelled", "Order cancelled")),
+            )
+        val escalationDefinition =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_escalation",
+                    "Overdue",
+                    eventDefinition = BpmnEscalationEventDefinition("Escalation_Overdue"),
+                ),
+                escalations = listOf(BpmnEscalationRef("Escalation_Overdue", "OVERDUE", "Overdue")),
+            )
+
+        val signalXml = converter.toXml(signalDefinition)
+        assertXml(signalXml).nodesByXPath(
+            "//bpmn:signal[@id='Signal_OrderCancelled' and @name='Order cancelled']",
+        ).exist()
+        assertXml(signalXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_signal']/bpmn:signalEventDefinition[@signalRef='Signal_OrderCancelled']",
+        ).exist()
+
+        val escalationXml = converter.toXml(escalationDefinition)
+        assertXml(escalationXml).nodesByXPath(
+            "//bpmn:escalation[@id='Escalation_Overdue' and @escalationCode='OVERDUE' and @name='Overdue']",
+        ).exist()
+        assertXml(escalationXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_escalation']/bpmn:escalationEventDefinition[@escalationRef='Escalation_Overdue']",
+        ).exist()
+    }
+
+    @Test
+    fun `converter renders compensate event definition with and without activityRef`() {
+        val withActivityRef =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Start",
+                    eventDefinition = BpmnCompensateEventDefinition("Task_refund"),
+                ),
+            )
+        val compensateAll =
+            minimalDefinition(
+                start =
+                BpmnStartEvent(
+                    "StartEvent_1",
+                    "Start",
+                    eventDefinition = BpmnCompensateEventDefinition(activityRef = null),
+                ),
+            )
+
+        val withActivityRefXml = converter.toXml(withActivityRef)
+        assertXml(withActivityRefXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_1']/bpmn:compensateEventDefinition[@activityRef='Task_refund']",
+        ).exist()
+
+        val compensateAllXml = converter.toXml(compensateAll)
+        assertXml(compensateAllXml).nodesByXPath(
+            "//bpmn:startEvent[@id='StartEvent_1']/bpmn:compensateEventDefinition",
+        ).exist()
+        assertFalse(compensateAllXml.contains("activityRef"))
+    }
+
+    // Boundary-event round-trip coverage lives in BpmnNodePayloadXmlWriterTest instead of here:
+    // BpmnModelFactory never sets the structurally-required `attachedToRef` on the raw skeleton
+    // element, so a full BpmnDefinitionToXmlConverter render of any BpmnBoundaryEvent fails Camunda's
+    // XSD validation before BpmnNodePayloadXmlWriter's post-processing pass ever runs — a
+    // pre-existing gap in the authoring pipeline unrelated to cancelActivity, out of scope here.
+
+    @Test
     fun `converter writes gateway default attribute when edge isDefault is true`() {
         val definition = creditTierDefinition()
 
@@ -617,6 +701,8 @@ class BpmnDefinitionToXmlConverterTest {
     private fun minimalDefinition(
         start: BpmnStartEvent,
         messages: List<BpmnMessageRef> = emptyList(),
+        signals: List<BpmnSignalRef> = emptyList(),
+        escalations: List<BpmnEscalationRef> = emptyList(),
     ) = BpmnDefinition(
         processId = "Process_events",
         processName = "Event starts",
@@ -627,5 +713,7 @@ class BpmnDefinitionToXmlConverterTest {
         ),
         sequences = listOf(BpmnEdge("Flow_1", start.id, "EndEvent_1")),
         messages = messages,
+        signals = signals,
+        escalations = escalations,
     )
 }

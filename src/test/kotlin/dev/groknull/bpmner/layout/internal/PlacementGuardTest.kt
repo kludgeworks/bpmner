@@ -10,7 +10,7 @@ import org.eclipse.elk.core.RecursiveGraphLayoutEngine
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.MethodSource
 import kotlin.test.assertTrue
 
 /**
@@ -42,37 +42,13 @@ class PlacementGuardTest {
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON
+
+        @JvmStatic
+        fun fixtures() = LAYOUT_CORPUS_FIXTURES
     }
 
     @ParameterizedTest(name = "no-undeclared-relocation guard: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "boundary-timer-task",
-            "boundary-on-subprocess",
-            "boundary-error-task",
-            "boundary-multi",
-            "subprocess-flat",
-            "subprocess-loop",
-            "subprocess-branch",
-            "subprocess-nested",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-lanes-loopback",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-two-pools",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-blackbox",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `every relocated flow-node is ledgered and every ledger owner is a declared convention`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val model = org.camunda.bpm.model.bpmn.Bpmn.readModelFromStream(

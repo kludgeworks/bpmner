@@ -23,10 +23,10 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
-import dev.groknull.bpmner.bpmn.BpmnUnrecognizedEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import org.xmlunit.assertj.XmlAssert
@@ -296,11 +296,11 @@ class BpmnXmlToDefinitionConverterTest {
     }
 
     @Test
-    fun `parse surfaces removed signal event definitions as unsupported`() {
+    fun `parse recognizes signal event definitions`() {
         val xml =
             """
             <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" targetNamespace="https://example.test/bpmn">
-              <process id="p1" name="Unsupported signal">
+              <process id="p1" name="Signal">
                 <startEvent id="start"><signalEventDefinition signalRef="signal"/></startEvent>
                 <endEvent id="end"/>
                 <sequenceFlow id="flow" sourceRef="start" targetRef="end"/>
@@ -310,7 +310,7 @@ class BpmnXmlToDefinitionConverterTest {
 
         val start = reverse.parse(xml).nodes.filterIsInstance<BpmnStartEvent>().single()
 
-        assertEquals(BpmnUnrecognizedEventDefinition("bpmn:SignalEventDefinition"), start.eventDefinition)
+        assertEquals(BpmnSignalEventDefinition("signal"), start.eventDefinition)
     }
 
     @Test

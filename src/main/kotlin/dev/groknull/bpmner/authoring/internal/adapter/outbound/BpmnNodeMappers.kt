@@ -10,6 +10,7 @@ import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
@@ -24,6 +25,7 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnScriptTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnServiceTask
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUserTask
@@ -103,6 +105,7 @@ internal fun FlowNode.toBpmnEventOrNull(normalisedName: String?, parentRef: Stri
                 name = normalisedName,
                 attachedToRef = eventMetadata.attachedToRefs[id].orEmpty(),
                 eventDefinition = eventMetadata.eventDefinitions[id] ?: BpmnNoneEventDefinition,
+                cancelActivity = eventMetadata.cancelActivity[id] ?: true,
                 parentRef = parentRef,
             )
         }
@@ -196,5 +199,24 @@ internal fun Document.parseErrors(): List<BpmnErrorRef> {
                 name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
             )
         }.filter { it.id.isNotBlank() && it.code.isNotBlank() }
+        .toList()
+}
+
+internal fun Document.parseSignals(): List<BpmnSignalRef> {
+    return bpmnElements("signal")
+        .map { BpmnSignalRef(id = it.getAttribute("id"), name = it.getAttribute("name")) }
+        .filter { it.id.isNotBlank() && it.name.isNotBlank() }
+        .toList()
+}
+
+internal fun Document.parseEscalations(): List<BpmnEscalationRef> {
+    return bpmnElements("escalation")
+        .map {
+            BpmnEscalationRef(
+                id = it.getAttribute("id"),
+                escalationCode = it.getAttribute("escalationCode"),
+                name = it.getAttribute("name").takeIf { name -> name.isNotBlank() },
+            )
+        }.filter { it.id.isNotBlank() && it.escalationCode.isNotBlank() }
         .toList()
 }

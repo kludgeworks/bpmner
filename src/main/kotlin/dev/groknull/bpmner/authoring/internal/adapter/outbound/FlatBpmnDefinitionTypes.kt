@@ -10,11 +10,13 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnLane
 import dev.groknull.bpmner.bpmn.BpmnMessageFlow
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -65,6 +67,9 @@ public enum class FlatBpmnEventDefinitionKind {
     MESSAGE,
     ERROR,
     TERMINATE,
+    SIGNAL,
+    ESCALATION,
+    COMPENSATE,
 }
 
 @JsonClassDescription(
@@ -72,7 +77,7 @@ public enum class FlatBpmnEventDefinitionKind {
         "BUSINESS_RULE_TASK → decisionRef; SEND_TASK / RECEIVE_TASK → messageRef; " +
         "START_EVENT / END_EVENT → optional eventDefinition (defaults to NONE); " +
         "INTERMEDIATE_CATCH_EVENT / INTERMEDIATE_THROW_EVENT → required eventDefinition; " +
-        "BOUNDARY_EVENT → attachedToRef + eventDefinition; " +
+        "BOUNDARY_EVENT → attachedToRef + eventDefinition, optionally cancelActivity; " +
         "START_EVENT additionally accepts isInterrupting (defaults true); " +
         "SUB_PROCESS → inner nodes carrying parentRef; " +
         "CALL_ACTIVITY → required calledElement (id of the separately-defined process it invokes).",
@@ -114,6 +119,11 @@ public data class FlatBpmnNode(
         "BOUNDARY_EVENT only. BPMN id of the activity this boundary event is attached to.",
     )
     val attachedToRef: String? = null,
+    @get:JsonPropertyDescription(
+        "BOUNDARY_EVENT only. Whether triggering this boundary event cancels the attached activity; " +
+            "false = non-interrupting. Defaults to true if omitted.",
+    )
+    val cancelActivity: Boolean? = null,
     @field:Valid
     @get:JsonPropertyDescription(
         "Task kinds only. Set when the activity runs once per item in a collection (a 'for each …' " +
@@ -179,13 +189,16 @@ public data class FlatStandardLoopCharacteristics(
 @JsonClassDescription(
     "Reusable BPMN event definition carried by an event-position node. Set `type` and populate " +
         "the matching kind-specific fields: TIMER → timerKind + expression; MESSAGE → messageRef; " +
-        "ERROR → errorRef. NONE and TERMINATE " +
+        "ERROR → errorRef; SIGNAL → signalRef; ESCALATION → escalationRef; " +
+        "COMPENSATE → optional activityRef (omit for compensate-all). NONE and TERMINATE " +
         "carry no payload.",
 )
 public data class FlatBpmnEventDefinition(
     @get:JsonPropertyDescription(
         "Event-definition kind. NONE = plain (no payload); TERMINATE = end-only terminate; " +
-            "TIMER = populate timerKind + expression; MESSAGE = populate messageRef; ERROR = populate errorRef.",
+            "TIMER = populate timerKind + expression; MESSAGE = populate messageRef; ERROR = populate errorRef; " +
+            "SIGNAL = populate signalRef; ESCALATION = populate escalationRef; " +
+            "COMPENSATE = optionally populate activityRef.",
     )
     val type: FlatBpmnEventDefinitionKind,
     @get:JsonPropertyDescription("Required when type=TIMER. DATE / DURATION / CYCLE.")
@@ -202,6 +215,15 @@ public data class FlatBpmnEventDefinition(
         "Required when type=ERROR. Id of the BpmnErrorRef in the process-level error catalogue.",
     )
     val errorRef: String? = null,
+    @get:JsonPropertyDescription("Required when type=SIGNAL. Free-form signal identifier.")
+    val signalRef: String? = null,
+    @get:JsonPropertyDescription("Required when type=ESCALATION. Free-form escalation identifier.")
+    val escalationRef: String? = null,
+    @get:JsonPropertyDescription(
+        "Optional when type=COMPENSATE. Id of the isForCompensation activity this compensates; " +
+            "omit for compensate-all.",
+    )
+    val activityRef: String? = null,
 )
 
 /**
@@ -243,6 +265,18 @@ public data class FlatBpmnDefinition(
             "event that uses that code references the same entry by id. Stable id e.g. Error_CreditRejected.",
     )
     val errors: List<BpmnErrorRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Process-level signal catalogue: declare one BpmnSignalRef per distinct signal name; every " +
+            "signal event that uses that name references the same entry by id. Stable id e.g. Signal_OrderCancelled.",
+    )
+    val signals: List<BpmnSignalRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Process-level escalation catalogue: declare one BpmnEscalationRef per distinct escalation code; " +
+            "every escalation event that uses that code references the same entry by id. Stable id e.g. Escalation_Overdue.",
+    )
+    val escalations: List<BpmnEscalationRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription(
         "Text annotations explaining elements. Required for every multi-instance task: emit one " +

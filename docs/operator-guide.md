@@ -49,8 +49,6 @@ technicalTokens = List("api", "svc", "tbl", "req", "resp", "tmp", "proc", "obj")
 discouragedLeadingVerbs = List("handle", "manage", "process", "perform", "do")
 discouragedBpmnTypes = List(
   "bpmn:Transaction",
-  "bpmn:SignalEventDefinition",
-  "bpmn:EscalationEventDefinition",
   "bpmn:DataObject",
   "bpmn:DataStore",
   "bpmn:DataInputAssociation",
@@ -70,7 +68,11 @@ The convention fields are:
 
 Profile and severity decisions are not read from `bpmner.pkl` at runtime; they come from `bpmner.rules.profile` and `bpmner.rules.severity-overrides`.
 
-The packaged profile also rejects event subprocesses and non-interrupting boundary events at XML conversion because those exclusions are attributes rather than BPMN element types. Data objects/stores and data associations, plus signal and escalation event definitions, are not supported.
+The packaged profile also rejects event subprocesses at XML conversion, because that exclusion is
+an attribute (`triggeredByEvent`) rather than a BPMN element type. Non-interrupting boundary events
+and signal/escalation/compensation event definitions are supported (`cancelActivity`, `signalRef`,
+`escalationRef`, and an optional `activityRef` all round-trip). Data objects/stores and data
+associations are not supported.
 
 ### LLM role bindings
 
