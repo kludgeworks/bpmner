@@ -5,11 +5,14 @@
 
 package dev.groknull.bpmner.layout.internal
 
+import java.io.ByteArrayInputStream
 import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 /**
  * Generates the layout engine's output for each corpus input fixture and prints
- * each result to stdout, delimited by a header line.
+ * each result to stdout, delimited by a header line. Also regenerates the AD-622-11 tier-2
+ * metrics baseline ([MetricsTripwireTest.BASELINE_RESOURCE]).
  *
  * Run via: bazel run //src/test:generate_candidate_goldens
  *
@@ -17,42 +20,15 @@ import java.io.File
  * output it becomes the committed golden file for that fixture.
  */
 fun main() {
-    val layouter = ElkBpmnLayouter()
-    val fixtures = listOf(
-        // Flat corpus (557-2)
-        "representative-process",
-        "explicit-cycle",
-        "annotation-and-group",
-        "long-labels",
-        // Subprocess + boundary corpus (557-3)
-        "subprocess-flat",
-        "subprocess-nested",
-        "subprocess-branch",
-        "subprocess-loop",
-        "boundary-timer-task",
-        "boundary-error-task",
-        "boundary-multi",
-        "boundary-on-subprocess",
-        "subprocess-no-start-cycle",
-        "subprocess-sequential-sharing",
-        // Collaboration fixtures
-        "collab-lanes",
-        "collab-two-pools",
-        "collab-blackbox",
-        "collab-msg-endpoint",
-        "collab-msg-label",
-        "collab-subprocess",
-        "collab-bioc",
-        "collab-lanes-loopback",
-        // BPMN MIWG interchange corpus
-        "miwg-a2-1",
-        "miwg-a3-0",
-    )
+    val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
+    val docBuilder = DocumentBuilderFactory.newInstance().apply { isNamespaceAware = true }
+    val fixtures = LAYOUT_CORPUS_FIXTURES
 
     val workspaceDir = System.getenv("BUILD_WORKSPACE_DIRECTORY")
     if (workspaceDir != null) {
         val goldenDir = File(workspaceDir, "src/test/resources/layout-fixtures")
         goldenDir.mkdirs()
+        val baselineLines = mutableListOf<String>()
         for (name in fixtures) {
             val resource = "layout-fixtures/$name.bpmn"
             val input = object {}.javaClass.classLoader.getResourceAsStream(resource)
@@ -63,7 +39,13 @@ fun main() {
             val file = File(goldenDir, "$name.expected.bpmn")
             file.writeText(output)
             println("Wrote expected file to ${file.absolutePath}")
+
+            val doc = docBuilder.newDocumentBuilder().parse(ByteArrayInputStream(output.toByteArray(Charsets.UTF_8)))
+            baselineLines += formatBaselineLine(name, layoutMetrics(doc))
         }
+        val baselineFile = File(goldenDir, "metrics-baseline.txt")
+        baselineFile.writeText(baselineLines.sorted().joinToString("\n", postfix = "\n"))
+        println("Wrote metrics baseline to ${baselineFile.absolutePath}")
     } else {
         for (name in fixtures) {
             val resource = "layout-fixtures/$name.bpmn"

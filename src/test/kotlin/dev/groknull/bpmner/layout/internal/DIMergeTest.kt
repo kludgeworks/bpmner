@@ -18,7 +18,7 @@ import org.xmlunit.assertj.XmlAssert
  */
 class DIMergeTest {
 
-    private val layouter = ElkBpmnLayouter()
+    private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
 
     private val bpmnNs = mapOf(
         "bpmn" to "http://www.omg.org/spec/BPMN/20100524/MODEL",

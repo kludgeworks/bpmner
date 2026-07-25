@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_miwg_c2_four_pools" targetNamespace="https://groknull.dev/bpmner">
+  <!--
+    Pool-stacking spike fixture (622-1, spike b): a MIWG C.2.0-derived four-participant
+    collaboration — 4 participants, 5 message flows, an embedded (expanded) subprocess, and a
+    boundary error event. Parked: intentionally NOT enrolled in ElkGoldenLayoutTest's corpus and
+    has no golden yet, since white-box pool stacking is documented-broken beyond two participants
+    until Stage 622-4 lands AD-622-05. Enrollment is that stage's exit gate.
+  -->
+  <bpmn:collaboration id="Collab_c2_four_pools">
+    <bpmn:participant id="Participant_customer" name="Customer" processRef="Process_customer"/>
+    <bpmn:participant id="Participant_retailer" name="Retailer" processRef="Process_retailer"/>
+    <bpmn:participant id="Participant_warehouse" name="Warehouse" processRef="Process_warehouse"/>
+    <bpmn:participant id="Participant_carrier" name="Carrier" processRef="Process_carrier"/>
+    <bpmn:messageFlow id="MsgFlow_order" name="Order" sourceRef="Task_place_order" targetRef="Task_receive_order"/>
+    <bpmn:messageFlow id="MsgFlow_reserve" name="Reserve Stock" sourceRef="Task_process_order" targetRef="Task_reserve_stock"/>
+    <bpmn:messageFlow id="MsgFlow_confirm" name="Stock Confirmed" sourceRef="Task_reserve_stock" targetRef="Task_confirm_order"/>
+    <bpmn:messageFlow id="MsgFlow_dispatch" name="Dispatch Request" sourceRef="Task_confirm_order" targetRef="Task_schedule_pickup"/>
+    <bpmn:messageFlow id="MsgFlow_delivered" name="Delivered" sourceRef="Task_deliver" targetRef="Task_receive_goods"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_customer" isExecutable="true">
+    <bpmn:startEvent id="Start_customer" name="Need Goods">
+      <bpmn:outgoing>Flow_c1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_place_order" name="Place Order">
+      <bpmn:incoming>Flow_c1</bpmn:incoming>
+      <bpmn:outgoing>Flow_c2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_receive_goods" name="Receive Goods">
+      <bpmn:incoming>Flow_c2</bpmn:incoming>
+      <bpmn:outgoing>Flow_c3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_customer" name="Done">
+      <bpmn:incoming>Flow_c3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_c1" sourceRef="Start_customer" targetRef="Task_place_order"/>
+    <bpmn:sequenceFlow id="Flow_c2" sourceRef="Task_place_order" targetRef="Task_receive_goods"/>
+    <bpmn:sequenceFlow id="Flow_c3" sourceRef="Task_receive_goods" targetRef="End_customer"/>
+  </bpmn:process>
+  <bpmn:process id="Process_retailer" isExecutable="true">
+    <bpmn:startEvent id="Start_retailer" name="Order Received">
+      <bpmn:outgoing>Flow_r1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_receive_order" name="Receive Order">
+      <bpmn:incoming>Flow_r1</bpmn:incoming>
+      <bpmn:outgoing>Flow_r2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:subProcess id="SubProcess_fulfil" name="Fulfil Order">
+      <bpmn:incoming>Flow_r2</bpmn:incoming>
+      <bpmn:outgoing>Flow_r3</bpmn:outgoing>
+      <bpmn:startEvent id="SubStart_fulfil" name="Begin">
+        <bpmn:outgoing>SubFlow_r1</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="Task_process_order" name="Process Order">
+        <bpmn:incoming>SubFlow_r1</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_r2</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:userTask id="Task_confirm_order" name="Confirm Order">
+        <bpmn:incoming>SubFlow_r2</bpmn:incoming>
+        <bpmn:outgoing>SubFlow_r3</bpmn:outgoing>
+      </bpmn:userTask>
+      <bpmn:endEvent id="SubEnd_fulfil" name="Fulfilled">
+        <bpmn:incoming>SubFlow_r3</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SubFlow_r1" sourceRef="SubStart_fulfil" targetRef="Task_process_order"/>
+      <bpmn:sequenceFlow id="SubFlow_r2" sourceRef="Task_process_order" targetRef="Task_confirm_order"/>
+      <bpmn:sequenceFlow id="SubFlow_r3" sourceRef="Task_confirm_order" targetRef="SubEnd_fulfil"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_fulfil_error" name="Stock Unavailable" attachedToRef="SubProcess_fulfil" cancelActivity="true">
+      <bpmn:outgoing>Flow_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_stock"/>
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_notify_customer" name="Notify Customer">
+      <bpmn:incoming>Flow_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_r4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_retailer_error" name="Cancelled">
+      <bpmn:incoming>Flow_r4</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_retailer" name="Order Fulfilled">
+      <bpmn:incoming>Flow_r3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_r1" sourceRef="Start_retailer" targetRef="Task_receive_order"/>
+    <bpmn:sequenceFlow id="Flow_r2" sourceRef="Task_receive_order" targetRef="SubProcess_fulfil"/>
+    <bpmn:sequenceFlow id="Flow_r3" sourceRef="SubProcess_fulfil" targetRef="End_retailer"/>
+    <bpmn:sequenceFlow id="Flow_error" sourceRef="Boundary_fulfil_error" targetRef="Task_notify_customer"/>
+    <bpmn:sequenceFlow id="Flow_r4" sourceRef="Task_notify_customer" targetRef="End_retailer_error"/>
+  </bpmn:process>
+  <bpmn:process id="Process_warehouse" isExecutable="true">
+    <bpmn:startEvent id="Start_warehouse" name="Reserve Requested">
+      <bpmn:outgoing>Flow_w1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_reserve_stock" name="Reserve Stock">
+      <bpmn:incoming>Flow_w1</bpmn:incoming>
+      <bpmn:outgoing>Flow_w2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_warehouse" name="Reserved">
+      <bpmn:incoming>Flow_w2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_w1" sourceRef="Start_warehouse" targetRef="Task_reserve_stock"/>
+    <bpmn:sequenceFlow id="Flow_w2" sourceRef="Task_reserve_stock" targetRef="End_warehouse"/>
+  </bpmn:process>
+  <bpmn:process id="Process_carrier" isExecutable="true">
+    <bpmn:startEvent id="Start_carrier" name="Dispatch Requested">
+      <bpmn:outgoing>Flow_p1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="Task_schedule_pickup" name="Schedule Pickup">
+      <bpmn:incoming>Flow_p1</bpmn:incoming>
+      <bpmn:outgoing>Flow_p2</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="Task_deliver" name="Deliver">
+      <bpmn:incoming>Flow_p2</bpmn:incoming>
+      <bpmn:outgoing>Flow_p3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_carrier" name="Delivered">
+      <bpmn:incoming>Flow_p3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_p1" sourceRef="Start_carrier" targetRef="Task_schedule_pickup"/>
+    <bpmn:sequenceFlow id="Flow_p2" sourceRef="Task_schedule_pickup" targetRef="Task_deliver"/>
+    <bpmn:sequenceFlow id="Flow_p3" sourceRef="Task_deliver" targetRef="End_carrier"/>
+  </bpmn:process>
+</bpmn:definitions>

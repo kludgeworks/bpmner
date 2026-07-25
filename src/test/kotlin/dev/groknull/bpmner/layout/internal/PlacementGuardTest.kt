@@ -6,9 +6,7 @@
 package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.internal.placement.PlacementContext
-import org.eclipse.elk.alg.layered.options.LayeredMetaDataProvider
 import org.eclipse.elk.core.RecursiveGraphLayoutEngine
-import org.eclipse.elk.core.data.LayoutMetaDataService
 import org.eclipse.elk.core.util.BasicProgressMonitor
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.params.ParameterizedTest
@@ -34,7 +32,7 @@ class PlacementGuardTest {
         @JvmStatic
         @BeforeAll
         fun registerMetadata() {
-            LayoutMetaDataService.getInstance().registerLayoutMetaDataProviders(LayeredMetaDataProvider())
+            ElkBpmnLayouter().registerElkLayoutAlgorithm()
         }
 
         private val DECLARED_OWNERS = setOf(
