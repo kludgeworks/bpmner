@@ -7,28 +7,24 @@ package dev.groknull.bpmner.layout.internal.placement
 
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Point
-import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 
 /**
- * Copies ELK routing sections verbatim for ordinary sequence flows.
+ * Copies ELK routing sections verbatim for sequence flows, including exception edges sourced at
+ * a boundary event's port (AD-622-08) — ELK routes those the same way it routes any other edge.
  *
- * Every ordinary (non-boundary-source, not already in [PlacementContext.edges])
- * sequence flow has its ELK-computed waypoints recorded in absolute canvas coordinates.
- * Flows already placed by exception routing are not overwritten. Loop-back flows
- * ([PlacementContext.skeleton]'s `reversedFlowIds`) were mapped to ELK with source and target
- * swapped (AD-622-15); their waypoint list is reversed here, immediately before storing, so the
- * BPMN-DI direction matches the flow's real source/target — every point is byte-identical, only
- * the sequence order flips, mirroring ELK's own `ReversedEdgeRestorer`.
+ * Every sequence flow not already in [PlacementContext.edges] has its ELK-computed waypoints
+ * recorded in absolute canvas coordinates. Loop-back flows ([PlacementContext.skeleton]'s
+ * `reversedFlowIds`) were mapped to ELK with source and target swapped (AD-622-15); their
+ * waypoint list is reversed here, immediately before storing, so the BPMN-DI direction matches
+ * the flow's real source/target — every point is byte-identical, only the sequence order flips,
+ * mirroring ELK's own `ReversedEdgeRestorer`.
  */
 internal object SequenceEdgeElkCopy : PlacementProcessor {
 
     override fun process(ctx: PlacementContext) {
-        val boundaryIds = ctx.model.getModelElementsByType(BoundaryEvent::class.java)
-            .mapTo(mutableSetOf()) { it.id }
-
         ctx.model.getModelElementsByType(SequenceFlow::class.java)
-            .filter { it.source?.id !in boundaryIds && it.id !in ctx.edges }
+            .filter { it.id !in ctx.edges }
             .sortedBy { it.id }
             .forEach { sf ->
                 val elkEdge = ctx.skeleton.edgeMap[sf.id] ?: return@forEach

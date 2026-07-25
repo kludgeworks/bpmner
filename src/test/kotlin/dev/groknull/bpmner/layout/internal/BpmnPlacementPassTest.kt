@@ -233,6 +233,32 @@ class BpmnPlacementPassTest {
     }
 
     @Test
+    fun `boundary shape falls back to port geometry when its event has no outgoing flow`() {
+        // Invalid BPMN (a boundary event must have an outgoing flow), but the mapper still
+        // creates the port — BoundaryShapePlacement must not throw or leave the shape unplaced.
+        val model = boundaryModel()
+        val root = ElkGraphUtil.createGraph()
+        val host = makeNode(root, "Task_1", 100.0, 50.0, 100.0, 80.0)
+        val beNode = makeNode(root, "Boundary_1", 0.0, 0.0, EVENT_SIZE, EVENT_SIZE)
+        val port = makePort(host, "port_Boundary_1", 45.0, host.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE)
+        val sk = skeleton(
+            root = root,
+            nodeMap = mapOf("Task_1" to host, "Boundary_1" to beNode),
+            portMap = mapOf("Boundary_1" to port),
+            edgeMap = emptyMap(),
+        )
+        val ctx = PlacementContext(model, sk, mutableMapOf(), mutableMapOf(), mutableMapOf(), mutableSetOf())
+
+        dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement.process(ctx)
+
+        val bRect = ctx.shapes["Boundary_1"]
+        assertNotNull(bRect, "Boundary_1 must still get a shape via the port-geometry fallback")
+        // Falls back to host-bottom straddle at the port's own centre-X (45 + half port width).
+        assertEquals(host.x + 45.0 + BpmnToElkMapper.BOUNDARY_PORT_SIZE / 2.0, bRect.x + bRect.w / 2.0, 0.5)
+        assertEquals(host.y + host.height, bRect.y + bRect.h / 2.0, 0.5)
+    }
+
+    @Test
     fun `host label clears its boundary label and exception route`() {
         val model = boundaryModel().also {
             it.getModelElementById<org.camunda.bpm.model.bpmn.instance.ServiceTask>("Task_1").name = "Host"
@@ -366,7 +392,9 @@ class BpmnPlacementPassTest {
         val handler = makeNode(root, "Handler_1", 250.0, 150.0, 36.0, 36.0)
         val beNode = makeNode(root, "Boundary_1", 0.0, 0.0, EVENT_SIZE, EVENT_SIZE)
         val port = makePort(host, "port_Boundary_1", 45.0, host.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE)
-        val edge = makeEdge(root, "Flow_ex", port, handler, 150.0, 130.0, 250.0, 168.0)
+        // Edge starts at the boundary shape's own rendered bottom (host bottom + EVENT_SIZE/2),
+        // not at the host-bottom straddle line, matching AD-622-08's projection.
+        val edge = makeEdge(root, "Flow_ex", port, handler, 150.0, 148.0, 250.0, 168.0)
         return skeleton(
             root = root,
             nodeMap = mapOf("Task_1" to host, "Handler_1" to handler, "Boundary_1" to beNode),
@@ -385,8 +413,10 @@ class BpmnPlacementPassTest {
         val beB = makeNode(root, "Boundary_B", 0.0, 0.0, EVENT_SIZE, EVENT_SIZE)
         val portA = makePort(host, "port_Boundary_A", 40.0, host.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE)
         val portB = makePort(host, "port_Boundary_B", 100.0, host.height - BpmnToElkMapper.BOUNDARY_PORT_SIZE)
-        val eA = makeEdge(root, "Flow_A", portA, handlerA, 150.0, 130.0, 300.0, 188.0)
-        val eB = makeEdge(root, "Flow_B", portB, handlerB, 150.0, 130.0, 360.0, 188.0)
+        // Edges start at each boundary's own port centre-X and rendered bottom (host bottom +
+        // EVENT_SIZE/2) — distinct port X keeps the two boundary shapes at distinct X positions.
+        val eA = makeEdge(root, "Flow_A", portA, handlerA, 145.0, 148.0, 300.0, 188.0)
+        val eB = makeEdge(root, "Flow_B", portB, handlerB, 205.0, 148.0, 360.0, 188.0)
         return skeleton(
             root = root,
             nodeMap = mapOf(
@@ -570,85 +600,6 @@ class BpmnPlacementPassTest {
             labelRect.x + labelRect.w < e1.x,
             "Edge label (right=${labelRect.x + labelRect.w}) must not overlap target node E1 (x=${e1.x})",
         )
-    }
-
-    // ── Exception edge routed as three-point orthogonal polyline ──
-
-    @Test
-    fun `exception edge is routed as three-point polyline from boundary bottom to handler`() {
-        // No ELK edge from port to handler: routeExceptionEdges produces the full route.
-        // Handler placed BELOW the main flow (ELK component stacking — no post-ELK node move).
-        val model = boundaryModel()
-        val root = ElkGraphUtil.createGraph()
-
-        val hostNode = ElkGraphUtil.createNode(root)
-        hostNode.identifier = "Task_1"
-        hostNode.x = 100.0
-        hostNode.y = 50.0
-        hostNode.width = 100.0
-        hostNode.height = 80.0
-
-        val handlerNode = ElkGraphUtil.createNode(root)
-        handlerNode.identifier = "Handler_1"
-        handlerNode.x = 280.0
-        handlerNode.y = 200.0 // below host bottom (50+80=130)
-        handlerNode.width = 100.0
-        handlerNode.height = 80.0
-
-        val beNode = ElkGraphUtil.createNode(root)
-        beNode.identifier = "Boundary_1"
-        beNode.width = EVENT_SIZE
-        beNode.height = EVENT_SIZE
-
-        val port = ElkGraphUtil.createPort(hostNode)
-        port.identifier = "port_Boundary_1"
-        port.setProperty(org.eclipse.elk.core.options.CoreOptions.PORT_SIDE, org.eclipse.elk.core.options.PortSide.SOUTH)
-
-        // No ELK edge from port to handler: edgeMap is empty.
-        val sk = skeleton(
-            root = root,
-            nodeMap = mapOf(
-                "Task_1" to hostNode,
-                "Handler_1" to handlerNode,
-                "Boundary_1" to beNode,
-            ),
-            portMap = mapOf("Boundary_1" to port),
-            edgeMap = emptyMap(),
-        )
-
-        val layout = BpmnPlacementPass.place(model, sk)
-
-        val bRect = layout.shapes["Boundary_1"]!!
-        val bCentreX = bRect.x + bRect.w / 2.0
-        val bBottomY = bRect.y + bRect.h
-        val handler = layout.shapes["Handler_1"]!!
-        val handlerCy = handler.y + handler.h / 2.0
-
-        val edgeWps = layout.edges["Flow_ex"]
-        assertNotNull(edgeWps, "Exception edge must have waypoints")
-        assertEquals(3, edgeWps.size, "Exception edge must be a three-point polyline")
-
-        // wp0: boundary bottom centre.
-        assertEquals(bCentreX, edgeWps[0].x, 0.5, "wp0 x must be boundary centre-X")
-        assertEquals(bBottomY, edgeWps[0].y, 0.5, "wp0 y must be boundary bottom edge")
-
-        // wp1: same X as start, at handler centre-Y (the vertical drop).
-        assertEquals(bCentreX, edgeWps[1].x, 0.5, "wp1 x must stay at boundary centre-X (drop)")
-        assertEquals(handlerCy, edgeWps[1].y, 0.5, "wp1 y must be handler centre-Y")
-
-        // wp2: handler's left edge (handler is to the right of boundary centre-X).
-        assertEquals(handler.x, edgeWps[2].x, 0.5, "wp2 x must be handler left edge")
-        assertEquals(handlerCy, edgeWps[2].y, 0.5, "wp2 y must be handler centre-Y")
-
-        // The route must be fully orthogonal.
-        for (i in 1 until edgeWps.size) {
-            val a = edgeWps[i - 1]
-            val b = edgeWps[i]
-            assertTrue(
-                kotlin.math.abs(a.x - b.x) < 0.5 || kotlin.math.abs(a.y - b.y) < 0.5,
-                "Segment $a->$b must be axis-aligned",
-            )
-        }
     }
 
     // ── No-relocation guard ──────────────────────────────────────────────────

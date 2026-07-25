@@ -151,11 +151,20 @@ internal object CollaborationShapePlacement : PlacementProcessor {
             }
     }
 
+    /**
+     * Re-anchors an exception edge after its lane/participant band shifted independently of its
+     * handler: a deterministic drop-then-horizontal route from the boundary's new position to the
+     * handler's new position, mirroring [routeSequence]'s own simple case.
+     */
     private fun routeException(flow: SequenceFlow, ctx: PlacementContext) {
         val boundary = flow.source as? BoundaryEvent ?: return
         val source = ctx.shapes[boundary.id] ?: return
         val target = ctx.shapes[flow.target?.id] ?: return
-        ctx.edges[flow.id] = ExceptionEdgeRoutes.routeExceptionEdge(source, target, ctx.shapes[boundary.attachedTo?.id])
+        val startX = source.x + source.w / 2.0
+        val startY = source.y + source.h
+        val targetCy = target.y + target.h / 2.0
+        val enterX = if (target.x >= startX) target.x else target.x + target.w
+        ctx.edges[flow.id] = listOf(Point(startX, startY), Point(startX, targetCy), Point(enterX, targetCy))
         EdgeLabelReposition.reposition(flow.id, flow.name, ctx)
     }
 

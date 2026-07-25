@@ -36,7 +36,6 @@ class PlacementGuardTest {
         }
 
         private val DECLARED_OWNERS = setOf(
-            "HandlerComponentAlignment",
             "CollaborationShapePlacement",
             "WhiteBoxPoolBandPlacement",
             "ExternalBlackBoxBandPlacement",

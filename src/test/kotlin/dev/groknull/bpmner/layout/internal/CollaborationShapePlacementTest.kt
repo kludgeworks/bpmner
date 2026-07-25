@@ -116,6 +116,56 @@ class CollaborationShapePlacementTest {
     }
 
     @Test
+    fun `re-anchors an exception edge whose host and handler shift by different amounts`() {
+        // Boundary_1's host (SubProcess_1) is in Lane_1, so it shifts by the lane's translation;
+        // Task_handler is an unassigned process member (no lane), so it does not shift at all —
+        // this mismatch is what routes the flow through routeException rather than the simple
+        // same-delta shift path.
+        val model = PlacementTestSkeletons.parse(LANED_SUBPROCESS_UNASSIGNED_HANDLER_XML)
+        val root = ElkGraphUtil.createGraph()
+        val participant = node(root, "Participant_1", Rect(10.0, 20.0, 500.0, 300.0))
+        val lane = node(participant, "Lane_1", Rect(30.0, 10.0, 400.0, 80.0))
+        val subprocess = node(lane, "SubProcess_1", Rect(20.0, 20.0, 200.0, 100.0))
+        val handler = node(participant, "Task_handler", Rect(290.0, 230.0, 100.0, 80.0))
+        val boundary = node(root, "Boundary_1", Rect(80.0, 100.0, 36.0, 36.0))
+        val ctx = PlacementContext(
+            model,
+            PlacementTestSkeletons.skeleton(
+                root,
+                mapOf(
+                    "Participant_1" to participant,
+                    "Lane_1" to lane,
+                    "SubProcess_1" to subprocess,
+                    "Task_handler" to handler,
+                    "Boundary_1" to boundary,
+                ),
+            ),
+            mutableMapOf(
+                "SubProcess_1" to Rect(60.0, 50.0, 200.0, 100.0),
+                "Task_handler" to Rect(300.0, 250.0, 100.0, 80.0),
+                "Boundary_1" to Rect(80.0, 100.0, 36.0, 36.0),
+            ),
+            mutableMapOf(),
+            mutableMapOf(),
+            mutableSetOf(),
+        )
+
+        CollaborationShapePlacement.process(ctx)
+
+        // Boundary_1 shifts with its host's lane (0,-10); Task_handler is unassigned and stays put.
+        assertEquals(Rect(80.0, 90.0, 36.0, 36.0), ctx.shapes["Boundary_1"])
+        assertEquals(Rect(300.0, 250.0, 100.0, 80.0), ctx.shapes["Task_handler"])
+        assertEquals(
+            listOf(
+                BpmnPlacementPass.Point(98.0, 126.0),
+                BpmnPlacementPass.Point(98.0, 290.0),
+                BpmnPlacementPass.Point(300.0, 290.0),
+            ),
+            ctx.edges["Flow_exception"],
+        )
+    }
+
+    @Test
     fun `re-centres a lane-less participant's content within its band`() {
         val model = PlacementTestSkeletons.parse(NO_LANE_PARTICIPANT_XML)
         val root = ElkGraphUtil.createGraph()
@@ -189,6 +239,15 @@ class CollaborationShapePlacementTest {
   <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
   <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1" name="Lane"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef><bpmn:flowNodeRef>Task_handler</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
     <bpmn:subProcess id="SubProcess_1"><bpmn:serviceTask id="Task_child"/></bpmn:subProcess>
+    <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        const val LANED_SUBPROCESS_UNASSIGNED_HANDLER_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C"><bpmn:participant id="Participant_1" name="Participant" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Lane_1" name="Lane"><bpmn:flowNodeRef>SubProcess_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:subProcess id="SubProcess_1"/>
     <bpmn:serviceTask id="Task_handler"/><bpmn:boundaryEvent id="Boundary_1" attachedToRef="SubProcess_1"/><bpmn:sequenceFlow id="Flow_exception" sourceRef="Boundary_1" targetRef="Task_handler"/>
   </bpmn:process>
 </bpmn:definitions>"""
