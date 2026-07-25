@@ -94,6 +94,23 @@ of `#608`'s declared scope (`#608` does not reassess collaboration presentation)
 draft fixture was discarded rather than committed with known-broken output; see the
 epic's closing PR discussion for the full investigation record.
 
+### Two label defects found in 622-3's HITL review, deferred to a later 622 stage
+
+Recorded, not fixed, during 622-3's golden-corpus HITL review — neither is a regression
+this stage introduced into the affected geometry, both are pre-existing label-metrics
+issues that the stage's changes happened to make visible:
+
+- `subprocess-loop.expected.bpmn`: the label on the flow from `success` back to
+  `process item` reads "retry", but renders wrapped as "retr" / "y" across two lines —
+  `LabelWrap`'s semantic-wrap estimate for this very short string is wrong.
+- `miwg-a3-0.expected.bpmn`: the "End Event 1" label collides with the terminating
+  arrowhead of the flow from `Task 3` into that end event — the label's placement does
+  not clear the incoming edge's terminal segment.
+
+Both are `LabelMetrics`/`LabelWrap`/label-placement concerns, not boundary-event or
+padding concerns, so they are out of 622-3's scope. Resolve in whichever later 622 stage
+next touches label metrics or placement (622-4 or 622-5).
+
 ## Epic #591 acceptance-criteria traceability
 
 Every checkbox in epic [#591](https://github.com/kludgeworks/bpmner/issues/591)'s acceptance
