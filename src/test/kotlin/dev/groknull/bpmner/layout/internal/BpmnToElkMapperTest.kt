@@ -212,6 +212,39 @@ class BpmnToElkMapperTest {
         assertNull(result.edgeMap["Flow_exception"], "Flow_exception (boundary source) must NOT be in edgeMap")
     }
 
+    // ── Loop-back reversal (AD-622-15) ─────────────────────────────────────────
+
+    @Test
+    fun `self-referencing sequence flow is not reversed and stays a genuine ELK self-loop`() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="D1" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>F1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:serviceTask id="Task_1">
+      <bpmn:incoming>F1</bpmn:incoming>
+      <bpmn:incoming>Flow_self</bpmn:incoming>
+      <bpmn:outgoing>Flow_self</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_self" sourceRef="Task_1" targetRef="Task_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        // A self-loop is not a back-edge needing AD-622-15's reversal (swapping identical
+        // endpoints is a no-op that would leave a real cycle); ELK's own self-loop machinery
+        // handles it natively, independent of cycle-breaking.
+        assertTrue("Flow_self" !in result.reversedFlowIds, "self-loop must not be classified as reversed")
+
+        val selfEdge = result.edgeMap["Flow_self"]
+        assertNotNull(selfEdge, "self-loop flow must still be a real ELK edge, not silently dropped")
+        assertEquals(1, selfEdge.sources.size)
+        assertEquals(1, selfEdge.targets.size)
+        assertEquals(selfEdge.sources.first(), selfEdge.targets.first(), "self-loop source and target must be the same node")
+        assertEquals(result.nodeMap.getValue("Task_1"), selfEdge.sources.first())
+    }
+
     // ── AD-557-11/AD-557-12 option assertions ─────────────────────────────────
 
     @Test

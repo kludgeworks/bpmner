@@ -455,6 +455,12 @@ internal object BpmnToElkMapper {
      * [org.camunda.bpm.model.bpmn.instance.Process]'s own direct flow elements — a nested
      * SubProcess's flow elements are scanned separately by the caller, not recursively here.
      *
+     * A self-referencing flow (source and target the same node) is never included: it is ELK's
+     * own self-loop primitive, pulled out of the graph and handled by dedicated processors
+     * ([org.eclipse.elk.alg.layered.intermediate.loops]) entirely independently of cycle-breaking
+     * — swapping its identical endpoints would be a no-op that leaves a real cycle in the graph
+     * AD-622-15 requires to be acyclic by construction.
+     *
      * Uses an iterative DFS with an explicit call-stack to avoid a local fun declaration
      * (which would count against the TooManyFunctions detekt limit).
      *
@@ -468,6 +474,7 @@ internal object BpmnToElkMapper {
         flows.forEach { sf ->
             val s = sf.source?.id ?: return@forEach
             val t = sf.target?.id ?: return@forEach
+            if (s == t) return@forEach
             succFlows.getOrPut(s) { mutableListOf() }.add(t to sf.id)
         }
 
