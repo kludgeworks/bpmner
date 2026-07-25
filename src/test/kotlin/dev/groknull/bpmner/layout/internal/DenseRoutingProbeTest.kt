@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.layout.internal
 
 import org.junit.jupiter.api.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
@@ -28,12 +29,26 @@ class DenseRoutingProbeTest {
         val result = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }.layout(xml)
         val doc = LayoutDiInspector.parse(result)
 
-        val shapes = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
-        val edges = doc.getElementsByTagNameNS(DI_NS, "BPMNEdge")
         val planes = doc.getElementsByTagNameNS(DI_NS, "BPMNPlane")
-        assertTrue(shapes.length > 0, "must produce at least one BPMNShape")
-        assertTrue(edges.length > 0, "must produce at least one BPMNEdge")
         assertTrue(planes.length == 1, "must produce exactly one BPMNPlane, had ${planes.length}")
+
+        val shapeElements = doc.getElementsByTagNameNS(DI_NS, "BPMNShape")
+        val shapeRects = extractShapeRects(doc)
+        assertTrue(shapeElements.length > 0, "must produce at least one BPMNShape")
+        assertEquals(
+            shapeElements.length,
+            shapeRects.size,
+            "every BPMNShape must have positive-area dc:Bounds (extractShapeRects drops invalid ones)",
+        )
+
+        val edges = extractEdges(doc)
+        assertTrue(edges.isNotEmpty(), "must produce at least one BPMNEdge")
+        edges.forEach { edge ->
+            assertTrue(
+                edge.waypoints.size >= 2,
+                "edge '${edge.id}' must have >= 2 valid waypoints, had ${edge.waypoints.size}",
+            )
+        }
 
         val metrics = layoutMetrics(doc)
         println(

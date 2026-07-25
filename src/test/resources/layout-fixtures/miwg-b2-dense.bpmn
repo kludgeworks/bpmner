@@ -60,16 +60,16 @@
       <bpmn:sequenceFlow id="SFlow_A6" sourceRef="Task_A3" targetRef="Gw_A_join"/>
       <bpmn:sequenceFlow id="SFlow_A7" sourceRef="Gw_A_join" targetRef="SubEnd_A"/>
     </bpmn:subProcess>
-    <bpmn:boundaryEvent id="Boundary_A1_timer" name="Review Timeout" attachedToRef="Task_between2" cancelActivity="true">
-      <bpmn:outgoing>Flow_b_a1_timer</bpmn:outgoing>
-      <bpmn:timerEventDefinition id="TimerDef_a1"/>
+    <bpmn:boundaryEvent id="Boundary_between2_timer" name="Pricing Timeout" attachedToRef="Task_between2" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_between2_timer</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_between2"/>
     </bpmn:boundaryEvent>
-    <bpmn:serviceTask id="Task_A1_timeout" name="Handle Review Timeout">
-      <bpmn:incoming>Flow_b_a1_timer</bpmn:incoming>
-      <bpmn:outgoing>Flow_b_a1_timer_end</bpmn:outgoing>
+    <bpmn:serviceTask id="Task_between2_timeout" name="Handle Pricing Timeout">
+      <bpmn:incoming>Flow_b_between2_timer</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_between2_timer_end</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="End_A1_timeout" name="Review Timed Out">
-      <bpmn:incoming>Flow_b_a1_timer_end</bpmn:incoming>
+    <bpmn:endEvent id="End_between2_timeout" name="Pricing Timed Out">
+      <bpmn:incoming>Flow_b_between2_timer_end</bpmn:incoming>
     </bpmn:endEvent>
 
     <bpmn:userTask id="Task_between1" name="Confirm Validation">
@@ -127,16 +127,16 @@
       <bpmn:sequenceFlow id="SFlow_B6" sourceRef="Task_B3" targetRef="Gw_B_join"/>
       <bpmn:sequenceFlow id="SFlow_B7" sourceRef="Gw_B_join" targetRef="SubEnd_B"/>
     </bpmn:subProcess>
-    <bpmn:boundaryEvent id="Boundary_B1_error" name="Stock Check Error" attachedToRef="Task_ex_a" cancelActivity="true">
-      <bpmn:outgoing>Flow_b_b1_error</bpmn:outgoing>
-      <bpmn:errorEventDefinition id="ErrorDef_b1"/>
+    <bpmn:boundaryEvent id="Boundary_ex_a_error" name="Dispatch Error" attachedToRef="Task_ex_a" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_ex_a_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_ex_a"/>
     </bpmn:boundaryEvent>
-    <bpmn:serviceTask id="Task_B1_error" name="Handle Stock Check Error">
-      <bpmn:incoming>Flow_b_b1_error</bpmn:incoming>
-      <bpmn:outgoing>Flow_b_b1_error_end</bpmn:outgoing>
+    <bpmn:serviceTask id="Task_ex_a_error" name="Handle Dispatch Error">
+      <bpmn:incoming>Flow_b_ex_a_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_ex_a_error_end</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="End_B1_error" name="Stock Check Failed">
-      <bpmn:incoming>Flow_b_b1_error_end</bpmn:incoming>
+    <bpmn:endEvent id="End_ex_a_error" name="Dispatch Failed">
+      <bpmn:incoming>Flow_b_ex_a_error_end</bpmn:incoming>
     </bpmn:endEvent>
 
     <bpmn:businessRuleTask id="Task_between2" name="Price Order">
@@ -246,16 +246,16 @@
       <bpmn:sequenceFlow id="SFlow_D6" sourceRef="Task_D3" targetRef="Gw_D_join"/>
       <bpmn:sequenceFlow id="SFlow_D7" sourceRef="Gw_D_join" targetRef="SubEnd_D"/>
     </bpmn:subProcess>
-    <bpmn:boundaryEvent id="Boundary_D1_error" name="Picking Error" attachedToRef="Task_par_a" cancelActivity="true">
-      <bpmn:outgoing>Flow_b_d1_error</bpmn:outgoing>
-      <bpmn:errorEventDefinition id="ErrorDef_d1"/>
+    <bpmn:boundaryEvent id="Boundary_par_a_error" name="Inventory Update Error" attachedToRef="Task_par_a" cancelActivity="true">
+      <bpmn:outgoing>Flow_b_par_a_error</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_par_a"/>
     </bpmn:boundaryEvent>
-    <bpmn:serviceTask id="Task_D1_error" name="Handle Picking Error">
-      <bpmn:incoming>Flow_b_d1_error</bpmn:incoming>
-      <bpmn:outgoing>Flow_b_d1_error_end</bpmn:outgoing>
+    <bpmn:serviceTask id="Task_par_a_error" name="Handle Inventory Update Error">
+      <bpmn:incoming>Flow_b_par_a_error</bpmn:incoming>
+      <bpmn:outgoing>Flow_b_par_a_error_end</bpmn:outgoing>
     </bpmn:serviceTask>
-    <bpmn:endEvent id="End_D1_error" name="Picking Failed">
-      <bpmn:incoming>Flow_b_d1_error_end</bpmn:incoming>
+    <bpmn:endEvent id="End_par_a_error" name="Inventory Update Failed">
+      <bpmn:incoming>Flow_b_par_a_error_end</bpmn:incoming>
     </bpmn:endEvent>
 
     <bpmn:userTask id="Task_after_subs" name="Review Fulfilment">
@@ -358,14 +358,15 @@
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_intake" targetRef="SubProcess_A"/>
     <bpmn:sequenceFlow id="Flow_b_intake_timer" sourceRef="Boundary_intake_timer" targetRef="Task_intake_timeout"/>
     <bpmn:sequenceFlow id="Flow_b_intake_timer_end" sourceRef="Task_intake_timeout" targetRef="End_intake_timeout"/>
-    <bpmn:sequenceFlow id="Flow_b_a1_timer" sourceRef="Boundary_A1_timer" targetRef="Task_intake_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_between2_timer" sourceRef="Boundary_between2_timer" targetRef="Task_between2_timeout"/>
+    <bpmn:sequenceFlow id="Flow_b_between2_timer_end" sourceRef="Task_between2_timeout" targetRef="End_between2_timeout"/>
     <bpmn:sequenceFlow id="Flow_3" sourceRef="SubProcess_A" targetRef="Task_between1"/>
     <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_between1" targetRef="SubProcess_B"/>
     <bpmn:sequenceFlow id="Flow_b_between1_error" sourceRef="Boundary_between1_error" targetRef="Task_between1_error"/>
     <bpmn:sequenceFlow id="Flow_b_between1_error_end" sourceRef="Task_between1_error" targetRef="End_between1_error"/>
     <bpmn:sequenceFlow id="Flow_5" sourceRef="SubProcess_B" targetRef="Task_between2"/>
-    <bpmn:sequenceFlow id="Flow_b_b1_error" sourceRef="Boundary_B1_error" targetRef="Task_B1_error"/>
-    <bpmn:sequenceFlow id="Flow_b_b1_error_end" sourceRef="Task_B1_error" targetRef="End_B1_error"/>
+    <bpmn:sequenceFlow id="Flow_b_ex_a_error" sourceRef="Boundary_ex_a_error" targetRef="Task_ex_a_error"/>
+    <bpmn:sequenceFlow id="Flow_b_ex_a_error_end" sourceRef="Task_ex_a_error" targetRef="End_ex_a_error"/>
     <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_between2" targetRef="SubProcess_C"/>
     <bpmn:sequenceFlow id="Flow_7" sourceRef="SubProcess_C" targetRef="Task_between3"/>
     <bpmn:sequenceFlow id="Flow_b_c_timer" sourceRef="Boundary_C_timer" targetRef="Task_C_timeout"/>
@@ -376,8 +377,8 @@
     <bpmn:sequenceFlow id="Flow_b_between3_timer" sourceRef="Boundary_between3_timer" targetRef="Task_between3_timeout"/>
     <bpmn:sequenceFlow id="Flow_b_between3_timer_end" sourceRef="Task_between3_timeout" targetRef="End_between3_timeout"/>
     <bpmn:sequenceFlow id="Flow_9" sourceRef="SubProcess_D" targetRef="Task_after_subs"/>
-    <bpmn:sequenceFlow id="Flow_b_d1_error" sourceRef="Boundary_D1_error" targetRef="Task_D1_error"/>
-    <bpmn:sequenceFlow id="Flow_b_d1_error_end" sourceRef="Task_D1_error" targetRef="End_D1_error"/>
+    <bpmn:sequenceFlow id="Flow_b_par_a_error" sourceRef="Boundary_par_a_error" targetRef="Task_par_a_error"/>
+    <bpmn:sequenceFlow id="Flow_b_par_a_error_end" sourceRef="Task_par_a_error" targetRef="End_par_a_error"/>
     <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_after_subs" targetRef="Gw_ex_split"/>
     <bpmn:sequenceFlow id="Flow_ex_a" sourceRef="Gw_ex_split" targetRef="Task_ex_a"/>
     <bpmn:sequenceFlow id="Flow_ex_b" sourceRef="Gw_ex_split" targetRef="Task_ex_b"/>

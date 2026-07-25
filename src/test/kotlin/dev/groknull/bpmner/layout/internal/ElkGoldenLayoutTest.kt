@@ -35,19 +35,13 @@ class ElkGoldenLayoutTest {
         private const val CONTAINER_AREA = 40_000.0
 
         /**
-         * Known label/edge-waypoint overlaps (fixture, label owner id, edge id), pending
-         * resolution by Unit D3 (message flows routed through ELK, closing
-         * `WhiteBoxPoolBandPlacement`'s and `ExternalBlackBoxBandPlacement`'s shared-centre exit)
-         * for the message-flow rows, and Unit B's lane mechanism rewrite for the sequence-flow
-         * rows. [assertLabelsClearEdgeGeometry] asserts this set is *exact* — a new collision
-         * fails immediately, and a row that stops reproducing must be removed. Emptied in
-         * increment 3 (`PLAN-622-4.md` §5).
-         *
-         * `PLAN-622-4.md` §1.1's evidence table lists one row per fixture (a first-failure-only
-         * scan). This exhaustive scan finds the sibling collision each fixture's *other*
-         * sole-incident message/sequence flow produces via the same root cause — plus one edge
-         * label ([collab-subprocess]'s `MsgFlow_1` label crossing `MsgFlow_2`'s waypoints). All
-         * are the same two root causes §1.1 names, not new defect categories.
+         * Known label/edge-waypoint overlaps (fixture, label owner id, edge id). Each pair traces
+         * to one of two causes: a hand-routed message flow exits its sole-incident source task at
+         * the same x/y `NodeLabelPlacement.outsideBottomCenter()` centres that task's own label
+         * under, or an ELK-routed sequence flow's south-port exit threads through its own
+         * gateway's placed label before turning. [assertLabelsClearEdgeGeometry] asserts this set
+         * is *exact* against every fixture in the corpus — a new collision fails immediately, and
+         * a declared pair that stops reproducing must be removed.
          */
         private val LABEL_EDGE_OVERLAP_EXCEPTIONS = setOf(
             Triple("collab-two-pools", "Task_order", "MsgFlow_1"),
