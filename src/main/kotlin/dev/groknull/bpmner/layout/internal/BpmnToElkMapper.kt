@@ -536,7 +536,11 @@ internal object BpmnToElkMapper {
         root.setProperty(CoreOptions.RANDOM_SEED, RANDOM_SEED)
         root.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.SEPARATE_CHILDREN)
         applyFlowSpacing(root)
-        // Handler nodes (no incoming ELK edge) become disconnected components placed below.
+        // Floating nodes (no sequence-flow edge at all — an event subprocess or a
+        // compensation-handler task) become their own disconnected component: guaranteed
+        // non-overlapping with the main flow, but not guaranteed to land below it — the
+        // packer's own ordering is not steered here (see FloatingElementAnchorProbeTest,
+        // AD-622-09: documented gap, not a placement processor).
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
         // NETWORK_SIMPLEX keeps the primary flow on a single Y baseline.
         root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.NETWORK_SIMPLEX)
