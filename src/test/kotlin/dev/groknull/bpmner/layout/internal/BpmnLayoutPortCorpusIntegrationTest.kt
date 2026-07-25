@@ -12,7 +12,7 @@ import dev.groknull.bpmner.ruleset.RuleEngine
 import dev.groknull.bpmner.ruleset.RuleRegistry
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.MethodSource
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.modulith.test.ApplicationModuleTest
 import org.springframework.modulith.test.ApplicationModuleTest.BootstrapMode
@@ -38,6 +38,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
     ],
 )
 class BpmnLayoutPortCorpusIntegrationTest {
+    companion object {
+        @JvmStatic
+        fun fixtures() = LAYOUT_CORPUS_FIXTURES
+    }
+
     @MockitoBean
     @Suppress("UnusedPrivateProperty") // Tier-2 mock for conformance adapters; not directly accessed
     private lateinit var ruleEngine: RuleEngine
@@ -50,34 +55,7 @@ class BpmnLayoutPortCorpusIntegrationTest {
     private lateinit var layoutAgent: BpmnLayoutAgent
 
     @ParameterizedTest(name = "layout + final validation succeeds for {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "annotation-and-group",
-            "long-labels",
-            "subprocess-flat",
-            "subprocess-nested",
-            "subprocess-branch",
-            "subprocess-loop",
-            "boundary-timer-task",
-            "boundary-error-task",
-            "boundary-multi",
-            "boundary-on-subprocess",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `real BpmnLayoutPort bean lays out and validates every corpus fixture`(fixture: String) {
         val xml = load("layout-fixtures/$fixture.bpmn")
         val definition = BpmnDefinition(processId = fixture, processName = fixture, nodes = emptyList(), sequences = emptyList())

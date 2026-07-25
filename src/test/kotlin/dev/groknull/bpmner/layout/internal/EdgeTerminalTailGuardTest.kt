@@ -7,7 +7,7 @@ package dev.groknull.bpmner.layout.internal
 
 import org.camunda.bpm.model.bpmn.Bpmn
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.ByteArrayInputStream
 import kotlin.test.assertTrue
 
@@ -25,35 +25,13 @@ class EdgeTerminalTailGuardTest {
 
     private val layouter = ElkBpmnLayouter().apply { registerElkLayoutAlgorithm() }
 
+    companion object {
+        @JvmStatic
+        fun fixtures() = LAYOUT_CORPUS_FIXTURES
+    }
+
     @ParameterizedTest(name = "edge terminal tail/perpendicularity: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "boundary-timer-task",
-            "boundary-on-subprocess",
-            "boundary-error-task",
-            "boundary-multi",
-            "subprocess-flat",
-            "subprocess-loop",
-            "subprocess-branch",
-            "subprocess-nested",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `every sequence-flow edge has axis-parallel, boundary-anchored terminals with adequate tail length`(
         fixture: String,
     ) {

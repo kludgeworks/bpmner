@@ -6,6 +6,7 @@
 package dev.groknull.bpmner.layout.internal
 
 import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.MethodSource
 import org.junit.jupiter.params.provider.ValueSource
 import org.w3c.dom.Element
 import org.xmlunit.assertj.XmlAssert
@@ -60,37 +61,13 @@ class ElkGoldenLayoutTest {
             Triple("collab-lanes", "Task_pack", "Flow_5"),
             Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
         )
+
+        @JvmStatic
+        fun fixtures() = LAYOUT_CORPUS_FIXTURES
     }
 
     @ParameterizedTest(name = "matches committed expected: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "boundary-timer-task",
-            "boundary-on-subprocess",
-            "boundary-error-task",
-            "boundary-multi",
-            "subprocess-flat",
-            "subprocess-loop",
-            "subprocess-branch",
-            "subprocess-nested",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `engine output matches committed expected`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val expected = load("layout-fixtures/$fixture.expected.bpmn")
@@ -105,34 +82,7 @@ class ElkGoldenLayoutTest {
     }
 
     @ParameterizedTest(name = "geometry invariants: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "subprocess-flat",
-            "subprocess-branch",
-            "subprocess-loop",
-            "subprocess-nested",
-            "boundary-timer-task",
-            "boundary-error-task",
-            "boundary-multi",
-            "boundary-on-subprocess",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     @Suppress("CyclomaticComplexMethod")
     fun `all 24 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
@@ -148,34 +98,7 @@ class ElkGoldenLayoutTest {
     }
 
     @ParameterizedTest(name = "labels clear labels and shapes: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "boundary-timer-task",
-            "boundary-on-subprocess",
-            "boundary-error-task",
-            "boundary-multi",
-            "subprocess-flat",
-            "subprocess-loop",
-            "subprocess-branch",
-            "subprocess-nested",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `named labels do not overlap other labels or shapes`(fixture: String) {
         val doc = LayoutDiInspector.parse(layouter.layout(load("layout-fixtures/$fixture.bpmn")))
         assertLabelsClearOtherDiGeometry(doc, fixture)
@@ -355,34 +278,7 @@ class ElkGoldenLayoutTest {
     }
 
     @ParameterizedTest(name = "determinism: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "subprocess-flat",
-            "subprocess-branch",
-            "subprocess-loop",
-            "subprocess-nested",
-            "boundary-timer-task",
-            "boundary-error-task",
-            "boundary-multi",
-            "boundary-on-subprocess",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `layout is deterministic across two runs`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val first = layouter.layout(input)

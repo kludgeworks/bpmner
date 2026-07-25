@@ -9,7 +9,7 @@ import org.camunda.bpm.model.bpmn.Bpmn
 import org.eclipse.elk.graph.ElkEdge
 import org.eclipse.elk.graph.ElkNode
 import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.ValueSource
+import org.junit.jupiter.params.provider.MethodSource
 import java.io.ByteArrayInputStream
 import kotlin.test.assertFalse
 
@@ -22,35 +22,13 @@ import kotlin.test.assertFalse
  */
 class AcyclicElkGraphTest {
 
+    companion object {
+        @JvmStatic
+        fun fixtures() = LAYOUT_CORPUS_FIXTURES
+    }
+
     @ParameterizedTest(name = "ELK skeleton is acyclic, root and nested: {0}")
-    @ValueSource(
-        strings = [
-            "representative-process",
-            "explicit-cycle",
-            "long-labels",
-            "annotation-and-group",
-            "boundary-timer-task",
-            "boundary-on-subprocess",
-            "boundary-error-task",
-            "boundary-multi",
-            "subprocess-flat",
-            "subprocess-loop",
-            "subprocess-branch",
-            "subprocess-nested",
-            "subprocess-no-start-cycle",
-            "subprocess-sequential-sharing",
-            "collab-lanes",
-            "collab-two-pools",
-            "collab-blackbox",
-            "collab-msg-endpoint",
-            "collab-msg-label",
-            "collab-subprocess",
-            "collab-bioc",
-            "collab-lanes-loopback",
-            "miwg-a2-1",
-            "miwg-a3-0",
-        ],
-    )
+    @MethodSource("fixtures")
     fun `no directed cycle in any container of the mapped ELK skeleton`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val model = Bpmn.readModelFromStream(ByteArrayInputStream(input.toByteArray(Charsets.UTF_8)))
