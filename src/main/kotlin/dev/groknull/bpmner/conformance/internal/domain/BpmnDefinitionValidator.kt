@@ -14,6 +14,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -100,7 +101,10 @@ internal class BpmnDefinitionValidator {
 
         val boundaryEventIds = definition.nodes.filterIsInstance<BpmnBoundaryEvent>().map { it.id }.toSet()
         definition.nodes
-            .filterNot { it is BpmnBoundaryEvent }
+            // An event subprocess has no sequence-flow connection to its scope's other nodes by
+            // BPMN definition — it is triggered by its own start event, not by flow — so, like a
+            // boundary event, it is excluded from the weak-connectivity requirement.
+            .filterNot { it is BpmnBoundaryEvent || it is BpmnEventSubProcess }
             .groupBy { it.parentRef }
             .forEach { (parentRef, nodes) ->
                 validateScopeWeakConnectivity(parentRef, nodes, definition.sequences, boundaryEventIds, errors)
@@ -160,12 +164,21 @@ internal class BpmnDefinitionValidator {
     private fun BpmnNode.requiresIncomingSequenceFlow(): Boolean = when (this) {
         is BpmnStartEvent, is BpmnBoundaryEvent -> false
 
+        // An event subprocess is floating: it starts on its own trigger, never on an incoming
+        // sequence flow from its enclosing scope.
+        is BpmnEventSubProcess -> false
+
         is BpmnSubProcess -> true
         else -> true
     }
 
     private fun BpmnNode.requiresOutgoingSequenceFlow(): Boolean = when (this) {
         is BpmnEndEvent, is BpmnBoundaryEvent -> false
+
+        // An event subprocess is floating: its handling ends inside its own scope, never on an
+        // outgoing sequence flow into its enclosing scope.
+        is BpmnEventSubProcess -> false
+
         is BpmnSubProcess -> true
         else -> true
     }
@@ -178,7 +191,13 @@ internal class BpmnDefinitionValidator {
         definition: BpmnDefinition,
         errors: MutableList<String>,
     ) {
-        val subProcessesById = definition.nodes.filterIsInstance<BpmnSubProcess>().associateBy { it.id }
+        // An event subprocess is a container in exactly the same sense as an embedded one — it
+        // holds its own start/end events and can nest other nodes via parentRef — so it
+        // participates in every containment check below alongside BpmnSubProcess.
+        val subProcessesById =
+            definition.nodes
+                .filter { it is BpmnSubProcess || it is BpmnEventSubProcess }
+                .associateBy { it.id }
         val nodesById = definition.nodes.associateBy { it.id }
 
         validateParentRefTargets(definition, nodesById.keys, subProcessesById.keys, errors)
@@ -228,7 +247,7 @@ internal class BpmnDefinitionValidator {
     // Walk each subprocess's parentRef chain; revisiting an id means the containment forms a cycle,
     // which would otherwise loop forever / corrupt the rendered tree.
     private fun validateNoSubProcessCycles(
-        subProcessesById: Map<String, BpmnSubProcess>,
+        subProcessesById: Map<String, BpmnNode>,
         errors: MutableList<String>,
     ) {
         subProcessesById.keys.forEach { startId ->
@@ -248,7 +267,7 @@ internal class BpmnDefinitionValidator {
     // nodes that name it via parentRef — the subprocess analogue of validateRequiredEvents.
     private fun validateSubProcessRequiredEvents(
         definition: BpmnDefinition,
-        subProcesses: Collection<BpmnSubProcess>,
+        subProcesses: Collection<BpmnNode>,
         errors: MutableList<String>,
     ) {
         val childrenByParent = definition.nodes.filter { it.parentRef != null }.groupBy { it.parentRef }

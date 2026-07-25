@@ -8,6 +8,9 @@ package dev.groknull.bpmner.conformance
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
+import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnSubProcess
 import dev.groknull.bpmner.bpmn.BpmnUserTask
@@ -131,6 +134,42 @@ class BpmnSubProcessValidationTest {
 
         val errors = validator.validate(definition).joinToString("\n")
         assertContains(errors, "edge 'Flow_cross' must not cross a subprocess boundary")
+    }
+
+    @Test
+    fun `validator accepts a floating event subprocess with no incoming or outgoing sequence flow`() {
+        // V3 (#622-Y): an event subprocess is triggered by its own start event, never by flow —
+        // requiring incoming/outgoing sequence flow, or weak connectivity to its sibling scope,
+        // would reject every valid event subprocess.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Received"),
+                    BpmnUserTask("Task_work", "Work"),
+                    BpmnEndEvent("EndEvent_1", "Completed"),
+                    BpmnEventSubProcess("SubProcess_handler", "Handle error"),
+                    BpmnStartEvent(
+                        "Inner_start",
+                        "On error",
+                        eventDefinition = BpmnErrorEventDefinition("Error_1"),
+                        parentRef = "SubProcess_handler",
+                    ),
+                    BpmnEndEvent("Inner_end", "Handled", parentRef = "SubProcess_handler"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_work"),
+                    BpmnEdge("Flow_2", "Task_work", "EndEvent_1"),
+                    BpmnEdge("Flow_in", "Inner_start", "Inner_end", parentRef = "SubProcess_handler"),
+                ),
+                errors = listOf(BpmnErrorRef(id = "Error_1", code = "ERR")),
+            )
+
+        val errors = validator.validate(definition)
+        assertTrue(errors.isEmpty(), "Expected no validation errors, got: $errors")
     }
 
     @Test

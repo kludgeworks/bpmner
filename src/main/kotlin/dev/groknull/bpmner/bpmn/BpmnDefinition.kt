@@ -73,6 +73,7 @@ val BpmnNode.typeName: String
             is BpmnBoundaryEvent -> "BOUNDARY_EVENT"
             is BpmnEndEvent -> "END_EVENT"
             is BpmnSubProcess -> "SUB_PROCESS"
+            is BpmnEventSubProcess -> "EVENT_SUB_PROCESS"
             is BpmnCallActivity -> "CALL_ACTIVITY"
             is BpmnUnrecognizedNode -> "UNRECOGNIZED:$bpmnType"
         }

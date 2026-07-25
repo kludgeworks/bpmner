@@ -54,6 +54,10 @@ internal fun BpmnNode.isSemanticallyTransparent(outgoingBySource: Map<String, Li
     // a containment boundary the fidelity walk must preserve. Never transparent.
     is BpmnSubProcess -> false
 
+    // An event subprocess is a composite activity handling its own trigger — never a
+    // routing-only pass-through.
+    is BpmnEventSubProcess -> false
+
     // A call activity is a real (composite) step that delegates to another process — it carries
     // semantic content, so it is never a routing-only pass-through.
     is BpmnCallActivity -> false

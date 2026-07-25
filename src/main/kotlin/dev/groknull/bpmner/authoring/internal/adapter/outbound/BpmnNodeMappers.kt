@@ -12,6 +12,7 @@ import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -154,7 +155,7 @@ internal fun FlowNode.toBpmnSubProcessOrUnrecognized(normalisedName: String?, pa
             if (this is Transaction) {
                 toUnrecognizedNode(normalisedName, parentRef)
             } else if (triggeredByEvent()) {
-                toUnrecognizedNode(normalisedName, parentRef)
+                BpmnEventSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             } else {
                 BpmnSubProcess(id = id, name = normalisedName, parentRef = parentRef)
             }

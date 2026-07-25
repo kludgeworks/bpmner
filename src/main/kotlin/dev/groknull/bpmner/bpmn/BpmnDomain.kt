@@ -251,6 +251,7 @@ data class BpmnUnrecognizedEventDefinition(
     JsonSubTypes.Type(value = BpmnBoundaryEvent::class, name = "BOUNDARY_EVENT"),
     JsonSubTypes.Type(value = BpmnEndEvent::class, name = "END_EVENT"),
     JsonSubTypes.Type(value = BpmnSubProcess::class, name = "SUB_PROCESS"),
+    JsonSubTypes.Type(value = BpmnEventSubProcess::class, name = "EVENT_SUB_PROCESS"),
     JsonSubTypes.Type(value = BpmnCallActivity::class, name = "CALL_ACTIVITY"),
 )
 sealed interface BpmnNode {
@@ -623,6 +624,23 @@ data class BpmnEndEvent(
         "nodes and edges stay in the flat definition lists and carry parentRef = this subprocess's id.",
 )
 data class BpmnSubProcess(
+    @field:NotBlank
+    @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
+    override val id: String,
+    @get:JsonPropertyDescription(NODE_NAME_DESCRIPTION)
+    override val name: String? = null,
+    @get:JsonPropertyDescription(PARENT_REF_DESCRIPTION)
+    override val parentRef: String? = null,
+) : BpmnNode {
+    override fun withName(name: String?): BpmnNode = copy(name = name)
+}
+
+@JsonClassDescription(
+    "BPMN event subprocess: a subprocess with no incoming/outgoing sequence flow, started by " +
+        "its own start event and triggered when that event occurs (e.g. an error or message " +
+        "arriving anywhere in the enclosing scope)",
+)
+data class BpmnEventSubProcess(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)
     override val id: String,

@@ -10,6 +10,7 @@ import dev.groknull.bpmner.bpmn.BpmnBusinessRuleTask
 import dev.groknull.bpmner.bpmn.BpmnCallActivity
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnEventBasedGateway
+import dev.groknull.bpmner.bpmn.BpmnEventSubProcess
 import dev.groknull.bpmner.bpmn.BpmnExclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnInclusiveGateway
 import dev.groknull.bpmner.bpmn.BpmnIntermediateCatchEvent
@@ -91,6 +92,11 @@ internal object BpmnModelFactory {
                 is BpmnEndEvent -> modelInstance.newInstance(EndEvent::class.java)
 
                 is BpmnSubProcess -> modelInstance.newInstance(SubProcess::class.java)
+
+                is BpmnEventSubProcess ->
+                    modelInstance.newInstance(SubProcess::class.java).apply {
+                        setTriggeredByEvent(true)
+                    }
 
                 is BpmnCallActivity ->
                     modelInstance.newInstance(CallActivity::class.java).apply {
