@@ -13,6 +13,7 @@ import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
 import dev.groknull.bpmner.bpmn.BpmnEscalationEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnLane
@@ -23,6 +24,7 @@ import dev.groknull.bpmner.bpmn.BpmnNode
 import dev.groknull.bpmner.bpmn.BpmnNoneEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnParticipant
 import dev.groknull.bpmner.bpmn.BpmnSignalEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnTerminateEventDefinition
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
@@ -121,6 +123,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             sequences = sequences,
             messages = eventMetadata.messages,
             errors = eventMetadata.errors,
+            signals = eventMetadata.signals,
+            escalations = eventMetadata.escalations,
             annotations = artifacts.annotations,
             groups = artifacts.groups,
             associations = artifacts.associations,
@@ -278,6 +282,8 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
                 .associate { it.getAttribute("id") to it.getAttribute("cancelActivity").toBoolean() },
             messages = document.parseMessages(),
             errors = document.parseErrors(),
+            signals = document.parseSignals(),
+            escalations = document.parseEscalations(),
         )
     }
 
@@ -456,6 +462,8 @@ internal data class EventMetadata(
     val cancelActivity: Map<String, Boolean>,
     val messages: List<BpmnMessageRef>,
     val errors: List<BpmnErrorRef>,
+    val signals: List<BpmnSignalRef>,
+    val escalations: List<BpmnEscalationRef>,
 )
 
 /**

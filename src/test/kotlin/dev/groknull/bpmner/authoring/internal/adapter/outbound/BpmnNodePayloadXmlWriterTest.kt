@@ -7,6 +7,7 @@
 
 package dev.groknull.bpmner.authoring.internal.adapter.outbound
 
+import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
 import dev.groknull.bpmner.bpmn.BpmnMessageEventDefinition
@@ -15,6 +16,8 @@ import dev.groknull.bpmner.bpmn.BpmnReceiveTask
 import dev.groknull.bpmner.bpmn.BpmnSendTask
 import dev.groknull.bpmner.bpmn.BpmnStartEvent
 import dev.groknull.bpmner.bpmn.BpmnTask
+import dev.groknull.bpmner.bpmn.BpmnTimerEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.MultiInstanceLoopCharacteristics
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -307,5 +310,74 @@ class BpmnNodePayloadXmlWriterTest {
         val serialized = writeBpmnDocument(doc)
 
         assertXml(serialized).nodesByXPath("//bpmn:endEvent[@id='end']/bpmn:messageEventDefinition").exist()
+    }
+
+    @Test
+    fun `non-interrupting boundary event writes cancelActivity=false`() {
+        val definition = BpmnDefinition(
+            processId = "Process_1",
+            processName = "Test",
+            nodes = listOf(
+                BpmnBoundaryEvent(
+                    id = "boundary1",
+                    name = "Timeout",
+                    attachedToRef = "task1",
+                    eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT5M"),
+                    cancelActivity = false,
+                ),
+            ),
+            sequences = listOf(dev.groknull.bpmner.bpmn.BpmnEdge("f1", "boundary1", "end")),
+        )
+
+        val xml = """
+            <bpmn:definitions xmlns:bpmn="$BPMN_NS">
+                <bpmn:process id="Process_1" name="Test">
+                    <bpmn:boundaryEvent id="boundary1"/>
+                    <bpmn:endEvent id="end"/>
+                </bpmn:process>
+            </bpmn:definitions>
+        """.trimIndent()
+
+        val doc = parseXml(xml)
+        writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
+
+        assertXml(serialized).nodesByXPath(
+            "//bpmn:boundaryEvent[@id='boundary1' and @attachedToRef='task1' and @cancelActivity='false']",
+        ).exist()
+        assertXml(serialized).nodesByXPath("//bpmn:boundaryEvent/bpmn:timerEventDefinition").exist()
+    }
+
+    @Test
+    fun `default interrupting boundary event omits cancelActivity attribute`() {
+        val definition = BpmnDefinition(
+            processId = "Process_1",
+            processName = "Test",
+            nodes = listOf(
+                BpmnBoundaryEvent(
+                    id = "boundary1",
+                    name = "Timeout",
+                    attachedToRef = "task1",
+                    eventDefinition = BpmnTimerEventDefinition(BpmnTimerKind.DURATION, "PT5M"),
+                ),
+            ),
+            sequences = listOf(dev.groknull.bpmner.bpmn.BpmnEdge("f1", "boundary1", "end")),
+        )
+
+        val xml = """
+            <bpmn:definitions xmlns:bpmn="$BPMN_NS">
+                <bpmn:process id="Process_1" name="Test">
+                    <bpmn:boundaryEvent id="boundary1"/>
+                    <bpmn:endEvent id="end"/>
+                </bpmn:process>
+            </bpmn:definitions>
+        """.trimIndent()
+
+        val doc = parseXml(xml)
+        writer.write(doc, definition)
+        val serialized = writeBpmnDocument(doc)
+
+        assertXml(serialized).nodesByXPath("//bpmn:boundaryEvent[@id='boundary1' and @attachedToRef='task1']").exist()
+        assertFalse(serialized.contains("cancelActivity"))
     }
 }

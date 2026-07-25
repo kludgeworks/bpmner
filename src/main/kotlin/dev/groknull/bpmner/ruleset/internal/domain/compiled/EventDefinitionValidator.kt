@@ -129,6 +129,14 @@ internal class EventDefinitionValidator(
                     message = "event $nodeId signalEventDefinition is missing the required signalRef attribute",
                 ),
             )
+        } else if (eventDefinition.signalRef !in ctx.signalIds) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_SIGNAL_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId signalRef '${eventDefinition.signalRef}' does not match any signal catalog id",
+                ),
+            )
         } else {
             emptyList()
         }
@@ -144,6 +152,15 @@ internal class EventDefinitionValidator(
                     diagnosticCode = DEF_INVALID_ESCALATION_REF,
                     nodeId = nodeId,
                     message = "event $nodeId escalationEventDefinition is missing the required escalationRef attribute",
+                ),
+            )
+        } else if (eventDefinition.escalationRef !in ctx.escalationIds) {
+            listOf(
+                eventDiagnostic(
+                    diagnosticCode = DEF_INVALID_ESCALATION_REF,
+                    nodeId = nodeId,
+                    message = "event $nodeId escalationRef '${eventDefinition.escalationRef}' does not match any " +
+                        "escalation catalog id",
                 ),
             )
         } else {

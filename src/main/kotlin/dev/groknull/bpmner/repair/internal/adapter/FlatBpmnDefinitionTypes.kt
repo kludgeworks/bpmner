@@ -12,11 +12,13 @@ import com.fasterxml.jackson.annotation.JsonPropertyDescription
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorRef
+import dev.groknull.bpmner.bpmn.BpmnEscalationRef
 import dev.groknull.bpmner.bpmn.BpmnGroup
 import dev.groknull.bpmner.bpmn.BpmnLane
 import dev.groknull.bpmner.bpmn.BpmnMessageFlow
 import dev.groknull.bpmner.bpmn.BpmnMessageRef
 import dev.groknull.bpmner.bpmn.BpmnParticipant
+import dev.groknull.bpmner.bpmn.BpmnSignalRef
 import dev.groknull.bpmner.bpmn.BpmnTextAnnotation
 import dev.groknull.bpmner.bpmn.BpmnTimerKind
 import dev.groknull.bpmner.bpmn.MultiInstanceMode
@@ -266,6 +268,18 @@ public data class FlatBpmnDefinition(
             "event that uses that code references the same entry by id. Stable id e.g. Error_CreditRejected.",
     )
     val errors: List<BpmnErrorRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Process-level signal catalogue: declare one BpmnSignalRef per distinct signal name; every " +
+            "signal event that uses that name references the same entry by id. Stable id e.g. Signal_OrderCancelled.",
+    )
+    val signals: List<BpmnSignalRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription(
+        "Process-level escalation catalogue: declare one BpmnEscalationRef per distinct escalation code; " +
+            "every escalation event that uses that code references the same entry by id. Stable id e.g. Escalation_Overdue.",
+    )
+    val escalations: List<BpmnEscalationRef> = emptyList(),
     @field:Valid
     @get:JsonPropertyDescription(
         "Text annotations explaining elements. Required for every multi-instance task: emit one " +

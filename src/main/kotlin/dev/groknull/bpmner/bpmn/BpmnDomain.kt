@@ -50,6 +50,12 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Reusable BPMN error declarations referenced by error event definitions")
     val errors: List<BpmnErrorRef> = emptyList(),
     @field:Valid
+    @get:JsonPropertyDescription("Reusable BPMN signal declarations referenced by signal event definitions")
+    val signals: List<BpmnSignalRef> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Reusable BPMN escalation declarations referenced by escalation event definitions")
+    val escalations: List<BpmnEscalationRef> = emptyList(),
+    @field:Valid
     @get:JsonPropertyDescription("Text annotations explaining elements (e.g. the item set of a multi-instance task)")
     val annotations: List<BpmnTextAnnotation> = emptyList(),
     @field:Valid
@@ -132,6 +138,21 @@ data class BpmnErrorRef(
     val id: String,
     @field:NotBlank
     val code: String,
+    val name: String? = null,
+)
+
+data class BpmnSignalRef(
+    @field:NotBlank
+    val id: String,
+    @field:NotBlank
+    val name: String,
+)
+
+data class BpmnEscalationRef(
+    @field:NotBlank
+    val id: String,
+    @field:NotBlank
+    val escalationCode: String,
     val name: String? = null,
 )
 
