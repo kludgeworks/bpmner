@@ -10,6 +10,10 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnBoundaryEvent
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnDataInputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataObjectReference
+import dev.groknull.bpmner.bpmn.BpmnDataOutputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataStoreReference
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnEndEvent
@@ -143,6 +147,77 @@ class BpmnDefinitionToXmlConverterTest {
         assertEquals(original.annotations, parsed.annotations)
         assertEquals(original.associations, parsed.associations)
     }
+
+    @Test
+    fun `data object and data store references render with data input-output associations nested in their activity`() {
+        val definition = dataDefinition()
+
+        val xml = converter.render(definition).xml
+
+        assertXml(xml).nodesByXPath("//bpmn:dataObjectReference[@id='DataObjectRef_Order']").exist()
+        assertXml(xml)
+            .valueByXPath("//bpmn:dataObjectReference[@id='DataObjectRef_Order']/@dataObjectRef")
+            .isEqualTo("DataObject_DataObjectRef_Order")
+        assertXml(xml).nodesByXPath("//bpmn:dataObject[@id='DataObject_DataObjectRef_Order']").exist()
+        assertXml(xml).nodesByXPath("//bpmn:dataStoreReference[@id='DataStoreRef_Orders']").exist()
+        assertXml(xml)
+            .valueByXPath("//bpmn:dataStoreReference[@id='DataStoreRef_Orders']/@dataStoreRef")
+            .isEqualTo("DataStore_DataStoreRef_Orders")
+        assertXml(xml).nodesByXPath("//bpmn:dataStore[@id='DataStore_DataStoreRef_Orders']").exist()
+        // Nested inside the owning activity, not the process — the defining trait of a data
+        // association versus a plain (process-level) association.
+        assertXml(xml)
+            .valueByXPath("//bpmn:userTask[@id='act-place']/bpmn:dataOutputAssociation/bpmn:targetRef/text()")
+            .isEqualTo("DataObjectRef_Order")
+        assertXml(xml)
+            .valueByXPath("//bpmn:serviceTask[@id='act-archive']/bpmn:dataInputAssociation/bpmn:sourceRef/text()")
+            .isEqualTo("DataObjectRef_Order")
+        assertXml(xml)
+            .valueByXPath("//bpmn:serviceTask[@id='act-archive']/bpmn:dataOutputAssociation/bpmn:targetRef/text()")
+            .isEqualTo("DataStoreRef_Orders")
+    }
+
+    @Test
+    fun `data objects, stores, and data associations round-trip through render and parse`() {
+        val original = dataDefinition()
+
+        val parsed = BpmnXmlToDefinitionConverter().parse(converter.render(original).xml)
+
+        assertEquals(original.dataObjectReferences, parsed.dataObjectReferences)
+        assertEquals(original.dataStoreReferences, parsed.dataStoreReferences)
+        assertEquals(original.dataInputAssociations.toSet(), parsed.dataInputAssociations.toSet())
+        assertEquals(original.dataOutputAssociations.toSet(), parsed.dataOutputAssociations.toSet())
+    }
+
+    // A two-task process: "Place Order" writes a DataObjectReference, "Archive Order" reads that
+    // same reference and writes a DataStoreReference — exercising both association directions on
+    // both a userTask and a serviceTask host.
+    private fun dataDefinition(): BpmnDefinition = BpmnDefinition(
+        processId = "Process_Data",
+        processName = "Data objects sample",
+        nodes =
+        listOf(
+            BpmnStartEvent("StartEvent_1", "Start"),
+            BpmnUserTask("act-place", "Place Order"),
+            BpmnServiceTask("act-archive", "Archive Order"),
+            BpmnEndEvent("EndEvent_1", "End"),
+        ),
+        sequences =
+        listOf(
+            BpmnEdge("F1", "StartEvent_1", "act-place"),
+            BpmnEdge("F2", "act-place", "act-archive"),
+            BpmnEdge("F3", "act-archive", "EndEvent_1"),
+        ),
+        dataObjectReferences = listOf(BpmnDataObjectReference("DataObjectRef_Order", "Order")),
+        dataStoreReferences = listOf(BpmnDataStoreReference("DataStoreRef_Orders", "Orders DB")),
+        dataInputAssociations = listOf(
+            BpmnDataInputAssociation("DataInputAssociation_archive", "DataObjectRef_Order", "act-archive"),
+        ),
+        dataOutputAssociations = listOf(
+            BpmnDataOutputAssociation("DataOutputAssociation_place", "act-place", "DataObjectRef_Order"),
+            BpmnDataOutputAssociation("DataOutputAssociation_archive", "act-archive", "DataStoreRef_Orders"),
+        ),
+    )
 
     @Test
     fun `task without multiInstance emits no loop characteristics`() {

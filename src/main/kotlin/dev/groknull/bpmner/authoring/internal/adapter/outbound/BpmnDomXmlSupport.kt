@@ -57,6 +57,10 @@ internal fun Document.bpmnElement(localName: String): Element = createElementNS(
 
 internal fun Document.bpmnElements(localName: String): Sequence<Element> = getElementsByTagNameNS(BPMN_NS, localName).elements()
 
+/** Finds a BPMN element anywhere in the document by its `id` attribute, regardless of local name. */
+internal fun Document.bpmnElementById(id: String): Element? = getElementsByTagNameNS(BPMN_NS, "*").elements()
+    .firstOrNull { it.getAttribute("id") == id }
+
 internal fun NodeList.elements(): Sequence<Element> = sequence {
     for (index in 0 until length) {
         (item(index) as? Element)?.let { yield(it) }

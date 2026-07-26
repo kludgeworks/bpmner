@@ -8,6 +8,10 @@ package dev.groknull.bpmner.authoring.internal.adapter.outbound
 import dev.groknull.bpmner.authoring.internal.domain.BpmnXmlParser
 import dev.groknull.bpmner.bpmn.BpmnAssociation
 import dev.groknull.bpmner.bpmn.BpmnCompensateEventDefinition
+import dev.groknull.bpmner.bpmn.BpmnDataInputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataObjectReference
+import dev.groknull.bpmner.bpmn.BpmnDataOutputAssociation
+import dev.groknull.bpmner.bpmn.BpmnDataStoreReference
 import dev.groknull.bpmner.bpmn.BpmnDefinition
 import dev.groknull.bpmner.bpmn.BpmnEdge
 import dev.groknull.bpmner.bpmn.BpmnErrorEventDefinition
@@ -61,6 +65,10 @@ private data class ParsedArtifacts(
     val annotations: List<BpmnTextAnnotation>,
     val associations: List<BpmnAssociation>,
     val groups: List<BpmnGroup>,
+    val dataObjectReferences: List<BpmnDataObjectReference>,
+    val dataStoreReferences: List<BpmnDataStoreReference>,
+    val dataInputAssociations: List<BpmnDataInputAssociation>,
+    val dataOutputAssociations: List<BpmnDataOutputAssociation>,
 )
 
 /**
@@ -128,6 +136,10 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
             annotations = artifacts.annotations,
             groups = artifacts.groups,
             associations = artifacts.associations,
+            dataObjectReferences = artifacts.dataObjectReferences,
+            dataStoreReferences = artifacts.dataStoreReferences,
+            dataInputAssociations = artifacts.dataInputAssociations,
+            dataOutputAssociations = artifacts.dataOutputAssociations,
             participants = collaboration.participants,
             lanes = collaboration.lanes,
             messageFlows = collaboration.messageFlows,
@@ -166,7 +178,37 @@ internal open class BpmnXmlToDefinitionConverter : BpmnXmlParser {
         val associations = document.bpmnElements("association")
             .map { el -> BpmnAssociation(el.getAttribute("id"), el.getAttribute("sourceRef"), el.getAttribute("targetRef")) }
             .filter { it.id.isNotBlank() }.toList()
-        return ParsedArtifacts(annotations, associations, groups)
+        val dataObjectReferences = document.bpmnElements("dataObjectReference")
+            .map { el ->
+                BpmnDataObjectReference(id = el.getAttribute("id"), name = el.getAttribute("name").takeIf { it.isNotBlank() })
+            }.filter { it.id.isNotBlank() }.toList()
+        val dataStoreReferences = document.bpmnElements("dataStoreReference")
+            .map { el ->
+                BpmnDataStoreReference(id = el.getAttribute("id"), name = el.getAttribute("name").takeIf { it.isNotBlank() })
+            }.filter { it.id.isNotBlank() }.toList()
+        val dataInputAssociations = document.bpmnElements("dataInputAssociation")
+            .mapNotNull { el ->
+                val activityId = (el.parentNode as? Element)?.getAttribute("id")?.takeIf { it.isNotBlank() }
+                    ?: return@mapNotNull null
+                val sourceRef = el.childElements().firstOrNull { it.localName == "sourceRef" }?.textContent?.trim().orEmpty()
+                BpmnDataInputAssociation(id = el.getAttribute("id"), sourceRef = sourceRef, activityRef = activityId)
+            }.filter { it.id.isNotBlank() }.toList()
+        val dataOutputAssociations = document.bpmnElements("dataOutputAssociation")
+            .mapNotNull { el ->
+                val activityId = (el.parentNode as? Element)?.getAttribute("id")?.takeIf { it.isNotBlank() }
+                    ?: return@mapNotNull null
+                val targetRef = el.childElements().firstOrNull { it.localName == "targetRef" }?.textContent?.trim().orEmpty()
+                BpmnDataOutputAssociation(id = el.getAttribute("id"), activityRef = activityId, targetRef = targetRef)
+            }.filter { it.id.isNotBlank() }.toList()
+        return ParsedArtifacts(
+            annotations,
+            associations,
+            groups,
+            dataObjectReferences,
+            dataStoreReferences,
+            dataInputAssociations,
+            dataOutputAssociations,
+        )
     }
 
     private fun parseDocument(xml: String): Document = DocumentBuilderFactory

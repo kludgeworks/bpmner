@@ -65,6 +65,18 @@ data class BpmnDefinition(
     @get:JsonPropertyDescription("Association edges linking text annotations to the flow elements they explain")
     val associations: List<BpmnAssociation> = emptyList(),
     @field:Valid
+    @get:JsonPropertyDescription("Data object references read or written by activities")
+    val dataObjectReferences: List<BpmnDataObjectReference> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data store references read or written by activities")
+    val dataStoreReferences: List<BpmnDataStoreReference> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data input associations: an activity reading from a data object/store reference")
+    val dataInputAssociations: List<BpmnDataInputAssociation> = emptyList(),
+    @field:Valid
+    @get:JsonPropertyDescription("Data output associations: an activity writing to a data object/store reference")
+    val dataOutputAssociations: List<BpmnDataOutputAssociation> = emptyList(),
+    @field:Valid
     @get:JsonPropertyDescription(
         "Participants (pools): white-box (processRef set, owns the process) or black-box (external, processRef null)",
     )
@@ -97,10 +109,14 @@ data class BpmnDefinition(
      *   a self-referencing edge (sourceRef == targetRef) is also flagged.
      * - At least one top-level [BpmnStartEvent] and at least one top-level [BpmnEndEvent]
      *   (i.e. [BpmnNode.parentRef] == null for both).
+     * - Every [BpmnDataInputAssociation]/[BpmnDataOutputAssociation] resolves its activity
+     *   reference to a node id and its data reference to a [BpmnDataObjectReference] or
+     *   [BpmnDataStoreReference] id.
      */
     @Tool
     fun validateStructure(): List<String> {
         val nodeIdSet = nodes.map { it.id }.toSet()
+        val dataRefIdSet = dataObjectReferences.map { it.id }.toSet() + dataStoreReferences.map { it.id }.toSet()
         return buildList {
             addAll(duplicateIdErrors(nodes.map { it.id.trim() }, "node"))
             addAll(duplicateIdErrors(sequences.map { it.id.trim() }, "edge"))
@@ -111,6 +127,8 @@ data class BpmnDefinition(
             if (nodes.none { it is BpmnEndEvent && it.parentRef == null }) {
                 add("definition must contain at least one END_EVENT")
             }
+            dataInputAssociations.forEach { addAll(dataInputAssociationErrors(it, nodeIdSet, dataRefIdSet)) }
+            dataOutputAssociations.forEach { addAll(dataOutputAssociationErrors(it, nodeIdSet, dataRefIdSet)) }
         }
     }
 
@@ -123,6 +141,40 @@ data class BpmnDefinition(
         if (edge.sourceRef !in nodeIdSet) add("edge $label sourceRef '${edge.sourceRef}' does not match any node id")
         if (edge.targetRef !in nodeIdSet) add("edge $label targetRef '${edge.targetRef}' does not match any node id")
         if (edge.sourceRef == edge.targetRef) add("edge $label must not self-reference source and target")
+    }
+
+    private fun dataInputAssociationErrors(
+        assoc: BpmnDataInputAssociation,
+        nodeIdSet: Set<String>,
+        dataRefIdSet: Set<String>,
+    ): List<String> = buildList {
+        val label = assoc.id.ifBlank { "<blank>" }
+        if (assoc.activityRef !in nodeIdSet) {
+            add("data input association $label activityRef '${assoc.activityRef}' does not match any node id")
+        }
+        if (assoc.sourceRef !in dataRefIdSet) {
+            add(
+                "data input association $label sourceRef '${assoc.sourceRef}' does not match any " +
+                    "data object/store reference id",
+            )
+        }
+    }
+
+    private fun dataOutputAssociationErrors(
+        assoc: BpmnDataOutputAssociation,
+        nodeIdSet: Set<String>,
+        dataRefIdSet: Set<String>,
+    ): List<String> = buildList {
+        val label = assoc.id.ifBlank { "<blank>" }
+        if (assoc.activityRef !in nodeIdSet) {
+            add("data output association $label activityRef '${assoc.activityRef}' does not match any node id")
+        }
+        if (assoc.targetRef !in dataRefIdSet) {
+            add(
+                "data output association $label targetRef '${assoc.targetRef}' does not match any " +
+                    "data object/store reference id",
+            )
+        }
     }
 }
 
@@ -762,6 +814,50 @@ data class BpmnAssociation(
     val sourceRef: String,
     @field:NotBlank
     @get:JsonPropertyDescription("Target element id (the text annotation)")
+    val targetRef: String,
+)
+
+@JsonClassDescription("BPMN data object reference: a process-scoped placeholder for data an activity reads or writes")
+data class BpmnDataObjectReference(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-object-reference id, e.g. DataObjectRef_Order")
+    val id: String,
+    @get:JsonPropertyDescription("Label, e.g. \"Order\"")
+    val name: String? = null,
+)
+
+@JsonClassDescription("BPMN data store reference: a placeholder for a persistent data store an activity reads or writes")
+data class BpmnDataStoreReference(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique data-store-reference id, e.g. DataStoreRef_Orders")
+    val id: String,
+    @get:JsonPropertyDescription("Label, e.g. \"Orders DB\"")
+    val name: String? = null,
+)
+
+@JsonClassDescription("BPMN data input association: an activity reads from a data object/store reference")
+data class BpmnDataInputAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique id, e.g. DataInputAssociation_1")
+    val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the data-object/data-store reference being read")
+    val sourceRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the activity that reads it")
+    val activityRef: String,
+)
+
+@JsonClassDescription("BPMN data output association: an activity writes to a data object/store reference")
+data class BpmnDataOutputAssociation(
+    @field:NotBlank
+    @get:JsonPropertyDescription("Unique id, e.g. DataOutputAssociation_1")
+    val id: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the activity that writes it")
+    val activityRef: String,
+    @field:NotBlank
+    @get:JsonPropertyDescription("Id of the data-object/data-store reference being written")
     val targetRef: String,
 )
 

@@ -199,6 +199,57 @@ class BpmnDefinitionValidateStructureTest {
         )
     }
 
+    // --- data association reference checks ---
+
+    @Test
+    fun `validateStructure accepts data input and output associations with resolvable references`() {
+        val definition = minimalValid().copy(
+            dataObjectReferences = listOf(BpmnDataObjectReference(id = "DataObjectRef_1", name = "Order")),
+            dataInputAssociations = listOf(
+                BpmnDataInputAssociation(id = "DataInputAssociation_1", sourceRef = "DataObjectRef_1", activityRef = "Task_1"),
+            ),
+            dataOutputAssociations = listOf(
+                BpmnDataOutputAssociation(id = "DataOutputAssociation_1", activityRef = "Task_1", targetRef = "DataObjectRef_1"),
+            ),
+        )
+        val errors = definition.validateStructure()
+        assertTrue(errors.isEmpty(), "Expected no errors but got: $errors")
+    }
+
+    @Test
+    fun `validateStructure detects a data input association whose activityRef does not resolve`() {
+        val definition = minimalValid().copy(
+            dataObjectReferences = listOf(BpmnDataObjectReference(id = "DataObjectRef_1")),
+            dataInputAssociations = listOf(
+                BpmnDataInputAssociation(id = "DataInputAssociation_1", sourceRef = "DataObjectRef_1", activityRef = "Ghost"),
+            ),
+        )
+        val errors = definition.validateStructure()
+        assertContains(errors.joinToString(), "activityRef 'Ghost' does not match any node id")
+    }
+
+    @Test
+    fun `validateStructure detects a data input association whose sourceRef does not resolve`() {
+        val definition = minimalValid().copy(
+            dataInputAssociations = listOf(
+                BpmnDataInputAssociation(id = "DataInputAssociation_1", sourceRef = "Ghost", activityRef = "Task_1"),
+            ),
+        )
+        val errors = definition.validateStructure()
+        assertContains(errors.joinToString(), "sourceRef 'Ghost' does not match any data object/store reference id")
+    }
+
+    @Test
+    fun `validateStructure detects a data output association whose targetRef does not resolve`() {
+        val definition = minimalValid().copy(
+            dataOutputAssociations = listOf(
+                BpmnDataOutputAssociation(id = "DataOutputAssociation_1", activityRef = "Task_1", targetRef = "Ghost"),
+            ),
+        )
+        val errors = definition.validateStructure()
+        assertContains(errors.joinToString(), "targetRef 'Ghost' does not match any data object/store reference id")
+    }
+
     // --- return idiom (no throw) ---
 
     @Test
