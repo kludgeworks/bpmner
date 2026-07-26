@@ -167,12 +167,21 @@ internal object BpmnToElkMapper {
         }
     }
 
+    // L5 (622-Y): nested lanes (tLane/childLaneSet) are outside this epic's supported
+    // profile. A lane that delegates to a childLaneSet carries no flowNodeRefs of its own,
+    // so mapping it unguarded silently produces a zero-height ghost lane while its
+    // descendants escape to the top level — a broken diagram with no error. Fail loudly
+    // instead (AD-622-10's "assert, don't mutate" applied to a construct this epic never
+    // implements, not one it renders wrong).
     private fun mapLane(
         participant: ElkNode,
         lane: Lane,
         nodeMap: MutableMap<String, ElkNode>,
         model: BpmnModelInstance,
     ) {
+        if (lane.childLaneSet != null) {
+            throw BpmnAutoLayoutException("ELK layout: nested lanes (lane '${lane.id}' has a childLaneSet) are not supported")
+        }
         val compound = ElkGraphUtil.createNode(participant)
         compound.identifier = lane.id
         applyLaneProfile(compound, lane)
