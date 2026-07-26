@@ -16,7 +16,17 @@ import org.camunda.bpm.model.bpmn.instance.Participant
 import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 
-/** Projects ELK-owned participant bounds and BPMN's ordered lane bands into BPMN-DI shapes. */
+/**
+ * Projects ELK-owned participant bounds and BPMN's ordered lane bands into BPMN-DI shapes.
+ *
+ * Two halves with different status (622-Y L1/L3, AD-622-23): the *lane* half
+ * ([projectLaneBands]) is the declared floor — the L1 spike found plain hierarchical
+ * compound nesting does not stack sibling lanes at all (see `LaneInLayerConstraintProbeTest`),
+ * so this processor's translate-and-stack remains the only lane-banding mechanism. The
+ * *pool* half ([copyWhiteBoxBounds]/[copyBlackBoxBounds]) is still live only because Unit
+ * P's pool-mechanism ADR (AD-622-19/AD-622-13) is unresolved; it is not itself justified
+ * by AD-622-23 and may be superseded once that ADR lands.
+ */
 internal object CollaborationShapePlacement : PlacementProcessor {
 
     private const val OWNER = "CollaborationShapePlacement"
