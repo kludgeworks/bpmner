@@ -9,34 +9,25 @@ import org.junit.jupiter.api.Test
 import kotlin.test.assertTrue
 
 /**
- * V6 probe (622-Y, AD-622-09): does the existing `SEPARATE_CONNECTED_COMPONENTS` mechanism
- * already anchor a floating element (no incoming/outgoing sequence flow to its enclosing
- * scope — an event subprocess or a compensation-handler task) below the main flow, or does
- * it need a dedicated placement processor?
+ * V6 (622-Y, AD-622-35): a floating element (no incoming/outgoing sequence flow to its
+ * enclosing scope — an event subprocess or a compensation-handler task) becomes its own ELK
+ * component. `SEPARATE_CONNECTED_COMPONENTS = true` already guarantees it never overlaps the
+ * main flow; `CONSIDER_MODEL_ORDER_COMPONENTS = MODEL_ORDER` (`BpmnToElkMapper.kt`) additionally
+ * orders the packer's rows by BPMN declaration order, so the main flow — declared first — sets
+ * row 1 and the floating element wraps to the row below it.
  *
- * `applyRootLayoutOptions` (`BpmnToElkMapper.kt`) sets `SEPARATE_CONNECTED_COMPONENTS = true`
- * on the root, previously commented "Handler nodes (no incoming ELK edge) become disconnected
- * components placed below." Live only on the flat (non-collaboration) path — the root's
- * `HIERARCHY_HANDLING` is `SEPARATE_CHILDREN` (`:537`), so a `process` fixture exercises it;
- * `applyParticipantProfile`/`applyLaneProfile` explicitly disable it (`:561`, `:576`) for
- * compound hosts.
+ * Live only on the flat (non-collaboration) path — the root's `HIERARCHY_HANDLING` is
+ * `SEPARATE_CHILDREN`, so a `process` fixture exercises it; `applyParticipantProfile`/
+ * `applyLaneProfile` explicitly disable `SEPARATE_CONNECTED_COMPONENTS` for compound hosts, so
+ * this option is inert for collaborations.
  *
- * **Verdict (falsifies the "placed below" half of the prior comment): the anchor is a partial
- * declaration.** ELK's component packer guarantees the floating element never overlaps the
- * main flow's bounding box — verified below — but it does **not** guarantee a "below the main
- * flow" *order*: on this fixture the floating component lands at (x=12, y=12), strictly
- * *above* the main flow (whose top edge sits at y=208), not below it. `ComponentsProcessor`
- * places components by its own packing heuristic, which this codebase does not steer.
- *
- * This is a real, documented gap (AD-622-09's "or a processor with the documented gap" floor),
- * not the preferred "declaration already does it" outcome — recording the verdict as an ADR
- * (whether "non-overlapping, unordered" is an acceptable floor, or a placement processor must
- * force "below") is the architect's call, not this session's.
+ * The rule this asserts: a floating component's top lies below the bottom of the component
+ * preceding it in model order.
  */
 class FloatingElementAnchorProbeTest {
 
     @Test
-    fun `a floating event subprocess does not overlap the main flow, but is not placed below it`() {
+    fun `a floating event subprocess is placed below the main flow, in model order`() {
         val xml =
             """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -65,21 +56,11 @@ class FloatingElementAnchorProbeTest {
         val handlerBounds = LayoutDiInspector.shapeBounds(doc, "EventSub_1")
 
         assertNoOverlap(mainFlowBounds, handlerBounds)
-
-        // Documents the falsified half of the old comment: it does NOT land below. Regenerate
-        // this assertion's recorded coordinates (not the invariant above) if a future placement
-        // processor changes the packer's ordering — that is the point at which V6 re-opens.
-        val mainFlowTop = mainFlowBounds.minOf { it["y"]!! }
-        assertTrue(
-            handlerBounds["y"]!! < mainFlowTop,
-            "expected the documented gap to still hold (floating component above the main flow, " +
-                "not below) — if this now sits below (y=${handlerBounds["y"]} >= top=$mainFlowTop), " +
-                "the packer's ordering has changed and V6's verdict should be re-probed",
-        )
+        assertBelow(mainFlowBounds, handlerBounds)
     }
 
     @Test
-    fun `a floating compensation-handler task does not overlap the main flow, but is not placed below it`() {
+    fun `a floating compensation-handler task is placed below the main flow, in model order`() {
         val xml =
             """<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
@@ -101,11 +82,12 @@ class FloatingElementAnchorProbeTest {
         val handlerBounds = LayoutDiInspector.shapeBounds(doc, "Task_refund")
 
         assertNoOverlap(mainFlowBounds, handlerBounds)
+        assertBelow(mainFlowBounds, handlerBounds)
     }
 
-    // The one invariant SEPARATE_CONNECTED_COMPONENTS does guarantee: distinct components never
-    // share screen space. Two axis-aligned rectangles overlap iff their x- and y-ranges both
-    // overlap; no overlap on either axis is sufficient to rule out a collision.
+    // The invariant SEPARATE_CONNECTED_COMPONENTS guarantees: distinct components never share
+    // screen space. Two axis-aligned rectangles overlap iff their x- and y-ranges both overlap;
+    // no overlap on either axis is sufficient to rule out a collision.
     private fun assertNoOverlap(others: List<Map<String, Double>>, handler: Map<String, Double>) {
         others.forEach { other ->
             val xOverlap =
@@ -116,5 +98,16 @@ class FloatingElementAnchorProbeTest {
                     other["y"]!! < handler["y"]!! + handler["height"]!!
             assertTrue(!(xOverlap && yOverlap), "floating element $handler must not overlap main-flow node $other")
         }
+    }
+
+    // AD-622-35: the model-order rule. The main flow is declared first, so the floating
+    // component (declared after it) must land below the main flow's bottom edge.
+    private fun assertBelow(precedingInModelOrder: List<Map<String, Double>>, floating: Map<String, Double>) {
+        val precedingBottom = precedingInModelOrder.maxOf { it["y"]!! + it["height"]!! }
+        assertTrue(
+            floating["y"]!! >= precedingBottom,
+            "expected the floating component to sit below the main flow " +
+                "(top=${floating["y"]}, main flow bottom=$precedingBottom)",
+        )
     }
 }

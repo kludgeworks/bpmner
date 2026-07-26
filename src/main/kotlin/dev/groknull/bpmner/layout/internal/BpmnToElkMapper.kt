@@ -19,6 +19,7 @@ import org.camunda.bpm.model.bpmn.instance.SequenceFlow
 import org.camunda.bpm.model.bpmn.instance.StartEvent
 import org.camunda.bpm.model.bpmn.instance.SubProcess
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
+import org.eclipse.elk.alg.layered.components.ComponentOrderingStrategy
 import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
 import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
@@ -546,14 +547,20 @@ internal object BpmnToElkMapper {
         applyFlowSpacing(root)
         // Floating nodes (no sequence-flow edge at all — an event subprocess or a
         // compensation-handler task) become their own disconnected component: guaranteed
-        // non-overlapping with the main flow, but not guaranteed to land below it — the
-        // packer's own ordering is not steered here (see FloatingElementAnchorProbeTest,
-        // AD-622-09: documented gap, not a placement processor).
+        // non-overlapping with the main flow (see FloatingElementAnchorProbeTest, AD-622-35).
         root.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, true)
         // NETWORK_SIMPLEX keeps the primary flow on a single Y baseline.
         root.setProperty(LayeredOptions.NODE_PLACEMENT_STRATEGY, NodePlacementStrategy.NETWORK_SIMPLEX)
         // Use model order for deterministic, document-order branch ordering.
         root.setProperty(LayeredOptions.CONSIDER_MODEL_ORDER_STRATEGY, OrderingStrategy.NODES_AND_EDGES)
+        // AD-622-35: order the row-packer's components by BPMN declaration order too, so the
+        // main flow (declared first) sets row 1's width and a floating element wraps below it,
+        // rather than the packer's default size-based ordering (which can float a small
+        // component above the main flow — see FloatingElementAnchorProbeTest).
+        root.setProperty(
+            LayeredOptions.CONSIDER_MODEL_ORDER_COMPONENTS,
+            ComponentOrderingStrategy.MODEL_ORDER,
+        )
         // Ensure adequate spacing between connected components.
         root.setProperty(LayeredOptions.SPACING_COMPONENT_COMPONENT, NODE_NODE_SPACING)
         // A named edge spanning 2+ layers (e.g. a gateway branch straight to a later end event,
