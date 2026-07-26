@@ -10,6 +10,10 @@ import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.PlacedLayout
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
+import org.camunda.bpm.model.bpmn.instance.DataInputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataObjectReference
+import org.camunda.bpm.model.bpmn.instance.DataOutputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataStoreReference
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.Lane
@@ -264,6 +268,22 @@ internal object ElkToBpmnDiWriter {
             shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
             plane.addChildElement(shape)
         }
+        for (ref in model.getModelElementsByType(DataObjectReference::class.java).sortedBy { it.id }) {
+            val rect = layout.shapes[ref.id] ?: continue
+            val shape = model.newInstance(BpmnShape::class.java)
+            shape.id = "BPMNShape_${ref.id}"
+            shape.bpmnElement = ref
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
+            plane.addChildElement(shape)
+        }
+        for (ref in model.getModelElementsByType(DataStoreReference::class.java).sortedBy { it.id }) {
+            val rect = layout.shapes[ref.id] ?: continue
+            val shape = model.newInstance(BpmnShape::class.java)
+            shape.id = "BPMNShape_${ref.id}"
+            shape.bpmnElement = ref
+            shape.bounds = model.newBounds(rect.x, rect.y, rect.w, rect.h)
+            plane.addChildElement(shape)
+        }
     }
 
     /**
@@ -332,8 +352,10 @@ internal object ElkToBpmnDiWriter {
         layout: PlacedLayout,
         existingEdges: Map<String, BpmnEdge>,
     ) {
-        for (assoc in model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Association::class.java)
-            .sortedBy { it.id }) {
+        val associations = model.getModelElementsByType(org.camunda.bpm.model.bpmn.instance.Association::class.java).toList() +
+            model.getModelElementsByType(DataInputAssociation::class.java).toList() +
+            model.getModelElementsByType(DataOutputAssociation::class.java).toList()
+        for (assoc in associations.sortedBy { it.id }) {
             val waypoints = layout.edges[assoc.id] ?: continue
             existingEdges[assoc.id]?.also { existing ->
                 existing.waypoints.clear()

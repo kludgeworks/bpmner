@@ -14,6 +14,7 @@ collab-subprocess 0 4 14
 collab-two-pools 0 4 8
 compensate 0 1 1
 compensation-handler 0 1 1
+data-object-and-store 0 6 0
 event-subprocess 0 0 3
 explicit-cycle 0 2 0
 long-labels 0 2 0

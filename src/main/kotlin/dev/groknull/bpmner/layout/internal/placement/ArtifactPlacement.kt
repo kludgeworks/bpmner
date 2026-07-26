@@ -7,20 +7,24 @@ package dev.groknull.bpmner.layout.internal.placement
 
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
+import org.camunda.bpm.model.bpmn.instance.DataObjectReference
+import org.camunda.bpm.model.bpmn.instance.DataStoreReference
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 
 /**
- * Text annotation and group sidecar geometry.
+ * Text annotation, data reference, and group sidecar geometry.
  *
- * A [TextAnnotation] with a real ELK-mapped comment box (`BpmnToElkMapper.trackAnnotations`,
- * group E) is already positioned by ELK's own comment-attachment mechanism — this processor
- * copies its final coordinates, the same convention [NodeShapeCopy] uses for flow nodes. One
- * with no association (or no mappable host) keeps the pre-group-E fallback: stacked below the
- * skeleton at [ARTIFACT_MARGIN] intervals. Every [Group] is never mapped into the ELK graph at
- * all — group bounding is a padded box around the flow-node shapes, the legitimate
- * projection-only survivor this processor still owns directly.
+ * A [TextAnnotation]/[DataObjectReference]/[DataStoreReference] with a real ELK-mapped comment
+ * box (`BpmnToElkMapper.trackAnnotations`/`trackDataReferences`, group E) is already positioned
+ * by ELK's own comment-attachment mechanism — this processor copies its final coordinates, the
+ * same convention [NodeShapeCopy] uses for flow nodes. One with no association (or no mappable
+ * host) keeps the pre-group-E fallback: stacked below the skeleton at [ARTIFACT_MARGIN]
+ * intervals, sharing one running `y` across all three kinds so none land on top of each other.
+ * Every [Group] is never mapped into the ELK graph at all — group bounding is a padded box
+ * around the flow-node shapes, the legitimate projection-only survivor this processor still
+ * owns directly.
  */
 internal object ArtifactPlacement : PlacementProcessor {
 
@@ -30,7 +34,7 @@ internal object ArtifactPlacement : PlacementProcessor {
 
     override fun process(ctx: PlacementContext) {
         placeGroups(ctx)
-        placeAnnotations(ctx)
+        placeCommentBoxArtifacts(ctx)
     }
 
     private fun placeGroups(ctx: PlacementContext) {
@@ -58,24 +62,26 @@ internal object ArtifactPlacement : PlacementProcessor {
         }
     }
 
-    private fun placeAnnotations(ctx: PlacementContext) {
+    private fun placeCommentBoxArtifacts(ctx: PlacementContext) {
+        val ids = ctx.model.getModelElementsByType(TextAnnotation::class.java).map { it.id } +
+            ctx.model.getModelElementsByType(DataObjectReference::class.java).map { it.id } +
+            ctx.model.getModelElementsByType(DataStoreReference::class.java).map { it.id }
+
         val skeletonBottom = ctx.shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
         var fallbackY = skeletonBottom + ARTIFACT_MARGIN
-        ctx.model.getModelElementsByType(TextAnnotation::class.java)
-            .sortedBy { it.id }
-            .forEach { ann ->
-                val elkNode = ctx.skeleton.nodeMap[ann.id] ?: return@forEach
-                if (elkNode.parent != null) {
-                    // Real comment box: ELK already decided its position (above/below its host,
-                    // clear of the host's margin) — copy it rather than recompute it.
-                    val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
-                    ctx.shapes[ann.id] = Rect(ax, ay, elkNode.width, elkNode.height)
-                } else {
-                    // Detached placeholder (no association, or host ELK never mapped): stack
-                    // below the skeleton, the pre-group-E fallback.
-                    ctx.shapes[ann.id] = Rect(0.0, fallbackY, elkNode.width, elkNode.height)
-                    fallbackY += elkNode.height + ARTIFACT_MARGIN
-                }
+        ids.sorted().forEach { id ->
+            val elkNode = ctx.skeleton.nodeMap[id] ?: return@forEach
+            if (elkNode.parent != null) {
+                // Real comment box: ELK already decided its position (above/below its host,
+                // clear of the host's margin) — copy it rather than recompute it.
+                val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
+                ctx.shapes[id] = Rect(ax, ay, elkNode.width, elkNode.height)
+            } else {
+                // Detached placeholder (no association, or host ELK never mapped): stack
+                // below the skeleton, the pre-group-E fallback.
+                ctx.shapes[id] = Rect(0.0, fallbackY, elkNode.width, elkNode.height)
+                fallbackY += elkNode.height + ARTIFACT_MARGIN
             }
+        }
     }
 }

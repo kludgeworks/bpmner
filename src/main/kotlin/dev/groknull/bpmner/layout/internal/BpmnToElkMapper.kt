@@ -10,6 +10,11 @@ import org.camunda.bpm.model.bpmn.BpmnModelInstance
 import org.camunda.bpm.model.bpmn.instance.Association
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
+import org.camunda.bpm.model.bpmn.instance.DataAssociation
+import org.camunda.bpm.model.bpmn.instance.DataInputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataObjectReference
+import org.camunda.bpm.model.bpmn.instance.DataOutputAssociation
+import org.camunda.bpm.model.bpmn.instance.DataStoreReference
 import org.camunda.bpm.model.bpmn.instance.EndEvent
 import org.camunda.bpm.model.bpmn.instance.FlowElement
 import org.camunda.bpm.model.bpmn.instance.FlowNode
@@ -108,6 +113,7 @@ internal object BpmnToElkMapper {
         }
 
         trackAnnotations(model, nodeMap, edgeMap)
+        trackDataReferences(model, nodeMap, edgeMap)
         trackGroups(model, nodeMap)
 
         mapBoundaryEvents(model, nodeMap, portMap)
@@ -313,6 +319,82 @@ internal object BpmnToElkMapper {
                 elkNode.width = ANNOTATION_WIDTH
                 elkNode.height = ANNOTATION_HEIGHT
                 nodeMap[ann.id] = elkNode
+            }
+        }
+    }
+
+    /**
+     * Tracks DataObjectReferences and DataStoreReferences in [nodeMap]. Same mechanism as
+     * [trackAnnotations] (group E item 2, form 1) — one with a [DataInputAssociation] or
+     * [DataOutputAssociation] to an already-mapped activity is attached as a real comment-box
+     * sibling of that activity, every matching association becomes a real edge (the same
+     * deliberate "don't pre-empt ELK's 0/N decision" reasoning), and one with none keeps a
+     * detached size-carrier placeholder.
+     *
+     * `sourceRef`/`targetRef` are read directly from each association's own child elements
+     * (`DomElement.getChildElementsByNameNs`), not the typed `DataAssociation.getSources()`/
+     * `.getTarget()` — a `dataInputAssociation`'s `targetRef` self-references its owning
+     * activity (`BpmnProcessArtifactXmlWriter.writeDataAssociations`'s documented simplification,
+     * since we don't model `ioSpecification`), and an activity is not an `ItemAwareElement`, so
+     * the typed accessor's resolution is unreliable for exactly that reference.
+     */
+    private fun trackDataReferences(
+        model: BpmnModelInstance,
+        nodeMap: MutableMap<String, ElkNode>,
+        edgeMap: MutableMap<String, ElkEdge>,
+    ) {
+        fun DataAssociation.childRef(localName: String): String? = domElement
+            .getChildElementsByNameNs(BPMN_MODEL_NAMESPACE, localName)
+            .firstOrNull()
+            ?.textContent
+            ?.trim()
+            ?.takeIf { it.isNotBlank() }
+
+        val dataRefIds = model.getModelElementsByType(DataObjectReference::class.java).mapTo(mutableSetOf()) { it.id } +
+            model.getModelElementsByType(DataStoreReference::class.java).mapTo(mutableSetOf()) { it.id }
+
+        val associationsByDataRef = (
+            model.getModelElementsByType(DataInputAssociation::class.java).mapNotNull { assoc ->
+                val dataRefId = assoc.childRef("sourceRef") ?: return@mapNotNull null
+                val activityId = (assoc.parentElement as? FlowNode)?.id ?: return@mapNotNull null
+                Triple(dataRefId, activityId, assoc as DataAssociation)
+            } +
+                model.getModelElementsByType(DataOutputAssociation::class.java).mapNotNull { assoc ->
+                    val dataRefId = assoc.childRef("targetRef") ?: return@mapNotNull null
+                    val activityId = (assoc.parentElement as? FlowNode)?.id ?: return@mapNotNull null
+                    Triple(dataRefId, activityId, assoc as DataAssociation)
+                }
+            )
+            .filter { (dataRefId, _, _) -> dataRefId in dataRefIds }
+            .sortedBy { (_, _, assoc) -> assoc.id }
+            .groupBy({ it.first }) { it.second to it.third }
+
+        val dataReferences = model.getModelElementsByType(DataObjectReference::class.java).map { it.id to it.name } +
+            model.getModelElementsByType(DataStoreReference::class.java).map { it.id to it.name }
+
+        for ((refId, _) in dataReferences.sortedBy { it.first }) {
+            val mappedAssociations = associationsByDataRef[refId].orEmpty()
+                .mapNotNull { (activityId, assoc) -> nodeMap[activityId]?.let { it to assoc } }
+            val firstHost = mappedAssociations.firstOrNull()?.first
+            if (firstHost != null) {
+                val elkNode = ElkGraphUtil.createNode(firstHost.parent)
+                elkNode.identifier = refId
+                elkNode.width = DATA_REFERENCE_WIDTH
+                elkNode.height = DATA_REFERENCE_HEIGHT
+                elkNode.setProperty(CoreOptions.COMMENT_BOX, true)
+                nodeMap[refId] = elkNode
+                mappedAssociations.forEach { (host, assoc) ->
+                    val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
+                    edge.identifier = assoc.id
+                    edgeMap[assoc.id] = edge
+                }
+            } else {
+                // Use a detached ElkNode (no parent) to carry the size info.
+                val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
+                elkNode.identifier = refId
+                elkNode.width = DATA_REFERENCE_WIDTH
+                elkNode.height = DATA_REFERENCE_HEIGHT
+                nodeMap[refId] = elkNode
             }
         }
     }
@@ -715,6 +797,12 @@ internal object BpmnToElkMapper {
     private const val ANNOTATION_HEIGHT = 60.0
     private const val GROUP_WIDTH = 300.0
     private const val GROUP_HEIGHT = 200.0
+
+    // BPMN's own data-object/data-store icon footprint (bpmn-js convention) — smaller than an
+    // annotation's free-text box.
+    private const val DATA_REFERENCE_WIDTH = 36.0
+    private const val DATA_REFERENCE_HEIGHT = 50.0
+    private const val BPMN_MODEL_NAMESPACE = "http://www.omg.org/spec/BPMN/20100524/MODEL"
     internal const val SUBPROCESS_PADDING = 50.0
     internal const val BOUNDARY_PORT_SIZE = 10.0
 

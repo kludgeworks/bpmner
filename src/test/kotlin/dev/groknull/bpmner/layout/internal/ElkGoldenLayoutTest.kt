@@ -14,13 +14,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Regression test over the full 25-fixture set.
+ * Regression test over the full 26-fixture set.
  *
  * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
  * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 25 fixtures.
+ * labels below nodes) and determinism for all 26 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -74,6 +74,7 @@ class ElkGoldenLayoutTest {
             Triple("miwg-c2-four-pools", "Task_reserve_stock", "MsgFlow_dispatch"),
             Triple("miwg-c2-four-pools", "Boundary_fulfil_error", "MsgFlow_confirm"),
             Triple("miwg-c2-four-pools", "MsgFlow_reserve", "MsgFlow_delivered"),
+            Triple("data-object-and-store", "Task_archive", "DataOutputAssociation_archive"),
         )
 
         @JvmStatic
@@ -98,7 +99,7 @@ class ElkGoldenLayoutTest {
     @ParameterizedTest(name = "geometry invariants: {0}")
     @MethodSource("fixtures")
     @Suppress("CyclomaticComplexMethod")
-    fun `all 25 layout fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 26 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)
