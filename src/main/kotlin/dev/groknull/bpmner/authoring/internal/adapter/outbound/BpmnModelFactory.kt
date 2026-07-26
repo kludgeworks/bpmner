@@ -30,6 +30,7 @@ import dev.groknull.bpmner.bpmn.BpmnUnrecognizedNode
 import dev.groknull.bpmner.bpmn.BpmnUserTask
 import dev.groknull.bpmner.bpmn.RetryableBpmnGenerationException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.Activity
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.BusinessRuleTask
 import org.camunda.bpm.model.bpmn.instance.CallActivity
