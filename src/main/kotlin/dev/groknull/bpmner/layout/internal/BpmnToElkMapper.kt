@@ -409,6 +409,10 @@ internal object BpmnToElkMapper {
      * the whole collaboration as one joint layered graph, so a cross-participant edge's hierarchical
      * port dummies let its crossing minimisation and network-simplex node placement perturb each
      * participant's own internal layout for a routing decision that is discarded anyway.
+     *
+     * This exclusion is retained deliberately (AD-622-36): probe `76c9571d` measured that removing
+     * it reorders a task ~58px within its own pool, confirming the perturbation. A change proposing
+     * to remove it has not read that ADR.
      */
     private fun mapMessageFlows(
         root: ElkNode,
