@@ -267,7 +267,7 @@
       <bpmn:sequenceFlow id="SFlow_D6" sourceRef="Task_D3" targetRef="Gw_D_join"/>
       <bpmn:sequenceFlow id="SFlow_D7" sourceRef="Gw_D_join" targetRef="SubEnd_D"/>
     </bpmn:subProcess>
-    <bpmn:boundaryEvent id="Boundary_par_a_error" name="Inventory Update Error" attachedToRef="Task_par_a" cancelActivity="true">
+    <bpmn:boundaryEvent id="Boundary_par_a_error" name="Analytics Update Error" attachedToRef="Task_par_c" cancelActivity="true">
       <bpmn:outgoing>Flow_b_par_a_error</bpmn:outgoing>
       <bpmn:errorEventDefinition id="ErrorDef_par_a"/>
     </bpmn:boundaryEvent>

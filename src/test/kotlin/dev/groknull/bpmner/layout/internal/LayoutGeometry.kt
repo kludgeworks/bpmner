@@ -52,6 +52,7 @@ internal val LAYOUT_CORPUS_FIXTURES = listOf(
     "boundary-non-interrupting",
     "signal-escalation",
     "compensate",
+    "miwg-b2-dense",
 )
 
 /** A BPMN DI shape's absolute bounds, keyed by the `bpmnElement` id it renders. */

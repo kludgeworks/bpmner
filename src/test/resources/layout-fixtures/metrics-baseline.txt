@@ -20,6 +20,7 @@ explicit-cycle 0 2 0
 long-labels 0 2 0
 miwg-a2-1 0 10 0
 miwg-a3-0 0 4 5
+miwg-b2-dense 0 45 37
 miwg-c2-four-pools 7 11 27
 representative-process 0 6 0
 signal-escalation 0 0 0
