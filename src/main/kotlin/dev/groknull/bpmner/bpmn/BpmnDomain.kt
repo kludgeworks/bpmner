@@ -354,6 +354,9 @@ data class BpmnStartEvent(
     override fun withName(name: String?): BpmnNode = copy(name = name)
 }
 
+// This file is excluded from Sonar's cpd (duplication) check: the task-type properties below
+// repeat by necessity, since each concrete type's annotations publish that type's JSON schema
+// (AD-622-41). Hoisting them into a shared base class would delete the schema they generate.
 data class BpmnUserTask(
     @field:NotBlank
     @get:JsonPropertyDescription(NODE_ID_DESCRIPTION)

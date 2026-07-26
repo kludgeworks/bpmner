@@ -219,7 +219,7 @@ jobs:
             -Dsonar.token="${SONAR_TOKEN}" \
             -Dsonar.coverageReportPaths="$GITHUB_WORKSPACE/coverage_report.dat" \
             -Dsonar.coverage.exclusions="**/*Module.kt" \
-            -Dsonar.cpd.exclusions="**/repair/internal/adapter/FlatBpmnDefinition*"
+            -Dsonar.cpd.exclusions="**/repair/internal/adapter/FlatBpmnDefinition*,**/bpmn/BpmnDomain.kt"
 
       - name: SonarCloud Scan — Web
         if: success() && steps.coverage.outcome == 'success'
