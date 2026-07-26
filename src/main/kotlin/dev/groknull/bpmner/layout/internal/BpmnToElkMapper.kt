@@ -175,7 +175,7 @@ internal object BpmnToElkMapper {
     ) {
         val compound = ElkGraphUtil.createNode(participant)
         compound.identifier = lane.id
-        applyLaneProfile(compound)
+        applyLaneProfile(compound, lane)
         nodeMap[lane.id] = compound
         mapProcess(compound, lane.flowNodeRefs.toList(), nodeMap, model)
     }
@@ -575,12 +575,27 @@ internal object BpmnToElkMapper {
         applyCompoundProfile(node)
     }
 
-    private fun applyLaneProfile(node: ElkNode) {
+    /**
+     * AD-622-28: `NODE_LABELS_PLACEMENT = outsideBottomCenter` (`:444`) makes a compound's
+     * content bbox the node row plus the label strip below it, so symmetric padding centres
+     * that combined box rather than the node row — the row ends up sitting half the label
+     * height above the band's visual centre. Declaring extra top padding equal to the lane's
+     * own direct children's tallest label — rather than translating content after the fact —
+     * makes the node row itself land on the band's centre. Not gated on the lane spike: this
+     * corrects the same defect whether the band is later ELK-stacked or kept at
+     * `CollaborationShapePlacement`'s declared floor.
+     */
+    private fun applyLaneProfile(node: ElkNode, lane: Lane) {
         node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
         node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
+        val maxLabelHeight = lane.flowNodeRefs
+            .mapNotNull { it.name }
+            .filter(String::isNotBlank)
+            .maxOfOrNull { BpmnPlacementPass.estimateLabelDimensions(it, BpmnPlacementPass.LABEL_WIDTH).second }
+            ?: 0.0
         node.setProperty(
             CoreOptions.PADDING,
-            ElkPadding(LANE_PADDING, LANE_PADDING, LANE_PADDING, LANE_PADDING),
+            ElkPadding(LANE_PADDING + maxLabelHeight, LANE_PADDING, LANE_PADDING, LANE_PADDING),
         )
         applyCompoundProfile(node)
     }

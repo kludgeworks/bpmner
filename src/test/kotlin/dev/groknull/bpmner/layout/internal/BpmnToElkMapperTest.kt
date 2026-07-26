@@ -424,6 +424,22 @@ class BpmnToElkMapperTest {
         assertEquals(participant, result.edgeMap.getValue("Flow_3").containingNode)
     }
 
+    @Test
+    fun `lane padding grows on top by its own members' tallest label height (AD-622-28)`() {
+        // Lane_sales has a named member (label height > 0); Lane_empty has none. Both keep the
+        // same base padding on every other side — only top grows, and only where a label exists.
+        val result = BpmnToElkMapper.map(parseXml(LANE_LABEL_PADDING_XML))
+
+        val labelled = result.nodeMap.getValue("Lane_sales").getProperty(CoreOptions.PADDING)
+        val unlabelled = result.nodeMap.getValue("Lane_empty").getProperty(CoreOptions.PADDING)
+
+        assertTrue(labelled.top > unlabelled.top, "a lane with a named member must reserve extra top padding")
+        assertEquals(unlabelled.top, unlabelled.bottom, "an unlabelled lane's padding is symmetric (no correction needed)")
+        assertEquals(labelled.right, unlabelled.right)
+        assertEquals(labelled.bottom, unlabelled.bottom)
+        assertEquals(labelled.left, unlabelled.left)
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     @Suppress("MaxLineLength")
@@ -439,6 +455,17 @@ class BpmnToElkMapperTest {
     <bpmn:serviceTask id="Task_pick"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:serviceTask>
     <bpmn:endEvent id="End_1"><bpmn:incoming>Flow_3</bpmn:incoming></bpmn:endEvent>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_pick"/><bpmn:sequenceFlow id="Flow_3" sourceRef="Task_pick" targetRef="End_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        const val LANE_LABEL_PADDING_XML = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D3" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:collaboration id="C1"><bpmn:participant id="Participant_1" name="Participant" processRef="P1"/></bpmn:collaboration>
+  <bpmn:process id="P1" isExecutable="true">
+    <bpmn:laneSet id="LS"><bpmn:lane id="Lane_sales" name="Sales"><bpmn:flowNodeRef>Task_review</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Lane_empty" name="Empty"><bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>
+    <bpmn:startEvent id="Start_1"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:userTask id="Task_review" name="Review Order"><bpmn:incoming>Flow_1</bpmn:incoming></bpmn:userTask>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_1" targetRef="Task_review"/>
   </bpmn:process>
 </bpmn:definitions>"""
 
