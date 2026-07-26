@@ -7,7 +7,6 @@ package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.internal.BpmnToElkMapper.ElkSkeleton
 import dev.groknull.bpmner.layout.internal.placement.ArtifactPlacement
-import dev.groknull.bpmner.layout.internal.placement.AssociationEdges
 import dev.groknull.bpmner.layout.internal.placement.BoundaryLabelPlacement
 import dev.groknull.bpmner.layout.internal.placement.BoundaryShapePlacement
 import dev.groknull.bpmner.layout.internal.placement.CollaborationFramePlacement
@@ -99,7 +98,6 @@ internal object BpmnPlacementPass {
         ElkLayoutResultCopy,
         BoundaryLabelPlacement,
         ArtifactPlacement,
-        AssociationEdges,
     )
 
     /**

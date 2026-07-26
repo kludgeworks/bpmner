@@ -5,8 +5,8 @@
 
 package dev.groknull.bpmner.layout.internal.placement
 
+import dev.groknull.bpmner.layout.internal.BpmnPlacementPass
 import dev.groknull.bpmner.layout.internal.BpmnPlacementPass.Rect
-import org.camunda.bpm.model.bpmn.instance.Association
 import org.camunda.bpm.model.bpmn.instance.FlowNode
 import org.camunda.bpm.model.bpmn.instance.Group
 import org.camunda.bpm.model.bpmn.instance.TextAnnotation
@@ -14,12 +14,13 @@ import org.camunda.bpm.model.bpmn.instance.TextAnnotation
 /**
  * Text annotation and group sidecar geometry.
  *
- * Artifacts are never mapped into the ELK graph, so they cannot perturb primary control-flow
- * layout: this processor derives their position entirely from the already-final flow-node shapes.
- *
- * Every [TextAnnotation] is placed below-and-right of its associated element
- * (if any association exists) or stacked below the skeleton at [ARTIFACT_MARGIN] intervals.
- * Every [Group] is placed as a padded bounding box around the flow-node shapes.
+ * A [TextAnnotation] with a real ELK-mapped comment box (`BpmnToElkMapper.trackAnnotations`,
+ * group E) is already positioned by ELK's own comment-attachment mechanism — this processor
+ * copies its final coordinates, the same convention [NodeShapeCopy] uses for flow nodes. One
+ * with no association (or no mappable host) keeps the pre-group-E fallback: stacked below the
+ * skeleton at [ARTIFACT_MARGIN] intervals. Every [Group] is never mapped into the ELK graph at
+ * all — group bounding is a padded box around the flow-node shapes, the legitimate
+ * projection-only survivor this processor still owns directly.
  */
 internal object ArtifactPlacement : PlacementProcessor {
 
@@ -28,19 +29,8 @@ internal object ArtifactPlacement : PlacementProcessor {
     private const val GROUP_NEST_STEP = 15.0
 
     override fun process(ctx: PlacementContext) {
-        val skeletonBottom = ctx.shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
-
-        val annotationHost = mutableMapOf<String, String>()
-        for (assoc in ctx.model.getModelElementsByType(Association::class.java)) {
-            val src = assoc.source?.id
-            val tgt = assoc.target?.id
-            val annId = listOf(src, tgt).firstOrNull { id -> ctx.shapes[id] == null && id != null }
-            val hostId = listOf(src, tgt).firstOrNull { it != annId }
-            if (annId != null && hostId != null) annotationHost[annId] = hostId
-        }
-
         placeGroups(ctx)
-        placeAnnotations(ctx, annotationHost, skeletonBottom)
+        placeAnnotations(ctx)
     }
 
     private fun placeGroups(ctx: PlacementContext) {
@@ -68,30 +58,21 @@ internal object ArtifactPlacement : PlacementProcessor {
         }
     }
 
-    private fun placeAnnotations(
-        ctx: PlacementContext,
-        annotationHost: Map<String, String>,
-        skeletonBottom: Double,
-    ) {
-        val groupBottom = ctx.model.getModelElementsByType(Group::class.java)
-            .mapNotNull { ctx.shapes[it.id] }
-            .maxOfOrNull { it.y + it.h }
+    private fun placeAnnotations(ctx: PlacementContext) {
+        val skeletonBottom = ctx.shapes.values.maxOfOrNull { it.y + it.h } ?: 0.0
         var fallbackY = skeletonBottom + ARTIFACT_MARGIN
         ctx.model.getModelElementsByType(TextAnnotation::class.java)
             .sortedBy { it.id }
             .forEach { ann ->
                 val elkNode = ctx.skeleton.nodeMap[ann.id] ?: return@forEach
-                val host = annotationHost[ann.id]?.let { ctx.shapes[it] }
-                if (host != null) {
-                    val belowHost = host.y + host.h + ARTIFACT_MARGIN
-                    val belowGroup = groupBottom?.let { it + ARTIFACT_MARGIN } ?: belowHost
-                    ctx.shapes[ann.id] = Rect(
-                        host.x + host.w + ARTIFACT_MARGIN,
-                        maxOf(belowHost, belowGroup),
-                        elkNode.width,
-                        elkNode.height,
-                    )
+                if (elkNode.parent != null) {
+                    // Real comment box: ELK already decided its position (above/below its host,
+                    // clear of the host's margin) — copy it rather than recompute it.
+                    val (ax, ay) = BpmnPlacementPass.absolutePosition(elkNode)
+                    ctx.shapes[ann.id] = Rect(ax, ay, elkNode.width, elkNode.height)
                 } else {
+                    // Detached placeholder (no association, or host ELK never mapped): stack
+                    // below the skeleton, the pre-group-E fallback.
                     ctx.shapes[ann.id] = Rect(0.0, fallbackY, elkNode.width, elkNode.height)
                     fallbackY += elkNode.height + ARTIFACT_MARGIN
                 }

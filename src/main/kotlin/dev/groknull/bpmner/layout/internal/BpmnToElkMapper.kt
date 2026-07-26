@@ -7,6 +7,7 @@ package dev.groknull.bpmner.layout.internal
 
 import dev.groknull.bpmner.layout.BpmnAutoLayoutException
 import org.camunda.bpm.model.bpmn.BpmnModelInstance
+import org.camunda.bpm.model.bpmn.instance.Association
 import org.camunda.bpm.model.bpmn.instance.BoundaryEvent
 import org.camunda.bpm.model.bpmn.instance.Collaboration
 import org.camunda.bpm.model.bpmn.instance.EndEvent
@@ -106,7 +107,7 @@ internal object BpmnToElkMapper {
             mapProcess(root, topProcess.flowElements.toList(), nodeMap, model)
         }
 
-        trackAnnotations(model, nodeMap)
+        trackAnnotations(model, nodeMap, edgeMap)
         trackGroups(model, nodeMap)
 
         mapBoundaryEvents(model, nodeMap, portMap)
@@ -259,20 +260,51 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Tracks TextAnnotations in [nodeMap] with their placeholder sizes.
-     * The nodeMap entry lets the placement pass find their dimensions.
+     * Tracks TextAnnotations in [nodeMap]. One with an [Association] to an already-mapped host
+     * is attached as a real comment-box sibling of that host (`CoreOptions.COMMENT_BOX`) with a
+     * real connecting edge — ELK's own `CommentPreprocessor`/`CommentPostprocessor` then place
+     * and margin it (group E, AD-622-09): the 0/N-connection fallback ("processed normally, i.e.
+     * treated as a regular node") is ELK's, not ours, so this ships a test pinning that
+     * behaviour rather than an implementation of it. An annotation with no association, or whose
+     * host was never mapped, keeps the old detached size-carrier placeholder — [ArtifactPlacement]
+     * falls back to its stacked-below-the-skeleton placement for exactly that case.
      */
     private fun trackAnnotations(
         model: BpmnModelInstance,
         nodeMap: MutableMap<String, ElkNode>,
+        edgeMap: MutableMap<String, ElkEdge>,
     ) {
+        val annotationIds = model.getModelElementsByType(TextAnnotation::class.java).mapTo(mutableSetOf()) { it.id }
+        val hostAssociation = mutableMapOf<String, Association>()
+        for (assoc in model.getModelElementsByType(Association::class.java).sortedBy { it.id }) {
+            val src = assoc.source?.id
+            val tgt = assoc.target?.id
+            val annId = listOf(src, tgt).firstOrNull { it in annotationIds }
+            if (annId != null && annId !in hostAssociation) hostAssociation[annId] = assoc
+        }
+
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            // Use a detached ElkNode (no parent) to carry the size info.
-            val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
-            elkNode.identifier = ann.id
-            elkNode.width = ANNOTATION_WIDTH
-            elkNode.height = ANNOTATION_HEIGHT
-            nodeMap[ann.id] = elkNode
+            val assoc = hostAssociation[ann.id]
+            val hostId = assoc?.let { a -> listOf(a.source?.id, a.target?.id).firstOrNull { it != ann.id } }
+            val host = hostId?.let { nodeMap[it] }
+            if (assoc != null && host != null) {
+                val elkNode = ElkGraphUtil.createNode(host.parent)
+                elkNode.identifier = ann.id
+                elkNode.width = ANNOTATION_WIDTH
+                elkNode.height = ANNOTATION_HEIGHT
+                elkNode.setProperty(CoreOptions.COMMENT_BOX, true)
+                nodeMap[ann.id] = elkNode
+                val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
+                edge.identifier = assoc.id
+                edgeMap[assoc.id] = edge
+            } else {
+                // Use a detached ElkNode (no parent) to carry the size info.
+                val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
+                elkNode.identifier = ann.id
+                elkNode.width = ANNOTATION_WIDTH
+                elkNode.height = ANNOTATION_HEIGHT
+                nodeMap[ann.id] = elkNode
+            }
         }
     }
 

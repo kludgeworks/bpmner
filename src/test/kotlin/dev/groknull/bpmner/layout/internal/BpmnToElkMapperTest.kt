@@ -440,6 +440,50 @@ class BpmnToElkMapperTest {
         assertEquals(labelled.left, unlabelled.left)
     }
 
+    // ── Artifacts (group E: annotations via ELK comment attachment) ───────────
+
+    @Test
+    fun `an annotation with one association becomes a real comment-box sibling of its host, with a real edge`() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        val host = result.nodeMap.getValue("Task_1")
+        assertEquals(host.parent, annotation.parent, "annotation must be a sibling of its host")
+        assertTrue(annotation.getProperty(CoreOptions.COMMENT_BOX), "annotation must be marked as a comment box")
+        val edge = result.edgeMap.getValue("Assoc_1")
+        assertTrue(
+            (edge.sources.single() == annotation || edge.sources.single() == host) &&
+                (edge.targets.single() == annotation || edge.targets.single() == host),
+            "the association edge must connect the annotation and its host",
+        )
+    }
+
+    @Test
+    fun `an annotation with no association keeps a detached placeholder and no edge`() {
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        assertNull(annotation.parent, "an un-associated annotation stays a detached size carrier")
+        assertTrue(result.edgeMap.values.none { it.sources.contains(annotation) || it.targets.contains(annotation) })
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     @Suppress("MaxLineLength")

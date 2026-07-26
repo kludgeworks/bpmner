@@ -85,7 +85,7 @@
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Anno_1" id="BPMNShape_Anno_1">
-        <dc:Bounds height="60.0" width="100.0" x="268.0" y="147.0"/>
+        <dc:Bounds height="60.0" width="100.0" x="138.0" y="135.0"/>
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape bpmnElement="Group_1" id="BPMNShape_Group_1">
         <dc:Bounds height="130.0" width="592.0" x="-13.0" y="-13.0"/>
@@ -103,8 +103,8 @@
         <di:waypoint x="518.0" y="52.0"/>
       </bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge bpmnElement="Assoc_1" id="BPMNEdge_Assoc_1">
-        <di:waypoint x="229.6" y="92.0"/>
-        <di:waypoint x="286.8" y="147.0"/>
+        <di:waypoint x="188.0" y="135.0"/>
+        <di:waypoint x="188.0" y="92.0"/>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

@@ -37,13 +37,14 @@ class ElkGoldenLayoutTest {
 
         /**
          * Known label/edge-waypoint overlaps (fixture, label owner id, edge id). Each pair traces
-         * to one of two causes: a hand-routed message flow exits its sole-incident source task at
-         * the same x/y `NodeLabelPlacement.outsideBottomCenter()` centres that task's own label
-         * under, or an ELK-routed sequence flow's south-port exit threads through its own
-         * gateway's placed label before turning. `miwg-c2-four-pools`'s nine rows are the same
-         * first cause at higher volume — five simultaneous hand-routed message flows crossing a
-         * four-participant stack densely enough that fanning one pair's bend height (`P5`) still
-         * leaves several labels under a neighbouring flow's or task's own footprint.
+         * to one of two causes: a hand-routed message flow (or, since group E, an ELK
+         * comment-attached `Association`) exits its sole-incident source task at the same x/y
+         * `NodeLabelPlacement.outsideBottomCenter()` centres that task's own label under, or an
+         * ELK-routed sequence flow's south-port exit threads through its own gateway's placed
+         * label before turning. `miwg-c2-four-pools`'s nine rows are the same first cause at
+         * higher volume — five simultaneous hand-routed message flows crossing a four-participant
+         * stack densely enough that fanning one pair's bend height (`P5`) still leaves several
+         * labels under a neighbouring flow's or task's own footprint.
          * [assertLabelsClearEdgeGeometry] asserts this set is *exact* against every fixture in the
          * corpus — a new collision fails immediately, and a declared pair that stops reproducing
          * must be removed.
@@ -60,6 +61,7 @@ class ElkGoldenLayoutTest {
             Triple("collab-subprocess", "Task_finalize", "MsgFlow_2"),
             Triple("collab-subprocess", "Task_prepare", "MsgFlow_1"),
             Triple("collab-bioc", "Task_1", "MsgFlow_1"),
+            Triple("annotation-and-group", "Task_1", "Assoc_1"),
             Triple("collab-lanes", "Gw_split", "Flow_3"),
             Triple("collab-lanes", "Task_pack", "Flow_5"),
             Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
