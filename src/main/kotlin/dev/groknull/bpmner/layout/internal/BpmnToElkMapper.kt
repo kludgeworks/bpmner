@@ -209,10 +209,15 @@ internal object BpmnToElkMapper {
                     val compound = ElkGraphUtil.createNode(container)
                     compound.identifier = element.id
                     compound.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
+                    // AD-622-28/AD-622-40: extra top padding equal to the direct children's
+                    // tallest label makes the node row itself land on the compound's centre,
+                    // rather than the node-row-plus-label-strip bbox that outsideBottomCenter
+                    // (`:453`) produces under symmetric padding. Same fix as applyLaneProfile.
+                    val maxLabelHeight = tallestLabelHeight(element.flowElements.filterIsInstance<FlowNode>().map { it.name })
                     compound.setProperty(
                         CoreOptions.PADDING,
                         ElkPadding(
-                            SUBPROCESS_PADDING,
+                            SUBPROCESS_PADDING + maxLabelHeight,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
                             SUBPROCESS_PADDING,
@@ -607,17 +612,24 @@ internal object BpmnToElkMapper {
     private fun applyLaneProfile(node: ElkNode, lane: Lane) {
         node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)
         node.setProperty(CoreOptions.SEPARATE_CONNECTED_COMPONENTS, false)
-        val maxLabelHeight = lane.flowNodeRefs
-            .mapNotNull { it.name }
-            .filter(String::isNotBlank)
-            .maxOfOrNull { BpmnPlacementPass.estimateLabelDimensions(it, BpmnPlacementPass.LABEL_WIDTH).second }
-            ?: 0.0
+        val maxLabelHeight = tallestLabelHeight(lane.flowNodeRefs.map { it.name })
         node.setProperty(
             CoreOptions.PADDING,
             ElkPadding(LANE_PADDING + maxLabelHeight, LANE_PADDING, LANE_PADDING, LANE_PADDING),
         )
         applyCompoundProfile(node)
     }
+
+    /**
+     * The tallest rendered label height among [names], or 0.0 if none is named — the extra
+     * top-padding compounds need so `NODE_LABELS_PLACEMENT = outsideBottomCenter`'s node-row-plus-
+     * label-strip bbox doesn't push the row above centre (AD-622-28/AD-622-40).
+     */
+    private fun tallestLabelHeight(names: Collection<String?>): Double = names
+        .filterNotNull()
+        .filter(String::isNotBlank)
+        .maxOfOrNull { BpmnPlacementPass.estimateLabelDimensions(it, BpmnPlacementPass.LABEL_WIDTH).second }
+        ?: 0.0
 
     private fun applyCompoundProfile(node: ElkNode) {
         applyFlowSpacing(node)
