@@ -484,6 +484,36 @@ class BpmnToElkMapperTest {
         assertTrue(result.edgeMap.values.none { it.sources.contains(annotation) || it.targets.contains(annotation) })
     }
 
+    @Test
+    fun `an annotation with two associations gets a real edge for each, not just the first`() {
+        // CommentPreprocessor decides single- vs multi-connection treatment itself by counting
+        // edges incident to the comment node; mapping every association (not just the first) is
+        // what lets that decision run on real data instead of being made for it.
+        val xml = """<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="https://groknull.dev/bpmner">
+  <bpmn:process id="P">
+    <bpmn:userTask id="Task_1"/>
+    <bpmn:userTask id="Task_2"/>
+    <bpmn:textAnnotation id="Anno_1"><bpmn:text>Note</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_1" sourceRef="Task_1" targetRef="Anno_1"/>
+    <bpmn:association id="Assoc_2" sourceRef="Task_2" targetRef="Anno_1"/>
+  </bpmn:process>
+</bpmn:definitions>"""
+
+        val result = BpmnToElkMapper.map(parseXml(xml))
+
+        val annotation = result.nodeMap.getValue("Anno_1")
+        val task1 = result.nodeMap.getValue("Task_1")
+        val task2 = result.nodeMap.getValue("Task_2")
+        assertTrue(annotation.getProperty(CoreOptions.COMMENT_BOX))
+        val edge1 = result.edgeMap.getValue("Assoc_1")
+        val edge2 = result.edgeMap.getValue("Assoc_2")
+        assertTrue(edge1.sources.contains(annotation) || edge1.targets.contains(annotation))
+        assertTrue(edge1.sources.contains(task1) || edge1.targets.contains(task1))
+        assertTrue(edge2.sources.contains(annotation) || edge2.targets.contains(annotation))
+        assertTrue(edge2.sources.contains(task2) || edge2.targets.contains(task2))
+    }
+
     // ── Helpers ───────────────────────────────────────────────────────────────
 
     @Suppress("MaxLineLength")

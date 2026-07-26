@@ -260,14 +260,18 @@ internal object BpmnToElkMapper {
     }
 
     /**
-     * Tracks TextAnnotations in [nodeMap]. One with an [Association] to an already-mapped host
-     * is attached as a real comment-box sibling of that host (`CoreOptions.COMMENT_BOX`) with a
-     * real connecting edge — ELK's own `CommentPreprocessor`/`CommentPostprocessor` then place
-     * and margin it (group E, AD-622-09): the 0/N-connection fallback ("processed normally, i.e.
-     * treated as a regular node") is ELK's, not ours, so this ships a test pinning that
-     * behaviour rather than an implementation of it. An annotation with no association, or whose
-     * host was never mapped, keeps the old detached size-carrier placeholder — [ArtifactPlacement]
-     * falls back to its stacked-below-the-skeleton placement for exactly that case.
+     * Tracks TextAnnotations in [nodeMap]. One with at least one [Association] to an
+     * already-mapped host is attached as a real comment-box sibling of the *first* such host
+     * (`CoreOptions.COMMENT_BOX`; `ElkGraphUtil.createSimpleEdge` computes each association's own
+     * correct containment, so a second host elsewhere in the hierarchy is not a problem). Every
+     * matching association becomes a real edge — deliberately not just the first one: whether a
+     * multi-connection comment gets lifted out (single association) or "processed normally, i.e.
+     * treated as a regular node" (more than one) is `CommentPreprocessor`'s own per-node edge-count
+     * decision, not ours, so this maps every association it could see and ships a test pinning
+     * whichever branch ELK takes rather than choosing one for it. An annotation with no
+     * association, or whose only hosts were never mapped, keeps the old detached size-carrier
+     * placeholder — [ArtifactPlacement] falls back to its stacked-below-the-skeleton placement
+     * for exactly that case.
      */
     private fun trackAnnotations(
         model: BpmnModelInstance,
@@ -275,28 +279,33 @@ internal object BpmnToElkMapper {
         edgeMap: MutableMap<String, ElkEdge>,
     ) {
         val annotationIds = model.getModelElementsByType(TextAnnotation::class.java).mapTo(mutableSetOf()) { it.id }
-        val hostAssociation = mutableMapOf<String, Association>()
-        for (assoc in model.getModelElementsByType(Association::class.java).sortedBy { it.id }) {
-            val src = assoc.source?.id
-            val tgt = assoc.target?.id
-            val annId = listOf(src, tgt).firstOrNull { it in annotationIds }
-            if (annId != null && annId !in hostAssociation) hostAssociation[annId] = assoc
-        }
+        val associationsByAnnotation = model.getModelElementsByType(Association::class.java)
+            .sortedBy { it.id }
+            .mapNotNull { assoc ->
+                val src = assoc.source?.id
+                val tgt = assoc.target?.id
+                val annId = listOf(src, tgt).firstOrNull { it in annotationIds } ?: return@mapNotNull null
+                val hostId = listOf(src, tgt).firstOrNull { it != annId } ?: return@mapNotNull null
+                Triple(annId, hostId, assoc)
+            }
+            .groupBy({ it.first }) { it.second to it.third }
 
         for (ann in model.getModelElementsByType(TextAnnotation::class.java).sortedBy { it.id }) {
-            val assoc = hostAssociation[ann.id]
-            val hostId = assoc?.let { a -> listOf(a.source?.id, a.target?.id).firstOrNull { it != ann.id } }
-            val host = hostId?.let { nodeMap[it] }
-            if (assoc != null && host != null) {
-                val elkNode = ElkGraphUtil.createNode(host.parent)
+            val mappedAssociations = associationsByAnnotation[ann.id].orEmpty()
+                .mapNotNull { (hostId, assoc) -> nodeMap[hostId]?.let { it to assoc } }
+            val firstHost = mappedAssociations.firstOrNull()?.first
+            if (firstHost != null) {
+                val elkNode = ElkGraphUtil.createNode(firstHost.parent)
                 elkNode.identifier = ann.id
                 elkNode.width = ANNOTATION_WIDTH
                 elkNode.height = ANNOTATION_HEIGHT
                 elkNode.setProperty(CoreOptions.COMMENT_BOX, true)
                 nodeMap[ann.id] = elkNode
-                val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
-                edge.identifier = assoc.id
-                edgeMap[assoc.id] = edge
+                mappedAssociations.forEach { (host, assoc) ->
+                    val edge = ElkGraphUtil.createSimpleEdge(elkNode, host)
+                    edge.identifier = assoc.id
+                    edgeMap[assoc.id] = edge
+                }
             } else {
                 // Use a detached ElkNode (no parent) to carry the size info.
                 val elkNode = ElkGraphUtil.createGraph() // detached root size carrier
