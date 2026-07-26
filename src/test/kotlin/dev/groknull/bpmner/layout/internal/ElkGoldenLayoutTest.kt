@@ -14,13 +14,13 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Regression test over the full 24-fixture set.
+ * Regression test over the full 25-fixture set.
  *
  * For each committed expected layout under `layout-fixtures/`, asserts byte-identical engine output.
  * Any coordinate change must be reviewed and re-committed before this test will pass again.
  *
  * Also asserts cross-cutting geometry invariants (positive bounds, ≥2 waypoints,
- * labels below nodes) and determinism for all 24 fixtures.
+ * labels below nodes) and determinism for all 25 fixtures.
  */
 @Suppress("TooManyFunctions")
 class ElkGoldenLayoutTest {
@@ -40,9 +40,13 @@ class ElkGoldenLayoutTest {
          * to one of two causes: a hand-routed message flow exits its sole-incident source task at
          * the same x/y `NodeLabelPlacement.outsideBottomCenter()` centres that task's own label
          * under, or an ELK-routed sequence flow's south-port exit threads through its own
-         * gateway's placed label before turning. [assertLabelsClearEdgeGeometry] asserts this set
-         * is *exact* against every fixture in the corpus — a new collision fails immediately, and
-         * a declared pair that stops reproducing must be removed.
+         * gateway's placed label before turning. `miwg-c2-four-pools`'s nine rows are the same
+         * first cause at higher volume — five simultaneous hand-routed message flows crossing a
+         * four-participant stack densely enough that fanning one pair's bend height (`P5`) still
+         * leaves several labels under a neighbouring flow's or task's own footprint.
+         * [assertLabelsClearEdgeGeometry] asserts this set is *exact* against every fixture in the
+         * corpus — a new collision fails immediately, and a declared pair that stops reproducing
+         * must be removed.
          */
         private val LABEL_EDGE_OVERLAP_EXCEPTIONS = setOf(
             Triple("collab-two-pools", "Task_order", "MsgFlow_1"),
@@ -55,11 +59,19 @@ class ElkGoldenLayoutTest {
             Triple("collab-msg-label", "Task_track", "MsgFlow_order"),
             Triple("collab-subprocess", "Task_finalize", "MsgFlow_2"),
             Triple("collab-subprocess", "Task_prepare", "MsgFlow_1"),
-            Triple("collab-subprocess", "MsgFlow_1", "MsgFlow_2"),
             Triple("collab-bioc", "Task_1", "MsgFlow_1"),
             Triple("collab-lanes", "Gw_split", "Flow_3"),
             Triple("collab-lanes", "Task_pack", "Flow_5"),
             Triple("collab-lanes-loopback", "Gw_check", "Flow_ok"),
+            Triple("miwg-c2-four-pools", "End_warehouse", "MsgFlow_delivered"),
+            Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_confirm"),
+            Triple("miwg-c2-four-pools", "Task_confirm_order", "MsgFlow_dispatch"),
+            Triple("miwg-c2-four-pools", "Task_place_order", "MsgFlow_order"),
+            Triple("miwg-c2-four-pools", "Task_process_order", "MsgFlow_reserve"),
+            Triple("miwg-c2-four-pools", "Task_receive_goods", "MsgFlow_delivered"),
+            Triple("miwg-c2-four-pools", "Task_reserve_stock", "MsgFlow_dispatch"),
+            Triple("miwg-c2-four-pools", "Boundary_fulfil_error", "MsgFlow_confirm"),
+            Triple("miwg-c2-four-pools", "MsgFlow_reserve", "MsgFlow_delivered"),
         )
 
         @JvmStatic
@@ -84,7 +96,7 @@ class ElkGoldenLayoutTest {
     @ParameterizedTest(name = "geometry invariants: {0}")
     @MethodSource("fixtures")
     @Suppress("CyclomaticComplexMethod")
-    fun `all 24 layout fixtures satisfy geometry invariants`(fixture: String) {
+    fun `all 25 layout fixtures satisfy geometry invariants`(fixture: String) {
         val input = load("layout-fixtures/$fixture.bpmn")
         val result = layouter.layout(input)
         val doc = LayoutDiInspector.parse(result)

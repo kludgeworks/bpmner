@@ -15,7 +15,7 @@ private const val DC_NS = "http://www.omg.org/spec/DD/20100524/DC"
 private const val DD_NS = "http://www.omg.org/spec/DD/20100524/DI"
 
 /**
- * The 24-fixture layout corpus, shared by [GenerateCandidateGoldens][main] (goldens + the Tier-2
+ * The 25-fixture layout corpus, shared by [GenerateCandidateGoldens][main] (goldens + the Tier-2
  * metrics baseline) and the Tier-2 tripwire test. [ElkGoldenLayoutTest]'s own `@ValueSource`
  * lists must stay in sync with this — JUnit5 annotation arguments must be compile-time constants,
  * so they cannot reference this list directly.
@@ -43,6 +43,7 @@ internal val LAYOUT_CORPUS_FIXTURES = listOf(
     "collab-subprocess",
     "collab-bioc",
     "collab-lanes-loopback",
+    "miwg-c2-four-pools",
     "miwg-a2-1",
     "miwg-a3-0",
     "event-subprocess",

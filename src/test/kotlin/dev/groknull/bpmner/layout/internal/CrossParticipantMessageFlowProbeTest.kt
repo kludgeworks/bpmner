@@ -67,6 +67,11 @@ class CrossParticipantMessageFlowProbeTest {
     private companion object {
         const val TOLERANCE = 0.1
         const val EXPECTED_REL_X = 224.03515625
-        const val EXPECTED_REL_Y = 117.25
+
+        // Was 117.25 before P3/AD-622-42 deleted CollaborationShapePlacement.centerContentInBand:
+        // that compensation was not quite the zero vector AD-622-42 predicted for this fixture,
+        // so removing it shifts the row down by the amount the compensation had been pulling it
+        // up. This is the deliberate P3 deletion, not a mapper regression.
+        const val EXPECTED_REL_Y = 127.0
     }
 }
