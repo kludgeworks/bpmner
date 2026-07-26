@@ -402,9 +402,9 @@ internal object BpmnToElkMapper {
      *
      * Any flow whose endpoints sit in different participants is excluded: that participant pair's
      * relative position is always decided afterward by a bounded BPMN exception
-     * (`ExternalBlackBoxBandPlacement` for a black box, `WhiteBoxPoolBandPlacement` for stacked
-     * white-box pools), which fully regenerates the flow's route rather than projecting ELK's
-     * section. Modelling it as a real graph edge anyway buys nothing and actively harms the
+     * (`CollaborationFramePlacement`, for both a black box and stacked white-box pools), which
+     * fully regenerates the flow's route rather than projecting ELK's section. Modelling it as a
+     * real graph edge anyway buys nothing and actively harms the
      * primary flow: because collaborations use `HIERARCHY_HANDLING.INCLUDE_CHILDREN`, ELK solves
      * the whole collaboration as one joint layered graph, so a cross-participant edge's hierarchical
      * port dummies let its crossing minimisation and network-simplex node placement perturb each
@@ -602,7 +602,7 @@ internal object BpmnToElkMapper {
      * own direct children's tallest label — rather than translating content after the fact —
      * makes the node row itself land on the band's centre. Not gated on the lane spike: this
      * corrects the same defect whether the band is later ELK-stacked or kept at
-     * `CollaborationShapePlacement`'s declared floor.
+     * `CollaborationFramePlacement`'s declared floor.
      */
     private fun applyLaneProfile(node: ElkNode, lane: Lane) {
         node.setProperty(CoreOptions.HIERARCHY_HANDLING, HierarchyHandling.INCLUDE_CHILDREN)

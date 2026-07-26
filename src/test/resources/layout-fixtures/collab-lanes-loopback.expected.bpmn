@@ -159,7 +159,7 @@
         <di:waypoint x="590.728515625" y="78.66666666666667"/>
         <di:waypoint x="356.03515625" y="78.66666666666667"/>
         <bpmndi:BPMNLabel id="BPMNLabel_Flow_retry">
-          <dc:Bounds height="20.0" width="46.0078125" x="450.3779296875" y="68.66666666666667"/>
+          <dc:Bounds height="20.0" width="46.0078125" x="446.03515625" y="80.66666666666667"/>
         </bpmndi:BPMNLabel>
       </bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

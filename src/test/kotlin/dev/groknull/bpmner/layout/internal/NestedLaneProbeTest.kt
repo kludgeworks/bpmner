@@ -28,7 +28,7 @@ import kotlin.test.assertFailsWith
  * Nested lanes are out of this epic's supported profile — not named as a goal in the epic
  * issue, and #591's lane work never claimed it. Should nested-lane support become a real
  * requirement, this probe is the starting point: `mapLane` needs to recurse into
- * `childLaneSet` and `CollaborationShapePlacement.projectLaneBands` needs a nested-band
+ * `childLaneSet` and `CollaborationFramePlacement.projectLaneBands` needs a nested-band
  * layout, neither of which this epic scopes.
  */
 class NestedLaneProbeTest {

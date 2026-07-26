@@ -36,9 +36,7 @@ class PlacementGuardTest {
         }
 
         private val DECLARED_OWNERS = setOf(
-            "CollaborationShapePlacement",
-            "WhiteBoxPoolBandPlacement",
-            "ExternalBlackBoxBandPlacement",
+            "CollaborationFramePlacement",
         )
 
         private val EPS = BpmnPlacementPass.POSITION_EPSILON

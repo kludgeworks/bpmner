@@ -346,7 +346,7 @@ class BpmnToElkMapperTest {
             result.nodeMap.getValue("Task_A").getProperty(CoreOptions.NODE_SIZE_CONSTRAINTS),
         )
         // Task_A (Participant_A) and Task_B (Participant_B) sit in different participants, so
-        // WhiteBoxPoolBandPlacement fully owns this route post-stacking; modelling it as a real
+        // CollaborationFramePlacement fully owns this route post-stacking; modelling it as a real
         // ELK edge would let it perturb each participant's own internal layered layout.
         assertNull(result.edgeMap["Message_1"], "cross-participant message flow must NOT be in edgeMap")
     }

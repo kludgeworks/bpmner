@@ -19,7 +19,7 @@ import kotlin.test.assertTrue
  * `IN_LAYER_SUCCESSOR_CONSTRAINTS` (AD-622-23 Correction 1: "the mechanism itself is
  * untested")?
  *
- * `CollaborationShapePlacement.projectLaneBands` currently force-stacks lanes in BPMN's
+ * `CollaborationFramePlacement.projectLaneBands` currently force-stacks lanes in BPMN's
  * declared order and translates every member — a Move→Repair pair AD-622-02 wants gone.
  * This probe inspects ELK's *raw* output (`BpmnToElkMapper.map` + `RecursiveGraphLayoutEngine`,
  * bypassing the placement pipeline) on `collab-lanes.bpmn`, whose three lanes declare Sales,
@@ -39,10 +39,11 @@ import kotlin.test.assertTrue
  *
  * Building and testing `IN_LAYER_SUCCESSOR_CONSTRAINTS` is real `alg.layered`-internals
  * work (risk 1) — out of this session's remaining scope. Per AD-622-23, both outcomes are
- * pre-authorised: if the mechanism is built and proven, delete `CollaborationShapePlacement`'s
+ * pre-authorised: if the mechanism is built and proven, delete `CollaborationFramePlacement`'s
  * band translation; if not, its existing translation stays as the documented floor with
- * `DECLARED_OWNERS = {CollaborationShapePlacement}`. This probe's evidence does not yet
- * support the mechanism, so the floor stands pending that follow-up prototype.
+ * `DECLARED_OWNERS = {CollaborationFramePlacement}` (AD-622-37, AD-622-36). This probe's
+ * evidence does not yet support the mechanism, so the floor stands pending that follow-up
+ * prototype.
  */
 class LaneInLayerConstraintProbeTest {
 
