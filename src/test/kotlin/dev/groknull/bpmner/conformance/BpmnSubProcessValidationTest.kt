@@ -173,6 +173,38 @@ class BpmnSubProcessValidationTest {
     }
 
     @Test
+    fun `validator rejects an event subprocess whose start event has no trigger`() {
+        // A5 (#622-Y): an event subprocess is triggered by its start event; a NONE start cannot
+        // trigger anything, leaving the scope unreachable.
+        val definition =
+            BpmnDefinition(
+                processId = "Process_1",
+                processName = "Handle request",
+                nodes =
+                listOf(
+                    BpmnStartEvent("StartEvent_1", "Received"),
+                    BpmnUserTask("Task_work", "Work"),
+                    BpmnEndEvent("EndEvent_1", "Completed"),
+                    BpmnEventSubProcess("SubProcess_handler", "Handle error"),
+                    BpmnStartEvent("Inner_start", "Begin", parentRef = "SubProcess_handler"),
+                    BpmnEndEvent("Inner_end", "Handled", parentRef = "SubProcess_handler"),
+                ),
+                sequences =
+                listOf(
+                    BpmnEdge("Flow_1", "StartEvent_1", "Task_work"),
+                    BpmnEdge("Flow_2", "Task_work", "EndEvent_1"),
+                    BpmnEdge("Flow_in", "Inner_start", "Inner_end", parentRef = "SubProcess_handler"),
+                ),
+            )
+
+        val errors = validator.validate(definition).joinToString("\n")
+        assertContains(
+            errors,
+            "event subprocess 'SubProcess_handler' start event must declare a triggering event definition",
+        )
+    }
+
+    @Test
     fun `validator rejects a cyclic subprocess parentRef chain`() {
         val definition =
             BpmnDefinition(

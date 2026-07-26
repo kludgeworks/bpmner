@@ -283,11 +283,21 @@ internal class BpmnDefinitionValidator {
         val childrenByParent = definition.nodes.filter { it.parentRef != null }.groupBy { it.parentRef }
         subProcesses.forEach { subProcess ->
             val children = childrenByParent[subProcess.id].orEmpty()
-            if (children.none { it is BpmnStartEvent }) {
+            val startEvents = children.filterIsInstance<BpmnStartEvent>()
+            if (startEvents.isEmpty()) {
                 errors.add("subprocess '${subProcess.id}' must contain at least one START_EVENT")
             }
             if (children.none { it is BpmnEndEvent }) {
                 errors.add("subprocess '${subProcess.id}' must contain at least one END_EVENT")
+            }
+            if (subProcess is BpmnEventSubProcess &&
+                startEvents.isNotEmpty() &&
+                startEvents.all { it.eventDefinition is BpmnNoneEventDefinition }
+            ) {
+                errors.add(
+                    "event subprocess '${subProcess.id}' start event must declare a triggering " +
+                        "event definition",
+                )
             }
         }
     }
