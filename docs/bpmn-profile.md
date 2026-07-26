@@ -21,7 +21,7 @@
 | Collaboration | Participants (pools), black-box participants, cross-pool message flows | 🟢 |
 | Collaboration | Lanes | 🟢 |
 | Artifacts | Text annotations, ordinary associations | 🟢 |
-| Data | Data objects/stores/references, data input/output associations | 🔴 |
+| Data | Data objects/stores/references, data input/output associations | 🟢 |
 
 > [!NOTE]
 > Removed constructs are not silently dropped: generation fails with a typed
