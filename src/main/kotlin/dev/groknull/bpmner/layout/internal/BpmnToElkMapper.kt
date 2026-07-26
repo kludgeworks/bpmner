@@ -29,6 +29,7 @@ import org.eclipse.elk.alg.layered.components.ComponentOrderingStrategy
 import org.eclipse.elk.alg.layered.options.CenterEdgeLabelPlacementStrategy
 import org.eclipse.elk.alg.layered.options.LayerConstraint
 import org.eclipse.elk.alg.layered.options.LayeredOptions
+import org.eclipse.elk.alg.layered.options.LayeredSpacings
 import org.eclipse.elk.alg.layered.options.NodePlacementStrategy
 import org.eclipse.elk.alg.layered.options.OrderingStrategy
 import org.eclipse.elk.core.math.ElkPadding
@@ -764,6 +765,12 @@ internal object BpmnToElkMapper {
         node.setProperty(LayeredOptions.SPACING_NODE_NODE_BETWEEN_LAYERS, NODE_NODE_BETWEEN_LAYERS)
         node.setProperty(CoreOptions.SPACING_EDGE_NODE, EDGE_NODE_SPACING)
         node.setProperty(LayeredOptions.SPACING_EDGE_NODE_BETWEEN_LAYERS, EDGE_NODE_BETWEEN_LAYERS)
+        // Q2/AD-622-43: dependent spacings (SPACING_LABEL_NODE among them) are independently
+        // defaulted and are never scaled by the four explicit overrides above — ELK's own fix
+        // for that mismatch (issue #104) is to derive every other SPACING_* proportionally from
+        // one base value, which also stops node labels defaulting to a spacing tuned for ELK's
+        // un-scaled node-node gap. withBaseValue never overwrites a property already set above.
+        LayeredSpacings.withBaseValue(NODE_NODE_SPACING).apply(node)
     }
 
     private fun nodeDimensions(flowNode: FlowNode): Pair<Double, Double> {

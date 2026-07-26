@@ -72,6 +72,9 @@ class CrossParticipantMessageFlowProbeTest {
         // that compensation was not quite the zero vector AD-622-42 predicted for this fixture,
         // so removing it shifts the row down by the amount the compensation had been pulling it
         // up. This is the deliberate P3 deletion, not a mapper regression.
-        const val EXPECTED_REL_Y = 127.0
+        // Was 127.0 before Q2/AD-622-43 declared SPACING_LABEL_NODE (and the other previously
+        // undeclared dependent spacings) via LayeredSpacings.withBaseValue — a corpus-wide
+        // spacing change that grows every participant, including this one, deliberately.
+        const val EXPECTED_REL_Y = 137.0
     }
 }

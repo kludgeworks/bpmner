@@ -7,7 +7,7 @@ boundary-timer-task 0 1 1
 collab-bioc 0 0 6
 collab-blackbox 0 0 4
 collab-lanes 0 4 17
-collab-lanes-loopback 0 4 12
+collab-lanes-loopback 0 6 12
 collab-msg-endpoint 0 0 8
 collab-msg-label 0 4 8
 collab-subprocess 0 4 14
@@ -25,7 +25,7 @@ representative-process 0 6 0
 signal-escalation 0 0 0
 subprocess-branch 0 4 6
 subprocess-flat 0 0 3
-subprocess-loop 0 2 4
+subprocess-loop 0 4 4
 subprocess-nested 0 0 9
 subprocess-no-start-cycle 0 0 2
 subprocess-sequential-sharing 0 0 4
