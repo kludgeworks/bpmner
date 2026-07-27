@@ -2,7 +2,7 @@
 	"strictness": 2,
 	"commentTypes": ["logic", "syntax", "style"],
 	"triggerOnUpdates": true,
-	"triggerOnDrafts": true,
+	"triggerOnDrafts": false,
 	"statusCheck": true,
 	"statusCommentsEnabled": true,
 	"updateExistingSummaryComment": true,

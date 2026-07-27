@@ -4,8 +4,7 @@
 name: Dispatch smoke-history ingest
 
 # Reusable: mint a GitHub-App token (Actions:write on the data repo) and trigger its ingest workflow for a
-# given bpmner run's smoke-* artifacts. Called from ci.yml (post-merge main run) and smoke-history-on-merge.yml
-# (the PR's last run, at merge) — so the dispatch logic lives in exactly one place.
+# given bpmner run's smoke-* artifacts after the post-merge main run or a manual dispatch.
 on:
   workflow_call:
     inputs:
